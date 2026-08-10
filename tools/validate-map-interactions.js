@@ -427,6 +427,44 @@ assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective
 assert.match(strongholdWheelSource, /Scout[\s\S]*?Info[\s\S]*?Attack/, "Foreign strongholds should expose Scout, Info, and Attack actions.");
 assert.match(strongholdWheelSource, /Send[\s\S]*?Reinforce/, "Owned strongholds should preserve send and reinforcement actions.");
 assert.doesNotMatch(strongholdWheelSource, /Level|upgradeCity/, "Stronghold action plaques must not expose leveling.");
+const controlledObjectiveBenefitSource = extractFunction("getControlledObjectiveBenefitBreakdown");
+assert.match(
+  controlledObjectiveBenefitSource,
+  /getStrongholdDisplayName\(objective\)[\s\S]*?getStrongholdDisplayName\(city\)/,
+  "Owned Stronghold and Citadel info must use the canonical objective-name helper."
+);
+assert.doesNotMatch(
+  controlledObjectiveBenefitSource,
+  /getStrongholdName\(/,
+  "Owned objective info must not call the removed getStrongholdName helper."
+);
+const ownedObjectiveContext = {
+  CROWN_CITADEL_GOLD_BONUS_PERCENT: 10,
+  CLAN_SHARED_OBJECTIVE_MULTIPLIER: 0.5,
+  formatNumber: value => String(value),
+  getStrongholdBonusPercent: objective => Number(objective?.bonusPercent) || 0,
+  getStrongholdDisplayName: objective => String(objective?.name || "Stronghold"),
+  isCrownCitadel: objective => objective?.strongholdType === "crown",
+  isStronghold: objective => objective?.kind === "stronghold",
+};
+vm.createContext(ownedObjectiveContext);
+vm.runInContext(controlledObjectiveBenefitSource, ownedObjectiveContext);
+const ownedDefenseStronghold = { id: "defense", kind: "stronghold", strongholdType: "defense", owner: "player", name: "Defense Stronghold", bonusPercent: 8 };
+ownedObjectiveContext.getGlobalStatsSnapshot = () => ({ crownCitadelControlled: false });
+ownedObjectiveContext.getAllOwnedCitiesForDisplay = () => [ownedDefenseStronghold];
+assert.equal(
+  ownedObjectiveContext.getControlledObjectiveBenefitBreakdown(ownedDefenseStronghold),
+  "Defense Stronghold +8%",
+  "An owned Stronghold must render its objective benefit without throwing."
+);
+const ownedCitadel = { id: "citadel", kind: "stronghold", strongholdType: "crown", owner: "player", name: "Crown Citadel", bonusPercent: 10 };
+ownedObjectiveContext.getGlobalStatsSnapshot = () => ({ crownCitadelControlled: true });
+ownedObjectiveContext.getAllOwnedCitiesForDisplay = () => [ownedCitadel, ownedDefenseStronghold];
+assert.equal(
+  ownedObjectiveContext.getControlledObjectiveBenefitBreakdown(ownedCitadel),
+  "Citadel +10% · Defense Stronghold +4%",
+  "Owned Citadel info must render alongside controlled Strongholds without throwing."
+);
 
 const cityInfoSource = extractFunction("showCityInfoModal");
 assert.doesNotMatch(

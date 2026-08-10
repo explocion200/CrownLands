@@ -108,7 +108,7 @@ const context = {
   },
 };
 vm.createContext(context);
-vm.runInContext(`${extractFunction(server, "normalizeFortificationState")}; ${extractFunction(server, "getFortificationStatePatch")}; ${extractFunction(server, "calculateCombatResult")}; this.normalizeFortificationState = normalizeFortificationState; this.getFortificationStatePatch = getFortificationStatePatch; this.calculateCombatResult = calculateCombatResult;`, context, {
+vm.runInContext(`${extractFunction(server, "normalizeFortificationState")}; ${extractFunction(server, "getFortificationIntegrityBpsAt")}; ${extractFunction(server, "getFortificationStatePatch")}; ${extractFunction(server, "calculateCombatResult")}; this.normalizeFortificationState = normalizeFortificationState; this.getFortificationIntegrityBpsAt = getFortificationIntegrityBpsAt; this.getFortificationStatePatch = getFortificationStatePatch; this.calculateCombatResult = calculateCombatResult;`, context, {
   filename: "functions/index.js",
 });
 
@@ -118,11 +118,66 @@ const activeStoredWall = context.normalizeFortificationState({
 assert.equal(activeStoredWall.integrityBps, 4_000);
 assert.equal(activeStoredWall.repairAtMs, 61_000);
 assert.equal(activeStoredWall.repairWindowMinutes, 1, "Legacy active timers must infer their original duration.");
+assert.equal(
+  context.getFortificationIntegrityBpsAt(activeStoredWall, 31_000),
+  7_000,
+  "A damaged wall must recover continuously instead of remaining static until its deadline."
+);
 const repairedStoredWall = context.normalizeFortificationState({
   fortificationState: { version: 1, integrityBps: 0, lastDamagedAtMs: 1_000, repairAtMs: 2_000, lastArmyId: "a1" },
 }, 2_000);
 assert.equal(repairedStoredWall.integrityBps, 10_000, "A completed repair timer must restore full wall integrity.");
 assert.equal(repairedStoredWall.repairAtMs, 0);
+
+const integrityContexts = [server, client].map((source, index) => {
+  const integrityContext = {
+    Date,
+    Math,
+    Number,
+    clamp(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, Number(value) || 0));
+    },
+    clampInt(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, Math.floor(Number(value) || 0)));
+    },
+    safeNumber(value, fallback = 0) {
+      return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    },
+    timestampToMs(value) {
+      return Math.max(0, Math.floor(Number(value) || 0));
+    },
+    normalizeTimestampMs(value) {
+      return Math.max(0, Math.floor(Number(value) || 0));
+    },
+  };
+  vm.createContext(integrityContext);
+  vm.runInContext(`${extractFunction(source, "getFortificationIntegrityBpsAt")}; this.getFortificationIntegrityBpsAt = getFortificationIntegrityBpsAt;`, integrityContext, {
+    filename: index === 0 ? "functions/index.js" : "game.js",
+  });
+  return integrityContext;
+});
+for (const integrityContext of integrityContexts) {
+  const breachedWall = { integrityBps: 0, lastDamagedAtMs: 1_000, repairAtMs: 101_000 };
+  assert.equal(integrityContext.getFortificationIntegrityBpsAt(breachedWall, 1_000), 0);
+  assert.equal(integrityContext.getFortificationIntegrityBpsAt(breachedWall, 26_000), 2_500);
+  assert.equal(integrityContext.getFortificationIntegrityBpsAt(breachedWall, 51_000), 5_000);
+  assert.equal(integrityContext.getFortificationIntegrityBpsAt(breachedWall, 76_000), 7_500);
+  assert.equal(integrityContext.getFortificationIntegrityBpsAt(breachedWall, 101_000), 10_000);
+  assert.equal(
+    integrityContext.getFortificationIntegrityBpsAt({
+      integrityBps: 4_000,
+      lastDamagedAtMs: 1_000,
+      repairAtMs: 101_000,
+    }, 51_000),
+    7_000,
+    "Partial wall damage must recover linearly from its post-hit integrity."
+  );
+  assert.equal(
+    integrityContext.getFortificationIntegrityBpsAt({ integrityBps: 4_000, repairAtMs: 101_000 }, 51_000),
+    4_000,
+    "Legacy damage without a known repair start must not invent elapsed progress."
+  );
+}
 
 const repairContexts = [server, client].map((source, index) => {
   const repairContext = {
@@ -205,6 +260,7 @@ function siegeResult({
   defenders = 1_000_000,
   wall,
   integrityBps = 10_000,
+  fullWallPower = wall * 10_000 / integrityBps,
   garrison,
   repairAtMs = 0,
   targetType = "city",
@@ -219,7 +275,7 @@ function siegeResult({
     siegeCombatVersion: version,
     targetType,
     fortification: {
-      fullWallPower: wall * 10_000 / integrityBps,
+      fullWallPower,
       currentWallPower: wall,
       integrityBps,
       repairAtMs,
@@ -273,14 +329,16 @@ assert.equal(firstProgressiveHit.fortification.repairAtMs, 2_340_000);
 const secondProgressiveHit = siegeResult({
   level: 100,
   attackPower: 100,
-  wall: 800,
-  integrityBps: 8_000,
+  wall: 911,
+  integrityBps: 9_111,
+  fullWallPower: 1_000,
   garrison: 10_000,
   repairAtMs: firstProgressiveHit.fortification.repairAtMs,
   nowMs: 2_100_000,
 });
 assert.equal(secondProgressiveHit.fortification.repairAddedMs, 270_000, "A later 10% hit must add 4 minutes 30 seconds.");
 assert.equal(secondProgressiveHit.fortification.repairAtMs, 2_610_000, "A later hit must extend the existing deadline without discarding elapsed progress.");
+assert.equal(secondProgressiveHit.fortification.endingIntegrityBps, 8_111, "A later hit must apply after the wall's elapsed repair is restored.");
 
 const strictCapture = siegeResult({ attackPower: 1_200, troops: 1_200, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(strictCapture.success, false, "Attack power equal to wall plus garrison must not capture.");
@@ -312,6 +370,9 @@ assert.match(server, /function getScoutCombatIntel[\s\S]*?report\.siegeCombatVer
 assert.match(server, /siegeCombatVersion: order\.targetType === "camp" \? 0 : SIEGE_COMBAT_VERSION/);
 assert.match(server, /siegeCombatVersion: rally\.targetType === "camp" \? 0 : SIEGE_COMBAT_VERSION/);
 assert.match(server, /function writeFortificationSettlement[\s\S]*?fortificationState/);
+assert.match(server, /function getFortificationSnapshot[\s\S]*?getFortificationIntegrityBpsAt\(state, nowMs\)[\s\S]*?currentWallPower/);
+assert.match(client, /function getCityFortificationSnapshot[\s\S]*?getFortificationIntegrityBpsAt\(state, nowMs\)[\s\S]*?currentWallPower/);
+assert.match(client, /function updateVisibleFortificationRepairStatus[\s\S]*?getFortificationIntegrityBpsAt[\s\S]*?data-fortification-power/);
 assert.match(server, /const carriedFortificationState = settledFortificationState \|\| \([\s\S]*?getNeutralClaimCapturePatch[\s\S]*?fortificationState: carriedFortificationState/);
 assert.match(server, /function getFortificationStatePatch[\s\S]*?repairAtMs: Math\.max\(nowMs, timestampToMs\(fortification\.repairAtMs\)\)/);
 assert.match(server, /function resolveCitadelAssaultTarget[\s\S]*?carriedFortificationState[\s\S]*?getNeutralClaimClearedPatch[\s\S]*?fortificationState: carriedFortificationState/);
@@ -328,10 +389,10 @@ assert.match(client, /function applyOnlineCities[\s\S]*?hasOwnProperty\.call\(on
 assert.match(client, /function applyServerCityUpdates[\s\S]*?hasOwnProperty\.call\(update, "fortificationState"\)/);
 assert.ok(client.includes("Walls likely hold"));
 assert.ok(client.includes("Walls breached — garrison likely holds"));
-assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?neutral claims[\s\S]*?Protected raids do not persist wall damage/);
+assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?recover continuously[\s\S]*?neutral claims[\s\S]*?Protected raids do not persist wall damage/);
 assert.match(guide, /Defense happens in two layers[\s\S]*?defender troop losses are capped at 10%/);
-assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?neutral handoff/);
-assert.match(readme, /two-phase siege model[\s\S]*?same linear wall curve[\s\S]*?full-breach repair window[\s\S]*?later meaningful hits preserve elapsed progress/);
+assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?rise continuously[\s\S]*?neutral handoff/);
+assert.match(readme, /two-phase siege model[\s\S]*?same linear wall curve[\s\S]*?full-breach repair window[\s\S]*?recover continuously[\s\S]*?later meaningful hits use that recovered strength/);
 assert.match(editor, /Soldiers and walls[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
 assert.match(editorServer, /siegeCombat: Object\.fromEntries\(Object\.keys\(fallback\.siegeCombat/);
 assert.match(editorServer, /troopCombat: Object\.fromEntries\(Object\.keys\(fallback\.troopCombat/);

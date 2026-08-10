@@ -32,6 +32,7 @@ const routeCacheLimit = readNumberConstant("ROUTE_CACHE_LIMIT");
 const routeEdgeCacheLimit = readNumberConstant("ROUTE_EDGE_PASSABLE_CACHE_LIMIT");
 const frameSource = extractFunction("frame");
 const renderableArmiesSource = extractFunction("getRenderableArmies");
+const fortificationRepairStatusSource = extractFunction("updateVisibleFortificationRepairStatus");
 const cameraInteractionStart = source.indexOf("function markCameraInteraction(");
 const cameraInteractionEnd = source.indexOf("function markZoomInteraction(", cameraInteractionStart);
 assert.ok(cameraInteractionStart >= 0 && cameraInteractionEnd > cameraInteractionStart, "Camera interaction renderer is missing.");
@@ -102,6 +103,26 @@ assert.match(
   cameraInteractionSource,
   /queueDeferredMapRender\(\)/,
   "Every pan and zoom must schedule a fresh city render as soon as the camera settles."
+);
+assert.match(
+  fortificationRepairStatusSource,
+  /if \(!modal\?\.open \|\| !modalBody\) return;/,
+  "Wall repair UI work must stop when no modal is visible."
+);
+assert.match(
+  fortificationRepairStatusSource,
+  /querySelector\("\[data-fortification-repair-at-ms\]"\)/,
+  "Wall repair UI should use one targeted lookup for the visible panel."
+);
+assert.doesNotMatch(
+  fortificationRepairStatusSource,
+  /querySelectorAll/,
+  "Wall repair UI must not scan a collection every second."
+);
+assert.match(
+  fortificationRepairStatusSource,
+  /fortificationRepairComplete[\s\S]*?setTextIfChanged/,
+  "Wall repair UI must retire completed updates and skip unchanged DOM text."
 );
 
 const testSeconds = 30;

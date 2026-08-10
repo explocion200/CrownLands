@@ -35,7 +35,7 @@ assert.match(server, /exports\.sendNearbyScouts\s*=\s*timedCallable/);
 assert.match(server, /exports\.sendRegroupOrders\s*=\s*timedCallable/);
 
 const previewStart = server.indexOf("exports.previewArmyRoute");
-const previewEnd = server.indexOf("function normalizeBulkOrderRequestId", previewStart);
+const previewEnd = server.indexOf("\nexports.", previewStart + "exports.previewArmyRoute".length);
 const previewSource = server.slice(previewStart, previewEnd);
 assert.match(previewSource, /buildServerGeneratedArmyRoute\(source, target\)/);
 assert.doesNotMatch(previewSource, /prepareEconomyCollection/,
