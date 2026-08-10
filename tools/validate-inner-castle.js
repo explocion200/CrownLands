@@ -21,7 +21,7 @@ function optimizedAsset(id) {
   return output;
 }
 
-const BUILD_ID = "20260809-daily-missions-v1";
+const BUILD_ID = "20260810-daily-mission-camp-fix-v1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {

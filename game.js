@@ -2870,6 +2870,7 @@ let dailyMissionCountdownTimer = 0;
 let dailyMissionClockOffsetMs = 0;
 let dailyMissionError = "";
 const dailyMissionActionsInFlight = new Set();
+let activeDailyRewardModalTab = "rewards";
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
@@ -3068,12 +3069,6 @@ const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
 const profileGoldProductionStat = document.getElementById("profileGoldProductionStat");
 const profileTroopProductionStat = document.getElementById("profileTroopProductionStat");
-const dailyMissionsSection = document.getElementById("dailyMissionsSection");
-const dailyMissionsCompleted = document.getElementById("dailyMissionsCompleted");
-const dailyMissionsCountdown = document.getElementById("dailyMissionsCountdown");
-const dailyMissionsRerolls = document.getElementById("dailyMissionsRerolls");
-const dailyMissionsList = document.getElementById("dailyMissionsList");
-const dailyMissionsStatus = document.getElementById("dailyMissionsStatus");
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
@@ -23399,7 +23394,7 @@ function renderClanQuestPanel() {
       </div>
       <p class="clan-quest-expiration" data-clan-quest-warning ${expirationWarningHidden}>Unclaimed rewards expire at Monday 00:00 UTC.</p>
       <div class="clan-quest-progress">
-        <div><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span>enemy holdings conquered this week</span></div>
+        <div><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span>enemy cities conquered this week</span></div>
         <span class="clan-quest-progress-track"><i style="width:${progressPercent}%"></i></span>
       </div>
       <div class="clan-quest-grid">${CLAN_QUEST_REWARDS.map(reward => {
@@ -24192,10 +24187,6 @@ function renderProfileScreen() {
   }
   applyFlagToElement(profileKingdomFlag, state.flag);
   renderProfileClanAffiliation();
-  renderDailyMissions();
-  if (supportsDailyMissions() && !dailyMissionState && !dailyMissionStatusLoading) {
-    void refreshDailyMissionStatus({ silent: true });
-  }
   updatePushAlertsUi();
   if (activeProfileTab === "skills") renderProfileSkills();
 }
@@ -29584,6 +29575,7 @@ function formatDailyMissionReward(reward = {}) {
 }
 
 function updateDailyMissionCountdown() {
+  const dailyMissionsCountdown = document.getElementById("dailyMissionsCountdown");
   if (!dailyMissionsCountdown) return;
   dailyMissionsCountdown.textContent = dailyMissionState?.resetsAtMs
     ? `New missions in ${formatDailyMissionCountdown()}`
@@ -29711,6 +29703,11 @@ function stopDailyMissionLifecycle({ clear = false } = {}) {
 }
 
 function renderDailyMissions() {
+  const dailyMissionsSection = document.getElementById("dailyMissionsSection");
+  const dailyMissionsCompleted = document.getElementById("dailyMissionsCompleted");
+  const dailyMissionsRerolls = document.getElementById("dailyMissionsRerolls");
+  const dailyMissionsList = document.getElementById("dailyMissionsList");
+  const dailyMissionsStatus = document.getElementById("dailyMissionsStatus");
   if (!dailyMissionsSection || !dailyMissionsList) return;
   const available = supportsDailyMissions();
   dailyMissionsSection.hidden = !available;
@@ -29785,7 +29782,7 @@ function showDailyMissionDetails(missionId = "") {
       <div><span>${escapeHtml(mission.difficulty)} mission</span><h3>${escapeHtml(mission.description)}</h3></div>
       <div class="daily-mission-detail-stat"><span>Progress</span><strong>${formatNumber(mission.progress)} / ${formatNumber(mission.target)}</strong></div>
       <div class="daily-mission-detail-stat"><span>Reward</span><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
-      <p>${complete ? mission.claimedAtMs ? "Reward collected. A new mission arrives at 00:00 UTC." : "Mission complete. Return to your profile to claim the reward." : "This target and reward are locked until the next 00:00 UTC reset."}</p>
+      <p>${complete ? mission.claimedAtMs ? "Reward collected. A new mission arrives at 00:00 UTC." : "Mission complete. Return to the Quests tab to claim the reward." : "This target and reward are locked until the next 00:00 UTC reset."}</p>
     </section>`);
 }
 
@@ -29862,7 +29859,7 @@ async function claimDailyMission(missionId = "", sourceElement = null) {
         id: `daily-mission:${dailyMissionState?.cycleKey || "cycle"}:${mission.id}`,
         sourceAnchor,
         tier: mission.difficulty === "hard" ? "large" : "medium",
-        host: profileScreen,
+        host: modal?.open && modal.classList.contains("daily-login-reward-modal") ? modal : profileScreen,
         destinationCityId: receipt.targetCityId || "",
       });
       const item = rewardType === "item" ? getShopItemById(receipt.itemId || mission.reward.itemId) : null;
@@ -30307,20 +30304,109 @@ function updateDailyLoginRewardCountdown() {
   if (countdown) countdown.textContent = getDailyLoginRewardCountdownText();
 }
 
+function renderDailyRewardModalTabs() {
+  const tabs = [
+    { id: "rewards", label: "Daily Rewards" },
+    { id: "quests", label: "Quests" },
+  ];
+  return `
+    <div class="profile-tabs daily-reward-tabs" role="tablist" aria-label="Rewards and quests">
+      ${tabs.map(tab => {
+        const active = activeDailyRewardModalTab === tab.id;
+        return `<button type="button" id="dailyRewardTab${tab.id === "rewards" ? "Rewards" : "Quests"}" role="tab" data-daily-reward-tab="${tab.id}" aria-selected="${active}" aria-controls="dailyRewardPanel${tab.id === "rewards" ? "Rewards" : "Quests"}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">${tab.label}</button>`;
+      }).join("")}
+    </div>`;
+}
+
+function bindDailyRewardModalTabs() {
+  const tabButtons = [...(modalBody?.querySelectorAll("[data-daily-reward-tab]") || [])];
+  const activateTab = tabId => {
+    if (!["rewards", "quests"].includes(tabId) || tabId === activeDailyRewardModalTab) return;
+    activeDailyRewardModalTab = tabId;
+    renderDailyLoginRewardModal();
+    const focusActiveTab = () => modalBody?.querySelector(`[data-daily-reward-tab="${tabId}"]`)?.focus();
+    if (tabId === "quests") {
+      void refreshDailyMissionStatus({ silent: true }).finally(focusActiveTab);
+    } else {
+      focusActiveTab();
+    }
+  };
+  tabButtons.forEach(button => {
+    button.addEventListener("click", () => activateTab(String(button.dataset.dailyRewardTab || "")));
+    button.addEventListener("keydown", event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const currentIndex = Math.max(0, tabButtons.indexOf(button));
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabButtons.length - 1
+          : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + tabButtons.length) % tabButtons.length;
+      activateTab(String(tabButtons[nextIndex]?.dataset.dailyRewardTab || ""));
+    });
+  });
+}
+
+function renderDailyMissionSection() {
+  return `
+    <section id="dailyMissionsSection" class="daily-missions-section" aria-label="Daily Missions">
+      <div class="daily-missions-heading">
+        <div class="profile-section-heading"><span>Daily</span><h3>MISSIONS <strong id="dailyMissionsCompleted">0/3</strong></h3></div>
+        <div class="daily-missions-meta">
+          <span id="dailyMissionsCountdown">New missions in --:--:--</span>
+          <span id="dailyMissionsRerolls">Reroll: 1</span>
+        </div>
+      </div>
+      <div id="dailyMissionsList" class="daily-missions-list" aria-live="polite">
+        <div class="daily-mission-placeholder">Preparing today’s missions…</div>
+      </div>
+      <p id="dailyMissionsStatus" class="daily-missions-status" hidden></p>
+    </section>`;
+}
+
+function renderDailyQuestTab() {
+  return `<section id="dailyRewardPanelQuests" class="daily-quest-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabQuests">${renderDailyMissionSection()}</section>`;
+}
+
+function bindDailyQuestControls() {
+  const dailyMissionsList = modalBody?.querySelector("#dailyMissionsList");
+  if (!dailyMissionsList) return;
+  dailyMissionsList.addEventListener("click", handleDailyMissionListClick);
+  dailyMissionsList.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    if (event.target.closest("button")) return;
+    const row = event.target.closest("[data-daily-mission-row]");
+    if (!row) return;
+    event.preventDefault();
+    showDailyMissionDetails(row.dataset.dailyMissionRow);
+  });
+}
+
 function renderDailyLoginRewardModal() {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
+  if (modalTitle) modalTitle.textContent = activeDailyRewardModalTab === "quests" ? "Quests" : "Daily Royal Rewards";
+  const tabsMarkup = renderDailyRewardModalTabs();
+  if (activeDailyRewardModalTab === "quests") {
+    modalBody.innerHTML = `${tabsMarkup}${renderDailyQuestTab()}`;
+    bindDailyRewardModalTabs();
+    bindDailyQuestControls();
+    renderDailyMissions();
+    return;
+  }
   const status = dailyLoginRewardStatus;
   if (dailyLoginRewardStatusLoading && !status) {
-    modalBody.innerHTML = `<div class="daily-reward-loading" role="status">Opening the royal reward ledger…</div>`;
+    modalBody.innerHTML = `${tabsMarkup}<section id="dailyRewardPanelRewards" role="tabpanel" aria-labelledby="dailyRewardTabRewards"><div class="daily-reward-loading" role="status">Opening the royal reward ledger…</div></section>`;
+    bindDailyRewardModalTabs();
     return;
   }
   if (!status) {
-    modalBody.innerHTML = `
-      <div class="daily-reward-error" role="alert">
+    modalBody.innerHTML = `${tabsMarkup}
+      <section id="dailyRewardPanelRewards" role="tabpanel" aria-labelledby="dailyRewardTabRewards"><div class="daily-reward-error" role="alert">
         <p>${escapeHtml(dailyLoginRewardError || "Daily rewards are unavailable.")}</p>
         <button class="primary" type="button" data-daily-reward-retry>Try again</button>
-      </div>
+      </div></section>
     `;
+    bindDailyRewardModalTabs();
     modalBody.querySelector("[data-daily-reward-retry]")?.addEventListener("click", () => {
       refreshDailyLoginRewardStatus({ silent: false });
     });
@@ -30341,8 +30427,8 @@ function renderDailyLoginRewardModal() {
   const rewardTrack = DAILY_LOGIN_REWARD_TRACKS[String(status.monthLengthDays)]
     || DAILY_LOGIN_REWARD_TRACKS["30"];
   const monthLabel = getDailyLoginRewardMonthLabel(status.monthKey);
-  modalBody.innerHTML = `
-    <section class="daily-reward-panel">
+  modalBody.innerHTML = `${tabsMarkup}
+    <section id="dailyRewardPanelRewards" class="daily-reward-panel" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
       <header class="daily-reward-hero">
         <img src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" alt="" decoding="async" />
         <div>
@@ -30397,6 +30483,7 @@ function renderDailyLoginRewardModal() {
       </footer>
     </section>
   `;
+  bindDailyRewardModalTabs();
   modalBody.querySelector("[data-daily-reward-claim]")?.addEventListener("click", event => claimDailyLoginReward(event.currentTarget));
   modalBody.querySelector("[data-daily-reward-claim-card]")?.addEventListener("click", event => claimDailyLoginReward(event.currentTarget));
   updateDailyLoginRewardCountdown();
@@ -30405,14 +30492,17 @@ function renderDailyLoginRewardModal() {
 async function showDailyLoginRewardsModal(options = {}) {
   if (!modal || !modalBody || !state) return;
   suspendRealmAnnouncementForLoginPresentation(loginPresentationSequence);
+  activeDailyRewardModalTab = options.tab === "quests" ? "quests" : "rewards";
   modal.classList.add("daily-login-reward-modal");
-  modalTitle.textContent = "Daily Royal Rewards";
   renderDailyLoginRewardModal();
   if (!modal.open) modal.showModal();
   if (dailyLoginRewardCountdownTimer) window.clearInterval(dailyLoginRewardCountdownTimer);
   dailyLoginRewardCountdownTimer = window.setInterval(updateDailyLoginRewardCountdown, 1000);
   if (!options.skipRefresh) {
     await refreshDailyLoginRewardStatus({ silent: true });
+  }
+  if (activeDailyRewardModalTab === "quests") {
+    await refreshDailyMissionStatus({ silent: true });
   }
 }
 
@@ -35997,17 +36087,6 @@ if (profileNameInput) {
   profileNameInput.addEventListener("keydown", event => {
     if (event.key === "Enter") saveProfileName();
     if (event.key === "Escape") cancelProfileNameEdit();
-  });
-}
-if (dailyMissionsList) {
-  dailyMissionsList.addEventListener("click", handleDailyMissionListClick);
-  dailyMissionsList.addEventListener("keydown", event => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    if (event.target.closest("button")) return;
-    const row = event.target.closest("[data-daily-mission-row]");
-    if (!row) return;
-    event.preventDefault();
-    showDailyMissionDetails(row.dataset.dailyMissionRow);
   });
 }
 if (flagSaveBtn) flagSaveBtn.addEventListener("click", saveFlagEditor);

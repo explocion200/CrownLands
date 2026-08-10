@@ -532,7 +532,7 @@ function applyProgressToMission(mission = {}, event = {}, state = {}, nowMs = Da
   if (mission.family === "UNIQUE_PLAYERS_ATTACKED" && event.type === "ATTACK_LAUNCHED" && ordinaryPlayerCity && meaningfulCombat) addUnique(event.opponentUid);
   if (mission.family === "TROOPS_SENT_TO_BATTLE" && event.type === "ATTACK_LAUNCHED" && ordinaryPlayerCity && meaningfulCombat) add(event.committedTroops);
 
-  if (event.type === "CAMP_CAPTURED" && camp && event.campCaptured && meaningfulCombat) {
+  if (event.type === "CAMP_CAPTURED" && camp && event.campCaptured && event.success) {
     if (mission.family === "CAMP_CAPTURE_COUNT") add(1);
     if (mission.family === "GOLD_CAMP_CAPTURE" && event.campType === "gold") add(1);
     if (mission.family === "WARBAND_CAMP_CAPTURE" && event.campType === "troops") add(1);

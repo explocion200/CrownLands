@@ -195,8 +195,14 @@ assert.strictEqual(applyOne(mission("ENEMY_TROOPS_DEFEATED", 1000), {
   type: "BATTLE_RESOLVED", targetCategory: "player_city", committedTroops: 50_000, defenderLosses: 1000,
 }, thresholdSnapshot).progress, 1000);
 assert.strictEqual(applyOne(mission("CAMP_CAPTURE_COUNT", 1), {
-  type: "CAMP_CAPTURED", targetCategory: "camp", committedTroops: 50_000, campCaptured: true, campType: "gold",
-}, thresholdSnapshot).progress, 1);
+  type: "CAMP_CAPTURED", targetCategory: "camp", committedTroops: 1, campCaptured: true, campType: "gold", success: true,
+}, thresholdSnapshot).progress, 1, "a server-confirmed camp capture must not be blocked by the PvP token-attack threshold");
+assert.strictEqual(applyOne(mission("GOLD_CAMP_CAPTURE", 1), {
+  type: "CAMP_CAPTURED", targetCategory: "camp", committedTroops: 1, campCaptured: true, campType: "gold", success: true,
+}, thresholdSnapshot).progress, 1, "a successful Gold Camp capture must complete its specific mission");
+assert.strictEqual(applyOne(mission("CAMP_CAPTURE_COUNT", 1), {
+  type: "CAMP_CAPTURED", targetCategory: "camp", committedTroops: 50_000, campCaptured: true, campType: "gold", success: false,
+}, thresholdSnapshot).progress, 0, "an unsuccessful camp battle must not progress a capture mission");
 assert.strictEqual(applyOne(mission("TOTAL_CITY_LEVEL_UPGRADES", 3), {
   type: "CITY_UPGRADED", cityId: "city-a", levelsGained: 3, goldSpent: 100_000,
 }).progress, 3);
@@ -235,6 +241,16 @@ const cssSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
   "CITY_UPGRADED", "ATTACK_LAUNCHED", "BATTLE_RESOLVED", "CAMP_CAPTURED",
   "DEED_CAMP_COMPLETED", "CLAN_GIFT_SENT", "ECONOMY_PRODUCED",
 ].forEach(eventType => assert(functionsSource.includes(eventType), `missing authoritative mission event: ${eventType}`));
+assert.match(
+  functionsSource,
+  /if \(battle\.success\)[\s\S]*?eventId: `camp_capture_\$\{armyId\}_\$\{target\.id\}`[\s\S]*?type: "CAMP_CAPTURED"[\s\S]*?campType: campTarget\.campType[\s\S]*?success: true[\s\S]*?campCaptured: true/,
+  "ordinary successful camp settlement does not enqueue Daily Mission progress"
+);
+assert.match(
+  functionsSource,
+  /if \(result\.success && targetType === "camp"\)[\s\S]*?eventId: `rally_camp_capture_\$\{armyId\}_\$\{target\.id\}`[\s\S]*?type: "CAMP_CAPTURED"[\s\S]*?campType: target\.campType[\s\S]*?success: true[\s\S]*?campCaptured: true/,
+  "successful rally camp settlement does not enqueue Daily Mission progress"
+);
 assert(functionsSource.includes("dailyMissionVersion: DAILY_MISSION_VERSION"));
 assert(apiSource.includes("subscribeDailyMissionState"));
 assert(clientSource.includes("function scheduleDailyMissionUtcRefresh"));
@@ -242,7 +258,9 @@ assert(clientSource.includes("function showDailyMissionRerollConfirmation"));
 assert(clientSource.includes("playRewardAnimation(rewardType"));
 assert(rulesSource.includes("match /dailyMissions/{cycleKey}"));
 assert(rulesSource.includes("match /dailyMissionEvents/{eventId}"));
-assert(htmlSource.includes('id="dailyMissionsList"'));
+assert(!htmlSource.includes('id="dailyMissionsSection"'), "Daily Missions must not remain in the Player Profile markup");
+assert(clientSource.includes("function renderDailyMissionSection"));
+assert(clientSource.includes('id="dailyMissionsList"'));
 assert(cssSource.includes(".daily-mission-row"));
 assert(cssSource.includes("overflow: hidden"));
 
