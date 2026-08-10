@@ -5190,6 +5190,60 @@ button.inventory-slot {
   display: grid;
   gap: .7rem;
 }
+.leaderboard-tabs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  padding-right: 2.3rem;
+}
+.leaderboard-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: .28rem;
+  min-width: min(390px, 100%);
+  padding: .26rem;
+  border: 1px solid rgba(158,213,255,.2);
+  border-radius: 12px;
+  background: rgba(3, 13, 24, .68);
+}
+.leaderboard-tab {
+  min-height: 40px;
+  padding: .4rem .8rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: rgba(246,239,228,.78);
+  background: transparent;
+  font-weight: 950;
+}
+.leaderboard-tab:hover,
+.leaderboard-tab:focus-visible {
+  color: #fff4c8;
+  border-color: rgba(255,226,147,.36);
+  background: rgba(42, 83, 119, .42);
+}
+.leaderboard-tab.active {
+  color: #211508;
+  border-color: rgba(255,255,255,.44);
+  background: linear-gradient(#ffe293, #d9962e);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 5px 12px rgba(0,0,0,.24);
+}
+.leaderboard-refresh-btn {
+  min-height: 40px;
+  padding: 0 .85rem;
+  border: 1px solid rgba(255,255,255,.42);
+  border-radius: 10px;
+  color: #211508;
+  background: linear-gradient(#ffe293, #e9a83b);
+  font-weight: 950;
+}
+.leaderboard-tab-panel {
+  display: grid;
+  gap: .7rem;
+}
+.leaderboard-tab-panel[hidden] {
+  display: none;
+}
 .leaderboard-toolbar {
   display: flex;
   justify-content: space-between;
@@ -5736,6 +5790,18 @@ button.inventory-slot {
   }
   .leaderboard-modal.modal {
     width: min(560px, calc(100vw - 1rem));
+  }
+  .leaderboard-tabs-header {
+    align-items: stretch;
+    flex-direction: column;
+    padding-right: 2rem;
+  }
+  .leaderboard-tabs {
+    min-width: 0;
+    width: 100%;
+  }
+  .leaderboard-refresh-btn {
+    width: 100%;
   }
   .leaderboard-toolbar {
     align-items: flex-start;
@@ -8151,7 +8217,7 @@ button.daily-reward-card.available:disabled {
 .clan-quest-card.unlocked { border-color: rgba(124,217,148,.48); background: rgba(39,101,57,.2); }
 .clan-quest-card.claimed { border-color: rgba(213,186,108,.28); }
 .clan-quest-card.claimed > div strong { color: #d8bd78; }
-.clan-leaderboard-heading { margin-top: .8rem; border-top: 1px solid rgba(124,211,149,.25); }
+.clan-leaderboard-heading { border-bottom: 1px solid rgba(124,211,149,.25); padding-bottom: .55rem; }
 .clan-leaderboard-heading small { display: block; color: #9bb8a2; }
 .clan-leaderboard-tag { color: #83d79b; font-weight: 950; }
 .clan-leaderboard-row { grid-template-columns: 54px 38px auto minmax(0, 1fr) auto; }

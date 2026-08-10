@@ -1071,6 +1071,7 @@ const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
 const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
   { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 30 },
@@ -2841,6 +2842,7 @@ let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
 let leaderboardLastSaveAt = 0;
+let leaderboardActiveTab = "players";
 let kingPowerCalculationInProgress = false;
 let lastComputedKingPower = 0;
 let currentPlayerIdentityKingPowerOverride = null;
@@ -23437,11 +23439,26 @@ async function runClanAction(action, payload = {}) {
     }[action];
     if (!method || !api[method]) return;
     const result = await api[method](payload);
+    if (["promote", "demote"].includes(action)) {
+      const targetUid = String(result?.targetUid || payload?.targetUid || "").trim();
+      const role = String(result?.role || "").trim();
+      if (targetUid && ["officer", "member"].includes(role)) {
+        clanMembers = clanMembers.map(member => (
+          String(member?.uid || member?.id || "") === targetUid
+            ? { ...member, role, roleChangedAtMs: Date.now() }
+            : member
+        ));
+      }
+    }
     if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
     if (["leave", "disband"].includes(action) && Number(result?.cooldownUntilMs) > Date.now()) {
       state.clanJoinCooldownUntilMs = Number(result.cooldownUntilMs);
     }
-    showToast(action === "apply"
+    showToast(action === "promote"
+      ? "Member promoted to officer. They can now form clan rallies."
+      : action === "demote"
+        ? "Officer demoted to member."
+        : action === "apply"
       ? "Application sent."
       : action === "cancel-application"
         ? "Application canceled."
@@ -24913,7 +24930,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
-  const canRally = Boolean(state?.clanId && !owned && !clanAlly && availableSources.length > 0);
+  const canRally = Boolean(canCurrentPlayerCreateClanRally() && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
   const canReinforce = owned && availableSources.length > 0;
   const wheelSize = getStrongholdVisualSize(stronghold);
@@ -25006,7 +25023,7 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
-  const canRally = Boolean(state?.clanId && !isHeldByPlayer && !clanAlly && canSend);
+  const canRally = Boolean(canCurrentPlayerCreateClanRally() && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -25902,11 +25919,26 @@ function beginClanReinforcement(targetOrId) {
   void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "reinforce" });
 }
 
+function canCurrentPlayerCreateClanRally() {
+  return Boolean(
+    state?.clanId
+    && CLAN_RALLY_CREATOR_ROLES.includes(String(state.clanRole || ""))
+  );
+}
+
 function beginCreateClanRally(targetOrId) {
   const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
   const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
-  if (!state?.clanId || !eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
-    rejectGameAction(!state?.clanId ? "Join a clan before forming a rally." : "That objective is not eligible for a clan rally.");
+  if (!state?.clanId) {
+    rejectGameAction("Join a clan before forming a rally.");
+    return;
+  }
+  if (!canCurrentPlayerCreateClanRally()) {
+    rejectGameAction("Only clan leaders and officers can form rallies.");
+    return;
+  }
+  if (!eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
+    rejectGameAction("That objective is not eligible for a clan rally.");
     return;
   }
   const api = getOnlineApi();
@@ -32530,6 +32562,25 @@ function setLeaderboardStatus(message) {
   if (status) status.textContent = message;
 }
 
+function setClanLeaderboardStatus(message) {
+  const status = modalBody?.querySelector("#clanLeaderboardStatus");
+  if (status) status.textContent = message;
+}
+
+function setLeaderboardTab(tabName = "players", { focus = false } = {}) {
+  leaderboardActiveTab = tabName === "clans" ? "clans" : "players";
+  modalBody?.querySelectorAll("[data-leaderboard-tab]").forEach(button => {
+    const selected = button.dataset.leaderboardTab === leaderboardActiveTab;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", selected ? "true" : "false");
+    button.tabIndex = selected ? 0 : -1;
+    if (selected && focus) button.focus();
+  });
+  modalBody?.querySelectorAll("[data-leaderboard-panel]").forEach(panel => {
+    panel.hidden = panel.dataset.leaderboardPanel !== leaderboardActiveTab;
+  });
+}
+
 async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = {}) {
   const api = getOnlineApi();
   const list = modalBody?.querySelector("#leaderboardRows");
@@ -32568,6 +32619,8 @@ async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = 
     if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
 
     renderLeaderboardRows(rows);
+    const panel = modalBody?.querySelector("#leaderboardPlayersPanel");
+    if (panel) panel.dataset.loaded = "true";
     if (usedFallback) {
       setLeaderboardStatus(globalError ? "Live online ranks shown. Deploy Firestore rules for saved global ranks." : "Live online ranks shown.");
     } else {
@@ -32584,7 +32637,14 @@ async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = 
 async function refreshClanLeaderboardRows() {
   const api = getOnlineApi();
   const list = modalBody?.querySelector("#clanLeaderboardRows");
-  if (!list || !api?.loadClanLeaderboard || !api?.isSignedIn?.()) return;
+  const refreshBtn = modalBody?.querySelector("#leaderboardRefreshBtn");
+  if (!list || !api?.loadClanLeaderboard || !api?.isSignedIn?.()) {
+    if (list) list.innerHTML = `<div class="leaderboard-empty">Sign in online to view clan ranks.</div>`;
+    return;
+  }
+  if (refreshBtn) refreshBtn.disabled = true;
+  list.innerHTML = `<div class="leaderboard-empty">Loading clan ranks...</div>`;
+  setClanLeaderboardStatus("Loading combined clan power...");
   try {
     const rows = await api.loadClanLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
     if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
@@ -32596,8 +32656,14 @@ async function refreshClanLeaderboardRows() {
         <div class="leaderboard-ruler">${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-name", display: "name" })}<small>${formatNumber(entry.memberCount || 0)} members</small></div>
         <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
       </article>`).join("") : `<div class="leaderboard-empty">No clan scores have been published yet.</div>`;
+    const panel = modalBody?.querySelector("#leaderboardClansPanel");
+    if (panel) panel.dataset.loaded = "true";
+    setClanLeaderboardStatus("Combined member King Power.");
   } catch (_error) {
     list.innerHTML = `<div class="leaderboard-empty">Could not load clan ranks right now.</div>`;
+    setClanLeaderboardStatus("Clan ranks are temporarily unavailable.");
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
   }
 }
 
@@ -32605,29 +32671,54 @@ function showLeaderboardModal() {
   if (!state) return;
   modal.classList.remove("battle-report-modal");
   modal.classList.add("leaderboard-modal");
-  modalTitle.textContent = "King Power Ranks";
+  modalTitle.textContent = "Leaderboards";
+  leaderboardActiveTab = "players";
   modalBody.innerHTML = `
     <div class="leaderboard-panel">
-      <div class="leaderboard-toolbar">
-        <div>
-          <strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</strong>
+      <div class="leaderboard-tabs-header">
+        <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard category">
+          <button id="leaderboardPlayersTab" class="leaderboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="leaderboardPlayersPanel" data-leaderboard-tab="players">Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</button>
+          <button id="leaderboardClansTab" class="leaderboard-tab" type="button" role="tab" aria-selected="false" aria-controls="leaderboardClansPanel" data-leaderboard-tab="clans" tabindex="-1">Top Clans</button>
         </div>
-        <button id="leaderboardRefreshBtn" type="button">Refresh</button>
+        <button id="leaderboardRefreshBtn" class="leaderboard-refresh-btn" type="button">Refresh</button>
       </div>
-      <div id="leaderboardRows" class="leaderboard-list">
-        <div class="leaderboard-empty">Loading King Power ranks...</div>
-      </div>
-      <div class="leaderboard-toolbar clan-leaderboard-heading"><div><strong>Top Clans</strong><small>Combined member King Power</small></div></div>
-      <div id="clanLeaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Loading clan ranks...</div></div>
+      <section id="leaderboardPlayersPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardPlayersTab" data-leaderboard-panel="players">
+        <div class="leaderboard-toolbar"><div><strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)} Kingdoms</strong><small id="leaderboardStatus">Loading global ranks...</small></div></div>
+        <div id="leaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Loading King Power ranks...</div></div>
+      </section>
+      <section id="leaderboardClansPanel" class="leaderboard-tab-panel" role="tabpanel" aria-labelledby="leaderboardClansTab" data-leaderboard-panel="clans" hidden>
+        <div class="leaderboard-toolbar clan-leaderboard-heading"><div><strong>Top Clans</strong><small id="clanLeaderboardStatus">Combined member King Power</small></div></div>
+        <div id="clanLeaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Select Top Clans to load clan ranks.</div></div>
+      </section>
     </div>
   `;
+  const tabButtons = Array.from(modalBody.querySelectorAll("[data-leaderboard-tab]"));
+  tabButtons.forEach((button, index) => {
+    button.addEventListener("click", () => {
+      const tabName = button.dataset.leaderboardTab === "clans" ? "clans" : "players";
+      setLeaderboardTab(tabName);
+      const panel = modalBody.querySelector(`[data-leaderboard-panel="${tabName}"]`);
+      if (panel?.dataset.loaded !== "true") {
+        if (tabName === "clans") refreshClanLeaderboardRows();
+        else refreshLeaderboardRows({ forcePublish: true });
+      }
+    });
+    button.addEventListener("keydown", event => {
+      if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextButton = tabButtons[(index + direction + tabButtons.length) % tabButtons.length];
+      nextButton?.click();
+      nextButton?.focus();
+    });
+  });
   modalBody.querySelector("#leaderboardRefreshBtn")?.addEventListener("click", () => {
-    refreshLeaderboardRows({ forcePublish: true });
-    refreshClanLeaderboardRows();
+    if (leaderboardActiveTab === "clans") refreshClanLeaderboardRows();
+    else refreshLeaderboardRows({ forcePublish: true });
   });
   if (!modal.open) modal.showModal();
+  setLeaderboardTab("players");
   refreshLeaderboardRows({ forcePublish: true });
-  refreshClanLeaderboardRows();
 }
 
 function showLogModal(options = {}) {

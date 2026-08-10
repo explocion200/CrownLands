@@ -31,6 +31,9 @@ function extractFunction(source, name, nextName) {
 ].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*timedCallable`), `Missing ${name} callable.`));
 
 requires(server, /RALLY_MAX_PARTICIPANTS\s*=\s*3[\s\S]*?CLAN_FORMING_RALLY_LIMIT\s*=\s*3/, "Rally participant or clan forming limits changed.");
+requires(server, /CLAN_RALLY_CREATOR_ROLES\s*=\s*Object\.freeze\(\["leader",\s*"officer"\]\)/, "Rally creation roles must remain restricted to clan leaders and officers.");
+requires(server, /exports\.createClanRally[\s\S]*?assertClanRole\(memberSnap\.data\(\),\s*CLAN_RALLY_CREATOR_ROLES\)/, "The authoritative rally callable does not enforce the leader-or-officer role.");
+requires(client, /function canCurrentPlayerCreateClanRally\(\)[\s\S]*?CLAN_RALLY_CREATOR_ROLES\.includes[\s\S]*?function beginCreateClanRally[\s\S]*?Only clan leaders and officers can form rallies\./, "The rally UI does not follow the authoritative leader-or-officer role policy.");
 requires(server, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The server rally assembly travel multiplier is missing.");
 requires(client, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The client rally assembly travel multiplier drifted from the server.");
 requires(server, /isRallyObjectiveTarget[\s\S]*?getRewardCampConfig\(target\)[\s\S]*?isStronghold\(target\)/, "Rallies are not restricted to reward camps and Strongholds.");

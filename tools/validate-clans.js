@@ -37,6 +37,13 @@ requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.
 requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
 requires(server, /function assertNoClan[\s\S]*?clanJoinCooldownUntilMs[\s\S]*?cooldownUntilMs\s*>\s*nowMs[\s\S]*?wait before joining another clan/, "Clan joining and applications must enforce the authoritative leave cooldown.");
 requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
+const changeClanRoleSource = server.slice(
+  server.indexOf("async function changeClanRole"),
+  server.indexOf("exports.promoteClanMember")
+);
+requires(changeClanRoleSource, /targetRef[\s\S]*?role:\s*nextRole[\s\S]*?targetProfileRef[\s\S]*?clanRole:\s*nextRole[\s\S]*?targetUid,\s*role:\s*nextRole/, "Clan role changes do not transactionally update the member and player profile roles.");
+assert.doesNotMatch(changeClanRoleSource, /leaderboardEntryRef|clanIdentityRevisionPatch/, "Clan promotion must not read, write, or trigger synchronization of leaderboard state.");
+requires(client, /\["promote",\s*"demote"\]\.includes\(action\)[\s\S]*?clanMembers\s*=\s*clanMembers\.map[\s\S]*?Member promoted to officer\. They can now form clan rallies\./, "Clan promotion feedback does not immediately reflect the authoritative officer role.");
 
 [
   "createClan",
