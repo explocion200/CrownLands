@@ -5829,6 +5829,38 @@ button.inventory-slot {
     linear-gradient(180deg, #102f4c, #0b1b2e 72%, #08111d);
   border-color: rgba(255, 221, 128, .62);
 }
+.daily-reward-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+  margin-bottom: .72rem;
+  padding: .25rem;
+  border: 1px solid rgba(143, 207, 255, .2);
+  border-radius: 10px;
+  background: rgba(4, 18, 32, .72);
+}
+.daily-reward-tabs button {
+  min-width: 0;
+  min-height: 44px;
+  padding: .48rem .7rem;
+  color: #a9cce3;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  font-weight: 950;
+}
+.daily-reward-tabs button:hover,
+.daily-reward-tabs button:focus-visible {
+  color: #eef8ff;
+  border-color: rgba(145, 210, 255, .36);
+  outline: none;
+}
+.daily-reward-tabs button.active {
+  color: #2d1a00;
+  border-color: #ffeaa0;
+  background: linear-gradient(#ffe785, #d9931f);
+  box-shadow: inset 0 -3px 0 rgba(92, 50, 5, .18), 0 5px 14px rgba(0,0,0,.2);
+}
 .daily-reward-panel {
   display: grid;
   gap: .72rem;
@@ -6049,6 +6081,10 @@ button.daily-reward-card.available:disabled {
   gap: .65rem;
   padding: 1rem;
   text-align: center;
+}
+.daily-quest-tab-panel {
+  min-height: 250px;
+  display: grid;
 }
 @media (max-width: 700px) {
   .daily-reward-grid {
@@ -7603,7 +7639,7 @@ button.daily-reward-card.available:disabled {
 .clan-overview-panel { margin-bottom: .75rem; }
 .clan-overview-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .45rem;
 }
 .clan-overview-grid button {
@@ -8443,7 +8479,7 @@ button.daily-reward-card.available:disabled {
     padding: .3rem .65rem;
   }
   .clan-overview-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: .35rem;
   }
   .clan-overview-grid button {
@@ -8461,7 +8497,7 @@ button.daily-reward-card.available:disabled {
     border-radius: 11px;
   }
   .clan-rewards-panel.active {
-    grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
     gap: .55rem;
   }
@@ -9249,6 +9285,299 @@ button.daily-reward-card.available:disabled {
   .profile-skill-list .skill-row { padding: .42rem .55rem; }
   .profile-settings-view { padding: .55rem; }
   .profile-notification-row { min-height: 46px; padding: .45rem .55rem; }
+}
+
+/* Compact profile dashboard and Daily Missions --------------------------- */
+.profile-view {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .48rem;
+  padding: .52rem .58rem .58rem;
+  overflow: hidden;
+}
+
+.profile-identity {
+  min-width: 0;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) minmax(145px, .58fr);
+  justify-items: stretch;
+  align-items: center;
+  align-content: center;
+  gap: .62rem;
+  padding: .28rem .5rem;
+  border: 1px solid rgba(158, 213, 255, .14);
+  border-radius: 8px;
+  background: linear-gradient(100deg, rgba(13, 44, 69, .82), rgba(5, 22, 37, .68));
+}
+
+.profile-identity .profile-flag-button {
+  grid-template-columns: auto;
+  gap: .08rem;
+  padding: .15rem;
+}
+
+.profile-identity .kingdom-flag-large {
+  width: 78px;
+  height: 58px;
+}
+
+.profile-identity .kingdom-flag-large .flag-symbol { font-size: 1.7rem; }
+.profile-identity .profile-flag-edit { font-size: .57rem; text-align: center; }
+.profile-identity .profile-name-block { width: 100%; gap: .3rem; }
+.profile-identity .profile-name-row { gap: .35rem; }
+.profile-identity .profile-name-row h3 { font-size: 1.05rem; }
+.profile-identity .profile-edit-btn { width: 32px; height: 32px; font-size: .9rem; }
+.profile-identity .profile-level-row span { font-size: .68rem; }
+.profile-identity .profile-xp-track { height: 10px; }
+.profile-identity .profile-clan-affiliation {
+  width: 100%;
+  min-height: 50px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: .4rem;
+  padding: .3rem .42rem;
+}
+.profile-identity .profile-clan-shield .clan-shield-size-mini { width: 32px; height: 36px; }
+.profile-identity .profile-clan-affiliation small { font-size: .57rem; }
+.profile-identity .profile-clan-affiliation strong { font-size: .72rem; }
+
+.profile-dashboard {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: .48rem;
+}
+
+.daily-missions-section,
+.profile-dashboard .kingdom-overview {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(211, 161, 63, .27);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(13, 44, 69, .82), rgba(4, 19, 32, .88));
+  box-shadow: inset 0 1px 0 rgba(255, 239, 186, .05);
+}
+
+.daily-missions-section {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: .38rem;
+  padding: .5rem;
+}
+.daily-quest-tab-panel .daily-missions-section {
+  min-height: 280px;
+  max-height: min(62vh, 540px);
+  padding: .7rem;
+}
+.daily-missions-section[hidden] { display: none; }
+.daily-missions-section[hidden] + .kingdom-overview { grid-column: 1 / -1; }
+
+.daily-missions-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .5rem;
+}
+.daily-missions-heading .profile-section-heading { text-align: left; }
+.daily-missions-heading .profile-section-heading h3 { font-size: .94rem; }
+.daily-missions-heading .profile-section-heading h3 strong { color: #9ed5ff; font-size: .72rem; }
+.daily-missions-meta { display: grid; justify-items: end; gap: .08rem; }
+.daily-missions-meta span { color: #b8d9ed; font-size: .59rem; font-weight: 850; white-space: nowrap; }
+.daily-missions-meta span:last-child { color: #f2c768; }
+
+.daily-missions-list {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: .34rem;
+}
+
+.daily-mission-row {
+  min-width: 0;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) minmax(88px, .48fr) 58px;
+  align-items: center;
+  gap: .42rem;
+  padding: .36rem .4rem;
+  border: 1px solid rgba(158, 213, 255, .17);
+  border-radius: 7px;
+  background: rgba(3, 17, 29, .68);
+  cursor: pointer;
+}
+.daily-mission-row:hover,
+.daily-mission-row:focus-visible { border-color: rgba(242, 200, 104, .62); }
+.daily-mission-row.complete { border-color: rgba(126, 190, 103, .42); background: rgba(18, 55, 41, .62); }
+.daily-mission-row.claimed { opacity: .76; }
+.daily-mission-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: #f3ca6e;
+  border: 1px solid rgba(211, 161, 63, .42);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(68, 50, 22, .9), rgba(12, 31, 46, .95));
+  font-size: 1rem;
+  line-height: 1;
+}
+.daily-mission-copy { min-width: 0; display: grid; gap: .12rem; }
+.daily-mission-copy > div { min-width: 0; display: flex; justify-content: space-between; gap: .35rem; }
+.daily-mission-copy strong,
+.daily-mission-copy small,
+.daily-mission-reward strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daily-mission-copy strong { color: #fff0bd; font-size: .72rem; }
+.daily-mission-copy > div > span { color: #9ed5ff; font-size: .61rem; font-weight: 900; }
+.daily-mission-copy small { color: #c3d9e5; font-size: .59rem; font-weight: 750; }
+.daily-mission-progress { height: 5px; overflow: hidden; border-radius: 99px; background: rgba(0, 0, 0, .55); }
+.daily-mission-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #347fa8, #efbd52); }
+.daily-mission-row.complete .daily-mission-progress i { background: linear-gradient(90deg, #437d4c, #9edc71); }
+.daily-mission-reward { min-width: 0; display: grid; gap: .08rem; }
+.daily-mission-reward small { color: #8ecdf1; font-size: .52rem; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.daily-mission-reward strong { color: #f2c768; font-size: .59rem; }
+.daily-mission-action { min-width: 0; display: grid; justify-items: end; }
+.daily-mission-action button {
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 .42rem;
+  border: 1px solid rgba(255, 235, 173, .68);
+  border-radius: 6px;
+  color: #271807;
+  background: linear-gradient(180deg, #f5d77f, #b97720);
+  font-size: .62rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.daily-mission-action .daily-mission-reroll {
+  min-width: 32px;
+  width: 32px;
+  padding: 0;
+  color: #fff0bd;
+  border-color: rgba(158, 213, 255, .32);
+  background: linear-gradient(180deg, #174b74, #071a2b);
+  font-size: 1rem;
+}
+.daily-mission-action button:disabled { opacity: .58; }
+.daily-mission-completed { color: #a8ec84; font-size: .55rem; font-weight: 950; text-align: right; text-transform: uppercase; }
+.daily-mission-difficulty { color: #8eb4cb; font-size: .54rem; font-weight: 900; text-transform: uppercase; }
+.daily-mission-placeholder {
+  min-width: 0;
+  min-height: 70px;
+  grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  padding: .7rem;
+  color: #c8d9e2;
+  border: 1px dashed rgba(158, 213, 255, .22);
+  border-radius: 7px;
+  background: rgba(3, 17, 29, .46);
+  font-size: .72rem;
+  font-weight: 850;
+  text-align: center;
+}
+button.daily-mission-placeholder { width: 100%; cursor: pointer; }
+.daily-missions-status { margin: 0; color: #ffb2a6; font-size: .58rem; font-weight: 800; }
+
+.profile-dashboard .kingdom-overview {
+  align-content: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: .35rem;
+  padding: .5rem;
+}
+.profile-dashboard .kingdom-stat-grid { min-height: 0; gap: .34rem; }
+.profile-dashboard .kingdom-stat { min-height: 48px; padding: .34rem .46rem; gap: .08rem; }
+.profile-dashboard .kingdom-stat span { font-size: .58rem; }
+.profile-dashboard .kingdom-stat strong { font-size: .84rem; }
+.profile-dashboard .kingdom-stat-power { position: relative; min-height: 54px; }
+
+.modal.daily-mission-modal { width: min(480px, calc(100% - 1.2rem)); }
+.daily-mission-detail {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .62rem;
+  align-items: center;
+}
+.daily-mission-detail-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  color: #f3ca6e;
+  border: 1px solid rgba(211, 161, 63, .46);
+  border-radius: 50%;
+  background: rgba(12, 31, 46, .88);
+  font-size: 1.5rem;
+}
+.daily-mission-detail h3 { margin: .08rem 0 0; color: #fff0bd; font-size: 1rem; }
+.daily-mission-detail > div > span,
+.daily-mission-detail-stat span { color: #8ecdf1; font-size: .62rem; font-weight: 900; text-transform: uppercase; }
+.daily-mission-detail-stat { min-width: 0; display: grid; gap: .12rem; padding: .5rem; border-radius: 7px; background: rgba(13, 44, 69, .68); }
+.daily-mission-detail-stat strong { color: #fff0bd; }
+.daily-mission-detail p,
+.daily-mission-detail small { grid-column: 1 / -1; margin: 0; color: #c8d9e2; line-height: 1.35; }
+.daily-mission-confirmation { display: grid; gap: .6rem; }
+.daily-mission-confirmation p { margin: 0; }
+.daily-mission-confirmation p strong { color: #f2c768; }
+.daily-mission-confirmation footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.daily-mission-confirmation footer button { min-height: 42px; }
+@media (max-width: 640px) {
+  .profile-view { gap: .34rem; padding: .36rem; }
+  .profile-identity {
+    min-height: 68px;
+    grid-template-columns: 58px minmax(0, 1fr) minmax(92px, .46fr);
+    gap: .36rem;
+    padding: .24rem .32rem;
+  }
+  .profile-identity .kingdom-flag-large { width: 54px; height: 42px; }
+  .profile-identity .profile-flag-edit { display: none; }
+  .profile-identity .profile-name-row h3 { font-size: .86rem; }
+  .profile-identity .profile-edit-btn { width: 28px; height: 28px; }
+  .profile-identity .profile-level-row { gap: .25rem; }
+  .profile-identity .profile-level-row strong,
+  .profile-identity .profile-level-row span { font-size: .58rem; }
+  .profile-identity .profile-clan-affiliation { min-height: 42px; grid-template-columns: 28px minmax(0, 1fr); padding: .2rem .28rem; }
+  .profile-identity .profile-clan-shield .clan-shield-size-mini { width: 25px; height: 28px; }
+  .profile-dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(126px, 1fr); gap: .34rem; }
+  .daily-missions-section { gap: .24rem; padding: .34rem; }
+  .daily-missions-heading .profile-section-heading span { font-size: .54rem; }
+  .daily-missions-heading .profile-section-heading h3 { font-size: .76rem; }
+  .daily-missions-meta span { font-size: .52rem; }
+  .daily-missions-list { gap: .24rem; }
+  .daily-mission-row { min-height: 52px; grid-template-columns: 28px minmax(0, 1fr) 77px 44px; gap: .28rem; padding: .25rem .28rem; }
+  .daily-mission-icon { width: 27px; height: 27px; font-size: .86rem; }
+  .daily-mission-copy strong { font-size: .62rem; }
+  .daily-mission-copy small { font-size: .52rem; }
+  .daily-mission-copy > div > span { font-size: .53rem; }
+  .daily-mission-reward small { font-size: .46rem; }
+  .daily-mission-reward strong { font-size: .5rem; }
+  .daily-mission-action button { min-width: 42px; min-height: 28px; padding: 0 .22rem; font-size: .54rem; }
+  .daily-mission-action .daily-mission-reroll { min-width: 28px; width: 28px; min-height: 28px; }
+  .daily-mission-completed { font-size: .47rem; }
+  .profile-dashboard .kingdom-overview { gap: .22rem; padding: .3rem; }
+  .profile-dashboard .kingdom-overview .profile-section-heading { display: none; }
+  .profile-dashboard .kingdom-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .22rem; }
+  .profile-dashboard .kingdom-stat { min-height: 45px; padding: .25rem .3rem; }
+  .profile-dashboard .kingdom-stat-wide { grid-column: auto; }
+  .profile-dashboard .kingdom-stat span { font-size: .5rem; }
+  .profile-dashboard .kingdom-stat strong { font-size: .68rem; }
+  .profile-dashboard .kingdom-stat-power { min-height: 45px; }
+  .profile-stat-info { right: .2rem; top: .2rem; width: 18px; height: 18px; font-size: .55rem; }
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .profile-view { grid-template-columns: minmax(0, 1fr); grid-template-rows: 58px minmax(0, 1fr); }
+  .profile-identity { min-height: 58px; grid-template-columns: 54px minmax(0, 1fr) minmax(120px, .45fr); }
+  .profile-identity .kingdom-flag-large { width: 50px; height: 38px; }
+  .profile-identity .profile-flag-edit { display: none; }
+  .profile-dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .daily-mission-row { min-height: 50px; }
+  .profile-dashboard .kingdom-stat { min-height: 40px; }
 }
 
 /* Main-menu patch notes ---------------------------------------------------- */

@@ -83,7 +83,7 @@ requires(server, /exports\.sendClanGift[\s\S]*?memberDoc\.id\s*!==\s*uid[\s\S]*?
 requires(server, /CLAN_GIFT_RECENT_DONATION_LIMIT\s*=\s*10[\s\S]*?function normalizeRecentClanGiftDonations[\s\S]*?\.slice\(0,\s*CLAN_GIFT_RECENT_DONATION_LIMIT\)[\s\S]*?exports\.sendClanGift[\s\S]*?giftActivityRef[\s\S]*?recentDonations/, "Clan gifts do not transactionally retain only the 10 most recent donor snapshots.");
 requires(server, /exports\.claimClanGiftPool[\s\S]*?getRewardedAdBaseRates\(economy\)\.goldPerHour[\s\S]*?pendingGiftGoldMinutes:\s*0/, "Clan gift collection does not use current permanent base gold production and clear the pool.");
 requires(server, /exports\.claimClanQuestReward[\s\S]*?joinedAtMs\s*>=\s*unlockedAtMs[\s\S]*?getRewardedAdBaseRates\(economy\)[\s\S]*?creditLevelUpTroopsToMainCity/, "Clan quest claims do not enforce unlock eligibility and current base production rewards.");
-requires(server, /function recordClanConquest[\s\S]*?targetType\s*!==\s*"city"[\s\S]*?safeString\(change\.reason,\s*64\)\s*!==\s*"city_captured"[\s\S]*?!beforeOwnerUid[\s\S]*?clanQuestCaptureReceiptRef[\s\S]*?receiptSnap\.exists/, "Clan conquest capture processing is not filtered and receipt-idempotent.");
+requires(server, /async function recordClanConquest[\s\S]*?targetType !== "city"[\s\S]*?reason, 64\) !== "city_captured"[\s\S]*?beforeOwnerUid[\s\S]*?afterOwnerUid[\s\S]*?clanQuestCaptureReceiptRef[\s\S]*?receiptSnap\.exists/, "Clan conquest processing does not count enemy-owned ordinary city captures idempotently.");
 requires(server, /async function removeClanMember[\s\S]*?assertClanRole\(actor,\s*\["leader"\]\)[\s\S]*?transaction\.delete\(clanMemberRewardsRef\(clanId,\s*targetUid\)\)/, "Clan removal must be leader-only and forfeit the departing member's rewards.");
 requires(disbandClanSource, /assertClanRole\(preflightActorSnap\.data\(\),\s*\["leader"\]\)[\s\S]*?safeString\(preflightClan\.leaderUid,\s*128\)\s*!==\s*uid[\s\S]*?assertClanRole\(actorSnap\.data\(\),\s*\["leader"\]\)/, "Clan disbanding must be leader-only at preflight and transaction commit.");
 requires(disbandClanSource, /transaction\.get\(memberQuery\)[\s\S]*?membersSnap\.docs\.forEach[\s\S]*?transaction\.delete\(memberSnap\.ref\)[\s\S]*?clanIdentityPatch\(\)[\s\S]*?buildClanBenefitExitPatch[\s\S]*?memberUid === uid[\s\S]*?CLAN_JOIN_COOLDOWN_MS[\s\S]*?leaderboardEntryRef\(memberUid\)/, "Clan disbanding does not transactionally detach the full roster while limiting the cooldown to the leader.");
@@ -149,7 +149,7 @@ requires(
   /id="clanOverviewPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanMembersPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRewardsPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanWarroomPanel"[\s\S]*?role="tabpanel"/,
   "The clan Overview, Members, War Room, and Rewards panels are not exposed as tab panels."
 );
-requires(client, /function renderClanOverviewPanel[\s\S]*?<span>War Room<\/span>[\s\S]*?Gold gifts[\s\S]*?Weekly conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
+requires(client, /function renderClanOverviewPanel[\s\S]*?<span>War Room<\/span>[\s\S]*?Gold gifts[\s\S]*?Roster/, "The clan Overview is missing its three profile activity summaries.");
 requires(
   client,
   /CLAN_BROWSER_SECTIONS\s*=\s*Object\.freeze\(\["discover",\s*"create"\]\)[\s\S]*?function renderClanBrowserNavigation[\s\S]*?key:\s*"discover"[\s\S]*?key:\s*"create"[\s\S]*?data-clan-browser-section="\$\{section\.key\}"[\s\S]*?id="clanBrowserCreatePanel"[\s\S]*?id="clanBrowserDiscoverPanel"/,
@@ -241,11 +241,11 @@ requires(
   /\.clan-content:not\(\.shield-editor-open\) \.clan-columns,[\s\S]*?\.clan-social-panels,[\s\S]*?\.clan-browser[\s\S]*?display:\s*contents[\s\S]*?\.clan-roster[\s\S]*?max-height:\s*none[\s\S]*?overflow:\s*visible/,
   "Mobile clan sections do not collapse to a single scroll container."
 );
-requires(styles, /\.clan-overview-grid[\s\S]*?repeat\(4,[\s\S]*?\.clan-rewards-panel\.active[\s\S]*?grid-template-columns/, "The clan Overview summaries or responsive Rewards layout are missing.");
+requires(styles, /\.clan-overview-grid[\s\S]*?repeat\(3,[\s\S]*?\.clan-rewards-panel\.active[\s\S]*?grid-template-columns/, "The three clan Overview summaries or responsive Rewards layout are missing.");
 requires(
   styles,
   /\.clan-gift-actions[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)[\s\S]*?\.clan-gift-actions button[\s\S]*?min-width:\s*0[\s\S]*?@media \(max-width:\s*900px\)[\s\S]*?\.clan-gift-actions\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/,
-  "Clan gift actions can overflow into Conquest Quests at compact Rewards widths."
+  "Clan gift actions can overflow at compact Rewards widths."
 );
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
@@ -253,4 +253,4 @@ requires(styles, /\.clan-member-last-login\s*\{[\s\S]*?color:\s*#88b99a[\s\S]*?f
 requires(styles, /\.clan-gift-donations\s*\{[\s\S]*?font-size:\s*\.65rem[\s\S]*?\.clan-gift-donations li[\s\S]*?text-overflow:\s*ellipsis/, "Recent clan generosity is not compact or overflow-safe.");
 requires(styles, /\.clan-quest-heading\s*\{[\s\S]*?display:\s*grid[\s\S]*?margin-bottom:\s*\.62rem[\s\S]*?\.clan-quest-progress\s*>\s*div\s*\{[\s\S]*?flex-wrap:\s*wrap/, "The Weekly Conquest reset timer can overlap the capture summary at compact widths.");
 
-console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quest data, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");

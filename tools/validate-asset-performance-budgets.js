@@ -5,7 +5,11 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
-const statBytes = relativePath => fs.statSync(path.join(root, relativePath)).size;
+const statBytes = relativePath => {
+  const payload = fs.readFileSync(path.join(root, relativePath));
+  if (!/\.(?:css|html?|js|json|toml|txt|webmanifest|xml)$/i.test(relativePath)) return payload.length;
+  return Buffer.byteLength(payload.toString("utf8").replace(/\r\n/g, "\n"));
+};
 const mib = value => `${(value / (1024 * 1024)).toFixed(2)} MiB`;
 
 const indexSource = read("index.html");

@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
+const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const constantNames = [
   "KING_POWER_ARMY_TROOP_VALUE",
   "KING_POWER_REPLACEMENT_HOURS",
@@ -43,6 +44,13 @@ const config = Object.fromEntries(constantNames.map(name => {
 
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
+const profileRenderSource = extractFunction(clientSource, "renderProfileScreen");
+assert.match(profileRenderSource, /profileKingPowerStat\.textContent\s*=\s*formatNumber\(summary\.kingPower\)/,
+  "The player profile must show only the authoritative King Power total.");
+assert.doesNotMatch(profileRenderSource, /formatBaseAndBonusStat|profileKingPowerBreakdown|profileKingPowerStrongholdBonus/,
+  "The player profile must not append a bonus suffix or Power explanation.");
+assert.doesNotMatch(htmlSource, /profilePowerInfoBtn|profileKingPowerBreakdown|profileKingPowerStrongholdBonus/,
+  "The player profile still exposes a Power explanation control.");
 if (serverVersion !== clientVersion || serverVersion !== 11) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }

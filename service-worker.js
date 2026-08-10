@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260807-animation-system-v1";
+const CACHE_VERSION = "20260810-daily-mission-camp-fix-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,7 +11,7 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260807-animation-system-v1",
+  "/styles.css?v=20260810-daily-mission-camp-fix-v1",
   "/release-config.js",
   "/patch-notes.js?v=20260807-login-resilience-v1",
   "/world-config.js",
@@ -19,19 +19,17 @@ const STATIC_CACHE_URLS = [
   "/ads-config.js?v=20260726-rewarded-ads",
   "/firebase-config.js?v=20260726-protected-ads-reset",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
-  "/firebaseClient.js?v=20260807-animation-system-v1",
+  "/firebaseClient.js?v=20260810-daily-mission-camp-fix-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",
-  "/animation-manager.js?v=20260807-animation-system-v1",
+  "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
   "/audio/manifest.json",
-  "/game.js?v=20260807-animation-system-v1",
+  "/game.js?v=20260810-daily-mission-camp-fix-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
   "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
   "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp",
-  "/assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp",
-  "/assets/icons/crownlands-icon-192.png",
-  "/assets/icons/crownlands-maskable-192.png"
+  "/assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp"
 ];
 
 const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0b111d"/></svg>`;

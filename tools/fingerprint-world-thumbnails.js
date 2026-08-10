@@ -74,7 +74,10 @@ function writeManifest(entries, { write }) {
     thumbnails: entries,
   }, null, 2)}\n`;
   if (!write) {
-    if (!fs.existsSync(manifestPath) || fs.readFileSync(manifestPath, "utf8") !== manifest) {
+    const current = fs.existsSync(manifestPath)
+      ? fs.readFileSync(manifestPath, "utf8").replace(/\r\n/g, "\n")
+      : "";
+    if (current !== manifest) {
       throw new Error("assets/worlds/world_01/thumbnail-manifest.json is stale.");
     }
     return;

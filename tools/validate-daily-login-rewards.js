@@ -222,10 +222,26 @@ requireMatch(game, /expectedMonthKey:\s*dailyLoginRewardStatus\.monthKey/, "Clie
 requireMatch(game, /unclaimed rewards expire when[\s\S]*UTC month boundary/, "Monthly expiry is not explained in the UI.");
 requireMatch(game, /DAILY_LOGIN_REWARD_TRACKS\[String\(status\.monthLengthDays\)\]/, "UI does not select the live month-length track.");
 requireMatch(game, /getDailyLoginRewardCardState[\s\S]*"queued"[\s\S]*getDailyLoginRewardPresentation/, "Reward cards lost their queue states.");
-requireMatch(game, /refreshDailyLoginRewardStatus\(\{\s*autoOpen:\s*true,\s*silent:\s*true\s*\}\)/, "Startup does not record attendance.");
+requireMatch(game, /startLoginPresentationDailyRefresh\(presentationGeneration\)[\s\S]*?markLoginPresentationMapReady\(presentationGeneration\)/, "Startup does not route attendance through the login presentation sequence.");
 requireMatch(game, /visibilitychange[\s\S]*handleGameForegroundSignal/, "Visible sessions do not refresh attendance.");
+requireMatch(game, /function renderDailyRewardModalTabs[\s\S]*Daily Rewards[\s\S]*Quests[\s\S]*role="tablist"[\s\S]*aria-selected[\s\S]*aria-controls/, "The reward modal is missing its accessible Daily Rewards and Quests tabs.");
+requireMatch(game, /function renderDailyMissionSection[\s\S]*dailyMissionsList[\s\S]*function renderDailyQuestTab[\s\S]*renderDailyMissionSection\(\)/, "Player Daily Missions are not rendered in the reward modal's Quests tab.");
+requireMatch(game, /function bindDailyQuestControls[\s\S]*handleDailyMissionListClick/, "Daily Mission controls are not connected inside the reward modal.");
+const clanRewardsPanelSource = game.slice(
+  game.indexOf("function renderClanRewardsPanel()"),
+  game.indexOf("function getRallyParticipantForCurrentPlayer")
+);
+assert.match(clanRewardsPanelSource, /renderClanQuestPanel/, "Clan Weekly Conquest is missing from the Player Profile Clan Rewards panel.");
+const clanOverviewPanelSource = game.slice(
+  game.indexOf("function renderClanOverviewPanel("),
+  game.indexOf("function renderClanMembersPanel(")
+);
+assert.doesNotMatch(clanOverviewPanelSource, /Weekly conquest|CLAN_QUEST_MAX_CAPTURES/, "Player Profile still includes a Weekly Conquest shortcut.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid responsiveness changed.");
+requireMatch(styles, /\.daily-reward-tabs[\s\S]*repeat\(2,[\s\S]*\.daily-reward-tabs button[\s\S]*min-height:\s*44px/, "Reward modal tabs are not a touch-safe two-column switcher.");
+requireMatch(styles, /\.daily-quest-tab-panel[\s\S]*\.daily-quest-tab-panel \.daily-missions-section/, "The moved Daily Missions ledger is not styled inside the reward modal.");
+assert.doesNotMatch(html, /id="dailyMissionsSection"/, "Daily Missions are still embedded in the Player Profile UI.");
 requireMatch(html, /economy-config\.js\?v=20260805-linear-walls-v1/, "Frontend does not load the current economy release.");
 requireMatch(serviceWorker, /economy-config\.js\?v=20260805-linear-walls-v1/, "Offline shell does not cache the current economy release.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");
@@ -235,4 +251,4 @@ requireMatch(
   "Deployment callable-access gate must include daily reward endpoints."
 );
 
-console.log("Validated UTC calendar-month daily rewards for 28, 29, 30, and 31 days.");
+console.log("Validated UTC calendar-month rewards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");

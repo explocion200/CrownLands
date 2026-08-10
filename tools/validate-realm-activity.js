@@ -39,7 +39,9 @@ assert.doesNotMatch(writer, /liveMessage|Hear ye|All hail/, "The server stores p
 
 assert.match(api, /function subscribeRealmActivity[\s\S]*?realmEvents[\s\S]*?activity[\s\S]*?orderBy\("occurredAtMs", "desc"\)[\s\S]*?limit\(250\)/, "The bounded realtime Realm Activity subscription is missing.");
 assert.match(api, /snapshot\.docChanges\(\)/, "Realtime Realm Activity changes are not exposed for live announcements.");
+assert.match(api, /function markRealmAnnouncementSeen[\s\S]*?callServerFunction\("markRealmAnnouncementSeen"/, "The Realm announcement cursor callable is not exposed by the Firebase client.");
 assert.match(rules, /match \/realmEvents\/\{resetGeneration\}\/activity\/\{eventId\}[\s\S]*?allow read:[\s\S]*?signedIn\(\)[\s\S]*?allow create, update, delete: if false;/, "Realm Activity rules are not authenticated and server-owned.");
+assert.match(rules, /profileFieldUnchanged\('realmAnnouncementSeenThroughMs'\)[\s\S]*?profileFieldUnchanged\('lastRealmAnnouncementEventId'\)/, "Players can write their own Realm announcement cursor.");
 assert.ok(indexes.indexes.some(index => (
   index.collectionGroup === "activity"
   && index.queryScope === "COLLECTION"
@@ -54,6 +56,10 @@ assert.match(functionBody(client, "getUnreadReportCount"), /onlineRealmActivityE
 assert.match(functionBody(client, "enqueueRealmAnnouncement"), /CITADEL_CAPTURED[\s\S]*?aPriority[\s\S]*?occurredAtMs/, "The announcement queue does not prioritize Citadel events while preserving order.");
 assert.match(functionBody(client, "focusRealmActivityTarget"), /switchOnlineIsland[\s\S]*?selectCity[\s\S]*?centerOnCity[\s\S]*?centerOnWorldPoint/, "View Location does not support cross-region objective and coordinate navigation.");
 assert.match(functionBody(client, "mergeRealmActivitySnapshot"), /metadata\.fromCache[\s\S]*?type === "added"[\s\S]*?realmActivityLiveSinceMs/, "Initial or cached history can replay as a live announcement.");
+assert.match(functionBody(client, "beginLoginPresentationSequence"), /mapReady:[\s\S]*?dailyResolved:[\s\S]*?welcomeResolved:[\s\S]*?realmCandidates:/, "The login presentation coordinator does not track each required completion state.");
+assert.match(functionBody(client, "advanceLoginPresentationSequence"), /dailyResolved[\s\S]*?dailyFinished[\s\S]*?welcomeResolved[\s\S]*?welcomeFinished[\s\S]*?realmActivityAuthoritativeHydrated/, "Daily Login, Welcome Back, and Realm hydration are not sequenced explicitly.");
+assert.match(functionBody(client, "finalizeLoginPresentationRealmCatchUp"), /CITADEL_CAPTURED[\s\S]*?markRealmAnnouncementSeen[\s\S]*?claimed/, "Realm catch-up does not prioritize Citadel events and claim the server-synced cursor.");
+assert.match(server, /exports\.markRealmAnnouncementSeen\s*=\s*onCall[\s\S]*?realmAnnouncementSeenThroughMs[\s\S]*?lastRealmAnnouncementEventId[\s\S]*?claimed/, "The authoritative Realm announcement cursor callable is missing.");
 
 const copySandbox = {
   CROWN_CITADEL_NAME: "Crown Citadel",
@@ -147,8 +153,15 @@ assert.doesNotMatch(neutralCitadel.body, /overthrown King/);
 const queueSandbox = {
   activeRealmAnnouncement: { eventId: "currently-visible" },
   realmAnnouncementQueue: [],
+  deliveredRealmAnnouncementEventIds: new Set(),
   normalizeRealmActivityEvent(event) {
     return event;
+  },
+  isLoginPresentationSequenceActive() {
+    return false;
+  },
+  addLoginPresentationRealmCandidate() {
+    return false;
   },
   showNextRealmAnnouncement() {},
 };
