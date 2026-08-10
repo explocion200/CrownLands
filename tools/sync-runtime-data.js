@@ -31,7 +31,7 @@ async function replaceAtomic(filePath, contents) {
 
 async function validateOrWrite(filePath, expected, label) {
   const current = await fsp.readFile(filePath, "utf8").catch(() => "");
-  if (current === expected) return;
+  if (current.replace(/\r\n/g, "\n") === expected.replace(/\r\n/g, "\n")) return;
   if (checkOnly) throw new Error(`${label} is stale. Run node tools/sync-runtime-data.js.`);
   await replaceAtomic(filePath, expected);
 }
