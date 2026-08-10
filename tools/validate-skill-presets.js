@@ -210,7 +210,7 @@ assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed Apply costs 1,000,000 gold[\s\S]*?never overwrites a preset automatically/i);
-const expectedBuild = "20260807-animation-system-v1";
+const expectedBuild = "20260809-daily-missions-v1";
 const expectedRelease = "crownlands-2026-08-02-single-active-skill-preset-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");

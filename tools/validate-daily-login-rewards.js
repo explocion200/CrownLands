@@ -222,7 +222,7 @@ requireMatch(game, /expectedMonthKey:\s*dailyLoginRewardStatus\.monthKey/, "Clie
 requireMatch(game, /unclaimed rewards expire when[\s\S]*UTC month boundary/, "Monthly expiry is not explained in the UI.");
 requireMatch(game, /DAILY_LOGIN_REWARD_TRACKS\[String\(status\.monthLengthDays\)\]/, "UI does not select the live month-length track.");
 requireMatch(game, /getDailyLoginRewardCardState[\s\S]*"queued"[\s\S]*getDailyLoginRewardPresentation/, "Reward cards lost their queue states.");
-requireMatch(game, /refreshDailyLoginRewardStatus\(\{\s*autoOpen:\s*true,\s*silent:\s*true\s*\}\)/, "Startup does not record attendance.");
+requireMatch(game, /startLoginPresentationDailyRefresh\(presentationGeneration\)[\s\S]*?markLoginPresentationMapReady\(presentationGeneration\)/, "Startup does not route attendance through the login presentation sequence.");
 requireMatch(game, /visibilitychange[\s\S]*handleGameForegroundSignal/, "Visible sessions do not refresh attendance.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid responsiveness changed.");

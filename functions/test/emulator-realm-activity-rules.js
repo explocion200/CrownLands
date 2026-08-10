@@ -103,10 +103,32 @@ async function attemptClientWrite(user) {
   );
 }
 
+async function attemptRealmCursorWrite(user) {
+  return fetch(
+    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=realmAnnouncementSeenThroughMs&updateMask.fieldPaths=lastRealmAnnouncementEventId`,
+    {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: {
+          realmAnnouncementSeenThroughMs: { integerValue: String(Date.now()) },
+          lastRealmAnnouncementEventId: { stringValue: "forged-citadel" },
+        },
+      }),
+    }
+  );
+}
+
 async function main() {
   const user = await createAuthUser();
   const nowMs = Date.now();
   const batch = db.batch();
+  batch.set(db.doc(`players/${user.uid}`), {
+    playerName: "Realm Activity Tester",
+  });
   batch.set(db.doc(`realmEvents/${realm.resetGeneration}/activity/stronghold_${user.uid}`), {
     eventType: "STRONGHOLD_CAPTURED",
     resetGeneration: realm.resetGeneration,
@@ -140,8 +162,10 @@ async function main() {
   assert(signedOut.response.status === 403, "A signed-out player read Realm Activity.");
   const write = await attemptClientWrite(user);
   assert(write.status === 403, "A player forged a Realm Activity event.");
+  const cursorWrite = await attemptRealmCursorWrite(user);
+  assert(cursorWrite.status === 403, "A player forged the server-owned Realm announcement cursor.");
 
-  console.log("Realm Activity rules passed: current-season reads work while stale, anonymous, unscoped, and client-write access stays blocked.");
+  console.log("Realm Activity rules passed: current-season reads work while stale, anonymous, unscoped, event-write, and cursor-write access stays blocked.");
 }
 
 main().catch(error => {

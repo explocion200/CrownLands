@@ -274,6 +274,7 @@ const DAILY_LOGIN_REWARD_TRACKS = Object.freeze(Object.fromEntries(
   DAILY_LOGIN_REWARD_MONTH_LENGTHS.map(length => [String(length), buildDailyLoginRewardTrack(length)])
 ));
 const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
+const DAILY_MISSION_VERSION = 1;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
   [WAR_DRUMS_ITEM_ID]: economyNumber("shopItems.war_drums_30m.dailyPurchaseLimit", 4),
@@ -2753,12 +2754,16 @@ let onlineServerReportsUnsubscribe = null;
 let onlineRealmActivityUnsubscribe = null;
 let onlineRealmActivityEvents = [];
 let realmActivityHydrated = false;
+let realmActivityAuthoritativeHydrated = false;
 let realmActivityLiveSinceMs = 0;
 let seenRealmActivityEventIds = new Set();
+let deliveredRealmAnnouncementEventIds = new Set();
 let realmAnnouncementQueue = [];
 let activeRealmAnnouncement = null;
 let realmAnnouncementTimer = 0;
 let realmAnnouncementExitTimer = 0;
+let loginPresentationGeneration = 0;
+let loginPresentationSequence = null;
 let onlineGlobalStatsUnsubscribe = null;
 let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
@@ -2849,11 +2854,22 @@ let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
 let dailyLoginRewardStatus = null;
 let dailyLoginRewardStatusLoading = false;
+let dailyLoginRewardStatusPromise = null;
 let dailyLoginRewardClaimInFlight = false;
 let dailyLoginRewardUtcTimer = 0;
 let dailyLoginRewardCountdownTimer = 0;
 let dailyLoginRewardError = "";
 let dailyLoginRewardPendingClaim = null;
+let dailyMissionState = null;
+let dailyMissionStatusLoading = false;
+let dailyMissionStatusPromise = null;
+let dailyMissionUnsubscribe = null;
+let dailyMissionSubscribedCycleKey = "";
+let dailyMissionUtcTimer = 0;
+let dailyMissionCountdownTimer = 0;
+let dailyMissionClockOffsetMs = 0;
+let dailyMissionError = "";
+const dailyMissionActionsInFlight = new Set();
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
@@ -3047,13 +3063,17 @@ const profileLevelText = document.getElementById("profileLevelText");
 const profileXpLabel = document.getElementById("profileXpLabel");
 const profileXpFill = document.getElementById("profileXpFill");
 const profileKingPowerStat = document.getElementById("profileKingPowerStat");
-const profileKingPowerBreakdown = document.getElementById("profileKingPowerBreakdown");
-const profileKingPowerStrongholdBonus = document.getElementById("profileKingPowerStrongholdBonus");
 const profileCitiesStat = document.getElementById("profileCitiesStat");
 const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
 const profileGoldProductionStat = document.getElementById("profileGoldProductionStat");
 const profileTroopProductionStat = document.getElementById("profileTroopProductionStat");
+const dailyMissionsSection = document.getElementById("dailyMissionsSection");
+const dailyMissionsCompleted = document.getElementById("dailyMissionsCompleted");
+const dailyMissionsCountdown = document.getElementById("dailyMissionsCountdown");
+const dailyMissionsRerolls = document.getElementById("dailyMissionsRerolls");
+const dailyMissionsList = document.getElementById("dailyMissionsList");
+const dailyMissionsStatus = document.getElementById("dailyMissionsStatus");
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
@@ -5825,6 +5845,8 @@ function newGame(playerName) {
     scoutReports: {},
     battleReports: [],
     reportsViewedAtMs: 0,
+    realmAnnouncementSeenThroughMs: 0,
+    lastRealmAnnouncementEventId: "",
     marchPercent: DEFAULT_MARCH_PERCENT,
     mainCityId: island.startIds.player,
     mainCityChangedAtMs: 0,
@@ -10945,6 +10967,17 @@ function supportsRealmActivity() {
   return isOnlineWorldActive() && getRealmCapabilityVersion("realmActivityVersion") >= REALM_ACTIVITY_VERSION;
 }
 
+function supportsDailyMissions() {
+  const api = getOnlineApi();
+  return Boolean(
+    isOnlineWorldActive()
+      && getRealmCapabilityVersion("dailyMissionVersion") >= DAILY_MISSION_VERSION
+      && api?.getDailyMissionStatus
+      && api?.rerollDailyMission
+      && api?.claimDailyMissionReward
+  );
+}
+
 function canUseBulkArmyOrders() {
   return !isOnlineWorldActive() || supportsBulkArmyOrders();
 }
@@ -11180,6 +11213,12 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.reportsViewedAtMs = reportsViewedAtMs;
     changed = true;
     updateReportUnreadBadge();
+  }
+  const realmAnnouncementSeenThroughMs = normalizeTimestampMs(patch.realmAnnouncementSeenThroughMs);
+  if (realmAnnouncementSeenThroughMs > normalizeTimestampMs(state.realmAnnouncementSeenThroughMs)) {
+    state.realmAnnouncementSeenThroughMs = realmAnnouncementSeenThroughMs;
+    state.lastRealmAnnouncementEventId = String(patch.lastRealmAnnouncementEventId || state.lastRealmAnnouncementEventId || "").slice(0, 180);
+    changed = true;
   }
   const previousLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   if (patch.globalStats) {
@@ -11648,12 +11687,16 @@ async function performServerEconomyRefresh(options = {}) {
           requestWelcomeBack: false,
         };
       }
+      resolveLoginPresentationWelcomePhase(options.presentationGeneration);
     }
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
     return true;
   } catch (error) {
+    if (options.requestWelcomeBack === true) {
+      resolveLoginPresentationWelcomePhase(options.presentationGeneration);
+    }
     onlineLastError = error?.message || String(error);
     const nowMs = Date.now();
     if (nowMs - serverEconomyLastToastAt > 30000) {
@@ -11753,6 +11796,8 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.kingPower;
   delete clean.cityCount;
   delete clean.reportsViewedAtMs;
+  delete clean.realmAnnouncementSeenThroughMs;
+  delete clean.lastRealmAnnouncementEventId;
   return clean;
 }
 
@@ -11798,6 +11843,8 @@ function getPlayerProfileSnapshot() {
     scoutReports: state ? normalizeScoutReports(state.scoutReports) : {},
     battleReports: state ? normalizeBattleReports(state.battleReports) : [],
     reportsViewedAtMs: normalizeTimestampMs(state?.reportsViewedAtMs),
+    realmAnnouncementSeenThroughMs: normalizeTimestampMs(state?.realmAnnouncementSeenThroughMs),
+    lastRealmAnnouncementEventId: String(state?.lastRealmAnnouncementEventId || "").slice(0, 180),
     marchPercent: normalizeMarchPercent(state?.marchPercent ?? selectedMarchPercent),
     lastSelectedOwnedCityId: getKnownCityId(lastSelectedOwnedCityId),
     gameSeconds: state ? Math.max(0, Number(state.gameSeconds) || 0) : 0,
@@ -11838,6 +11885,8 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
       "kingPower",
       "cityCount",
       "reportsViewedAtMs",
+      "realmAnnouncementSeenThroughMs",
+      "lastRealmAnnouncementEventId",
     ].forEach(key => {
       if (currentProfile[key] !== undefined) merged[key] = currentProfile[key];
     });
@@ -11881,6 +11930,8 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.scoutReports = normalizeScoutReports(profile.scoutReports);
   state.battleReports = normalizeBattleReports(profile.battleReports);
   state.reportsViewedAtMs = normalizeTimestampMs(profile.reportsViewedAtMs);
+  state.realmAnnouncementSeenThroughMs = normalizeTimestampMs(profile.realmAnnouncementSeenThroughMs);
+  state.lastRealmAnnouncementEventId = String(profile.lastRealmAnnouncementEventId || "").slice(0, 180);
   state.marchPercent = normalizeMarchPercent(profile.marchPercent);
   selectedMarchPercent = state.marchPercent;
   lastSelectedOwnedCityId = getKnownCityId(profile.lastSelectedOwnedCityId) || lastSelectedOwnedCityId;
@@ -14586,6 +14637,8 @@ function retireActiveOnlineIslandSubscription() {
 }
 
 function disconnectOnlineWorld() {
+  cancelLoginPresentationSequence();
+  stopDailyMissionLifecycle({ clear: true });
   retireActiveOnlineIslandSubscription();
   stopClanRealtimeSubscriptions({ clear: true });
   clearOnlineArmyWatchers();
@@ -14965,6 +15018,7 @@ function applyActiveOnlineCityPayload(onlineCities, {
     refreshServerEconomy(true, {
       requestWelcomeBack: shouldRequestWelcomeBack,
       showOfflineRewards: shouldRequestWelcomeBack,
+      presentationGeneration: loginPresentationSequence?.generation || 0,
     });
   } else if (pendingOfflineProgressSeconds > 0) {
     applyPendingOfflineProgress();
@@ -17054,6 +17108,250 @@ function clearOnlineServerReportWatcher() {
   onlineServerReportsUnsubscribe = null;
 }
 
+function isLoginPresentationSequenceActive(sequence = loginPresentationSequence) {
+  return Boolean(
+    sequence
+    && !sequence.finished
+    && sequence.generation === loginPresentationGeneration
+  );
+}
+
+function isLoginPresentationModalOpen() {
+  return Boolean(
+    modal?.open
+    && (
+      modal.classList.contains("daily-login-reward-modal")
+      || modal.classList.contains("offline-reward-modal")
+    )
+  );
+}
+
+function isLoginPresentationBlockingRealmAnnouncements() {
+  return isLoginPresentationSequenceActive() || isLoginPresentationModalOpen();
+}
+
+function getLoginPresentationRealmFloorMs(sequence = loginPresentationSequence) {
+  return Math.max(
+    normalizeTimestampMs(sequence?.baselineAtMs),
+    normalizeTimestampMs(state?.realmAnnouncementSeenThroughMs)
+  );
+}
+
+function addLoginPresentationRealmCandidate(event = null, sequence = loginPresentationSequence) {
+  if (!isLoginPresentationSequenceActive(sequence)) return false;
+  const normalized = normalizeRealmActivityEvent(event);
+  if (!normalized || normalized.occurredAtMs <= getLoginPresentationRealmFloorMs(sequence)) return false;
+  if (sequence.finalizing) {
+    if (!sequence.batchEventIds?.has(normalized.eventId)) {
+      sequence.deferredLiveEvents.set(normalized.eventId, normalized);
+    }
+    return true;
+  }
+  sequence.realmCandidates.set(normalized.eventId, normalized);
+  return true;
+}
+
+function collectLoginPresentationRealmCandidates(events = [], sequence = loginPresentationSequence) {
+  if (!isLoginPresentationSequenceActive(sequence)) return false;
+  let changed = false;
+  normalizeRealmActivityEvents(events).forEach(event => {
+    changed = addLoginPresentationRealmCandidate(event, sequence) || changed;
+  });
+  return changed;
+}
+
+function suspendRealmAnnouncementForLoginPresentation(sequence = loginPresentationSequence) {
+  const active = activeRealmAnnouncement;
+  if (active) {
+    clearRealmAnnouncementPresentation();
+    if (!addLoginPresentationRealmCandidate(active, sequence)) {
+      realmAnnouncementQueue.unshift(active);
+    }
+  }
+  if (!isLoginPresentationSequenceActive(sequence) || !realmAnnouncementQueue.length) return;
+  realmAnnouncementQueue = realmAnnouncementQueue.filter(event => (
+    !addLoginPresentationRealmCandidate(event, sequence)
+  ));
+}
+
+function beginLoginPresentationSequence({ kind = "login", baselineAtMs = 0, welcomeExpected = false } = {}) {
+  const generation = ++loginPresentationGeneration;
+  const sequence = {
+    generation,
+    kind,
+    baselineAtMs: normalizeTimestampMs(baselineAtMs) || Date.now(),
+    mapReady: false,
+    dailyResolved: false,
+    dailyRequired: false,
+    dailyOpen: false,
+    dailyFinished: false,
+    welcomeExpected: Boolean(welcomeExpected),
+    welcomeResolved: !welcomeExpected,
+    welcomeOpen: false,
+    welcomeFinished: !welcomeExpected,
+    realmCandidates: new Map(),
+    deferredLiveEvents: new Map(),
+    batchEventIds: new Set(),
+    finalizing: false,
+    finished: false,
+  };
+  loginPresentationSequence = sequence;
+  collectLoginPresentationRealmCandidates(onlineRealmActivityEvents, sequence);
+  suspendRealmAnnouncementForLoginPresentation(sequence);
+  return generation;
+}
+
+function cancelLoginPresentationSequence() {
+  loginPresentationGeneration += 1;
+  loginPresentationSequence = null;
+  showNextRealmAnnouncement();
+}
+
+function markLoginPresentationMapReady(generation = loginPresentationGeneration) {
+  const sequence = loginPresentationSequence;
+  if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return false;
+  sequence.mapReady = true;
+  advanceLoginPresentationSequence(sequence);
+  return true;
+}
+
+function hasDailyLoginAutoOpenBeenUsed(status = dailyLoginRewardStatus) {
+  const key = getDailyLoginRewardAutoOpenKey(status);
+  if (!key) return true;
+  try {
+    return window.localStorage?.getItem(key) === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function resolveLoginPresentationDailyPhase(generation, status = null) {
+  const sequence = loginPresentationSequence;
+  if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return false;
+  sequence.dailyResolved = true;
+  sequence.dailyRequired = Boolean(status?.eligible && !hasDailyLoginAutoOpenBeenUsed(status));
+  if (!sequence.dailyRequired) sequence.dailyFinished = true;
+  advanceLoginPresentationSequence(sequence);
+  return true;
+}
+
+function resolveLoginPresentationWelcomePhase(generation) {
+  const sequence = loginPresentationSequence;
+  if (!isLoginPresentationSequenceActive(sequence) || sequence.generation !== generation) return false;
+  sequence.welcomeResolved = true;
+  if (!pendingOfflineRewardsSummary && !sequence.welcomeOpen) sequence.welcomeFinished = true;
+  advanceLoginPresentationSequence(sequence);
+  return true;
+}
+
+function completeLoginPresentationModal(kind = "") {
+  const sequence = loginPresentationSequence;
+  if (!isLoginPresentationSequenceActive(sequence)) {
+    showNextRealmAnnouncement();
+    return false;
+  }
+  if (kind === "daily") {
+    sequence.dailyOpen = false;
+    sequence.dailyFinished = true;
+  } else if (kind === "welcome") {
+    sequence.welcomeOpen = false;
+    sequence.welcomeFinished = true;
+  }
+  advanceLoginPresentationSequence(sequence);
+  return true;
+}
+
+function finishLoginPresentationSequence(sequence, { catchUpEvent = null } = {}) {
+  if (!isLoginPresentationSequenceActive(sequence)) return false;
+  const deferredEvents = [...sequence.deferredLiveEvents.values()]
+    .sort((a, b) => a.occurredAtMs - b.occurredAtMs || a.eventId.localeCompare(b.eventId));
+  sequence.finished = true;
+  loginPresentationSequence = null;
+  if (catchUpEvent) {
+    deliveredRealmAnnouncementEventIds.delete(catchUpEvent.eventId);
+    enqueueRealmAnnouncement(catchUpEvent);
+  }
+  deferredEvents.forEach(event => enqueueRealmAnnouncement(event));
+  showNextRealmAnnouncement();
+  return true;
+}
+
+async function finalizeLoginPresentationRealmCatchUp(sequence) {
+  if (!isLoginPresentationSequenceActive(sequence) || sequence.finalizing) return false;
+  const floorMs = getLoginPresentationRealmFloorMs(sequence);
+  const candidates = [...sequence.realmCandidates.values()]
+    .filter(event => event.occurredAtMs > floorMs)
+    .sort((a, b) => b.occurredAtMs - a.occurredAtMs || b.eventId.localeCompare(a.eventId));
+  if (!candidates.length) return finishLoginPresentationSequence(sequence);
+
+  const selected = candidates.find(event => event.eventType === "CITADEL_CAPTURED") || candidates[0];
+  const seenThroughMs = candidates.reduce((latest, event) => Math.max(latest, event.occurredAtMs), 0);
+  sequence.finalizing = true;
+  sequence.batchEventIds = new Set(candidates.map(event => event.eventId));
+  const api = getOnlineApi();
+  if (!api?.markRealmAnnouncementSeen || !api?.isSignedIn?.()) {
+    return finishLoginPresentationSequence(sequence);
+  }
+
+  try {
+    const result = await api.markRealmAnnouncementSeen({
+      eventId: selected.eventId,
+      seenThroughMs,
+    });
+    if (!isLoginPresentationSequenceActive(sequence)) return false;
+    const confirmedSeenThroughMs = normalizeTimestampMs(result?.realmAnnouncementSeenThroughMs);
+    if (!confirmedSeenThroughMs) throw new Error("The server did not confirm the Realm announcement cursor.");
+    state.realmAnnouncementSeenThroughMs = Math.max(
+      normalizeTimestampMs(state.realmAnnouncementSeenThroughMs),
+      confirmedSeenThroughMs
+    );
+    state.lastRealmAnnouncementEventId = String(result?.lastRealmAnnouncementEventId || state.lastRealmAnnouncementEventId || "").slice(0, 180);
+    const claimed = result?.claimed === true && String(result?.eventId || "") === selected.eventId;
+    return finishLoginPresentationSequence(sequence, { catchUpEvent: claimed ? selected : null });
+  } catch (error) {
+    console.warn("Could not synchronize the Realm catch-up announcement", error);
+    return finishLoginPresentationSequence(sequence);
+  }
+}
+
+function advanceLoginPresentationSequence(sequence = loginPresentationSequence) {
+  if (!isLoginPresentationSequenceActive(sequence) || sequence.finalizing || !sequence.mapReady) return false;
+  if (!sequence.dailyResolved) return false;
+  if (!sequence.dailyFinished) {
+    if (sequence.dailyOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
+    if (!sequence.dailyRequired || hasDailyLoginAutoOpenBeenUsed()) {
+      sequence.dailyFinished = true;
+    } else {
+      const opened = maybeAutoOpenDailyLoginRewards({ presentationGeneration: sequence.generation });
+      if (opened) sequence.dailyOpen = true;
+      return opened;
+    }
+  }
+  if (!sequence.welcomeResolved) return false;
+  if (!sequence.welcomeFinished) {
+    if (sequence.welcomeOpen || modal?.open || profileScreen?.classList.contains("open") || document.visibilityState !== "visible") return false;
+    if (pendingOfflineRewardsSummary) {
+      const opened = showPendingOfflineRewardsSummary({ presentationGeneration: sequence.generation });
+      if (opened) sequence.welcomeOpen = true;
+      return opened;
+    }
+    sequence.welcomeFinished = true;
+  }
+  if (!realmActivityAuthoritativeHydrated) return false;
+  void finalizeLoginPresentationRealmCatchUp(sequence);
+  return true;
+}
+
+function startLoginPresentationDailyRefresh(generation = loginPresentationGeneration) {
+  void refreshDailyMissionStatus({ silent: true });
+  Promise.resolve(refreshDailyLoginRewardStatus({ silent: true }))
+    .then(status => resolveLoginPresentationDailyPhase(generation, status))
+    .catch(error => {
+      console.warn("Daily Login presentation status failed", error);
+      resolveLoginPresentationDailyPhase(generation, null);
+    });
+}
+
 function clearRealmAnnouncementPresentation() {
   window.clearTimeout(realmAnnouncementTimer);
   window.clearTimeout(realmAnnouncementExitTimer);
@@ -17071,10 +17369,16 @@ function clearRealmAnnouncementQueue() {
 }
 
 function showNextRealmAnnouncement() {
-  if (activeRealmAnnouncement || !realmAnnouncementQueue.length || !realmAnnouncement) return;
+  if (
+    activeRealmAnnouncement
+    || !realmAnnouncementQueue.length
+    || !realmAnnouncement
+    || isLoginPresentationBlockingRealmAnnouncements()
+  ) return;
   const event = realmAnnouncementQueue.shift();
   const copy = getRealmActivityCopy(event);
   activeRealmAnnouncement = event;
+  deliveredRealmAnnouncementEventIds.add(event.eventId);
   realmAnnouncement.classList.remove("is-visible", "is-leaving", "stronghold", "citadel");
   realmAnnouncement.classList.add(copy.tone);
   realmAnnouncement.hidden = false;
@@ -17108,6 +17412,8 @@ function enqueueRealmAnnouncement(event = null) {
   if (!normalized) return false;
   if (activeRealmAnnouncement?.eventId === normalized.eventId) return false;
   if (realmAnnouncementQueue.some(entry => entry.eventId === normalized.eventId)) return false;
+  if (deliveredRealmAnnouncementEventIds.has(normalized.eventId)) return false;
+  if (isLoginPresentationSequenceActive()) return addLoginPresentationRealmCandidate(normalized);
   realmAnnouncementQueue.push(normalized);
   realmAnnouncementQueue.sort((a, b) => {
     const aPriority = a.eventType === "CITADEL_CAPTURED" ? 0 : 1;
@@ -17136,10 +17442,18 @@ function mergeRealmActivitySnapshot(events = [], metadata = {}) {
     .map(change => normalizeRealmActivityEvent(change.event))
     .filter(Boolean);
   if (authoritative) {
+    realmActivityAuthoritativeHydrated = true;
+    if (isLoginPresentationSequenceActive() && !loginPresentationSequence.finalizing) {
+      collectLoginPresentationRealmCandidates(nextEvents, loginPresentationSequence);
+    }
     addedEvents.forEach(event => {
       const newDuringSession = event.occurredAtMs >= realmActivityLiveSinceMs;
       if (newDuringSession && !seenRealmActivityEventIds.has(event.eventId)) {
-        enqueueRealmAnnouncement(event);
+        if (isLoginPresentationSequenceActive()) {
+          addLoginPresentationRealmCandidate(event, loginPresentationSequence);
+        } else {
+          enqueueRealmAnnouncement(event);
+        }
       }
     });
   }
@@ -17148,6 +17462,9 @@ function mergeRealmActivitySnapshot(events = [], metadata = {}) {
     seenRealmActivityEventIds = new Set(nextEvents.map(event => event.eventId));
   }
   realmActivityHydrated = true;
+  if (authoritative && isLoginPresentationSequenceActive()) {
+    advanceLoginPresentationSequence(loginPresentationSequence);
+  }
 
   if (changed) {
     updateReportUnreadBadge();
@@ -17168,11 +17485,13 @@ function mergeRealmActivitySnapshot(events = [], metadata = {}) {
 function clearOnlineRealmActivityWatcher({ clear = true } = {}) {
   if (typeof onlineRealmActivityUnsubscribe === "function") onlineRealmActivityUnsubscribe();
   onlineRealmActivityUnsubscribe = null;
+  realmActivityHydrated = false;
+  realmActivityAuthoritativeHydrated = false;
   if (!clear) return;
   onlineRealmActivityEvents = [];
-  realmActivityHydrated = false;
   realmActivityLiveSinceMs = 0;
   seenRealmActivityEventIds = new Set();
+  deliveredRealmAnnouncementEventIds = new Set();
   clearRealmAnnouncementQueue();
   updateReportUnreadBadge();
 }
@@ -17942,6 +18261,7 @@ async function startFromInput(forceFresh = false) {
   const originalStatusDetail = onlineStatusDetail?.textContent || "";
   let shouldConnectOnline = false;
   let statusOverride = "";
+  let presentationGeneration = 0;
   try {
     onlineSessionReplaced = false;
     pendingWelcomeBackSession = null;
@@ -17976,6 +18296,14 @@ async function startFromInput(forceFresh = false) {
     pendingOfflineProductionCities = [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
+    const welcomeSession = gameServerMembership?.welcomeBack || null;
+    presentationGeneration = beginLoginPresentationSequence({
+      kind: "login",
+      baselineAtMs: normalizeTimestampMs(welcomeSession?.awayStartedAtMs)
+        || normalizeTimestampMs(welcomeSession?.sessionStartedAtMs)
+        || Date.now(),
+      welcomeExpected: Boolean(pendingWelcomeBackSession?.eligible),
+    });
 
     if (onlineStatusDetail) onlineStatusDetail.textContent = "Loading your online city...";
     const connected = await setupOnlineWorld();
@@ -17991,12 +18319,16 @@ async function startFromInput(forceFresh = false) {
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
-    refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
+    startLoginPresentationDailyRefresh(presentationGeneration);
+    markLoginPresentationMapReady(presentationGeneration);
     retryPendingRewardedAdClaim();
     if (pendingGameServerInactivityNotice) {
       window.setTimeout(() => showGameServerInactivityNotice(pendingGameServerInactivityNotice), 0);
     }
   } catch (error) {
+    if (presentationGeneration && loginPresentationSequence?.generation === presentationGeneration) {
+      cancelLoginPresentationSequence();
+    }
     onlineLastError = error?.message || String(error);
     statusOverride = shouldConnectOnline ? `Online setup failed: ${onlineLastError}` : onlineLastError;
     if (setupScreen?.classList.contains("visible")) {
@@ -20091,13 +20423,22 @@ function mergeOfflineRewardsSummaries(current = null, next = null) {
 function queueOfflineRewardsSummary(summary = null) {
   if (!summary) return false;
   pendingOfflineRewardsSummary = mergeOfflineRewardsSummaries(pendingOfflineRewardsSummary, summary);
+  if (isLoginPresentationSequenceActive()) {
+    advanceLoginPresentationSequence(loginPresentationSequence);
+    return true;
+  }
   if (modal.open || deferWhileScreenRewardAnimationRuns(showPendingOfflineRewardsSummary)) return true;
   return showPendingOfflineRewardsSummary();
 }
 
-function showPendingOfflineRewardsSummary() {
+function showPendingOfflineRewardsSummary(options = {}) {
   if (!pendingOfflineRewardsSummary || modal.open) return false;
-  if (deferWhileScreenRewardAnimationRuns(showPendingOfflineRewardsSummary)) return false;
+  const sequence = loginPresentationSequence;
+  if (
+    isLoginPresentationSequenceActive(sequence)
+    && options.presentationGeneration !== sequence.generation
+  ) return false;
+  if (deferWhileScreenRewardAnimationRuns(() => showPendingOfflineRewardsSummary(options))) return false;
   const summary = pendingOfflineRewardsSummary;
   pendingOfflineRewardsSummary = null;
   showOfflineRewardsModal(summary);
@@ -20109,6 +20450,7 @@ function formatOfflineRewardAmount(value) {
 }
 
 function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [], lostCityCount = 0 } = {}) {
+  suspendRealmAnnouncementForLoginPresentation(loginPresentationSequence);
   const lostList = Array.isArray(lostCities) ? lostCities : [];
   const totalLostCities = Math.max(lostList.length, Math.floor(Number(lostCityCount) || 0));
   const inactivityNotice = pendingGameServerInactivityNotice;
@@ -20220,10 +20562,17 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
   const shouldRestartRealtime = longRefresh || onlineRealtimeRecoveryNeeded;
   const shouldShowWelcomeBack = awayMs >= FOREGROUND_LONG_RESUME_MS;
   const shouldRequestWelcomeBack = Boolean(pendingWelcomeBackSession?.eligible);
+  const presentationGeneration = beginLoginPresentationSequence({
+    kind: "resume",
+    baselineAtMs: Math.max(0, Date.now() - Math.max(0, Number(awayMs) || 0)),
+    welcomeExpected: shouldRequestWelcomeBack,
+  });
+  startLoginPresentationDailyRefresh(presentationGeneration);
   const economyPromise = Promise.resolve(refreshServerEconomy(true, {
     requestWelcomeBack: shouldRequestWelcomeBack,
     showOfflineRewards: shouldShowWelcomeBack || shouldRequestWelcomeBack,
     resumeCatchUp: true,
+    presentationGeneration,
   }));
   const refreshTasks = [
     Promise.resolve(refreshAllOwnedCities(true)),
@@ -20238,11 +20587,11 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
     economyPromise,
     Promise.allSettled(refreshTasks),
   ]);
-  refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
   retryPendingRewardedAdClaim();
   recoverPendingOnlineArmyMovements();
   retryOverdueOnlineArmyResolutions();
   renderAll();
+  markLoginPresentationMapReady(presentationGeneration);
   updateIncomingAttackUi();
   updateOutgoingAttackUi();
   refreshOpenServerDrivenPanels();
@@ -21928,7 +22277,7 @@ function getControlledObjectiveBenefitBreakdown(city = null) {
     .forEach(objective => {
       const percent = getStrongholdBonusPercent(objective)
         * (ownsCitadel ? CLAN_SHARED_OBJECTIVE_MULTIPLIER : 1);
-      parts.push(`${getStrongholdName(objective)} +${formatNumber(percent)}%`);
+      parts.push(`${getStrongholdDisplayName(objective)} +${formatNumber(percent)}%`);
     });
   if (!ownsCitadel && Number(stats.clanCitadelBonusPercent) > 0) {
     parts.push(`Shared Citadel +${formatNumber(stats.clanCitadelBonusPercent)}%`);
@@ -21943,7 +22292,7 @@ function getControlledObjectiveBenefitBreakdown(city = null) {
       parts.push(`Shared clan ${label} +${formatNumber(percent)}%`);
     });
   }
-  return parts.join(" · ") || `${getStrongholdName(city)} +${formatNumber(getStrongholdBonusPercent(city))}%`;
+  return parts.join(" · ") || `${getStrongholdDisplayName(city)} +${formatNumber(getStrongholdBonusPercent(city))}%`;
 }
 
 function isClanAllyCity(city) {
@@ -23807,44 +24156,6 @@ function renderProfileScreen() {
   state.character = normalizeCharacterProgress(state.character);
   state.flag = normalizeFlag(state.flag);
   const summary = getKingdomSummary();
-  const globalStats = getGlobalStatsSnapshot();
-  const hasMilitaryBreakdown = globalStats?.version >= KING_POWER_AUTHORITY_VERSION;
-  const ownedCities = hasMilitaryBreakdown ? [] : getAllOwnedCitiesForDisplay();
-  const fallbackComponents = hasMilitaryBreakdown ? [] : ownedCities.map(getCityInfrastructureKingPowerComponents);
-  const armyPower = hasMilitaryBreakdown
-    ? globalStats.armyPower
-    : getTroopKingPower(summary.troops);
-  const replacementPower = hasMilitaryBreakdown
-    ? globalStats.replacementPower
-    : fallbackComponents.reduce((total, component) => total + component.replacementPower, 0);
-  const defensivePower = hasMilitaryBreakdown
-    ? globalStats.defensivePower
-    : fallbackComponents.reduce((total, component) => total + component.defensivePower, 0);
-  const baseReplacementPower = hasMilitaryBreakdown
-    ? globalStats.baseReplacementPower
-    : ownedCities.reduce(
-      (total, city) => total + getCityInfrastructureKingPowerComponents(
-        city,
-        { includeStrongholdBoosts: false }
-      ).replacementPower,
-      0
-    );
-  const baseDefensivePower = hasMilitaryBreakdown
-    ? globalStats.baseDefensivePower
-    : ownedCities.reduce(
-      (total, city) => total + getCityInfrastructureKingPowerComponents(
-        city,
-        { includeStrongholdBoosts: false }
-      ).defensivePower,
-      0
-    );
-  const strongholdTroopBonusPercent = hasMilitaryBreakdown
-    ? globalStats.strongholdTroopBonusPercent
-    : getControlledStrongholdTroopBonusPercent("player");
-  const defenseBonusTarget = ownedCities.find(city => city?.owner === "player" && !isStronghold(city));
-  const strongholdDefenseBonusPercent = hasMilitaryBreakdown
-    ? getObjectiveTroopDefenseBonusPercent(globalStats)
-    : getControlledObjectiveTroopDefenseBonusPercentForCity(defenseBonusTarget);
   const xpRequired = getXpRequiredForLevel(state.character.level);
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
 
@@ -23859,19 +24170,7 @@ function renderProfileScreen() {
   if (profileLevelText) profileLevelText.textContent = `Level ${formatNumber(state.character.level)}`;
   if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
   if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
-  if (profileKingPowerStat) {
-    profileKingPowerStat.textContent = formatBaseAndBonusStat(summary.baseKingPower, summary.kingPower);
-  }
-  if (profileKingPowerBreakdown) {
-    profileKingPowerBreakdown.textContent = `Army ${formatBaseAndBonusStat(armyPower, armyPower)} | Replacement ${formatBaseAndBonusStat(baseReplacementPower, replacementPower)} | Defense ${formatBaseAndBonusStat(baseDefensivePower, defensivePower)}`;
-  }
-  if (profileKingPowerStrongholdBonus) {
-    const bonusParts = [];
-    if (strongholdTroopBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdTroopBonusPercent)}% troop production`);
-    if (strongholdDefenseBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdDefenseBonusPercent)}% defending-soldier power`);
-    profileKingPowerStrongholdBonus.hidden = bonusParts.length === 0;
-    profileKingPowerStrongholdBonus.textContent = bonusParts.length ? `Strongholds: ${bonusParts.join(" | ")}` : "";
-  }
+  if (profileKingPowerStat) profileKingPowerStat.textContent = formatNumber(summary.kingPower);
   if (profileCitiesStat) profileCitiesStat.textContent = formatNumber(summary.cities);
   if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
   if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);
@@ -23893,6 +24192,10 @@ function renderProfileScreen() {
   }
   applyFlagToElement(profileKingdomFlag, state.flag);
   renderProfileClanAffiliation();
+  renderDailyMissions();
+  if (supportsDailyMissions() && !dailyMissionState && !dailyMissionStatusLoading) {
+    void refreshDailyMissionStatus({ silent: true });
+  }
   updatePushAlertsUi();
   if (activeProfileTab === "skills") renderProfileSkills();
 }
@@ -29175,6 +29478,431 @@ function clearPendingRewardedAdClaim(intentId = "") {
   }
 }
 
+const DAILY_MISSION_ICONS = Object.freeze({
+  city: "♜",
+  swords: "⚔",
+  helmet: "♞",
+  banner: "⚑",
+  targets: "◎",
+  march: "➜",
+  camp: "⌂",
+  gold: "●",
+  warband: "⚔",
+  relic: "◆",
+  deed: "▣",
+  "camp-types": "♣",
+  upgrade: "▲",
+  tower: "♜",
+  cities: "♜",
+  hammer: "⚒",
+  treasury: "●",
+  troops: "♟",
+  stronghold: "♜",
+  siege: "⚔",
+  "stronghold-march": "➜",
+  gift: "✦",
+});
+
+function normalizeDailyMissionReward(raw = null) {
+  const reward = raw && typeof raw === "object" ? raw : {};
+  const type = ["gold", "troops", "item"].includes(String(reward.type || ""))
+    ? String(reward.type)
+    : "gold";
+  return {
+    type,
+    lockedAmount: Math.max(1, Math.floor(Number(reward.lockedAmount) || 1)),
+    productionHours: Math.max(0, Number(reward.productionHours) || 0),
+    itemId: type === "item" ? String(reward.itemId || "").slice(0, 64) : "",
+  };
+}
+
+function normalizeDailyMission(raw = null, slot = 0) {
+  const mission = raw && typeof raw === "object" ? raw : {};
+  const target = Math.max(1, Math.floor(Number(mission.target) || 1));
+  const progress = Math.min(target, Math.max(0, Math.floor(Number(mission.progress) || 0)));
+  return {
+    id: String(mission.id || `mission-${slot}`).slice(0, 96),
+    slot: Math.max(0, Math.floor(Number(mission.slot) || slot)),
+    family: String(mission.family || "").slice(0, 48),
+    activityGroup: String(mission.activityGroup || "").slice(0, 32),
+    difficulty: ["easy", "medium", "hard"].includes(String(mission.difficulty || ""))
+      ? String(mission.difficulty)
+      : "easy",
+    icon: String(mission.icon || "banner").slice(0, 32),
+    title: String(mission.title || "Daily Mission").slice(0, 80),
+    description: String(mission.description || "Complete the mission").slice(0, 180),
+    target,
+    progress,
+    completedAtMs: normalizeTimestampMs(mission.completedAtMs),
+    claimedAtMs: normalizeTimestampMs(mission.claimedAtMs),
+    reward: normalizeDailyMissionReward(mission.reward),
+  };
+}
+
+function normalizeDailyMissionState(raw = null, fallbackServerTimeMs = Date.now()) {
+  if (!raw || typeof raw !== "object") return null;
+  const missions = (Array.isArray(raw.missions) ? raw.missions : [])
+    .slice(0, 3)
+    .map((mission, index) => normalizeDailyMission(mission, index))
+    .sort((a, b) => a.slot - b.slot);
+  const serverTimeMs = Math.max(0, normalizeTimestampMs(raw.serverTimeMs) || Math.floor(Number(fallbackServerTimeMs) || Date.now()));
+  return {
+    schemaVersion: Math.max(0, Math.floor(Number(raw.schemaVersion) || 0)),
+    missionVersion: Math.max(0, Math.floor(Number(raw.missionVersion) || 0)),
+    cycleKey: String(raw.cycleKey || raw.id || "").slice(0, 160),
+    utcDate: String(raw.utcDate || "").slice(0, 16),
+    resetsAtMs: normalizeTimestampMs(raw.resetsAtMs),
+    serverTimeMs,
+    rerollsRemaining: Math.max(0, Math.min(1, Math.floor(Number(raw.rerollsRemaining) || 0))),
+    completedCount: missions.filter(mission => mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target).length,
+    claimedCount: missions.filter(mission => mission.claimedAtMs).length,
+    missions,
+  };
+}
+
+function getDailyMissionNowMs() {
+  return Date.now() + dailyMissionClockOffsetMs;
+}
+
+function formatDailyMissionCountdown(resetsAtMs = dailyMissionState?.resetsAtMs) {
+  const seconds = Math.max(0, Math.ceil((Math.max(0, Number(resetsAtMs) || 0) - getDailyMissionNowMs()) / 1000));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`;
+}
+
+function formatDailyMissionReward(reward = {}) {
+  if (reward.type === "item") {
+    const item = getShopItemById(reward.itemId);
+    return item?.label || "Royal Item";
+  }
+  const hours = Number(reward.productionHours) || 0;
+  const hoursLabel = hours > 0 ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h ` : "";
+  const kind = reward.type === "troops" ? "Troops" : "Gold";
+  return `${hoursLabel}${kind} · ${formatNumber(reward.lockedAmount)}`;
+}
+
+function updateDailyMissionCountdown() {
+  if (!dailyMissionsCountdown) return;
+  dailyMissionsCountdown.textContent = dailyMissionState?.resetsAtMs
+    ? `New missions in ${formatDailyMissionCountdown()}`
+    : "New missions at 00:00 UTC";
+}
+
+function clearDailyMissionSubscription() {
+  if (typeof dailyMissionUnsubscribe === "function") dailyMissionUnsubscribe();
+  dailyMissionUnsubscribe = null;
+  dailyMissionSubscribedCycleKey = "";
+}
+
+function subscribeDailyMissionCycle(cycleKey = dailyMissionState?.cycleKey) {
+  const key = String(cycleKey || "");
+  const api = getOnlineApi();
+  if (!key || !api?.subscribeDailyMissionState || dailyMissionSubscribedCycleKey === key) return;
+  clearDailyMissionSubscription();
+  dailyMissionSubscribedCycleKey = key;
+  dailyMissionUnsubscribe = api.subscribeDailyMissionState(key, {
+    onState: snapshot => {
+      if (!snapshot || String(snapshot.cycleKey || snapshot.id || "") !== key) return;
+      const normalized = normalizeDailyMissionState(snapshot, dailyMissionState?.serverTimeMs || getDailyMissionNowMs());
+      if (!normalized) return;
+      dailyMissionState = normalized;
+      dailyMissionError = "";
+      renderDailyMissions();
+    },
+    onError: error => {
+      console.warn("Daily Mission subscription failed", error);
+      dailyMissionError = "Mission progress is reconnecting…";
+      renderDailyMissions();
+    },
+  });
+}
+
+function scheduleDailyMissionUtcRefresh() {
+  if (dailyMissionUtcTimer) window.clearTimeout(dailyMissionUtcTimer);
+  dailyMissionUtcTimer = 0;
+  if (!dailyMissionState?.resetsAtMs || !getOnlineApi()?.isSignedIn?.()) return;
+  const delayMs = Math.min(2_147_000_000, Math.max(250, dailyMissionState.resetsAtMs - getDailyMissionNowMs() + 250));
+  dailyMissionUtcTimer = window.setTimeout(() => {
+    dailyMissionUtcTimer = 0;
+    clearDailyMissionSubscription();
+    dailyMissionState = null;
+    void refreshDailyMissionStatus({ force: true, silent: true });
+  }, delayMs);
+}
+
+function startDailyMissionCountdown() {
+  if (dailyMissionCountdownTimer) window.clearInterval(dailyMissionCountdownTimer);
+  dailyMissionCountdownTimer = window.setInterval(() => {
+    updateDailyMissionCountdown();
+    if (dailyMissionState?.resetsAtMs && getDailyMissionNowMs() >= dailyMissionState.resetsAtMs) {
+      if (!dailyMissionStatusLoading) void refreshDailyMissionStatus({ force: true, silent: true });
+    }
+  }, 1000);
+  updateDailyMissionCountdown();
+}
+
+function applyDailyMissionStatus(raw = null, serverTimeMs = Date.now()) {
+  const normalized = normalizeDailyMissionState(raw, serverTimeMs);
+  if (!normalized) return null;
+  const confirmedServerTimeMs = Math.max(0, Number(serverTimeMs) || normalized.serverTimeMs);
+  if (confirmedServerTimeMs) dailyMissionClockOffsetMs = confirmedServerTimeMs - Date.now();
+  normalized.serverTimeMs = confirmedServerTimeMs || normalized.serverTimeMs;
+  dailyMissionState = normalized;
+  dailyMissionError = "";
+  subscribeDailyMissionCycle(normalized.cycleKey);
+  scheduleDailyMissionUtcRefresh();
+  startDailyMissionCountdown();
+  renderDailyMissions();
+  return normalized;
+}
+
+async function refreshDailyMissionStatus(options = {}) {
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.() || !supportsDailyMissions()) {
+    if (options.force) {
+      dailyMissionState = null;
+      clearDailyMissionSubscription();
+    }
+    renderDailyMissions();
+    return null;
+  }
+  if (dailyMissionStatusPromise && !options.force) return dailyMissionStatusPromise;
+  dailyMissionStatusLoading = true;
+  dailyMissionError = "";
+  renderDailyMissions();
+  const startedAtMs = Date.now();
+  const request = Promise.resolve(api.getDailyMissionStatus({}))
+    .then(result => {
+      const serverTimeMs = Math.max(0, Number(result?.serverTimeMs) || Number(result?.dailyMissionState?.serverTimeMs) || startedAtMs);
+      return applyDailyMissionStatus(result?.dailyMissionState, serverTimeMs);
+    })
+    .catch(error => {
+      dailyMissionError = error?.message || "Daily Missions could not be loaded.";
+      if (!options.silent) showToast(dailyMissionError);
+      console.warn("Daily Mission status failed", error);
+      renderDailyMissions();
+      return null;
+    })
+    .finally(() => {
+      dailyMissionStatusLoading = false;
+      if (dailyMissionStatusPromise === request) dailyMissionStatusPromise = null;
+      renderDailyMissions();
+    });
+  dailyMissionStatusPromise = request;
+  return request;
+}
+
+function stopDailyMissionLifecycle({ clear = false } = {}) {
+  clearDailyMissionSubscription();
+  if (dailyMissionUtcTimer) window.clearTimeout(dailyMissionUtcTimer);
+  if (dailyMissionCountdownTimer) window.clearInterval(dailyMissionCountdownTimer);
+  dailyMissionUtcTimer = 0;
+  dailyMissionCountdownTimer = 0;
+  dailyMissionStatusPromise = null;
+  dailyMissionStatusLoading = false;
+  dailyMissionActionsInFlight.clear();
+  if (clear) {
+    dailyMissionState = null;
+    dailyMissionError = "";
+    dailyMissionClockOffsetMs = 0;
+  }
+}
+
+function renderDailyMissions() {
+  if (!dailyMissionsSection || !dailyMissionsList) return;
+  const available = supportsDailyMissions();
+  dailyMissionsSection.hidden = !available;
+  if (!available) return;
+  if (dailyMissionsCompleted) dailyMissionsCompleted.textContent = `${dailyMissionState?.completedCount || 0}/3`;
+  if (dailyMissionsRerolls) dailyMissionsRerolls.textContent = `Reroll: ${dailyMissionState?.rerollsRemaining ?? 1}`;
+  updateDailyMissionCountdown();
+  if (dailyMissionsStatus) {
+    dailyMissionsStatus.hidden = !dailyMissionError;
+    dailyMissionsStatus.textContent = dailyMissionError;
+  }
+  if (dailyMissionStatusLoading && !dailyMissionState) {
+    dailyMissionsList.innerHTML = `<div class="daily-mission-placeholder" role="status">Preparing today’s missions…</div>`;
+    return;
+  }
+  if (!dailyMissionState?.missions?.length) {
+    dailyMissionsList.innerHTML = `
+      <button class="daily-mission-placeholder daily-mission-retry" type="button" data-daily-mission-retry>
+        ${escapeHtml(dailyMissionError || "Open today’s mission ledger")}
+      </button>`;
+    return;
+  }
+  dailyMissionsList.innerHTML = dailyMissionState.missions.map(mission => {
+    const claimed = mission.claimedAtMs > 0;
+    const complete = claimed || mission.completedAtMs > 0 || mission.progress >= mission.target;
+    const busy = dailyMissionActionsInFlight.has(mission.id);
+    const rerollAvailable = !complete && dailyMissionState.rerollsRemaining > 0 && !busy;
+    const percent = Math.round(Math.min(1, mission.progress / Math.max(1, mission.target)) * 100);
+    const icon = DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner;
+    return `
+      <article class="daily-mission-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""}" data-daily-mission-row="${escapeHtml(mission.id)}" tabindex="0" aria-label="${escapeHtml(`${mission.title}. ${mission.description}. Progress ${mission.progress} of ${mission.target}. Reward ${formatDailyMissionReward(mission.reward)}.`)}">
+        <span class="daily-mission-icon" aria-hidden="true">${escapeHtml(icon)}</span>
+        <div class="daily-mission-copy">
+          <div><strong>${escapeHtml(mission.title)}</strong><span>${formatNumber(mission.progress)}/${formatNumber(mission.target)}</span></div>
+          <small>${escapeHtml(mission.description)}</small>
+          <span class="daily-mission-progress" aria-hidden="true"><i style="width:${percent}%"></i></span>
+        </div>
+        <div class="daily-mission-reward"><small>Reward</small><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
+        <div class="daily-mission-action">
+          ${claimed
+            ? `<span class="daily-mission-completed">✓ Completed</span>`
+            : complete
+              ? `<button class="daily-mission-claim" type="button" data-daily-mission-claim="${escapeHtml(mission.id)}" ${busy ? "disabled" : ""}>${busy ? "Claiming…" : "Claim"}</button>`
+              : rerollAvailable
+                ? `<button class="daily-mission-reroll" type="button" data-daily-mission-reroll="${escapeHtml(mission.id)}" aria-label="Replace ${escapeHtml(mission.title)}">↻</button>`
+                : `<span class="daily-mission-difficulty">${escapeHtml(mission.difficulty)}</span>`}
+        </div>
+      </article>`;
+  }).join("");
+}
+
+function getDailyMissionById(missionId = "") {
+  return dailyMissionState?.missions?.find(mission => mission.id === String(missionId || "")) || null;
+}
+
+function openDailyMissionModal(title = "Daily Mission", bodyHtml = "") {
+  if (!modal || !modalBody || !modalTitle) return false;
+  modal.classList.add("daily-mission-modal");
+  modalTitle.textContent = title;
+  modalBody.innerHTML = bodyHtml;
+  if (!modal.open) modal.showModal();
+  return true;
+}
+
+function showDailyMissionDetails(missionId = "") {
+  const mission = getDailyMissionById(missionId);
+  if (!mission) return;
+  const complete = mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target;
+  openDailyMissionModal(mission.title, `
+    <section class="daily-mission-detail">
+      <span class="daily-mission-detail-icon" aria-hidden="true">${escapeHtml(DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner)}</span>
+      <div><span>${escapeHtml(mission.difficulty)} mission</span><h3>${escapeHtml(mission.description)}</h3></div>
+      <div class="daily-mission-detail-stat"><span>Progress</span><strong>${formatNumber(mission.progress)} / ${formatNumber(mission.target)}</strong></div>
+      <div class="daily-mission-detail-stat"><span>Reward</span><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
+      <p>${complete ? mission.claimedAtMs ? "Reward collected. A new mission arrives at 00:00 UTC." : "Mission complete. Return to your profile to claim the reward." : "This target and reward are locked until the next 00:00 UTC reset."}</p>
+    </section>`);
+}
+
+function showDailyMissionRerollConfirmation(missionId = "") {
+  const mission = getDailyMissionById(missionId);
+  if (!mission || mission.completedAtMs || mission.claimedAtMs || dailyMissionState?.rerollsRemaining < 1) return;
+  if (!openDailyMissionModal("Replace Mission?", `
+    <section class="daily-mission-confirmation">
+      <p>You have <strong>1 replacement</strong> for this UTC day.</p>
+      <p>Replacing <strong>${escapeHtml(mission.title)}</strong> discards its ${formatNumber(mission.progress)}/${formatNumber(mission.target)} progress.</p>
+      <footer>
+        <button class="profile-secondary-btn" type="button" data-daily-mission-cancel>Keep Mission</button>
+        <button class="profile-primary-btn" type="button" data-daily-mission-confirm-reroll="${escapeHtml(mission.id)}">Replace</button>
+      </footer>
+    </section>`)) return;
+  modalBody.querySelector("[data-daily-mission-cancel]")?.addEventListener("click", () => modal.close());
+  modalBody.querySelector("[data-daily-mission-confirm-reroll]")?.addEventListener("click", event => {
+    const id = event.currentTarget.dataset.dailyMissionConfirmReroll;
+    modal.close();
+    void rerollDailyMission(id);
+  });
+}
+
+function createDailyMissionRequestId(prefix = "mission") {
+  if (window.crypto?.randomUUID) return `${prefix}-${window.crypto.randomUUID()}`;
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+async function rerollDailyMission(missionId = "") {
+  const mission = getDailyMissionById(missionId);
+  const api = getOnlineApi();
+  if (!mission || !api?.rerollDailyMission || dailyMissionActionsInFlight.has(mission.id)) return;
+  dailyMissionActionsInFlight.add(mission.id);
+  renderDailyMissions();
+  try {
+    const result = await api.rerollDailyMission({
+      cycleKey: dailyMissionState?.cycleKey || "",
+      missionId: mission.id,
+      requestId: createDailyMissionRequestId("reroll"),
+    });
+    if (result?.dailyMissionState) applyDailyMissionStatus(result.dailyMissionState, result.dailyMissionState.serverTimeMs || getDailyMissionNowMs());
+    showToast(result?.rerolled ? "Daily Mission replaced." : result?.message || "No different mission is available.");
+  } catch (error) {
+    dailyMissionError = error?.message || "That mission could not be replaced.";
+    showToast(dailyMissionError);
+    void refreshDailyMissionStatus({ force: true, silent: true });
+  } finally {
+    dailyMissionActionsInFlight.delete(mission.id);
+    renderDailyMissions();
+  }
+}
+
+async function claimDailyMission(missionId = "", sourceElement = null) {
+  const mission = getDailyMissionById(missionId);
+  const api = getOnlineApi();
+  if (!mission || !api?.claimDailyMissionReward || dailyMissionActionsInFlight.has(mission.id)) return;
+  const sourceAnchor = captureAnimationAnchor(sourceElement);
+  dailyMissionActionsInFlight.add(mission.id);
+  renderDailyMissions();
+  try {
+    const result = await api.claimDailyMissionReward({
+      cycleKey: dailyMissionState?.cycleKey || "",
+      missionId: mission.id,
+      requestId: createDailyMissionRequestId("claim"),
+    });
+    if (result?.currentUser || result?.cityUpdates) applyServerEconomyResult(result, { renderCities: true });
+    if (result?.dailyMissionState) applyDailyMissionStatus(result.dailyMissionState, result.dailyMissionState.serverTimeMs || getDailyMissionNowMs());
+    const receipt = result?.receipt || {};
+    if (!result?.replayed) {
+      const rewardType = String(receipt.rewardType || mission.reward.type || "gold");
+      const amount = Math.max(1, Math.floor(Number(receipt.lockedAmount) || mission.reward.lockedAmount));
+      playRewardSound(rewardType === "item" ? "item" : rewardType);
+      playRewardAnimation(rewardType, {
+        id: `daily-mission:${dailyMissionState?.cycleKey || "cycle"}:${mission.id}`,
+        sourceAnchor,
+        tier: mission.difficulty === "hard" ? "large" : "medium",
+        host: profileScreen,
+        destinationCityId: receipt.targetCityId || "",
+      });
+      const item = rewardType === "item" ? getShopItemById(receipt.itemId || mission.reward.itemId) : null;
+      showToast(`Mission reward: ${item?.label || `${formatNumber(amount)} ${rewardType}`}.`);
+      addLog(`Daily Mission complete: ${mission.title}.`);
+    } else {
+      showToast("That mission reward was already collected.");
+    }
+    saveGame();
+    queueOnlineSave();
+  } catch (error) {
+    dailyMissionError = error?.message || "That mission reward could not be claimed.";
+    showToast(dailyMissionError);
+    void refreshDailyMissionStatus({ force: true, silent: true });
+  } finally {
+    dailyMissionActionsInFlight.delete(mission.id);
+    renderDailyMissions();
+  }
+}
+
+function handleDailyMissionListClick(event) {
+  const retry = event.target.closest("[data-daily-mission-retry]");
+  if (retry) {
+    void refreshDailyMissionStatus({ force: true, silent: false });
+    return;
+  }
+  const claim = event.target.closest("[data-daily-mission-claim]");
+  if (claim) {
+    void claimDailyMission(claim.dataset.dailyMissionClaim, claim);
+    return;
+  }
+  const reroll = event.target.closest("[data-daily-mission-reroll]");
+  if (reroll) {
+    showDailyMissionRerollConfirmation(reroll.dataset.dailyMissionReroll);
+    return;
+  }
+  const row = event.target.closest("[data-daily-mission-row]");
+  if (row) showDailyMissionDetails(row.dataset.dailyMissionRow);
+}
+
 function normalizeDailyLoginRewardReceipt(raw = null) {
   if (!raw || typeof raw !== "object") return null;
   const dayKey = String(raw.dayKey || "").slice(0, 10);
@@ -29400,36 +30128,49 @@ async function refreshDailyLoginRewardStatus(options = {}) {
     renderDailyLoginRewardButton();
     return null;
   }
-  if (dailyLoginRewardStatusLoading) return dailyLoginRewardStatus;
+  if (dailyLoginRewardStatusPromise) {
+    const status = await dailyLoginRewardStatusPromise;
+    if (options.autoOpen) maybeAutoOpenDailyLoginRewards(options);
+    return status;
+  }
   dailyLoginRewardStatusLoading = true;
   renderDailyLoginRewardButton();
+  const refreshPromise = (async () => {
+    try {
+      const result = await api.getDailyLoginRewardStatus();
+      dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+      if (
+        dailyLoginRewardPendingClaim
+        && (
+          dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+          || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
+        )
+      ) {
+        dailyLoginRewardPendingClaim = null;
+      }
+      dailyLoginRewardError = "";
+      scheduleDailyLoginRewardUtcRefresh();
+      return dailyLoginRewardStatus;
+    } catch (error) {
+      dailyLoginRewardError = error?.message || "Daily rewards could not be loaded.";
+      if (!options.silent) showToast(dailyLoginRewardError);
+      console.warn("Daily login reward status failed", error);
+      return null;
+    } finally {
+      dailyLoginRewardStatusLoading = false;
+      renderDailyLoginRewardButton();
+      if (modal?.open && modal.classList.contains("daily-login-reward-modal")) {
+        renderDailyLoginRewardModal();
+      }
+    }
+  })();
+  dailyLoginRewardStatusPromise = refreshPromise;
   try {
-    const result = await api.getDailyLoginRewardStatus();
-    dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
-    if (
-      dailyLoginRewardPendingClaim
-      && (
-        dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
-        || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
-      )
-    ) {
-      dailyLoginRewardPendingClaim = null;
-    }
-    dailyLoginRewardError = "";
-    scheduleDailyLoginRewardUtcRefresh();
-    if (options.autoOpen) maybeAutoOpenDailyLoginRewards();
-    return dailyLoginRewardStatus;
-  } catch (error) {
-    dailyLoginRewardError = error?.message || "Daily rewards could not be loaded.";
-    if (!options.silent) showToast(dailyLoginRewardError);
-    console.warn("Daily login reward status failed", error);
-    return null;
+    const status = await refreshPromise;
+    if (options.autoOpen) maybeAutoOpenDailyLoginRewards(options);
+    return status;
   } finally {
-    dailyLoginRewardStatusLoading = false;
-    renderDailyLoginRewardButton();
-    if (modal?.open && modal.classList.contains("daily-login-reward-modal")) {
-      renderDailyLoginRewardModal();
-    }
+    if (dailyLoginRewardStatusPromise === refreshPromise) dailyLoginRewardStatusPromise = null;
   }
 }
 
@@ -29439,7 +30180,17 @@ function getDailyLoginRewardAutoOpenKey(status = dailyLoginRewardStatus) {
   return uid && dayKey ? `${DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX}-${uid}-${dayKey}` : "";
 }
 
-function maybeAutoOpenDailyLoginRewards() {
+function maybeAutoOpenDailyLoginRewards(options = {}) {
+  const sequence = loginPresentationSequence;
+  if (
+    isLoginPresentationSequenceActive(sequence)
+    && (
+      options.presentationGeneration !== sequence.generation
+      || !sequence.dailyResolved
+      || sequence.dailyFinished
+      || sequence.dailyOpen
+    )
+  ) return false;
   if (
     !dailyLoginRewardStatus?.eligible
     || !state
@@ -29451,7 +30202,7 @@ function maybeAutoOpenDailyLoginRewards() {
   ) {
     return false;
   }
-  if (deferWhileScreenRewardAnimationRuns(maybeAutoOpenDailyLoginRewards)) return false;
+  if (deferWhileScreenRewardAnimationRuns(() => maybeAutoOpenDailyLoginRewards(options))) return false;
   const key = getDailyLoginRewardAutoOpenKey();
   if (!key) return false;
   try {
@@ -29460,7 +30211,7 @@ function maybeAutoOpenDailyLoginRewards() {
   } catch (_) {
     // Auto-opening is best-effort when storage is unavailable.
   }
-  showDailyLoginRewardsModal({ skipRefresh: true });
+  showDailyLoginRewardsModal({ skipRefresh: true, presentationGeneration: options.presentationGeneration });
   return true;
 }
 
@@ -29653,6 +30404,7 @@ function renderDailyLoginRewardModal() {
 
 async function showDailyLoginRewardsModal(options = {}) {
   if (!modal || !modalBody || !state) return;
+  suspendRealmAnnouncementForLoginPresentation(loginPresentationSequence);
   modal.classList.add("daily-login-reward-modal");
   modalTitle.textContent = "Daily Royal Rewards";
   renderDailyLoginRewardModal();
@@ -35178,6 +35930,7 @@ window.addEventListener("crownlands:auth", async () => {
     watchGameServerMembership();
   } else {
     stopGameServerMembershipWatcher({ clear: true });
+    stopDailyMissionLifecycle({ clear: true });
     dailyLoginRewardStatus = null;
     dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
@@ -35244,6 +35997,17 @@ if (profileNameInput) {
   profileNameInput.addEventListener("keydown", event => {
     if (event.key === "Enter") saveProfileName();
     if (event.key === "Escape") cancelProfileNameEdit();
+  });
+}
+if (dailyMissionsList) {
+  dailyMissionsList.addEventListener("click", handleDailyMissionListClick);
+  dailyMissionsList.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    if (event.target.closest("button")) return;
+    const row = event.target.closest("[data-daily-mission-row]");
+    if (!row) return;
+    event.preventDefault();
+    showDailyMissionDetails(row.dataset.dailyMissionRow);
   });
 }
 if (flagSaveBtn) flagSaveBtn.addEventListener("click", saveFlagEditor);
@@ -35425,6 +36189,11 @@ document.addEventListener("pointerdown", event => {
   closeProfileScreen();
 }, true);
 modal.addEventListener("close", () => {
+  const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
+    ? "daily"
+    : modal.classList.contains("offline-reward-modal")
+      ? "welcome"
+      : "";
   publicPlayerProfileRequestId += 1;
   publicClanProfileRequestId += 1;
   cancelAuthoritativeRoutePreviewRefresh();
@@ -35458,12 +36227,18 @@ modal.addEventListener("close", () => {
   modal.classList.remove("public-player-profile-modal");
   modal.classList.remove("rewarded-ad-confirmation-modal");
   modal.classList.remove("daily-login-reward-modal");
+  modal.classList.remove("daily-mission-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
   modal.classList.remove("patch-notes-modal");
   const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());
-  window.setTimeout(maybeAutoOpenDailyLoginRewards, followupDelayMs);
-  setTimeout(showNextLevelUpReward, followupDelayMs);
-  window.setTimeout(showPendingOfflineRewardsSummary, followupDelayMs);
+  window.setTimeout(() => {
+    if (closedLoginPresentationKind) completeLoginPresentationModal(closedLoginPresentationKind);
+    else if (isLoginPresentationSequenceActive()) advanceLoginPresentationSequence(loginPresentationSequence);
+    maybeAutoOpenDailyLoginRewards();
+    showNextLevelUpReward();
+    showPendingOfflineRewardsSummary();
+    showNextRealmAnnouncement();
+  }, followupDelayMs);
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

@@ -15,6 +15,14 @@ try {
   if (error?.code !== "MODULE_NOT_FOUND") throw error;
 }
 const { getClanQuestPeriod } = require("./clanQuestPeriod.js");
+const {
+  DAILY_MISSION_VERSION,
+  DAILY_MISSION_EVENT_RETENTION_MS,
+  getDailyMissionCycle,
+  createDailyMissionState,
+  createReplacementMission,
+  applyDailyMissionEvent,
+} = require("./dailyMissions.js");
 const { createAuthoritativeRoutePlanner } = require("./authoritative-route-planner.js");
 const {
   AUTHORITATIVE_ROUTES_VERSION,
@@ -7366,6 +7374,71 @@ exports.markReportsViewed = onCall(
   }
 );
 
+exports.markRealmAnnouncementSeen = onCall(
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const eventId = safeString(request.data?.eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const requestedSeenThroughMs = Math.max(0, timestampToMs(request.data?.seenThroughMs));
+    const eventRef = realmActivityEventRef(eventId);
+    if (!eventRef) throw new HttpsError("invalid-argument", "Choose a valid Realm Activity event.");
+
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const [profileSnap, eventSnap] = await Promise.all([
+        transaction.get(profileRef),
+        transaction.get(eventRef),
+      ]);
+      if (!profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Your Crownlands profile is not ready yet.");
+      }
+      if (!eventSnap.exists) {
+        throw new HttpsError("not-found", "That Realm Activity event is no longer available.");
+      }
+
+      const event = eventSnap.data() || {};
+      const eventOccurredAtMs = Math.max(0, timestampToMs(event.occurredAtMs || event.createdAtMs));
+      if (
+        safeString(event.worldId, 120) !== ONLINE_WORLD_ID
+        || safeString(event.resetGeneration, 120) !== RESET_GENERATION
+        || !["STRONGHOLD_CAPTURED", "CITADEL_CAPTURED"].includes(safeString(event.eventType, 32))
+        || !eventOccurredAtMs
+      ) {
+        throw new HttpsError("failed-precondition", "That announcement belongs to a different Crownlands realm.");
+      }
+      if (requestedSeenThroughMs && requestedSeenThroughMs < eventOccurredAtMs) {
+        throw new HttpsError("invalid-argument", "The Realm announcement cursor cannot precede its selected event.");
+      }
+
+      const profile = profileSnap.data() || {};
+      const currentSeenThroughMs = Math.max(0, timestampToMs(profile.realmAnnouncementSeenThroughMs));
+      const seenThroughMs = Math.max(
+        currentSeenThroughMs,
+        Math.min(nowMs, Math.max(eventOccurredAtMs, requestedSeenThroughMs || eventOccurredAtMs))
+      );
+      const claimed = currentSeenThroughMs < eventOccurredAtMs;
+      if (seenThroughMs > currentSeenThroughMs) {
+        transaction.set(profileRef, {
+          realmAnnouncementSeenThroughMs: seenThroughMs,
+          lastRealmAnnouncementEventId: eventId,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      return {
+        ok: true,
+        claimed,
+        eventId,
+        realmAnnouncementSeenThroughMs: seenThroughMs,
+        lastRealmAnnouncementEventId: seenThroughMs > currentSeenThroughMs
+          ? eventId
+          : safeString(profile.lastRealmAnnouncementEventId, 180),
+        serverTimeMs: nowMs,
+      };
+    }, "markRealmAnnouncementSeen");
+  }
+);
+
 function createIslandReportProjection(report = {}) {
   if (report?.type !== "scout") return report;
   return {
@@ -8152,6 +8225,397 @@ function normalizeItemPurchaseTimestamps(value = {}) {
 function getNextUtcDayStartMs(nowMs = Date.now()) {
   const date = new Date(Math.max(0, safeNumber(nowMs, Date.now())));
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+}
+
+function dailyMissionStateRef(uid = "", cycleKey = "") {
+  const safeUid = safeString(uid, 128);
+  const safeCycleKey = safeString(cycleKey, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid && safeCycleKey
+    ? db.doc(`players/${safeUid}/dailyMissions/${safeCycleKey}`)
+    : null;
+}
+
+function dailyMissionEventRef(uid = "", eventId = "") {
+  const safeUid = safeString(uid, 128);
+  const safeEventId = safeString(eventId, 220);
+  if (!safeUid || !safeEventId) return null;
+  const digest = crypto.createHash("sha256").update(`${safeUid}|${safeEventId}`).digest("hex").slice(0, 36);
+  return db.doc(`dailyMissionEvents/${safeUid}_${digest}`);
+}
+
+function getDailyMissionTargetCategory(target = {}, targetType = "city") {
+  if (targetType === "camp" || target?.campType) return "camp";
+  if (isCrownCitadel(target)) return "citadel";
+  if (isStronghold(target)) return "stronghold";
+  if (getOwnerUid(target)) return target?.isMainCity ? "main_city" : "player_city";
+  return "neutral_city";
+}
+
+function enqueueDailyMissionEvent(transaction, {
+  uid = "",
+  eventId = "",
+  type = "",
+  occurredAtMs = Date.now(),
+  ...details
+} = {}) {
+  const eventRef = dailyMissionEventRef(uid, eventId);
+  const normalizedType = safeString(type, 48).toUpperCase();
+  if (!transaction || !eventRef || !normalizedType) return null;
+  const nowMs = Math.max(0, Math.floor(safeNumber(occurredAtMs, Date.now())));
+  const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
+  const event = {
+    id: eventRef.id,
+    eventId: safeString(eventId, 220),
+    uid: safeString(uid, 128),
+    type: normalizedType,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    cycleKey: cycle.cycleKey,
+    occurredAtMs: nowMs,
+    targetCategory: safeString(details.targetCategory, 32).toLowerCase(),
+    opponentUid: safeString(details.opponentUid, 128),
+    cityId: safeString(details.cityId, 96),
+    campType: safeString(details.campType, 24).toLowerCase(),
+    committedTroops: Math.max(0, Math.floor(safeNumber(details.committedTroops, 0))),
+    defenderLosses: Math.max(0, Math.floor(safeNumber(details.defenderLosses, 0))),
+    levelsGained: Math.max(0, Math.floor(safeNumber(details.levelsGained, 0))),
+    goldSpent: Math.max(0, Math.floor(safeNumber(details.goldSpent, 0))),
+    goldProduced: Math.max(0, Math.floor(safeNumber(details.goldProduced, 0))),
+    troopsProduced: Math.max(0, Math.floor(safeNumber(details.troopsProduced, 0))),
+    productionFromMs: Math.max(0, Math.floor(safeNumber(details.productionFromMs, 0))),
+    productionToMs: Math.max(0, Math.floor(safeNumber(details.productionToMs, 0))),
+    success: Boolean(details.success),
+    cityCaptured: Boolean(details.cityCaptured),
+    campCaptured: Boolean(details.campCaptured),
+    deedCompleted: Boolean(details.deedCompleted),
+    clanGiftSent: Boolean(details.clanGiftSent),
+    meaningful: details.meaningful !== false,
+    processedAtMs: 0,
+    expiresAtMs: cycle.resetsAtMs + DAILY_MISSION_EVENT_RETENTION_MS,
+    expiresAt: Timestamp.fromMillis(cycle.resetsAtMs + DAILY_MISSION_EVENT_RETENTION_MS),
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  transaction.create(eventRef, event);
+  return eventRef;
+}
+
+function getConfiguredRewardCampSeeds() {
+  return (Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : []).flatMap(map => (
+    (Array.isArray(map?.camps) ? map.camps : []).map(camp => ({
+      ...camp,
+      regionId: normalizeRegionId(map.id || map.region?.id),
+      campType: safeString(camp.campType || camp.type, 24).toLowerCase(),
+    }))
+  )).filter(camp => camp.id && REWARD_CAMP_CONFIG[camp.campType]);
+}
+
+function getConfiguredStrongholdSeeds() {
+  return (Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : []).flatMap(map => (
+    (Array.isArray(map?.cities) ? map.cities : []).map(city => ({
+      ...city,
+      regionId: normalizeRegionId(map.id || map.region?.id),
+    }))
+  )).filter(city => city.id && city.strongholdType && !isCrownCitadel(city));
+}
+
+function getDailyMissionUpgradeBonuses(economy = null) {
+  return {
+    ...(economy?.bonuses || {}),
+    upgradeCostReductionPercent: Math.min(
+      85,
+      Math.max(0, safeNumber(economy?.bonuses?.upgradeCostReductionPercent, 0))
+        + getSkillPercent(economy?.profileAfter || {}, "guildCharters")
+    ),
+  };
+}
+
+function simulateDailyMissionUpgradeTargets(economy = null, remainingHours = 24) {
+  const regularCities = (economy?.cityEntries || [])
+    .filter(entry => entry?.city && getOwnerUid(entry.city) === economy.uid && !isStronghold(entry.city))
+    .map(entry => ({ ...entry.city }));
+  const rate = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedGoldPerHour, 1)));
+  const currentGold = Math.max(0, Math.floor(safeNumber(economy?.gold, 0)));
+  const bonuses = getDailyMissionUpgradeBonuses(economy);
+  const definitions = {
+    easy: { effortHours: 4, totalCap: 3, singleCap: 1, uniqueCap: 1 },
+    medium: { effortHours: 8, totalCap: 6, singleCap: 2, uniqueCap: 2 },
+    hard: { effortHours: 12, totalCap: 10, singleCap: 3, uniqueCap: 3 },
+  };
+
+  return Object.fromEntries(Object.entries(definitions).map(([difficulty, definition]) => {
+    const effortHours = Math.max(0.1, Math.min(definition.effortHours, Math.max(0.1, remainingHours * 0.5)));
+    const availableGold = currentGold + rate * Math.max(0, remainingHours);
+    const workingBudget = Math.min(availableGold, currentGold + rate * effortHours);
+    const workingCities = regularCities.map(city => ({ ...city }));
+    let totalLevels = 0;
+    let totalSpent = 0;
+    while (workingCities.length && totalLevels < definition.totalCap) {
+      const choices = workingCities.map((city, index) => ({ index, cost: getCityUpgradeCost(city, bonuses) }))
+        .filter(choice => Number.isFinite(choice.cost))
+        .sort((left, right) => left.cost - right.cost);
+      const choice = choices[0];
+      if (!choice || totalSpent + choice.cost > workingBudget) break;
+      totalSpent += choice.cost;
+      totalLevels += 1;
+      workingCities[choice.index].level = clampCityLevel(workingCities[choice.index].level + 1);
+    }
+
+    let singleCityLevels = 0;
+    regularCities.forEach(source => {
+      const city = { ...source };
+      let spent = 0;
+      let levels = 0;
+      while (levels < definition.singleCap) {
+        const cost = getCityUpgradeCost(city, bonuses);
+        if (!Number.isFinite(cost) || spent + cost > workingBudget) break;
+        spent += cost;
+        levels += 1;
+        city.level = clampCityLevel(city.level + 1);
+      }
+      singleCityLevels = Math.max(singleCityLevels, levels);
+    });
+
+    const nextCosts = regularCities.map(city => getCityUpgradeCost(city, bonuses))
+      .filter(Number.isFinite)
+      .sort((left, right) => left - right);
+    let uniqueCities = 0;
+    let uniqueSpent = 0;
+    for (const cost of nextCosts) {
+      if (uniqueCities >= Math.min(definition.uniqueCap, regularCities.length) || uniqueSpent + cost > workingBudget) break;
+      uniqueSpent += cost;
+      uniqueCities += 1;
+    }
+    const cheapestCost = nextCosts[0] || 0;
+    const goldSpendTarget = cheapestCost > 0 && cheapestCost <= availableGold
+      ? Math.max(1, Math.floor(Math.min(
+        Math.max(cheapestCost, Math.min(totalSpent || cheapestCost, workingBudget)),
+        rate * effortHours
+      )))
+      : 0;
+    return [difficulty, { totalLevels, singleCityLevels, uniqueCities, goldSpendTarget }];
+  }));
+}
+
+async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now(), economy = null) {
+  const profile = economy?.profileAfter || {};
+  const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
+  const regularEntries = (economy?.cityEntries || []).filter(entry => (
+    entry?.city && getOwnerUid(entry.city) === uid && !isStronghold(entry.city)
+  ));
+  const launchableTroops = (economy?.cityEntries || []).reduce((total, entry) => (
+    getOwnerUid(entry?.city) === uid
+      ? total + Math.max(0, Math.floor(safeNumber(entry.city.troops, 0)))
+      : total
+  ), 0);
+  const goldPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedGoldPerHour, 1)));
+  const troopPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedTroopPerHour, 1)));
+  const projectedCombatTroops = Math.max(
+    launchableTroops,
+    Math.floor(launchableTroops + troopPerHour * Math.min(12, cycle.remainingHours))
+  );
+
+  const leaderboardQuery = db.collection(`leaderboards/${RESET_GENERATION}/entries`).limit(GAME_SERVER_CAPACITY);
+  const campSeeds = getConfiguredRewardCampSeeds();
+  const strongholdSeeds = getConfiguredStrongholdSeeds();
+  const clanId = safeString(profile.clanId, 128);
+  const reads = [transaction.get(leaderboardQuery)];
+  campSeeds.forEach(camp => reads.push(transaction.get(campRefForRegion(camp.regionId, camp.id))));
+  strongholdSeeds.forEach(city => reads.push(transaction.get(cityRefForRegion(city.regionId, city.id))));
+  if (clanId) {
+    reads.push(transaction.get(db.doc(`clans/${clanId}`)));
+    reads.push(transaction.get(clanMemberRewardsRef(clanId, uid)));
+  }
+  reads.push(transaction.get(db.doc(`players/${uid}/objectiveStats/deedCamp`)));
+  const snapshots = await Promise.all(reads);
+  let readIndex = 0;
+  const leaderboardSnap = snapshots[readIndex++];
+  const campSnaps = campSeeds.map(() => snapshots[readIndex++]);
+  const strongholdSnaps = strongholdSeeds.map(() => snapshots[readIndex++]);
+  const clanSnap = clanId ? snapshots[readIndex++] : null;
+  const memberRewardsSnap = clanId ? snapshots[readIndex++] : null;
+  const deedClaimSnap = snapshots[readIndex++];
+
+  const opponents = leaderboardSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
+    .filter(entry => entry.uid !== uid)
+    .filter(entry => safeString(entry.worldId, 128) === ONLINE_WORLD_ID)
+    .filter(entry => safeString(entry.resetGeneration, 128) === RESET_GENERATION)
+    .filter(entry => Math.max(0, Math.floor(safeNumber(entry.cityCount, 0))) > 1)
+    .filter(entry => !clanId || safeString(entry.clanId, 128) !== clanId);
+  const eligibleEnemyCityCount = opponents.reduce((total, entry) => (
+    total + Math.max(0, Math.floor(safeNumber(entry.cityCount, 0)) - 1)
+  ), 0);
+
+  const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * skillMultiplier(profile, "swordmastery");
+  const projectedAttackPower = Math.floor(projectedCombatTroops * attackPowerPerTroop);
+  const feasibleCampTypes = [];
+  campSeeds.forEach((seed, index) => {
+    const config = REWARD_CAMP_CONFIG[seed.campType];
+    const data = campSnaps[index]?.exists ? campSnaps[index].data() || {} : {};
+    const holderUid = safeString(data.holderUid || data.ownerUid, 128);
+    const defenders = Math.max(1, Math.floor(safeNumber(data.currentGarrison, config?.baseDefenders || 20_000)));
+    if (holderUid !== uid && projectedAttackPower > defenders * Math.max(1, safeNumber(config?.troopPower, 1))) {
+      feasibleCampTypes.push(seed.campType);
+    }
+  });
+
+  const strongholdEligible = cycle.remainingHours >= 0.5 && strongholdSeeds.some((seed, index) => {
+    const data = strongholdSnaps[index]?.exists ? strongholdSnaps[index].data() || {} : seed;
+    const ownerUid = getOwnerUid(data);
+    const ownerClanId = safeString(data.ownerClanId, 128);
+    return ownerUid !== uid && (!clanId || ownerClanId !== clanId);
+  });
+  const giftData = memberRewardsSnap?.exists ? memberRewardsSnap.data() || {} : {};
+  const lastGiftSentAtMs = Math.max(0, timestampToMs(giftData.lastGiftSentAtMs));
+  const giftReadyAtMs = lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS;
+  const clanGiftEligible = Boolean(
+    clanId
+    && clanSnap?.exists
+    && clanSnap.data()?.status === "active"
+    && Math.max(0, Math.floor(safeNumber(clanSnap.data()?.memberCount, 0))) >= 2
+    && giftReadyAtMs < cycle.resetsAtMs
+  );
+  const deedClaims = deedClaimSnap?.exists ? deedClaimSnap.data() || {} : {};
+  const deedCampEligible = feasibleCampTypes.includes("deed")
+    && cycle.remainingHours >= (DEED_CAMP_HOLD_DURATION_MS + 30 * 60 * 1000) / 3_600_000
+    && !(safeString(deedClaims.date, 10) === cycle.utcDate && Math.max(0, Math.floor(safeNumber(deedClaims.count, 0))) >= 1)
+    && regularEntries.length < NEUTRAL_CITY_COUNT_LIMIT;
+
+  return {
+    cityCount: regularEntries.length,
+    totalCityLevels: regularEntries.reduce((total, entry) => total + clampCityLevel(entry.city.level), 0),
+    averageCityLevel: regularEntries.length
+      ? regularEntries.reduce((total, entry) => total + clampCityLevel(entry.city.level), 0) / regularEntries.length
+      : 1,
+    gold: Math.max(0, Math.floor(safeNumber(economy?.gold, 0))),
+    goldPerHour,
+    troopPerHour,
+    launchableTroops,
+    qualifyingAttackTroops: Math.max(1, Math.ceil(launchableTroops * 0.05)),
+    projectedCombatTroops,
+    kingPower: Math.max(0, Math.floor(safeNumber(economy?.globalStats?.kingPower, profile.kingPower))),
+    eligibleOpponentCount: opponents.length,
+    eligibleEnemyCityCount,
+    maxCampCaptures: feasibleCampTypes.length,
+    feasibleCampTypes,
+    deedCampEligible,
+    strongholdEligible,
+    clanGiftEligible,
+    remainingHours: cycle.remainingHours,
+    upgradeTargets: simulateDailyMissionUpgradeTargets(economy, cycle.remainingHours),
+    itemCosts: Object.fromEntries(Object.entries(SHOP_ITEMS).map(([itemId, item]) => [itemId, item.cost])),
+  };
+}
+
+function dailyMissionStateForClient(state = {}, nowMs = Date.now()) {
+  return {
+    ...state,
+    serverTimeMs: Math.max(0, Math.floor(safeNumber(nowMs, Date.now()))),
+  };
+}
+
+async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
+  const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
+  const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
+  if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Daily Missions.");
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const [stateSnap, profileSnap] = await Promise.all([
+      transaction.get(stateRef),
+      transaction.get(profileRef),
+    ]);
+    if (stateSnap.exists) return dailyMissionStateForClient(stateSnap.data() || {}, nowMs);
+    if (!profileSnap.exists) {
+      throw new HttpsError("failed-precondition", "Claim a starting city before opening Daily Missions.");
+    }
+    const profile = profileSnap.data() || {};
+    assertCurrentPlayerProfile(profile);
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+    const capacity = await buildDailyMissionCapacity(transaction, uid, nowMs, economy);
+    let state;
+    try {
+      state = createDailyMissionState({
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        nowMs,
+        capacity,
+      });
+    } catch (error) {
+      console.error("Daily mission generation failed", { uid, cycleKey: cycle.cycleKey, error: error?.message });
+      throw new HttpsError("unavailable", "Daily Missions are being prepared. Try again in a moment.");
+    }
+    transaction.create(stateRef, {
+      ...state,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(state.expiresAtMs),
+    });
+    writePreparedEconomy(transaction, economy, {}, [], {
+      nowMs,
+      suppressDailyMissionProduction: true,
+    });
+    return dailyMissionStateForClient(state, nowMs);
+  });
+}
+
+async function processDailyMissionEvent(event) {
+  const snapshot = event?.data;
+  const raw = snapshot?.exists ? snapshot.data() || {} : {};
+  if (!raw?.uid || raw.processedAtMs) return null;
+  if (safeString(raw.worldId, 128) !== ONLINE_WORLD_ID || safeString(raw.resetGeneration, 128) !== RESET_GENERATION) return null;
+  const occurredAtMs = Math.max(0, Math.floor(safeNumber(raw.occurredAtMs, Date.now())));
+  await ensureDailyMissionStateForPlayer(raw.uid, occurredAtMs);
+  const cycle = getDailyMissionCycle(occurredAtMs, RESET_GENERATION);
+  const stateRef = dailyMissionStateRef(raw.uid, cycle.cycleKey);
+  const eventRef = snapshot?.ref || dailyMissionEventRef(raw.uid, raw.eventId || raw.id);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [freshEventSnap, stateSnap] = await Promise.all([
+      transaction.get(eventRef),
+      transaction.get(stateRef),
+    ]);
+    if (!freshEventSnap.exists || !stateSnap.exists) return null;
+    const freshEvent = freshEventSnap.data() || {};
+    if (freshEvent.processedAtMs) return { replayed: true };
+    const nowMs = Date.now();
+    const currentState = stateSnap.data() || {};
+    let eventForProgress = freshEvent;
+    if (safeString(freshEvent.type, 48).toUpperCase() === "ECONOMY_PRODUCED") {
+      const productionToMs = Math.max(0, Math.floor(safeNumber(
+        freshEvent.productionToMs,
+        freshEvent.occurredAtMs
+      )));
+      const productionFromMs = Math.min(
+        productionToMs,
+        Math.max(0, Math.floor(safeNumber(freshEvent.productionFromMs, productionToMs)))
+      );
+      const eligibleFromMs = Math.max(
+        productionFromMs,
+        Math.floor(safeNumber(currentState.cycleStartsAtMs, cycle.startsAtMs)),
+        Math.floor(safeNumber(currentState.generatedAtMs, cycle.startsAtMs))
+      );
+      const fullDurationMs = Math.max(0, productionToMs - productionFromMs);
+      const eligibleDurationMs = Math.max(0, productionToMs - eligibleFromMs);
+      const eligibleShare = fullDurationMs > 0
+        ? clamp(eligibleDurationMs / fullDurationMs, 0, 1)
+        : 0;
+      eventForProgress = {
+        ...freshEvent,
+        goldProduced: Math.floor(Math.max(0, safeNumber(freshEvent.goldProduced, 0)) * eligibleShare),
+        troopsProduced: Math.floor(Math.max(0, safeNumber(freshEvent.troopsProduced, 0)) * eligibleShare),
+      };
+    }
+    const nextState = applyDailyMissionEvent(currentState, eventForProgress, nowMs);
+    transaction.set(stateRef, {
+      ...nextState,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(eventRef, {
+      processedAtMs: nowMs,
+      appliedCycleKey: cycle.cycleKey,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { replayed: false, cycleKey: cycle.cycleKey };
+  });
 }
 
 function getCityRelinquishPolicy(lastCityRelinquishedAtMs = 0, nowMs = Date.now()) {
@@ -10518,6 +10982,23 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
     }
     transaction.update(economy.profileRef, addLegacyShopItemDeletes());
   }
+  if (
+    !options.suppressDailyMissionProduction
+    && (Math.max(0, Math.floor(safeNumber(economy.production?.goldGained, 0))) > 0
+      || Math.max(0, Math.floor(safeNumber(economy.production?.troopsGained, 0))) > 0)
+  ) {
+    enqueueDailyMissionEvent(transaction, {
+      uid: economy.uid,
+      eventId: `economy_${economy.uid}_${Math.max(0, Math.floor(safeNumber(economy.profilePatch?.economyUpdatedAtMs, options.nowMs || Date.now())))}`,
+      type: "ECONOMY_PRODUCED",
+      occurredAtMs: options.nowMs || economy.profilePatch?.economyUpdatedAtMs || Date.now(),
+      goldProduced: economy.production?.goldGained,
+      troopsProduced: economy.production?.troopsGained,
+      productionFromMs: (options.nowMs || economy.profilePatch?.economyUpdatedAtMs || Date.now())
+        - Math.max(0, Math.floor(safeNumber(economy.production?.elapsedSeconds, 0))) * 1000,
+      productionToMs: options.nowMs || economy.profilePatch?.economyUpdatedAtMs || Date.now(),
+    });
+  }
   return stats;
 }
 
@@ -11140,6 +11621,7 @@ exports.getRealmInfo = timedCallable(
       defenseCombatVersion: DEFENSE_COMBAT_VERSION,
       realmActivityVersion: REALM_ACTIVITY_VERSION,
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+      dailyMissionVersion: DAILY_MISSION_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
@@ -11149,6 +11631,7 @@ exports.getRealmInfo = timedCallable(
         defenseCombatVersion: DEFENSE_COMBAT_VERSION,
         realmActivityVersion: REALM_ACTIVITY_VERSION,
         dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+        dailyMissionVersion: DAILY_MISSION_VERSION,
         releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       },
       appCheckEnforced: false,
@@ -13464,6 +13947,15 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       gold,
       goldFloat,
     }, [{ ref: cityRef, city, patch: cityPatch }]);
+    enqueueDailyMissionEvent(transaction, {
+      uid,
+      eventId: `city_upgrade_${regionId}_${cityId}_${nowMs}_${city.level}`,
+      type: "CITY_UPGRADED",
+      occurredAtMs: nowMs,
+      cityId,
+      levelsGained: upgraded,
+      goldSpent: spentGold,
+    });
 
     return createEconomyResponse(economy, {
       gold,
@@ -15287,6 +15779,9 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
       throw new HttpsError("failed-precondition", "Your clan gift is still cooling down.", { cooldownUntilMs });
     }
     const recipients = membersSnap.docs.filter(memberDoc => memberDoc.id !== uid && memberDoc.data()?.status !== "removed");
+    if (!recipients.length) {
+      throw new HttpsError("failed-precondition", "Another active clan member is required to receive a Clan Gift.");
+    }
     const nextSentCount = Math.max(0, Math.floor(safeNumber(senderRewards.giftCountSent, 0))) + 1;
     const donorName = normalizePlayerName(
       senderMemberSnap.data()?.displayName || profile.playerName || profile.displayName || "Ruler"
@@ -15344,6 +15839,13 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
       recipientCount: recipients.length,
       productionMinutes: CLAN_GIFT_PRODUCTION_MINUTES,
     }, nowMs);
+    enqueueDailyMissionEvent(transaction, {
+      uid,
+      eventId: `clan_gift_${clanId}_${uid}_${nowMs}`,
+      type: "CLAN_GIFT_SENT",
+      occurredAtMs: nowMs,
+      clanGiftSent: true,
+    });
     return {
       ok: true,
       recipientCount: recipients.length,
@@ -16711,6 +17213,19 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       target,
     });
     queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
+    attackPackages.forEach(participant => {
+      enqueueDailyMissionEvent(transaction, {
+        uid: participant.uid,
+        eventId: `rally_launch_${movement.id}_${participant.uid}`,
+        type: "ATTACK_LAUNCHED",
+        occurredAtMs: nowMs,
+        targetCategory: getDailyMissionTargetCategory(target, rally.targetType),
+        opponentUid: targetOwnerUid,
+        cityId: target.id,
+        campType: target.campType,
+        committedTroops: participant.troops,
+      });
+    });
     return {
       ok: true,
       antiFarmPolicy: antiFarmContext.policy,
@@ -17290,6 +17805,271 @@ exports.previewArmyRoute = timedCallable(
     }, "previewArmyRoute");
   }
 );
+
+exports.getDailyMissionStatus = timedCallable(
+  "getDailyMissionStatus",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const dailyMissionState = await ensureDailyMissionStateForPlayer(uid, nowMs);
+    return {
+      ok: true,
+      serverTimeMs: nowMs,
+      dailyMissionState,
+    };
+  }
+);
+
+exports.rerollDailyMission = timedCallable(
+  "rerollDailyMission",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
+    const requestedCycleKey = safeString(request.data?.cycleKey, 160);
+    const missionId = safeString(request.data?.missionId, 96);
+    const requestId = safeString(request.data?.requestId, 96);
+    if (!missionId) throw new HttpsError("invalid-argument", "Choose an unfinished mission to replace.");
+    if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
+      throw new HttpsError("failed-precondition", "Daily Missions reset at 00:00 UTC. Refresh the mission list.");
+    }
+    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
+      const profileRef = db.doc(`players/${uid}`);
+      const [stateSnap, profileSnap] = await Promise.all([
+        transaction.get(stateRef),
+        transaction.get(profileRef),
+      ]);
+      if (!stateSnap.exists || !profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Daily Missions are not ready.");
+      }
+      const state = stateSnap.data() || {};
+      if (requestId && state.lastRerollRequestId === requestId && state.lastRerollReceipt) {
+        return {
+          ok: true,
+          rerolled: true,
+          replayed: true,
+          receipt: state.lastRerollReceipt,
+          dailyMissionState: dailyMissionStateForClient(state, nowMs),
+        };
+      }
+      if (safeString(state.cycleKey, 160) !== cycle.cycleKey) {
+        throw new HttpsError("failed-precondition", "Daily Missions reset at 00:00 UTC. Refresh the mission list.");
+      }
+      if (Math.max(0, Math.floor(safeNumber(state.rerollsRemaining, 0))) < 1) {
+        throw new HttpsError("failed-precondition", "Your Daily Mission reroll has already been used.");
+      }
+      const mission = (Array.isArray(state.missions) ? state.missions : []).find(entry => entry?.id === missionId);
+      if (!mission) throw new HttpsError("not-found", "That Daily Mission is no longer active.");
+      if (mission.completedAtMs || mission.claimedAtMs) {
+        throw new HttpsError("failed-precondition", "Completed missions cannot be rerolled.");
+      }
+      const profile = profileSnap.data() || {};
+      assertCurrentPlayerProfile(profile);
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const capacity = await buildDailyMissionCapacity(transaction, uid, nowMs, economy);
+      const replacement = createReplacementMission(state, missionId, capacity, nowMs);
+      if (!replacement) {
+        return {
+          ok: false,
+          rerolled: false,
+          replayed: false,
+          message: "No different achievable mission is available right now. Your reroll was not used.",
+          dailyMissionState: dailyMissionStateForClient(state, nowMs),
+        };
+      }
+      const missions = state.missions.map(entry => entry?.id === missionId ? replacement : entry);
+      const receipt = {
+        requestId,
+        cycleKey: cycle.cycleKey,
+        replacedMissionId: missionId,
+        replacementMissionId: replacement.id,
+        replacementFamily: replacement.family,
+        rerolledAtMs: nowMs,
+      };
+      const nextState = {
+        ...state,
+        missions,
+        rerollsRemaining: Math.max(0, Math.floor(safeNumber(state.rerollsRemaining, 0)) - 1),
+        rerollCount: Math.max(0, Math.floor(safeNumber(state.rerollCount, 0))) + 1,
+        lastRerollRequestId: requestId,
+        lastRerollReceipt: receipt,
+        updatedAtMs: nowMs,
+      };
+      transaction.set(stateRef, {
+        ...nextState,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writePreparedEconomy(transaction, economy, {}, [], { nowMs });
+      return {
+        ok: true,
+        rerolled: true,
+        replayed: false,
+        receipt,
+        dailyMissionState: dailyMissionStateForClient(nextState, nowMs),
+      };
+    });
+  }
+);
+
+exports.claimDailyMissionReward = timedCallable(
+  "claimDailyMissionReward",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
+    const requestedCycleKey = safeString(request.data?.cycleKey, 160);
+    const missionId = safeString(request.data?.missionId, 96);
+    const requestId = safeString(request.data?.requestId, 96);
+    if (!missionId) throw new HttpsError("invalid-argument", "Choose a completed Daily Mission.");
+    if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
+      throw new HttpsError("failed-precondition", "That Daily Mission expired at 00:00 UTC.");
+    }
+    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
+      const profileRef = db.doc(`players/${uid}`);
+      const [stateSnap, profileSnap] = await Promise.all([
+        transaction.get(stateRef),
+        transaction.get(profileRef),
+      ]);
+      if (!stateSnap.exists || !profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Daily Missions are not ready.");
+      }
+      const state = stateSnap.data() || {};
+      const mission = (Array.isArray(state.missions) ? state.missions : []).find(entry => entry?.id === missionId);
+      if (!mission) throw new HttpsError("not-found", "That Daily Mission is no longer active.");
+      if (mission.claimedAtMs) {
+        return {
+          ok: true,
+          claimed: true,
+          replayed: true,
+          receipt: mission.claimReceipt || null,
+          dailyMissionState: dailyMissionStateForClient(state, nowMs),
+        };
+      }
+      if (!mission.completedAtMs || Math.max(0, safeNumber(mission.progress, 0)) < Math.max(1, safeNumber(mission.target, 1))) {
+        throw new HttpsError("failed-precondition", "Complete that Daily Mission before claiming its reward.");
+      }
+      const profile = profileSnap.data() || {};
+      assertCurrentPlayerProfile(profile);
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const reward = mission.reward && typeof mission.reward === "object" ? mission.reward : {};
+      const rewardType = safeString(reward.type, 16);
+      const lockedAmount = Math.max(1, Math.floor(safeNumber(reward.lockedAmount, 1)));
+      let gold = economy.gold;
+      let goldFloat = economy.goldFloat;
+      let shopItems = { ...economy.shopItems };
+      let troopCredit = null;
+      if (rewardType === "gold") {
+        goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + lockedAmount;
+        gold = Math.max(0, Math.floor(goldFloat));
+      } else if (rewardType === "troops") {
+        troopCredit = creditLevelUpTroopsToMainCity(economy, economy.profileAfter, lockedAmount, nowMs);
+        if (!troopCredit) {
+          throw new HttpsError("failed-precondition", "Verify your Main City before receiving the troop reward.");
+        }
+      } else if (rewardType === "item") {
+        const itemId = safeString(reward.itemId, 64);
+        if (!SHOP_ITEMS[itemId]) throw new HttpsError("internal", "That Daily Mission reward is unavailable.");
+        shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0))) + lockedAmount;
+      } else {
+        throw new HttpsError("internal", "That Daily Mission reward is unavailable.");
+      }
+
+      const receipt = {
+        requestId,
+        cycleKey: cycle.cycleKey,
+        missionId,
+        family: mission.family,
+        claimedAtMs: nowMs,
+        rewardType,
+        lockedAmount,
+        productionHours: Math.max(0, safeNumber(reward.productionHours, 0)),
+        itemId: rewardType === "item" ? safeString(reward.itemId, 64) : "",
+        targetCityId: troopCredit?.cityId || "",
+        targetCityName: troopCredit?.cityName || "",
+        targetRegionId: troopCredit?.regionId || "",
+      };
+      const missions = state.missions.map(entry => entry?.id === missionId
+        ? {
+          ...entry,
+          claimedAtMs: nowMs,
+          claimRequestId: requestId,
+          claimReceipt: receipt,
+        }
+        : entry);
+      const nextState = {
+        ...state,
+        missions,
+        completedCount: missions.filter(entry => entry?.completedAtMs || entry?.claimedAtMs).length,
+        claimedCount: missions.filter(entry => entry?.claimedAtMs).length,
+        updatedAtMs: nowMs,
+      };
+      transaction.set(stateRef, {
+        ...nextState,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writePreparedEconomy(transaction, economy, {
+        gold,
+        goldFloat,
+        shopItems,
+      }, [], { nowMs });
+      return createEconomyResponse(economy, {
+        gold,
+        goldFloat,
+        shopItems,
+        claimed: true,
+        replayed: false,
+        receipt,
+        dailyMissionState: dailyMissionStateForClient(nextState, nowMs),
+        targetCityId: troopCredit?.cityId || "",
+        targetCityName: troopCredit?.cityName || "",
+      });
+    });
+  }
+);
+
+exports.applyDailyMissionEvent = onDocumentCreated({
+  region: "us-central1",
+  document: "dailyMissionEvents/{eventId}",
+  maxInstances: 30,
+  retry: true,
+}, async event => {
+  try {
+    return await processDailyMissionEvent(event);
+  } catch (error) {
+    console.error("Daily mission event processing failed", {
+      eventId: event?.params?.eventId || "",
+      error: error?.message || error,
+    });
+    throw error;
+  }
+});
+
+exports.cleanupExpiredDailyMissions = onSchedule({
+  region: "us-central1",
+  schedule: "every 6 hours",
+  timeZone: "UTC",
+  timeoutSeconds: 120,
+  maxInstances: 1,
+}, async () => {
+  const nowMs = Date.now();
+  const [eventsSnap, statesSnap] = await Promise.all([
+    db.collection("dailyMissionEvents").where("expiresAtMs", "<=", nowMs).limit(400).get(),
+    db.collectionGroup("dailyMissions").where("expiresAtMs", "<=", nowMs).limit(400).get(),
+  ]);
+  const refs = [...eventsSnap.docs, ...statesSnap.docs].map(doc => doc.ref);
+  if (!refs.length) return { deleted: 0 };
+  const batch = db.batch();
+  refs.forEach(ref => batch.delete(ref));
+  await batch.commit();
+  return { deleted: refs.length };
+});
 
 function normalizeBulkOrderRequestId(value) {
   try {
@@ -18539,6 +19319,19 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     });
 
     writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+    if (resolvedKind === "attack") {
+      enqueueDailyMissionEvent(transaction, {
+        uid,
+        eventId: `army_launch_${movement.id}`,
+        type: "ATTACK_LAUNCHED",
+        occurredAtMs: nowMs,
+        targetCategory: getDailyMissionTargetCategory(target, order.targetType),
+        opponentUid: targetOwnerUid,
+        cityId: target.id,
+        campType: target.campType,
+        committedTroops: troops,
+      });
+    }
     reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs);
 
     if (order.targetType === "camp" && resolvedKind === "attack") {
@@ -20022,6 +20815,45 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ? rawAttackWinXp
         : getPartialBattleXpAward(rawAttackWinXp);
       const attackXpAllocation = allocateRallyAttackXp(attackXpPool, attackPackages);
+      const dailyMissionDefenderLossAllocation = allocateRallyAttackXp(result.defenderLosses, attackPackages);
+      const rallyDailyMissionTargetCategory = getDailyMissionTargetCategory(target, targetType);
+      attackerAllocation.forEach(entry => {
+        enqueueDailyMissionEvent(transaction, {
+          uid: entry.uid,
+          eventId: `rally_battle_${armyId}_${entry.uid}`,
+          type: "BATTLE_RESOLVED",
+          occurredAtMs: nowMs,
+          targetCategory: rallyDailyMissionTargetCategory,
+          opponentUid: oldOwnerUid,
+          cityId: target.id,
+          campType: target.campType,
+          committedTroops: entry.troops,
+          defenderLosses: dailyMissionDefenderLossAllocation.get(entry.uid) || 0,
+          success: result.success,
+          cityCaptured: Boolean(
+            result.success
+            && entry.uid === attackerUid
+            && oldOwnerUid
+            && rallyDailyMissionTargetCategory === "player_city"
+          ),
+        });
+      });
+      if (result.success && targetType === "camp") {
+        enqueueDailyMissionEvent(transaction, {
+          uid: attackerUid,
+          eventId: `rally_camp_capture_${armyId}_${target.id}`,
+          type: "CAMP_CAPTURED",
+          occurredAtMs: nowMs,
+          targetCategory: "camp",
+          opponentUid: oldOwnerUid,
+          cityId: target.id,
+          campType: target.campType,
+          committedTroops: leaderAllocation.troops,
+          defenderLosses: dailyMissionDefenderLossAllocation.get(attackerUid) || 0,
+          success: true,
+          campCaptured: true,
+        });
+      }
       const leaderXp = capBattleXpForHeroLevel(
         attackXpAllocation.get(attackerUid) || 0,
         attackerProfile
@@ -20587,6 +21419,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           reason: "camp_captured",
           nowMs,
         });
+        enqueueDailyMissionEvent(transaction, {
+          uid: attackerUid,
+          eventId: `camp_capture_${armyId}_${target.id}`,
+          type: "CAMP_CAPTURED",
+          occurredAtMs: nowMs,
+          targetCategory: "camp",
+          opponentUid: defenderUid,
+          cityId: target.id,
+          campType: campTarget.campType,
+          committedTroops: troopCount,
+          defenderLosses: battle.defenderLosses,
+          success: true,
+          campCaptured: true,
+        });
       }
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap);
       reports.push(attackerReport);
@@ -20971,6 +21817,32 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       nowMs,
       convertedReinforcement,
       convertedReinforcementCaptureAllowed: convertedTransferReinforcement,
+    });
+    const dailyMissionTargetCategory = getDailyMissionTargetCategory(target, "city");
+    if (convertedReinforcement) {
+      enqueueDailyMissionEvent(transaction, {
+        uid: attackerUid,
+        eventId: `converted_attack_launch_${armyId}`,
+        type: "ATTACK_LAUNCHED",
+        occurredAtMs: nowMs,
+        targetCategory: dailyMissionTargetCategory,
+        opponentUid: oldOwnerUid,
+        cityId: target.id,
+        committedTroops: troopCount,
+      });
+    }
+    enqueueDailyMissionEvent(transaction, {
+      uid: attackerUid,
+      eventId: `battle_resolved_${armyId}_${attackerUid}`,
+      type: "BATTLE_RESOLVED",
+      occurredAtMs: nowMs,
+      targetCategory: dailyMissionTargetCategory,
+      opponentUid: oldOwnerUid,
+      cityId: target.id,
+      committedTroops: troopCount,
+      defenderLosses: result.defenderLosses,
+      success: result.success,
+      cityCaptured: Boolean(result.success && oldOwnerUid && dailyMissionTargetCategory === "player_city"),
     });
     const settledFortificationState = writeFortificationSettlement(
       transaction,
@@ -22836,6 +23708,17 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       transaction.set(db.doc(`${campRef.path}/rewardHistory/${historyId}`), {
         ...deedHistoryEntry,
         awardedAt: FieldValue.serverTimestamp(),
+      });
+      enqueueDailyMissionEvent(transaction, {
+        uid: holderUid,
+        eventId: `deed_camp_completed_${camp.id}_${deedCityAward.city.id}_${payoutAtMs}`,
+        type: "DEED_CAMP_COMPLETED",
+        occurredAtMs: nowMs,
+        targetCategory: "camp",
+        cityId: deedCityAward.city.id,
+        campType: "deed",
+        deedCompleted: true,
+        success: true,
       });
     }
 

@@ -125,6 +125,7 @@ const economyContext = {
   serverEconomyLastToastAt: 0,
   onlineLastError: "",
   usesServerEconomyAuthority: () => true,
+  resolveLoginPresentationWelcomePhase: () => {},
   updateOnlineUi: () => {},
   showToast: () => {},
   console,
@@ -186,6 +187,7 @@ async function validateAsyncBehavior() {
   assert.equal(economyContext.pendingWelcomeBackSession, null);
 
   const foregroundEconomyOptions = [];
+  const foregroundPresentationStarts = [];
   const foregroundContext = {
     FOREGROUND_LONG_RESUME_MS: 60_000,
     pendingWelcomeBackSession: null,
@@ -200,6 +202,12 @@ async function validateAsyncBehavior() {
       foregroundEconomyOptions.push(options);
       return true;
     },
+    beginLoginPresentationSequence: options => {
+      foregroundPresentationStarts.push(options);
+      return foregroundPresentationStarts.length;
+    },
+    startLoginPresentationDailyRefresh: () => {},
+    markLoginPresentationMapReady: () => {},
     refreshAllOwnedCities: () => true,
     loadOnlineRegionCitiesForResolution: () => true,
     loadServerReportsOnce: () => true,
@@ -223,15 +231,35 @@ async function validateAsyncBehavior() {
   assert.equal(await foregroundContext.synchronizeForegroundGame(120_000), true);
   assert.deepEqual(
     { ...foregroundEconomyOptions[0] },
-    { requestWelcomeBack: false, showOfflineRewards: true, resumeCatchUp: true },
+    {
+      requestWelcomeBack: false,
+      showOfflineRewards: true,
+      resumeCatchUp: true,
+      presentationGeneration: 1,
+    },
     "A normal foreground resume requests the stale one-use login summary."
+  );
+  assert.equal(
+    foregroundPresentationStarts[0].welcomeExpected,
+    false,
+    "The login sequence waits for a Welcome Back receipt that was not requested."
   );
   foregroundContext.pendingWelcomeBackSession = { eligible: true };
   assert.equal(await foregroundContext.synchronizeForegroundGame(5_000), true);
   assert.deepEqual(
     { ...foregroundEconomyOptions[1] },
-    { requestWelcomeBack: true, showOfflineRewards: true, resumeCatchUp: true },
+    {
+      requestWelcomeBack: true,
+      showOfflineRewards: true,
+      resumeCatchUp: true,
+      presentationGeneration: 2,
+    },
     "An unclaimed login summary is not requested independently of foreground duration."
+  );
+  assert.equal(
+    foregroundPresentationStarts[1].welcomeExpected,
+    true,
+    "The login sequence does not wait for an eligible Welcome Back receipt."
   );
 
   let nowMs = 1_201_000;
@@ -275,6 +303,9 @@ async function validateAsyncBehavior() {
   const modalContext = {
     modal: { open: true },
     pendingOfflineRewardsSummary: null,
+    loginPresentationSequence: null,
+    isLoginPresentationSequenceActive: () => false,
+    advanceLoginPresentationSequence() {},
     screenRewardAnimationBlockUntilMs: 0,
     showOfflineRewardsModal: summary => shownSummaries.push(summary),
     window: { setTimeout: callback => callback() },

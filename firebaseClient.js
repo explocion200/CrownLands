@@ -529,8 +529,24 @@
     return callServerFunction("claimDailyLoginReward", payload);
   }
 
+  async function getDailyMissionStatus(payload = {}) {
+    return callServerFunction("getDailyMissionStatus", payload);
+  }
+
+  async function rerollDailyMission(payload = {}) {
+    return callServerFunction("rerollDailyMission", payload);
+  }
+
+  async function claimDailyMissionReward(payload = {}) {
+    return callServerFunction("claimDailyMissionReward", payload);
+  }
+
   async function markReportsViewed(payload = {}) {
     return callServerFunction("markReportsViewed", payload);
+  }
+
+  async function markRealmAnnouncementSeen(payload = {}) {
+    return callServerFunction("markRealmAnnouncementSeen", payload);
   }
 
   async function getRewardedAdStatus(payload = {}) {
@@ -1162,6 +1178,23 @@
       }
       throw error;
     }
+  }
+
+  function subscribeDailyMissionState(cycleKey = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !cycleKey) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    const safeCycleKey = String(cycleKey).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
+    return onSnapshot(
+      doc(client.db, "players", client.user.uid, "dailyMissions", safeCycleKey),
+      snapshot => {
+        if (typeof handlers.onState === "function") {
+          handlers.onState(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "dailyMissions");
+      }
+    );
   }
 
   async function signInWithGoogleRedirect() {
@@ -2362,7 +2395,11 @@
     collectEconomy,
     getDailyLoginRewardStatus,
     claimDailyLoginReward,
+    getDailyMissionStatus,
+    rerollDailyMission,
+    claimDailyMissionReward,
     markReportsViewed,
+    markRealmAnnouncementSeen,
     getRewardedAdStatus,
     prepareRewardedAd,
     claimRewardedAd,
@@ -2402,6 +2439,7 @@
     subscribeClanApplications,
     subscribeClanSocialState,
     subscribeClanQuestProgress,
+    subscribeDailyMissionState,
     subscribeClanRallies,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
