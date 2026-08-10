@@ -1629,6 +1629,11 @@ async function releaseInactiveCity(uid = "", cityDoc = null, homeRef = null, run
       previousOwnerUid: uid,
       nextOwnerUid: "",
     });
+    const strongholdLegacySnapshots = await prefetchStrongholdLegacySnapshots(transaction, {
+      stronghold: city,
+      previousOwnerUid: uid,
+      nextOwnerUid: "",
+    });
     const troops = homeRef ? getTargetOwnerTroops(city, "city") : 0;
     if (homeRef) {
       if (!homeSnap?.exists || getOwnerUid(homeSnap.data() || {}) !== uid) {
@@ -1649,6 +1654,15 @@ async function releaseInactiveCity(uid = "", cityDoc = null, homeRef = null, run
         nextOwnerUid: "",
         nowMs,
         reignSnapshots: citadelReignSnapshots,
+      });
+    } else if (isStrongholdLegacyTarget(city)) {
+      recordStrongholdLegacyControlChange(transaction, {
+        stronghold: city,
+        previousOwnerUid: uid,
+        previousOwnerName: normalizePlayerName(city.ownerName, "Ruler"),
+        nextOwnerUid: "",
+        nowMs,
+        legacySnapshots: strongholdLegacySnapshots,
       });
     }
     transaction.set(cityDoc.ref, cleanCityUpdate(city, getInactiveCityNeutralPatch(city, nowMs)), { merge: true });
@@ -2786,6 +2800,130 @@ function recordCrownCitadelControlChange(transaction, {
       playerFlag: nextOwnerFlag || newData.playerFlag || null,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      totalHeldMs: isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(newData.totalHeldMs, 0))) : 0,
+      currentHeldSinceMs: nowMs,
+      isCurrentHolder: true,
+      lastCapturedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+}
+
+function isStrongholdLegacyTarget(stronghold = {}) {
+  return isStronghold(stronghold) && !isCrownCitadel(stronghold);
+}
+
+function strongholdLegacyRef(stronghold = {}, uid = "") {
+  if (!isStrongholdLegacyTarget(stronghold)) return null;
+  const strongholdId = safeString(stronghold.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return strongholdId && safeUid
+    ? db.doc(`strongholdLegacies/${RESET_GENERATION}/entries/${strongholdId}__${safeUid}`)
+    : null;
+}
+
+function getStrongholdLegacyRefsForPlayer(uid = "") {
+  return [...STRONGHOLD_IDS]
+    .filter(strongholdId => strongholdId !== CROWN_CITADEL_ID)
+    .map(strongholdId => strongholdLegacyRef({ id: strongholdId }, uid))
+    .filter(Boolean);
+}
+
+function getStrongholdLegacyChangeRefs({
+  stronghold = {},
+  previousOwnerUid = "",
+  nextOwnerUid = "",
+} = {}) {
+  if (!isStrongholdLegacyTarget(stronghold)) return [];
+  const oldUid = safeString(previousOwnerUid, 128);
+  const newUid = safeString(nextOwnerUid, 128);
+  if (oldUid === newUid) return [];
+  return [...new Map([
+    strongholdLegacyRef(stronghold, oldUid),
+    strongholdLegacyRef(stronghold, newUid),
+  ].filter(Boolean).map(ref => [ref.path, ref])).values()];
+}
+
+async function prefetchStrongholdLegacySnapshots(transaction, change = {}) {
+  const refs = getStrongholdLegacyChangeRefs(change);
+  const snapshots = refs.length
+    ? await Promise.all(refs.map(ref => transaction.get(ref)))
+    : [];
+  return new Map(snapshots.map(snapshot => [snapshot.ref.path, snapshot]));
+}
+
+function recordStrongholdLegacyControlChange(transaction, {
+  stronghold = {},
+  previousOwnerUid = "",
+  previousOwnerName = "",
+  nextOwnerUid = "",
+  nextOwnerName = "",
+  nextOwnerFlag = null,
+  nowMs = Date.now(),
+  legacySnapshots = new Map(),
+} = {}) {
+  if (!transaction || !isStrongholdLegacyTarget(stronghold)) return;
+  const oldUid = safeString(previousOwnerUid, 128);
+  const newUid = safeString(nextOwnerUid, 128);
+  if (oldUid === newUid) return;
+
+  const oldRef = strongholdLegacyRef(stronghold, oldUid);
+  const newRef = strongholdLegacyRef(stronghold, newUid);
+  const refs = [...new Set([oldRef, newRef].filter(Boolean))];
+  refs.forEach(ref => {
+    if (!legacySnapshots.has(ref.path)) {
+      throw new Error(`Stronghold legacy snapshot was not prefetched: ${ref.path}`);
+    }
+  });
+  const publicStronghold = getPublicStrongholdSnapshot(stronghold) || {};
+  const commonFields = {
+    strongholdId: safeString(publicStronghold.id || stronghold.id, 96),
+    strongholdName: safeString(publicStronghold.name || stronghold.name || "Stronghold", 80),
+    strongholdType: safeString(publicStronghold.strongholdType || stronghold.strongholdType, 32),
+    regionId: normalizeRegionId(publicStronghold.regionId || stronghold.regionId),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+  };
+
+  if (oldRef) {
+    const oldData = legacySnapshots.get(oldRef.path)?.data() || {};
+    const isCurrentWorldRecord = safeString(oldData.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(oldData.resetGeneration, 120) === RESET_GENERATION
+      && safeString(oldData.strongholdId, 96) === commonFields.strongholdId;
+    const recordedHeldSinceMs = isCurrentWorldRecord
+      ? Math.max(0, Math.floor(safeNumber(oldData.currentHeldSinceMs, 0)))
+      : 0;
+    const heldSinceMs = recordedHeldSinceMs || Math.max(0, Math.floor(safeNumber(
+      stronghold.lastCapturedAtMs,
+      timestampToMs(stronghold.lastCapturedAt)
+    )));
+    const completedTenureMs = heldSinceMs > 0 ? Math.max(0, nowMs - heldSinceMs) : 0;
+    transaction.set(oldRef, {
+      ...commonFields,
+      playerId: oldUid,
+      playerName: normalizePlayerName(previousOwnerName || oldData.playerName, "Ruler"),
+      playerFlag: oldData.playerFlag || stronghold.ownerFlag || null,
+      totalHeldMs: (isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(oldData.totalHeldMs, 0))) : 0)
+        + completedTenureMs,
+      currentHeldSinceMs: 0,
+      isCurrentHolder: false,
+      lastLostAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  if (newRef) {
+    const newData = legacySnapshots.get(newRef.path)?.data() || {};
+    const isCurrentWorldRecord = safeString(newData.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(newData.resetGeneration, 120) === RESET_GENERATION
+      && safeString(newData.strongholdId, 96) === commonFields.strongholdId;
+    transaction.set(newRef, {
+      ...commonFields,
+      playerId: newUid,
+      playerName: normalizePlayerName(nextOwnerName || newData.playerName, "Ruler"),
+      playerFlag: nextOwnerFlag || newData.playerFlag || null,
       totalHeldMs: isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(newData.totalHeldMs, 0))) : 0,
       currentHeldSinceMs: nowMs,
       isCurrentHolder: true,
@@ -4215,6 +4353,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     options.siegeCombatVersion,
     options.targetType === "camp" ? "camp" : "city"
   ) && options.fortification && typeof options.fortification === "object";
+  const wallDefenseIgnored = siegeEnabled && options.ignoreWallDefense === true;
   const fullWallPower = siegeEnabled
     ? Math.max(0, Math.floor(safeNumber(options.fortification.fullWallPower, 0)))
     : 0;
@@ -4224,17 +4363,20 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const startingWallPower = siegeEnabled
     ? Math.max(0, Math.floor(safeNumber(options.fortification.currentWallPower, 0)))
     : 0;
+  const effectiveWallPower = wallDefenseIgnored ? 0 : startingWallPower;
   const garrisonDefensePower = siegeEnabled
     ? Math.max(0, Math.floor(safeNumber(
       options.garrisonDefensePower,
       Math.max(0, safeNumber(options.defensePower, 0) - startingWallPower)
     )))
     : 0;
-  const defensePower = Number.isFinite(Number(options.defensePower))
-    ? Math.max(0, Math.floor(Number(options.defensePower)))
-    : siegeEnabled
-      ? startingWallPower + garrisonDefensePower
-      : getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
+  const defensePower = wallDefenseIgnored
+    ? garrisonDefensePower
+    : Number.isFinite(Number(options.defensePower))
+      ? Math.max(0, Math.floor(Number(options.defensePower)))
+      : siegeEnabled
+        ? startingWallPower + garrisonDefensePower
+        : getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
   const protectedRaid = attackProtection?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
@@ -4244,9 +4386,12 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const breachOnly = attackProtection?.mode === "assault"
     && attackProtection.captureAllowed !== true
     && !convertedReinforcementCaptureAllowed;
-  const wallDamagePower = siegeEnabled ? Math.min(attackPower, startingWallPower) : 0;
-  const penetratingAttackPower = siegeEnabled ? Math.max(0, attackPower - startingWallPower) : attackPower;
-  const wallBreached = siegeEnabled && startingWallPower <= attackPower;
+  const wallDamagePower = siegeEnabled && !wallDefenseIgnored
+    ? Math.min(attackPower, startingWallPower)
+    : 0;
+  const penetratingAttackPower = siegeEnabled ? Math.max(0, attackPower - effectiveWallPower) : attackPower;
+  const wallBreached = siegeEnabled && !wallDefenseIgnored && startingWallPower <= attackPower;
+  const garrisonExposed = wallDefenseIgnored || wallBreached;
   const rawEndingIntegrityBps = siegeEnabled && fullWallPower > 0
     ? Math.max(
       0,
@@ -4305,7 +4450,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     attackerLosses = troops - survivors;
     defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
     defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
-  } else if (siegeEnabled && !wallBreached) {
+  } else if (siegeEnabled && !garrisonExposed) {
     const pressure = clamp(attackPower / Math.max(1, startingWallPower), 0, 1);
     const maximumRate = SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT / 100;
     defenderLosses = Math.min(
@@ -4358,6 +4503,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       )),
       objectiveDefenseBonusPercent: Math.max(0, safeNumber(options.fortification.objectiveDefenseBonusPercent, 0)),
       fullWallPower,
+      wallDefenseIgnored,
       startingIntegrityBps,
       startingWallPower,
       wallDamagePower,
@@ -12883,7 +13029,8 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     };
   }
 
-  const [ownedCitiesSnap, activeArmiesSnap, crownReignSnap] = await Promise.all([
+  const strongholdLegacyRefs = getStrongholdLegacyRefsForPlayer(uid);
+  const [ownedCitiesSnap, activeArmiesSnap, crownReignSnap, strongholdLegacySnaps] = await Promise.all([
     db.collectionGroup("cities")
       .where("ownerUid", "==", uid)
       .where("resetGeneration", "==", RESET_GENERATION)
@@ -12891,6 +13038,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       .get(),
     activeArmiesQueryForPlayer(uid).get(),
     crownCitadelReignRef(uid).get(),
+    Promise.all(strongholdLegacyRefs.map(ref => ref.get())),
   ]);
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
@@ -13055,6 +13203,17 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       },
     });
   }
+  strongholdLegacySnaps.filter(snapshot => snapshot.exists).forEach(snapshot => {
+    writes.push({
+      ref: snapshot.ref,
+      data: {
+        playerName: identity.ownerName,
+        playerFlag: identity.ownerFlag,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  });
   mainCityRepair.cityPatches.forEach(entry => {
     writes.push({
       ref: entry.ref,
@@ -14091,6 +14250,11 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       previousOwnerUid: uid,
       nextOwnerUid: "",
     });
+    const strongholdLegacySnapshots = await prefetchStrongholdLegacySnapshots(transaction, {
+      stronghold: source,
+      previousOwnerUid: uid,
+      nextOwnerUid: "",
+    });
     const sourceLevel = isStronghold(source) ? getStrongholdDefenseLevel(source) : clampCityLevel(source.level);
     const sourcePatch = {
       ownerKind: "neutral",
@@ -14125,6 +14289,15 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         nowMs,
         reignSnapshots: citadelReignSnapshots,
       }, nowMs);
+    } else if (isStrongholdLegacyTarget(source)) {
+      recordStrongholdLegacyControlChange(transaction, {
+        stronghold: source,
+        previousOwnerUid: uid,
+        previousOwnerName: normalizePlayerName(economy.profileAfter.playerName || source.ownerName, "Ruler"),
+        nextOwnerUid: "",
+        nowMs,
+        legacySnapshots: strongholdLegacySnapshots,
+      });
     }
     writeOwnershipChangeEvent(transaction, {
       eventId: `relinquish_${uid}_${source.id}_${nowMs}`,
@@ -17599,6 +17772,7 @@ function normalizeCombatFortificationSnapshot(raw = null) {
     troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(raw.troopObjectiveDefenseBonusPercent, 0)),
     objectiveDefenseBonusPercent: Math.max(0, safeNumber(raw.objectiveDefenseBonusPercent, 0)),
     fullWallPower: Math.max(0, Math.floor(safeNumber(raw.fullWallPower, 0))),
+    wallDefenseIgnored: raw.wallDefenseIgnored === true,
     currentWallPower: Math.max(0, Math.floor(safeNumber(raw.currentWallPower, raw.startingWallPower))),
     startingWallPower: Math.max(0, Math.floor(safeNumber(raw.startingWallPower, raw.currentWallPower))),
     wallDamagePower: Math.max(0, Math.floor(safeNumber(raw.wallDamagePower, 0))),
@@ -19482,6 +19656,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       previousOwnerUid: defenderUid,
       nextOwnerUid: attackerUid,
     });
+    const strongholdLegacySnapshots = await prefetchStrongholdLegacySnapshots(transaction, {
+      stronghold: target,
+      previousOwnerUid: defenderUid,
+      nextOwnerUid: attackerUid,
+    });
     const rallyAttackDocumentRef = army.rallyAttack && army.rallyClanId && army.rallyId
       ? clanRallyRef(army.rallyClanId, army.rallyId)
       : null;
@@ -20818,6 +20997,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
           nowMs,
           reignSnapshots: citadelReignSnapshots,
+        });
+      } else if (result.success && targetType === "city" && isStrongholdLegacyTarget(target)) {
+        recordStrongholdLegacyControlChange(transaction, {
+          stronghold: target,
+          previousOwnerUid: oldOwnerUid,
+          previousOwnerName: defenderName,
+          nextOwnerUid: attackerUid,
+          nextOwnerName: attackerName,
+          nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
+          nowMs,
+          legacySnapshots: strongholdLegacySnapshots,
         });
       }
       currentBattleId = safeString(armyId, 160);
@@ -22159,6 +22349,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
           nowMs,
           reignSnapshots: citadelReignSnapshots,
+        });
+      } else if (isStrongholdLegacyTarget(target)) {
+        recordStrongholdLegacyControlChange(transaction, {
+          stronghold: target,
+          previousOwnerUid: oldOwnerUid,
+          previousOwnerName: defenderName,
+          nextOwnerUid: attackerUid,
+          nextOwnerName: attackerName,
+          nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
+          nowMs,
+          legacySnapshots: strongholdLegacySnapshots,
         });
       }
       const targetPatch = {
@@ -24427,6 +24628,24 @@ function recoverCitadelAssaultLosses(economy, profile, losses, nowMs) {
   return recovered;
 }
 
+function getCitadelAssaultOutcome(result = {}, level = 1) {
+  const previousLevel = clampCityLevel(level);
+  const defendersLeft = Math.max(
+    0,
+    Math.floor(safeNumber(result.defendersLeft, Number.MAX_SAFE_INTEGER))
+  );
+  const defendersDefeated = result.success === true && defendersLeft === 0;
+  const neutralized = defendersDefeated && previousLevel <= CITADEL_ASSAULT_LEVEL_LOSS;
+  return {
+    defendersDefeated,
+    neutralized,
+    outcome: defendersDefeated ? (neutralized ? "lost" : "damaged") : "held",
+    nextLevel: defendersDefeated
+      ? Math.max(1, previousLevel - CITADEL_ASSAULT_LEVEL_LOSS)
+      : previousLevel,
+  };
+}
+
 async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) {
   const targetReceiptRef = targetDoc.ref;
   const initialReceipt = targetDoc.data() || {};
@@ -24502,11 +24721,12 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
     const combatTarget = createReinforcedCombatTarget({ ...producedTarget, alliedReinforcementTroops: alliedTroops }, "city");
     const result = calculateCombatResult(CITADEL_ASSAULT_TROOPS, combatTarget, null, defenderProfile, {
       defenderBonuses: defenderEconomy.bonuses || {},
-      defensePower: defensePackages.totalDefense,
+      defensePower: defensePackages.totalGarrisonDefense,
       siegeCombatVersion: SIEGE_COMBAT_VERSION,
       targetType: "city",
       fortification: defensePackages.fortification,
       garrisonDefensePower: defensePackages.totalGarrisonDefense,
+      ignoreWallDefense: true,
       nowMs,
     });
     const settledFortificationState = writeFortificationSettlement(
@@ -24522,9 +24742,12 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
     );
     const allocation = allocateDefenderLosses(getTargetOwnerTroops(producedTarget, "city"), reinforcements, result.defenderLosses);
     const previousLevel = clampCityLevel(producedTarget.level);
-    const neutralized = result.success && previousLevel <= CITADEL_ASSAULT_LEVEL_LOSS;
-    const outcome = result.success ? (neutralized ? "lost" : "damaged") : "held";
-    const nextLevel = result.success ? Math.max(1, previousLevel - CITADEL_ASSAULT_LEVEL_LOSS) : previousLevel;
+    const {
+      defendersDefeated,
+      neutralized,
+      outcome,
+      nextLevel,
+    } = getCitadelAssaultOutcome(result, previousLevel);
     const targetPatch = neutralized ? {
       ownerKind: "neutral",
       ownerUid: null,
@@ -24635,8 +24858,11 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
       sentTroops: CITADEL_ASSAULT_TROOPS,
       troopCount: allocation.ownerStart + allocation.alliedStart,
       result,
-      totalDefense: defensePackages.totalDefense,
-      defenseStats: { ...getCityStats(producedTarget, defenderProfile, defenderEconomy.bonuses || {}), totalDefense: defensePackages.totalDefense },
+      totalDefense: defensePackages.totalGarrisonDefense,
+      defenseStats: {
+        ...getCityStats(producedTarget, defenderProfile, defenderEconomy.bonuses || {}),
+        totalDefense: defensePackages.totalGarrisonDefense,
+      },
       summary: `${reportSummary}${fieldMedicsRecovered > 0 ? ` Field Medics returned ${fieldMedicsRecovered.toLocaleString()} troops to your main city.` : ""}`,
       xpAwarded: 0,
       goldAwarded: 0,
@@ -24668,6 +24894,8 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
       attackerLosses: result.attackerLosses,
       defenderLosses: result.defenderLosses,
       defendersLeft: result.defendersLeft,
+      defendersDefeated,
+      wallDefenseIgnored: true,
       fieldMedicsRecovered,
       xpAwarded: 0,
       resolvedAtMs: nowMs,
