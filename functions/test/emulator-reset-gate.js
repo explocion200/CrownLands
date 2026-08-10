@@ -2393,7 +2393,33 @@ async function main() {
     lateClaimError = error;
   }
   assert(/joined after that reward was unlocked/.test(String(lateClaimError?.message || "")), "A late clan member collected an earlier quest milestone.");
-  await callFunction("promoteClanMember", clanLeader.token, { targetUid: clanApplicant.uid });
+  const roleProfileBeforePromotion = (await clanApplicantRef.get()).data() || {};
+  const leaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${clanApplicant.uid}`);
+  const leaderboardRoleBeforePromotion = (await leaderboardRef.get()).data()?.clanRole;
+  const promotionResult = await callFunction("promoteClanMember", clanLeader.token, { targetUid: clanApplicant.uid });
+  const [promotedMemberSnap, promotedProfileSnap, promotedLeaderboardSnap] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/members/${clanApplicant.uid}`).get(),
+    clanApplicantRef.get(),
+    leaderboardRef.get(),
+  ]);
+  assert(
+    promotionResult?.ok === true
+      && promotionResult?.targetUid === clanApplicant.uid
+      && promotionResult?.role === "officer",
+    "Clan promotion did not return the promoted officer identity."
+  );
+  assert(promotedMemberSnap.data()?.role === "officer", "Clan promotion did not update the authoritative member role.");
+  assert(
+    promotedProfileSnap.data()?.clanRole === "officer"
+      && promotedProfileSnap.data()?.clanId === applicationClanId
+      && Number(promotedProfileSnap.data()?.clanIdentityRevision || 0)
+        === Number(roleProfileBeforePromotion.clanIdentityRevision || 0),
+    "Clan promotion did not update the player role independently from clan identity and leaderboard state."
+  );
+  assert(
+    promotedLeaderboardSnap.data()?.clanRole === leaderboardRoleBeforePromotion,
+    "Clan promotion unexpectedly changed the player's leaderboard role."
+  );
   let officerRemovalError = null;
   try {
     await callFunction("kickClanMember", clanApplicant.token, { targetUid: lateClanMember.uid });
@@ -2409,6 +2435,17 @@ async function main() {
     "The rejected officer removal changed the clan roster."
   );
   await callFunction("demoteClanOfficer", clanLeader.token, { targetUid: clanApplicant.uid });
+  const [demotedMemberSnap, demotedProfileSnap, demotedLeaderboardSnap] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/members/${clanApplicant.uid}`).get(),
+    clanApplicantRef.get(),
+    leaderboardRef.get(),
+  ]);
+  assert(
+    demotedMemberSnap.data()?.role === "member"
+      && demotedProfileSnap.data()?.clanRole === "member"
+      && demotedLeaderboardSnap.data()?.clanRole === leaderboardRoleBeforePromotion,
+    "Clan demotion did not restore membership state without changing the leaderboard."
+  );
 
   const pendingDisbandApplicant = queuedUser;
   await db.doc(`players/${pendingDisbandApplicant.uid}`).set({

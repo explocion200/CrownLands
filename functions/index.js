@@ -196,6 +196,7 @@ const REINFORCEMENT_CAPACITY_RECONCILE_PAGE_SIZE = 25;
 const RALLY_MODEL_VERSION = 1;
 const RALLY_MAX_PARTICIPANTS = 3;
 const CLAN_FORMING_RALLY_LIMIT = 3;
+const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
 const RALLY_STATUS_FORMING = "forming";
 const RALLY_STATUS_LAUNCHED = "launched";
 const RALLY_STATUS_RECALLING = "recalling";
@@ -15708,20 +15709,57 @@ exports.kickClanMember = onCall({ region: "us-central1", maxInstances: 20, invok
 async function changeClanRole(request, nextRole) {
   const uid = requireAuth(request);
   const targetUid = safeString(request.data?.targetUid, 128);
+  if (!targetUid || targetUid === uid) {
+    throw new HttpsError("invalid-argument", "Choose another clan member.");
+  }
+  if (!["officer", "member"].includes(nextRole)) {
+    throw new HttpsError("internal", "Unsupported clan role change.");
+  }
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
   const clanId = safeString(profile.clanId, 128);
+  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+  const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [actorSnap, targetSnap] = await Promise.all([
-      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
-      transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
+    const clanRef = db.doc(`clans/${clanId}`);
+    const actorRef = db.doc(`clans/${clanId}/members/${uid}`);
+    const targetRef = db.doc(`clans/${clanId}/members/${targetUid}`);
+    const targetProfileRef = db.doc(`players/${targetUid}`);
+    const [clanSnap, actorSnap, targetSnap, targetProfileSnap] = await Promise.all([
+      transaction.get(clanRef),
+      transaction.get(actorRef),
+      transaction.get(targetRef),
+      transaction.get(targetProfileRef),
     ]);
+    if (!clanSnap.exists || clanSnap.data()?.status !== "active") {
+      throw new HttpsError("failed-precondition", "Your clan is no longer active.");
+    }
+    const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
     assertClanRole(actorSnap.data(), ["leader"]);
-    if (!targetSnap.exists || targetSnap.data()?.role === "leader") throw new HttpsError("failed-precondition", "That member's role cannot be changed.");
-    transaction.set(targetSnap.ref, { role: nextRole, roleChangedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    transaction.set(db.doc(`players/${targetUid}`), { clanRole: nextRole, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    transaction.set(leaderboardEntryRef(targetUid), { clanRole: nextRole }, { merge: true });
+    const targetMember = targetSnap.exists ? targetSnap.data() || {} : {};
+    const targetProfile = targetProfileSnap.exists ? targetProfileSnap.data() || {} : {};
+    if (
+      !targetSnap.exists
+      || !targetProfileSnap.exists
+      || targetMember.status === "removed"
+      || targetMember.role === "leader"
+      || safeString(targetProfile.clanId, 128) !== clanId
+    ) {
+      throw new HttpsError("failed-precondition", "That member's role cannot be changed.");
+    }
+    transaction.set(targetRef, {
+      role: nextRole,
+      roleChangedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(targetProfileRef, {
+      clanRole: nextRole,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     writeClanAudit(transaction, clanId, uid, nextRole === "officer" ? "member_promoted" : "officer_demoted", { targetUid });
-    return { ok: true, role: nextRole };
+    return { ok: true, clanId, targetUid, role: nextRole };
   });
 }
 
@@ -16488,6 +16526,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
       throw new HttpsError("failed-precondition", "Your clan membership is no longer active.");
     }
+    assertClanRole(memberSnap.data(), CLAN_RALLY_CREATOR_ROLES);
     if (rallySnap.exists) {
       const existing = normalizeClanRally(rallySnap);
       if (existing?.leaderUid === uid) {

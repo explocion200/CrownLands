@@ -6,6 +6,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const statBytes = relativePath => fs.statSync(path.join(root, relativePath)).size;
+const normalizedTextBytes = relativePath => Buffer.byteLength(read(relativePath).replace(/\r\n/g, "\n"), "utf8");
 const mib = value => `${(value / (1024 * 1024)).toFixed(2)} MiB`;
 
 const indexSource = read("index.html");
@@ -265,7 +266,7 @@ assert(
 );
 
 for (const [relativePath, budget] of Object.entries(entrypointBudgets)) {
-  const bytes = statBytes(relativePath);
+  const bytes = normalizedTextBytes(relativePath);
   assert(bytes <= budget, `${relativePath} is ${(bytes / 1024).toFixed(1)} KiB; budget is ${(budget / 1024).toFixed(0)} KiB.`);
 }
 
