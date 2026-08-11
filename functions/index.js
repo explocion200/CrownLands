@@ -8,6 +8,7 @@ const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
+const COMMON_GEAR = require("./common-gear.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -68,6 +69,32 @@ admin.initializeApp();
 
 const db = getFirestore();
 const messaging = getMessaging();
+
+function normalizeCommonGear(profileOrGear = {}) {
+  return COMMON_GEAR.normalizeState(profileOrGear?.gear || profileOrGear);
+}
+
+function getCommonGearBonuses(profileOrGear = {}) {
+  return COMMON_GEAR.getBonuses(profileOrGear);
+}
+
+function getCasualtyRecoveryPercent(profile = {}) {
+  return Math.min(
+    COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT,
+    getSkillPercent(profile, "fieldMedics") + getCommonGearBonuses(profile).casualtyEfficiency
+  );
+}
+
+function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultiplier = 1) {
+  const bonuses = getCommonGearBonuses(profile);
+  const normalizedKind = safeString(kind, 32).toLowerCase();
+  const bonusPercent = normalizedKind === "scout"
+    ? bonuses.scoutSpeed
+    : ["attack", "rally", "rally_join"].includes(normalizedKind)
+      ? bonuses.enemyMarchSpeed
+      : bonuses.ownedMarchSpeed;
+  return Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100);
+}
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
@@ -3328,6 +3355,7 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
   );
   const includeSkillBoosts = options.includeSkillBoosts !== false;
   const includeStrongholdBoosts = options.includeStrongholdBoosts !== false;
+  const gearBonuses = getCommonGearBonuses(profile);
   const royalGranariesPercent = includeSkillBoosts ? getSkillPercent(profile, "royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts ? getSkillPercent(profile, "taxStewardship") : 0;
   const strongholdTroopBonusPercent = includeStrongholdBoosts
@@ -3353,11 +3381,14 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
     troopProductionBonusPerHour,
   } = calculateTroopProductionRates(
     rawTroopProductionPerHour,
-    royalGranariesPercent,
+    royalGranariesPercent + gearBonuses.troopProductionAllCities,
     strongholdTroopBonusPercent,
     warDrumsTroopBonusPercent
   );
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
+  const isMainCity = !stronghold && safeString(city.id, 96) === safeString(profile?.mainCityId, 96);
+  const gearGoldProductionPercent = gearBonuses.goldProductionAllCities
+    + (isMainCity ? gearBonuses.goldProductionMainCity : 0);
   const {
     baseGoldProductionPerHour,
     untimedGoldProductionPerHour,
@@ -3365,7 +3396,7 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
     goldProductionBonusPerHour,
   } = calculateGoldProductionRates(
     rawGoldProductionPerHour,
-    taxStewardshipPercent,
+    taxStewardshipPercent + gearGoldProductionPercent,
     strongholdGoldBonusPercent,
     royalTaxDecreeGoldBonusPercent
   );
@@ -3387,6 +3418,8 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
     strongholdGoldBonusPercent,
     warDrumsTroopBonusPercent,
     royalTaxDecreeGoldBonusPercent,
+    gearTroopProductionPercent: gearBonuses.troopProductionAllCities,
+    gearGoldProductionPercent,
     troopProductionPerSecond: troopProductionPerHour / 3600,
     goldProductionPerSecond: goldProductionPerHour / 3600,
   };
@@ -3477,13 +3510,16 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
   const soldierDefenseEnabled = usesSoldierDefenseModel(defenseCombatVersion, city);
   const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
   const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
+  const gearBonuses = defenderProfile ? getCommonGearBonuses(defenderProfile) : {};
   const stoneworksPercent = !rewardCamp && defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
-  const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
+  const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, safeNumber(gearBonuses.wallStrength, 0));
+  const cityWalls = Math.floor(baseCityWalls * (1 + (stoneworksPercent + gearWallStrengthPercent) / 100));
   const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const shieldwallDisciplinePercent = soldierDefenseEnabled && defenderProfile
     ? getSkillPercent(defenderProfile, "shieldwallDiscipline")
     : 0;
   const objectiveTroopDefenseBonusPercent = rewardCamp ? 0 : getObjectiveTroopDefenseBonusPercent(bonuses);
+  const gearDefenderStrengthPercent = rewardCamp ? 0 : Math.max(0, safeNumber(gearBonuses.defenderStrength, 0));
   const baseTroopDefense = rewardCamp
     ? Math.floor(troopCount * REWARD_CAMP_TROOP_POWER)
     : soldierDefenseEnabled
@@ -3498,7 +3534,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
+        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent + gearDefenderStrengthPercent) / 100
       ))
       : troopDefenseBeforeObjective;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
@@ -3521,6 +3557,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     cityWalls,
     cityWallsBonus,
     stoneworksPercent,
+    gearWallStrengthPercent,
     shieldwallDisciplineLevel: soldierDefenseEnabled && defenderProfile
       ? getSkillLevel(defenderProfile, "shieldwallDiscipline")
       : 0,
@@ -3530,6 +3567,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     troopDefense,
     baseTotalDefense,
     objectiveTroopDefenseBonusPercent,
+    gearDefenderStrengthPercent,
     strongholdDefenseBonusPercent: objectiveTroopDefenseBonusPercent,
     strongholdDefenseBonus,
     totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
@@ -4342,7 +4380,9 @@ function normalizeDemoAttackSnapshot(demo = null) {
 }
 
 function getAttackPower(troops, attackerProfile = null) {
-  const boost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
+  const boost = attackerProfile
+    ? skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+    : 1;
   return troops * BASE_TROOP_ATTACK_POWER * boost;
 }
 
@@ -4421,7 +4461,11 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       fullWallPower,
       options.fortification?.repairAtMs,
       Math.max(0, Math.floor(safeNumber(options.nowMs, Date.now()))),
-      options.repairReductionPercent
+      Math.min(
+        95,
+        Math.max(0, safeNumber(options.repairReductionPercent, 0))
+          + getCommonGearBonuses(defenderProfile || {}).wallRepairSpeed
+      )
     )
     : null;
   const repairAtMs = repairTiming?.repairAtMs
@@ -4431,7 +4475,9 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const repairReductionPercent = repairTiming?.repairReductionPercent
     ?? clamp(safeNumber(options.fortification?.repairReductionPercent, 0), 0, 100);
   const repairAddedMs = repairTiming?.repairAddedMs || 0;
-  const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
+  const attackerBoost = attackerProfile
+    ? skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+    : 1;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
   let attackerLosses = troops;
@@ -5584,8 +5630,10 @@ function createRallyParticipantSnapshot({
     assembledAtMs,
     attackSkillLevel: getSkillLevel(profile, "swordmastery"),
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
-    attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * skillMultiplier(profile, "swordmastery"),
-    fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
+    attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
+      skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100
+    ),
+    fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
     ownerKingPower,
   });
 }
@@ -9203,11 +9251,13 @@ async function processDailyMissionEvent(event) {
   const achievementStateRef = seasonalAchievementStateRef(raw.uid, achievementCycle.seasonId);
   const eventRef = snapshot?.ref || dailyMissionEventRef(raw.uid, raw.eventId || raw.id);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [freshEventSnap, stateSnap, achievementStateSnap, statsSnap] = await Promise.all([
+    const playerRef = db.doc(`players/${raw.uid}`);
+    const [freshEventSnap, stateSnap, achievementStateSnap, statsSnap, playerSnap] = await Promise.all([
       transaction.get(eventRef),
       transaction.get(stateRef),
       transaction.get(achievementStateRef),
       transaction.get(playerGlobalStatsRef(raw.uid)),
+      transaction.get(playerRef),
     ]);
     if (!freshEventSnap.exists || !stateSnap.exists || !achievementStateSnap.exists) return null;
     const freshEvent = freshEventSnap.data() || {};
@@ -9274,6 +9324,11 @@ async function processDailyMissionEvent(event) {
         );
         achievementState = allCompletedResult.state;
         newlyCompletedAchievementIds.push(...allCompletedResult.newlyCompletedIds);
+        const gear = normalizeCommonGear(playerSnap.exists ? playerSnap.data() || {} : {});
+        gear.commonGearBoxes += 1;
+        gear.updatedAtMs = nowMs;
+        transaction.set(playerRef, { gear }, { merge: true });
+        nextState.allCompletedGearBoxAwardedAtMs = nowMs;
       }
       transaction.set(achievementStateRef, {
         ...achievementState,
@@ -9359,6 +9414,7 @@ function normalizeDailyLoginRewardReceipt(raw = {}) {
     troopHours: Math.max(0, safeNumber(raw.troopHours, 0)),
     gold: Math.max(0, Math.floor(safeNumber(raw.gold, 0))),
     troops: Math.max(0, Math.floor(safeNumber(raw.troops, 0))),
+    commonGearBoxes: Math.max(0, Math.floor(safeNumber(raw.commonGearBoxes, 0))),
     items,
     targetCityId: safeString(raw.targetCityId, 96),
   };
@@ -10410,8 +10466,8 @@ function createRallyReturnMovement({
     pathLength: route.pathLength,
     troopCount: troops,
     kind: "transfer",
-    speedMultiplier: skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+    speedMultiplier: addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
   });
   return {
     id: rawId,
@@ -10523,8 +10579,8 @@ function createRelinquishContinuationMovement({
     pathLength: route.pathLength,
     troopCount: troops,
     kind: "transfer",
-    speedMultiplier: skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+    speedMultiplier: addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
   });
   return {
     id: continuationId,
@@ -10606,8 +10662,8 @@ function createReinforcementReturnMovement({
     pathLength: route.pathLength,
     troopCount: troops,
     kind: "transfer",
-    speedMultiplier: skillMultiplier(profile, "marchOrders")
-      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+    speedMultiplier: addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
   });
   return {
     id: movementId,
@@ -11428,6 +11484,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   }, nowMs);
   const scoutReports = pruneExpiredScoutReportMap(rawProfile.scoutReports, nowMs);
   const battleReports = pruneExpiredBattleScoutReports(rawProfile.battleReports, nowMs);
+  const gear = normalizeCommonGear(rawProfile);
   const profileAfter = {
     ...rawProfile,
     character,
@@ -11442,6 +11499,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     pendingAwayProduction,
     scoutReports,
     battleReports,
+    gear,
     ...mainCityRepair.profileFields,
     economyUpdatedAtMs: economyRevisionMs,
   };
@@ -11469,6 +11527,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     pendingAwayProduction,
+    gear,
     ...(scoutReports !== rawProfile.scoutReports ? { scoutReports } : {}),
     ...(battleReports !== rawProfile.battleReports ? { battleReports } : {}),
     ...mainCityRepair.profileFields,
@@ -11859,6 +11918,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     character,
     upgrades,
     skillPresets,
+    gear,
     daily,
     dailyLoginReward,
     harvestBonuses,
@@ -11882,6 +11942,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     shopItems: shopItems || economy.shopItems,
     itemEffects: itemEffects || economy.itemEffects,
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
+    gear: normalizeCommonGear(gear !== undefined ? gear : economy.profileAfter),
     character: character || economy.profileAfter.character || null,
     upgrades: upgrades || normalizeSkillUpgrades(economy.profileAfter.upgrades),
     skillPresets: normalizeSkillPresets(
@@ -12272,6 +12333,183 @@ exports.deliverIncomingArmyNotification = onDocumentCreated({
   }
 });
 
+function requireCommonGearInstance(gear, instanceId) {
+  const id = safeString(instanceId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const instance = gear.instances[id];
+  if (!instance) throw new HttpsError("not-found", "That gear piece is no longer available.");
+  return instance;
+}
+
+function createCommonGearClientStatus(profile = {}, baseGoldPerHour = 0, nowMs = Date.now()) {
+  const gear = normalizeCommonGear(profile);
+  const today = getUtcDateKey(nowMs);
+  const purchasedToday = gear.shopPurchase.utcDate === today ? gear.shopPurchase.purchaseCount : 0;
+  return {
+    gear,
+    bonuses: getCommonGearBonuses(gear),
+    shop: {
+      utcDate: today,
+      purchaseCount: purchasedToday,
+      dailyLimit: COMMON_GEAR.SHOP_DAILY_LIMIT,
+      available: purchasedToday < COMMON_GEAR.SHOP_DAILY_LIMIT,
+      price: Math.max(0, Math.floor(safeNumber(baseGoldPerHour, 0) * COMMON_GEAR.SHOP_BASE_GOLD_HOURS)),
+      resetsAtMs: getNextUtcDayStartMs(nowMs),
+    },
+  };
+}
+
+exports.getCommonGearStatus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const rates = getRewardedAdBaseRates(economy);
+    writePreparedEconomy(transaction, economy);
+    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, rates.goldPerHour, nowMs), ...createEconomyResponse(economy) };
+  });
+});
+
+exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const rates = getRewardedAdBaseRates(economy);
+    const status = createCommonGearClientStatus(economy.profileAfter, rates.goldPerHour, nowMs);
+    if (!status.shop.available) throw new HttpsError("resource-exhausted", "You already bought today's Common Gear Box.");
+    if (economy.goldFloat < status.shop.price) throw new HttpsError("failed-precondition", "Not enough gold for today's Common Gear Box.");
+    const gear = status.gear;
+    gear.commonGearBoxes += 1;
+    gear.shopPurchase = { utcDate: status.shop.utcDate, purchaseCount: 1 };
+    gear.updatedAtMs = nowMs;
+    const goldFloat = economy.goldFloat - status.shop.price;
+    const gold = Math.floor(goldFloat);
+    writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
+    return createEconomyResponse(economy, {
+      gear, gold, goldFloat, purchased: true, spentGold: status.shop.price,
+      commonGearStatus: createCommonGearClientStatus({ gear }, rates.goldPerHour, nowMs),
+    });
+  });
+});
+
+exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const requestId = safeString(request.data?.requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!requestId) throw new HttpsError("invalid-argument", "A gear box request id is required.");
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    if (!profileSnap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before opening gear.");
+    const gear = normalizeCommonGear(profileSnap.data() || {});
+    if (gear.lastOpenRequestId === requestId && gear.lastOpenReceipt) {
+      return { ok: true, replayed: true, gear, receipt: gear.lastOpenReceipt };
+    }
+    if (gear.commonGearBoxes < 1) throw new HttpsError("failed-precondition", "You do not have a Common Gear Box.");
+    gear.commonGearBoxes -= 1;
+    const instanceIds = [];
+    for (let index = 0; index < COMMON_GEAR.BOX_REVEAL_COUNT; index += 1) {
+      const definition = COMMON_GEAR.DEFINITIONS[crypto.randomInt(0, COMMON_GEAR.DEFINITIONS.length)];
+      const instanceId = `cg_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
+      gear.instances[instanceId] = COMMON_GEAR.normalizeInstance({
+        instanceId, gearKey: definition.gearKey, level: 1, isNew: true, acquiredAtMs: nowMs,
+      });
+      gear.newMarkers[definition.buildingId] = true;
+      instanceIds.push(instanceId);
+    }
+    gear.lastOpenRequestId = requestId;
+    gear.lastOpenReceipt = { requestId, openedAtMs: nowMs, instanceIds };
+    gear.updatedAtMs = nowMs;
+    transaction.set(profileRef, { gear, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true, replayed: false, gear, receipt: gear.lastOpenReceipt };
+  });
+});
+
+exports.viewCommonGearBuilding = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const buildingId = safeString(request.data?.buildingId, 32);
+  if (!COMMON_GEAR.BUILDINGS[buildingId]) throw new HttpsError("invalid-argument", "Unknown Inner Castle building.");
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const ref = db.doc(`players/${uid}`);
+    const snap = await transaction.get(ref);
+    if (!snap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before managing gear.");
+    const gear = normalizeCommonGear(snap.data() || {});
+    gear.newMarkers[buildingId] = false;
+    Object.values(gear.instances).forEach(instance => {
+      if (instance.buildingId === buildingId) instance.isNew = false;
+    });
+    gear.updatedAtMs = Date.now();
+    transaction.set(ref, { gear }, { merge: true });
+    return { ok: true, gear };
+  });
+});
+
+async function mutateCommonGearLoadout(uid, request, mode) {
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const gear = normalizeCommonGear(economy.profileAfter);
+    const instance = requireCommonGearInstance(gear, request.data?.instanceId);
+    if (mode === "equip") {
+      const currentId = gear.equipped[instance.buildingId][instance.slot];
+      if (currentId && gear.instances[currentId]) gear.instances[currentId].isEquipped = false;
+      gear.equipped[instance.buildingId][instance.slot] = instance.instanceId;
+      instance.isEquipped = true;
+      instance.isNew = false;
+    } else {
+      if (!instance.isEquipped) throw new HttpsError("failed-precondition", "That gear piece is not equipped.");
+      gear.equipped[instance.buildingId][instance.slot] = "";
+      instance.isEquipped = false;
+    }
+    gear.updatedAtMs = nowMs;
+    writePreparedEconomy(transaction, economy, { gear });
+    return createEconomyResponse(economy, { gear, bonuses: getCommonGearBonuses(gear) });
+  });
+}
+
+exports.equipCommonGear = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, request => {
+  const uid = requireAuth(request);
+  return mutateCommonGearLoadout(uid, request, "equip");
+});
+
+exports.unequipCommonGear = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, request => {
+  const uid = requireAuth(request);
+  return mutateCommonGearLoadout(uid, request, "unequip");
+});
+
+exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const gear = normalizeCommonGear(economy.profileAfter);
+    const instance = requireCommonGearInstance(gear, request.data?.instanceId);
+    const requirement = COMMON_GEAR.getUpgradeRequirement(instance.level);
+    if (!requirement) throw new HttpsError("failed-precondition", "Max Level Reached.");
+    const materials = Object.values(gear.instances)
+      .filter(candidate => candidate.instanceId !== instance.instanceId
+        && candidate.gearKey === instance.gearKey && candidate.level === 1 && !candidate.isEquipped)
+      .sort((a, b) => a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
+    if (materials.length < requirement.duplicates) {
+      throw new HttpsError("failed-precondition", `You need ${requirement.duplicates} unequipped Level 1 duplicate${requirement.duplicates === 1 ? "" : "s"}.`);
+    }
+    const rates = getRewardedAdBaseRates(economy);
+    const cost = Math.max(0, Math.floor(rates.goldPerHour * requirement.baseGoldHours));
+    if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
+    materials.slice(0, requirement.duplicates).forEach(material => { delete gear.instances[material.instanceId]; });
+    instance.level += 1;
+    instance.upgradedAtMs = nowMs;
+    const goldFloat = economy.goldFloat - cost;
+    const gold = Math.floor(goldFloat);
+    gear.updatedAtMs = nowMs;
+    writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
+    return createEconomyResponse(economy, {
+      gear, gold, goldFloat, upgradedInstanceId: instance.instanceId, spentGold: cost,
+      bonuses: getCommonGearBonuses(gear),
+    });
+  });
+});
+
 exports.getRealmInfo = timedCallable(
   "getRealmInfo",
   { region: "us-central1", maxInstances: 20, invoker: "public" },
@@ -12304,6 +12542,7 @@ exports.getRealmInfo = timedCallable(
       capabilities: {
         shardedGameServerHeartbeats: true,
         instantEconomyActionsVersion: 1,
+        commonGearVersion: COMMON_GEAR.SCHEMA_VERSION,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
         bulkOrdersVersion: BULK_ORDERS_VERSION,
         combatForecastVersion: COMBAT_FORECAST_VERSION,
@@ -12646,6 +12885,10 @@ exports.claimDailyLoginReward = timedCallable(
       const goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + goldReward;
       const gold = Math.max(0, Math.floor(goldFloat));
       const shopItems = { ...economy.shopItems };
+      const gear = normalizeCommonGear(economy.profileAfter);
+      const commonGearBoxes = claimedPosition.day % 7 === 0 ? 1 : 0;
+      gear.commonGearBoxes += commonGearBoxes;
+      gear.updatedAtMs = nowMs;
       Object.entries(reward.items || {}).forEach(([itemId, quantity]) => {
         shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)))
           + Math.max(1, Math.floor(safeNumber(quantity, 1)));
@@ -12671,6 +12914,7 @@ exports.claimDailyLoginReward = timedCallable(
         troopHours: reward.troopHours,
         gold: goldReward,
         troops: troopReward,
+        commonGearBoxes,
         items: { ...reward.items },
         targetCityId: troopCredit?.cityId || "",
       };
@@ -12690,12 +12934,14 @@ exports.claimDailyLoginReward = timedCallable(
         gold,
         goldFloat,
         shopItems,
+        gear,
         dailyLoginReward: nextState,
       });
       return createEconomyResponse(economy, {
         gold,
         goldFloat,
         shopItems,
+        gear,
         dailyLoginReward: nextState,
         claimed: true,
         replayed: false,
@@ -14230,6 +14476,7 @@ function createFreshResetPlayerProfile({
     freeSkillResetGrantVersion: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
+    gear: COMMON_GEAR.createDefaultState(),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
     dailyLoginReward: createDefaultDailyLoginRewardState(),
@@ -14773,8 +15020,8 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         pathLength: validatedRoute.pathLength,
         troopCount: transferredTroops,
         kind: "transfer",
-        speedMultiplier: skillMultiplier(economy.profileAfter, "marchOrders")
-          * (1 + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100),
+        speedMultiplier: addCommonGearMarchSpeed(economy.profileAfter, "transfer", skillMultiplier(economy.profileAfter, "marchOrders")
+          * (1 + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100)),
       });
       movement = {
         id: order.id,
@@ -17899,8 +18146,8 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       pathLength: validatedRoute.pathLength,
       troopCount: totalTroops,
       kind: "attack",
-      speedMultiplier: skillMultiplier(leaderEconomy.profileAfter || leaderProfile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(leaderEconomy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+      speedMultiplier: addCommonGearMarchSpeed(leaderEconomy.profileAfter || leaderProfile, "attack", skillMultiplier(leaderEconomy.profileAfter || leaderProfile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(leaderEconomy.bonuses?.marchSpeedBonusPercent, 0)) / 100)),
     });
     const movement = {
       id: launchOrder.id,
@@ -18227,7 +18474,9 @@ function normalizeAttackCombatSnapshot(raw = null) {
 function createAttackCombatSnapshot(troops = 1, attackerProfile = {}) {
   const launchTroops = Math.max(1, Math.floor(safeNumber(troops, 1)));
   const swordmasteryPercent = Math.max(0, getSkillPercent(attackerProfile, "swordmastery"));
-  const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * skillMultiplier(attackerProfile, "swordmastery");
+  const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * (
+    skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+  );
   return normalizeAttackCombatSnapshot({
     version: ATTACK_COMBAT_SNAPSHOT_VERSION,
     swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
@@ -18571,8 +18820,8 @@ exports.previewArmyRoute = timedCallable(
         pathLength: route.pathLength,
         troopCount: troops,
         kind,
-        speedMultiplier: skillMultiplier(profile, "marchOrders")
-          * (1 + marchSpeedBonusPercent / 100),
+        speedMultiplier: addCommonGearMarchSpeed(profile, kind, skillMultiplier(profile, "marchOrders")
+          * (1 + marchSpeedBonusPercent / 100)),
       });
       const durationMs = Math.ceil(durationSeconds * 1000);
       return {
@@ -20153,8 +20402,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       troopCount: troops,
       kind: resolvedKind,
       targetType: order.targetType,
-      speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
+      speedMultiplier: addCommonGearMarchSpeed(attackerProfile, resolvedKind, skillMultiplier(attackerProfile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100)),
     });
     const originalArrivesAtMs = nowMs + Math.ceil(originalDuration * 1000);
     const swiftMarchDurationMs = useSwiftMarchOrder
@@ -20789,7 +21038,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return { returned, cityId: fallbackCity.id, regionId: fallbackRegionId };
     };
     const recoverBattleLossesToMainCity = ({ uid = "", profile = {}, economy = null, losses = 0 } = {}) => {
-      const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
+      const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getCasualtyRecoveryPercent(profile) / 100);
       if (!uid || recovered <= 0 || !economy) return 0;
       const entry = getCanonicalMainCityEntry(profile, economy.cityEntries);
       const city = entry?.city;
@@ -21292,7 +21541,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: entry.losses,
           survivors: entry.remaining,
           xpAwarded,
-          fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
+          fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
           createdAtMs: nowMs,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -24080,7 +24329,7 @@ async function settleReinforcementBattleReceipt(event) {
     finalizeLevelUpReward(progress, levelTroopReward);
     const recoveredTroops = Math.floor(
       Math.max(0, safeNumber(receipt.losses, 0))
-      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
+      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getCasualtyRecoveryPercent(profile)))
       / 100
     );
     let recovery = null;
@@ -24215,7 +24464,7 @@ async function settleRallyBattleReceipt(event) {
     finalizeLevelUpReward(progress, levelTroopReward);
     const recoveredTroops = Math.floor(
       Math.max(0, safeNumber(receipt.losses, 0))
-      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
+      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getCasualtyRecoveryPercent(profile)))
       / 100
     );
     let recovery = null;
@@ -24535,6 +24784,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const relicRewardItem = isRelicCamp && !relicDailyLimitReached
       ? rollRelicCampItem(config.itemDrops)
       : null;
+    const relicGearBoxAwarded = Boolean(
+      relicRewardItem
+      && crypto.randomInt(1, 101) <= COMMON_GEAR.RELIC_BONUS_CHANCE_PERCENT
+    );
     let reward = isDeedCamp
       ? deedDailyLimitReached ? 0 : 1
       : isRelicCamp
@@ -24616,7 +24869,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         pathLength: route.pathLength,
         troopCount: returningTroops,
         kind: "transfer",
-        speedMultiplier: skillMultiplier(player, "marchOrders"),
+        speedMultiplier: addCommonGearMarchSpeed(player, "transfer", skillMultiplier(player, "marchOrders")),
       });
       returnArmy = {
         id: returnArmyId,
@@ -24743,6 +24996,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
     let relicRewardEntry = null;
     let rewardedShopItems = null;
+    let rewardedGear = null;
     if (relicRewardItem) {
       rewardedShopItems = normalizeShopItems(player.shopItems);
       rewardedShopItems[relicRewardItem.itemId] = Math.max(
@@ -24757,6 +25011,11 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         campId: camp.id,
         campName: camp.name || config.name,
       };
+      if (relicGearBoxAwarded) {
+        rewardedGear = normalizeCommonGear(player);
+        rewardedGear.commonGearBoxes += 1;
+        rewardedGear.updatedAtMs = nowMs;
+      }
     }
     const relicRewardsToday = isRelicCamp
       ? [...priorRelicRewards, ...(relicRewardEntry ? [relicRewardEntry] : [])]
@@ -24861,7 +25120,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       : isRelicCamp
         ? relicDailyLimitReached
           ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but the daily limit of ${config.maxDailyRewards} Relic Camp rewards was already reached. The camp reset to neutral.${returnSummary}`
-          : `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. The item was added to your bag.${returnSummary}`
+          : `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. The item was added to your bag.${relicGearBoxAwarded ? " You also found a Common Gear Box!" : ""}${returnSummary}`
       : reward > 0
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnSummary}`;
@@ -24911,6 +25170,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         goldFloat: nextGoldFloat,
       } : {}),
       ...(rewardedShopItems ? { shopItems: rewardedShopItems } : {}),
+      ...(rewardedGear ? { gear: rewardedGear } : {}),
     });
     transaction.set(islandReportRef(camp.regionId, report.id), {
       ...report,
@@ -24943,6 +25203,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       rewardHistoryEntry: deedHistoryEntry,
       rewardHistoryLimit: DEED_CAMP_HISTORY_LIMIT,
       rewardItem: relicRewardEntry,
+      commonGearBoxAwarded: relicGearBoxAwarded,
       rewardsToday: relicRewardsToday,
       maxDailyRewards: isRelicCamp ? config.maxDailyRewards : 0,
       returnedTroops,
@@ -24955,10 +25216,11 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       rewardedTroops,
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
       cityUpdates: [deedCityPatch, mainCityPatch].filter(Boolean),
-      currentUser: callerUid === holderUid && (config.rewardType === "gold" || rewardedShopItems)
+      currentUser: callerUid === holderUid && (config.rewardType === "gold" || rewardedShopItems || rewardedGear)
         ? {
             ...(config.rewardType === "gold" ? { gold: nextGold, goldFloat: nextGoldFloat } : {}),
             ...(rewardedShopItems ? { shopItems: rewardedShopItems } : {}),
+            ...(rewardedGear ? { gear: rewardedGear } : {}),
           }
         : null,
     };
@@ -25053,7 +25315,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
         pathLength: route.pathLength,
         troopCount: returningTroops,
         kind: "transfer",
-        speedMultiplier: skillMultiplier(player, "marchOrders"),
+        speedMultiplier: addCommonGearMarchSpeed(player, "transfer", skillMultiplier(player, "marchOrders")),
       });
       movement = {
         id: armyId,
@@ -25393,7 +25655,7 @@ async function selectCitadelAssaultTargets(wave, nowMs = Date.now()) {
 }
 
 function recoverCitadelAssaultLosses(economy, profile, losses, nowMs) {
-  const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
+  const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getCasualtyRecoveryPercent(profile) / 100);
   if (!economy?.uid || recovered <= 0) return 0;
   const mainEntry = getCanonicalMainCityEntry(profile, economy.cityEntries);
   const city = mainEntry?.city;
@@ -25609,7 +25871,7 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
         losses: entry.losses,
         survivors: entry.remaining,
         xpAwarded: 0,
-        fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
+        fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),

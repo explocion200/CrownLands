@@ -16,6 +16,7 @@ const STATIC_CACHE_URLS = [
   "/patch-notes.js?v=20260807-login-resilience-v1",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",
+  "/common-gear.js?v=20260811-common-gear-v1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
   "/firebaseClient.js?v=20260810-daily-mission-camp-fix-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",

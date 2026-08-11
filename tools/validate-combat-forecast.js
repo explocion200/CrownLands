@@ -104,6 +104,9 @@ const sandbox = {
   skillMultiplier() {
     return 1;
   },
+  getCommonGearBonuses() {
+    return { attackStrength: 0, wallRepairSpeed: 0 };
+  },
   clamp(value, min, max) {
     return Math.max(min, Math.min(max, Number(value) || 0));
   },
@@ -134,6 +137,9 @@ const attackSnapshotSandbox = {
   },
   skillMultiplier() {
     return 1.6;
+  },
+  getCommonGearBonuses() {
+    return { attackStrength: 0 };
   },
 };
 vm.createContext(attackSnapshotSandbox);

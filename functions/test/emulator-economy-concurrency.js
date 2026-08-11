@@ -3,6 +3,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const economyConfig = require("../economy-config.json");
 const realm = require("../release-config.json");
+const commonGear = require("../common-gear.js");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -305,6 +306,91 @@ async function main() {
     );
   }
 
+  const gearStatus = await callFunction("getCommonGearStatus", user.token);
+  const gearBoxPrice = Number(gearStatus.shop?.price || 0);
+  await profileRef.set({
+    gold: gearBoxPrice * 2 + 1000,
+    goldFloat: gearBoxPrice * 2 + 1000,
+    gear: commonGear.createDefaultState(),
+    economyUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const concurrentGearPurchases = await Promise.all([
+    invokeFunction("purchaseCommonGearBox", user.token),
+    invokeFunction("purchaseCommonGearBox", user.token),
+  ]);
+  assert(
+    concurrentGearPurchases.filter(result => result.ok).length === 1
+      && concurrentGearPurchases.filter(result => !result.ok && result.error?.status === "RESOURCE_EXHAUSTED").length === 1,
+    `Concurrent Common Gear Box purchases bypassed the UTC limit: ${JSON.stringify(concurrentGearPurchases)}`
+  );
+  const gearAfterPurchase = (await profileRef.get()).data()?.gear || {};
+  assert(Number(gearAfterPurchase.commonGearBoxes || 0) === 1, "The Common Gear Box purchase did not credit exactly one box.");
+
+  const openRequestId = `emulator-gear-${crypto.randomBytes(6).toString("hex")}`;
+  const openedGear = await callFunction("openCommonGearBox", user.token, { requestId: openRequestId });
+  assert(openedGear.receipt?.instanceIds?.length === 3, "A Common Gear Box did not reveal exactly three pieces.");
+  assert(Object.keys(openedGear.gear?.instances || {}).length === 3, "The three revealed pieces were not stored in gear inventory.");
+  assert(Number(openedGear.gear?.commonGearBoxes || 0) === 0, "Opening a Common Gear Box did not consume exactly one box.");
+  const revealedBuildingIds = new Set(openedGear.receipt.instanceIds.map(instanceId => openedGear.gear.instances[instanceId].buildingId));
+  assert(
+    [...revealedBuildingIds].every(buildingId => openedGear.gear?.newMarkers?.[buildingId] === true),
+    "A building that received Common Gear did not retain its new-gear marker."
+  );
+  const replayedGear = await callFunction("openCommonGearBox", user.token, { requestId: openRequestId });
+  assert(replayedGear.replayed === true, "Repeating a Common Gear Box request was not idempotent.");
+  assert(Object.keys(replayedGear.gear?.instances || {}).length === 3, "An idempotent box replay awarded extra gear.");
+  const viewedBuildingId = [...revealedBuildingIds][0];
+  const viewedGear = await callFunction("viewCommonGearBuilding", user.token, { buildingId: viewedBuildingId });
+  assert(viewedGear.gear?.newMarkers?.[viewedBuildingId] === false, "Viewing a gear building did not clear its notification marker.");
+  assert(
+    Object.values(viewedGear.gear?.instances || {})
+      .filter(instance => instance.buildingId === viewedBuildingId)
+      .every(instance => instance.isNew === false),
+    "Viewing a gear building did not clear its individual new-item markers."
+  );
+
+  const upgradeDefinition = commonGear.DEFINITIONS.find(definition => definition.statType === "attackStrength");
+  const upgradeGear = commonGear.createDefaultState();
+  upgradeGear.instances.upgrade_target = commonGear.normalizeInstance({
+    instanceId: "upgrade_target",
+    gearKey: upgradeDefinition.gearKey,
+    level: 1,
+    acquiredAtMs: Date.now() - 1000,
+  });
+  upgradeGear.instances.upgrade_material = commonGear.normalizeInstance({
+    instanceId: "upgrade_material",
+    gearKey: upgradeDefinition.gearKey,
+    level: 1,
+    acquiredAtMs: Date.now(),
+  });
+  upgradeGear.instances.upgrade_swap = commonGear.normalizeInstance({
+    instanceId: "upgrade_swap",
+    gearKey: upgradeDefinition.gearKey,
+    level: 2,
+    acquiredAtMs: Date.now() + 1000,
+  });
+  upgradeGear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
+  await profileRef.set({
+    gold: 1_000_000_000,
+    goldFloat: 1_000_000_000,
+    gear: upgradeGear,
+    economyUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const swappedGear = await callFunction("equipCommonGear", user.token, { instanceId: "upgrade_swap" });
+  assert(swappedGear.currentUser?.gear?.instances?.upgrade_target?.isEquipped === false, "Replacing equipped gear did not return the old piece to inventory.");
+  assert(swappedGear.currentUser?.gear?.instances?.upgrade_swap?.isEquipped === true, "Replacing equipped gear did not equip the selected piece.");
+  const reequippedGear = await callFunction("equipCommonGear", user.token, { instanceId: "upgrade_target" });
+  assert(reequippedGear.currentUser?.gear?.instances?.upgrade_target?.isEquipped === true, "The original gear could not be re-equipped.");
+  const upgradedGear = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
+  const upgradedGearState = upgradedGear.currentUser?.gear || {};
+  assert(Number(upgradedGearState.instances?.upgrade_target?.level || 0) === 2, "Common Gear did not upgrade from Level 1 to Level 2.");
+  assert(!upgradedGearState.instances?.upgrade_material, "The gear upgrade did not consume its Level 1 duplicate.");
+  assert(
+    upgradedGearState.equipped?.[upgradeDefinition.buildingId]?.[upgradeDefinition.slot] === "upgrade_target",
+    "Upgrading equipped Common Gear unexpectedly unequipped it."
+  );
+  assert(Number(upgradedGear.bonuses?.attackStrength || 0) === 0.5, "The upgraded equipped gear bonus was not recalculated.");
+
   const [statsSnap, leaderboardSnap] = await Promise.all([
     db.doc(`players/${user.uid}/stats/global`).get(),
     db.doc(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`).get(),
@@ -317,7 +403,7 @@ async function main() {
     "The leaderboard did not receive the authoritative King Power snapshot."
   );
 
-  console.log("Emulator economy concurrency passed: production, shield use, stackable timed items, city propagation, and King Power.");
+  console.log("Emulator economy concurrency passed: production, items, Common Gear transactions, city propagation, and King Power.");
 }
 
 main()

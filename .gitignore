@@ -11,3 +11,4 @@ release-manifest.js
 functions/release-manifest.json
 .codex-remote-attachments/
 .codex_tmp_*
+/tmp/

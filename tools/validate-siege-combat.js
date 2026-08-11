@@ -106,6 +106,9 @@ const context = {
   skillMultiplier() {
     return 1;
   },
+  getCommonGearBonuses() {
+    return { attackStrength: 0, wallRepairSpeed: 0 };
+  },
 };
 vm.createContext(context);
 vm.runInContext(`${extractFunction(server, "normalizeFortificationState")}; ${extractFunction(server, "getFortificationIntegrityBpsAt")}; ${extractFunction(server, "getFortificationStatePatch")}; ${extractFunction(server, "calculateCombatResult")}; this.normalizeFortificationState = normalizeFortificationState; this.getFortificationIntegrityBpsAt = getFortificationIntegrityBpsAt; this.getFortificationStatePatch = getFortificationStatePatch; this.calculateCombatResult = calculateCombatResult;`, context, {

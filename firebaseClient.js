@@ -1352,6 +1352,7 @@
     delete cleanProfile.skillPresets;
     delete cleanProfile.freeSkillResetGrantVersion;
     delete cleanProfile.freeSkillResetCredits;
+    delete cleanProfile.gear;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
@@ -1667,6 +1668,34 @@
 
   async function purchaseShopItem({ itemId = "", cost = 0, quantity = 1 } = {}) {
     return callServerFunction("purchaseShopItem", { itemId, cost, quantity });
+  }
+
+  async function getCommonGearStatus() {
+    return callServerFunction("getCommonGearStatus", {});
+  }
+
+  async function purchaseCommonGearBox() {
+    return callServerFunction("purchaseCommonGearBox", {});
+  }
+
+  async function openCommonGearBox({ requestId = "" } = {}) {
+    return callServerFunction("openCommonGearBox", { requestId });
+  }
+
+  async function viewCommonGearBuilding({ buildingId = "" } = {}) {
+    return callServerFunction("viewCommonGearBuilding", { buildingId });
+  }
+
+  async function equipCommonGear({ instanceId = "" } = {}) {
+    return callServerFunction("equipCommonGear", { instanceId });
+  }
+
+  async function unequipCommonGear({ instanceId = "" } = {}) {
+    return callServerFunction("unequipCommonGear", { instanceId });
+  }
+
+  async function upgradeCommonGear({ instanceId = "" } = {}) {
+    return callServerFunction("upgradeCommonGear", { instanceId });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {
@@ -2613,6 +2642,13 @@
     getRealmInfo,
     relinquishCity,
     purchaseShopItem,
+    getCommonGearStatus,
+    purchaseCommonGearBox,
+    openCommonGearBox,
+    viewCommonGearBuilding,
+    equipCommonGear,
+    unequipCommonGear,
+    upgradeCommonGear,
     activateInventoryItem,
     useSwiftMarchOrder,
     useRecallHorn,

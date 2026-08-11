@@ -50,6 +50,7 @@ service cloud.firestore {
           'gold',
           'goldFloat',
           'shopItems',
+          'gear',
           'itemEffects',
           'itemPurchaseCooldowns',
           'dailyLoginReward',

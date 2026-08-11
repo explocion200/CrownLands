@@ -51,7 +51,7 @@ requireMatch(serverSource, /function getCityProductionStats[\s\S]*?getSkillPerce
 requireMatch(serverSource, /exports\.upgradeCity[\s\S]*?getSkillPercent\(economy\.profileAfter, "guildCharters"\)/, "Guild Charters is missing from server upgrade costs.");
 requireMatch(serverSource, /exports\.spendSkillPoint[\s\S]*?prepareEconomyCollection[\s\S]*?writePreparedEconomy/, "Skill purchases do not settle production through the server economy.");
 
-const marchOrderUses = serverSource.match(/speedMultiplier:\s*skillMultiplier\([^,]+, "marchOrders"\)/g) || [];
+const marchOrderUses = serverSource.match(/speedMultiplier:[^\n]*skillMultiplier\([^,]+, "marchOrders"\)/g) || [];
 if (marchOrderUses.length < 5) {
   throw new Error(`March Orders is only wired into ${marchOrderUses.length} server march paths; expected at least 5.`);
 }
