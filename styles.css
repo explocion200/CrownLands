@@ -3676,12 +3676,14 @@ input {
   text-align: center;
 }
 .rewarded-ad-disclosure img {
+  box-sizing: border-box;
   width: 88px;
   height: 88px;
+  padding: 5px;
   border: 1px solid rgba(246, 190, 82, .46);
   border-radius: 16px;
   box-shadow: 0 10px 22px rgba(0, 0, 0, .28);
-  object-fit: cover;
+  object-fit: contain;
 }
 .rewarded-ad-disclosure strong {
   color: #fff0a7;
@@ -3733,10 +3735,12 @@ input {
   background: rgba(5, 20, 36, .88);
 }
 .shop-item-image {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: cover;
+  padding: 4px;
+  object-fit: contain;
 }
 .shop-item-image-placeholder span {
   width: 30px;
@@ -3910,10 +3914,12 @@ button.inventory-slot {
   font-weight: 1000;
 }
 .inventory-slot-image {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: cover;
+  padding: 3px;
+  object-fit: contain;
 }
 .inventory-slot-name {
   max-width: 100%;
@@ -3973,10 +3979,12 @@ button.inventory-slot {
   background: rgba(5, 20, 36, .88);
 }
 .inventory-selection-image {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: cover;
+  padding: 4px;
+  object-fit: contain;
 }
 .inventory-selection-copy {
   min-width: 0;
@@ -10096,10 +10104,12 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 }
 
 .inner-castle-preview-art {
+  box-sizing: border-box;
   width: 100%;
   aspect-ratio: 1;
   display: block;
-  object-fit: cover;
+  padding: clamp(4px, .7vw, 8px);
+  object-fit: contain;
   border: 1px solid rgba(206, 230, 246, .28);
   border-radius: 13px;
   background: rgba(4, 14, 23, .72);
@@ -10238,7 +10248,11 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 }
 
 .common-gear-box-open img {
+  display: block;
   width: min(35vh, 230px);
+  max-width: 100%;
+  max-height: min(45dvh, 230px);
+  object-fit: contain;
   border-radius: 18px;
   filter: drop-shadow(0 16px 18px #050a12cc);
 }
@@ -10295,7 +10309,16 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 }
 
 .common-gear-character-panel { position: relative; min-height: 0; overflow: hidden; border-radius: 10px; background: #0c1320; }
-.common-gear-character-panel > img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; opacity: .86; }
+.common-gear-character-panel > img {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: clamp(4px, .8vw, 9px);
+  object-fit: contain;
+  object-position: center bottom;
+  opacity: .92;
+}
 .common-gear-equipped-slots { position: absolute; inset: 8px; display: grid; grid-template-columns: repeat(2, 72px); justify-content: space-between; align-content: space-between; gap: 4px; pointer-events: none; }
 .common-gear-slot { position: relative; pointer-events: auto; min-height: 42px; padding: 4px; border: 1px solid #71819a; border-radius: 7px; color: #dfe8f8; background: #111a28dd; font-size: 10px; text-transform: capitalize; }
 .common-gear-slot.filled { padding-left: 34px; }

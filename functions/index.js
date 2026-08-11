@@ -12340,7 +12340,7 @@ function requireCommonGearInstance(gear, instanceId) {
   return instance;
 }
 
-function createCommonGearClientStatus(profile = {}, baseGoldPerHour = 0, nowMs = Date.now()) {
+function createCommonGearClientStatus(profile = {}, nowMs = Date.now()) {
   const gear = normalizeCommonGear(profile);
   const today = getUtcDateKey(nowMs);
   const purchasedToday = gear.shopPurchase.utcDate === today ? gear.shopPurchase.purchaseCount : 0;
@@ -12352,7 +12352,7 @@ function createCommonGearClientStatus(profile = {}, baseGoldPerHour = 0, nowMs =
       purchaseCount: purchasedToday,
       dailyLimit: COMMON_GEAR.SHOP_DAILY_LIMIT,
       available: purchasedToday < COMMON_GEAR.SHOP_DAILY_LIMIT,
-      price: Math.max(0, Math.floor(safeNumber(baseGoldPerHour, 0) * COMMON_GEAR.SHOP_BASE_GOLD_HOURS)),
+      price: COMMON_GEAR.SHOP_PRICE_GOLD,
       resetsAtMs: getNextUtcDayStartMs(nowMs),
     },
   };
@@ -12363,9 +12363,8 @@ exports.getCommonGearStatus = onCall({ region: "us-central1", maxInstances: 30, 
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    const rates = getRewardedAdBaseRates(economy);
     writePreparedEconomy(transaction, economy);
-    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, rates.goldPerHour, nowMs), ...createEconomyResponse(economy) };
+    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, nowMs), ...createEconomyResponse(economy) };
   });
 });
 
@@ -12374,8 +12373,7 @@ exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    const rates = getRewardedAdBaseRates(economy);
-    const status = createCommonGearClientStatus(economy.profileAfter, rates.goldPerHour, nowMs);
+    const status = createCommonGearClientStatus(economy.profileAfter, nowMs);
     if (!status.shop.available) throw new HttpsError("resource-exhausted", "You already bought today's Common Gear Box.");
     if (economy.goldFloat < status.shop.price) throw new HttpsError("failed-precondition", "Not enough gold for today's Common Gear Box.");
     const gear = status.gear;
@@ -12387,7 +12385,7 @@ exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30
     writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
     return createEconomyResponse(economy, {
       gear, gold, goldFloat, purchased: true, spentGold: status.shop.price,
-      commonGearStatus: createCommonGearClientStatus({ gear }, rates.goldPerHour, nowMs),
+      commonGearStatus: createCommonGearClientStatus({ gear }, nowMs),
     });
   });
 });

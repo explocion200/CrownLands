@@ -308,6 +308,7 @@ async function main() {
 
   const gearStatus = await callFunction("getCommonGearStatus", user.token);
   const gearBoxPrice = Number(gearStatus.shop?.price || 0);
+  assert(gearBoxPrice === 1_000_000_000, `Common Gear Box price must be exactly 1 billion gold, got ${gearBoxPrice}.`);
   await profileRef.set({
     gold: gearBoxPrice * 2 + 1000,
     goldFloat: gearBoxPrice * 2 + 1000,

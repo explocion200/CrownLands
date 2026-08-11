@@ -29515,7 +29515,9 @@ function renderCommonGearBuilding(buildingId) {
     ? Object.values(state.gear.instances).filter(item => item.instanceId !== selected.instanceId
       && item.gearKey === selected.gearKey && item.level === 1 && !item.isEquipped).length
     : 0;
-  const upgradeGold = requirement ? Math.floor(getCommonGearBoxShopPrice() / 24 * requirement.baseGoldHours) : 0;
+  const upgradeGold = requirement ? Math.floor(
+    Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0) * requirement.baseGoldHours
+  ) : 0;
   const grouped = new Map();
   instances.forEach(instance => {
     const key = `${instance.gearKey}:${instance.level}:${instance.isEquipped ? "equipped" : "stored"}`;
@@ -32286,8 +32288,7 @@ function renderShopItem(item) {
 }
 
 function getCommonGearBoxShopPrice() {
-  return Math.floor(Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0)
-    * (COMMON_GEAR?.SHOP_BASE_GOLD_HOURS || 24));
+  return Math.max(0, Math.floor(Number(COMMON_GEAR?.SHOP_PRICE_GOLD) || 1_000_000_000));
 }
 
 function renderCommonGearShopItem() {
@@ -32298,7 +32299,7 @@ function renderCommonGearShopItem() {
   return `<article class="shop-item common-gear-shop-item">
     <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
     <div class="shop-item-copy"><strong>Common Gear Box</strong><span>${formatNumber(price)} gold</span>
-      <small>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>Limit: 1 per UTC day · price is 24h base gold</small></div>
+      <small>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>Limit: 1 per UTC day · fixed price</small></div>
     <button class="shop-buy-btn" data-buy-common-gear-box type="button" ${purchasedToday || getProjectedGold() < price ? "disabled" : ""}>${purchasedToday ? "Purchased" : "Buy"}</button>
   </article>`;
 }
