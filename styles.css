@@ -10184,17 +10184,37 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   background: linear-gradient(#31517c, #172a49);
 }
 
+.common-gear-box-modal.modal,
+.common-gear-building-modal.modal {
+  box-sizing: border-box;
+  width: min(96vw, 980px);
+  max-width: min(96vw, 980px);
+  max-height: none;
+  overflow: visible;
+}
+
 .common-gear-box-modal .modal-card,
 .common-gear-building-modal .modal-card {
-  width: min(96vw, 980px);
-  height: min(94vh, 620px);
+  box-sizing: border-box;
+  width: 100%;
+  height: min(620px, calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow: hidden;
+}
+
+.common-gear-box-modal .modal-card h2,
+.common-gear-building-modal .modal-card h2 {
+  margin-bottom: .5rem;
+  padding-bottom: .45rem;
+  font-size: clamp(1.05rem, 3vw, 1.55rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
 }
 
 .common-gear-box-modal #modalBody,
 .common-gear-building-modal #modalBody {
   min-height: 0;
-  height: calc(100% - 48px);
+  height: auto;
   overflow: hidden;
 }
 
@@ -10297,22 +10317,115 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 .common-gear-empty-strip { align-self: center; color: #a9b5c8; }
 
 @media (max-height: 520px) {
-  .common-gear-building-modal .modal-card { height: 98vh; }
-  .common-gear-building-shell { grid-template-rows: minmax(0, 1fr) 72px; }
+  .common-gear-box-modal .modal-card,
+  .common-gear-building-modal .modal-card {
+    height: calc(100dvh - .5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - .5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: .45rem;
+  }
+  .common-gear-box-modal .modal-card h2,
+  .common-gear-building-modal .modal-card h2 {
+    margin-bottom: .3rem;
+    padding-bottom: .3rem;
+    font-size: clamp(.98rem, 3.5vw, 1.25rem);
+  }
+  .common-gear-building-shell { grid-template-rows: minmax(0, 1fr) 68px; gap: 6px; padding: 6px; }
+  .common-gear-equipped-slots { inset: 6px; grid-template-columns: repeat(2, 66px); gap: 3px; }
+  .common-gear-slot { min-height: 36px; padding: 3px; font-size: 9px; }
+  .common-gear-slot.filled { padding-left: 29px; }
+  .common-gear-slot > img { width: 24px; height: 24px; }
+  .common-gear-detail-panel { gap: 4px; padding: 8px; }
+  .common-gear-detail-panel > strong { font-size: 13px; line-height: 1.08; }
+  .common-gear-detail-panel > small { font-size: 10px; line-height: 1.08; }
+  .common-gear-rarity { font-size: 9px; }
+  .common-gear-actions { gap: 5px; }
+  .common-gear-actions button { min-height: 30px; padding: 3px 7px; font-size: 11px; }
+  .common-gear-inventory-strip { grid-template-columns: 94px minmax(0, 1fr); gap: 6px; }
+  .common-gear-back { padding: 4px 7px; font-size: 11px; }
   .common-gear-reveal-card { min-height: 112px; padding: 8px; }
-  .common-gear-detail-art { width: 56px; }
+  .common-gear-detail-art { width: 52px; }
 }
 
 @media (max-width: 640px) and (orientation: portrait) {
   .common-gear-box-modal.modal,
   .common-gear-building-modal.modal { width: calc(100vw - .5rem); max-width: calc(100vw - .5rem); }
   .common-gear-box-modal .modal-card,
-  .common-gear-building-modal .modal-card { box-sizing: border-box; width: 100%; height: calc(100dvh - .5rem); padding: .45rem; }
+  .common-gear-building-modal .modal-card {
+    box-sizing: border-box;
+    width: 100%;
+    height: calc(100dvh - .5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - .5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: .45rem;
+  }
   .common-gear-building-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(280px, 46vh) auto 86px; overflow-x: hidden; overflow-y: auto; }
   .common-gear-detail-panel { min-height: 260px; }
   .common-gear-inventory-strip { grid-column: 1; grid-template-columns: 96px minmax(0, 1fr); }
   .common-gear-reveal-shell { place-items: stretch; align-content: start; overflow-y: auto; }
   .common-gear-reveal-cards { grid-template-columns: 1fr; width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .shop-modal.modal {
+    width: calc(100vw - .5rem - env(safe-area-inset-left) - env(safe-area-inset-right));
+    max-width: calc(100vw - .5rem - env(safe-area-inset-left) - env(safe-area-inset-right));
+  }
+  .shop-modal .modal-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-height: calc(100dvh - .5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: .55rem;
+  }
+  .shop-modal .modal-card h2 {
+    margin-bottom: .45rem;
+    padding-bottom: .4rem;
+    font-size: 1.3rem;
+  }
+  .shop-panel { gap: .55rem; }
+  .shop-balance {
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: .35rem .65rem;
+    padding: .5rem .65rem;
+  }
+  .shop-balance strong {
+    max-width: 100%;
+    font-size: clamp(1rem, 5.8vw, 1.2rem);
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+  .shop-rewarded-section { padding: .5rem; }
+  .shop-item.rewarded-ad-shop-item {
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: .5rem;
+    padding: .55rem;
+  }
+  .rewarded-ad-shop-action .shop-item-image-placeholder { width: 56px; height: 56px; }
+  .shop-buy-btn.rewarded-ad-watch-btn { min-height: 34px; font-size: .66rem; }
+  .rewarded-ad-shop-copy strong { font-size: .88rem; }
+  .rewarded-ad-shop-copy span { font-size: .72rem; }
+  .rewarded-ad-shop-copy small { font-size: .65rem; line-height: 1.18; }
+  .shop-items { gap: .5rem; }
+  .shop-items .shop-item {
+    min-height: 0;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: start;
+    gap: .5rem;
+    padding: .58rem;
+  }
+  .shop-items .shop-item-image-placeholder { width: 52px; height: 52px; }
+  .shop-items .shop-item-copy {
+    align-self: center;
+    overflow-wrap: anywhere;
+  }
+  .shop-items .shop-item-copy strong { font-size: .9rem; line-height: 1.08; }
+  .shop-items .shop-item-copy span { font-size: .74rem; }
+  .shop-items .shop-item-copy small { font-size: .66rem; line-height: 1.22; }
+  .shop-items .shop-buy-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+  }
 }
 
 @media (max-width: 900px) and (orientation: landscape), (max-height: 430px) {
