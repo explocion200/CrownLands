@@ -13,7 +13,7 @@ const rootFiles = [
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "economy-config.js", "firebase-config.js",
   "daily-rewards.css",
-  "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js",
+  "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js", "instant-economy-actions.js",
   "how-to-play.html", "index.html", "manifest.webmanifest", "patch-notes.js",
   "privacy.html", "release-config.js", "release-manifest.js", "robots.txt",
   "route-worker.js", "service-worker.js", "site-info.css", "sitemap.xml",

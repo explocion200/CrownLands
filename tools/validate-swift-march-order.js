@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
-const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const clientSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(path.join(root, "game.js"), "utf8")}`;
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
 function readFunction(source, name) {

@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
+const serviceWorkerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 
 assert.match(serverSource, /ARMY_TROOP_VISIBILITY_VERSION\s*=\s*3/, "Reinforcement privacy rollout must trigger a new active-army backfill.");
@@ -187,6 +188,67 @@ assert.match(
   firebaseClientSource,
   /collection\(client\.db, "players", uid, "incomingArmies"\)/,
   "Defenders must subscribe to their private incoming-army projections."
+);
+assert.match(
+  clientSource,
+  /function getIncomingArmyTargetSnapshot[\s\S]*?viewerAccess === "target"[\s\S]*?getOwnedCitySnapshotById[\s\S]*?getPlayableBaseCityById[\s\S]*?incomingSnapshotPending/,
+  "Incoming threats must resolve owned targets outside the active map."
+);
+assert.match(
+  clientSource,
+  /function focusIncomingAttackCity\(cityId, explicitRegionId[\s\S]*?incoming\?\.targetRegionId[\s\S]*?switchOnlineIsland\(regionId\)/,
+  "Incoming notification navigation must open the attacked city's map."
+);
+assert.match(
+  firebaseClientSource,
+  /function normalizePushPayload[\s\S]*?targetRegionId:\s*data\.targetRegionId/,
+  "Foreground push messages must retain the attacked map."
+);
+assert.match(
+  serverSource,
+  /function createIncomingArmyNotification[\s\S]*?targetRegionId:\s*normalizeRegionId\(movement\.targetRegionId[\s\S]*?function sendIncomingArmyNotification[\s\S]*?targetRegionId:\s*safeString\(notification\.targetRegionId/,
+  "Attack push notifications must carry the attacked map from creation through delivery."
+);
+assert.match(
+  serviceWorkerSource,
+  /notificationclick[\s\S]*?CROWNLANDS_NOTIFICATION_CLICK[\s\S]*?notification:\s*notificationData/,
+  "Clicking a background notification must forward its map target to an open game."
+);
+
+const crossMapSandbox = {
+  getCurrentOnlineUid() { return "defender-1"; },
+  getArmyTargetById() { return null; },
+  getOwnedCitySnapshotById() { return null; },
+  getPlayableBaseCityById(id) {
+    return id === "east-007" ? { id, name: "Eastwatch", regionId: "east", startPool: "east", owner: "neutral" } : null;
+  },
+  getCityRegionId(cityOrId) { return typeof cityOrId === "object" ? cityOrId.regionId : cityOrId === "east-007" ? "east" : ""; },
+  getActiveMapRegionId() { return "west"; },
+  normalizeRegionId(value) { return String(value || "").toLowerCase(); },
+};
+vm.createContext(crossMapSandbox);
+vm.runInContext(readFunction(clientSource, "getIncomingArmyTargetSnapshot"), crossMapSandbox);
+const crossMapTarget = crossMapSandbox.getIncomingArmyTargetSnapshot({
+  toId: "east-007",
+  toName: "Eastwatch",
+  targetRegionId: "east",
+  targetOwnerUid: "defender-1",
+  viewerAccess: "target",
+  targetType: "city",
+});
+assert.equal(crossMapTarget.owner, "player", "A private incoming view must remain an alert when its target map is not loaded.");
+assert.equal(crossMapTarget.regionId, "east", "A cross-map incoming alert must retain the attacked region.");
+assert.equal(crossMapTarget.incomingSnapshotPending, true, "An unloaded target must not present manifest stats as live city stats.");
+assert.equal(
+  crossMapSandbox.getIncomingArmyTargetSnapshot({
+    toId: "east-007",
+    targetRegionId: "east",
+    targetOwnerUid: "another-player",
+    viewerAccess: "public",
+    targetType: "city",
+  }),
+  null,
+  "A public movement targeting another player must not become an incoming alert."
 );
 assert.match(
   clientSource,

@@ -2691,6 +2691,17 @@ input {
   justify-content: center;
   gap: .2rem;
 }
+.map-city-clan-tag {
+  max-width: 150px;
+  overflow: hidden;
+  justify-self: center;
+  color: #f1d47d;
+  font-size: .64rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: -1px -1px 0 #080808, 1px -1px 0 #080808, -1px 1px 0 #080808, 1px 1px 0 #080808;
+}
 .city-ruler-name {
   max-width: 170px;
   overflow: hidden;

@@ -231,7 +231,9 @@ requires(styles, /\.foreign-ruler-name-inline\s*\{[^}]*font-size:\s*\.8rem;[^}]*
 requires(styles, /\.player-city-data \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Owned-city names must use the compact city-label type size.");
 requires(styles, /\.foreign-city-label > \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Foreign-city names must use the compact city-label type size.");
 requires(styles, /\.foreign-selected-data \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Selected foreign-city names must use the compact city-label type size.");
-assert.doesNotMatch(client, /foreign-ruler-name foreign-ruler-name-inline"\)\}\$\{clanIdentity\.clanTag/, "Floating city labels must not insert clan tags between the ruler name and Clan Ally status.");
+requires(client, /const clanIdentity = city\.owner === "player"[\s\S]*?const clanTagMarkup = clanIdentity\.clanId && clanIdentity\.clanTag[\s\S]*?<strong class="map-city-clan-tag">\[\$\{escapeHtml\(clanIdentity\.clanTag\)\}\]<\/strong>/, "Map city labels do not conditionally build clan tags from canonical player identity.");
+requires(client, /\? `\$\{clanTagMarkup\}<span class="city-ruler-row">[\s\S]*?<span class="player-city-data">\s*\$\{clanTagMarkup\}\s*<span class="city-ruler-row">/, "Clan tags must render directly above both foreign and owned ruler names.");
+requires(styles, /\.map-city-clan-tag\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Map clan tags must use the same type size as city names.");
 requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");

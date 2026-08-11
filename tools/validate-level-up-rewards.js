@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
-const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const clientSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(path.join(root, "game.js"), "utf8")}`;
 const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
 
 function requireMatch(source, pattern, message) {
@@ -182,9 +182,7 @@ requireMatch(
 const serverUpgradeCitySource = serverSource.match(
   /exports\.upgradeCity[\s\S]*?(?=exports\.relinquishCity)/
 )?.[0] || "";
-const clientUpgradeCitySource = clientSource.match(
-  /async function upgradeCity[\s\S]*?(?=function fortifyCity)/
-)?.[0] || "";
+const clientUpgradeCitySource = extractFunction(clientSource, "upgradeCity");
 assert.doesNotMatch(
   serverSource,
   /CITY_UPGRADE_XP|getCityUpgradeXpAward/,

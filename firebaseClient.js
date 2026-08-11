@@ -1098,6 +1098,9 @@
       type: data.type || "",
       cityId: data.cityId || "",
       armyId: data.armyId || "",
+      targetRegionId: data.targetRegionId || "",
+      sourceRegionId: data.sourceRegionId || "",
+      targetName: data.targetName || "",
       arrivesAtMs: Number(data.arrivesAtMs) || 0,
       raw: payload,
     };
@@ -1662,8 +1665,8 @@
     );
   }
 
-  async function purchaseShopItem({ itemId = "", cost = 0 } = {}) {
-    return callServerFunction("purchaseShopItem", { itemId, cost });
+  async function purchaseShopItem({ itemId = "", cost = 0, quantity = 1 } = {}) {
+    return callServerFunction("purchaseShopItem", { itemId, cost, quantity });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {
