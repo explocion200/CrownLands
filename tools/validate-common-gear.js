@@ -22,7 +22,7 @@ gear.DEFINITIONS.forEach(definition => {
 });
 assert.equal(gear.BOX_REVEAL_COUNT, 3);
 assert.equal(gear.SHOP_DAILY_LIMIT, 1);
-assert.equal(gear.SHOP_BASE_GOLD_HOURS, 24);
+assert.equal(gear.SHOP_PRICE_GOLD, 1_000_000_000, "The Common Gear Box must cost exactly 1 billion gold.");
 assert.equal(gear.RELIC_BONUS_CHANCE_PERCENT, 1);
 assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 75);
 assert.deepEqual(gear.BONUS_BY_LEVEL, { 1: .25, 2: .5, 3: .8, 4: 1.15, 5: 1.5 });
@@ -51,6 +51,11 @@ assert.match(index, /relicRewardItem[\s\S]{0,180}crypto\.randomInt\(1, 101\)/, "
 assert.match(index, /claimedPosition\.day % 7 === 0 \? 1 : 0/, "Weekly daily-login milestones must award a Common Gear Box.");
 assert.match(index, /currentState\.completedCount[\s\S]{0,1500}gear\.commonGearBoxes \+= 1/, "Completing all three daily missions must award a box once.");
 assert.match(index, /getCasualtyRecoveryPercent[\s\S]{0,500}CASUALTY_RECOVERY_CAP_PERCENT/, "Field Medic plus gear recovery must be capped.");
+assert.match(
+  index,
+  /createCommonGearClientStatus[\s\S]{0,700}price: COMMON_GEAR\.SHOP_PRICE_GOLD/,
+  "The authoritative Common Gear shop status must use the fixed shared price."
+);
 
 const rules = read("firestore.rules");
 assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not seed authoritative gear.");
@@ -66,6 +71,11 @@ assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/,
 assert.match(game, /class="common-gear-mini-card[\s\S]{0,260}def\.art/, "Building inventory cards must render item artwork.");
 assert.match(game, /class="common-gear-reveal-card"[\s\S]{0,140}definition\.art/, "Box reveals must render item artwork.");
 assert.match(game, /onerror="this\.hidden=true"/, "Gear art must fail gracefully without obscuring labels.");
+assert.match(
+  game,
+  /function getCommonGearBoxShopPrice\(\)[\s\S]{0,180}COMMON_GEAR\?\.SHOP_PRICE_GOLD/,
+  "The Shop must display the same fixed Common Gear Box price used by the server."
+);
 const profilePatchSection = game.slice(
   game.indexOf("function applyServerProfilePatch"),
   game.indexOf("function applyServerCityUpdateToOwnedCache")
@@ -102,6 +112,19 @@ assert.match(
   /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
   "Narrow Shop rows must give copy room and move purchase buttons onto their own row."
 );
+for (const [selector, label] of [
+  ["\\.shop-item-image", "Shop item"],
+  ["\\.inventory-slot-image", "Bag slot"],
+  ["\\.inventory-selection-image", "selected Bag item"],
+  ["\\.inner-castle-preview-art", "Inner Castle preview"],
+  ["\\.common-gear-character-panel > img", "officer character"],
+]) {
+  assert.match(
+    css,
+    new RegExp(`${selector}\\s*\\{[^}]*object-fit: contain;`),
+    `${label} artwork must be fully contained instead of cropped.`
+  );
+}
 
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const expectedAssets = ["gear-war-captain", "gear-master-of-coin", "gear-cavalry-master", "gear-defensive-commander", "item-common-gear-box"];
