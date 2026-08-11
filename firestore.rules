@@ -191,6 +191,11 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /seasonalAchievements/{seasonId} {
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
       match /serverMembership/{membershipId} {
         allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;

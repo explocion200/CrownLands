@@ -39,11 +39,11 @@
       "id": "map-transition-clouds",
       "category": "transition",
       "source": "assets/map-transition-clouds.png",
-      "output": "assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp",
-      "width": 640,
-      "height": 640,
-      "bytes": 97584,
-      "sha256": "6c69161ccac62ca87a627c8e97f13833262570ef673189993c9a1381aba82c76",
+      "output": "assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp",
+      "width": 448,
+      "height": 448,
+      "bytes": 59574,
+      "sha256": "a17eebc9852d392d69aefd34b6d459dad0b564f2a50c6f97d63f9da231bbca29",
       "hasAlpha": true
     },
     {
@@ -110,6 +110,17 @@
       "height": 192,
       "bytes": 12628,
       "sha256": "c712b2f6c4171ac311309e985ba02f9707f4f0cd66b037a6c433eeb109ed4f1c",
+      "hasAlpha": true
+    },
+    {
+      "id": "hud-achievements",
+      "category": "hud",
+      "source": "assets/achievement-icon.png",
+      "output": "assets/optimized/hud-achievements-192x192-6126eda4c9e8.webp",
+      "width": 192,
+      "height": 192,
+      "bytes": 12070,
+      "sha256": "6126eda4c9e8f9af618c031f1f4d1342bb1198bdb38ade01b2135788a5ec1e9e",
       "hasAlpha": true
     },
     {

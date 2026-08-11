@@ -1,15 +1,17 @@
 const crypto = require("node:crypto");
 
 const DAILY_MISSION_VERSION = 1;
-const DAILY_MISSION_SCHEMA_VERSION = 1;
+const DAILY_MISSION_SCHEMA_VERSION = 2;
 const DAILY_MISSION_COUNT = 3;
 const DAILY_MISSION_REROLLS = 1;
 const DAILY_MISSION_EVENT_RETENTION_MS = 48 * 60 * 60 * 1000;
+const MILITARY_SELECTION_GROUP = "military";
+const TROOP_TARGET_RATIOS = Object.freeze({ easy: 0.05, medium: 0.1, hard: 0.15 });
 
 const DIFFICULTY = Object.freeze({
-  easy: Object.freeze({ id: "easy", rewardHours: 0.5, effortHours: 4, fixedScale: 1 }),
-  medium: Object.freeze({ id: "medium", rewardHours: 1, effortHours: 8, fixedScale: 2 }),
-  hard: Object.freeze({ id: "hard", rewardHours: 2, effortHours: 12, fixedScale: 3 }),
+  easy: Object.freeze({ id: "easy", rewardHours: 0.5, effortHours: 1, fixedScale: 1 }),
+  medium: Object.freeze({ id: "medium", rewardHours: 1, effortHours: 2, fixedScale: 2 }),
+  hard: Object.freeze({ id: "hard", rewardHours: 2, effortHours: 4, fixedScale: 3 }),
 });
 
 const DIFFICULTY_WEIGHTS = Object.freeze({
@@ -44,13 +46,14 @@ const MISSION_FAMILIES = Object.freeze({
 });
 
 const FIXED_TARGETS = Object.freeze({
-  ENEMY_CITY_CAPTURE: Object.freeze({ easy: 1, medium: 2, hard: 3 }),
-  BATTLE_WINS: Object.freeze({ easy: 2, medium: 3, hard: 5 }),
-  ATTACK_COUNT: Object.freeze({ easy: 2, medium: 3, hard: 5 }),
-  UNIQUE_PLAYERS_ATTACKED: Object.freeze({ easy: 2, medium: 3, hard: 4 }),
-  CAMP_CAPTURE_COUNT: Object.freeze({ easy: 1, medium: 2, hard: 3 }),
+  ENEMY_CITY_CAPTURE: Object.freeze({ easy: 1, medium: 1, hard: 1 }),
+  BATTLE_WINS: Object.freeze({ easy: 1, medium: 1, hard: 1 }),
+  ATTACK_COUNT: Object.freeze({ easy: 1, medium: 2, hard: 3 }),
+  UNIQUE_PLAYERS_ATTACKED: Object.freeze({ easy: 1, medium: 1, hard: 2 }),
+  CAMP_CAPTURE_COUNT: Object.freeze({ easy: 1, medium: 1, hard: 2 }),
+  UNIQUE_CAMP_TYPES: Object.freeze({ easy: 1, medium: 1, hard: 2 }),
   STRONGHOLD_ATTACK: Object.freeze({ easy: 1, medium: 1, hard: 1 }),
-  STRONGHOLD_ATTACK_COUNT: Object.freeze({ easy: 1, medium: 2, hard: 3 }),
+  STRONGHOLD_ATTACK_COUNT: Object.freeze({ easy: 1, medium: 1, hard: 2 }),
 });
 
 function safeNumber(value, fallback = 0) {
@@ -68,6 +71,29 @@ function clampInt(value, minimum = 0, maximum = Number.MAX_SAFE_INTEGER) {
 
 function safeString(value, maximum = 160) {
   return String(value || "").trim().slice(0, maximum);
+}
+
+function getMissionSelectionGroup(family = "") {
+  const group = MISSION_FAMILIES[family]?.group || "";
+  return ["combat", "stronghold"].includes(group) ? MILITARY_SELECTION_GROUP : group;
+}
+
+function normalizeRecommendedTarget(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const cityId = safeString(raw.cityId || raw.id, 96);
+  const regionId = safeString(raw.regionId, 80);
+  if (!cityId || !regionId) return null;
+  return {
+    cityId,
+    regionId,
+    cityName: safeString(raw.cityName || raw.name || "Enemy City", 80),
+    sourceCityId: safeString(raw.sourceCityId, 96),
+    sourceRegionId: safeString(raw.sourceRegionId, 80),
+    sourceCityName: safeString(raw.sourceCityName, 80),
+    recommendedTroops: Math.max(1, clampInt(raw.recommendedTroops, 1)),
+    estimatedLosses: Math.max(0, clampInt(raw.estimatedLosses, 0)),
+    evaluatedAtMs: Math.max(0, clampInt(raw.evaluatedAtMs, 0)),
+  };
 }
 
 function getUtcDateKey(nowMs = Date.now()) {
@@ -137,6 +163,7 @@ function normalizeCapacity(raw = {}) {
   const goldPerHour = Math.max(1, clampInt(raw.goldPerHour, 1));
   const troopPerHour = Math.max(1, clampInt(raw.troopPerHour, 1));
   const launchableTroops = Math.max(0, clampInt(raw.launchableTroops, 0));
+  const maxSourceTroops = Math.max(0, clampInt(raw.maxSourceTroops, launchableTroops));
   const projectedCombatTroops = Math.max(
     launchableTroops,
     clampInt(raw.projectedCombatTroops, launchableTroops + troopPerHour * Math.min(12, remainingHours))
@@ -145,6 +172,10 @@ function normalizeCapacity(raw = {}) {
     .map(type => safeString(type, 24).toLowerCase())
     .filter(type => ["gold", "troops", "items", "deed"].includes(type)))];
   const itemCosts = raw.itemCosts && typeof raw.itemCosts === "object" ? raw.itemCosts : {};
+  const safePvpTargets = (Array.isArray(raw.safePvpTargets) ? raw.safePvpTargets : [])
+    .map(normalizeRecommendedTarget)
+    .filter(Boolean)
+    .slice(0, 12);
   return {
     cityCount,
     totalCityLevels: Math.max(cityCount, clampInt(raw.totalCityLevels, cityCount)),
@@ -153,11 +184,13 @@ function normalizeCapacity(raw = {}) {
     goldPerHour,
     troopPerHour,
     launchableTroops,
+    maxSourceTroops,
     qualifyingAttackTroops: Math.max(1, clampInt(raw.qualifyingAttackTroops, Math.ceil(launchableTroops * 0.05))),
     projectedCombatTroops,
     kingPower: Math.max(0, clampInt(raw.kingPower, 0)),
     eligibleOpponentCount: Math.max(0, clampInt(raw.eligibleOpponentCount, 0)),
     eligibleEnemyCityCount: Math.max(0, clampInt(raw.eligibleEnemyCityCount, 0)),
+    safePvpTargets,
     maxCampCaptures: Math.max(0, clampInt(raw.maxCampCaptures, feasibleCampTypes.length)),
     feasibleCampTypes,
     deedCampEligible: Boolean(raw.deedCampEligible),
@@ -200,18 +233,20 @@ function getUpgradeValue(capacity = {}, family = "", difficulty = "easy") {
 
 function isDifficultyFeasible(family = "", difficulty = "easy", capacity = {}) {
   const fixedTarget = FIXED_TARGETS[family]?.[difficulty] || 0;
-  if (family === "ENEMY_CITY_CAPTURE") return fixedTarget > 0
-    && capacity.eligibleEnemyCityCount >= fixedTarget
-    && capacity.remainingHours >= fixedTarget * 0.75;
-  if (family === "BATTLE_WINS") return capacity.eligibleOpponentCount > 0
-    && capacity.remainingHours >= fixedTarget * 0.5;
+  if (["ENEMY_CITY_CAPTURE", "BATTLE_WINS"].includes(family)) return difficulty === "easy"
+    && fixedTarget === 1
+    && capacity.safePvpTargets.length > 0
+    && capacity.remainingHours >= 0.75;
   if (family === "ATTACK_COUNT") return capacity.eligibleOpponentCount > 0
+    && capacity.maxSourceTroops >= capacity.qualifyingAttackTroops
     && capacity.remainingHours >= fixedTarget / 600;
   if (family === "UNIQUE_PLAYERS_ATTACKED") return fixedTarget > 0
     && capacity.eligibleOpponentCount >= fixedTarget
+    && capacity.maxSourceTroops >= capacity.qualifyingAttackTroops
     && capacity.remainingHours >= fixedTarget / 600;
   if (["ENEMY_TROOPS_DEFEATED", "TROOPS_SENT_TO_BATTLE"].includes(family)) return capacity.eligibleOpponentCount > 0
-    && capacity.projectedCombatTroops > 0
+    && capacity.launchableTroops > 0
+    && capacity.maxSourceTroops >= capacity.qualifyingAttackTroops
     && capacity.remainingHours >= (family === "ENEMY_TROOPS_DEFEATED" ? 0.5 : 1 / 600);
   if (family === "CAMP_CAPTURE_COUNT") return fixedTarget > 0
     && capacity.maxCampCaptures >= fixedTarget
@@ -220,7 +255,9 @@ function isDifficultyFeasible(family = "", difficulty = "easy", capacity = {}) {
   if (family === "WARBAND_CAMP_CAPTURE") return capacity.feasibleCampTypes.includes("troops") && capacity.remainingHours >= 0.5;
   if (family === "RELIC_CAMP_CAPTURE") return capacity.feasibleCampTypes.includes("items") && capacity.remainingHours >= 0.5;
   if (family === "DEED_CAMP_COMPLETE") return capacity.deedCampEligible && capacity.feasibleCampTypes.includes("deed");
-  if (family === "UNIQUE_CAMP_TYPES") return capacity.feasibleCampTypes.length >= 2 && capacity.remainingHours >= 1;
+  if (family === "UNIQUE_CAMP_TYPES") return fixedTarget > 0
+    && capacity.feasibleCampTypes.length >= fixedTarget
+    && capacity.remainingHours >= fixedTarget * 0.5;
   if (["TOTAL_CITY_LEVEL_UPGRADES", "SINGLE_CITY_UPGRADE", "UNIQUE_CITIES_UPGRADED", "GOLD_SPENT_ON_UPGRADES"].includes(family)) {
     return getUpgradeValue(capacity, family, difficulty) > 0;
   }
@@ -228,7 +265,8 @@ function isDifficultyFeasible(family = "", difficulty = "easy", capacity = {}) {
   if (["STRONGHOLD_ATTACK", "STRONGHOLD_ATTACK_COUNT", "STRONGHOLD_TROOPS_SENT"].includes(family)) {
     const launchCount = family === "STRONGHOLD_ATTACK_COUNT" ? Math.max(1, fixedTarget) : 1;
     return capacity.strongholdEligible
-      && capacity.projectedCombatTroops >= capacity.qualifyingAttackTroops
+      && capacity.launchableTroops >= capacity.qualifyingAttackTroops
+      && capacity.maxSourceTroops >= capacity.qualifyingAttackTroops
       && capacity.remainingHours >= launchCount / 600;
   }
   if (family === "CLAN_GIFT") return capacity.clanGiftEligible;
@@ -237,29 +275,16 @@ function isDifficultyFeasible(family = "", difficulty = "easy", capacity = {}) {
 
 function getMissionTarget(family = "", difficulty = "easy", capacity = {}) {
   const fixedTarget = FIXED_TARGETS[family]?.[difficulty];
-  if (fixedTarget) {
-    if (family === "CAMP_CAPTURE_COUNT" && difficulty === "hard" && capacity.maxCampCaptures >= 4 && capacity.cityCount >= 11) return 4;
-    return fixedTarget;
-  }
+  if (fixedTarget) return fixedTarget;
   const effort = getScaledEffort(difficulty, capacity.remainingHours);
-  if (family === "ENEMY_TROOPS_DEFEATED") {
-    const ratio = difficulty === "hard" ? 1 : difficulty === "medium" ? 0.5 : 0.25;
-    return roundMissionTarget(capacity.projectedCombatTroops * ratio * effort.ratio);
-  }
-  if (family === "TROOPS_SENT_TO_BATTLE") {
-    const ratio = difficulty === "hard" ? 1.5 : difficulty === "medium" ? 1 : 0.5;
-    return roundMissionTarget(capacity.projectedCombatTroops * ratio * effort.ratio);
-  }
-  if (family === "STRONGHOLD_TROOPS_SENT") {
-    const ratio = difficulty === "hard" ? 1 : difficulty === "medium" ? 0.5 : 0.25;
-    return roundMissionTarget(capacity.projectedCombatTroops * ratio * effort.ratio);
+  if (["ENEMY_TROOPS_DEFEATED", "TROOPS_SENT_TO_BATTLE", "STRONGHOLD_TROOPS_SENT"].includes(family)) {
+    return roundMissionTarget(capacity.launchableTroops * (TROOP_TARGET_RATIOS[difficulty] || TROOP_TARGET_RATIOS.easy));
   }
   if (["TOTAL_CITY_LEVEL_UPGRADES", "SINGLE_CITY_UPGRADE", "UNIQUE_CITIES_UPGRADED", "GOLD_SPENT_ON_UPGRADES"].includes(family)) {
     return Math.max(1, getUpgradeValue(capacity, family, difficulty));
   }
   if (family === "GOLD_EARNED") return roundMissionTarget(capacity.goldPerHour * effort.targetHours);
   if (family === "TROOPS_PRODUCED") return roundMissionTarget(capacity.troopPerHour * effort.targetHours);
-  if (family === "UNIQUE_CAMP_TYPES") return 2;
   if (["GOLD_CAMP_CAPTURE", "WARBAND_CAMP_CAPTURE", "RELIC_CAMP_CAPTURE", "DEED_CAMP_COMPLETE", "CLAN_GIFT"].includes(family)) return 1;
   return 1;
 }
@@ -345,11 +370,15 @@ function createMissionRecord({ family, difficulty, capacity, random, slot, revis
     .update(`${seed}|${slot}|${revision}|${family}|${difficulty}`)
     .digest("hex")
     .slice(0, 18);
+  const recommendedTarget = ["ENEMY_CITY_CAPTURE", "BATTLE_WINS"].includes(family)
+    ? normalizeRecommendedTarget(capacity.safePvpTargets[Math.floor(random() * capacity.safePvpTargets.length)])
+    : null;
   return {
     id: `dm_${missionIdHash}`,
     slot,
     family,
     activityGroup: definition.group,
+    selectionGroup: getMissionSelectionGroup(family),
     activityKey: definition.activityKey || family,
     difficulty,
     icon: definition.icon,
@@ -365,6 +394,7 @@ function createMissionRecord({ family, difficulty, capacity, random, slot, revis
     claimRequestId: "",
     claimReceipt: null,
     rerollRevision: revision,
+    ...(recommendedTarget ? { recommendedTarget } : {}),
   };
 }
 
@@ -379,7 +409,13 @@ function buildMissionCandidates(capacity = {}, random = Math.random, exclusions 
     const preferred = chooseWeightedDifficulty(capacityBand, random);
     const difficulty = downgradeDifficulty(preferred, candidate => isDifficultyFeasible(family, candidate, capacity));
     if (!difficulty) return null;
-    return { family, difficulty, group: definition.group, activityKey };
+    return {
+      family,
+      difficulty,
+      group: definition.group,
+      selectionGroup: getMissionSelectionGroup(family),
+      activityKey,
+    };
   }).filter(Boolean);
 }
 
@@ -387,14 +423,15 @@ function selectMissionCandidates(capacity = {}, random = Math.random, count = DA
   const candidates = buildMissionCandidates(capacity, random, exclusions);
   const selected = [];
   const usedFamilies = new Set(exclusions.families || []);
-  const usedGroups = new Set(exclusions.groups || []);
+  const usedSelectionGroups = new Set(exclusions.selectionGroups || exclusions.groups || []);
   const usedActivityKeys = new Set(exclusions.activityKeys || []);
   const tryCandidate = (candidate, requireNewGroup) => {
     if (!candidate || usedFamilies.has(candidate.family) || usedActivityKeys.has(candidate.activityKey)) return false;
-    if (requireNewGroup && usedGroups.has(candidate.group)) return false;
+    const selectionGroupUsed = usedSelectionGroups.has(candidate.selectionGroup);
+    if (selectionGroupUsed && (requireNewGroup || [MILITARY_SELECTION_GROUP, "camps"].includes(candidate.selectionGroup))) return false;
     selected.push(candidate);
     usedFamilies.add(candidate.family);
-    usedGroups.add(candidate.group);
+    usedSelectionGroups.add(candidate.selectionGroup);
     usedActivityKeys.add(candidate.activityKey);
     return true;
   };
@@ -464,7 +501,7 @@ function createReplacementMission(state = {}, missionId = "", rawCapacity = {}, 
   const otherMissions = missions.filter(mission => mission?.id !== missionId);
   const candidates = selectMissionCandidates(capacity, random, 1, {
     families: [replaced.family, ...otherMissions.map(mission => mission.family)],
-    groups: otherMissions.map(mission => mission.activityGroup),
+    selectionGroups: otherMissions.map(mission => mission.selectionGroup || getMissionSelectionGroup(mission.family)),
     activityKeys: otherMissions.map(mission => mission.activityKey || mission.family),
   });
   const candidate = candidates[0];
@@ -478,6 +515,64 @@ function createReplacementMission(state = {}, missionId = "", rawCapacity = {}, 
     nowMs,
     seed,
   });
+}
+
+function migrateDailyMissionState(state = {}, rawCapacity = {}, nowMs = Date.now()) {
+  if (Math.max(0, clampInt(state.schemaVersion, 0)) >= DAILY_MISSION_SCHEMA_VERSION) return state;
+  const currentCapacity = normalizeCapacity({
+    ...rawCapacity,
+    remainingHours: getDailyMissionCycle(nowMs, state.resetGeneration).remainingHours,
+  });
+  const previousThreshold = Math.max(1, clampInt(state.capacitySnapshot?.qualifyingAttackTroops, currentCapacity.qualifyingAttackTroops));
+  const capacity = {
+    ...currentCapacity,
+    qualifyingAttackTroops: Math.min(previousThreshold, currentCapacity.qualifyingAttackTroops),
+  };
+  const missions = (Array.isArray(state.missions) ? state.missions : []).map((mission, slot) => {
+    if (!mission || mission.claimedAtMs || mission.completedAtMs) return mission;
+    const migrationRandom = createSeededRandom(`${safeString(state.cycleKey, 160)}|migration|${safeString(mission.id, 96)}`);
+    const outcomeFamily = ["ENEMY_CITY_CAPTURE", "BATTLE_WINS"].includes(mission.family);
+    const replaceUnsafeOutcome = outcomeFamily && !capacity.safePvpTargets.length;
+    const family = replaceUnsafeOutcome ? "ATTACK_COUNT" : mission.family;
+    const definition = MISSION_FAMILIES[family] || MISSION_FAMILIES.ATTACK_COUNT;
+    const difficulty = replaceUnsafeOutcome || outcomeFamily
+      ? "easy"
+      : DIFFICULTY[mission.difficulty] ? mission.difficulty : "easy";
+    const balancedTarget = replaceUnsafeOutcome ? 1 : getMissionTarget(family, difficulty, capacity);
+    const oldTarget = Math.max(1, clampInt(mission.target, balancedTarget));
+    const target = Math.max(1, Math.min(oldTarget, balancedTarget));
+    const progress = Math.max(0, clampInt(mission.progress, 0));
+    const completedAtMs = progress >= target ? Math.max(1, nowMs) : 0;
+    const recommendedTarget = outcomeFamily && !replaceUnsafeOutcome
+      ? normalizeRecommendedTarget(capacity.safePvpTargets[Math.floor(migrationRandom() * capacity.safePvpTargets.length)])
+      : null;
+    return {
+      ...mission,
+      slot: Math.max(0, clampInt(mission.slot, slot)),
+      family,
+      activityGroup: definition.group,
+      selectionGroup: getMissionSelectionGroup(family),
+      activityKey: definition.activityKey || family,
+      difficulty,
+      icon: definition.icon,
+      title: definition.title,
+      description: getMissionDescription(family, target),
+      target,
+      progress,
+      completedAtMs,
+      ...(recommendedTarget ? { recommendedTarget } : { recommendedTarget: null }),
+    };
+  });
+  return {
+    ...state,
+    schemaVersion: DAILY_MISSION_SCHEMA_VERSION,
+    capacitySnapshot: capacity,
+    missions,
+    completedCount: missions.filter(mission => mission?.completedAtMs || mission?.claimedAtMs).length,
+    claimedCount: missions.filter(mission => mission?.claimedAtMs).length,
+    migratedAtMs: Math.max(1, nowMs),
+    updatedAtMs: Math.max(1, nowMs),
+  };
 }
 
 function normalizeMissionEvent(raw = {}) {
@@ -594,10 +689,15 @@ module.exports = {
   DAILY_MISSION_EVENT_RETENTION_MS,
   DIFFICULTY,
   MISSION_FAMILIES,
+  FIXED_TARGETS,
+  TROOP_TARGET_RATIOS,
   getDailyMissionCycle,
   normalizeCapacity,
+  getMissionTarget,
+  getMissionSelectionGroup,
   createDailyMissionState,
   createReplacementMission,
+  migrateDailyMissionState,
   normalizeMissionEvent,
   applyDailyMissionEvent,
   roundMissionTarget,

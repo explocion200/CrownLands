@@ -22,7 +22,7 @@
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-cec197d384ba.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" fetchpriority="high" />
-  <link rel="preload" as="image" type="image/webp" href="assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp" fetchpriority="low" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp" fetchpriority="low" />
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -284,6 +284,16 @@
               <div class="kingdom-stat"><span>Gold production</span><strong id="profileGoldProductionStat">0/h</strong></div>
               <div class="kingdom-stat"><span>Troops production</span><strong id="profileTroopProductionStat">0/h</strong></div>
             </div>
+          </section>
+
+          <section class="profile-achievement-summary" aria-label="Seasonal Achievements summary">
+            <div class="profile-section-heading"><span>Season</span><h3>Achievements</h3></div>
+            <div class="profile-achievement-summary-grid">
+              <div><span>Complete</span><strong id="profileAchievementCompleted">0 / 40</strong></div>
+              <div><span>Claimed</span><strong id="profileAchievementClaimed">0 / 40</strong></div>
+              <div><span>Remaining</span><strong id="profileAchievementRemaining">—</strong></div>
+            </div>
+            <button id="profileViewAchievementsBtn" class="profile-view-achievements-btn" type="button">View Achievements</button>
           </section>
         </div>
 

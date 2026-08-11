@@ -9,8 +9,10 @@ const {
   DAILY_MISSION_COUNT,
   MISSION_FAMILIES,
   getDailyMissionCycle,
+  getMissionTarget,
   createDailyMissionState,
   createReplacementMission,
+  migrateDailyMissionState,
   applyDailyMissionEvent,
 } = require(path.join(root, "functions", "dailyMissions.js"));
 
@@ -21,11 +23,23 @@ function capacity(overrides = {}) {
     goldPerHour: 100_000,
     troopPerHour: 20_000,
     launchableTroops: 1_000_000,
+    maxSourceTroops: 600_000,
     qualifyingAttackTroops: 50_000,
     projectedCombatTroops: 1_200_000,
     kingPower: 4_000_000,
     eligibleOpponentCount: 8,
     eligibleEnemyCityCount: 24,
+    safePvpTargets: [{
+      cityId: "enemy-city",
+      regionId: "west",
+      cityName: "Low-Risk Keep",
+      sourceCityId: "source-city",
+      sourceRegionId: "west",
+      sourceCityName: "Home Keep",
+      recommendedTroops: 150_000,
+      estimatedLosses: 75_000,
+      evaluatedAtMs: Date.UTC(2026, 7, 9, 8),
+    }],
     maxCampCaptures: 4,
     feasibleCampTypes: ["gold", "troops", "items", "deed"],
     deedCampEligible: true,
@@ -55,6 +69,7 @@ function makeState(missions, overrides = {}) {
     resetGeneration: "fresh-2026-07-26-server-reset",
     capacitySnapshot: capacity(),
     missions,
+    rerollsRemaining: 1,
     completedCount: 0,
     claimedCount: 0,
     ...overrides,
@@ -117,6 +132,38 @@ assert.strictEqual(first.rerollsRemaining, 1);
 assert.strictEqual(first.resetsAtMs, atMidnight);
 assert.strictEqual(first.capacitySnapshot.goldPerHour, 100_000);
 
+assert.strictEqual(getMissionTarget("TROOPS_SENT_TO_BATTLE", "easy", first.capacitySnapshot), 50_000);
+assert.strictEqual(getMissionTarget("TROOPS_SENT_TO_BATTLE", "medium", first.capacitySnapshot), 100_000);
+assert.strictEqual(getMissionTarget("TROOPS_SENT_TO_BATTLE", "hard", first.capacitySnapshot), 150_000);
+assert.strictEqual(getMissionTarget("ENEMY_TROOPS_DEFEATED", "hard", first.capacitySnapshot), 150_000);
+assert.strictEqual(getMissionTarget("STRONGHOLD_TROOPS_SENT", "hard", first.capacitySnapshot), 150_000);
+assert.strictEqual(getMissionTarget("ATTACK_COUNT", "hard", first.capacitySnapshot), 3);
+assert.strictEqual(getMissionTarget("UNIQUE_PLAYERS_ATTACKED", "hard", first.capacitySnapshot), 2);
+assert.strictEqual(getMissionTarget("CAMP_CAPTURE_COUNT", "hard", first.capacitySnapshot), 2);
+assert.strictEqual(getMissionTarget("UNIQUE_CAMP_TYPES", "medium", first.capacitySnapshot), 1);
+assert.strictEqual(getMissionTarget("STRONGHOLD_ATTACK_COUNT", "hard", first.capacitySnapshot), 2);
+assert.strictEqual(getMissionTarget("GOLD_EARNED", "hard", first.capacitySnapshot), 400_000);
+assert.strictEqual(getMissionTarget("TROOPS_PRODUCED", "hard", first.capacitySnapshot), 80_000);
+
+for (let seed = 0; seed < 200; seed += 1) {
+  const generated = createDailyMissionState({
+    uid: `selection-${seed}`,
+    worldId: "world_01",
+    resetGeneration: "realm-reset",
+    nowMs: generatedAt,
+    capacity: capacity(),
+  });
+  const militaryCount = generated.missions.filter(entry => ["combat", "stronghold"].includes(entry.activityGroup)).length;
+  const campCount = generated.missions.filter(entry => entry.activityGroup === "camps").length;
+  assert(militaryCount <= 1, "PvP and Stronghold missions shared more than one selection slot");
+  assert(campCount <= 1, "camp missions must occupy at most one separate slot");
+  generated.missions.filter(entry => ["ENEMY_CITY_CAPTURE", "BATTLE_WINS"].includes(entry.family)).forEach(entry => {
+    assert.strictEqual(entry.difficulty, "easy");
+    assert.strictEqual(entry.target, 1);
+    assert.strictEqual(entry.recommendedTarget?.cityId, "enemy-city");
+  });
+}
+
 first.missions.forEach(entry => {
   assert(entry.target >= 1);
   assert(entry.reward.lockedAmount >= 1);
@@ -166,6 +213,63 @@ assert.notStrictEqual(replacement.family, first.missions[0].family);
 assert(!first.missions.slice(1).some(entry => entry.family === replacement.family));
 assert(!first.missions.slice(1).some(entry => entry.activityKey === replacement.activityKey));
 assert.strictEqual(replacement.progress, 0);
+const replacementSet = first.missions.slice(1).concat(replacement);
+assert(replacementSet.filter(entry => ["combat", "stronghold"].includes(entry.activityGroup)).length <= 1);
+
+const legacyReward = { type: "troops", lockedAmount: 40_000, productionHours: 2 };
+const migrated = migrateDailyMissionState(makeState([
+  mission("TROOPS_SENT_TO_BATTLE", 1_800_000, {
+    difficulty: "hard",
+    progress: 150_000,
+    reward: legacyReward,
+  }),
+  mission("ENEMY_CITY_CAPTURE", 3, {
+    difficulty: "hard",
+    progress: 0,
+    reward: { type: "troops", lockedAmount: 10_000, productionHours: 0.5 },
+  }),
+  mission("GOLD_EARNED", 1_200_000, {
+    difficulty: "hard",
+    progress: 500_000,
+    reward: { type: "gold", lockedAmount: 200_000, productionHours: 2 },
+  }),
+], { schemaVersion: 1 }), capacity({ safePvpTargets: [] }), generatedAt + 2000);
+assert.strictEqual(migrated.schemaVersion, DAILY_MISSION_SCHEMA_VERSION);
+assert.strictEqual(migrated.missions[0].target, 150_000);
+assert.strictEqual(migrated.missions[0].completedAtMs, generatedAt + 2000);
+assert.deepStrictEqual(migrated.missions[0].reward, legacyReward);
+assert.strictEqual(migrated.missions[1].family, "ATTACK_COUNT");
+assert.strictEqual(migrated.missions[1].target, 1);
+assert.strictEqual(migrated.missions[1].reward.lockedAmount, 10_000);
+assert.strictEqual(migrated.missions[2].target, 400_000);
+assert.strictEqual(migrated.missions[2].progress, 500_000, "migration must retain progress above a lowered target");
+assert.strictEqual(migrated.missions[2].completedAtMs, generatedAt + 2000);
+assert.strictEqual(migrated.rerollsRemaining, 1);
+
+const preservedClaim = mission("BATTLE_WINS", 5, {
+  difficulty: "hard",
+  progress: 5,
+  completedAtMs: generatedAt - 1000,
+  claimedAtMs: generatedAt,
+  reward: legacyReward,
+});
+const migratedClaim = migrateDailyMissionState(
+  makeState([preservedClaim], { schemaVersion: 1, rerollsRemaining: 0 }),
+  capacity({ safePvpTargets: [] }),
+  generatedAt + 3000
+);
+assert.deepStrictEqual(migratedClaim.missions[0], preservedClaim, "claimed missions must remain untouched");
+assert.strictEqual(migratedClaim.rerollsRemaining, 0);
+
+const migratedSafeOutcome = migrateDailyMissionState(
+  makeState([mission("ENEMY_CITY_CAPTURE", 3, { difficulty: "hard", reward: legacyReward })], { schemaVersion: 1 }),
+  capacity(),
+  generatedAt + 4000
+);
+assert.strictEqual(migratedSafeOutcome.missions[0].family, "ENEMY_CITY_CAPTURE");
+assert.strictEqual(migratedSafeOutcome.missions[0].difficulty, "easy");
+assert.strictEqual(migratedSafeOutcome.missions[0].target, 1);
+assert.strictEqual(migratedSafeOutcome.missions[0].recommendedTarget.cityId, "enemy-city");
 
 const thresholdSnapshot = capacity({ launchableTroops: 1_000_000, qualifyingAttackTroops: 50_000 });
 const tokenAttack = applyOne(mission("ATTACK_COUNT", 1), {
@@ -236,6 +340,15 @@ const cssSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
   "productionFromMs",
   "productionToMs",
   "eligibleShare",
+  "findDailyMissionSafePvpTargets",
+  "createDailyMissionSafeBattleTarget",
+  "DAILY_MISSION_SAFE_PEER_LIMIT = 3",
+  "DAILY_MISSION_SAFE_CITY_LIMIT = 12",
+  "DAILY_MISSION_SAFE_ARMY_PERCENT = 15",
+  "DAILY_MISSION_SAFE_LOSS_PERCENT = 10",
+  "campDefenders",
+  "defenderProfile.clanId",
+  "migrateDailyMissionState",
 ].forEach(contract => assert(functionsSource.includes(contract), `missing server contract: ${contract}`));
 [
   "CITY_UPGRADED", "ATTACK_LAUNCHED", "BATTLE_RESOLVED", "CAMP_CAPTURED",
@@ -255,6 +368,10 @@ assert(functionsSource.includes("dailyMissionVersion: DAILY_MISSION_VERSION"));
 assert(apiSource.includes("subscribeDailyMissionState"));
 assert(clientSource.includes("function scheduleDailyMissionUtcRefresh"));
 assert(clientSource.includes("function showDailyMissionRerollConfirmation"));
+assert(clientSource.includes("function normalizeMissionTarget"));
+assert(clientSource.includes('querySelector(".daily-mission-recommendation button")'));
+assert(clientSource.includes("focusBattleReportTarget(recommendation.cityId, recommendation.regionId)"));
+assert(clientSource.includes("Low-risk target"));
 assert(clientSource.includes("playRewardAnimation(rewardType"));
 assert(rulesSource.includes("match /dailyMissions/{cycleKey}"));
 assert(rulesSource.includes("match /dailyMissionEvents/{eventId}"));
@@ -262,6 +379,7 @@ assert(!htmlSource.includes('id="dailyMissionsSection"'), "Daily Missions must n
 assert(clientSource.includes("function renderDailyMissionSection"));
 assert(clientSource.includes('id="dailyMissionsList"'));
 assert(cssSource.includes(".daily-mission-row"));
+assert(cssSource.includes(".daily-mission-recommendation"));
 assert(cssSource.includes("overflow: hidden"));
 
 console.log("Daily Missions validation passed.");

@@ -26,7 +26,7 @@ const STATIC_CACHE_URLS = [
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
   "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
   "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp",
-  "/assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp"
+  "/assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp"
 ];
 
 const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0b111d"/></svg>`;
