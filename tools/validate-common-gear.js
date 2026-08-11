@@ -77,7 +77,31 @@ const economyResultSection = game.slice(
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
 const css = read("styles.css");
-assert.match(css, /\.common-gear-building-modal #modalBody[\s\S]{0,160}overflow: hidden;/);
+assert.match(
+  css,
+  /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,
+  "Common Gear dialogs must own their full responsive width instead of overflowing the base modal."
+);
+assert.match(
+  css,
+  /\.common-gear-box-modal \.modal-card,[\s\S]{0,120}\.common-gear-building-modal \.modal-card[\s\S]{0,180}width: 100%;[\s\S]{0,180}100dvh/,
+  "Common Gear cards must fit their dialog and the dynamic viewport."
+);
+assert.match(
+  css,
+  /\.common-gear-building-modal #modalBody[\s\S]{0,120}height: auto;[\s\S]{0,80}overflow: hidden;/,
+  "The Common Gear body must use the modal grid row instead of subtracting a fixed title height."
+);
+assert.match(
+  css,
+  /@media \(max-height: 520px\)[\s\S]{0,2200}\.common-gear-building-shell\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\) 68px;/,
+  "Short landscape screens need a compact non-overlapping Common Gear layout."
+);
+assert.match(
+  css,
+  /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
+  "Narrow Shop rows must give copy room and move purchase buttons onto their own row."
+);
 
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const expectedAssets = ["gear-war-captain", "gear-master-of-coin", "gear-cavalry-master", "gear-defensive-commander", "item-common-gear-box"];
