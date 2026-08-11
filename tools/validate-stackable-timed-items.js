@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
-const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const clientSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(path.join(root, "game.js"), "utf8")}`;
 
 const activationSource = serverSource.slice(
   serverSource.indexOf("exports.activateInventoryItem"),
@@ -13,12 +13,12 @@ const activationSource = serverSource.slice(
 
 assert.match(
   activationSource,
-  /itemId === WAR_DRUMS_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS;/,
+  /itemId === WAR_DRUMS_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS \* requestedQuantity;/,
   "War Drums must extend the active server timer instead of replacing it."
 );
 assert.match(
   activationSource,
-  /itemId === ROYAL_TAX_DECREE_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS;/,
+  /itemId === ROYAL_TAX_DECREE_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS \* requestedQuantity;/,
   "Royal Tax Decrees must extend the active server timer instead of replacing it."
 );
 for (const label of ["War Drums", "Royal Tax Decree"]) {
@@ -50,7 +50,7 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /activeRemainingSeconds > 0 && !isStackableTimedInventoryItem\(item\)/,
+  /!isStackableTimedInventoryItem\(item\) && projectedActive > Date\.now\(\)/,
   "The generic active-item guard must allow stackable item use."
 );
 assert.match(

@@ -2716,8 +2716,6 @@ let onlineLastSaveAt = 0;
 let onlineLastError = "";
 let verifiedRealmInfo = null;
 let onlineArmySavePromises = new Set();
-const swiftMarchOrderRequests = new Set();
-const recallHornRequests = new Set();
 const rewardCampRecallRequests = new Set();
 const rewardCampProgressCache = new Map();
 const rewardCampProgressRequests = new Map();
@@ -2867,7 +2865,6 @@ let lastComputedKingPower = 0;
 let currentPlayerIdentityKingPowerOverride = null;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
-let shopPurchaseInFlight = false;
 let dailyLoginRewardStatus = null;
 let dailyLoginRewardStatusLoading = false;
 let dailyLoginRewardStatusPromise = null;
@@ -2895,6 +2892,7 @@ let seasonalAchievementClockOffsetMs = 0;
 let seasonalAchievementError = "";
 let seasonalAchievementHydrated = false;
 let activeSeasonalAchievementFilter = "all";
+let expandedSeasonalAchievementId = "";
 const seasonalAchievementActionsInFlight = new Set();
 let activeDailyRewardModalTab = "rewards";
 let rewardedAdStatus = null;
@@ -2903,15 +2901,10 @@ let rewardedAdInFlight = false;
 let rewardedAdShopCountdownTimer = 0;
 let googlePublisherServicesEnabled = false;
 let googlePublisherTagLoadPromise = null;
-let skillActionInFlight = false;
-const pendingSkillSpendAllocations = new Map();
-let activeSkillSpendBatch = null;
-let skillSpendFlushTimer = 0;
 let skillsViewMarkupReady = false;
 let skillsViewEventsBound = false;
 let skillPresetMarkupSignature = "";
 let selectedSkillPresetSlot = 1;
-let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
 let cityRelinquishCountdownTimer = 0;
 let pendingHarvestBonusIds = new Set();
@@ -12139,6 +12132,7 @@ function scheduleOnlineSaveRetry() {
 function resetOnlineSaveCircuitForAuth(uid = "") {
   const nextUid = String(uid || "");
   if (nextUid === onlineSaveAuthUid) return;
+  clearInstantEconomyActions();
   onlineSaveAuthUid = nextUid;
   onlineSaveGeneration += 1;
   clearOnlineSaveRetry();
@@ -14688,6 +14682,7 @@ async function handleGoogleSignOut() {
         console.warn("Continuing sign-out while some online writes are still pending", error);
       }
     }
+    clearInstantEconomyActions();
     await flushOnlineSave(true);
     disconnectOnlineWorld();
     await leaveSelectedGameServer();
@@ -14706,6 +14701,7 @@ async function handleGoogleSignOut() {
 function handleOnlineSessionReplaced() {
   leaveSelectedGameServer();
   onlineSessionReplaced = true;
+  clearInstantEconomyActions();
   onlineLastError = "";
   disconnectOnlineWorld();
   clearSelection(false);
@@ -14945,6 +14941,14 @@ async function handleDeployedUpdate(deployedBuildId) {
 }
 
 function handleServiceWorkerUpdateMessage(event) {
+  if (event?.data?.type === "CROWNLANDS_NOTIFICATION_CLICK") {
+    const notification = event.data.notification || {};
+    if (notification.type === "incoming_army" && notification.cityId) {
+      if (!state) return;
+      void focusIncomingAttackCity(notification.cityId, notification.targetRegionId || "");
+    }
+    return;
+  }
   if (event?.data?.type !== "CROWNLANDS_UPDATE_READY") return;
   const buildId = String(event.data.buildId || "").trim();
   if (!buildId || buildId === APP_BUILD_ID) return;
@@ -15251,6 +15255,7 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
     && Boolean(serverContractHash)
     && serverContractHash === expectedContractHash;
   if (!releaseMatches || !generationMatches || !worldMatches || !contractMatches) {
+    if (!generationMatches || !worldMatches) clearInstantEconomyActions();
     throw new Error("A Crownlands update is still deploying. Refresh before entering the kingdom.");
   }
   const clientBuildId = String(clientManifest.buildId || "");
@@ -18317,13 +18322,47 @@ function getRenderableArmies() {
   return renderableArmies;
 }
 
+function getIncomingArmyTargetSnapshot(attack = {}) {
+  const targetId = String(attack.toId || "").trim();
+  if (!targetId) return null;
+  const currentUid = getCurrentOnlineUid();
+  const targetOwnerUid = String(attack.targetOwnerUid || "").trim();
+  const isPrivateTargetView = attack.viewerAccess === "target"
+    || Boolean(currentUid && targetOwnerUid === currentUid);
+  const loadedTarget = getArmyTargetById(targetId);
+  const cachedOwnedTarget = attack.targetType === "camp" ? null : getOwnedCitySnapshotById(targetId);
+  const activeLoadedTarget = loadedTarget && getCityRegionId(loadedTarget) === getActiveMapRegionId()
+    ? loadedTarget
+    : null;
+  const target = activeLoadedTarget || cachedOwnedTarget || loadedTarget
+    || (attack.targetType === "camp" ? null : getPlayableBaseCityById(targetId));
+  if (!target) return null;
+
+  const targetIsOwned = target.owner === "player"
+    || Boolean(currentUid && String(target.ownerUid || "") === currentUid);
+  if (!targetIsOwned && !isPrivateTargetView) return null;
+  const targetRegionId = normalizeRegionId(attack.targetRegionId || target.regionId || target.startPool || getCityRegionId(targetId));
+  const snapshotPending = isPrivateTargetView
+    && !activeLoadedTarget
+    && !cachedOwnedTarget;
+  if (targetIsOwned && !snapshotPending) return target;
+  return {
+    ...target,
+    name: attack.toName || target.name || "Your city",
+    owner: "player",
+    ownerUid: currentUid || targetOwnerUid || target.ownerUid || null,
+    regionId: targetRegionId,
+    incomingSnapshotPending: snapshotPending,
+  };
+}
+
 function getIncomingAttacks() {
   if (!state) return [];
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
       if (!attack || attack.returning || !["attack", "scout"].includes(attack.kind) || attack.owner === "player") return null;
-      const baseTarget = getArmyTargetById(attack.toId);
+      const baseTarget = getIncomingArmyTargetSnapshot(attack);
       const target = attack.targetType === "camp" && baseTarget && attack.targetOwnerUid === getCurrentOnlineUid()
         ? { ...baseTarget, owner: "player", ownerKind: "player", ownerUid: attack.targetOwnerUid }
         : baseTarget;
@@ -18333,7 +18372,7 @@ function getIncomingAttacks() {
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
-      const source = cityById(attack.fromId);
+      const source = cityById(attack.fromId) || getPlayableBaseCityById(attack.fromId);
       const attackerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
       return {
         ...attack,
@@ -21777,7 +21816,7 @@ function renderHud() {
   ensureDailyCaptureTracker();
   state.character = normalizeCharacterProgress(state.character);
   state.flag = normalizeFlag(state.flag);
-  setTextIfChanged(goldText, formatNumber(Math.floor(state.gold)));
+  setTextIfChanged(goldText, formatNumber(getProjectedGold()));
   setTextIfChanged(characterLevelBadge, `Lv ${formatNumber(state.character.level)}`);
   setTextIfChanged(characterXpText, "");
   const flagSignature = getFlagSignature(state.flag);
@@ -25371,8 +25410,14 @@ function renderCities(force = false) {
     const crownBadge = cityOwnerHoldsCrownCitadel(city)
       ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">&#9819;</span>`
       : "";
+    const clanIdentity = city.owner === "player"
+      ? { clanId: state.clanId, clanTag: state.clanTag }
+      : getCityClanIdentity(city);
+    const clanTagMarkup = clanIdentity.clanId && clanIdentity.clanTag
+      ? `<strong class="map-city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</strong>`
+      : "";
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
+      ? `${clanTagMarkup}<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
       : "";
     const visibleGarrison = getVisibleCityGarrisonTroops(city, scoutReport);
     const garrisonVisibilityClass = visibleGarrison === undefined
@@ -25387,6 +25432,7 @@ function renderCities(force = false) {
               <span class="city-label-level">${formatNumber(city.level)}</span>
             </span>
             <span class="player-city-data">
+              ${clanTagMarkup}
               <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>${crownBadge}</span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
               <span class="city-army-count">${formatNumber(city.troops)} troops</span>
@@ -25488,9 +25534,10 @@ function renderSelectedCityWheel(city) {
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
   const bulkOrdersSupported = canUseBulkArmyOrders();
-  const levelCost = getLevelCost(city);
+  const projectedCity = getProjectedCityForInstantActions(city);
+  const levelCost = getLevelCost(projectedCity);
   const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
-  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || state.gold < levelCost;
+  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || getProjectedGold() < levelCost;
   const levelButtonLabel = incomingUpgradeLocked
     ? `${city.name} cannot be leveled while an attack is incoming`
     : `Level up ${city.name}`;
@@ -26251,7 +26298,7 @@ function showRewardCampInfoModal(campId) {
     ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
     : rewardCampProgressMarkup(config, null, "loading");
   const rewardConditionMarkup = isDeedCamp
-    ? `<p class="deed-camp-condition">Hold this camp for ${formatNumber(holdMinutes)} minutes to receive one random eligible neutral gray city. A player can receive one Deed Camp city per UTC day. This remains separate from the normal neutral-city capture limit.</p>`
+    ? `<p class="deed-camp-condition">Hold for ${formatNumber(holdMinutes)} minutes to receive one random neutral city from any map except Crownlands Heart. One award per player per UTC day; normal neutral-city limits are separate.</p>`
     : isRelicCamp
       ? `<p class="deed-camp-condition">Hold this camp for ${formatNumber(holdMinutes)} minutes to receive one random usable item. Up to ${formatNumber(config.maxDailyRewards || RELIC_CAMP_DAILY_REWARD_LIMIT)} Relic Camp item rewards can be earned per player each UTC day.</p>`
       : "";
@@ -26262,11 +26309,11 @@ function showRewardCampInfoModal(campId) {
     ? `
       <div class="gold-camp-description deed-camp-help">
         <strong>How it works</strong>
-        <p>Capture and hold the Deed Camp for ${formatNumber(holdMinutes)} minutes. If you still control it when the timer ends, you are awarded one random eligible neutral gray city. Each player can receive one Deed Camp city per UTC day. This reward is separate from normal gray-city captures and can happen whether you are below, at, or above the normal neutral-city daily capture limit.</p>
-        <p>Other players can attack and steal the camp before the timer finishes. If control changes, the public timer restarts for the new holder. The Reward History tab shows cities previously awarded by this camp.</p>
-        <p>The awarded city is chosen automatically. No Deed Token or inventory item is given, and no battle XP is awarded because no battle happened for that city.</p>
-        <p>The normal neutral-city capture limit still applies to regular attacks on gray cities. A Deed Camp reward does not use that limit and is granted whether the holder is below, at, or above it.</p>
-        <p>After payout, stationed troops march back to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral with its fixed defenders.</p>
+        <p>Capture and hold the Deed Camp for ${formatNumber(holdMinutes)} minutes. The holder gets a random neutral city from any map except Crownlands Heart, limited to one Deed Camp city per UTC day.</p>
+        <p>Another ruler can steal the camp, restarting its timer. Reward History lists past awards.</p>
+        <p>No Deed Token or inventory item is given; selection is automatic and grants no battle XP.</p>
+        <p>The normal neutral-city capture limit still applies to gray-city attacks; this reward is separate.</p>
+        <p>After payout, troops return to their origin or main city, and the camp resets with its fixed defenders.</p>
       </div>`
     : isRelicCamp
       ? `
@@ -30918,6 +30965,26 @@ function formatSeasonalAchievementReward(reward = null) {
   return `${hoursLabel}${kind}${amount ? ` · ${formatNumber(amount)}` : ""}`;
 }
 
+function getSeasonalAchievementRequirementNote(entry = {}) {
+  const notes = {
+    enemy_city_captures: "Regular enemy player cities only; special holdings do not count.",
+    battle_wins: "Win offensive battles against enemy player cities.",
+    attacks_launched: "Launch attacks against enemy players.",
+    camp_captures: "Any Camp type counts.",
+    city_levels_gained: "Each city level upgraded adds one.",
+    stronghold_captures: "Gold, Training, Speed, and Defense Strongholds count.",
+    stronghold_types: "Capture Gold, Training, Speed, and Defense once each.",
+    stronghold_battles: "Participate in attacks against Strongholds.",
+    citadel_captures: "Capture the Crown Citadel.",
+    king_overthrows: "Capture the Crown Citadel from its reigning King.",
+    long_reign_hours: "Hold the Crown continuously; losing it resets the reign.",
+    clan_gifts: "Send Clan Gifts to members of your clan.",
+    daily_missions: "Each completed Daily Mission counts.",
+    daily_three_days: "Complete all 3 missions in one UTC day on different days.",
+  };
+  return notes[String(entry.metric || "")] || "Progress is tracked throughout the current UTC month.";
+}
+
 function getDailyLoginClaimableCount() {
   return Math.max(0, Math.floor(Number(dailyLoginRewardStatus?.pendingCount) || 0));
 }
@@ -30957,6 +31024,7 @@ function stopSeasonalAchievementLifecycle({ clear = false } = {}) {
     seasonalAchievementError = "";
     seasonalAchievementHydrated = false;
     activeSeasonalAchievementFilter = "all";
+    expandedSeasonalAchievementId = "";
   }
   updateDailyLoginRewardHudState();
 }
@@ -31147,8 +31215,16 @@ function renderSeasonalAchievementTab() {
     const progressLabel = longReign
       ? `${Math.min(entry.target, entry.progress).toFixed(1)} / ${entry.target}h`
       : `${formatNumber(Math.floor(entry.progress))} / ${formatNumber(entry.target)}`;
+    const expanded = expandedSeasonalAchievementId === entry.id;
+    const detailId = `seasonalAchievementDetails${entry.order}`;
+    const remaining = Math.max(0, entry.target - entry.progress);
+    const remainingLabel = complete
+      ? "Requirement met"
+      : longReign
+        ? `${remaining.toFixed(1)}h remaining`
+        : `${formatNumber(Math.ceil(remaining))} remaining`;
     return `
-      <article class="seasonal-achievement-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""}">
+      <article class="seasonal-achievement-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""} ${expanded ? "expanded" : ""}" data-seasonal-achievement-toggle="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-expanded="${expanded}" aria-controls="${detailId}">
         <span class="seasonal-achievement-row-icon" aria-hidden="true">${SEASONAL_ACHIEVEMENT_ICONS[entry.icon] || "◆"}</span>
         <div class="seasonal-achievement-row-copy">
           <span>${escapeHtml(entry.categoryLabel)}</span>
@@ -31163,6 +31239,11 @@ function renderSeasonalAchievementTab() {
           ${claimable
             ? `<button type="button" data-seasonal-achievement-claim="${escapeHtml(entry.id)}" ${busy ? "disabled" : ""}>${busy ? "Claiming…" : "Claim"}</button>`
             : claimed ? `<b>COMPLETED</b>` : `<small>${complete ? "Reward ready" : "In progress"}</small>`}
+        </div>
+        <div id="${detailId}" class="seasonal-achievement-details" data-seasonal-achievement-details ${expanded ? "" : "hidden"}>
+          <span>Required</span>
+          <strong>${escapeHtml(entry.description)}</strong>
+          <small>${escapeHtml(getSeasonalAchievementRequirementNote(entry))} · ${escapeHtml(remainingLabel)}</small>
         </div>
       </article>`;
   }).join("");
@@ -31185,11 +31266,39 @@ function bindSeasonalAchievementControls() {
   modalBody?.querySelectorAll("[data-seasonal-achievement-filter]").forEach(button => {
     button.addEventListener("click", () => {
       activeSeasonalAchievementFilter = button.dataset.seasonalAchievementFilter || "all";
+      expandedSeasonalAchievementId = "";
       renderDailyLoginRewardModal();
     });
   });
+  const rows = [...(modalBody?.querySelectorAll("[data-seasonal-achievement-toggle]") || [])];
+  const toggleRow = row => {
+    const achievementId = String(row?.dataset?.seasonalAchievementToggle || "");
+    if (!achievementId) return;
+    expandedSeasonalAchievementId = expandedSeasonalAchievementId === achievementId ? "" : achievementId;
+    rows.forEach(candidate => {
+      const expanded = candidate.dataset.seasonalAchievementToggle === expandedSeasonalAchievementId;
+      candidate.classList.toggle("expanded", expanded);
+      candidate.setAttribute("aria-expanded", String(expanded));
+      const details = candidate.querySelector("[data-seasonal-achievement-details]");
+      if (details) details.hidden = !expanded;
+    });
+  };
+  rows.forEach(row => {
+    row.addEventListener("click", event => {
+      if (event.target.closest("button, a")) return;
+      toggleRow(row);
+    });
+    row.addEventListener("keydown", event => {
+      if (event.target !== row || !["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      toggleRow(row);
+    });
+  });
   modalBody?.querySelectorAll("[data-seasonal-achievement-claim]").forEach(button => {
-    button.addEventListener("click", () => void claimSeasonalAchievement(button.dataset.seasonalAchievementClaim, button));
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      void claimSeasonalAchievement(button.dataset.seasonalAchievementClaim, button);
+    });
   });
   modalBody?.querySelector("[data-seasonal-achievement-refresh]")?.addEventListener("click", () => {
     void refreshSeasonalAchievementStatus({ force: true, silent: false });
@@ -31968,23 +32077,23 @@ function renderItemIcon(item, imageClass = "") {
   return `<span>${escapeHtml(label.slice(0, 1))}</span>`;
 }
 
-function renderShopItem(item, inventory) {
-  const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
+function renderShopItem(item) {
+  const owned = getProjectedInventoryCount(item.id);
   const cooldownText = getItemPurchaseCooldownText(item.id);
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
-  const purchaseCount = getItemPurchaseCount(item.id);
-  const canBuy = state && !shopPurchaseInFlight && !cooldownText && Math.floor(Number(state.gold) || 0) >= item.cost;
+  const purchaseCount = getProjectedItemPurchaseCount(item.id);
+  const canBuy = state && !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit) && getProjectedGold() >= item.cost;
   const buyLabel = cooldownText ? "Cooldown" : "Buy";
   return `
-    <article class="shop-item">
+    <article class="shop-item" data-shop-item="${escapeHtml(item.id)}">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
         ${renderItemIcon(item, "shop-item-image")}
       </div>
       <div class="shop-item-copy">
         <strong>${escapeHtml(item.label)}</strong>
         <span>${formatNumber(item.cost)} gold</span>
-        <small>Owned: ${formatNumber(owned)}</small>
-        ${purchaseLimit > 0 ? `<small class="shop-item-purchase-limit">Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)</small>` : ""}
+        <small data-shop-owned>Owned: ${formatNumber(owned)}</small>
+        ${purchaseLimit > 0 ? `<small class="shop-item-purchase-limit" data-shop-purchase-count>Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)</small>` : ""}
         ${cooldownText ? `<small class="shop-item-cooldown">UTC reset in ${escapeHtml(cooldownText)}</small>` : ""}
         <small>${escapeHtml(item.description)}</small>
       </div>
@@ -31995,14 +32104,13 @@ function renderShopItem(item, inventory) {
 
 function renderShopModal() {
   if (!state) return;
-  const inventory = ensureShopItems();
   modal.classList.remove("rewarded-ad-confirmation-modal");
   modalTitle.textContent = "Shop";
   modalBody.innerHTML = `
     <div class="shop-panel">
       <section class="shop-balance">
         <span>Gold available</span>
-        <strong>${formatNumber(Math.floor(Number(state.gold) || 0))}</strong>
+        <strong data-shop-balance>${formatNumber(getProjectedGold())}</strong>
       </section>
       <section class="shop-rewarded-section" aria-labelledby="shopRewardedHeading">
         <header class="shop-rewarded-heading">
@@ -32017,7 +32125,7 @@ function renderShopModal() {
         </div>
       </section>
       <div class="shop-items">
-        ${SHOP_ITEMS.map(item => renderShopItem(item, inventory)).join("")}
+        ${SHOP_ITEMS.map(renderShopItem).join("")}
       </div>
     </div>
   `;
@@ -32040,68 +32148,11 @@ function showShopModal() {
   retryPendingRewardedAdClaim();
 }
 
-async function buyShopItem(itemId) {
-  if (!state) return;
-  if (shopPurchaseInFlight) return;
-  const item = getShopItemById(itemId);
-  if (!item) return;
-  const cooldownText = getItemPurchaseCooldownText(item.id);
-  if (cooldownText) {
-    rejectGameAction(`${item.label} resets at 00:00 UTC, in ${cooldownText}.`);
-    renderShopModal();
-    return;
-  }
-  const currentGold = Math.floor(Number(state.gold) || 0);
-  if (currentGold < item.cost) {
-    rejectGameAction(`${item.label} costs ${formatNumber(item.cost)} gold.`);
-    renderShopModal();
-    return;
-  }
-
-  shopPurchaseInFlight = true;
-  renderShopModal();
-
-  try {
-    if (usesServerEconomyAuthority()) {
-      const result = await getOnlineApi().purchaseShopItem({ itemId: item.id, cost: item.cost });
-      applyServerEconomyResult(result);
-      selectedInventoryItemId = item.id;
-      addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
-      saveGame();
-      renderHud();
-      showToast(`${item.label} added to Bag.`);
-      return;
-    }
-
-    const inventory = ensureShopItems();
-    state.gold = currentGold - item.cost;
-    inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
-    recordItemPurchase(item.id);
-
-    addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
-    saveGame();
-    renderHud();
-    selectedInventoryItemId = item.id;
-    showToast(`${item.label} added to Bag.`);
-    const cloudSaved = await flushOnlineSave(true);
-    if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
-      showToast(`${item.label} added to Bag. Cloud save will retry.`);
-    }
-  } catch (error) {
-    rejectGameAction(error?.message || `Could not buy ${item.label}.`);
-    console.warn("Shop purchase failed", error);
-  } finally {
-    shopPurchaseInFlight = false;
-    if (modal.classList.contains("shop-modal")) renderShopModal();
-  }
-}
-
 function getInventorySlotEntries() {
-  const inventory = ensureShopItems();
   const entries = SHOP_ITEMS
     .map(item => ({
       ...item,
-      count: Math.max(0, Math.floor(Number(inventory[item.id]) || 0)),
+      count: getProjectedInventoryCount(item.id),
     }))
     .filter(item => item.count > 0)
     .slice(0, INVENTORY_SLOT_COUNT);
@@ -32175,8 +32226,8 @@ function showInventoryModal() {
           <div class="inventory-selection-copy">
             <strong>${escapeHtml(selectedEntry.label)}</strong>
             <small>${escapeHtml(selectedEntry.description)}</small>
-            ${selectedEntryActiveRemaining > 0 ? `<small>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : ""}
-            <span>Owned: ${formatNumber(selectedEntry.count)}</span>
+            ${selectedEntryActiveRemaining > 0 ? `<small data-inventory-active>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : `<small data-inventory-active></small>`}
+            <span data-inventory-owned>Owned: ${formatNumber(selectedEntry.count)}</span>
           </div>
           <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 && !selectedEntryIsStackable ? "disabled" : ""}>${selectedEntryActionLabel}</button>
         ` : `
@@ -32198,71 +32249,6 @@ function showInventoryModal() {
     button.addEventListener("click", () => useInventoryItem(button.dataset.inventoryUse));
   });
   if (!modal.open) modal.showModal();
-}
-
-function useInventoryItem(itemId) {
-  if (!state) return;
-  const item = getShopItemById(itemId);
-  if (!item) return;
-  const activeRemainingSeconds = getInventoryItemActiveRemainingSeconds(item);
-  if (activeRemainingSeconds > 0 && !isStackableTimedInventoryItem(item)) {
-    rejectGameAction(`${item.label} is already active for ${formatDuration(activeRemainingSeconds)}.`);
-    if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
-    return;
-  }
-  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-    useRoyalPeaceShield(item).catch(error => {
-      console.warn("Royal Peace Shield activation failed", error);
-      rejectGameAction(error?.message || "Could not activate Royal Peace Shield.");
-      renderHud();
-    });
-    return;
-  }
-  if (item.id === WAR_DRUMS_ITEM_ID) {
-    useWarDrums(item).catch(error => {
-      console.warn("War Drums activation failed", error);
-      rejectGameAction(error?.message || "Could not activate War Drums.");
-      renderHud();
-    });
-    return;
-  }
-  if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
-    useRoyalTaxDecree(item).catch(error => {
-      console.warn("Royal Tax Decree activation failed", error);
-      rejectGameAction(error?.message || "Could not activate Royal Tax Decree.");
-      renderHud();
-    });
-    return;
-  }
-  if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
-    useVeilOfSilence(item).catch(error => {
-      console.warn("Veil of Silence activation failed", error);
-      rejectGameAction(error?.message || "Could not activate Veil of Silence.");
-      renderHud();
-    });
-    return;
-  }
-  if (item.id === SWIFT_MARCH_ORDER_ITEM_ID) {
-    const eligibleMarches = getOutgoingAttacks().filter(isSwiftMarchOrderEligible);
-    if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-    if (!eligibleMarches.length) {
-      rejectGameAction("No eligible troop transfers or Stronghold reinforcements are active.");
-      return;
-    }
-    showOutgoingAttacksModal();
-    return;
-  }
-  if (item.id === RECALL_HORN_ITEM_ID) {
-    const eligibleMarches = getOutgoingAttacks().filter(isRecallHornEligible);
-    if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-    if (!eligibleMarches.length) {
-      rejectGameAction("No eligible troop marches are active.");
-      return;
-    }
-    showOutgoingAttacksModal();
-    return;
-  }
-  rejectGameAction(`${item.label} mechanics are coming next.`);
 }
 
 function consumeInventoryItem(item) {
@@ -32419,10 +32405,16 @@ function formatShieldReturnSummary(summary = null) {
   return `${formatNumber(normalized.outgoing)} outgoing and ${formatNumber(normalized.incoming)} incoming rival ${noun} turned back.`;
 }
 
-async function useServerInventoryItem(item) {
+async function useServerInventoryItem(item, quantity = 1) {
   if (!item || !usesServerEconomyAuthority()) return false;
-  const result = await getOnlineApi().activateInventoryItem({ itemId: item.id });
+  const result = await getOnlineApi().activateInventoryItem({ itemId: item.id, quantity });
   applyServerEconomyResult(result);
+  settleConfirmedInventoryItem(item, result, quantity);
+  return true;
+}
+
+function settleConfirmedInventoryItem(item, result, quantity = 1) {
+  const activatedQuantity = Math.max(1, Math.floor(Number(result?.activatedQuantity) || Number(quantity) || 1));
   const expiresAtMs = normalizeTimestampMs(result?.expiresAtMs);
   const effectDurationAddedSeconds = Math.max(0, normalizeTimestampMs(result?.effectDurationAddedMs) / 1000);
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
@@ -32435,12 +32427,12 @@ async function useServerInventoryItem(item) {
     showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}${returnSummary.total ? ` · ${formatNumber(returnSummary.total)} rival ${returnSummary.total === 1 ? "march" : "marches"} turned back` : ""}`);
   } else if (item.id === WAR_DRUMS_ITEM_ID) {
     const addedSeconds = effectDurationAddedSeconds || WAR_DRUMS_DURATION_MS / 1000;
-    addLog(`${item.label} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% base city troop-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
-    showToast(`${item.label}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
+    addLog(`${formatNumber(activatedQuantity)} ${item.label}${activatedQuantity === 1 ? "" : "s"} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% base city troop-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
+    showToast(`${formatNumber(activatedQuantity)} ${item.label}${activatedQuantity === 1 ? "" : "s"}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   } else if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
     const addedSeconds = effectDurationAddedSeconds || ROYAL_TAX_DECREE_DURATION_MS / 1000;
-    addLog(`${item.label} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% base city gold-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
-    showToast(`${item.label}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
+    addLog(`${formatNumber(activatedQuantity)} ${item.label}${activatedQuantity === 1 ? "" : "s"} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% base city gold-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
+    showToast(`${formatNumber(activatedQuantity)} ${item.label}${activatedQuantity === 1 ? "" : "s"}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   } else if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
     addLog(`${item.label} activated. Enemy scouts are blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: scouts blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
@@ -32713,111 +32705,6 @@ function recruit(cityId) {
   renderAll();
 }
 
-async function upgradeCity(cityId, levels = 1) {
-  const city = cityById(cityId);
-  if (!city) return;
-  const requestedLevels = Math.max(1, Math.floor(Number(levels) || 1));
-  if (city.owner !== "player") {
-    rejectGameAction("You do not own that city.");
-    renderAll();
-    return;
-  }
-  if (isStronghold(city)) {
-    rejectGameAction("Strongholds cannot be upgraded.");
-    renderAll();
-    return;
-  }
-  const incomingBlockers = getIncomingUpgradeBlockers(city.id);
-  if (incomingBlockers.length) {
-    rejectGameAction(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(incomingBlockers[0].remaining)}.`);
-    renderAll();
-    return;
-  }
-  const upgradeVfxBefore = getCityVfxSnapshot(city);
-  if (usesServerEconomyAuthority()) {
-    const inFlightKey = city.id;
-    if (serverCityUpgradeInFlightIds.has(inFlightKey)) {
-      rejectGameAction(`${city.name} upgrade is already processing.`);
-      return;
-    }
-    serverCityUpgradeInFlightIds.add(inFlightKey);
-    let totalUpgraded = 0;
-    let totalSpent = 0;
-    try {
-      let remainingLevels = requestedLevels;
-      while (remainingLevels > 0) {
-        const chunkLevels = Math.min(remainingLevels, SERVER_CITY_UPGRADE_LEVEL_CHUNK);
-        const result = await getOnlineApi().upgradeCity({
-          cityId: city.id,
-          regionId: getCityRegionId(city),
-          levels: chunkLevels,
-        });
-        const reportedUpgraded = Number(result?.upgraded);
-        const upgraded = Number.isFinite(reportedUpgraded)
-          ? Math.min(chunkLevels, Math.max(0, Math.floor(reportedUpgraded)))
-          : 0;
-        if (upgraded < 1) throw new Error("The city upgrade was not confirmed by the server.");
-        applyServerEconomyResult(result);
-        totalUpgraded += upgraded;
-        totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
-        remainingLevels -= upgraded;
-        if (upgraded < chunkLevels) break;
-      }
-      if (totalUpgraded > 0) {
-        const updatedCity = cityById(city.id) || city;
-        const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
-        addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-        showToast(`${updatedCity.name} upgraded ${levelText}`);
-        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
-      } else {
-        rejectGameAction("Could not upgrade city.", { allowCrossMap: true });
-      }
-      renderAll();
-      if (totalUpgraded > 0) playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(cityById(city.id) || city));
-    } catch (error) {
-      onlineLastError = error?.message || String(error);
-      if (totalUpgraded > 0) {
-        const updatedCity = cityById(city.id) || city;
-        showToast(`${updatedCity.name} upgraded ${formatNumber(totalUpgraded)} level${totalUpgraded === 1 ? "" : "s"}`);
-        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
-      } else {
-        rejectGameAction(error?.message || "Could not upgrade city.", { allowCrossMap: true });
-      }
-      console.warn("Server city upgrade failed", error);
-      renderAll();
-      if (totalUpgraded > 0) playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(cityById(city.id) || city));
-    } finally {
-      serverCityUpgradeInFlightIds.delete(inFlightKey);
-    }
-    return;
-  }
-  let upgraded = 0;
-  while (upgraded < requestedLevels) {
-    const cost = getLevelCost(city);
-    if (!Number.isFinite(cost) || state.gold < cost) break;
-    state.gold -= cost;
-    city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0)) + cost;
-    const nextLevel = clampCityLevel(city.level + 1);
-    if (nextLevel <= city.level) break;
-    city.level = nextLevel;
-    upgraded += 1;
-  }
-
-  if (!upgraded) {
-    rejectGameAction(Number.isFinite(getLevelCost(city)) ? "Not enough gold" : "That upgrade is outside the supported number range");
-    renderAll();
-    return;
-  }
-
-  addLog(`${city.name} upgraded to level ${city.level}.`);
-  showToast(`${city.name} upgraded`);
-  playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
-  markOwnedCityChanged(city);
-  saveGame();
-  renderAll();
-  playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(city));
-}
-
 function fortifyCity(cityId) {
   const city = cityById(cityId);
   if (!city) return;
@@ -32926,24 +32813,22 @@ function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
 
 function renderCityLevelUpAction(city) {
   if (!city || city.owner !== "player" || isStronghold(city)) return "";
-  const currentLevel = clampCityLevel(city?.level || 1);
+  const projectedCity = getProjectedCityForInstantActions(city);
+  const currentLevel = clampCityLevel(projectedCity?.level || 1);
   const incomingBlockers = city ? getIncomingUpgradeBlockers(city.id) : [];
-  const inFlight = city ? serverCityUpgradeInFlightIds.has(city.id) : false;
   const baseDisabledReason = incomingBlockers.length
     ? "Incoming"
-    : inFlight
-      ? "Working"
-      : "";
-  const oneCost = getMultiLevelCost(city, 1);
-  const fiveCost = getMultiLevelCost(city, 5);
-  const affordableMax = baseDisabledReason ? 0 : getAffordableCityUpgradeLevels(city);
-  const maxCost = affordableMax > 0 ? getMultiLevelCost(city, affordableMax) : Infinity;
+    : "";
+  const oneCost = getMultiLevelCost(projectedCity, 1);
+  const fiveCost = getMultiLevelCost(projectedCity, 5);
+  const affordableMax = baseDisabledReason ? 0 : getProjectedAffordableCityUpgradeLevels(city);
+  const maxCost = affordableMax > 0 ? getMultiLevelCost(projectedCity, affordableMax) : Infinity;
   const nextLevelLabel = `Next: Lv ${formatNumber(currentLevel + 1)}`;
-  const availableGold = Math.max(0, Math.floor(Number(state?.gold) || 0));
+  const availableGold = getProjectedGold();
   const insufficientReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
 
   return `
-    <section class="city-level-up-panel">
+    <section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}">
       <div class="city-level-up-copy">
         <strong>Level up city</strong>
         <small>${escapeHtml(nextLevelLabel)} · Gold ${formatNumber(availableGold)}</small>
@@ -32976,14 +32861,11 @@ function renderCityLevelUpAction(city) {
 
 function bindCityLevelUpButtons(city) {
   modalBody.querySelectorAll("[data-city-upgrade-levels]").forEach(button => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const levels = Math.max(0, Math.floor(Number(button.dataset.cityUpgradeLevels) || 0));
       if (levels < 1) return;
       primeCityUpgradeAudio();
-      button.disabled = true;
-      await upgradeCity(city.id, levels);
-      const refreshedCity = cityById(city.id);
-      if (refreshedCity && modal.open) showCityInfoModal(refreshedCity.id);
+      upgradeCity(city.id, levels);
     });
   });
 }
@@ -33337,132 +33219,6 @@ async function applySavedSkillPreset(slotNumber = 0) {
   }
 }
 
-function isMissingSkillBatchCallable(error = null) {
-  const code = String(error?.code || "").toLowerCase().replace(/^functions\//, "");
-  return code === "not-found" || code === "unimplemented";
-}
-
-function scheduleSkillSpendFlush(delayMs = 125) {
-  if (skillSpendFlushTimer || activeSkillSpendBatch || !pendingSkillSpendAllocations.size) return;
-  skillSpendFlushTimer = window.setTimeout(() => {
-    skillSpendFlushTimer = 0;
-    flushSkillSpendQueue();
-  }, Math.max(0, delayMs));
-}
-
-function trimPendingSkillSpendAllocations() {
-  if (!state || !pendingSkillSpendAllocations.size) return false;
-  let available = getAvailableSkillPoints(state.character, state.upgrades);
-  let trimmed = false;
-  const next = new Map();
-  pendingSkillSpendAllocations.forEach((points, skill) => {
-    const capRoom = Math.max(0, getSkillMaxLevel(skill) - getSkillLevel(skill));
-    const kept = Math.min(Math.max(0, Math.floor(Number(points) || 0)), capRoom, available);
-    if (kept > 0) {
-      next.set(skill, kept);
-      available -= kept;
-    }
-    if (kept !== points) trimmed = true;
-  });
-  pendingSkillSpendAllocations.clear();
-  next.forEach((points, skill) => pendingSkillSpendAllocations.set(skill, points));
-  return trimmed;
-}
-
-async function spendSkillBatchWithLegacyFallback(allocations = []) {
-  const api = getOnlineApi();
-  if (!api?.spendSkillPoint) throw new Error("Skill upgrades require the Crownlands server.");
-  if (api.spendSkillPoints) {
-    try {
-      return await api.spendSkillPoints({ allocations });
-    } catch (error) {
-      if (!isMissingSkillBatchCallable(error)) throw error;
-    }
-  }
-  let result = null;
-  for (const allocation of allocations) {
-    for (let point = 0; point < allocation.points; point += 1) {
-      result = await api.spendSkillPoint({ skillId: allocation.skillId });
-    }
-  }
-  return result;
-}
-
-async function flushSkillSpendQueue() {
-  if (!state || activeSkillSpendBatch || !pendingSkillSpendAllocations.size) return false;
-  const allocations = [...pendingSkillSpendAllocations.entries()]
-    .map(([skillId, points]) => ({ skillId, points }));
-  pendingSkillSpendAllocations.clear();
-  const batch = { allocations };
-  activeSkillSpendBatch = batch;
-  skillPresetMarkupSignature = "";
-  renderProfileSkills();
-  try {
-    const result = await spendSkillBatchWithLegacyFallback(allocations);
-    applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
-    activeSkillSpendBatch = null;
-    const trimmed = trimPendingSkillSpendAllocations();
-    allocations.forEach(allocation => {
-      const config = SKILL_CONFIG[allocation.skillId];
-      addLog(`${config.label} improved by ${formatNumber(allocation.points)} to level ${getSkillLevel(allocation.skillId)}.`);
-    });
-    const totalPoints = allocations.reduce((total, allocation) => total + allocation.points, 0);
-    showToast(`${formatNumber(totalPoints)} skill ${totalPoints === 1 ? "point" : "points"} applied`);
-    if (trimmed) showToast("Some queued skill points were no longer available.");
-    return true;
-  } catch (error) {
-    activeSkillSpendBatch = null;
-    console.warn("Could not spend queued skill points on server", error);
-    const refreshed = await Promise.resolve(refreshServerEconomy(true, {
-      renderCities: false,
-      renderProfile: false,
-    }));
-    const trimmed = trimPendingSkillSpendAllocations();
-    showToast(refreshed
-      ? "Skill update was not confirmed. Your current build was refreshed."
-      : error?.message || "Skill upgrade failed.");
-    if (trimmed) showToast("Some queued skill points were no longer available.");
-    return false;
-  } finally {
-    skillPresetMarkupSignature = "";
-    renderHud();
-    renderProfileSkills();
-    if (pendingSkillSpendAllocations.size) scheduleSkillSpendFlush();
-  }
-}
-
-async function buySkill(skill) {
-  const config = SKILL_CONFIG[skill];
-  if (!config || skillActionInFlight) return;
-  state.character = normalizeCharacterProgress(state.character);
-  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
-  reconcileSkillPoints(state.character, state.upgrades);
-  if (isDisplayedSkillAtCap(skill)) {
-    rejectGameAction(`${config.label} is capped at ${config.maxPercent}%.`);
-    return;
-  }
-  if (getDisplayedSkillPoints() < 1) {
-    rejectGameAction("Earn a hero level for another skill point.");
-    return;
-  }
-  if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
-    pendingSkillSpendAllocations.set(skill, (pendingSkillSpendAllocations.get(skill) || 0) + 1);
-    skillPresetMarkupSignature = "";
-    renderProfileSkills();
-    scheduleSkillSpendFlush();
-    return true;
-  }
-  state.character.skillPoints -= 1;
-  state.upgrades[skill] = getSkillLevel(skill) + 1;
-  state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
-  addLog(`${SKILL_CONFIG[skill].label} improved to level ${state.upgrades[skill]}.`);
-  saveGame();
-  skillPresetMarkupSignature = "";
-  renderHud();
-  renderProfileSkills();
-  return true;
-}
-
 async function resetSkills() {
   if (!state) return;
   if (isSkillSpendSyncing()) {
@@ -33783,9 +33539,9 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
 function renderIncomingAttackCard(attack) {
   const city = attack.target;
   const isCitadelAssault = attack.eventKind === CITADEL_ASSAULT_EVENT_KIND;
-  const sourceName = isCitadelAssault ? CROWN_CITADEL_NAME : attack.source?.name || "Unknown city";
+  const sourceName = isCitadelAssault ? CROWN_CITADEL_NAME : attack.source?.name || attack.fromName || "Unknown city";
   const regionName = getRegionLabel(getCityRegionId(city));
-  const defense = getCityStats(city).totalDefense;
+  const defense = city.incomingSnapshotPending ? 0 : getCityStats(city).totalDefense;
   const isScout = attack.kind === "scout";
   const threatLabel = isScout ? "Scout" : isCitadelAssault ? "Legion" : "Attack";
   const forceLabel = isScout ? "Scout" : "Attacker";
@@ -33793,6 +33549,9 @@ function renderIncomingAttackCard(attack) {
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `Estimated troops: ${escapeHtml(estimatedTroops)} from ${escapeHtml(sourceName)}`;
+  const cityDetails = city.incomingSnapshotPending
+    ? "City status will refresh when this map opens"
+    : `Lv ${formatNumber(city.level)} - ${formatNumber(city.troops)} troops - ${formatNumber(defense)} defense`;
   return `
     <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""} ${isCitadelAssault ? "citadel-assault-card" : ""}">
       <div class="incoming-attack-badge">
@@ -33802,7 +33561,7 @@ function renderIncomingAttackCard(attack) {
       <div class="incoming-attack-city">
         <span>${escapeHtml(regionName)}</span>
         <strong>${escapeHtml(city.name)}</strong>
-        <small>Lv ${formatNumber(city.level)} - ${formatNumber(city.troops)} troops - ${formatNumber(defense)} defense</small>
+        <small>${escapeHtml(cityDetails)}</small>
       </div>
       <div class="incoming-attack-force">
         <span>${forceLabel}</span>
@@ -33814,16 +33573,21 @@ function renderIncomingAttackCard(attack) {
   `;
 }
 
-async function focusIncomingAttackCity(cityId) {
-  const city = getArmyTargetById(cityId);
+async function focusIncomingAttackCity(cityId, explicitRegionId = "") {
+  const incoming = getIncomingAttacks().find(attack => String(attack.toId || "") === String(cityId || ""));
+  const city = incoming?.target
+    || getArmyTargetById(cityId)
+    || getOwnedCitySnapshotById(cityId)
+    || getPlayableBaseCityById(cityId);
   if (!city) {
     showToast("That city is no longer available.");
     return;
   }
-  const regionId = getCityRegionId(city);
+  const regionId = normalizeRegionId(explicitRegionId || incoming?.targetRegionId || getCityRegionId(city));
   if (modal.open) modal.close();
   if (regionId !== getActiveMapRegionId()) {
-    await switchOnlineIsland(regionId);
+    const switched = await switchOnlineIsland(regionId);
+    if (!switched || regionId !== getActiveMapRegionId()) return;
   }
   requestAnimationFrame(() => {
     centerOnCity(city.id);
@@ -34143,114 +33907,46 @@ function isRecallHornEligible(mission) {
   return Math.max(0, Number(mission.remaining) || 0) > 1;
 }
 
-async function useSwiftMarchOrderOnMission(armyId = "") {
-  const normalizedArmyId = String(armyId || "").trim();
-  if (!normalizedArmyId || swiftMarchOrderRequests.has(normalizedArmyId)) return;
-  const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
-  if (!mission || !isSwiftMarchOrderEligible(mission)) {
-    rejectGameAction("That troop transfer or Stronghold reinforcement is no longer eligible for a Swift March Order.");
-    renderOutgoingAttacksModalContent();
-    return;
-  }
-  const inventory = ensureShopItems();
-  if (Math.max(0, Math.floor(Number(inventory[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)) <= 0) {
-    rejectGameAction("You do not have a Swift March Order.");
-    renderOutgoingAttacksModalContent();
-    return;
-  }
-  const api = getOnlineApi();
-  if (!usesServerArmyAuthority() || !api?.useSwiftMarchOrder) {
-    rejectGameAction("Swift March Orders require the online Crownlands server.");
-    return;
-  }
-
-  swiftMarchOrderRequests.add(normalizedArmyId);
-  renderOutgoingAttacksModalContent();
-  try {
-    const result = await api.useSwiftMarchOrder({ armyId: normalizedArmyId });
-    if (result?.currentUser) applyServerProfilePatch(result.currentUser);
-    const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
-    if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
-    onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
-      if (getOnlineArmyResolutionId(army) === normalizedArmyId && result?.movement) {
-        applyServerMovementToMission(army, result.movement);
-      }
-    }));
-    rebuildOnlineArmies();
-    const secondsSaved = Math.max(0, Math.floor(Number(result?.secondsSaved) || 0));
-    addLog(`Swift March Order used on the transfer to ${mission.toName || mission.target?.name || "your city"}.`);
-    showToast(secondsSaved > 0
-      ? `Swift March Order used. Arrival shortened by ${formatDuration(secondsSaved)}.`
-      : "Swift March Order used.");
-    saveGame();
-    renderArmies(true);
-    updateOutgoingAttackUi();
-  } catch (error) {
-    console.warn("Swift March Order activation failed", error);
-    rejectGameAction(error?.message || "Could not use Swift March Order.");
-  } finally {
-    swiftMarchOrderRequests.delete(normalizedArmyId);
-    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
-      renderOutgoingAttacksModalContent();
-    }
-  }
+function settleConfirmedSwiftMarchOrder(action, result) {
+  const mission = action.mission;
+  if (result?.currentUser) applyServerProfilePatch(result.currentUser);
+  const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === action.armyId);
+  if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
+  onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
+    if (getOnlineArmyResolutionId(army) === action.armyId && result?.movement) applyServerMovementToMission(army, result.movement);
+  }));
+  rebuildOnlineArmies();
+  const secondsSaved = Math.max(0, Math.floor(Number(result?.secondsSaved) || 0));
+  addLog(`Swift March Order used on the transfer to ${mission.toName || mission.target?.name || "your city"}.`);
+  showToast(secondsSaved > 0
+    ? `Swift March Order used. Arrival shortened by ${formatDuration(secondsSaved)}.`
+    : "Swift March Order used.");
+  saveGame();
+  renderArmies(true);
+  updateOutgoingAttackUi();
 }
 
-async function useRecallHornOnMission(armyId = "") {
-  const normalizedArmyId = String(armyId || "").trim();
-  if (!normalizedArmyId || recallHornRequests.has(normalizedArmyId)) return;
-  const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
-  if (!mission || !isRecallHornEligible(mission)) {
-    rejectGameAction("That troop march is no longer eligible for a Recall Horn.");
-    renderOutgoingAttacksModalContent();
-    return;
-  }
-  const inventory = ensureShopItems();
-  if (Math.max(0, Math.floor(Number(inventory[RECALL_HORN_ITEM_ID]) || 0)) <= 0) {
-    rejectGameAction("You do not have a Recall Horn.");
-    renderOutgoingAttacksModalContent();
-    return;
-  }
-  const api = getOnlineApi();
-  if (!usesServerArmyAuthority() || !api?.useRecallHorn) {
-    rejectGameAction("Recall Horns require the online Crownlands server.");
-    return;
-  }
-
-  recallHornRequests.add(normalizedArmyId);
-  renderOutgoingAttacksModalContent();
-  try {
-    const result = await api.useRecallHorn({ armyId: normalizedArmyId });
-    applyServerArmyResult(result);
-    const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
-    if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
-    onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
-      if (getOnlineArmyResolutionId(army) === normalizedArmyId && result?.movement) {
-        applyServerMovementToMission(army, result.movement);
-      }
-    }));
-    rebuildOnlineArmies();
-    const sourceName = mission.fromName || mission.source?.name || "its origin city";
-    addLog(`Recall Horn used. ${formatNumber(mission.troops)} troops are returning to ${sourceName}.`);
-    playGameSound("troop_dispatch", {
-      cooldownMs: 80,
-      regionId: mission.sourceRegionId || getCityRegionId(mission.fromId),
-      allowCrossMap: true,
-    });
-    showToast(`Army recalled. Returning to ${sourceName} in ${formatDuration(result?.returnSeconds || mission.remaining)}.`);
-    saveGame();
-    renderArmies(true);
-    updateIncomingAttackUi();
-    updateOutgoingAttackUi();
-  } catch (error) {
-    console.warn("Recall Horn activation failed", error);
-    rejectGameAction(error?.message || "Could not use Recall Horn.");
-  } finally {
-    recallHornRequests.delete(normalizedArmyId);
-    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
-      renderOutgoingAttacksModalContent();
-    }
-  }
+function settleConfirmedRecallHorn(action, result) {
+  const mission = action.mission;
+  applyServerArmyResult(result);
+  const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === action.armyId);
+  if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
+  onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
+    if (getOnlineArmyResolutionId(army) === action.armyId && result?.movement) applyServerMovementToMission(army, result.movement);
+  }));
+  rebuildOnlineArmies();
+  const sourceName = mission.fromName || mission.source?.name || "its origin city";
+  addLog(`Recall Horn used. ${formatNumber(mission.troops)} troops are returning to ${sourceName}.`);
+  playGameSound("troop_dispatch", {
+    cooldownMs: 80,
+    regionId: mission.sourceRegionId || getCityRegionId(mission.fromId),
+    allowCrossMap: true,
+  });
+  showToast(`Army recalled. Returning to ${sourceName} in ${formatDuration(result?.returnSeconds || mission.remaining)}.`);
+  saveGame();
+  renderArmies(true);
+  updateIncomingAttackUi();
+  updateOutgoingAttackUi();
 }
 
 function renderOutgoingAttackCard(mission) {
@@ -34293,13 +33989,13 @@ function renderOutgoingAttackCard(mission) {
     ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">&#8982;</button>`
     : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>&#8982;</button>`;
   const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
-  const swiftItemCount = Math.max(0, Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0));
+  const swiftItemCount = getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID);
   const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
     ? `<button class="swift-march-order-btn" data-swift-march-order="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${swiftMarchOrderRequests.has(onlineId) ? "Applying Swift Order..." : "Use Swift March Order"}</button>`
     : mission.swiftMarchUsedAtMs && !isReturning
       ? `<div class="swift-march-order-used">Swift March Order applied</div>`
       : "";
-  const recallHornCount = Math.max(0, Math.floor(Number(ensureShopItems()[RECALL_HORN_ITEM_ID]) || 0));
+  const recallHornCount = getProjectedInventoryCount(RECALL_HORN_ITEM_ID);
   const recallHornButton = isRecallHornEligible(mission) && recallHornCount > 0
     ? `<button class="recall-horn-btn" data-recall-horn="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${recallHornRequests.has(onlineId) ? "Sounding Recall..." : "Use Recall Horn"}</button>`
     : isReturning

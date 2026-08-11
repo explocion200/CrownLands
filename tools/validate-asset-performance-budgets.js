@@ -13,6 +13,7 @@ const indexSource = read("index.html");
 const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const gameSource = read("game.js");
+const instantEconomyActionsSource = read("instant-economy-actions.js");
 const stylesSource = read("styles.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
@@ -41,6 +42,7 @@ const categoryFileBudgets = {
 
 const entrypointBudgets = {
   "game.js": 1600 * 1024,
+  "instant-economy-actions.js": 64 * 1024,
   "styles.css": 400 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   "firebaseClient.js": 150 * 1024,
@@ -169,10 +171,10 @@ const precachedOptimizedArt = staticCacheUrls
   .filter(relativePath => relativePath.startsWith("assets/optimized/"));
 assert.deepEqual(
   precachedOptimizedArt.sort(),
-  ["loading-crown", "loading-ring", "login-background", "map-transition-clouds"]
+  ["loading-crown", "loading-ring", "login-background"]
     .map(id => manifest.assets.find(asset => asset.id === id)?.output)
     .sort(),
-  "Only login-critical artwork and the lightweight map-transition clouds belong in the installation cache."
+  "Only login-critical artwork belongs in the installation cache; transition clouds are runtime-cached."
 );
 for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css"]) {
   assert(
@@ -184,6 +186,7 @@ for (const requiredShellFile of [
   "index.html",
   "manifest.webmanifest",
   "styles.css",
+  "instant-economy-actions.js",
   "game.js",
   "animation-manager.js",
   "firebaseClient.js",
@@ -199,7 +202,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, stylesSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, instantEconomyActionsSource, stylesSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

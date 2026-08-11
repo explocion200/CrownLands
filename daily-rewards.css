@@ -3,6 +3,7 @@
 }
 
 .daily-login-reward-modal .modal-card {
+  height: min(94dvh, 780px);
   max-height: min(94dvh, 780px);
   padding: .72rem .78rem .82rem;
   overflow: hidden;
@@ -47,7 +48,9 @@
 }
 
 .daily-login-reward-modal .modal-card #modalBody {
+  height: 100%;
   min-height: 0;
+  display: grid;
   overflow: hidden;
   padding-right: 0;
 }
@@ -157,7 +160,7 @@
 }
 
 .seasonal-achievement-tab-panel {
-  height: min(690px, calc(94dvh - 80px));
+  height: 100%;
   display: grid;
   overflow: hidden;
 }
@@ -257,12 +260,15 @@
   align-content: start;
   gap: .34rem;
   overflow-y: auto;
-  padding-right: .12rem;
+  padding: 0 .12rem .18rem 0;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: .18rem;
   scrollbar-width: thin;
 }
 
 .seasonal-achievement-row {
   min-width: 0;
+  position: relative;
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) minmax(118px, .42fr);
   align-items: center;
@@ -271,10 +277,15 @@
   border: 1px solid rgba(114, 181, 218, .2);
   border-radius: 9px;
   background: rgba(3, 17, 29, .68);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
 }
 
 .seasonal-achievement-row.complete { border-color: rgba(224, 184, 77, .5); background: rgba(50, 42, 20, .52); }
 .seasonal-achievement-row.claimed { border-color: rgba(91, 160, 73, .4); opacity: .72; }
+.seasonal-achievement-row:hover,
+.seasonal-achievement-row.expanded { border-color: rgba(238, 198, 96, .62); }
+.seasonal-achievement-row:focus-visible { outline: 2px solid #f2c768; outline-offset: 1px; }
 
 .seasonal-achievement-row-icon {
   width: 36px;
@@ -300,6 +311,23 @@
 .seasonal-achievement-reward strong { color: #f2c768; font-size: .62rem; }
 .seasonal-achievement-reward small { color: #aac7d8; font-size: .55rem; }
 .seasonal-achievement-reward b { color: #9ed77c; font-size: .56rem; }
+
+.seasonal-achievement-details {
+  min-width: 0;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: .08rem .42rem;
+  padding: .34rem .18rem 0;
+  border-top: 1px solid rgba(142, 205, 241, .18);
+}
+
+.seasonal-achievement-details[hidden] { display: none; }
+.seasonal-achievement-details > span { color: #8ecdf1; font-size: .55rem; font-weight: 950; letter-spacing: .06em; text-transform: uppercase; }
+.seasonal-achievement-details > strong { color: #fff4d2; font-size: .63rem; }
+.seasonal-achievement-details > small { grid-column: 2; color: #bcd2df; font-size: .56rem; line-height: 1.25; }
+
 .seasonal-achievement-reward button,
 .seasonal-achievement-panel .daily-mission-empty button {
   min-width: 72px;
@@ -571,13 +599,13 @@ button.daily-reward-card.available:disabled {
     font-size: clamp(.5rem, 2.35vw, .63rem);
   }
 
-  .seasonal-achievement-tab-panel { height: calc(94dvh - 70px); }
   .seasonal-achievement-panel { padding: .38rem; gap: .32rem; }
   .seasonal-achievement-hero { padding: .38rem .45rem; }
   .seasonal-achievement-row { grid-template-columns: 32px minmax(0, 1fr) 91px; gap: .32rem; padding: .34rem; }
   .seasonal-achievement-row-icon { width: 30px; height: 30px; font-size: .84rem; }
   .seasonal-achievement-row-copy p { display: none; }
   .seasonal-achievement-reward strong { font-size: .54rem; }
+  .seasonal-achievement-details { padding-top: .28rem; }
 }
 
 @media (max-width: 360px) {
@@ -606,6 +634,7 @@ button.daily-reward-card.available:disabled {
 
 @media (max-height: 640px) and (orientation: landscape) {
   .daily-login-reward-modal .modal-card {
+    height: calc(100dvh - .3rem);
     max-height: calc(100dvh - .3rem);
     padding: .4rem .44rem .46rem;
   }
@@ -662,7 +691,6 @@ button.daily-reward-card.available:disabled {
     font-size: .5rem;
   }
 
-  .seasonal-achievement-tab-panel { height: calc(100dvh - 54px); }
   .seasonal-achievement-panel { padding: .28rem; gap: .25rem; }
   .seasonal-achievement-hero { padding: .25rem .38rem; }
   .seasonal-achievement-hero h3 { font-size: .82rem; }
@@ -671,6 +699,8 @@ button.daily-reward-card.available:disabled {
   .seasonal-achievement-row { grid-template-columns: 28px minmax(0, 1fr) 100px; gap: .28rem; padding: .23rem .32rem; }
   .seasonal-achievement-row-icon { width: 27px; height: 27px; font-size: .76rem; }
   .seasonal-achievement-row p { display: none; }
+  .seasonal-achievement-details { grid-template-columns: 1fr; gap: .08rem; }
+  .seasonal-achievement-details > small { grid-column: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

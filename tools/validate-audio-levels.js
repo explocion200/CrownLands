@@ -260,7 +260,7 @@ function createRewardSequences() {
 }
 
 function validateRuntimeScales(effectIds) {
-  const runtimeSource = ["audio-manager.js", "game.js"]
+  const runtimeSource = ["audio-manager.js", "instant-economy-actions.js", "game.js"]
     .map(file => fs.readFileSync(path.join(projectRoot, file), "utf8"))
     .join("\n");
   const observedScales = new Map();

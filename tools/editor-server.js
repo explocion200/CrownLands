@@ -45,6 +45,7 @@ const ROOT_STATIC_FILES = new Set([
   "/audio-manager.js",
   "/firebaseClient.js",
   "/game.js",
+  "/instant-economy-actions.js",
   "/index.html",
   "/styles.css",
   "/world-config.js",

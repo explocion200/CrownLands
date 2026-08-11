@@ -135,9 +135,14 @@ assert.match(functions, /lockedReward[\s\S]*claimReceipt[\s\S]*replayed:\s*true/
 assert.match(client, /getSeasonalAchievementStatus[\s\S]*claimSeasonalAchievementReward[\s\S]*subscribeSeasonalAchievementState/, "The client Seasonal Achievement API is incomplete.");
 assert.match(rules, /match \/seasonalAchievements\/\{seasonId\}[\s\S]*allow read:[\s\S]*allow create, update, delete:\s*if false/, "Private server-authoritative achievement rules are missing.");
 assert.match(game, /renderSeasonalAchievementTab[\s\S]*data-seasonal-achievement-filter[\s\S]*data-seasonal-achievement-claim/, "Achievement filters or manual claims are not rendered.");
+assert.match(game, /expandedSeasonalAchievementId[\s\S]*data-seasonal-achievement-toggle[\s\S]*aria-expanded[\s\S]*getSeasonalAchievementRequirementNote/, "Compact expandable achievement requirements are missing.");
+assert.match(game, /event\.target\.closest\("button, a"\)[\s\S]*event\.stopPropagation\(\)/, "Achievement claims must not toggle expandable rows.");
 assert.match(game, /getCollectibleRewardAlertSummary[\s\S]*daily-reward-tab-alert/, "Unified collectible reward alerts are missing.");
 assert.match(html, /profileAchievementCompleted[\s\S]*profileViewAchievementsBtn/, "The compact Player Profile summary is missing.");
 assert.match(styles, /\.seasonal-achievement-list[\s\S]*overflow-y:\s*auto/, "The compact/mobile achievement list is missing its contained scrolling behavior.");
+assert.match(styles, /\.daily-login-reward-modal \.modal-card\s*\{[\s\S]*height:\s*min\(94dvh,\s*780px\)[\s\S]*#modalBody\s*\{[\s\S]*height:\s*100%[\s\S]*display:\s*grid/, "The reward modal does not give Achievements a bounded visible height.");
+assert.match(styles, /\.seasonal-achievement-tab-panel\s*\{[\s\S]*height:\s*100%[\s\S]*\.seasonal-achievement-list\s*\{[\s\S]*overflow-y:\s*auto[\s\S]*scroll-padding-bottom/, "The full Achievement list is not reachable inside the modal.");
+assert.match(styles, /\.seasonal-achievement-details[\s\S]*grid-column:\s*1\s*\/\s*-1[\s\S]*\[hidden\]\s*\{\s*display:\s*none/, "Expandable achievement details are not compact or collapsible.");
 assert.match(styles, /\.daily-reward-tab-alert[\s\S]*#ff5148/, "The red claimable tab alert style is missing.");
 const achievementAsset = artManifest.assets.find(entry => entry.id === "hud-achievements");
 assert(achievementAsset?.hasAlpha && achievementAsset.width === 192 && achievementAsset.height === 192, "The optimized transparent Achievement icon is missing.");

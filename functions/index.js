@@ -435,7 +435,7 @@ const DEED_CAMP_HOLD_DURATION_MS = economyNumber("camps.deed.holdMinutes", 60) *
 const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 20_000);
 const DEED_CAMP_HISTORY_LIMIT = 25;
 const DEED_CAMP_CITY_QUERY_LIMIT = 50;
-const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
+const DEED_CAMP_EXCLUDED_REGION_ID = "center";
 const RELIC_CAMP_HOLD_DURATION_MS = economyNumber("camps.items.holdMinutes", 30) * 60 * 1000;
 const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 20_000);
 const RELIC_CAMP_DAILY_REWARD_LIMIT = economyNumber("camps.items.maxDailyRewards", 2);
@@ -2390,10 +2390,6 @@ const STARTER_REGION_IDS = Object.freeze(
     .map(map => normalizeRegionId(map.id))
 );
 
-function isKnownWorldRegionId(regionId = "") {
-  return SERVER_WORLD_REGION_IDS.has(normalizeRegionId(regionId));
-}
-
 function requireKnownWorldRegionId(regionId = "") {
   const normalized = normalizeRegionId(regionId);
   if (!SERVER_WORLD_REGION_IDS.has(normalized)) {
@@ -2557,15 +2553,6 @@ function serverImageSizeToWorld(regionId = "", size = 1) {
   const bounds = getServerMapBounds(regionId);
   if (!map || !bounds) return Math.max(1, Math.floor(safeNumber(size, 1)));
   return Math.max(1, Math.round(Math.max(1, safeNumber(size, 1)) * bounds.width / getServerMapImageDimensions(map).width));
-}
-
-function getServerEdgeConnections(regionId = "") {
-  const map = getServerWorldMap(regionId);
-  const edgeConnections = map?.edgeConnections || {};
-  return ["north", "south", "east", "west"].flatMap(side => (
-    Array.isArray(edgeConnections[side]) ? edgeConnections[side] : []
-  ).map(connection => ({ ...connection, side })))
-    .filter(connection => !connection.intentionalOuter && isKnownWorldRegionId(connection.connectsToRegionId));
 }
 
 function getAuthoritativeIslandSeed(regionId = "") {
@@ -12126,6 +12113,8 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
     armyId: safeString(movement.id, 96),
     cityId: safeString(movement.toId, 96),
     sourceCityId: safeString(movement.fromId, 96),
+    targetRegionId: normalizeRegionId(movement.targetRegionId || target.regionId || target.startPool),
+    sourceRegionId: normalizeRegionId(movement.sourceRegionId || source.regionId || source.startPool),
     targetName,
     sourceName,
     attackerName,
@@ -12178,6 +12167,8 @@ async function sendIncomingArmyNotification(notification = {}) {
     armyId: safeString(notification.armyId, 96),
     cityId: safeString(notification.cityId, 96),
     sourceCityId: safeString(notification.sourceCityId, 96),
+    targetRegionId: safeString(notification.targetRegionId, 80),
+    sourceRegionId: safeString(notification.sourceRegionId, 80),
     targetName: safeString(notification.targetName, 60),
     sourceName: safeString(notification.sourceName, 60),
     attackerName: safeString(notification.attackerName, 60),
@@ -12312,6 +12303,7 @@ exports.getRealmInfo = timedCallable(
       seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
+        instantEconomyActionsVersion: 1,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
         bulkOrdersVersion: BULK_ORDERS_VERSION,
         combatForecastVersion: COMBAT_FORECAST_VERSION,
@@ -14940,6 +14932,10 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
   const itemId = safeString(data.itemId, 64);
   const item = SHOP_ITEMS[itemId];
   if (!item) throw new HttpsError("invalid-argument", "That shop item does not exist.");
+  const requestedQuantity = data.quantity === undefined ? 1 : Number(data.quantity);
+  if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1 || requestedQuantity > MAX_ITEM_DAILY_PURCHASE_LIMIT) {
+    throw new HttpsError("invalid-argument", `Purchase quantity must be a whole number from 1 to ${MAX_ITEM_DAILY_PURCHASE_LIMIT}.`);
+  }
   if (Number.isFinite(Number(data.cost)) && Math.floor(safeNumber(data.cost, 0)) !== item.cost) {
     throw new HttpsError("failed-precondition", "Shop item price changed. Reload Crownlands and try again.");
   }
@@ -14949,11 +14945,12 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold));
     let gold = Math.max(0, Math.floor(goldFloat));
-    if (gold < item.cost) {
-      throw new HttpsError("failed-precondition", `${item.label} costs ${item.cost.toLocaleString()} gold.`);
+    const totalCost = item.cost * requestedQuantity;
+    if (!Number.isSafeInteger(totalCost) || gold < totalCost) {
+      throw new HttpsError("failed-precondition", `${requestedQuantity.toLocaleString()} ${item.label} cost ${totalCost.toLocaleString()} gold.`);
     }
     const purchaseStatus = getItemPurchaseStatus(itemId, economy.itemPurchaseCooldowns, nowMs);
-    if (purchaseStatus.remainingMs > 0) {
+    if (purchaseStatus.remainingMs > 0 || (purchaseStatus.limit > 0 && purchaseStatus.count + requestedQuantity > purchaseStatus.limit)) {
       const purchaseRule = purchaseStatus.limit === 1
         ? "once per UTC day"
         : `${purchaseStatus.limit} times per UTC day`;
@@ -14963,16 +14960,16 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
       );
     }
 
-    goldFloat = Math.max(0, goldFloat - item.cost);
+    goldFloat = Math.max(0, goldFloat - totalCost);
     gold = Math.max(0, Math.floor(goldFloat));
     const shopItems = { ...economy.shopItems };
-    shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0))) + 1;
+    shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0))) + requestedQuantity;
     const itemPurchaseCooldowns = {
       ...economy.itemPurchaseCooldowns,
       ...(purchaseStatus.limit > 0 ? {
         [itemId]: {
           utcDate: purchaseStatus.utcDate,
-          purchaseCount: Math.min(purchaseStatus.limit, purchaseStatus.count + 1),
+          purchaseCount: Math.min(purchaseStatus.limit, purchaseStatus.count + requestedQuantity),
         },
       } : {}),
     };
@@ -14989,6 +14986,8 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
       goldFloat,
       shopItems,
       itemPurchaseCooldowns,
+      purchasedQuantity: requestedQuantity,
+      spentGold: totalCost,
     });
   });
 });
@@ -15002,6 +15001,14 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
   if (![ROYAL_PEACE_SHIELD_ITEM_ID, WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID, VEIL_OF_SILENCE_ITEM_ID].includes(itemId)) {
     throw new HttpsError("failed-precondition", "That item effect is not active yet.");
   }
+  const requestedQuantity = data.quantity === undefined ? 1 : Number(data.quantity);
+  const stackable = [WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID].includes(itemId);
+  const maxQuantity = stackable ? 25 : 1;
+  if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1 || requestedQuantity > maxQuantity) {
+    throw new HttpsError("invalid-argument", stackable
+      ? "Activation quantity must be a whole number from 1 to 25."
+      : `${item.label} can only be activated one at a time.`);
+  }
 
   return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
@@ -15011,7 +15018,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       : null;
     const shopItems = { ...economy.shopItems };
     const owned = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)));
-    if (owned <= 0) throw new HttpsError("failed-precondition", `You do not have ${item.label}.`);
+    if (owned < requestedQuantity) throw new HttpsError("failed-precondition", `You do not have ${requestedQuantity.toLocaleString()} ${item.label}.`);
 
     const itemEffects = { ...economy.itemEffects };
     let expiresAtMs = 0;
@@ -15056,11 +15063,11 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       });
     } else if (itemId === WAR_DRUMS_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.warDrumsExpiresAtMs);
-      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS;
+      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS * requestedQuantity;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
     } else if (itemId === ROYAL_TAX_DECREE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.royalTaxDecreeExpiresAtMs);
-      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS;
+      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS * requestedQuantity;
       itemEffects.royalTaxDecreeExpiresAtMs = expiresAtMs;
     } else if (itemId === VEIL_OF_SILENCE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.veilOfSilenceExpiresAtMs);
@@ -15070,7 +15077,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       expiresAtMs = nowMs + VEIL_OF_SILENCE_DURATION_MS;
       itemEffects.veilOfSilenceExpiresAtMs = expiresAtMs;
     }
-    shopItems[itemId] = owned - 1;
+    shopItems[itemId] = owned - requestedQuantity;
 
     writePreparedEconomy(transaction, economy, {
       shopItems,
@@ -15082,9 +15089,10 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       itemEffects,
       cityUpdates: [...economy.cityUpdates, ...extraCityUpdates],
       activatedItemId: itemId,
+      activatedQuantity: requestedQuantity,
       expiresAtMs,
       ...([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID].includes(itemId)
-        ? { effectDurationAddedMs: itemId === WAR_DRUMS_ITEM_ID ? WAR_DRUMS_DURATION_MS : ROYAL_TAX_DECREE_DURATION_MS }
+        ? { effectDurationAddedMs: (itemId === WAR_DRUMS_ITEM_ID ? WAR_DRUMS_DURATION_MS : ROYAL_TAX_DECREE_DURATION_MS) * requestedQuantity }
         : {}),
       ...(itemId === ROYAL_PEACE_SHIELD_ITEM_ID ? { shieldReturnSummary } : {}),
     });
@@ -24427,32 +24435,33 @@ function normalizeRelicCampRewardsToday(claimData = {}, today = "", maxDailyRewa
   })).filter(entry => entry.itemId && SHOP_ITEMS[entry.itemId]);
 }
 
-function getDeedCampCandidateRegionIds(regionId = "") {
-  const sourceRegionId = requireKnownWorldRegionId(regionId);
-  const connectedRegions = getServerEdgeConnections(sourceRegionId)
-    .map(connection => normalizeRegionId(connection.connectsToRegionId))
-    .filter((candidateRegionId, index, all) => {
-      if (!candidateRegionId || candidateRegionId === sourceRegionId || all.indexOf(candidateRegionId) !== index) return false;
-      const mapType = safeString(getServerWorldMap(candidateRegionId)?.type, 32).toLowerCase();
-      return mapType === "starter" || mapType === "midgame";
-    })
-    .slice(0, DEED_CAMP_FALLBACK_REGION_LIMIT);
-  return [sourceRegionId, ...connectedRegions];
-}
-
-function stableDeedCampChoiceIndex(seed = "", count = 0) {
-  const size = Math.max(0, Math.floor(safeNumber(count, 0)));
-  if (!size) return -1;
+function stableDeedCampHash(seed = "") {
   let hash = 2166136261;
   for (const character of String(seed || "")) {
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
   }
-  return (hash >>> 0) % size;
+  return hash >>> 0;
 }
 
-async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", payoutAtMs = 0) {
-  for (const regionId of getDeedCampCandidateRegionIds(camp.regionId)) {
+function stableDeedCampChoiceIndex(seed = "", count = 0) {
+  const size = Math.max(0, Math.floor(safeNumber(count, 0)));
+  return size ? stableDeedCampHash(seed) % size : -1;
+}
+
+function getDeedCampCandidateRegionIds(camp = {}, holderUid = "", payoutAtMs = 0, selectionEntropy = "") {
+  const seed = `${safeString(selectionEntropy, 64)}:${safeString(camp.id, 96)}:${Math.max(0, Math.floor(safeNumber(payoutAtMs, 0)))}:${safeString(holderUid, 128)}`;
+  return SERVER_WORLD_MAPS
+    .map(map => normalizeRegionId(map?.id))
+    .filter(regionId => regionId && regionId !== DEED_CAMP_EXCLUDED_REGION_ID && getServerWorldRegularCityIds(regionId).size)
+    .sort((left, right) => (
+      stableDeedCampHash(`${seed}:${left}`) - stableDeedCampHash(`${seed}:${right}`)
+      || left.localeCompare(right)
+    ));
+}
+
+async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", payoutAtMs = 0, selectionEntropy = "") {
+  for (const regionId of getDeedCampCandidateRegionIds(camp, holderUid, payoutAtMs, selectionEntropy)) {
     const regularCityIds = getServerWorldRegularCityIds(regionId);
     if (!regularCityIds.size) continue;
     const neutralQuery = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
@@ -24471,7 +24480,7 @@ async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", 
       .sort((left, right) => left.id.localeCompare(right.id));
     if (!candidates.length) continue;
     const selectedIndex = stableDeedCampChoiceIndex(
-      `${camp.id}:${payoutAtMs}:${holderUid}:${regionId}`,
+      `${selectionEntropy}:${camp.id}:${payoutAtMs}:${holderUid}:${regionId}`,
       candidates.length
     );
     const selected = candidates[selectedIndex];
@@ -24488,6 +24497,7 @@ async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", 
 }
 
 async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerUid = "") {
+  const deedSelectionEntropy = crypto.randomBytes(16).toString("hex");
   return runTransactionWithInfrastructureRetry(async transaction => {
     const campSnap = await transaction.get(campRef);
     if (!campSnap.exists) return { ok: true, status: "missing" };
@@ -24565,7 +24575,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? { ...mainCity, regionId: mainCityInfo.regionId }
       : null;
     const deedCityAward = isDeedCamp && !deedDailyLimitReached
-      ? await findEligibleDeedCampCity(transaction, camp, holderUid, payoutAtMs)
+      ? await findEligibleDeedCampCity(transaction, camp, holderUid, payoutAtMs, deedSelectionEntropy)
       : null;
     if (isDeedCamp && !deedCityAward) reward = 0;
     if (deedCityAward) nextClaims = priorClaims + 1;

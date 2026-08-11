@@ -20,13 +20,13 @@ const STATIC_CACHE_URLS = [
   "/firebaseClient.js?v=20260810-daily-mission-camp-fix-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
+  "/instant-economy-actions.js?v=20260810-instant-economy-actions-v1",
   "/game.js?v=20260810-daily-mission-camp-fix-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
   "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
-  "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp",
-  "/assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp"
+  "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp"
 ];
 
 const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0b111d"/></svg>`;
@@ -235,8 +235,9 @@ self.addEventListener("message", event => {
 });
 
 self.addEventListener("notificationclick", event => {
+  const notificationData = event.notification?.data || {};
   event.notification.close();
-  const url = resolveAppUrl(event.notification?.data?.url || "");
+  const url = resolveAppUrl(notificationData.url || "");
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
     const sameOriginClient = windowClients.find(client => {
@@ -248,6 +249,10 @@ self.addEventListener("notificationclick", event => {
     });
     if (sameOriginClient) {
       await sameOriginClient.focus();
+      sameOriginClient.postMessage({
+        type: "CROWNLANDS_NOTIFICATION_CLICK",
+        notification: notificationData,
+      });
       return;
     }
     await clients.openWindow(url);

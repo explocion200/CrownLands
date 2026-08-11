@@ -1,5 +1,7 @@
 const fs = require("fs");
 const path = require("path");
+const assert = require("node:assert/strict");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
@@ -12,6 +14,19 @@ const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "e
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
+}
+
+function readFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`Missing ${name}.`);
+  const bodyStart = source.indexOf(") {", start) + 2;
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
 }
 
 const deedCamps = (worldLayout.maps || []).flatMap(map => (map.camps || [])
@@ -33,8 +48,45 @@ requireMatch(serverSource, /deed:\s*\{[\s\S]*?objectiveStatsId:\s*"deedCamp"/, "
 requireMatch(serverSource, /deedDailyLimitReached\s*=\s*isDeedCamp\s*&&\s*priorClaims\s*>=\s*1/, "Deed Camp is not limited to one city award per player per UTC day.");
 requireMatch(serverSource, /status:\s*isDeedCamp[\s\S]*?"daily-limit"[\s\S]*?"no-eligible-city"/, "Deed Camp payout does not report its daily limit cleanly.");
 requireMatch(serverSource, /findEligibleDeedCampCity[\s\S]*?getServerWorldRegularCityIds[\s\S]*?where\("ownerUid",\s*"==",\s*null\)/, "Deed Camp payout is not using a bounded neutral-city query.");
-requireMatch(serverSource, /getDeedCampCandidateRegionIds[\s\S]*?mapType === "starter" \|\| mapType === "midgame"/, "Deed Camp fallback regions are not restricted to connected activity maps.");
+requireMatch(serverSource, /DEED_CAMP_EXCLUDED_REGION_ID\s*=\s*"center"/, "Crownlands Heart is not excluded from Deed Camp city awards.");
+requireMatch(serverSource, /function getDeedCampCandidateRegionIds[\s\S]*?SERVER_WORLD_MAPS[\s\S]*?regionId !== DEED_CAMP_EXCLUDED_REGION_ID[\s\S]*?stableDeedCampHash/, "Deed Camp candidate maps are not randomized across the full world outside Crownlands Heart.");
+requireMatch(serverSource, /getDeedCampCandidateRegionIds\(camp, holderUid, payoutAtMs, selectionEntropy\)/, "Deed Camp map randomization is not seeded to the payout transaction.");
+requireMatch(serverSource, /async function resolveRewardCampPayoutByRef[\s\S]*?crypto\.randomBytes\(16\)[\s\S]*?runTransactionWithInfrastructureRetry[\s\S]*?findEligibleDeedCampCity\(transaction, camp, holderUid, payoutAtMs, deedSelectionEntropy\)/, "Deed Camp selection does not use retry-stable random entropy created outside the transaction.");
 requireMatch(serverSource, /missingTargetCamp[\s\S]*?getAuthoritativeRewardCampSeed[\s\S]*?transaction\.set\(targetRef,[\s\S]*?missingTargetCamp/, "Missing authoritative camp documents are not repaired before an army launches.");
+
+const crownlandsHeart = worldLayout.maps.find(map => map.label === "Crownlands Heart");
+assert.equal(crownlandsHeart?.id, "center", "The validator could not identify Crownlands Heart.");
+const candidateSandbox = {
+  DEED_CAMP_EXCLUDED_REGION_ID: crownlandsHeart.id,
+  SERVER_WORLD_MAPS: worldLayout.maps,
+  normalizeRegionId(value) { return String(value || "").trim().toLowerCase(); },
+  safeString(value, limit = 160) { return String(value || "").slice(0, limit); },
+  safeNumber(value, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; },
+  getServerWorldRegularCityIds(regionId) {
+    const map = worldLayout.maps.find(entry => entry.id === regionId);
+    return new Set((map?.cities || []).map(city => city.id).filter(Boolean));
+  },
+};
+vm.createContext(candidateSandbox);
+vm.runInContext(readFunction(serverSource, "stableDeedCampHash"), candidateSandbox);
+vm.runInContext(readFunction(serverSource, "getDeedCampCandidateRegionIds"), candidateSandbox);
+const eligibleMapIds = worldLayout.maps
+  .filter(map => map.id !== crownlandsHeart.id && (map.cities || []).length)
+  .map(map => map.id)
+  .sort();
+const candidateOrders = Array.from({ length: 32 }, (_, index) => Array.from(
+  candidateSandbox.getDeedCampCandidateRegionIds({ id: "region_9_deed_camp" }, "holder-1", 1_000_000, `selection-${index}`)
+));
+candidateOrders.forEach(order => {
+  assert.deepEqual([...order].sort(), eligibleMapIds, "Every non-Heart map with regular cities must be eligible for a Deed Camp award.");
+  assert(!order.includes(crownlandsHeart.id), "Crownlands Heart appeared in a Deed Camp candidate order.");
+});
+assert(new Set(candidateOrders.map(order => order[0])).size >= 4, "Deed Camp payout seeds do not randomize the first candidate map.");
+assert.deepEqual(
+  Array.from(candidateSandbox.getDeedCampCandidateRegionIds({ id: "region_9_deed_camp" }, "holder-1", 1_000_000, "selection-0")),
+  candidateOrders[0],
+  "Deed Camp candidate order must remain stable during a transaction retry."
+);
 
 const cityOwnerIndex = (firestoreIndexes.fieldOverrides || []).find(index => (
   index.collectionGroup === "cities" && index.fieldPath === "ownerUid"
@@ -63,6 +115,6 @@ requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
 requireMatch(clientSource, /function getDeedCampHistoryCityName[\s\S]*?getCanonicalCityName[\s\S]*?const cityName = getDeedCampHistoryCityName\(entry\)/, "Existing Deed Camp history entries do not resolve canonical city names.");
 requireMatch(clientSource, /function renderCampReportRewardMetrics[\s\S]*?renderBattleMetric\("City"[\s\S]*?renderBattleMetric\("Location"/, "Deed Camp report rewards do not show the city and location.");
-requireMatch(clientSource, /Capture and hold the Deed Camp for \$\{formatNumber\(holdMinutes\)\} minutes[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete or not driven by its configured timer.");
+requireMatch(clientSource, /Capture and hold the Deed Camp for \$\{formatNumber\(holdMinutes\)\} minutes[\s\S]*?any map except Crownlands Heart[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete or not driven by its configured timer.");
 
-console.log("Validated Deed Camp placement, payout authority, neutral-city award, public history, navigation, and capture-limit isolation.");
+console.log("Validated Deed Camp placement, all-map random award outside Crownlands Heart, payout authority, history, and capture-limit isolation.");

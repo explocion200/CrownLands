@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const gamePath = path.join(root, "game.js");
 const serverPath = path.join(root, "functions", "index.js");
-const gameSource = fs.readFileSync(gamePath, "utf8");
+const gameSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(gamePath, "utf8")}`;
 const serverSource = fs.readFileSync(serverPath, "utf8");
 const firebaseSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
@@ -212,7 +212,8 @@ assert.match(gameSource, /const SKILL_GROUPS = Object\.freeze\([\s\S]*?Attack[\s
 assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(4,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-tabs \{ grid-template-columns: repeat\(2,/, "Four preset tabs are not responsive as a mobile 2x2 grid.");
 assert.match(gameSource, /renderSkillPresetAllocation[\s\S]*?SKILL_GROUPS\.map[\s\S]*?skill-preset-allocation-group/, "Saved allocations are not grouped by role.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.map[\s\S]*?profile-skill-group/, "The current skill list is not grouped by role.");
-assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillSpendAllocations[\s\S]*?spendSkillBatchWithLegacyFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false/, "Queued skill spending is not batched or is forcing broad renders.");
+assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillSpendAllocations[\s\S]*?enqueueInstantEconomyAction/, "Queued skill spending is not routed through the shared instant-action queue.");
+assert.match(extractFunction(gameSource, "executeInstantSkillSpend"), /spendSkillBatchWithLegacyFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false/, "Skill settlement is not batched or is forcing broad renders.");
 assert.doesNotMatch(extractFunction(gameSource, "buySkill"), /skillActionInFlight = true|renderAll\(/, "A skill-point click still blocks the full Skills UI or forces a full map render.");
 assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfChanged[\s\S]*?button\.disabled[\s\S]*?row\?\.classList\.toggle/, "Skill clicks are not patched into stable row nodes.");
 

@@ -850,9 +850,26 @@ function validateCityUpgradeCueContract(gameSource) {
   const bindCityLevelUpButtons = extractFunction(gameSource, "bindCityLevelUpButtons");
   check(
     bindCityLevelUpButtons.indexOf("primeCityUpgradeAudio()") >= 0
-      && bindCityLevelUpButtons.indexOf("primeCityUpgradeAudio()") < bindCityLevelUpButtons.indexOf("button.disabled = true"),
-    "modal city-upgrade controls must prime audio before disabling the clicked button"
+      && bindCityLevelUpButtons.indexOf("primeCityUpgradeAudio()") < bindCityLevelUpButtons.indexOf("upgradeCity("),
+    "modal city-upgrade controls must prime audio before queueing the upgrade"
   );
+
+  const queuedUpgrade = extractFunction(gameSource, "upgradeCity");
+  const confirmedSettlement = extractFunction(gameSource, "executeInstantCityUpgrade");
+  check(
+    /enqueueInstantEconomyAction/.test(queuedUpgrade) && !/serverCityUpgradeInFlightIds\.has/.test(queuedUpgrade),
+    "rapid city-upgrade taps must enqueue instead of being rejected by an in-flight lock"
+  );
+  check(
+    /if \(upgraded < 1\) throw/.test(confirmedSettlement)
+      && confirmedSettlement.indexOf("playGameSound(\"level_up\"") > confirmedSettlement.indexOf("if (upgraded < 1)"),
+    "the delayed city-upgrade success cue must only play after positive server confirmation"
+  );
+  check(
+    countGameCueCalls(confirmedSettlement, "level_up") === 1,
+    "each confirmed city-upgrade settlement must play level_up exactly once"
+  );
+  return;
 
   const upgradeCity = extractFunction(gameSource, "upgradeCity");
   check(
@@ -1465,7 +1482,7 @@ function main() {
   }
 
   const audioManagerSource = readSource("audio-manager.js");
-  const gameSource = readSource("game.js");
+  const gameSource = `${readSource("instant-economy-actions.js")}\n${readSource("game.js")}`;
   const serverSource = readSource("functions/index.js");
   const indexSource = readSource("index.html");
   const stylesSource = readSource("styles.css");

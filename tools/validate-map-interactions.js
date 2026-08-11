@@ -4,8 +4,9 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const gamePath = path.resolve(__dirname, "..", "game.js");
+const instantActionsPath = path.resolve(__dirname, "..", "instant-economy-actions.js");
 const stylesPath = path.resolve(__dirname, "..", "styles.css");
-const source = fs.readFileSync(gamePath, "utf8");
+const source = `${fs.readFileSync(instantActionsPath, "utf8")}\n${fs.readFileSync(gamePath, "utf8")}`;
 const stylesSource = fs.readFileSync(stylesPath, "utf8");
 
 function extractFunction(name) {
@@ -480,8 +481,8 @@ assert.match(
   "The shared level-up renderer must reject foreign cities and every stronghold."
 );
 const upgradeCitySource = extractFunction("upgradeCity");
-assert.match(upgradeCitySource, /city\.owner !== "player"[\s\S]*?return;/, "The upgrade handler must reject cities the player does not own.");
-assert.match(upgradeCitySource, /isStronghold\(city\)[\s\S]*?return;/, "The upgrade handler must reject strongholds.");
+assert.match(upgradeCitySource, /city\.owner !== "player"[\s\S]*?return false;/, "The upgrade handler must reject cities the player does not own.");
+assert.match(upgradeCitySource, /isStronghold\(city\)[\s\S]*?return false;/, "The upgrade handler must reject strongholds.");
 assert.match(stylesSource, /\.stronghold-objective-action-wheel\s*\{[\s\S]*?translate\(-50%, -62%\)/, "Stronghold action plaques should align to stronghold artwork.");
 
 const outgoingMarchCardSource = extractFunction("renderOutgoingAttackCard");
