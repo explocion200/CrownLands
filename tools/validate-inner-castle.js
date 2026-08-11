@@ -200,7 +200,8 @@ assert.match(
   /querySelector\(["']#enterInnerCastleBtn["']\)\?\.focus\(\)/,
   "Returning to city details must restore focus to the Inner Castle entry action."
 );
-assert.match(previewSource, /Details coming soon/, "Building previews must remain explicit placeholders.");
+assert.match(previewSource, /data-manage-common-gear/, "Supported Inner Castle buildings must open their Common Gear screen.");
+assert.match(previewSource, /Not yet available/, "Great Hall and Alehouse must remain explicitly unavailable.");
 
 const selectSource = extractFunction(gameSource, "selectInnerCastleBuilding");
 assert.match(selectSource, /getInnerCastleBuilding\(buildingKey\)/, "Building selection must resolve through the registry.");
@@ -226,13 +227,10 @@ assert.doesNotMatch(
   "The placeholder Inner Castle must not mutate gameplay stats."
 );
 
-for (const [label, source] of [
-  ["Functions", serverSource],
-  ["Firebase client", firebaseSource],
-  ["browser economy config", browserEconomySource],
-  ["server economy config", serverEconomySource],
-]) {
-  assert.doesNotMatch(source, /inner[\s_-]*castle/i, `${label} must not add Inner Castle persistence or economy hooks.`);
+assert.match(serverSource, /exports\.equipCommonGear\s*=/, "Inner Castle gear equipment must be server-authoritative.");
+assert.match(firebaseSource, /equipCommonGear/, "Firebase client must expose the Inner Castle gear callable.");
+for (const [label, source] of [["browser economy config", browserEconomySource], ["server economy config", serverEconomySource]]) {
+  assert.doesNotMatch(source, /inner[\s_-]*castle/i, `${label} must not contain presentation-only Inner Castle data.`);
 }
 
 assert.match(stylesSource, /\.inner-castle-modal\b/, "The expanded Inner Castle modal styles are missing.");
@@ -274,4 +272,4 @@ assert.match(
   "The Inner Castle validator is not registered in the Functions test chain."
 );
 
-console.log("Validated the six-building client-only Inner Castle hub, canonical access guard, modal lifecycle, artwork delivery, and release cache tags.");
+console.log("Validated the six-building Inner Castle hub, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");

@@ -13,6 +13,8 @@ const paths = {
   serverRealm: path.join(root, "functions", "release-config.json"),
   browserWorld: path.join(root, "assets", "map-editor-data.js"),
   serverWorld: path.join(root, "functions", "world-layout.json"),
+  browserCommonGear: path.join(root, "common-gear.js"),
+  serverCommonGear: path.join(root, "functions", "common-gear.js"),
 };
 
 function stableJson(value) {
@@ -58,9 +60,14 @@ async function main() {
     "Browser world layout",
   );
   await validateOrWrite(paths.serverWorld, stableJson(world), "Server world layout");
+  await validateOrWrite(
+    paths.serverCommonGear,
+    await fsp.readFile(paths.browserCommonGear, "utf8"),
+    "Server Common Gear definitions",
+  );
 
   const mode = checkOnly ? "Validated" : "Synchronized";
-  console.log(`${mode} economy, realm, and ${world.maps.length} world regions from canonical sources.`);
+  console.log(`${mode} economy, realm, Common Gear, and ${world.maps.length} world regions from canonical sources.`);
 }
 
 main().catch(error => {

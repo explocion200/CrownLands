@@ -14,6 +14,7 @@ const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const gameSource = read("game.js");
 const instantEconomyActionsSource = read("instant-economy-actions.js");
+const commonGearSource = read("common-gear.js");
 const stylesSource = read("styles.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
@@ -22,7 +23,7 @@ const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-mani
 
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 const MAX_INSTALL_PRECACHE_BYTES = 3 * 1024 * 1024;
-const MAX_OPTIMIZED_ART_BYTES = 2100 * 1024;
+const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -38,6 +39,7 @@ const categoryFileBudgets = {
   camp: 80 * 1024,
   city: 64 * 1024,
   "inner-castle": 400 * 1024,
+  gear: 140 * 1024,
 };
 
 const entrypointBudgets = {
@@ -202,7 +204,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, instantEconomyActionsSource, stylesSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, commonGearSource, instantEconomyActionsSource, stylesSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {
