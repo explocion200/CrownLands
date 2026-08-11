@@ -6967,11 +6967,11 @@ button.inventory-slot {
   height: 21px;
   display: grid;
   place-items: center;
-  border: 2px solid #fff4bd;
+  border: 2px solid #ffd4cf;
   border-radius: 50%;
-  color: #271500;
-  background: linear-gradient(#ffe775, #e99b20);
-  box-shadow: 0 3px 8px rgba(0,0,0,.48), 0 0 12px rgba(255, 219, 88, .72);
+  color: #fff;
+  background: linear-gradient(#ff5148, #b80e18);
+  box-shadow: 0 3px 8px rgba(0,0,0,.48), 0 0 12px rgba(255, 46, 46, .72);
   font-size: .72rem;
   font-weight: 1000;
   line-height: 1;
@@ -8898,6 +8898,53 @@ button.inventory-slot {
   font-weight: 700;
   line-height: 1.25;
 }
+
+.profile-achievement-summary {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(280px, 1.6fr) minmax(145px, .7fr);
+  align-items: center;
+  gap: .55rem;
+  padding: .48rem .62rem;
+  border: 1px solid rgba(211, 161, 63, .3);
+  border-radius: 12px;
+  background: linear-gradient(110deg, rgba(52, 36, 20, .68), rgba(7, 38, 62, .78));
+}
+
+.profile-achievement-summary-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .38rem;
+}
+
+.profile-achievement-summary-grid > div {
+  min-width: 0;
+  display: grid;
+  gap: .08rem;
+  padding: .35rem .46rem;
+  border: 1px solid rgba(118, 182, 216, .18);
+  border-radius: 8px;
+  background: rgba(3, 18, 30, .5);
+  text-align: center;
+}
+
+.profile-achievement-summary-grid span { color: #8ecdf1; font-size: .6rem; font-weight: 900; text-transform: uppercase; }
+.profile-achievement-summary-grid strong { color: #fff0b6; font-size: .82rem; }
+.profile-view-achievements-btn {
+  min-height: 38px;
+  padding: .42rem .62rem;
+  border: 1px solid rgba(255, 232, 151, .72);
+  border-radius: 9px;
+  color: #271800;
+  background: linear-gradient(#ffe785, #d9931f);
+  box-shadow: inset 0 -3px 0 rgba(92, 50, 5, .22);
+  font-size: .68rem;
+  font-weight: 1000;
+}
+.profile-view-achievements-btn.has-alert { border-color: #ffb4ae; box-shadow: 0 0 12px rgba(255, 54, 50, .4), inset 0 -3px 0 rgba(92, 50, 5, .22); }
+.profile-view-achievements-btn:disabled { opacity: .5; }
 .kingdom-stat-power small[hidden] { display: none; }
 .profile-notification-row {
   min-height: 50px;
@@ -9203,6 +9250,8 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 .daily-mission-detail-stat span { color: #8ecdf1; font-size: .62rem; font-weight: 900; text-transform: uppercase; }
 .daily-mission-detail-stat { min-width: 0; display: grid; gap: .12rem; padding: .5rem; border-radius: 7px; background: rgba(13, 44, 69, .68); }
 .daily-mission-detail-stat strong { color: #fff0bd; }
+.daily-mission-recommendation { grid-column:1/-1; display:grid; gap:.18rem; padding:.58rem; border:1px solid #6a995e; border-radius:8px; background:#123729c7; }
+.daily-mission-recommendation > span { color:#9edc71; font-weight:900; text-transform:uppercase; }
 .daily-mission-detail p,
 .daily-mission-detail small { grid-column: 1 / -1; margin: 0; color: #c8d9e2; line-height: 1.35; }
 .daily-mission-confirmation { display: grid; gap: .6rem; }
@@ -9217,6 +9266,12 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
     gap: .42rem;
     padding: .42rem;
     overflow-y: auto;
+  }
+  .profile-achievement-summary {
+    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .38rem;
+    padding: .48rem;
   }
   .profile-identity {
     min-width: 0;
@@ -13188,7 +13243,7 @@ select:focus {
 .crownlands-map-transition__part--cloud-front {
   inset: -20%;
   opacity: 0;
-  background-image: url("assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp");
+  background-image: url("assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp");
   background-repeat: repeat;
   background-position: center;
   background-size: clamp(430px, 58vw, 760px) auto;

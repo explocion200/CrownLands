@@ -17,12 +17,25 @@ try {
 const { getClanQuestPeriod } = require("./clanQuestPeriod.js");
 const {
   DAILY_MISSION_VERSION,
+  DAILY_MISSION_SCHEMA_VERSION,
   DAILY_MISSION_EVENT_RETENTION_MS,
   getDailyMissionCycle,
   createDailyMissionState,
   createReplacementMission,
+  migrateDailyMissionState,
   applyDailyMissionEvent,
 } = require("./dailyMissions.js");
+const {
+  SEASONAL_ACHIEVEMENT_VERSION,
+  SEASONAL_ACHIEVEMENT_SCHEMA_VERSION,
+  SEASONAL_ACHIEVEMENT_DEFINITION_VERSION,
+  SEASONAL_ACHIEVEMENT_COUNT,
+  getUtcMonthCycle,
+  getSeasonalAchievementCycle,
+  createSeasonalAchievementState,
+  reconcileSeasonalAchievementState,
+  applySeasonalAchievementEvent,
+} = require("./seasonalAchievements.js");
 const { createAuthoritativeRoutePlanner } = require("./authoritative-route-planner.js");
 const {
   AUTHORITATIVE_ROUTES_VERSION,
@@ -2973,6 +2986,9 @@ function writeRealmActivityCaptureEvent(transaction, {
   if (!ref) return null;
 
   const citadel = isCrownCitadel(target);
+  const previousReignStartedAtMs = citadel
+    ? Math.max(0, timestampToMs(target.lastCapturedAtMs || target.lastCapturedAt))
+    : 0;
   const objective = getPublicStrongholdSnapshot(target) || {};
   const regionId = requireKnownWorldRegionId(targetRegionId || target.regionId);
   const attackerClan = getRealmActivityClanSnapshot(nextOwnerProfile);
@@ -3020,6 +3036,7 @@ function writeRealmActivityCaptureEvent(transaction, {
     defenderClanTag: defenderClan?.clanTag || "",
     newKingPlayerId: citadel ? attackerPlayerId : "",
     previousKingPlayerId: citadel ? defenderPlayerId : "",
+    previousReignStartedAtMs,
   }, { merge: false });
   return ref;
 }
@@ -8446,6 +8463,231 @@ function enqueueDailyMissionEvent(transaction, {
   return eventRef;
 }
 
+function seasonalAchievementStateRef(uid = "", seasonId = "") {
+  const safeUid = safeString(uid, 128);
+  const safeSeasonId = safeString(seasonId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid && safeSeasonId
+    ? db.doc(`players/${safeUid}/seasonalAchievements/${safeSeasonId}`)
+    : null;
+}
+
+function seasonalAchievementStateForClient(state = {}, nowMs = Date.now()) {
+  const achievements = Array.isArray(state.achievements) ? state.achievements : [];
+  return {
+    ...state,
+    achievementCount: SEASONAL_ACHIEVEMENT_COUNT,
+    completedCount: achievements.filter(entry => entry?.completedAtMs || entry?.claimedAtMs).length,
+    claimedCount: achievements.filter(entry => entry?.claimedAtMs).length,
+    claimableCount: achievements.filter(entry => entry?.completedAtMs && !entry?.claimedAtMs).length,
+    serverTimeMs: Math.max(0, Math.floor(safeNumber(nowMs, Date.now()))),
+  };
+}
+
+function getSeasonalAchievementRewardCapacity(stats = {}) {
+  return {
+    goldPerHour: Math.max(1, Math.floor(safeNumber(stats.untimedGoldPerHour, stats.goldPerHour || 1))),
+    troopPerHour: Math.max(1, Math.floor(safeNumber(stats.untimedTroopPerHour, stats.troopPerHour || 1))),
+  };
+}
+
+async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.now()) {
+  const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
+  const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
+  if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Seasonal Achievements.");
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const [stateSnap, profileSnap] = await Promise.all([
+      transaction.get(stateRef),
+      transaction.get(profileRef),
+    ]);
+    if (!profileSnap.exists) {
+      throw new HttpsError("failed-precondition", "Claim a starting city before opening Seasonal Achievements.");
+    }
+    assertCurrentPlayerProfile(profileSnap.data() || {});
+    const state = stateSnap.exists
+      ? reconcileSeasonalAchievementState(stateSnap.data() || {}, {
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        nowMs,
+      })
+      : createSeasonalAchievementState({
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        nowMs,
+      });
+    const needsWrite = !stateSnap.exists
+      || Math.floor(safeNumber(stateSnap.data()?.schemaVersion, 0)) !== SEASONAL_ACHIEVEMENT_SCHEMA_VERSION
+      || Math.floor(safeNumber(stateSnap.data()?.definitionVersion, 0)) !== SEASONAL_ACHIEVEMENT_DEFINITION_VERSION
+      || !Array.isArray(stateSnap.data()?.achievements)
+      || stateSnap.data().achievements.length !== SEASONAL_ACHIEVEMENT_COUNT;
+    if (needsWrite) {
+      transaction.set(stateRef, {
+        ...state,
+        ...(stateSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: stateSnap.exists });
+    }
+    return seasonalAchievementStateForClient(state, nowMs);
+  }, "ensureSeasonalAchievementState");
+}
+
+async function applyLongReignProgressForPlayer(uid = "", nowMs = Date.now()) {
+  const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
+  const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
+  const reignRef = crownCitadelReignRef(uid);
+  if (!stateRef || !reignRef) return null;
+  await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [stateSnap, reignSnap, statsSnap] = await Promise.all([
+      transaction.get(stateRef),
+      transaction.get(reignRef),
+      transaction.get(playerGlobalStatsRef(uid)),
+    ]);
+    if (!stateSnap.exists || !reignSnap.exists) return null;
+    const reign = reignSnap.data() || {};
+    if (
+      reign.isCurrentHolder !== true
+      || safeString(reign.worldId, 120) !== ONLINE_WORLD_ID
+      || safeString(reign.resetGeneration, 120) !== RESET_GENERATION
+    ) return null;
+    const heldSinceMs = Math.max(cycle.startsAtMs, Math.max(0, timestampToMs(reign.currentHeldSinceMs)));
+    if (!heldSinceMs || heldSinceMs >= nowMs) return null;
+    const result = applySeasonalAchievementEvent(
+      stateSnap.data() || {},
+      { type: "LONG_REIGN_PROGRESS", occurredAtMs: nowMs, heldMs: nowMs - heldSinceMs },
+      getSeasonalAchievementRewardCapacity(statsSnap.data() || {}),
+      nowMs
+    );
+    transaction.set(stateRef, {
+      ...result.state,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { seasonId: cycle.seasonId, newlyCompletedIds: result.newlyCompletedIds };
+  }, "applyLongReignProgress");
+}
+
+async function processSeasonalAchievementActionEvent(event) {
+  const snapshot = event?.data;
+  const raw = snapshot?.exists ? snapshot.data() || {} : {};
+  const uid = safeString(raw.uid, 128);
+  if (!uid || raw.seasonalAchievementProcessedAtMs) return null;
+  if (safeString(raw.worldId, 128) !== ONLINE_WORLD_ID || safeString(raw.resetGeneration, 128) !== RESET_GENERATION) return null;
+  const occurredAtMs = Math.max(0, Math.floor(safeNumber(raw.occurredAtMs, Date.now())));
+  const cycle = getSeasonalAchievementCycle(occurredAtMs, RESET_GENERATION);
+  const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
+  const eventRef = snapshot.ref;
+  await ensureSeasonalAchievementStateForPlayer(uid, occurredAtMs);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [freshEventSnap, stateSnap, statsSnap] = await Promise.all([
+      transaction.get(eventRef),
+      transaction.get(stateRef),
+      transaction.get(playerGlobalStatsRef(uid)),
+    ]);
+    if (!freshEventSnap.exists || !stateSnap.exists) return null;
+    const freshEvent = freshEventSnap.data() || {};
+    if (freshEvent.seasonalAchievementProcessedAtMs) return { replayed: true };
+    const nowMs = Date.now();
+    const result = applySeasonalAchievementEvent(
+      stateSnap.data() || {},
+      freshEvent,
+      getSeasonalAchievementRewardCapacity(statsSnap.data() || {}),
+      nowMs
+    );
+    transaction.set(stateRef, {
+      ...result.state,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(eventRef, {
+      seasonalAchievementProcessedAtMs: nowMs,
+      appliedAchievementSeasonId: cycle.seasonId,
+      completedAchievementIds: result.newlyCompletedIds,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { replayed: false, seasonId: cycle.seasonId, newlyCompletedIds: result.newlyCompletedIds };
+  }, "processSeasonalAchievementActionEvent");
+}
+
+async function processSeasonalAchievementRealmEvent(event) {
+  const snapshot = event?.data;
+  const raw = snapshot?.exists ? snapshot.data() || {} : {};
+  if (!snapshot?.exists || raw.seasonalAchievementProcessedAtMs) return null;
+  if (safeString(raw.worldId, 128) !== ONLINE_WORLD_ID || safeString(raw.resetGeneration, 128) !== RESET_GENERATION) return null;
+  const type = safeString(raw.eventType, 48).toUpperCase();
+  if (!["STRONGHOLD_CAPTURED", "CITADEL_CAPTURED"].includes(type)) return null;
+  const attackerUid = safeString(raw.attackerPlayerId, 128);
+  if (!attackerUid) return null;
+  const previousKingUid = type === "CITADEL_CAPTURED" ? safeString(raw.previousKingPlayerId, 128) : "";
+  const occurredAtMs = Math.max(0, timestampToMs(raw.occurredAtMs || raw.createdAtMs)) || Date.now();
+  const cycle = getSeasonalAchievementCycle(occurredAtMs, RESET_GENERATION);
+  const affectedUids = [...new Set([attackerUid, previousKingUid].filter(Boolean))];
+  await Promise.all(affectedUids.map(uid => ensureSeasonalAchievementStateForPlayer(uid, occurredAtMs)));
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const eventRef = snapshot.ref;
+    const stateRefs = new Map(affectedUids.map(uid => [uid, seasonalAchievementStateRef(uid, cycle.seasonId)]));
+    const [eventSnap, ...reads] = await Promise.all([
+      transaction.get(eventRef),
+      ...affectedUids.flatMap(uid => [
+        transaction.get(stateRefs.get(uid)),
+        transaction.get(playerGlobalStatsRef(uid)),
+      ]),
+    ]);
+    if (!eventSnap.exists) return null;
+    const freshEvent = eventSnap.data() || {};
+    if (freshEvent.seasonalAchievementProcessedAtMs) return { replayed: true };
+    const stateSnapshots = new Map();
+    const statsSnapshots = new Map();
+    affectedUids.forEach((uid, index) => {
+      stateSnapshots.set(uid, reads[index * 2]);
+      statsSnapshots.set(uid, reads[index * 2 + 1]);
+    });
+    const nowMs = Date.now();
+    const newlyCompletedIds = [];
+    const attackerResult = applySeasonalAchievementEvent(
+      stateSnapshots.get(attackerUid)?.data() || {},
+      {
+        type,
+        occurredAtMs,
+        strongholdType: safeString(freshEvent.strongholdType, 32),
+        previousKingPlayerId: safeString(freshEvent.previousKingPlayerId, 128),
+        attackerPlayerId: attackerUid,
+      },
+      getSeasonalAchievementRewardCapacity(statsSnapshots.get(attackerUid)?.data() || {}),
+      nowMs
+    );
+    transaction.set(stateRefs.get(attackerUid), {
+      ...attackerResult.state,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    newlyCompletedIds.push(...attackerResult.newlyCompletedIds.map(id => `${attackerUid}:${id}`));
+
+    const previousReignStartedAtMs = Math.max(0, timestampToMs(freshEvent.previousReignStartedAtMs));
+    if (previousKingUid && previousKingUid !== attackerUid && previousReignStartedAtMs > 0) {
+      const heldSinceMs = Math.max(cycle.startsAtMs, previousReignStartedAtMs);
+      const heldMs = Math.max(0, occurredAtMs - heldSinceMs);
+      const previousResult = applySeasonalAchievementEvent(
+        stateSnapshots.get(previousKingUid)?.data() || {},
+        { type: "LONG_REIGN_PROGRESS", occurredAtMs, heldMs },
+        getSeasonalAchievementRewardCapacity(statsSnapshots.get(previousKingUid)?.data() || {}),
+        nowMs
+      );
+      transaction.set(stateRefs.get(previousKingUid), {
+        ...previousResult.state,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      newlyCompletedIds.push(...previousResult.newlyCompletedIds.map(id => `${previousKingUid}:${id}`));
+    }
+    transaction.set(eventRef, {
+      seasonalAchievementProcessedAtMs: nowMs,
+      appliedAchievementSeasonId: cycle.seasonId,
+      completedAchievementIds: newlyCompletedIds,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { replayed: false, seasonId: cycle.seasonId, newlyCompletedIds };
+  }, "processSeasonalAchievementRealmEvent");
+}
+
 function getConfiguredRewardCampSeeds() {
   return (Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : []).flatMap(map => (
     (Array.isArray(map?.camps) ? map.camps : []).map(camp => ({
@@ -8463,6 +8705,192 @@ function getConfiguredStrongholdSeeds() {
       regionId: normalizeRegionId(map.id || map.region?.id),
     }))
   )).filter(city => city.id && city.strongholdType && !isCrownCitadel(city));
+}
+
+const DAILY_MISSION_SAFE_ARMY_PERCENT = 15;
+const DAILY_MISSION_SAFE_LOSS_PERCENT = 10;
+const DAILY_MISSION_SAFE_PEER_LIMIT = 3;
+const DAILY_MISSION_SAFE_CITY_LIMIT = 12;
+
+function getDailyMissionSourceForTarget(regularEntries = [], target = {}, maximumTroops = 0, minimumTroops = 1) {
+  const troopCeiling = Math.max(1, Math.floor(safeNumber(maximumTroops, 1)));
+  const minimum = Math.max(1, Math.floor(safeNumber(minimumTroops, 1)));
+  const sources = (Array.isArray(regularEntries) ? regularEntries : [])
+    .filter(entry => entry?.city && getOwnerUid(entry.city))
+    .map(entry => ({
+      ...entry,
+      availableTroops: Math.max(0, Math.floor(safeNumber(entry.city.troops, 0))),
+    }))
+    .filter(entry => Math.min(entry.availableTroops, troopCeiling) >= minimum)
+    .sort((left, right) => right.availableTroops - left.availableTroops || left.city.id.localeCompare(right.city.id));
+  for (const entry of sources) {
+    try {
+      buildServerGeneratedArmyRoute(entry.city, target);
+      return {
+        city: entry.city,
+        troops: Math.min(entry.availableTroops, troopCeiling),
+      };
+    } catch (error) {
+      if (error?.code !== "failed-precondition") throw error;
+    }
+  }
+  return null;
+}
+
+function createDailyMissionSafeBattleTarget({
+  uid = "",
+  nowMs = Date.now(),
+  attackerProfile = {},
+  attackerKingPower = 0,
+  launchableTroops = 0,
+  qualifyingAttackTroops = 1,
+  regularEntries = [],
+  target = {},
+  targetType = "city",
+  defenderProfile = {},
+  defenderBonuses = {},
+  defenderKingPower = 1,
+} = {}) {
+  const totalTroops = Math.max(0, Math.floor(safeNumber(launchableTroops, 0)));
+  const maximumCommitment = Math.max(1, Math.floor(totalTroops * DAILY_MISSION_SAFE_ARMY_PERCENT / 100));
+  const source = getDailyMissionSourceForTarget(
+    regularEntries,
+    target,
+    maximumCommitment,
+    qualifyingAttackTroops
+  );
+  if (!source) return null;
+  const reinforcedTarget = createReinforcedCombatTarget(target, targetType);
+  const defensePackages = calculateDefenderArmyPackages({
+    target: reinforcedTarget,
+    targetType,
+    ownerProfile: defenderProfile,
+    ownerBonuses: defenderBonuses,
+    contributions: [],
+    siegeCombatVersion: targetType === "city" ? SIEGE_COMBAT_VERSION : 0,
+    defenseCombatVersion: targetType === "city" ? DEFENSE_COMBAT_VERSION : 0,
+    nowMs,
+  });
+  const attackProtection = targetType === "city"
+    ? createServerAttackProtectionSnapshot({
+      sourceTroops: Math.max(1, Math.floor(safeNumber(source.city.troops, source.troops))),
+      target: reinforcedTarget,
+      targetType,
+      requestedTroops: source.troops,
+      attackerKingPower,
+      defenderKingPower,
+      attackerUid: uid,
+      attackerProfile,
+      defenderProfile,
+      defenderBonuses,
+      defensePower: defensePackages.totalDefense,
+      assaultStage: "breach",
+    })
+    : null;
+  if (attackProtection) return null;
+  const result = calculateCombatResult(source.troops, reinforcedTarget, attackerProfile, defenderProfile, {
+    defenderBonuses,
+    defensePower: defensePackages.totalDefense,
+    siegeCombatVersion: targetType === "city" ? SIEGE_COMBAT_VERSION : 0,
+    targetType,
+    fortification: defensePackages.fortification,
+    garrisonDefensePower: defensePackages.totalGarrisonDefense,
+    nowMs,
+  });
+  const maximumLosses = Math.max(0, Math.floor(totalTroops * DAILY_MISSION_SAFE_LOSS_PERCENT / 100));
+  if (!result.success || result.attackerLosses > maximumLosses) return null;
+  return {
+    cityId: safeString(target.id, 96),
+    regionId: normalizeRegionId(target.regionId || target.startPool),
+    cityName: safeString(target.name || target.id || "Enemy City", 80),
+    sourceCityId: safeString(source.city.id, 96),
+    sourceRegionId: normalizeRegionId(source.city.regionId || source.city.startPool),
+    sourceCityName: safeString(source.city.name || source.city.id || "City", 80),
+    recommendedTroops: source.troops,
+    estimatedLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
+    evaluatedAtMs: nowMs,
+  };
+}
+
+function selectDailyMissionPeerCandidates(opponents = [], attackerKingPower = 0) {
+  const attackerPower = Math.max(1, Math.floor(safeNumber(attackerKingPower, 1)));
+  return (Array.isArray(opponents) ? opponents : [])
+    .filter(entry => Math.max(1, Math.floor(safeNumber(entry.kingPower, 1))) * ATTACK_PROTECTION_ASSAULT_MIN_RATIO > attackerPower)
+    .sort((left, right) => {
+      const leftDifference = Math.abs(Math.log(attackerPower / Math.max(1, safeNumber(left.kingPower, 1))));
+      const rightDifference = Math.abs(Math.log(attackerPower / Math.max(1, safeNumber(right.kingPower, 1))));
+      return leftDifference - rightDifference || safeString(left.uid, 128).localeCompare(safeString(right.uid, 128));
+    })
+    .slice(0, DAILY_MISSION_SAFE_PEER_LIMIT);
+}
+
+async function findDailyMissionSafePvpTargets(transaction, {
+  uid = "",
+  nowMs = Date.now(),
+  profile = {},
+  economy = null,
+  opponents = [],
+  regularEntries = [],
+  launchableTroops = 0,
+  qualifyingAttackTroops = 1,
+} = {}) {
+  const attackerKingPower = Math.max(0, Math.floor(safeNumber(economy?.globalStats?.kingPower, profile.kingPower)));
+  const peers = selectDailyMissionPeerCandidates(opponents, attackerKingPower);
+  if (!peers.length) return [];
+  const reads = peers.flatMap(peer => [
+    transaction.get(
+      db.collectionGroup("cities")
+        .where("ownerUid", "==", peer.uid)
+        .where("resetGeneration", "==", RESET_GENERATION)
+        .where("worldId", "==", ONLINE_WORLD_ID)
+        .limit(DAILY_MISSION_SAFE_CITY_LIMIT)
+    ),
+    transaction.get(db.doc(`players/${peer.uid}`)),
+    transaction.get(playerGlobalStatsRef(peer.uid)),
+  ]);
+  const snapshots = await Promise.all(reads);
+  const safeTargets = [];
+  peers.forEach((peer, peerIndex) => {
+    const citySnap = snapshots[peerIndex * 3];
+    const defenderProfileSnap = snapshots[peerIndex * 3 + 1];
+    const defenderStatsSnap = snapshots[peerIndex * 3 + 2];
+    if (!defenderProfileSnap?.exists) return;
+    const defenderProfile = defenderProfileSnap.data() || {};
+    const defenderStats = defenderStatsSnap?.exists ? defenderStatsSnap.data() || {} : {};
+    if (safeString(profile.clanId, 128)
+      && safeString(defenderProfile.clanId, 128) === safeString(profile.clanId, 128)) return;
+    citySnap.docs.forEach(cityDoc => {
+      if (safeTargets.length >= DAILY_MISSION_SAFE_CITY_LIMIT) return;
+      const rawCity = cityDoc.data() || {};
+      const regionId = getRegionIdFromCityDoc(cityDoc, rawCity);
+      const target = { id: cityDoc.id, ...rawCity, regionId };
+      if (!getServerWorldTargetIds(regionId).has(cityDoc.id)
+        || isStronghold(target)
+        || target.isMainCity
+        || isProtectedMainCity(target, uid, defenderProfile)
+        || isCityShielded(target, uid, nowMs)
+        || getAlliedReinforcementTroops(target) > 0) return;
+      const safeTarget = createDailyMissionSafeBattleTarget({
+        uid,
+        nowMs,
+        attackerProfile: profile,
+        attackerKingPower,
+        launchableTroops,
+        qualifyingAttackTroops,
+        regularEntries,
+        target,
+        targetType: "city",
+        defenderProfile,
+        defenderBonuses: defenderStats,
+        defenderKingPower: Math.max(1, Math.floor(safeNumber(
+          defenderStats.kingPower,
+          safeNumber(peer.kingPower, target.ownerKingPower)
+        ))),
+      });
+      if (safeTarget) safeTargets.push(safeTarget);
+    });
+  });
+  return safeTargets.slice(0, DAILY_MISSION_SAFE_CITY_LIMIT);
 }
 
 function getDailyMissionUpgradeBonuses(economy = null) {
@@ -8484,9 +8912,9 @@ function simulateDailyMissionUpgradeTargets(economy = null, remainingHours = 24)
   const currentGold = Math.max(0, Math.floor(safeNumber(economy?.gold, 0)));
   const bonuses = getDailyMissionUpgradeBonuses(economy);
   const definitions = {
-    easy: { effortHours: 4, totalCap: 3, singleCap: 1, uniqueCap: 1 },
-    medium: { effortHours: 8, totalCap: 6, singleCap: 2, uniqueCap: 2 },
-    hard: { effortHours: 12, totalCap: 10, singleCap: 3, uniqueCap: 3 },
+    easy: { effortHours: 1, totalCap: 1, singleCap: 1, uniqueCap: 1 },
+    medium: { effortHours: 2, totalCap: 2, singleCap: 1, uniqueCap: 2 },
+    hard: { effortHours: 4, totalCap: 3, singleCap: 2, uniqueCap: 3 },
   };
 
   return Object.fromEntries(Object.entries(definitions).map(([difficulty, definition]) => {
@@ -8549,11 +8977,16 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
   const regularEntries = (economy?.cityEntries || []).filter(entry => (
     entry?.city && getOwnerUid(entry.city) === uid && !isStronghold(entry.city)
   ));
-  const launchableTroops = (economy?.cityEntries || []).reduce((total, entry) => (
-    getOwnerUid(entry?.city) === uid
-      ? total + Math.max(0, Math.floor(safeNumber(entry.city.troops, 0)))
-      : total
-  ), 0);
+  const ownedLaunchEntries = (economy?.cityEntries || []).filter(entry => entry?.city && getOwnerUid(entry.city) === uid);
+  const launchableTroops = ownedLaunchEntries.reduce(
+    (total, entry) => total + Math.max(0, Math.floor(safeNumber(entry.city.troops, 0))),
+    0
+  );
+  const maxSourceTroops = ownedLaunchEntries.reduce(
+    (maximum, entry) => Math.max(maximum, Math.max(0, Math.floor(safeNumber(entry.city.troops, 0)))),
+    0
+  );
+  const qualifyingAttackTroops = Math.max(1, Math.ceil(launchableTroops * 0.05));
   const goldPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedGoldPerHour, 1)));
   const troopPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedTroopPerHour, 1)));
   const projectedCombatTroops = Math.max(
@@ -8581,6 +9014,17 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
   const clanSnap = clanId ? snapshots[readIndex++] : null;
   const memberRewardsSnap = clanId ? snapshots[readIndex++] : null;
   const deedClaimSnap = snapshots[readIndex++];
+  const campHolderUids = [...new Set(campSnaps
+    .map(snapshot => safeString(snapshot?.data()?.holderUid || snapshot?.data()?.ownerUid, 128))
+    .filter(Boolean))];
+  const campDefenderSnaps = await Promise.all(campHolderUids.flatMap(holderUid => [
+    transaction.get(db.doc(`players/${holderUid}`)),
+    transaction.get(playerGlobalStatsRef(holderUid)),
+  ]));
+  const campDefenders = new Map(campHolderUids.map((holderUid, index) => [holderUid, {
+    profile: campDefenderSnaps[index * 2]?.exists ? campDefenderSnaps[index * 2].data() || {} : {},
+    stats: campDefenderSnaps[index * 2 + 1]?.exists ? campDefenderSnaps[index * 2 + 1].data() || {} : {},
+  }]));
 
   const opponents = leaderboardSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
     .filter(entry => entry.uid !== uid)
@@ -8592,17 +9036,49 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     total + Math.max(0, Math.floor(safeNumber(entry.cityCount, 0)) - 1)
   ), 0);
 
-  const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * skillMultiplier(profile, "swordmastery");
-  const projectedAttackPower = Math.floor(projectedCombatTroops * attackPowerPerTroop);
   const feasibleCampTypes = [];
   campSeeds.forEach((seed, index) => {
-    const config = REWARD_CAMP_CONFIG[seed.campType];
     const data = campSnaps[index]?.exists ? campSnaps[index].data() || {} : {};
     const holderUid = safeString(data.holderUid || data.ownerUid, 128);
-    const defenders = Math.max(1, Math.floor(safeNumber(data.currentGarrison, config?.baseDefenders || 20_000)));
-    if (holderUid !== uid && projectedAttackPower > defenders * Math.max(1, safeNumber(config?.troopPower, 1))) {
-      feasibleCampTypes.push(seed.campType);
-    }
+    const holderClanId = safeString(data.ownerClanId || data.holderClanId, 128);
+    const defender = campDefenders.get(holderUid) || { profile: {}, stats: {} };
+    const currentHolderClanId = safeString(defender.profile.clanId || holderClanId, 128);
+    const target = getRewardCampCombatTarget({
+      id: seed.id,
+      ...seed,
+      ...data,
+      regionId: seed.regionId,
+    });
+    if (!target
+      || holderUid === uid
+      || clanId && currentHolderClanId === clanId
+      || getAlliedReinforcementTroops(target) > 0) return;
+    const safeTarget = createDailyMissionSafeBattleTarget({
+      uid,
+      nowMs,
+      attackerProfile: profile,
+      attackerKingPower: Math.max(0, Math.floor(safeNumber(economy?.globalStats?.kingPower, profile.kingPower))),
+      launchableTroops,
+      qualifyingAttackTroops,
+      regularEntries: ownedLaunchEntries,
+      target,
+      targetType: "camp",
+      defenderProfile: defender.profile,
+      defenderBonuses: defender.stats,
+      defenderKingPower: Math.max(1, Math.floor(safeNumber(defender.stats.kingPower, defender.profile.kingPower || 1))),
+    });
+    if (safeTarget) feasibleCampTypes.push(seed.campType);
+  });
+
+  const safePvpTargets = await findDailyMissionSafePvpTargets(transaction, {
+    uid,
+    nowMs,
+    profile,
+    economy,
+    opponents,
+    regularEntries: ownedLaunchEntries,
+    launchableTroops,
+    qualifyingAttackTroops,
   });
 
   const strongholdEligible = cycle.remainingHours >= 0.5 && strongholdSeeds.some((seed, index) => {
@@ -8637,11 +9113,13 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     goldPerHour,
     troopPerHour,
     launchableTroops,
-    qualifyingAttackTroops: Math.max(1, Math.ceil(launchableTroops * 0.05)),
+    maxSourceTroops,
+    qualifyingAttackTroops,
     projectedCombatTroops,
     kingPower: Math.max(0, Math.floor(safeNumber(economy?.globalStats?.kingPower, profile.kingPower))),
     eligibleOpponentCount: opponents.length,
     eligibleEnemyCityCount,
+    safePvpTargets,
     maxCampCaptures: feasibleCampTypes.length,
     feasibleCampTypes,
     deedCampEligible,
@@ -8670,12 +9148,29 @@ async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
       transaction.get(stateRef),
       transaction.get(profileRef),
     ]);
-    if (stateSnap.exists) return dailyMissionStateForClient(stateSnap.data() || {}, nowMs);
     if (!profileSnap.exists) {
       throw new HttpsError("failed-precondition", "Claim a starting city before opening Daily Missions.");
     }
     const profile = profileSnap.data() || {};
     assertCurrentPlayerProfile(profile);
+    if (stateSnap.exists) {
+      const existingState = stateSnap.data() || {};
+      if (Math.max(0, Math.floor(safeNumber(existingState.schemaVersion, 0))) >= DAILY_MISSION_SCHEMA_VERSION) {
+        return dailyMissionStateForClient(existingState, nowMs);
+      }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const capacity = await buildDailyMissionCapacity(transaction, uid, nowMs, economy);
+      const migratedState = migrateDailyMissionState(existingState, capacity, nowMs);
+      transaction.set(stateRef, {
+        ...migratedState,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writePreparedEconomy(transaction, economy, {}, [], {
+        nowMs,
+        suppressDailyMissionProduction: true,
+      });
+      return dailyMissionStateForClient(migratedState, nowMs);
+    }
     const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
     const capacity = await buildDailyMissionCapacity(transaction, uid, nowMs, economy);
     let state;
@@ -8711,16 +9206,23 @@ async function processDailyMissionEvent(event) {
   if (!raw?.uid || raw.processedAtMs) return null;
   if (safeString(raw.worldId, 128) !== ONLINE_WORLD_ID || safeString(raw.resetGeneration, 128) !== RESET_GENERATION) return null;
   const occurredAtMs = Math.max(0, Math.floor(safeNumber(raw.occurredAtMs, Date.now())));
-  await ensureDailyMissionStateForPlayer(raw.uid, occurredAtMs);
+  await Promise.all([
+    ensureDailyMissionStateForPlayer(raw.uid, occurredAtMs),
+    ensureSeasonalAchievementStateForPlayer(raw.uid, occurredAtMs),
+  ]);
   const cycle = getDailyMissionCycle(occurredAtMs, RESET_GENERATION);
   const stateRef = dailyMissionStateRef(raw.uid, cycle.cycleKey);
+  const achievementCycle = getSeasonalAchievementCycle(occurredAtMs, RESET_GENERATION);
+  const achievementStateRef = seasonalAchievementStateRef(raw.uid, achievementCycle.seasonId);
   const eventRef = snapshot?.ref || dailyMissionEventRef(raw.uid, raw.eventId || raw.id);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [freshEventSnap, stateSnap] = await Promise.all([
+    const [freshEventSnap, stateSnap, achievementStateSnap, statsSnap] = await Promise.all([
       transaction.get(eventRef),
       transaction.get(stateRef),
+      transaction.get(achievementStateRef),
+      transaction.get(playerGlobalStatsRef(raw.uid)),
     ]);
-    if (!freshEventSnap.exists || !stateSnap.exists) return null;
+    if (!freshEventSnap.exists || !stateSnap.exists || !achievementStateSnap.exists) return null;
     const freshEvent = freshEventSnap.data() || {};
     if (freshEvent.processedAtMs) return { replayed: true };
     const nowMs = Date.now();
@@ -8752,6 +9254,45 @@ async function processDailyMissionEvent(event) {
       };
     }
     const nextState = applyDailyMissionEvent(currentState, eventForProgress, nowMs);
+    const priorCompletedIds = new Set((Array.isArray(currentState.missions) ? currentState.missions : [])
+      .filter(mission => mission?.completedAtMs || mission?.claimedAtMs)
+      .map(mission => safeString(mission.id, 96)));
+    const newlyCompletedMissions = (Array.isArray(nextState.missions) ? nextState.missions : [])
+      .filter(mission => (mission?.completedAtMs || mission?.claimedAtMs) && !priorCompletedIds.has(safeString(mission.id, 96)));
+    let achievementState = achievementStateSnap.data() || {};
+    const newlyCompletedAchievementIds = [];
+    if (newlyCompletedMissions.length) {
+      const completionResult = applySeasonalAchievementEvent(
+        achievementState,
+        {
+          type: "DAILY_MISSIONS_COMPLETED",
+          occurredAtMs,
+          count: newlyCompletedMissions.length,
+        },
+        getSeasonalAchievementRewardCapacity(statsSnap.data() || {}),
+        nowMs
+      );
+      achievementState = completionResult.state;
+      newlyCompletedAchievementIds.push(...completionResult.newlyCompletedIds);
+      if (Math.max(0, Math.floor(safeNumber(currentState.completedCount, 0))) < 3 && nextState.completedCount >= 3) {
+        const allCompletedResult = applySeasonalAchievementEvent(
+          achievementState,
+          {
+            type: "DAILY_ALL_COMPLETED",
+            occurredAtMs,
+            dateKey: cycle.utcDate,
+          },
+          getSeasonalAchievementRewardCapacity(statsSnap.data() || {}),
+          nowMs
+        );
+        achievementState = allCompletedResult.state;
+        newlyCompletedAchievementIds.push(...allCompletedResult.newlyCompletedIds);
+      }
+      transaction.set(achievementStateRef, {
+        ...achievementState,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     transaction.set(stateRef, {
       ...nextState,
       updatedAt: FieldValue.serverTimestamp(),
@@ -8759,6 +9300,8 @@ async function processDailyMissionEvent(event) {
     transaction.set(eventRef, {
       processedAtMs: nowMs,
       appliedCycleKey: cycle.cycleKey,
+      dailyAchievementCompletedMissionIds: newlyCompletedMissions.map(mission => safeString(mission.id, 96)),
+      completedDailyAchievementIds: newlyCompletedAchievementIds,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     return { replayed: false, cycleKey: cycle.cycleKey };
@@ -8780,20 +9323,17 @@ function getCityRelinquishPolicy(lastCityRelinquishedAtMs = 0, nowMs = Date.now(
 }
 
 function getDailyLoginRewardMonthInfo(nowMs = Date.now()) {
-  const serverTimeMs = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
-  const date = new Date(serverTimeMs);
+  const month = getUtcMonthCycle(nowMs);
+  const date = new Date(month.startsAtMs);
   const year = date.getUTCFullYear();
   const monthIndex = date.getUTCMonth();
   const monthLengthDays = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-  const monthKey = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-  const monthStartsAtMs = Date.UTC(year, monthIndex, 1);
-  const monthEndsAtMs = Date.UTC(year, monthIndex + 1, 1);
   return {
-    monthKey,
+    monthKey: month.monthKey,
     monthLengthDays,
-    monthStartsAtMs,
-    monthEndsAtMs,
-    daysRemaining: Math.max(0, Math.ceil((monthEndsAtMs - serverTimeMs) / (24 * 60 * 60 * 1000))),
+    monthStartsAtMs: month.startsAtMs,
+    monthEndsAtMs: month.endsAtMs,
+    daysRemaining: month.daysRemaining,
     track: DAILY_LOGIN_REWARD_TRACKS[String(monthLengthDays)],
   };
 }
@@ -11769,6 +12309,7 @@ exports.getRealmInfo = timedCallable(
       realmActivityVersion: REALM_ACTIVITY_VERSION,
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
       dailyMissionVersion: DAILY_MISSION_VERSION,
+      seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
@@ -11779,6 +12320,7 @@ exports.getRealmInfo = timedCallable(
         realmActivityVersion: REALM_ACTIVITY_VERSION,
         dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
         dailyMissionVersion: DAILY_MISSION_VERSION,
+        seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
         releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       },
       appCheckEnforced: false,
@@ -18056,6 +18598,144 @@ exports.previewArmyRoute = timedCallable(
   }
 );
 
+exports.getSeasonalAchievementStatus = timedCallable(
+  "getSeasonalAchievementStatus",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await applyLongReignProgressForPlayer(uid, nowMs);
+    const stateSnap = await seasonalAchievementStateRef(uid, cycle.seasonId).get();
+    if (!stateSnap.exists) throw new HttpsError("unavailable", "Seasonal Achievements are being prepared.");
+    return {
+      ok: true,
+      serverTimeMs: nowMs,
+      seasonalAchievementState: seasonalAchievementStateForClient(stateSnap.data() || {}, nowMs),
+    };
+  }
+);
+
+exports.claimSeasonalAchievementReward = timedCallable(
+  "claimSeasonalAchievementReward",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
+    const requestedSeasonId = safeString(request.data?.seasonId, 180);
+    const achievementId = safeString(request.data?.achievementId, 96);
+    const requestId = safeString(request.data?.requestId, 96);
+    if (!achievementId) throw new HttpsError("invalid-argument", "Choose a completed Seasonal Achievement.");
+    if (requestedSeasonId && requestedSeasonId !== cycle.seasonId) {
+      throw new HttpsError("failed-precondition", "That Seasonal Achievement reward expired at the UTC month rollover.");
+    }
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await applyLongReignProgressForPlayer(uid, nowMs);
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
+      const profileRef = db.doc(`players/${uid}`);
+      const [stateSnap, profileSnap] = await Promise.all([
+        transaction.get(stateRef),
+        transaction.get(profileRef),
+      ]);
+      if (!stateSnap.exists || !profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Seasonal Achievements are not ready.");
+      }
+      const state = stateSnap.data() || {};
+      if (safeString(state.seasonId, 180) !== cycle.seasonId || nowMs >= Math.max(0, timestampToMs(state.seasonEndsAtMs))) {
+        throw new HttpsError("failed-precondition", "That Seasonal Achievement reward has expired.");
+      }
+      const achievement = (Array.isArray(state.achievements) ? state.achievements : [])
+        .find(entry => entry?.id === achievementId);
+      if (!achievement) throw new HttpsError("not-found", "That Seasonal Achievement is unavailable.");
+      if (achievement.claimedAtMs) {
+        return {
+          ok: true,
+          claimed: true,
+          replayed: true,
+          receipt: achievement.claimReceipt || null,
+          seasonalAchievementState: seasonalAchievementStateForClient(state, nowMs),
+        };
+      }
+      if (!achievement.completedAtMs || Math.max(0, safeNumber(achievement.progress, 0)) < Math.max(1, safeNumber(achievement.target, 1))) {
+        throw new HttpsError("failed-precondition", "Complete that Seasonal Achievement before claiming its reward.");
+      }
+      const lockedReward = achievement.lockedReward && typeof achievement.lockedReward === "object"
+        ? achievement.lockedReward
+        : null;
+      if (!lockedReward) throw new HttpsError("internal", "That Seasonal Achievement reward is not locked.");
+      const profile = profileSnap.data() || {};
+      assertCurrentPlayerProfile(profile);
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const rewardType = safeString(lockedReward.type, 16);
+      const lockedAmount = Math.max(1, Math.floor(safeNumber(lockedReward.lockedAmount, 1)));
+      let gold = economy.gold;
+      let goldFloat = economy.goldFloat;
+      let shopItems = { ...economy.shopItems };
+      let troopCredit = null;
+      if (rewardType === "gold") {
+        goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + lockedAmount;
+        gold = Math.max(0, Math.floor(goldFloat));
+      } else if (rewardType === "troops") {
+        troopCredit = creditLevelUpTroopsToMainCity(economy, economy.profileAfter, lockedAmount, nowMs);
+        if (!troopCredit) throw new HttpsError("failed-precondition", "Verify your Main City before receiving the troop reward.");
+      } else if (rewardType === "item") {
+        const itemId = safeString(lockedReward.itemId, 64);
+        if (!SHOP_ITEMS[itemId]) throw new HttpsError("internal", "That Seasonal Achievement reward is unavailable.");
+        shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0))) + lockedAmount;
+      } else {
+        throw new HttpsError("internal", "That Seasonal Achievement reward is unavailable.");
+      }
+      const receipt = {
+        requestId,
+        seasonId: cycle.seasonId,
+        achievementId,
+        claimedAtMs: nowMs,
+        rewardType,
+        lockedAmount,
+        productionHours: Math.max(0, safeNumber(lockedReward.productionHours, 0)),
+        itemId: rewardType === "item" ? safeString(lockedReward.itemId, 64) : "",
+        targetCityId: troopCredit?.cityId || "",
+        targetCityName: troopCredit?.cityName || "",
+        targetRegionId: troopCredit?.regionId || "",
+      };
+      const achievements = state.achievements.map(entry => entry?.id === achievementId
+        ? {
+          ...entry,
+          claimedAtMs: nowMs,
+          claimRequestId: requestId,
+          claimReceipt: receipt,
+        }
+        : entry);
+      const nextState = {
+        ...state,
+        achievements,
+        completedCount: achievements.filter(entry => entry?.completedAtMs || entry?.claimedAtMs).length,
+        claimedCount: achievements.filter(entry => entry?.claimedAtMs).length,
+        updatedAtMs: nowMs,
+      };
+      transaction.set(stateRef, {
+        ...nextState,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writePreparedEconomy(transaction, economy, { gold, goldFloat, shopItems }, [], { nowMs });
+      return createEconomyResponse(economy, {
+        gold,
+        goldFloat,
+        shopItems,
+        claimed: true,
+        replayed: false,
+        receipt,
+        seasonalAchievementState: seasonalAchievementStateForClient(nextState, nowMs),
+        targetCityId: troopCredit?.cityId || "",
+        targetCityName: troopCredit?.cityName || "",
+      });
+    }, "claimSeasonalAchievementReward");
+  }
+);
+
 exports.getDailyMissionStatus = timedCallable(
   "getDailyMissionStatus",
   { region: "us-central1", maxInstances: 30, invoker: "public" },
@@ -18299,6 +18979,58 @@ exports.applyDailyMissionEvent = onDocumentCreated({
     });
     throw error;
   }
+});
+
+exports.applySeasonalAchievementEvent = onDocumentCreated({
+  region: "us-central1",
+  document: "dailyMissionEvents/{eventId}",
+  maxInstances: 30,
+  retry: true,
+}, async event => {
+  try {
+    return await processSeasonalAchievementActionEvent(event);
+  } catch (error) {
+    console.error("Seasonal Achievement action event processing failed", {
+      eventId: event?.params?.eventId || "",
+      error: error?.message || error,
+    });
+    throw error;
+  }
+});
+
+exports.applySeasonalRealmAchievementEvent = onDocumentCreated({
+  region: "us-central1",
+  document: "realmEvents/{resetGeneration}/activity/{eventId}",
+  maxInstances: 20,
+  retry: true,
+}, async event => {
+  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+  try {
+    return await processSeasonalAchievementRealmEvent(event);
+  } catch (error) {
+    console.error("Seasonal Achievement Realm event processing failed", {
+      eventId: event?.params?.eventId || "",
+      error: error?.message || error,
+    });
+    throw error;
+  }
+});
+
+exports.evaluateSeasonalAchievementReigns = onSchedule({
+  region: "us-central1",
+  schedule: "every 5 minutes",
+  timeZone: "UTC",
+  timeoutSeconds: 120,
+  maxInstances: 1,
+}, async () => {
+  const currentHolders = await db.collection(`crownCitadelReigns/${RESET_GENERATION}/entries`)
+    .where("isCurrentHolder", "==", true)
+    .limit(5)
+    .get();
+  const results = await Promise.allSettled(currentHolders.docs.map(doc => applyLongReignProgressForPlayer(doc.id, Date.now())));
+  const failed = results.filter(result => result.status === "rejected");
+  if (failed.length) throw failed[0].reason;
+  return { evaluated: results.length };
 });
 
 exports.cleanupExpiredDailyMissions = onSchedule({

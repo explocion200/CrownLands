@@ -276,6 +276,7 @@ const DAILY_LOGIN_REWARD_TRACKS = Object.freeze(Object.fromEntries(
 ));
 const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const DAILY_MISSION_VERSION = 1;
+const SEASONAL_ACHIEVEMENT_VERSION = 1;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
   [WAR_DRUMS_ITEM_ID]: economyNumber("shopItems.war_drums_30m.dailyPurchaseLimit", 4),
@@ -2884,6 +2885,17 @@ let dailyMissionCountdownTimer = 0;
 let dailyMissionClockOffsetMs = 0;
 let dailyMissionError = "";
 const dailyMissionActionsInFlight = new Set();
+let seasonalAchievementState = null;
+let seasonalAchievementStatusLoading = false;
+let seasonalAchievementStatusPromise = null;
+let seasonalAchievementUnsubscribe = null;
+let seasonalAchievementSubscribedSeasonId = "";
+let seasonalAchievementUtcTimer = 0;
+let seasonalAchievementClockOffsetMs = 0;
+let seasonalAchievementError = "";
+let seasonalAchievementHydrated = false;
+let activeSeasonalAchievementFilter = "all";
+const seasonalAchievementActionsInFlight = new Set();
 let activeDailyRewardModalTab = "rewards";
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
@@ -3089,6 +3101,10 @@ const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
 const profileGoldProductionStat = document.getElementById("profileGoldProductionStat");
 const profileTroopProductionStat = document.getElementById("profileTroopProductionStat");
+const profileAchievementCompleted = document.getElementById("profileAchievementCompleted");
+const profileAchievementClaimed = document.getElementById("profileAchievementClaimed");
+const profileAchievementRemaining = document.getElementById("profileAchievementRemaining");
+const profileViewAchievementsBtn = document.getElementById("profileViewAchievementsBtn");
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
@@ -10994,6 +11010,16 @@ function supportsDailyMissions() {
   );
 }
 
+function supportsSeasonalAchievements() {
+  const api = getOnlineApi();
+  return Boolean(
+    isOnlineWorldActive()
+      && getRealmCapabilityVersion("seasonalAchievementVersion") >= SEASONAL_ACHIEVEMENT_VERSION
+      && api?.getSeasonalAchievementStatus
+      && api?.claimSeasonalAchievementReward
+  );
+}
+
 function canUseBulkArmyOrders() {
   return !isOnlineWorldActive() || supportsBulkArmyOrders();
 }
@@ -14742,6 +14768,7 @@ function retireActiveOnlineIslandSubscription() {
 function disconnectOnlineWorld() {
   cancelLoginPresentationSequence();
   stopDailyMissionLifecycle({ clear: true });
+  stopSeasonalAchievementLifecycle({ clear: true });
   retireActiveOnlineIslandSubscription();
   stopClanRealtimeSubscriptions({ clear: true });
   clearOnlineArmyWatchers();
@@ -17475,6 +17502,7 @@ function advanceLoginPresentationSequence(sequence = loginPresentationSequence) 
 
 function startLoginPresentationDailyRefresh(generation = loginPresentationGeneration) {
   void refreshDailyMissionStatus({ silent: true });
+  void refreshSeasonalAchievementStatus({ silent: true });
   Promise.resolve(refreshDailyLoginRewardStatus({ silent: true }))
     .then(status => resolveLoginPresentationDailyPhase(generation, status))
     .catch(error => {
@@ -24345,6 +24373,25 @@ function renderProfileScreen() {
       "/h"
     );
   }
+  if (profileAchievementCompleted) {
+    profileAchievementCompleted.textContent = `${seasonalAchievementState?.completedCount || 0} / 40`;
+  }
+  if (profileAchievementClaimed) {
+    profileAchievementClaimed.textContent = `${seasonalAchievementState?.claimedCount || 0} / 40`;
+  }
+  if (profileAchievementRemaining) {
+    profileAchievementRemaining.textContent = seasonalAchievementState?.seasonEndsAtMs
+      ? formatSeasonRemaining()
+      : supportsSeasonalAchievements() ? "Loading…" : "Unavailable";
+  }
+  if (profileViewAchievementsBtn) {
+    const claimable = getSeasonalAchievementClaimableCount();
+    profileViewAchievementsBtn.disabled = !supportsSeasonalAchievements();
+    profileViewAchievementsBtn.classList.toggle("has-alert", claimable > 0);
+    profileViewAchievementsBtn.textContent = claimable > 0
+      ? `View Achievements · ${claimable} Ready`
+      : "View Achievements";
+  }
   applyFlagToElement(profileKingdomFlag, state.flag);
   renderProfileClanAffiliation();
   updatePushAlertsUi();
@@ -29974,6 +30021,18 @@ function normalizeDailyMissionReward(raw = null) {
   };
 }
 
+function normalizeMissionTarget(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const cityId = String(raw.cityId || "").slice(0, 96), regionId = normalizeRegionId(raw.regionId || "");
+  return cityId && regionId ? {
+    cityId, regionId,
+    cityName: raw.cityName || "Enemy City",
+    sourceCityName: raw.sourceCityName || "",
+    recommendedTroops: Math.max(1, +raw.recommendedTroops || 1),
+    estimatedLosses: Math.max(0, +raw.estimatedLosses || 0),
+  } : null;
+}
+
 function normalizeDailyMission(raw = null, slot = 0) {
   const mission = raw && typeof raw === "object" ? raw : {};
   const target = Math.max(1, Math.floor(Number(mission.target) || 1));
@@ -29994,6 +30053,7 @@ function normalizeDailyMission(raw = null, slot = 0) {
     completedAtMs: normalizeTimestampMs(mission.completedAtMs),
     claimedAtMs: normalizeTimestampMs(mission.claimedAtMs),
     reward: normalizeDailyMissionReward(mission.reward),
+    recommendedTarget: normalizeMissionTarget(mission.recommendedTarget),
   };
 }
 
@@ -30069,6 +30129,7 @@ function subscribeDailyMissionCycle(cycleKey = dailyMissionState?.cycleKey) {
       dailyMissionState = normalized;
       dailyMissionError = "";
       renderDailyMissions();
+      updateDailyLoginRewardHudState();
     },
     onError: error => {
       console.warn("Daily Mission subscription failed", error);
@@ -30114,6 +30175,7 @@ function applyDailyMissionStatus(raw = null, serverTimeMs = Date.now()) {
   scheduleDailyMissionUtcRefresh();
   startDailyMissionCountdown();
   renderDailyMissions();
+  updateDailyLoginRewardHudState();
   return normalized;
 }
 
@@ -30243,14 +30305,21 @@ function showDailyMissionDetails(missionId = "") {
   const mission = getDailyMissionById(missionId);
   if (!mission) return;
   const complete = mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target;
-  openDailyMissionModal(mission.title, `
+  const recommendation = mission.recommendedTarget;
+  const recommendationHtml = recommendation ? `<section class="daily-mission-recommendation"><span>Low-risk target</span><strong>${escapeHtml(recommendation.cityName)}</strong>
+    <small>${escapeHtml(getRegionLabel(recommendation.regionId))}${recommendation.sourceCityName ? ` · From ${escapeHtml(recommendation.sourceCityName)}` : ""} · ≤${formatNumber(recommendation.recommendedTroops)} troops · ~${formatNumber(recommendation.estimatedLosses)} losses</small><button class="profile-primary-btn" type=button>View on Map</button><p>Recheck forecast before marching.</p></section>` : "";
+  if (!openDailyMissionModal(mission.title, `
     <section class="daily-mission-detail">
       <span class="daily-mission-detail-icon" aria-hidden="true">${escapeHtml(DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner)}</span>
       <div><span>${escapeHtml(mission.difficulty)} mission</span><h3>${escapeHtml(mission.description)}</h3></div>
       <div class="daily-mission-detail-stat"><span>Progress</span><strong>${formatNumber(mission.progress)} / ${formatNumber(mission.target)}</strong></div>
       <div class="daily-mission-detail-stat"><span>Reward</span><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
+      ${recommendationHtml}
       <p>${complete ? mission.claimedAtMs ? "Reward collected. A new mission arrives at 00:00 UTC." : "Mission complete. Return to the Quests tab to claim the reward." : "This target and reward are locked until the next 00:00 UTC reset."}</p>
-    </section>`);
+    </section>`)) return;
+  modalBody.querySelector(".daily-mission-recommendation button")?.addEventListener("click", () => {
+    void focusBattleReportTarget(recommendation.cityId, recommendation.regionId);
+  });
 }
 
 function showDailyMissionRerollConfirmation(missionId = "") {
@@ -30550,22 +30619,30 @@ function renderDailyLoginRewardButton() {
   if (!dailyLoginRewardBtn) return;
   const active = Boolean(state && isOnlineWorldActive() && getOnlineApi()?.isSignedIn?.());
   const status = dailyLoginRewardStatus;
-  const eligible = Boolean(active && status?.eligible);
-  dailyLoginRewardBtn.disabled = !active || dailyLoginRewardStatusLoading;
+  const alerts = getCollectibleRewardAlertSummary();
+  const eligible = Boolean(active && alerts.total > 0);
+  dailyLoginRewardBtn.disabled = !active;
   dailyLoginRewardBtn.classList.toggle("is-claimable", eligible);
   if (dailyLoginRewardBadge) dailyLoginRewardBadge.hidden = !eligible;
+  const alertLabels = [
+    alerts.rewards ? `${alerts.rewards} daily login` : "",
+    alerts.quests ? `${alerts.quests} quest` : "",
+    alerts.achievements ? `${alerts.achievements} achievement` : "",
+  ].filter(Boolean);
   const label = !active
     ? "Daily rewards require an online kingdom"
-    : dailyLoginRewardStatusLoading
-      ? "Loading daily rewards"
-      : status
-        ? eligible
-          ? `Claim ${status.pendingCount} daily reward${status.pendingCount === 1 ? "" : "s"}, next is ${status.monthKey} day ${status.nextDay}`
-          : status.nextDay > status.monthLengthDays
-            ? `${status.monthKey} daily reward track complete`
-            : `Daily attendance recorded, next reward is ${status.monthKey} day ${status.nextDay}`
-        : "Open daily rewards";
+    : eligible
+      ? `Rewards ready to collect: ${alertLabels.join(", ")}`
+      : dailyLoginRewardStatusLoading || dailyMissionStatusLoading || seasonalAchievementStatusLoading
+        ? "Loading rewards"
+        : status?.nextDay > status?.monthLengthDays
+          ? `${status.monthKey} daily reward track complete; open quests and achievements`
+          : "Open daily rewards, quests, and achievements";
   dailyLoginRewardBtn.setAttribute("aria-label", label);
+}
+
+function updateDailyLoginRewardHudState() {
+  renderDailyLoginRewardButton();
 }
 
 function scheduleDailyLoginRewardUtcRefresh() {
@@ -30730,7 +30807,397 @@ function getDailyLoginRewardPresentation(reward = {}) {
   };
 }
 
+const SEASONAL_ACHIEVEMENT_ICONS = Object.freeze({
+  castle: "♜",
+  banner: "⚑",
+  crown: "♛",
+  swords: "⚔",
+  helmet: "♞",
+  march: "➜",
+  camp: "⌂",
+  hammer: "⚒",
+  tower: "♜",
+  city: "♜",
+  stronghold: "♜",
+  siege: "⚔",
+  gift: "✦",
+  scroll: "▤",
+  seal: "◆",
+});
+
+const SEASONAL_ACHIEVEMENT_FILTERS = Object.freeze([
+  ["all", "All"],
+  ["conquest", "Conquest"],
+  ["combat", "Combat"],
+  ["camps", "Camps"],
+  ["growth", "Growth"],
+  ["strongholds", "Strongholds"],
+  ["crown", "Crown"],
+  ["clan", "Clan"],
+  ["daily", "Daily"],
+]);
+
+function normalizeSeasonalAchievementReward(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const type = ["gold", "troops", "item"].includes(String(raw.type || "")) ? String(raw.type) : "gold";
+  return {
+    type,
+    lockedAmount: Math.max(0, Math.floor(Number(raw.lockedAmount) || 0)),
+    productionHours: Math.max(0, Number(raw.productionHours) || 0),
+    itemId: type === "item" ? String(raw.itemId || "").slice(0, 64) : "",
+  };
+}
+
+function normalizeSeasonalAchievement(raw = null, order = 0) {
+  const entry = raw && typeof raw === "object" ? raw : {};
+  const target = Math.max(1, Number(entry.target) || 1);
+  const progress = Math.min(target, Math.max(0, Number(entry.progress) || 0));
+  return {
+    id: String(entry.id || `achievement-${order}`).slice(0, 96),
+    order: Math.max(0, Math.floor(Number(entry.order) || order)),
+    category: String(entry.category || "conquest").slice(0, 32),
+    categoryLabel: String(entry.categoryLabel || "Achievements").slice(0, 40),
+    difficulty: ["easy", "medium", "hard", "very_hard", "prestige"].includes(String(entry.difficulty || ""))
+      ? String(entry.difficulty)
+      : "easy",
+    title: String(entry.title || "Seasonal Achievement").slice(0, 80),
+    description: String(entry.description || "Complete the achievement").slice(0, 180),
+    metric: String(entry.metric || "").slice(0, 48),
+    icon: String(entry.icon || "seal").slice(0, 32),
+    target,
+    progress,
+    completedAtMs: normalizeTimestampMs(entry.completedAtMs),
+    claimedAtMs: normalizeTimestampMs(entry.claimedAtMs),
+    rewardSpec: normalizeSeasonalAchievementReward(entry.rewardSpec) || { type: "gold", lockedAmount: 0, productionHours: 0.5, itemId: "" },
+    lockedReward: normalizeSeasonalAchievementReward(entry.lockedReward),
+  };
+}
+
+function normalizeSeasonalAchievementState(raw = null, fallbackServerTimeMs = Date.now()) {
+  if (!raw || typeof raw !== "object") return null;
+  const achievements = (Array.isArray(raw.achievements) ? raw.achievements : [])
+    .slice(0, 40)
+    .map((entry, index) => normalizeSeasonalAchievement(entry, index))
+    .sort((left, right) => left.order - right.order);
+  const serverTimeMs = Math.max(0, normalizeTimestampMs(raw.serverTimeMs) || Math.floor(Number(fallbackServerTimeMs) || Date.now()));
+  return {
+    schemaVersion: Math.max(0, Math.floor(Number(raw.schemaVersion) || 0)),
+    achievementVersion: Math.max(0, Math.floor(Number(raw.achievementVersion) || 0)),
+    definitionVersion: Math.max(0, Math.floor(Number(raw.definitionVersion) || 0)),
+    seasonId: String(raw.seasonId || raw.id || "").slice(0, 180),
+    monthKey: String(raw.monthKey || "").slice(0, 7),
+    seasonStartsAtMs: normalizeTimestampMs(raw.seasonStartsAtMs),
+    seasonEndsAtMs: normalizeTimestampMs(raw.seasonEndsAtMs),
+    serverTimeMs,
+    completedCount: achievements.filter(entry => entry.completedAtMs || entry.claimedAtMs).length,
+    claimedCount: achievements.filter(entry => entry.claimedAtMs).length,
+    claimableCount: achievements.filter(entry => entry.completedAtMs && !entry.claimedAtMs).length,
+    achievements,
+  };
+}
+
+function getSeasonalAchievementNowMs() {
+  return Date.now() + seasonalAchievementClockOffsetMs;
+}
+
+function formatSeasonRemaining(endsAtMs = seasonalAchievementState?.seasonEndsAtMs) {
+  const remainingMs = Math.max(0, (Number(endsAtMs) || 0) - getSeasonalAchievementNowMs());
+  if (!remainingMs) return "Season ending";
+  const days = Math.floor(remainingMs / 86_400_000);
+  const hours = Math.max(0, Math.ceil((remainingMs % 86_400_000) / 3_600_000));
+  return days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+}
+
+function formatSeasonalAchievementReward(reward = null) {
+  if (!reward) return "Reward locks on completion";
+  if (reward.type === "item") return getShopItemById(reward.itemId)?.label || "Royal Item";
+  const hours = Math.max(0, Number(reward.productionHours) || 0);
+  const hoursLabel = hours ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h ` : "";
+  const kind = reward.type === "troops" ? "Troop Production" : "Gold Production";
+  const amount = Math.max(0, Math.floor(Number(reward.lockedAmount) || 0));
+  return `${hoursLabel}${kind}${amount ? ` · ${formatNumber(amount)}` : ""}`;
+}
+
+function getDailyLoginClaimableCount() {
+  return Math.max(0, Math.floor(Number(dailyLoginRewardStatus?.pendingCount) || 0));
+}
+
+function getDailyMissionClaimableCount() {
+  return (Array.isArray(dailyMissionState?.missions) ? dailyMissionState.missions : [])
+    .filter(mission => mission?.completedAtMs && !mission?.claimedAtMs).length;
+}
+
+function getSeasonalAchievementClaimableCount() {
+  return Math.max(0, Math.floor(Number(seasonalAchievementState?.claimableCount) || 0));
+}
+
+function getCollectibleRewardAlertSummary() {
+  const rewards = getDailyLoginClaimableCount();
+  const quests = getDailyMissionClaimableCount();
+  const achievements = getSeasonalAchievementClaimableCount();
+  return { rewards, quests, achievements, total: rewards + quests + achievements };
+}
+
+function clearSeasonalAchievementSubscription() {
+  if (typeof seasonalAchievementUnsubscribe === "function") seasonalAchievementUnsubscribe();
+  seasonalAchievementUnsubscribe = null;
+  seasonalAchievementSubscribedSeasonId = "";
+}
+
+function stopSeasonalAchievementLifecycle({ clear = false } = {}) {
+  clearSeasonalAchievementSubscription();
+  if (seasonalAchievementUtcTimer) window.clearTimeout(seasonalAchievementUtcTimer);
+  seasonalAchievementUtcTimer = 0;
+  seasonalAchievementStatusPromise = null;
+  seasonalAchievementStatusLoading = false;
+  seasonalAchievementActionsInFlight.clear();
+  if (clear) {
+    seasonalAchievementState = null;
+    seasonalAchievementClockOffsetMs = 0;
+    seasonalAchievementError = "";
+    seasonalAchievementHydrated = false;
+    activeSeasonalAchievementFilter = "all";
+  }
+  updateDailyLoginRewardHudState();
+}
+
+function announceSeasonalAchievementCompletions(previous = null, next = null) {
+  if (!seasonalAchievementHydrated || !previous || !next || previous.seasonId !== next.seasonId) return;
+  const priorCompleted = new Set(previous.achievements.filter(entry => entry.completedAtMs || entry.claimedAtMs).map(entry => entry.id));
+  const newlyCompleted = next.achievements.filter(entry => (entry.completedAtMs || entry.claimedAtMs) && !priorCompleted.has(entry.id));
+  if (!newlyCompleted.length) return;
+  const first = newlyCompleted[0];
+  const suffix = newlyCompleted.length > 1 ? ` +${newlyCompleted.length - 1} more` : "";
+  showToast(`ACHIEVEMENT COMPLETED · ${first.title}${suffix} · Reward ready to claim`);
+  playGameSound("level_up", { cooldownMs: 180 });
+}
+
+function subscribeSeasonalAchievementCycle(seasonId = seasonalAchievementState?.seasonId) {
+  const id = String(seasonId || "");
+  const api = getOnlineApi();
+  if (!id || !api?.subscribeSeasonalAchievementState || seasonalAchievementSubscribedSeasonId === id) return;
+  clearSeasonalAchievementSubscription();
+  seasonalAchievementSubscribedSeasonId = id;
+  seasonalAchievementUnsubscribe = api.subscribeSeasonalAchievementState(id, {
+    onState: snapshot => {
+      if (!snapshot || String(snapshot.seasonId || snapshot.id || "") !== id) return;
+      const normalized = normalizeSeasonalAchievementState(snapshot, seasonalAchievementState?.serverTimeMs || getSeasonalAchievementNowMs());
+      if (!normalized) return;
+      const previous = seasonalAchievementState;
+      seasonalAchievementState = normalized;
+      seasonalAchievementError = "";
+      announceSeasonalAchievementCompletions(previous, normalized);
+      seasonalAchievementHydrated = true;
+      updateDailyLoginRewardHudState();
+      if (modal?.open && modal.classList.contains("daily-login-reward-modal")) renderDailyLoginRewardModal();
+      if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    },
+    onError: error => {
+      console.warn("Seasonal Achievement subscription failed", error);
+      seasonalAchievementError = "Achievement progress is reconnecting…";
+      if (modal?.open && activeDailyRewardModalTab === "achievements") renderDailyLoginRewardModal();
+    },
+  });
+}
+
+function scheduleSeasonalAchievementUtcRefresh() {
+  if (seasonalAchievementUtcTimer) window.clearTimeout(seasonalAchievementUtcTimer);
+  seasonalAchievementUtcTimer = 0;
+  if (!seasonalAchievementState?.seasonEndsAtMs || !getOnlineApi()?.isSignedIn?.()) return;
+  const delayMs = Math.min(2_147_000_000, Math.max(250, seasonalAchievementState.seasonEndsAtMs - getSeasonalAchievementNowMs() + 250));
+  seasonalAchievementUtcTimer = window.setTimeout(() => {
+    seasonalAchievementUtcTimer = 0;
+    clearSeasonalAchievementSubscription();
+    seasonalAchievementState = null;
+    seasonalAchievementHydrated = false;
+    void refreshSeasonalAchievementStatus({ force: true, silent: true });
+  }, delayMs);
+}
+
+function applySeasonalAchievementStatus(raw = null, serverTimeMs = Date.now()) {
+  const normalized = normalizeSeasonalAchievementState(raw, serverTimeMs);
+  if (!normalized) return null;
+  const confirmedServerTimeMs = Math.max(0, Number(serverTimeMs) || normalized.serverTimeMs);
+  if (confirmedServerTimeMs) seasonalAchievementClockOffsetMs = confirmedServerTimeMs - Date.now();
+  normalized.serverTimeMs = confirmedServerTimeMs || normalized.serverTimeMs;
+  const previous = seasonalAchievementState;
+  seasonalAchievementState = normalized;
+  seasonalAchievementError = "";
+  announceSeasonalAchievementCompletions(previous, normalized);
+  seasonalAchievementHydrated = true;
+  subscribeSeasonalAchievementCycle(normalized.seasonId);
+  scheduleSeasonalAchievementUtcRefresh();
+  updateDailyLoginRewardHudState();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (modal?.open && modal.classList.contains("daily-login-reward-modal")) renderDailyLoginRewardModal();
+  return normalized;
+}
+
+async function refreshSeasonalAchievementStatus(options = {}) {
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.() || !supportsSeasonalAchievements()) {
+    if (options.force) {
+      seasonalAchievementState = null;
+      seasonalAchievementHydrated = false;
+      clearSeasonalAchievementSubscription();
+    }
+    updateDailyLoginRewardHudState();
+    return null;
+  }
+  if (seasonalAchievementStatusPromise && !options.force) return seasonalAchievementStatusPromise;
+  seasonalAchievementStatusLoading = true;
+  seasonalAchievementError = "";
+  const startedAtMs = Date.now();
+  const request = Promise.resolve(api.getSeasonalAchievementStatus({}))
+    .then(result => applySeasonalAchievementStatus(
+      result?.seasonalAchievementState,
+      Math.max(0, Number(result?.serverTimeMs) || startedAtMs)
+    ))
+    .catch(error => {
+      seasonalAchievementError = error?.message || "Seasonal Achievements could not be loaded.";
+      if (!options.silent) showToast(seasonalAchievementError);
+      return null;
+    })
+    .finally(() => {
+      if (seasonalAchievementStatusPromise === request) seasonalAchievementStatusPromise = null;
+      seasonalAchievementStatusLoading = false;
+      updateDailyLoginRewardHudState();
+      if (modal?.open && activeDailyRewardModalTab === "achievements") renderDailyLoginRewardModal();
+    });
+  seasonalAchievementStatusPromise = request;
+  return request;
+}
+
+function createSeasonalAchievementRequestId(prefix = "achievement") {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function claimSeasonalAchievement(achievementId = "", sourceElement = null) {
+  const achievement = seasonalAchievementState?.achievements?.find(entry => entry.id === achievementId);
+  const api = getOnlineApi();
+  if (!achievement || !api?.claimSeasonalAchievementReward || seasonalAchievementActionsInFlight.has(achievement.id)) return;
+  const sourceAnchor = captureAnimationAnchor(sourceElement);
+  seasonalAchievementActionsInFlight.add(achievement.id);
+  renderDailyLoginRewardModal();
+  try {
+    const result = await api.claimSeasonalAchievementReward({
+      seasonId: seasonalAchievementState?.seasonId || "",
+      achievementId: achievement.id,
+      requestId: createSeasonalAchievementRequestId("claim"),
+    });
+    if (result?.currentUser || result?.cityUpdates) applyServerEconomyResult(result, { renderCities: true });
+    if (result?.seasonalAchievementState) {
+      applySeasonalAchievementStatus(result.seasonalAchievementState, result.seasonalAchievementState.serverTimeMs || getSeasonalAchievementNowMs());
+    }
+    const receipt = result?.receipt || achievement.lockedReward || {};
+    if (!result?.replayed) {
+      const rewardType = String(receipt.rewardType || receipt.type || achievement.lockedReward?.type || "gold");
+      const amount = Math.max(1, Math.floor(Number(receipt.lockedAmount) || achievement.lockedReward?.lockedAmount || 1));
+      playRewardSound(rewardType === "item" ? "item" : rewardType);
+      playRewardAnimation(rewardType, {
+        id: `seasonal-achievement:${seasonalAchievementState?.seasonId || "season"}:${achievement.id}`,
+        sourceAnchor,
+        tier: ["very_hard", "prestige"].includes(achievement.difficulty) ? "large" : "medium",
+        host: modal?.open ? modal : profileScreen,
+        destinationCityId: receipt.targetCityId || "",
+      });
+      const item = rewardType === "item" ? getShopItemById(receipt.itemId || achievement.lockedReward?.itemId) : null;
+      showToast(`Achievement reward: ${item?.label || `${formatNumber(amount)} ${rewardType}`}.`);
+      addLog(`Seasonal Achievement completed: ${achievement.title}.`);
+    } else {
+      showToast("That achievement reward was already collected.");
+    }
+    saveGame();
+    queueOnlineSave();
+  } catch (error) {
+    seasonalAchievementError = error?.message || "That achievement reward could not be claimed.";
+    showToast(seasonalAchievementError);
+    void refreshSeasonalAchievementStatus({ force: true, silent: true });
+  } finally {
+    seasonalAchievementActionsInFlight.delete(achievement.id);
+    renderDailyLoginRewardModal();
+  }
+}
+
+function renderSeasonalAchievementTab() {
+  if (!supportsSeasonalAchievements()) {
+    return `<section class="seasonal-achievement-panel"><div class="daily-mission-empty"><strong>Seasonal Achievements unavailable</strong><p>Reconnect to the current Crownlands realm to continue.</p></div></section>`;
+  }
+  if (seasonalAchievementStatusLoading && !seasonalAchievementState) {
+    return `<section class="seasonal-achievement-panel"><div class="daily-mission-empty"><strong>Loading Seasonal Achievements…</strong><p>Reviewing this month’s royal ledger.</p></div></section>`;
+  }
+  if (!seasonalAchievementState) {
+    return `<section class="seasonal-achievement-panel"><div class="daily-mission-empty"><strong>Achievements are reconnecting</strong><p>${escapeHtml(seasonalAchievementError || "Try again in a moment.")}</p><button type="button" data-seasonal-achievement-refresh>Try again</button></div></section>`;
+  }
+  const filtered = seasonalAchievementState.achievements.filter(entry => (
+    activeSeasonalAchievementFilter === "all" || entry.category === activeSeasonalAchievementFilter
+  ));
+  const filters = SEASONAL_ACHIEVEMENT_FILTERS.map(([id, label]) => {
+    const active = activeSeasonalAchievementFilter === id;
+    return `<button type="button" class="${active ? "active" : ""}" data-seasonal-achievement-filter="${id}" aria-pressed="${active}">${label}</button>`;
+  }).join("");
+  const rows = filtered.map(entry => {
+    const complete = Boolean(entry.completedAtMs || entry.progress >= entry.target);
+    const claimed = Boolean(entry.claimedAtMs);
+    const claimable = complete && !claimed;
+    const busy = seasonalAchievementActionsInFlight.has(entry.id);
+    const reward = entry.lockedReward || entry.rewardSpec;
+    const progressPercent = Math.max(0, Math.min(100, entry.progress / entry.target * 100));
+    const longReign = entry.metric === "long_reign_hours";
+    const progressLabel = longReign
+      ? `${Math.min(entry.target, entry.progress).toFixed(1)} / ${entry.target}h`
+      : `${formatNumber(Math.floor(entry.progress))} / ${formatNumber(entry.target)}`;
+    return `
+      <article class="seasonal-achievement-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""}">
+        <span class="seasonal-achievement-row-icon" aria-hidden="true">${SEASONAL_ACHIEVEMENT_ICONS[entry.icon] || "◆"}</span>
+        <div class="seasonal-achievement-row-copy">
+          <span>${escapeHtml(entry.categoryLabel)}</span>
+          <strong>${escapeHtml(entry.title)}</strong>
+          <p>${escapeHtml(entry.description)}</p>
+          <div class="seasonal-achievement-progress"><span style="width:${progressPercent.toFixed(2)}%"></span></div>
+          <small>${escapeHtml(progressLabel)}</small>
+        </div>
+        <div class="seasonal-achievement-reward">
+          <span>Reward</span>
+          <strong>${escapeHtml(formatSeasonalAchievementReward(reward))}</strong>
+          ${claimable
+            ? `<button type="button" data-seasonal-achievement-claim="${escapeHtml(entry.id)}" ${busy ? "disabled" : ""}>${busy ? "Claiming…" : "Claim"}</button>`
+            : claimed ? `<b>COMPLETED</b>` : `<small>${complete ? "Reward ready" : "In progress"}</small>`}
+        </div>
+      </article>`;
+  }).join("");
+  return `
+    <section class="seasonal-achievement-panel">
+      <header class="seasonal-achievement-hero">
+        <div><span>Monthly Campaign</span><h3>Seasonal Achievements</h3><p>${escapeHtml(seasonalAchievementState.monthKey)} · ${formatSeasonRemaining()} remaining</p></div>
+        <div class="seasonal-achievement-totals">
+          <strong>${seasonalAchievementState.completedCount} / 40</strong><span>Complete</span>
+          <strong>${seasonalAchievementState.claimedCount} / 40</strong><span>Claimed</span>
+        </div>
+      </header>
+      <nav class="seasonal-achievement-filters" aria-label="Achievement categories">${filters}</nav>
+      ${seasonalAchievementError ? `<p class="seasonal-achievement-error">${escapeHtml(seasonalAchievementError)}</p>` : ""}
+      <div class="seasonal-achievement-list">${rows || `<div class="daily-mission-empty"><strong>No achievements in this category.</strong></div>`}</div>
+    </section>`;
+}
+
+function bindSeasonalAchievementControls() {
+  modalBody?.querySelectorAll("[data-seasonal-achievement-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+      activeSeasonalAchievementFilter = button.dataset.seasonalAchievementFilter || "all";
+      renderDailyLoginRewardModal();
+    });
+  });
+  modalBody?.querySelectorAll("[data-seasonal-achievement-claim]").forEach(button => {
+    button.addEventListener("click", () => void claimSeasonalAchievement(button.dataset.seasonalAchievementClaim, button));
+  });
+  modalBody?.querySelector("[data-seasonal-achievement-refresh]")?.addEventListener("click", () => {
+    void refreshSeasonalAchievementStatus({ force: true, silent: false });
+  });
+}
+
 function renderDailyRewardModalTabs() {
+  const alerts = getCollectibleRewardAlertSummary();
   const tabs = [
     {
       id: "rewards",
@@ -30742,12 +31209,22 @@ function renderDailyRewardModalTabs() {
       label: "Quests",
       icon: "assets/optimized/hud-report-192x192-c712b2f6c417.webp",
     },
+    {
+      id: "achievements",
+      label: "Achievements",
+      icon: "assets/optimized/hud-achievements-192x192-6126eda4c9e8.webp",
+    },
   ];
   return `
-    <div class="daily-reward-tabs" role="tablist" aria-label="Daily rewards and quests">
+    <div class="daily-reward-tabs" role="tablist" aria-label="Daily rewards, quests, and achievements">
       ${tabs.map(tab => {
         const active = activeDailyRewardModalTab === tab.id;
-        return `<button type="button" id="dailyRewardTab${tab.id === "rewards" ? "Rewards" : "Quests"}" role="tab" data-daily-reward-tab="${tab.id}" aria-label="${tab.label}" title="${tab.label}" aria-selected="${active}" aria-controls="dailyRewardPanel${tab.id === "rewards" ? "Rewards" : "Quests"}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}"><img src="${tab.icon}" alt="" draggable="false" /></button>`;
+        const suffix = tab.id === "rewards" ? "Rewards" : tab.id === "quests" ? "Quests" : "Achievements";
+        const alertCount = Math.max(0, Number(alerts[tab.id]) || 0);
+        const accessibleLabel = alertCount > 0
+          ? `${tab.label}, ${alertCount} reward${alertCount === 1 ? "" : "s"} ready to collect`
+          : tab.label;
+        return `<button type="button" id="dailyRewardTab${suffix}" role="tab" data-daily-reward-tab="${tab.id}" aria-label="${accessibleLabel}" title="${tab.label}" aria-selected="${active}" aria-controls="dailyRewardPanel${suffix}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}"><img src="${tab.icon}" alt="" draggable="false" />${alertCount > 0 ? `<span class="daily-reward-tab-alert" aria-hidden="true">!</span>` : ""}</button>`;
       }).join("")}
     </div>`;
 }
@@ -30755,12 +31232,14 @@ function renderDailyRewardModalTabs() {
 function bindDailyRewardModalTabs() {
   const tabButtons = [...(modalBody?.querySelectorAll("[data-daily-reward-tab]") || [])];
   const activateTab = tabId => {
-    if (!["rewards", "quests"].includes(tabId) || tabId === activeDailyRewardModalTab) return;
+    if (!["rewards", "quests", "achievements"].includes(tabId) || tabId === activeDailyRewardModalTab) return;
     activeDailyRewardModalTab = tabId;
     renderDailyLoginRewardModal();
     const focusActiveTab = () => modalBody?.querySelector(`[data-daily-reward-tab="${tabId}"]`)?.focus();
     if (tabId === "quests") {
       void refreshDailyMissionStatus({ silent: true }).finally(focusActiveTab);
+    } else if (tabId === "achievements") {
+      void refreshSeasonalAchievementStatus({ silent: true }).finally(focusActiveTab);
     } else {
       focusActiveTab();
     }
@@ -30818,13 +31297,23 @@ function bindDailyQuestControls() {
 
 function renderDailyLoginRewardModal() {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
-  if (modalTitle) modalTitle.textContent = activeDailyRewardModalTab === "quests" ? "Quests" : "Daily Rewards";
+  if (modalTitle) modalTitle.textContent = activeDailyRewardModalTab === "quests"
+    ? "Quests"
+    : activeDailyRewardModalTab === "achievements"
+      ? "Achievements"
+      : "Daily Rewards";
   const tabsMarkup = renderDailyRewardModalTabs();
   if (activeDailyRewardModalTab === "quests") {
     modalBody.innerHTML = `${tabsMarkup}${renderDailyQuestTab()}`;
     bindDailyRewardModalTabs();
     bindDailyQuestControls();
     renderDailyMissions();
+    return;
+  }
+  if (activeDailyRewardModalTab === "achievements") {
+    modalBody.innerHTML = `${tabsMarkup}<section id="dailyRewardPanelAchievements" class="seasonal-achievement-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabAchievements">${renderSeasonalAchievementTab()}</section>`;
+    bindDailyRewardModalTabs();
+    bindSeasonalAchievementControls();
     return;
   }
   const status = dailyLoginRewardStatus;
@@ -30886,12 +31375,18 @@ function renderDailyLoginRewardModal() {
 async function showDailyLoginRewardsModal(options = {}) {
   if (!modal || !modalBody || !state) return;
   suspendRealmAnnouncementForLoginPresentation(loginPresentationSequence);
-  activeDailyRewardModalTab = "rewards";
+  activeDailyRewardModalTab = ["rewards", "quests", "achievements"].includes(options.initialTab)
+    ? options.initialTab
+    : "rewards";
   modal.classList.add("daily-login-reward-modal");
   renderDailyLoginRewardModal();
   if (!modal.open) modal.showModal();
   if (!options.skipRefresh) {
-    await refreshDailyLoginRewardStatus({ silent: true });
+    await Promise.all([
+      refreshDailyLoginRewardStatus({ silent: true }),
+      refreshDailyMissionStatus({ silent: true }),
+      refreshSeasonalAchievementStatus({ silent: true }),
+    ]);
   }
 }
 
@@ -36583,6 +37078,7 @@ window.addEventListener("crownlands:auth", async () => {
   } else {
     stopGameServerMembershipWatcher({ clear: true });
     stopDailyMissionLifecycle({ clear: true });
+    stopSeasonalAchievementLifecycle({ clear: true });
     dailyLoginRewardStatus = null;
     dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
@@ -36617,6 +37113,7 @@ if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitche
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (clanHudBtn) clanHudBtn.addEventListener("click", showClanHub);
 if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => showDailyLoginRewardsModal());
+if (profileViewAchievementsBtn) profileViewAchievementsBtn.addEventListener("click", () => showDailyLoginRewardsModal({ initialTab: "achievements" }));
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (clanTabBtn) clanTabBtn.addEventListener("click", showProfileClan);

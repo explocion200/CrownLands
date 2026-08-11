@@ -6,6 +6,8 @@ const MAX_PARALLEL_PROBES = 4;
 const publicCallables = [
   "getDailyLoginRewardStatus",
   "claimDailyLoginReward",
+  "getSeasonalAchievementStatus",
+  "claimSeasonalAchievementReward",
   "saveSkillPreset",
   "renameSkillPreset",
   "applySkillPreset",

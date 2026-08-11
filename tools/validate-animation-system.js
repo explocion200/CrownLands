@@ -213,7 +213,7 @@ requireMatch(
 );
 requireMatch(
   stylesSource,
-  /\.crownlands-map-transition__part--cloud-back,[\s\S]*?map-transition-clouds-640x640-[a-f0-9]{12}\.webp[\s\S]*?will-change:\s*transform,\s*opacity/,
+  /\.crownlands-map-transition__part--cloud-back,[\s\S]*?map-transition-clouds-448x448-[a-f0-9]{12}\.webp[\s\S]*?will-change:\s*transform,\s*opacity/,
   "The transition must use the optimized painterly cloud texture on GPU-friendly layers."
 );
 requireMatch(stylesSource, /@keyframes crownlandsMapMistCover/, "The directional pale-mist cover animation is missing.");

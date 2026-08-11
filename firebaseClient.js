@@ -616,6 +616,14 @@
     return callServerFunction("claimDailyMissionReward", payload);
   }
 
+  async function getSeasonalAchievementStatus(payload = {}) {
+    return callServerFunction("getSeasonalAchievementStatus", payload);
+  }
+
+  async function claimSeasonalAchievementReward(payload = {}) {
+    return callServerFunction("claimSeasonalAchievementReward", payload);
+  }
+
   async function markReportsViewed(payload = {}) {
     return callServerFunction("markReportsViewed", payload);
   }
@@ -1272,6 +1280,23 @@
       },
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error, "dailyMissions");
+      }
+    );
+  }
+
+  function subscribeSeasonalAchievementState(seasonId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !seasonId) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    const safeSeasonId = String(seasonId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 180);
+    return onSnapshot(
+      doc(client.db, "players", client.user.uid, "seasonalAchievements", safeSeasonId),
+      snapshot => {
+        if (typeof handlers.onState === "function") {
+          handlers.onState(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "seasonalAchievements");
       }
     );
   }
@@ -2531,6 +2556,8 @@
     getDailyMissionStatus,
     rerollDailyMission,
     claimDailyMissionReward,
+    getSeasonalAchievementStatus,
+    claimSeasonalAchievementReward,
     markReportsViewed,
     markRealmAnnouncementSeen,
     getRewardedAdStatus,
@@ -2574,6 +2601,7 @@
     subscribeClanSocialState,
     subscribeClanQuestProgress,
     subscribeDailyMissionState,
+    subscribeSeasonalAchievementState,
     subscribeClanRallies,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,

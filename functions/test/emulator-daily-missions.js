@@ -2,6 +2,16 @@ const { getApps, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
+const worldLayout = require("../world-layout.json");
+const {
+  createAuthoritativeRoutePlanner,
+  imagePointToWorld,
+} = require("../authoritative-route-planner.js");
+const { getAuthoritativeTerrainBlockers } = require("../authoritative-route-policy.js");
+
+const routePlanner = createAuthoritativeRoutePlanner(worldLayout, {
+  getTerrainBlockers: getAuthoritativeTerrainBlockers,
+});
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -126,17 +136,103 @@ async function main() {
     createAuthUser("owner"),
     createAuthUser("stranger"),
   ]);
-  const claim = await callFunction("claimStartingCity", player.token, { playerName: "Mission Sentinel" });
+  const [claim, strangerClaim] = await Promise.all([
+    callFunction("claimStartingCity", player.token, { playerName: "Mission Sentinel" }),
+    callFunction("claimStartingCity", stranger.token, { playerName: "Mission Target" }),
+  ]);
+  const regionId = String(claim.regionId || claim.islandId || "").replace(`${realm.worldId}-`, "");
+  const region = worldLayout.maps.find(map => String(map.id) === regionId);
+  const cityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
+  const sourceCity = (await cityRef.get()).data() || {};
+  const routeModel = routePlanner.getModel(regionId);
+  const safeTargetSeed = region?.cities
+    ?.filter(city => city.id !== claim.cityId && city.id !== strangerClaim.cityId && !city.strongholdType)
+    .map(city => ({
+      ...city,
+      ...imagePointToWorld(routeModel, city),
+      regionId,
+      startPool: regionId,
+    }))
+    .filter(city => routePlanner.calculate(sourceCity, city))
+    .sort((left, right) => (
+      Math.hypot(Number(left.x) - Number(sourceCity.x), Number(left.y) - Number(sourceCity.y))
+      - Math.hypot(Number(right.x) - Number(sourceCity.x), Number(right.y) - Number(sourceCity.y))
+    ))[0];
+  assert(safeTargetSeed, "A regular city seed was not available for Daily Mission safety tests.");
+  const safeTargetRef = db.doc(`islands/${claim.islandId}/cities/${safeTargetSeed.id}`);
+  const strangerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${stranger.uid}`);
+  const strangerGlobalStatsRef = db.doc(`players/${stranger.uid}/stats/global`);
+  await Promise.all([
+    cityRef.set({ troops: 1_000_000, troopFloat: 1_000_000 }, { merge: true }),
+    safeTargetRef.set({
+      ...safeTargetSeed,
+      regionId,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      ownerKind: "player",
+      ownerUid: stranger.uid,
+      ownerName: "Mission Target",
+      ownerKingPower: 100_000_000,
+      isMainCity: false,
+      troops: 1,
+      troopFloat: 1,
+      alliedReinforcementTroops: 0,
+      ownerShieldExpiresAtMs: 0,
+    }, { merge: true }),
+    strangerLeaderboardRef.set({
+      uid: stranger.uid,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      cityCount: 2,
+      kingPower: 100_000_000,
+    }, { merge: true }),
+    strangerGlobalStatsRef.set({ kingPower: 100_000_000 }, { merge: true }),
+  ]);
   const firstStatus = await callFunction("getDailyMissionStatus", player.token);
   const secondStatus = await callFunction("getDailyMissionStatus", player.token);
   const first = firstStatus.dailyMissionState;
   const second = secondStatus.dailyMissionState;
   assert(first?.missions?.length === 3, "Daily Missions did not generate three entries.");
   assert(new Set(first.missions.map(mission => mission.family)).size === 3, "Daily Missions duplicated a family.");
+  assert(first.missions.filter(mission => ["combat", "stronghold"].includes(mission.activityGroup)).length <= 1, "PvP and Stronghold missions did not share one slot.");
+  assert(first.missions.filter(mission => mission.activityGroup === "camps").length <= 1, "Camp missions did not remain in one separate slot.");
   assert(JSON.stringify(first.missions) === JSON.stringify(second.missions), "Daily Missions changed after reopening.");
   assert(Number(first.rerollsRemaining) === 1, "Daily Missions did not start with one reroll.");
+  assert(
+    first.capacitySnapshot?.safePvpTargets?.some(target => target.cityId === safeTargetSeed.id),
+    `A reachable low-loss PvP target was not recommended: ${JSON.stringify(first.capacitySnapshot)}`
+  );
 
   const statePath = `players/${player.uid}/dailyMissions/${first.cycleKey}`;
+  const stateRef = db.doc(statePath);
+  await stateRef.delete();
+  await safeTargetRef.set({ ownerShieldExpiresAtMs: Date.now() + 86_400_000 }, { merge: true });
+  const shieldedStatus = await callFunction("getDailyMissionStatus", player.token);
+  assert(!shieldedStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A shielded city was recommended as a safe PvP target.");
+  await stateRef.delete();
+  await safeTargetRef.set({ ownerShieldExpiresAtMs: 0, alliedReinforcementTroops: 1 }, { merge: true });
+  const reinforcedStatus = await callFunction("getDailyMissionStatus", player.token);
+  assert(!reinforcedStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A reinforced city was recommended as a safe PvP target.");
+  await stateRef.delete();
+  await safeTargetRef.set({ alliedReinforcementTroops: 0, troops: 1_000_000, troopFloat: 1_000_000 }, { merge: true });
+  const costlyStatus = await callFunction("getDailyMissionStatus", player.token);
+  assert(!costlyStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A city outside the commitment/loss cap was recommended.");
+  await stateRef.delete();
+  await Promise.all([
+    safeTargetRef.set({ troops: 1, troopFloat: 1 }, { merge: true }),
+    strangerLeaderboardRef.set({ kingPower: 1 }, { merge: true }),
+    strangerGlobalStatsRef.set({ kingPower: 1 }, { merge: true }),
+  ]);
+  const protectedStatus = await callFunction("getDailyMissionStatus", player.token);
+  assert(!protectedStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A weaker-kingdom-protected target was recommended.");
+  await stateRef.delete();
+  await Promise.all([
+    strangerLeaderboardRef.set({ kingPower: 100_000_000 }, { merge: true }),
+    strangerGlobalStatsRef.set({ kingPower: 100_000_000 }, { merge: true }),
+  ]);
+  const restoredStatus = await callFunction("getDailyMissionStatus", player.token);
+  assert(restoredStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.some(target => target.cityId === safeTargetSeed.id), "The safe PvP recommendation did not recover after conditions were restored.");
+
   const ownerRead = await clientDocumentRequest(player, statePath);
   assert(ownerRead.status === 200, `The owner could not read Daily Missions (HTTP ${ownerRead.status}).`);
   const strangerRead = await clientDocumentRequest(stranger, statePath);
@@ -161,9 +257,7 @@ async function main() {
   });
   assert(!secondReroll.ok && secondReroll.error?.status === "FAILED_PRECONDITION", "A second daily reroll was accepted.");
 
-  const stateRef = db.doc(statePath);
   const profileRef = db.doc(`players/${player.uid}`);
-  const cityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
   const state = (await stateRef.get()).data() || {};
   const testMission = {
     ...state.missions[0],
@@ -347,7 +441,67 @@ async function main() {
   const claimedState = (await stateRef.get()).data() || {};
   assert(Number(claimedState.missions?.[0]?.claimedAtMs || 0) > 0, "The claimed mission did not persist its claimed state.");
 
-  console.log("Daily Missions emulator gate passed: private state, UTC persistence, one reroll, PvP thresholds, successful camp progress, event processing, and idempotent claims are enforced.");
+  const legacyUnsafeReward = { type: "troops", lockedAmount: 9_876, productionHours: 0.5, itemId: "" };
+  const legacyVolumeReward = { type: "troops", lockedAmount: 22_222, productionHours: 2, itemId: "" };
+  const legacyClaimedMission = { ...claimedState.missions[0] };
+  const legacyUnsafeMission = {
+    ...claimedState.missions[1],
+    id: `legacy_capture_${player.uid}`,
+    family: "ENEMY_CITY_CAPTURE",
+    activityGroup: "combat",
+    activityKey: "ENEMY_CITY_CAPTURE",
+    difficulty: "hard",
+    title: "Conqueror",
+    description: "Capture 3 enemy cities",
+    target: 3,
+    progress: 0,
+    uniqueProgressKeys: [],
+    completedAtMs: 0,
+    claimedAtMs: 0,
+    reward: legacyUnsafeReward,
+  };
+  const legacyVolumeMission = {
+    ...claimedState.missions[2],
+    id: `legacy_troops_${player.uid}`,
+    family: "TROOPS_SENT_TO_BATTLE",
+    activityGroup: "combat",
+    activityKey: "TROOPS_SENT_TO_BATTLE",
+    difficulty: "hard",
+    title: "Muster the Host",
+    description: "Send 1,800,000 troops into battle",
+    target: 1_800_000,
+    progress: 150_000,
+    uniqueProgressKeys: [],
+    completedAtMs: 0,
+    claimedAtMs: 0,
+    reward: legacyVolumeReward,
+  };
+  await Promise.all([
+    safeTargetRef.set({ ownerShieldExpiresAtMs: Date.now() + 86_400_000 }, { merge: true }),
+    stateRef.set({
+      schemaVersion: 1,
+      missions: [legacyClaimedMission, legacyUnsafeMission, legacyVolumeMission],
+      completedCount: 1,
+      claimedCount: 1,
+      rerollsRemaining: 0,
+    }, { merge: true }),
+  ]);
+  const migrationResponses = await Promise.all([
+    callFunction("getDailyMissionStatus", player.token),
+    callFunction("getDailyMissionStatus", player.token),
+  ]);
+  assert(migrationResponses.every(response => Number(response.dailyMissionState?.schemaVersion) === 2), "Concurrent legacy migration did not converge on schema v2.");
+  const migratedState = (await stateRef.get()).data() || {};
+  assert(Number(migratedState.schemaVersion) === 2, "Legacy Daily Missions did not persist schema v2.");
+  assert(Number(migratedState.rerollsRemaining) === 0, "Legacy migration restored a consumed reroll.");
+  assert(Number(migratedState.missions?.[0]?.claimedAtMs || 0) === Number(legacyClaimedMission.claimedAtMs), "Legacy migration changed a claimed mission.");
+  assert(migratedState.missions?.[1]?.family === "ATTACK_COUNT" && Number(migratedState.missions?.[1]?.target) === 1, "An unsafe legacy capture was not replaced with one meaningful attack.");
+  assert(Number(migratedState.missions?.[1]?.reward?.lockedAmount) === legacyUnsafeReward.lockedAmount, "Unsafe migration changed the locked reward.");
+  assert(Number(migratedState.missions?.[2]?.target) < 1_800_000, "Legacy troop-volume target was not reduced.");
+  assert(Number(migratedState.missions?.[2]?.completedAtMs || 0) > 0, "Retained progress did not complete the lowered troop mission.");
+  assert(Number(migratedState.missions?.[2]?.reward?.lockedAmount) === legacyVolumeReward.lockedAmount, "Volume migration changed the locked reward.");
+
+  console.log("Daily Missions emulator gate passed: private state, UTC persistence, balanced selection, one reroll, PvP thresholds, successful camp progress, schema-v2 migration, event processing, and idempotent claims are enforced.");
 }
 
 main().catch(error => {
