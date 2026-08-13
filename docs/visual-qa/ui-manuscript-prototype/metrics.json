@@ -1,0 +1,582 @@
+[
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "before",
+    "screen": "profile",
+    "box": [
+      240,
+      70,
+      960,
+      760
+    ],
+    "content": [
+      958,
+      758,
+      958,
+      758
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "before",
+    "screen": "shop",
+    "box": [
+      270,
+      132.625,
+      900,
+      634.734375
+    ],
+    "content": [
+      849,
+      544,
+      849,
+      544
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "before",
+    "screen": "daily",
+    "box": [
+      270,
+      262.46875,
+      900,
+      375.0625
+    ],
+    "content": [
+      849,
+      285,
+      849,
+      285
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "before",
+    "screen": "attack",
+    "box": [
+      270,
+      182.90625,
+      900,
+      534.171875
+    ],
+    "content": [
+      849,
+      444,
+      849,
+      444
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "before",
+    "screen": "battle",
+    "box": [
+      270,
+      26.65625,
+      900,
+      846.671875
+    ],
+    "content": [
+      849,
+      756,
+      849,
+      756
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "after",
+    "screen": "profile",
+    "box": [
+      240,
+      70,
+      960,
+      760
+    ],
+    "content": [
+      958,
+      758,
+      958,
+      758
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "after",
+    "screen": "shop",
+    "box": [
+      270,
+      159.1875,
+      900,
+      581.625
+    ],
+    "content": [
+      851,
+      492,
+      851,
+      492
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "after",
+    "screen": "daily",
+    "box": [
+      270,
+      257.03125,
+      900,
+      385.9375
+    ],
+    "content": [
+      851,
+      297,
+      851,
+      297
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "after",
+    "screen": "attack",
+    "box": [
+      270,
+      189.515625,
+      900,
+      520.96875
+    ],
+    "content": [
+      851,
+      432,
+      851,
+      432
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      1440,
+      900
+    ],
+    "mode": "after",
+    "screen": "battle",
+    "box": [
+      270,
+      40.515625,
+      900,
+      818.953125
+    ],
+    "content": [
+      851,
+      730,
+      851,
+      730
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      1440,
+      900
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "before",
+    "screen": "profile",
+    "box": [
+      8,
+      4,
+      828,
+      382
+    ],
+    "content": [
+      826,
+      380,
+      826,
+      380
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "before",
+    "screen": "shop",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      769,
+      292,
+      769,
+      544
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "before",
+    "screen": "daily",
+    "box": [
+      12,
+      27.25,
+      820,
+      335.5
+    ],
+    "content": [
+      769,
+      245,
+      769,
+      245
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "before",
+    "screen": "attack",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      778,
+      315,
+      778,
+      382
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "before",
+    "screen": "battle",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      769,
+      292,
+      769,
+      744
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "after",
+    "screen": "profile",
+    "box": [
+      8,
+      4,
+      828,
+      382
+    ],
+    "content": [
+      826,
+      380,
+      826,
+      380
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "after",
+    "screen": "shop",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      787,
+      328,
+      787,
+      366
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "after",
+    "screen": "daily",
+    "box": [
+      12,
+      47.953125,
+      820,
+      294.078125
+    ],
+    "content": [
+      787,
+      241,
+      787,
+      241
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "after",
+    "screen": "attack",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      780,
+      318,
+      780,
+      373
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "mode": "after",
+    "screen": "battle",
+    "box": [
+      12,
+      4,
+      820,
+      382
+    ],
+    "content": [
+      787,
+      328,
+      787,
+      663
+    ],
+    "fonts": {
+      "body": "Cinzel, ui-serif, Georgia, \"Times New Roman\", serif",
+      "heading": "\"Cinzel Decorative\", Cinzel, ui-serif, Georgia, \"Times New Roman\", serif"
+    },
+    "overflowX": false,
+    "page": [
+      844,
+      390
+    ]
+  }
+]

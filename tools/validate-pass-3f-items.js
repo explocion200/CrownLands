@@ -17,7 +17,7 @@ const expected = [
   ["item-recall-horn", "assets/recall-horn-icon.webp", 160, "item"],
   ["pickup-gold", "assets/gold-pickup.png", 192, "pickup"],
   ["pickup-troops", "assets/troop-pickup.png", 192, "pickup"],
-  ["status-peace-shield-field", "assets/royal-peace-shield-field.png", 192, "status"],
+  ["status-peace-shield-field", "assets/royal-peace-shield-icon.webp", 192, "status"],
 ];
 
 function read(relativePath) {
@@ -77,7 +77,7 @@ const manifestById = new Map(manifest.assets.map(asset => [asset.id, asset]));
 const game = read("game.js");
 const index = read("index.html");
 const guide = read("daily-rewards-guide.html");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const optimizer = read("tools/optimize-game-art.py");
 const serviceWorker = read("service-worker.js");
 const shippedReferences = `${game}\n${index}\n${guide}`;
@@ -118,6 +118,7 @@ assert(serviceWorker.includes(`const CACHE_VERSION = "${BUILD_ID}";`), "Service-
 const retiredHashes = [
   "0f7ac5409316", "dcb8dddc35ea", "48ecb3c2150b", "eaa5b941fe82", "5d50be41ce93",
   "f1cb9c8471ca", "eb20879b085e", "13064480d6c7", "866b66c49b83", "5b5b95051830",
+  "5fd9cc116a40", "d7e2adb1b120", "1e09f4efdbff", "9392b160d654",
 ];
 for (const hash of retiredHashes) {
   assert(!shippedReferences.includes(hash), `Retired Pass 3F asset hash ${hash} is still referenced.`);

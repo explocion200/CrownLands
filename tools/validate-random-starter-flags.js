@@ -8,6 +8,7 @@ const gamePath = path.join(root, "game.js");
 const serverPath = path.join(root, "functions", "index.js");
 const gameSource = fs.readFileSync(gamePath, "utf8");
 const serverSource = fs.readFileSync(serverPath, "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 
 const colors = [
   "#1f5f91",
@@ -51,6 +52,30 @@ const defaultFlag = {
   pattern: "diagonal",
   symbol: "crown",
 };
+
+const flagSymbolCatalog = gameSource.slice(
+  gameSource.indexOf("const FLAG_SYMBOLS = ["),
+  gameSource.indexOf("const CLAN_SHIELD_COLORS"),
+);
+for (const [key, label, icon] of [
+  ["castle", "Castle", "flag-castle"],
+  ["star", "Star", "flag-star"],
+  ["fleur", "Fleur-de-lis", "flag-fleur"],
+  ["cross", "Pilgrim Cross", "flag-cross"],
+  ["sun", "Sun", "flag-sun"],
+  ["moon", "Crescent Moon", "flag-moon"],
+  ["knight", "Warhorse", "flag-horse"],
+  ["tower", "Watchtower", "flag-tower"],
+  ["diamond", "Heraldic Lozenge", "flag-lozenge"],
+  ["spire", "Spearhead", "flag-spearhead"],
+]) {
+  assert.ok(
+    flagSymbolCatalog.includes(`{ key: "${key}", label: "${label}", icon: "${icon}" }`),
+    `${label} does not use its medieval heraldry icon.`,
+  );
+  assert.ok(indexSource.includes(`id="cl-icon-${icon}"`), `${label} is missing its SVG symbol.`);
+}
+assert.doesNotMatch(flagSymbolCatalog, /icon:\s*"(?:transfer|scout|gold|achievements|check)"/, "Flag charges still borrow mismatched gameplay icons.");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);

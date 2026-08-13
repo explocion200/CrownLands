@@ -52,7 +52,7 @@ ASSETS = (
     ("hud-map-switch-arrow", "assets/map-switch-arrow.png", 192, 212, 88, "hud"),
     ("pickup-gold", "assets/gold-pickup.png", 192, 192, 88, "pickup"),
     ("pickup-troops", "assets/troop-pickup.png", 192, 192, 88, "pickup"),
-    ("status-peace-shield-field", "assets/royal-peace-shield-field.png", 192, 192, 92, "status"),
+    ("status-peace-shield-field", "assets/royal-peace-shield-icon.webp", 192, 192, 92, "status"),
     ("daily-reward", "assets/daily-reward-icon-cutout.webp", 160, 160, 92, "hud"),
     ("item-peace-shield", "assets/royal-peace-shield-icon.webp", 160, 160, 86, "item"),
     ("item-war-drums", "assets/war-drums-icon.webp", 160, 160, 86, "item"),

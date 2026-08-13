@@ -148,7 +148,7 @@ assert.equal(mist.width, 448, "Transition mist runtime width drifted.");
 assert.equal(mist.height, 448, "Transition mist runtime height drifted.");
 assert.equal(mist.hasAlpha, true, "Transition mist lost alpha.");
 const html = read("index.html").toString("utf8");
-const css = read("styles.css").toString("utf8");
+const css = `${read("styles.css").toString("utf8")}\n${read("interface-theme.css").toString("utf8")}`;
 const worker = read("service-worker.js").toString("utf8");
 const game = read("game.js").toString("utf8");
 for (const match of game.matchAll(/assets\/worlds\/world_01\/thumbnails\/versioned\/[\w-]+-[0-9a-f]{12}\.webp/g)) {

@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const html = read("index.html");
 const game = read("game.js");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const worker = read("service-worker.js");
 const deployStamp = read("tools/stamp-deploy-build.js");
 const patchNotes = read("patch-notes.js");

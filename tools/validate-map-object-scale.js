@@ -182,7 +182,7 @@ assert.match(game, /function getStrongholdVisualSize\(city\) \{\s*if \(isCrownCi
 assert.match(game, /size: DEFAULT_CAMP_VISUAL_SIZE,\s*payoutAtMs:/);
 assert.match(game, /artSrc,\s*size: DEFAULT_CAMP_VISUAL_SIZE,\s*activeArmyIds:/);
 
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 assert.match(styles, /\.city-node\.stronghold-node \{[^}]*width: var\(--stronghold-size, 154px\);[^}]*height: var\(--stronghold-size, 154px\);/s);
 assert.match(styles, /\.stronghold-building \{[^}]*width: var\(--stronghold-size, 154px\);[^}]*height: var\(--stronghold-size, 154px\);/s);
 assert.match(styles, /\.camp-node \{[^}]*width: var\(--camp-size, 132px\);[^}]*height: var\(--camp-size, 132px\);/s);

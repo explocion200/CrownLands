@@ -1,0 +1,3321 @@
+/* Runtime interface layers split from styles.css to keep the core stylesheet within its release budget. */
+/* Realm Activity is a click-through herald layer, never a modal. */
+.realm-announcement,
+.realm-announcement * {
+  pointer-events: none !important;
+  touch-action: none;
+  user-select: none;
+}
+
+.realm-announcement {
+  position: absolute;
+  z-index: 260;
+  top: max(calc(env(safe-area-inset-top, 0px) + 88px), 11vh);
+  left: 50%;
+  width: min(620px, calc(100% - 28px));
+  opacity: 0;
+  transform: translate3d(-50%, -18px, 0) scale(.97);
+  transition: opacity 420ms ease, transform 420ms cubic-bezier(.2, .8, .2, 1);
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .58));
+}
+
+.realm-announcement.is-visible {
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0) scale(1);
+}
+
+.realm-announcement-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 102px;
+  padding: 12px 28px 12px 20px;
+  overflow: hidden;
+  color: #251506;
+  background:
+    linear-gradient(90deg, rgba(86, 44, 13, .2), transparent 16% 84%, rgba(86, 44, 13, .2)),
+    linear-gradient(180deg, #f5df9a, #d7a84d 58%, #b77925);
+  border: 3px solid #6d3a11;
+  border-radius: 8px 22px 8px 22px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 246, 191, .7),
+    inset 0 -12px 22px rgba(91, 43, 7, .18),
+    0 0 0 2px rgba(28, 13, 4, .58);
+}
+
+.realm-announcement-banner::before,
+.realm-announcement-banner::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  width: 8px;
+  border: solid rgba(91, 43, 7, .56);
+  border-width: 1px 0;
+}
+
+.realm-announcement-banner::before { left: 7px; }
+.realm-announcement-banner::after { right: 7px; }
+
+.realm-announcement-icon {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 3px rgba(42, 20, 3, .42));
+}
+
+.realm-announcement-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+
+.realm-announcement-copy strong {
+  color: #4d2105;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.15rem, 3.4vw, 1.75rem);
+  line-height: 1.05;
+  letter-spacing: .055em;
+  text-shadow: 0 1px rgba(255, 244, 187, .8);
+}
+
+.realm-announcement-copy span {
+  overflow-wrap: anywhere;
+  color: #2b1809;
+  font-size: clamp(.9rem, 2.4vw, 1.08rem);
+  font-weight: 900;
+}
+
+.realm-announcement.citadel .realm-announcement-banner {
+  color: #fff2bd;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 236, 139, .34), transparent 48%),
+    linear-gradient(180deg, #463311, #17170f 72%, #080b0c);
+  border-color: #e2b84f;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 224, 118, .34),
+    inset 0 0 32px rgba(211, 156, 35, .28),
+    0 0 0 2px rgba(69, 41, 5, .8),
+    0 0 28px rgba(231, 180, 53, .34);
+}
+
+.realm-announcement.citadel .realm-announcement-copy strong {
+  color: #ffe59a;
+  text-shadow: 0 2px #170d02, 0 0 14px rgba(255, 203, 76, .48);
+}
+
+.realm-announcement.citadel .realm-announcement-copy span {
+  color: #fff4cf;
+  text-shadow: 0 2px #090704;
+}
+
+.realm-activity-card {
+  display: grid;
+  gap: .75rem;
+  padding: .85rem;
+  border: 2px solid rgba(219, 177, 83, .62);
+  border-radius: 14px;
+  color: #f5ead5;
+  background:
+    linear-gradient(135deg, rgba(123, 72, 23, .16), transparent 42%),
+    rgba(4, 15, 27, .86);
+  box-shadow: inset 0 0 0 1px rgba(255, 241, 187, .08);
+}
+
+.realm-activity-card.citadel {
+  border-color: #e0b54a;
+  background:
+    radial-gradient(circle at 50% 0, rgba(224, 181, 74, .18), transparent 42%),
+    linear-gradient(180deg, rgba(31, 27, 17, .96), rgba(5, 16, 28, .94));
+}
+
+.realm-activity-card-head {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+  gap: .7rem;
+}
+
+.realm-activity-card-head img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .5));
+}
+
+.realm-activity-card-head > div {
+  display: grid;
+  gap: .15rem;
+  min-width: 0;
+}
+
+.realm-activity-card-head strong {
+  color: #ffe3a0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  letter-spacing: .035em;
+  text-shadow: 0 2px #080706;
+}
+
+.realm-activity-age {
+  color: rgba(245, 234, 213, .72);
+  font-size: .84rem;
+  font-weight: 800;
+}
+
+.realm-activity-proclamation {
+  display: grid;
+  gap: .42rem;
+  padding: .75rem;
+  border: 1px solid rgba(224, 181, 74, .24);
+  border-radius: 10px;
+  background: rgba(3, 11, 20, .46);
+}
+
+.realm-activity-proclamation p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.realm-activity-herald,
+.realm-activity-closing {
+  color: #ffda82;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 900;
+}
+
+.realm-activity-proclamation .player-name-link,
+.realm-activity-proclamation .clan-name-link {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  color: #9ed6ff;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 950;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.realm-activity-proclamation .clan-name-link { color: #ffe08b; }
+
+.realm-activity-card-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, .8fr) auto;
+  align-items: center;
+  gap: .55rem;
+}
+
+.realm-activity-card-foot span {
+  display: grid;
+  gap: .08rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: rgba(245, 234, 213, .8);
+  font-size: .88rem;
+}
+
+.realm-activity-card-foot b {
+  color: #fff;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.realm-activity-location-btn {
+  min-height: 42px;
+  padding: 0 .85rem;
+  border: 1px solid rgba(255, 245, 190, .62);
+  border-radius: 10px;
+  color: #211304;
+  background: linear-gradient(#ffe9a0, #e7a638);
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+html[data-animation-mode="off"] .realm-announcement {
+  transition: none !important;
+}
+
+@media (max-width: 760px) {
+  .realm-announcement {
+    top: max(calc(env(safe-area-inset-top, 0px) + 76px), 10vh);
+    width: min(94%, 520px);
+  }
+
+  .realm-announcement-banner {
+    grid-template-columns: 58px minmax(0, 1fr);
+    min-height: 84px;
+    gap: 8px;
+    padding: 9px 18px 9px 14px;
+  }
+
+  .realm-announcement-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .battle-report-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-right: 2rem;
+  }
+
+  .battle-report-filters button {
+    min-height: 34px;
+    padding: 0 .5rem;
+    font-size: .82rem;
+  }
+
+  .realm-activity-card {
+    padding: .65rem;
+  }
+
+  .realm-activity-card-foot {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .realm-activity-location-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-animation-mode]) .realm-announcement {
+    transform: translate3d(-50%, 0, 0);
+    transition: opacity 160ms linear;
+  }
+}
+/* Frontier kingdom visual system ------------------------------------------ */
+
+body,
+.phone-shell,
+.phone-shell:fullscreen {
+  background:
+    linear-gradient(180deg, rgba(36, 32, 26, .92), rgba(23, 19, 15, .96)),
+    var(--ocean-bg);
+}
+
+body {
+  color: var(--cl-ivory);
+}
+
+::selection {
+  color: var(--cl-ink);
+  background: var(--cl-aged-parchment);
+}
+
+:where(button, input, [tabindex]):focus-visible {
+  outline-color: #d9c07f;
+}
+
+.setup-screen {
+  background:
+    linear-gradient(180deg, rgba(18, 14, 10, .08) 0%, rgba(18, 14, 10, .22) 42%, rgba(18, 14, 10, .76) 100%),
+    linear-gradient(90deg, rgba(65, 43, 27, .18), transparent 24% 76%, rgba(65, 43, 27, .18)),
+    url("assets/optimized/login-background-1448x1086-c8507d1988d6.webp") center / contain no-repeat,
+    #1e1812;
+}
+
+.setup-card,
+.online-login,
+.map-loading-panel,
+.commander-panel,
+.profile-screen,
+.modal .modal-card,
+.realm-activity-card {
+  border-radius: var(--ui-radius);
+  border-color: rgba(94, 63, 36, .78);
+  background:
+    linear-gradient(180deg, rgba(79, 53, 34, .97), rgba(30, 23, 17, .99)),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .035) 0 1px, transparent 1px 6px);
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, .52),
+    inset 0 0 0 1px rgba(231, 221, 196, .09),
+    inset 0 -2px 0 rgba(0, 0, 0, .34);
+}
+
+.setup-card::before,
+.commander-panel::before,
+.profile-screen::before,
+.modal .modal-card::before {
+  border-radius: inherit;
+}
+
+.online-login,
+.profile-settings-section,
+.profile-skill-summary > div,
+.profile-skill-reset,
+.profile-skill-list .skill-row,
+.kingdom-stat,
+.profile-notification-row,
+.stat-card,
+.shop-balance,
+.shop-item,
+.inventory-summary,
+.inventory-slot,
+.inventory-selection,
+.city-list-summary,
+.city-list-row,
+.city-list-empty,
+.island-switch-row,
+.battle-report-card,
+.battle-report-empty,
+.battle-report-detail-head,
+.battle-report-detail-grid > div,
+.battle-result,
+.leaderboard-row,
+.leaderboard-empty,
+.incoming-attack-summary,
+.incoming-attack-card,
+.incoming-attack-empty,
+.outgoing-attack-summary,
+.outgoing-attack-card,
+.offline-reward-grid > div,
+.scout-report-city,
+.scout-report-overview > div,
+.scout-breakdown-row,
+.scout-skill-list,
+.troop-route-city,
+.troop-slider-control,
+.troop-slider-preview > div,
+.send-confirm-card,
+.city-stat-panel,
+.stat-wide,
+.stat-chip,
+.main-city-action-panel,
+.city-level-up-panel,
+.relinquish-city-action-panel,
+.gold-camp-info-grid > div,
+.gold-camp-description,
+.clan-panel,
+.clan-card,
+.clan-hero,
+.clan-war-room-panel,
+.skill-preset-panel,
+.skill-preset-detail,
+.daily-mission-row,
+.daily-mission-detail-stat,
+.daily-mission-recommendation {
+  border-radius: var(--ui-radius);
+  border-color: rgba(111, 82, 45, .52);
+  color: var(--cl-ink);
+  background:
+    linear-gradient(180deg, rgba(224, 211, 177, .96), rgba(185, 164, 122, .95)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .06) 0 1px, transparent 1px 9px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 226, .24),
+    inset 0 -2px 0 rgba(85, 54, 25, .12),
+    0 7px 14px rgba(0, 0, 0, .18);
+}
+
+.modal .modal-card {
+  color: var(--cl-ink);
+  background:
+    linear-gradient(90deg, rgba(90, 50, 26, .18), transparent 15% 85%, rgba(90, 50, 26, .16)),
+    linear-gradient(180deg, #dfd0ad, #c5b17f 58%, #ad9464),
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .08) 0 1px, transparent 1px 10px);
+  border: 2px solid #5a3b21;
+  box-shadow:
+    0 0 0 2px rgba(23, 14, 7, .62),
+    0 30px 76px rgba(0, 0, 0, .64),
+    inset 0 0 0 1px rgba(255, 247, 216, .38),
+    inset 0 -14px 26px rgba(93, 58, 24, .16);
+}
+
+.modal-card h2,
+.profile-screen-header h2,
+.profile-section-heading h3,
+.flag-editor-preview h3,
+.panel-header strong,
+.online-login strong,
+.shop-item-copy strong,
+.inventory-slot-name,
+.inventory-selection-copy strong,
+.city-list-summary strong,
+.battle-report-detail-grid strong,
+.leaderboard-power strong,
+.profile-name-row h3,
+.profile-level-row strong,
+.profile-skill-summary strong,
+.profile-skill-reset strong,
+.profile-skill-list .skill-row strong,
+.profile-notification-row strong {
+  color: #3b2412;
+  text-shadow: 0 1px rgba(255, 247, 216, .48);
+}
+
+.setup-card h1,
+.setup-card h2,
+.login-game-info h2,
+.login-game-info strong,
+.setup-card .online-login strong {
+  color: var(--cl-ivory);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .68);
+}
+
+.modal-card #modalBody,
+.modal-card p,
+.modal-card li,
+.modal-card small,
+.profile-screen,
+.profile-screen p,
+.profile-screen small {
+  color: #3f2b18;
+}
+
+.profile-screen {
+  background:
+    linear-gradient(90deg, rgba(64, 39, 21, .2), transparent 14% 86%, rgba(64, 39, 21, .2)),
+    linear-gradient(180deg, #d9c9a4, #b8a073 56%, #957a4f);
+  border-color: #54371f;
+  box-shadow:
+    0 0 0 100vmax rgba(15, 11, 8, .7),
+    0 26px 70px rgba(0, 0, 0, .62),
+    inset 0 0 0 2px rgba(255, 246, 212, .26);
+}
+
+.profile-screen-header,
+.bottom-nav,
+.commander-panel,
+.map-loading-panel,
+.realm-activity-card.citadel {
+  color: var(--cl-ivory);
+  background:
+    linear-gradient(180deg, #4c3220, #201710),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .045) 0 1px, transparent 1px 7px);
+}
+
+.profile-screen-header {
+  border-bottom-color: rgba(84, 55, 31, .78);
+}
+
+.profile-screen-header span,
+.profile-flag-edit,
+.shop-balance span,
+.inventory-summary span,
+.shop-item-copy span,
+.inventory-slot-count,
+.inventory-selection-copy span,
+.kingdom-stat span,
+.profile-skill-summary span,
+.profile-section-heading span,
+.flag-editor-preview > div > span,
+.leaderboard-row small,
+.battle-report-result small,
+.incoming-attack-city span,
+.incoming-attack-force span,
+.scout-report-overview span,
+.daily-missions-meta span {
+  color: #5f482b;
+}
+
+.commander-panel .panel-header strong,
+.commander-panel .panel-header small,
+.commander-panel .selected-info,
+.bottom-nav .nav-btn,
+.map-loading-panel,
+.realm-activity-card.citadel,
+.realm-activity-card.citadel * {
+  color: var(--cl-ivory);
+}
+
+.primary-btn,
+.shop-buy-btn,
+.inventory-use-btn,
+.profile-primary-btn,
+.offline-collect-btn,
+.troop-slider-confirm,
+.main-city-change-btn,
+.city-level-up-btn,
+.skill-row button,
+.profile-skill-reset button,
+.leaderboard-toolbar button,
+.battle-report-filters button.active,
+.action-buttons button,
+.modal-actions button,
+.seasonal-achievement-reward button,
+.daily-mission-action button {
+  color: var(--cl-ivory);
+  border: 1px solid rgba(90, 38, 42, .78);
+  border-radius: var(--ui-radius-small);
+  background:
+    linear-gradient(180deg, #7a373b, #5a262b 66%, #361417),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .05) 0 1px, transparent 1px 6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 233, 190, .18),
+    inset 0 -3px 0 rgba(20, 7, 5, .25),
+    0 7px 14px rgba(0, 0, 0, .25);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .62);
+}
+
+.ghost-btn,
+.profile-secondary-btn,
+.battle-report-back,
+.battle-report-detail-btn,
+.battle-report-locate-btn,
+.city-list-toolbar button,
+.city-list-locate,
+.city-list-info,
+.city-list-pager button,
+.troop-slider-cancel,
+.incoming-attack-locate,
+.realm-activity-location-btn,
+.recall-horn-btn,
+.modal-actions .safe-action {
+  color: var(--cl-ivory);
+  border: 1px solid rgba(69, 68, 62, .74);
+  border-radius: var(--ui-radius-small);
+  background:
+    linear-gradient(180deg, #555047, #2e2b26),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .035) 0 1px, transparent 1px 6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    inset 0 -3px 0 rgba(0, 0, 0, .24),
+    0 6px 12px rgba(0, 0, 0, .22);
+}
+
+.primary-btn:disabled,
+.shop-buy-btn:disabled,
+.inventory-use-btn:disabled,
+.city-level-up-btn:disabled,
+.main-city-change-btn:disabled,
+.profile-skill-reset button:disabled,
+.daily-mission-action button:disabled {
+  color: rgba(73, 58, 38, .62);
+  border-color: rgba(94, 74, 45, .24);
+  background:
+    linear-gradient(180deg, rgba(180, 164, 129, .65), rgba(132, 112, 78, .65));
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.action-buttons button.secondary,
+.action-buttons button.blue,
+.swift-march-order-used,
+.outgoing-attack-card .incoming-attack-locate {
+  color: var(--cl-ivory);
+  border-color: rgba(72, 88, 105, .62);
+  background: linear-gradient(180deg, #566372, #303941);
+}
+
+.action-buttons button.move-action,
+.troop-slider-panel.transfer .troop-command-icon,
+.troop-slider-confirm.transfer,
+.modal-actions .safe-action {
+  color: #f3f0df;
+  border-color: rgba(85, 97, 61, .72);
+  background: linear-gradient(180deg, #647047, #374128);
+}
+
+.action-buttons button.danger,
+.action-buttons button.attack-action,
+.modal-actions .danger-action,
+.incoming-attack-btn,
+.incoming-attack-btn.active {
+  color: #fff1e2;
+  border-color: rgba(136, 72, 44, .82);
+  background: linear-gradient(180deg, #88482c, #58262a 72%, #321316);
+}
+
+.setup-fullscreen-btn,
+.fullscreen-btn,
+.modal-close,
+.clear-btn,
+.profile-icon-btn,
+.profile-screen-close,
+.audio-mute-button {
+  color: var(--cl-ivory);
+  border-color: rgba(69, 68, 62, .8);
+  border-radius: var(--ui-radius-small);
+  background: linear-gradient(180deg, #59534a, #2b2925);
+}
+
+.profile-tabs,
+.push-alerts-toggle,
+.animation-mode-toggle,
+.skill-preset-tabs,
+.battle-report-filters,
+.seasonal-achievement-filters {
+  border-color: rgba(84, 55, 31, .42);
+  border-radius: var(--ui-radius);
+  background:
+    linear-gradient(180deg, rgba(121, 91, 54, .28), rgba(56, 38, 24, .22)),
+    rgba(48, 34, 23, .18);
+  box-shadow: inset 0 2px 8px rgba(70, 45, 22, .18);
+}
+
+.profile-tabs button,
+.push-alerts-option,
+.animation-mode-option,
+.skill-preset-tabs button,
+.battle-report-filters button,
+.seasonal-achievement-filters button,
+.flag-option-grid button,
+.flag-symbol-grid button,
+.clan-shield-choice-grid button,
+.clan-shield-swatch-grid button {
+  border-radius: var(--ui-radius-small);
+  color: #49341d;
+}
+
+.city-list-toolbar button.active,
+.profile-tabs button.active,
+.push-alerts-option.active,
+.push-alerts-option[aria-pressed="true"],
+.animation-mode-option.active,
+.animation-mode-option[aria-pressed="true"],
+.flag-option-grid button.active,
+.flag-symbol-grid button.active,
+.clan-shield-choice-grid button.active,
+.skill-preset-tabs button.selected,
+.skill-preset-tabs button.active {
+  color: var(--cl-ivory);
+  border-color: rgba(90, 38, 42, .8);
+  background: linear-gradient(180deg, #7a373b, #5a262b);
+  box-shadow: inset 0 1px 0 rgba(255, 236, 190, .2), 0 4px 10px rgba(0, 0, 0, .18);
+}
+
+.profile-gold,
+.resource-pill:not(.bag-btn):not(.shop-btn):not(.city-list-btn):not(.island-switch-btn) {
+  color: var(--cl-ivory);
+  border-color: rgba(69, 68, 62, .74);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(61, 43, 29, .97), rgba(26, 20, 15, .98)),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .05) 0 1px, transparent 1px 6px);
+}
+
+.resource-pill.bag-btn,
+.resource-pill.shop-btn,
+.resource-pill.city-list-btn,
+.resource-pill.island-switch-btn,
+.profile-rank-btn,
+.profile-button {
+  border-radius: 5px;
+  border-color: rgba(69, 68, 62, .72);
+  background:
+    linear-gradient(180deg, #4f3826, #201710),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .045) 0 1px, transparent 1px 6px);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, .36),
+    inset 0 0 0 1px rgba(231, 221, 196, .08);
+}
+
+.daily-login-reward-btn.attention,
+.leaderboard-row.current,
+.inventory-slot.filled.selected,
+.island-map-picker .island-map-icon.active {
+  border-color: rgba(161, 120, 50, .86);
+  box-shadow:
+    0 0 0 2px rgba(161, 120, 50, .22),
+    0 9px 18px rgba(0, 0, 0, .28),
+    inset 0 0 0 1px rgba(255, 246, 212, .18);
+}
+
+.shop-item,
+.inventory-slot,
+.city-list-row,
+.battle-report-card,
+.leaderboard-row,
+.incoming-attack-card,
+.daily-mission-row {
+  border-left: 4px solid var(--cl-muted-brass);
+}
+
+.battle-report-card.victory,
+.daily-mission-row.complete,
+.seasonal-achievement-row.complete {
+  border-color: rgba(85, 97, 61, .72);
+  border-left-color: var(--cl-moss);
+  background:
+    linear-gradient(180deg, rgba(214, 204, 169, .96), rgba(165, 166, 120, .94)),
+    repeating-linear-gradient(0deg, rgba(54, 65, 40, .08) 0 1px, transparent 1px 9px);
+}
+
+.battle-report-card.defeat,
+.incoming-attack-card,
+.offline-lost-cities,
+.seasonal-achievement-error {
+  border-color: rgba(136, 72, 44, .7);
+  border-left-color: var(--cl-rust);
+  background:
+    linear-gradient(180deg, rgba(210, 185, 151, .96), rgba(157, 111, 85, .94)),
+    repeating-linear-gradient(0deg, rgba(88, 38, 42, .08) 0 1px, transparent 1px 9px);
+}
+
+.battle-report-card.scout,
+.incoming-attack-card.incoming-scout-card,
+.outgoing-attack-card,
+.scout-report-city,
+.scout-report-overview > div,
+.scout-breakdown-row,
+.scout-skill-list {
+  border-color: rgba(72, 88, 105, .62);
+  border-left-color: var(--cl-faded-indigo);
+  background:
+    linear-gradient(180deg, rgba(214, 206, 187, .96), rgba(158, 166, 166, .94)),
+    repeating-linear-gradient(0deg, rgba(72, 88, 105, .08) 0 1px, transparent 1px 9px);
+}
+
+.battle-report-result,
+.incoming-attack-badge,
+.troop-command-icon,
+.daily-mission-icon,
+.seasonal-achievement-row-icon,
+.leaderboard-rank,
+.shop-item-image-placeholder,
+.inventory-slot-icon,
+.inventory-selection-icon,
+.daily-mission-detail-icon {
+  color: var(--cl-ivory);
+  border-color: rgba(69, 68, 62, .72);
+  border-radius: var(--ui-radius-small);
+  background:
+    linear-gradient(180deg, #555047, #2e2b26),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .035) 0 1px, transparent 1px 6px);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .6);
+}
+
+.battle-report-card.defeat .battle-report-result,
+.incoming-attack-badge,
+.citadel-assault-card .incoming-attack-badge {
+  background: linear-gradient(180deg, #88482c, #58262a);
+}
+
+.incoming-scout-card .incoming-attack-badge,
+.outgoing-scout-card .incoming-attack-badge,
+.scout-report-mark {
+  color: var(--cl-faded-indigo);
+}
+
+.outgoing-attack-btn,
+.outgoing-attack-btn.active {
+  border-color: rgba(72, 88, 105, .72);
+  background: linear-gradient(180deg, #59697a, #2f3944);
+}
+
+.toast {
+  color: #3a2715;
+  border: 2px solid #4d321c;
+  border-radius: 5px;
+  background:
+    linear-gradient(180deg, #d9c79f, #ad9464),
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .08) 0 1px, transparent 1px 9px);
+  box-shadow:
+    0 0 0 2px rgba(23, 14, 7, .38),
+    0 14px 32px rgba(0, 0, 0, .44),
+    inset 0 0 0 1px rgba(255, 247, 216, .32);
+}
+
+.realm-announcement-banner {
+  color: var(--cl-ink);
+  border-color: #54371f;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(90, 50, 26, .18), transparent 14% 86%, rgba(90, 50, 26, .16)),
+    linear-gradient(180deg, #decda6, #bba271 58%, #9b7b4a);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 246, 212, .4),
+    inset 0 -12px 22px rgba(91, 43, 7, .14),
+    0 0 0 2px rgba(28, 13, 4, .58);
+}
+
+.realm-announcement-copy strong,
+.realm-announcement-copy span {
+  color: #3c2411;
+  text-shadow: 0 1px rgba(255, 244, 187, .75);
+}
+
+.realm-announcement.citadel .realm-announcement-banner {
+  color: #f3e7c9;
+  border-color: #b48a3a;
+  background:
+    linear-gradient(180deg, #5a3d20, #251710 72%, #15100c),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .04) 0 1px, transparent 1px 7px);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 198, 162, .22),
+    0 0 0 2px rgba(69, 41, 5, .76),
+    0 18px 30px rgba(0, 0, 0, .42);
+}
+
+.realm-announcement.citadel .realm-announcement-copy strong,
+.realm-announcement.citadel .realm-announcement-copy span {
+  color: #eadbb5;
+  text-shadow: 0 2px #170d02;
+}
+
+.map-frame {
+  background:
+    linear-gradient(180deg, rgba(36, 32, 26, .16), rgba(23, 19, 15, .24)),
+    var(--ocean-bg);
+}
+
+.paths .army-route-ribbon.player-route { fill: rgba(161, 120, 50, .72); }
+.paths .army-route-ribbon.enemy-route,
+.paths .army-route-ribbon.clan-hostile-route { fill: rgba(136, 72, 44, .76); }
+.paths .army-route-ribbon.clan-support-route { fill: rgba(85, 97, 61, .76); }
+.paths .army-route-flow.player-route { stroke: rgba(214, 198, 162, .95); }
+.paths .army-route-flow.enemy-route { stroke: rgba(207, 130, 91, .96); }
+.paths .army-route-flow.clan-support-route { stroke: rgba(173, 190, 134, .96); }
+.paths .army-route-flow.clan-hostile-route { stroke: rgba(136, 72, 44, .96); }
+.paths .army-route-flow.scout-route {
+  stroke: rgba(72, 88, 105, .96);
+  stroke-dasharray: 7 13;
+}
+
+.city-ring {
+  border: 2px solid rgba(214, 198, 162, .58);
+  background: transparent;
+}
+
+.city-node.player .city-ring,
+.city-node.player2 .city-ring,
+.city-node.player3 .city-ring,
+.city-node.enemy .city-ring,
+.city-node.neutral .city-ring {
+  border-color: transparent;
+  background: transparent;
+}
+
+.city-node.selected .city-ring,
+.city-node.targeted .city-ring {
+  border-color: rgba(214, 198, 162, .8);
+  box-shadow: 0 0 0 4px rgba(36, 32, 26, .28), 0 12px 22px rgba(0, 0, 0, .42);
+}
+
+.city-node.attackable .city-ring,
+.city-node.regroup-target .city-ring {
+  border-color: rgba(136, 72, 44, .9);
+  box-shadow: 0 0 0 5px rgba(136, 72, 44, .22), 0 12px 22px rgba(0, 0, 0, .42);
+}
+
+.city-node.supportable .city-ring {
+  border-color: rgba(85, 97, 61, .92);
+  box-shadow: 0 0 0 5px rgba(85, 97, 61, .22), 0 12px 22px rgba(0, 0, 0, .42);
+}
+
+.city-node.scout-nearby-target .city-ring,
+.city-node.scout-radius-source .city-ring {
+  border-color: rgba(72, 88, 105, .92);
+  box-shadow: 0 0 0 5px rgba(72, 88, 105, .22), 0 12px 22px rgba(0, 0, 0, .42);
+}
+
+.foreign-city-shield,
+.foreign-selected-level,
+.foreign-selected-data,
+.foreign-selected-crest {
+  border-color: rgba(214, 198, 162, .5);
+  background:
+    linear-gradient(180deg, #5f5548, #332e28);
+  box-shadow: inset 0 0 0 1px rgba(231, 221, 196, .1), 0 8px 12px rgba(0, 0, 0, .3);
+}
+
+.army-token-nav,
+.army-token-nav button {
+  border-radius: var(--ui-radius-small);
+  background: linear-gradient(180deg, #4f3826, #201710);
+}
+
+.stronghold-glow {
+  background: rgba(161, 120, 50, .2);
+  box-shadow: 0 0 0 4px rgba(36, 32, 26, .22);
+}
+
+.city-node.stronghold-training .stronghold-glow,
+.city-node.stronghold-speed .stronghold-glow,
+.city-node.stronghold-defense .stronghold-glow,
+.city-node.stronghold-crown .stronghold-glow {
+  background: rgba(161, 120, 50, .18);
+}
+
+.city-node.stronghold-node.attackable .stronghold-glow {
+  background: rgba(136, 72, 44, .24);
+}
+
+.city-node.stronghold-node.supportable .stronghold-glow {
+  background: rgba(85, 97, 61, .24);
+}
+
+.camp-node.selected .camp-art,
+.camp-node.attackable .camp-art,
+.camp-node.supportable .camp-art {
+  filter:
+    drop-shadow(0 8px 8px rgba(0, 0, 0, .48))
+    drop-shadow(0 0 6px rgba(214, 198, 162, .44));
+}
+
+.camp-node.attackable .camp-art {
+  filter:
+    drop-shadow(0 8px 8px rgba(0, 0, 0, .48))
+    drop-shadow(0 0 7px rgba(136, 72, 44, .62));
+}
+
+.camp-node.supportable .camp-art {
+  filter:
+    drop-shadow(0 8px 8px rgba(0, 0, 0, .48))
+    drop-shadow(0 0 7px rgba(85, 97, 61, .62));
+}
+
+.city-wheel-ring,
+.foreign-city-action-wheel .city-wheel-ring {
+  border-color: rgba(211, 161, 63, .78);
+  border-top-color: transparent;
+}
+
+.city-wheel-action {
+  border-radius: 50%;
+  color: #fff5d7;
+  background: linear-gradient(180deg, #1e628a, #082a46);
+  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .56)) drop-shadow(0 0 2px rgba(243, 212, 135, .52));
+}
+
+.gold-camp-wheel-action {
+  border-radius: 50%;
+  color: var(--cl-ivory);
+  background: linear-gradient(180deg, #555047, #2e2b26);
+  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .56));
+}
+
+.wheel-send,
+.wheel-attack {
+  color: #271807;
+  background: linear-gradient(180deg, var(--ui-gold-bright), #a8691b);
+}
+
+.wheel-level,
+.wheel-scout-nearby.armed {
+  color: #f4f8e8;
+  background: linear-gradient(180deg, #4f8447, #173a27);
+}
+
+.wheel-regroup,
+.wheel-regroup.armed {
+  background: linear-gradient(180deg, #a6423c, #4b1618);
+}
+
+.wheel-cost {
+  color: var(--ui-gold-bright);
+  border: 1px solid rgba(211, 161, 63, .32);
+  background: rgba(3, 18, 31, .9);
+}
+
+.character-level-badge,
+.daily-login-reward-badge,
+.report-unread-badge {
+  color: var(--cl-ink);
+  border-color: rgba(90, 57, 28, .62);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #d7c493, #a88d55);
+  text-shadow: 0 1px rgba(255, 247, 216, .55);
+}
+
+.kingdom-flag {
+  overflow: hidden;
+  border: 1px solid rgba(38, 26, 15, .65);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 247, 216, .16),
+    inset 8px 0 12px rgba(255, 255, 255, .08),
+    inset -8px 0 12px rgba(0, 0, 0, .16),
+    0 4px 9px rgba(0, 0, 0, .34);
+}
+
+.kingdom-flag::after {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.14), transparent 14% 28%, rgba(0,0,0,.1) 40% 48%, transparent 58% 72%, rgba(255,255,255,.08)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 7px);
+  opacity: .38;
+}
+
+.kingdom-flag .flag-symbol {
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .42));
+}
+
+.clan-shield svg {
+  filter: saturate(.9) contrast(1.05);
+}
+
+.clan-shield {
+  filter:
+    drop-shadow(0 5px 5px rgba(0, 0, 0, .38))
+    sepia(.08);
+}
+
+.clan-shield-editor,
+.clan-shield-editor-workspace,
+.clan-shield-panel,
+.clan-shield-editor-preview,
+.clan-overview-panel,
+.clan-social-panel,
+.clan-quest-card,
+.clan-member-row,
+.clan-objective-card {
+  border-color: rgba(111, 82, 45, .52);
+  background:
+    linear-gradient(180deg, rgba(224, 211, 177, .96), rgba(185, 164, 122, .95)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .06) 0 1px, transparent 1px 9px);
+}
+
+.effect-status-badge,
+.active-item-effects-stack.compact .effect-status-badge,
+.active-item-effects-stack.dense .effect-status-badge {
+  border-color: rgba(69, 68, 62, .72);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(65, 48, 33, .96), rgba(25, 19, 14, .98));
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, .4),
+    inset 0 0 0 1px rgba(231, 221, 196, .08);
+}
+
+.effect-status-badge strong {
+  color: var(--cl-ink);
+  background: linear-gradient(180deg, #d7c493, #a88d55);
+}
+
+.loading-wheel-ring {
+  filter: sepia(.32) saturate(.7) brightness(.86) drop-shadow(0 4px 8px rgba(0, 0, 0, .5));
+}
+
+.loading-wheel-crown,
+.level-up-crown-wrap img {
+  filter: sepia(.18) saturate(.8) brightness(.9) drop-shadow(0 4px 8px rgba(0, 0, 0, .58));
+}
+
+.level-up-reward-modal .level-up-reward-card {
+  border-color: #54371f;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(90, 50, 26, .16), transparent 14% 86%, rgba(90, 50, 26, .16)),
+    linear-gradient(180deg, #dfd0ad, #c5b17f 58%, #ad9464),
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .08) 0 1px, transparent 1px 10px);
+  box-shadow:
+    0 0 0 2px rgba(23, 14, 7, .58),
+    0 30px 90px rgba(0, 0, 0, .72),
+    inset 0 0 0 1px rgba(255, 247, 216, .36);
+}
+
+.level-up-crown-glow {
+  background: rgba(180, 138, 58, .14);
+  box-shadow: 0 0 24px rgba(180, 138, 58, .22);
+}
+
+.level-up-reward-item,
+.level-up-troop-destination {
+  border-radius: var(--ui-radius);
+  color: var(--cl-ink);
+  background:
+    linear-gradient(180deg, rgba(224, 211, 177, .96), rgba(185, 164, 122, .95)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .06) 0 1px, transparent 1px 9px);
+}
+
+.level-up-reward-item strong,
+.level-up-reward-header h2,
+.level-up-troop-destination strong {
+  color: #3b2412;
+  text-shadow: none;
+}
+
+.level-up-eyebrow,
+.level-up-step strong,
+.level-up-reward-item small,
+.level-up-troop-destination small {
+  color: #6e2f35;
+}
+
+.performance-panel,
+.rotate-warning > div {
+  border-radius: var(--ui-radius);
+  border-color: rgba(94, 63, 36, .78);
+  background: linear-gradient(180deg, rgba(79, 53, 34, .97), rgba(30, 23, 17, .99));
+}
+
+@media (hover: hover) {
+  :where(button, .nav-btn, .resource-pill, .city-wheel-action, .gold-camp-wheel-action):not(:disabled):hover {
+    filter: brightness(1.05) saturate(.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paths .army-route-flow,
+  .city-node.attackable .city-ring,
+  .city-node.supportable .city-ring,
+  .city-node.scout-nearby-target .city-ring,
+  .city-node.regroup-target .city-ring {
+    animation: none !important;
+  }
+}
+/* Crownlands core player experience pass 2 -------------------------------- */
+
+:root {
+  --cl-parchment-sheet:
+    linear-gradient(90deg, rgba(89, 56, 26, .12), transparent 13% 87%, rgba(89, 56, 26, .1)),
+    linear-gradient(180deg, rgba(226, 214, 181, .98), rgba(193, 174, 127, .97)),
+    repeating-linear-gradient(0deg, rgba(82, 58, 31, .055) 0 1px, transparent 1px 10px);
+  --cl-parchment-royal:
+    linear-gradient(90deg, rgba(110, 47, 53, .18), transparent 18% 82%, rgba(110, 47, 53, .14)),
+    linear-gradient(180deg, #e1d1ac, #c8b17c 66%, #a98e5b);
+  --cl-timber-panel:
+    linear-gradient(180deg, #5c3b25, #2a1d14 72%, #17110d),
+    repeating-linear-gradient(90deg, rgba(232, 216, 176, .045) 0 1px, transparent 1px 8px);
+  --cl-iron-panel:
+    linear-gradient(180deg, #56534c, #292720 72%, #17130f);
+  --cl-oxblood-panel:
+    linear-gradient(180deg, #7a373b, #58262a 72%, #341518);
+  --cl-moss-panel:
+    linear-gradient(180deg, #667248, #3d462b 72%, #262d1c);
+  --cl-indigo-panel:
+    linear-gradient(180deg, #5a6875, #37434e 72%, #252c34);
+  --cl-inset-edge:
+    inset 0 0 0 1px rgba(255, 246, 214, .2),
+    inset 0 -3px 0 rgba(55, 35, 18, .18);
+  --cl-hard-shadow: 0 14px 28px rgba(0, 0, 0, .34);
+  --cl-panel-edge: #54371f;
+  --cl-ledger-line: rgba(84, 59, 31, .16);
+}
+
+.cl-icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.cl-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+:is(button, a, .nav-btn, .resource-pill, .army-token, .kingdom-flag) .cl-icon {
+  pointer-events: none;
+}
+
+.cl-glyph,
+:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .patch-notes-btn-icon, .install-app-icon, .audio-channel-glyph) {
+  display: inline-grid;
+  place-items: center;
+  color: currentColor;
+}
+
+:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .patch-notes-btn-icon, .install-app-icon, .audio-channel-glyph) .cl-icon {
+  width: 1em;
+  height: 1em;
+}
+
+.install-app-btn {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.install-app-icon {
+  font-size: 1rem;
+}
+
+:is(.panel, .cl-panel, .modal .modal-card, .commander-panel, .profile-screen, .online-login, .profile-settings-section, .shop-item, .inventory-slot, .city-list-row, .battle-report-card, .incoming-attack-card, .outgoing-attack-card, .daily-mission-row) {
+  border-radius: 4px;
+}
+
+:is(.panel, .cl-panel, .modal .modal-card, .profile-settings-section, .kingdom-stat, .shop-item, .inventory-slot, .inventory-selection, .city-list-row, .battle-report-card, .incoming-attack-card, .outgoing-attack-card, .daily-mission-row, .seasonal-achievement-row) {
+  background: var(--cl-parchment-sheet);
+  border-color: rgba(84, 55, 31, .62);
+  box-shadow: var(--cl-inset-edge), var(--cl-hard-shadow);
+}
+
+:is(.modal .modal-card, .profile-screen, .commander-panel, .map-loading-panel)::before {
+  opacity: .45;
+}
+
+:is(input, select, textarea) {
+  color: var(--cl-ink);
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(236, 225, 191, .96), rgba(206, 187, 141, .96)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .08) 0 1px, transparent 1px 8px);
+  box-shadow: inset 0 2px 4px rgba(72, 43, 18, .2);
+}
+
+input[type="range"] {
+  accent-color: var(--cl-oxblood);
+}
+
+:is(.primary-btn, .profile-primary-btn, .shop-buy-btn, .inventory-use-btn, .troop-slider-confirm, .city-level-up-btn, .main-city-change-btn, .daily-mission-action button, .seasonal-achievement-reward button, .modal-actions button):not(:disabled) {
+  border-color: rgba(82, 34, 37, .85);
+  background: var(--cl-oxblood-panel);
+  box-shadow:
+    inset 0 1px 0 rgba(236, 216, 171, .2),
+    inset 0 -3px 0 rgba(26, 8, 7, .32),
+    0 8px 14px rgba(0, 0, 0, .26);
+}
+
+:is(.ghost-btn, .profile-secondary-btn, .battle-report-back, .battle-report-detail-btn, .battle-report-locate-btn, .city-list-toolbar button, .city-list-locate, .city-list-info, .city-list-pager button, .incoming-attack-locate, .modal-close, .clear-btn, .profile-icon-btn, .audio-mute-button):not(:disabled) {
+  border-color: rgba(54, 51, 45, .82);
+  background: var(--cl-iron-panel);
+}
+
+:is(.modal-close, .clear-btn, .profile-icon-btn, .audio-mute-button) {
+  display: grid;
+  place-items: center;
+}
+
+:is(.modal-close, .clear-btn, .profile-icon-btn, .audio-mute-button) .cl-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.setup-screen {
+  background:
+    linear-gradient(180deg, rgba(20, 15, 10, .06) 0%, rgba(20, 15, 10, .2) 42%, rgba(20, 15, 10, .76) 100%),
+    linear-gradient(90deg, rgba(91, 58, 36, .22), transparent 22% 78%, rgba(91, 58, 36, .2)),
+    url("assets/optimized/login-background-1448x1086-c8507d1988d6.webp") center / contain no-repeat,
+    #1c150f;
+}
+
+.setup-screen::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: calc((100vw - var(--login-art-width)) / 2);
+  top: calc((100dvh - var(--login-art-height)) / 2);
+  width: var(--login-art-width);
+  height: var(--login-art-height);
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 1px solid rgba(204, 177, 115, .68);
+  box-shadow:
+    inset 0 0 0 2px rgba(45, 31, 20, .72),
+    inset 0 0 0 3px rgba(238, 218, 165, .12),
+    0 0 0 1px rgba(10, 7, 5, .82),
+    0 8px 24px rgba(0, 0, 0, .26);
+}
+
+.setup-card {
+  position: relative;
+  border: 2px solid var(--cl-panel-edge);
+  border-radius: 5px;
+  background:
+    linear-gradient(90deg, rgba(58, 37, 22, .2), transparent 16% 84%, rgba(58, 37, 22, .16)),
+    linear-gradient(180deg, rgba(66, 43, 27, .98), rgba(24, 17, 12, .99));
+  box-shadow:
+    0 0 0 2px rgba(14, 9, 6, .7),
+    0 22px 44px rgba(0, 0, 0, .56),
+    inset 0 0 0 1px rgba(230, 214, 174, .1);
+  backdrop-filter: none;
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  .setup-card {
+    width: min(350px, calc(100vw - 1rem));
+    max-height: calc(100dvh - .75rem);
+    margin-bottom: .25rem;
+    padding: .38rem;
+  }
+
+  .online-login {
+    padding: .42rem;
+  }
+
+  .online-login .ghost-btn,
+  .online-login .primary-btn {
+    min-height: 39px;
+    margin-top: .26rem;
+  }
+
+  .public-site-links {
+    gap: .22rem;
+    margin-top: .32rem;
+  }
+
+  .public-site-links a {
+    min-width: 0;
+    min-height: 34px;
+    padding: .28rem .38rem;
+    font-size: .62rem;
+  }
+}
+
+.online-login {
+  color: var(--cl-ink);
+  border: 1px solid rgba(89, 58, 31, .7);
+  background: var(--cl-parchment-sheet);
+}
+
+.setup-card .online-login strong,
+.setup-card .online-login small,
+.server-realm-heading {
+  color: #3b2412;
+  text-shadow: 0 1px rgba(255, 246, 214, .5);
+}
+
+.server-realm-card {
+  border-radius: 3px;
+  border-color: rgba(84, 55, 31, .68);
+  color: var(--cl-ink);
+  background: var(--cl-parchment-royal);
+  box-shadow: inset 0 0 0 1px rgba(255, 246, 214, .24);
+}
+
+.server-realm-crest {
+  width: 32px;
+  height: 32px;
+  color: var(--cl-muted-brass);
+}
+
+.server-realm-crest .cl-icon {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.login-game-info {
+  border: 2px solid rgba(84, 55, 31, .78);
+  border-radius: 4px;
+  color: var(--cl-ink);
+  background: var(--cl-parchment-sheet);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, .42), inset 0 0 0 1px rgba(255, 246, 214, .22);
+  backdrop-filter: none;
+}
+
+.login-game-info-eyebrow,
+.login-game-info h2,
+.login-game-info p,
+.login-game-info li,
+.login-game-info li strong {
+  color: #3b2412;
+  text-shadow: none;
+}
+
+.login-game-info li {
+  border-left-color: rgba(110, 47, 53, .54);
+}
+
+.login-game-info > a,
+.public-site-links a {
+  border: 1px solid rgba(84, 55, 31, .62);
+  border-radius: 3px;
+  color: var(--cl-ink);
+  background:
+    linear-gradient(180deg, #d9c79b, #aa8c55),
+    repeating-linear-gradient(90deg, rgba(55, 32, 15, .06) 0 1px, transparent 1px 6px);
+}
+
+.setup-fullscreen-btn,
+.discord-home-link,
+.login-music-mute-btn {
+  border-radius: 4px;
+  color: var(--cl-ivory);
+  border-color: rgba(46, 43, 36, .88);
+  background: var(--cl-iron-panel);
+  box-shadow:
+    0 10px 18px rgba(0, 0, 0, .42),
+    inset 0 0 0 1px rgba(232, 216, 176, .1);
+  backdrop-filter: none;
+}
+
+.top-hud {
+  --top-hud-shade: linear-gradient(180deg, rgba(33, 24, 17, .72), rgba(20, 15, 11, .24), transparent);
+  isolation: isolate;
+  color: var(--cl-ivory);
+  background: none;
+}
+/* Extend only the existing shade beyond the HUD safe-area offsets. */
+.top-hud::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset-block: 0;
+  left: calc(0px - max(.75rem, env(safe-area-inset-left)));
+  right: calc(0px - max(.75rem, env(safe-area-inset-right)));
+  background: var(--top-hud-shade);
+  pointer-events: none;
+}
+
+.profile-stack {
+  gap: .28rem;
+}
+
+.profile-action-row {
+  align-items: center;
+  gap: .28rem;
+  padding: .24rem;
+  border: 1px solid rgba(28, 19, 12, .64);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(78, 51, 33, .92), rgba(31, 21, 14, .94)),
+    repeating-linear-gradient(90deg, rgba(232, 216, 176, .05) 0 1px, transparent 1px 7px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .34), inset 0 0 0 1px rgba(232, 216, 176, .08);
+}
+
+.profile-button,
+.profile-rank-btn,
+.resource-pill.bag-btn,
+.resource-pill.shop-btn,
+.resource-pill.city-list-btn,
+.resource-pill.island-switch-btn {
+  border-radius: 4px;
+  border: 1px solid rgba(44, 40, 34, .78);
+  background: var(--cl-timber-panel);
+}
+
+.profile-button {
+  box-shadow: inset 0 0 0 1px rgba(231, 221, 196, .08), 0 8px 16px rgba(0, 0, 0, .38);
+}
+
+.profile-rank-icon,
+.bag-icon,
+.shop-icon,
+.city-list-icon,
+.island-switch-icon,
+.nav-icon,
+.daily-login-reward-icon {
+  filter: saturate(.9) contrast(1.04) sepia(.08) drop-shadow(0 5px 6px rgba(0, 0, 0, .42));
+}
+
+.profile-gold {
+  min-height: 32px;
+  padding: .22rem .54rem;
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .34rem;
+  border: 1px solid rgba(54, 51, 45, .86);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, #3a291c, #17120d),
+    repeating-linear-gradient(90deg, rgba(214, 198, 162, .06) 0 1px, transparent 1px 7px);
+  box-shadow: 0 8px 14px rgba(0, 0, 0, .36), inset 0 0 0 1px rgba(232, 216, 176, .08);
+}
+
+.profile-gold .cl-icon {
+  width: 1rem;
+  height: 1rem;
+  color: #c8a966;
+}
+
+.character-level-badge,
+.daily-login-reward-badge,
+.report-unread-badge,
+.incoming-attack-badge {
+  border-radius: 3px;
+  border-color: rgba(84, 55, 31, .68);
+  background: linear-gradient(180deg, #d7c493, #a88d55);
+  box-shadow: inset 0 0 0 1px rgba(255, 246, 214, .26), 0 3px 6px rgba(0, 0, 0, .28);
+}
+
+.citadel-assault-countdown {
+  border-radius: 3px;
+  border-color: rgba(150, 118, 61, .68);
+  background: var(--cl-timber-panel);
+  box-shadow: 0 8px 16px rgba(0,0,0,.38), inset 0 0 0 1px rgba(231, 221, 196, .08);
+}
+
+.citadel-assault-countdown.imminent {
+  border-color: rgba(136, 72, 44, .9);
+  background: var(--cl-oxblood-panel);
+  box-shadow: 0 9px 18px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255, 218, 180, .12);
+}
+
+.bottom-nav {
+  border-radius: 0;
+  border-top: 1px solid rgba(28, 19, 12, .88);
+  background: var(--cl-timber-panel);
+  box-shadow: 0 -8px 18px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(232, 216, 176, .08);
+}
+
+.bottom-nav .nav-btn {
+  border-radius: 3px;
+  border: 1px solid rgba(44, 40, 34, .66);
+  color: var(--cl-ivory);
+  background: linear-gradient(180deg, rgba(75, 54, 35, .72), rgba(30, 22, 15, .82));
+}
+
+.outgoing-attack-btn,
+.outgoing-attack-btn.active {
+  border-color: rgba(72, 88, 105, .8);
+  background: var(--cl-indigo-panel);
+}
+
+.incoming-attack-btn,
+.incoming-attack-btn.active {
+  border-color: rgba(136, 72, 44, .9);
+  background: var(--cl-oxblood-panel);
+}
+
+.bottom-nav .cl-icon,
+.incoming-attack-locate .cl-icon,
+.battle-report-locate-btn .cl-icon,
+.city-list-locate .cl-icon,
+.city-list-info .cl-icon,
+.city-list-pager .cl-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.profile-tabs,
+.push-alerts-toggle,
+.animation-mode-toggle,
+.skill-preset-tabs,
+.battle-report-filters,
+.seasonal-achievement-filters,
+.active-operations-tabs,
+.clan-section-nav,
+.clan-browser-nav {
+  border-radius: 3px;
+  border-color: rgba(84, 55, 31, .56);
+  background:
+    linear-gradient(180deg, rgba(69, 44, 27, .24), rgba(36, 24, 16, .18)),
+    repeating-linear-gradient(90deg, rgba(84, 59, 31, .08) 0 1px, transparent 1px 7px);
+}
+
+:is(.profile-tabs button, .push-alerts-option, .animation-mode-option, .skill-preset-tabs button, .battle-report-filters button, .seasonal-achievement-filters button, .active-operations-tab, .clan-section-nav button, .clan-browser-nav button) {
+  border-radius: 2px;
+  color: #49341d;
+}
+
+:is(.profile-tabs button.active, .push-alerts-option.active, .push-alerts-option[aria-pressed="true"], .animation-mode-option.active, .animation-mode-option[aria-pressed="true"], .battle-report-filters button.active, .seasonal-achievement-filters button.active, .active-operations-tab.active, .clan-section-nav button.active, .clan-browser-nav button.active) {
+  color: var(--cl-ivory);
+  border-color: rgba(90, 38, 42, .82);
+  background: var(--cl-oxblood-panel);
+}
+
+.map-frame {
+  background:
+    linear-gradient(180deg, rgba(36, 32, 26, .12), rgba(23, 19, 15, .2)),
+    var(--ocean-bg);
+}
+
+.paths .army-route-ribbon {
+  opacity: .52;
+  filter: drop-shadow(0 2px 1px rgba(25, 16, 10, .42));
+}
+
+.paths .army-route-ribbon.player-route { fill: rgba(95, 72, 43, .62); }
+.paths .army-route-ribbon.enemy-route,
+.paths .army-route-ribbon.clan-hostile-route { fill: rgba(136, 72, 44, .72); }
+.paths .army-route-ribbon.clan-support-route { fill: rgba(85, 97, 61, .7); }
+
+.paths .army-route-flow {
+  stroke-linecap: round;
+  filter: none;
+}
+
+.paths .army-route-flow.player-route { stroke: rgba(174, 140, 86, .95); }
+.paths .army-route-flow.enemy-route { stroke: rgba(156, 73, 50, .96); }
+.paths .army-route-flow.clan-support-route { stroke: rgba(106, 125, 76, .96); }
+.paths .army-route-flow.clan-hostile-route { stroke: rgba(136, 72, 44, .96); }
+.paths .army-route-flow.scout-route {
+  stroke: rgba(64, 73, 80, .94);
+  stroke-dasharray: 4 11;
+}
+
+.city-ring {
+  border-style: solid;
+  border-width: 2px;
+  border-color: rgba(214, 198, 162, .48);
+  box-shadow: 0 2px 6px rgba(18, 12, 8, .28);
+}
+
+.city-node.selected .city-ring,
+.city-node.targeted .city-ring {
+  border-color: rgba(214, 198, 162, .88);
+  box-shadow: 0 0 0 4px rgba(36, 32, 26, .32), 0 10px 18px rgba(0, 0, 0, .42);
+}
+
+.city-node.attackable .city-ring {
+  border-color: rgba(136, 72, 44, .95);
+  box-shadow: 0 0 0 5px rgba(99, 42, 34, .2), 0 10px 18px rgba(0, 0, 0, .42);
+}
+
+.city-node.supportable .city-ring,
+.city-node.regroup-target .city-ring {
+  border-color: rgba(85, 97, 61, .94);
+  box-shadow: 0 0 0 5px rgba(85, 97, 61, .2), 0 10px 18px rgba(0, 0, 0, .42);
+}
+
+.city-node.scout-nearby-target .city-ring,
+.city-node.scout-radius-source .city-ring {
+  border-color: rgba(72, 88, 105, .94);
+  border-style: dashed;
+  box-shadow: 0 0 0 5px rgba(72, 88, 105, .18), 0 10px 18px rgba(0, 0, 0, .42);
+}
+
+.scout-nearby-radius,
+.regroup-radius {
+  border: 2px dashed rgba(72, 88, 105, .72);
+  background: rgba(214, 198, 162, .04);
+  box-shadow: inset 0 0 24px rgba(24, 18, 12, .14);
+}
+
+.regroup-radius {
+  border-color: rgba(85, 97, 61, .74);
+}
+
+.scout-nearby-radius span,
+.regroup-radius span {
+  border-radius: 3px;
+  color: var(--cl-ink);
+  border: 1px solid rgba(84, 55, 31, .66);
+  background: var(--cl-parchment-sheet);
+}
+
+.city-label .city-name,
+.foreign-ruler-name-inline,
+.city-ruler-name,
+.map-city-clan-tag {
+  text-shadow:
+    0 1px 1px rgba(0, 0, 0, .72),
+    0 0 3px rgba(20, 13, 8, .66);
+}
+
+.foreign-city-shield,
+.foreign-selected-level,
+.foreign-selected-data,
+.foreign-selected-crest,
+.owner-flag {
+  border-radius: 3px;
+  border-color: rgba(214, 198, 162, .48);
+  background: var(--cl-iron-panel);
+}
+
+.owner-flag .cl-icon,
+.citadel-city-crown .cl-icon {
+  width: .88rem;
+  height: .88rem;
+}
+
+.citadel-city-crown {
+  display: inline-grid;
+  place-items: center;
+  color: #d7bd72;
+}
+
+.city-shield-field img,
+.foreign-city-shield-field img {
+  filter: sepia(.28) saturate(.72) brightness(.86) opacity(.7);
+}
+
+.army-token-nav button {
+  border-radius: 2px;
+  color: var(--cl-ivory);
+}
+
+.city-wheel-action {
+  border: 1px solid rgba(38, 34, 29, .86);
+  color: #fff5d7;
+  background: linear-gradient(180deg, #1e628a, #082a46);
+  box-shadow:
+    0 6px 5px rgba(0, 0, 0, .42),
+    inset 0 0 0 1px rgba(232, 216, 176, .12);
+}
+
+.gold-camp-wheel-action {
+  border: 1px solid rgba(38, 34, 29, .86);
+  color: var(--cl-ivory);
+  background: var(--cl-iron-panel);
+  box-shadow:
+    0 6px 5px rgba(0, 0, 0, .42),
+    inset 0 0 0 1px rgba(232, 216, 176, .12);
+}
+
+.wheel-icon .cl-icon,
+.gold-camp-wheel-action .cl-icon {
+  width: 1.18rem;
+  height: 1.18rem;
+}
+
+.wheel-send,
+.wheel-attack {
+  color: #271807;
+  background: linear-gradient(180deg, var(--ui-gold-bright), #a8691b);
+}
+
+.camp-order-action:not(.clan-reinforce-action) {
+  background: var(--cl-oxblood-panel);
+}
+
+.wheel-level,
+.wheel-scout-nearby.armed {
+  color: #f4f8e8;
+  background: linear-gradient(180deg, #4f8447, #173a27);
+}
+
+.wheel-regroup,
+.wheel-regroup.armed {
+  background: linear-gradient(180deg, #a6423c, #4b1618);
+}
+
+.camp-scout-action {
+  background: var(--cl-indigo-panel);
+}
+
+.wheel-reinforce,
+.clan-reinforce-action {
+  background: var(--cl-moss-panel) !important;
+}
+
+.troop-command-icon {
+  border-radius: 3px;
+}
+
+.troop-command-icon .cl-icon,
+.send-icon .cl-icon,
+.daily-mission-icon .cl-icon,
+.daily-mission-detail-icon .cl-icon,
+.seasonal-achievement-row-icon .cl-icon,
+.battle-visual-detail-icon .cl-icon,
+.battle-visual-section-title .cl-icon,
+.battle-visual-bonus-row .cl-icon,
+.scout-report-mark .cl-icon,
+.scout-breakdown-row .cl-icon,
+.clan-section-nav-mark .cl-icon,
+.clan-lock .cl-icon,
+.level-up-reward-icon .cl-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.kingdom-flag {
+  clip-path: polygon(0 0, 100% 4%, 94% 50%, 100% 96%, 0 100%);
+  border-radius: 1px;
+  border-color: rgba(36, 24, 13, .82);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 247, 216, .13),
+    inset 6px 0 10px rgba(255, 255, 255, .08),
+    inset -7px 0 12px rgba(0, 0, 0, .18),
+    0 5px 10px rgba(0, 0, 0, .38);
+}
+
+.kingdom-flag::before {
+  background: var(--flag-secondary);
+}
+
+.kingdom-flag::after {
+  opacity: 1;
+}
+
+.kingdom-flag.pattern-cross::after,
+.kingdom-flag.pattern-saltire::after {
+  z-index: 0;
+  background: var(--flag-secondary);
+  opacity: .96;
+}
+
+.kingdom-flag:not(.pattern-cross):not(.pattern-saltire)::after {
+  z-index: 1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.14), transparent 18% 31%, rgba(0,0,0,.12) 43% 51%, transparent 64% 78%, rgba(255,255,255,.08)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.09) 0 1px, transparent 1px 6px);
+  opacity: .34;
+  pointer-events: none;
+}
+
+.kingdom-flag {
+  border-style: solid;
+  background-color: var(--flag-primary);
+}
+
+.kingdom-flag::after {
+  box-shadow:
+    inset 3px 0 0 rgba(236, 220, 184, .13),
+    inset 0 1px 0 rgba(255, 247, 218, .1),
+    inset 0 -1px 0 rgba(38, 23, 13, .24);
+}
+
+.kingdom-flag-editor {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 247, 216, .13),
+    inset 14px 0 17px rgba(255, 255, 255, .07),
+    inset -15px 0 19px rgba(0, 0, 0, .2),
+    0 10px 16px rgba(0, 0, 0, .34);
+}
+
+.kingdom-flag .flag-symbol {
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  color: #f6efd8;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,.58));
+}
+
+.flag-symbol .cl-icon {
+  width: .9em;
+  height: .9em;
+}
+
+.kingdom-flag-large .flag-symbol .cl-icon {
+  width: .84em;
+  height: .84em;
+}
+
+.flag-symbol-grid button,
+.clan-shield-choice-grid button,
+.clan-shield-swatch-grid button {
+  border-radius: 3px;
+}
+
+.flag-editor-symbol-icon {
+  width: 1.24rem;
+  height: 1.24rem;
+}
+
+.clan-shield svg {
+  filter: saturate(.86) contrast(1.08);
+}
+
+.clan-shield .clan-shield-boundary {
+  filter: drop-shadow(0 1px 0 rgba(255, 246, 214, .12));
+}
+
+.clan-shield-battleworn svg {
+  filter: saturate(.78) contrast(1.16) sepia(.08);
+}
+
+.clan-shield-planks {
+  mix-blend-mode: multiply;
+}
+/* Pass 4B: secondary heraldry workspaces and dispatch states. */
+.patch-notes-modal .modal-card {
+  isolation: isolate;
+  overflow: hidden;
+  color: #2b2017;
+  border: 2px solid #4b3523;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, rgba(88, 62, 33, .035) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #e1d4b7, #c9b58e);
+  box-shadow: 0 18px 42px rgba(13, 8, 5, .7), inset 0 0 24px rgba(95, 69, 38, .2);
+}
+
+.patch-notes-modal .modal-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: #d8c7a4;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.patch-notes-modal .modal-title {
+  color: #3a2415;
+  text-shadow: none;
+}
+
+.patch-notes-modal #modalBody { color: #2c2118; }
+
+.patch-notes-intro,
+.patch-notes-release,
+.patch-notes-release.is-latest {
+  border: 1px solid #816947;
+  border-radius: 3px;
+  background: rgba(244, 233, 204, .72);
+  box-shadow: inset 0 0 16px rgba(90, 63, 34, .12);
+}
+
+.patch-notes-intro {
+  border-left: 7px solid #6d2d35;
+}
+
+.patch-notes-intro > span,
+.patch-notes-release header span {
+  color: #71313a;
+}
+
+.patch-notes-intro > strong,
+.patch-notes-release header strong,
+.patch-notes-release li {
+  color: #302117;
+}
+
+.patch-notes-release header em {
+  color: #f5e8cd;
+  border: 1px solid #3e1d20;
+  border-radius: 2px;
+  background: #6d2d35;
+}
+
+.patch-notes-release > small { color: #735e43; }
+
+.flag-editor-view,
+.clan-shield-editor {
+  color: var(--cl-ink);
+}
+
+.flag-editor-preview,
+.clan-shield-editor-preview {
+  border: 1px solid rgba(84, 55, 31, .5);
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(77, 46, 25, .11), transparent 16% 84%, rgba(77, 46, 25, .11)),
+    linear-gradient(180deg, #d9c9a4, #b9a074);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 220, .28), 0 7px 14px rgba(0,0,0,.16);
+}
+
+.flag-control-group,
+.clan-shield-control,
+.clan-shield-color-group,
+.clan-shield-panel {
+  border: 1px solid rgba(101, 72, 40, .5);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .045) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, rgba(229, 216, 181, .97), rgba(190, 168, 120, .96));
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 220, .24);
+}
+
+.flag-control-group h4,
+.clan-shield-control legend,
+.clan-shield-color-group legend,
+.clan-shield-editor-preview h3 {
+  color: #3b2412;
+}
+
+.flag-editor-preview > div > span,
+.clan-shield-editor-preview > div > span {
+  color: #6d2d35;
+}
+
+.clan-shield-editor-preview p,
+.clan-shield-editor-preview small {
+  color: #523c27;
+}
+
+.flag-swatch-grid button {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(65, 45, 26, .56);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.1) 0 1px, transparent 1px 6px),
+    linear-gradient(90deg, rgba(255,255,255,.08), transparent 45%, rgba(0,0,0,.12)),
+    var(--flag-swatch);
+  box-shadow: inset 0 0 0 1px rgba(255,247,216,.13), 0 3px 6px rgba(0,0,0,.2);
+}
+
+.flag-swatch-grid button.active,
+.clan-shield-swatch-grid button.active {
+  border-color: #f0e1b8;
+  outline: 2px solid #6d2d35;
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 1px rgba(28,17,9,.45);
+}
+
+.clan-shield-swatch-grid button {
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.1) 0 1px, transparent 1px 5px),
+    linear-gradient(90deg, rgba(255,255,255,.08), transparent 45%, rgba(0,0,0,.12)),
+    var(--shield-swatch);
+}
+
+.flag-option-grid button,
+.flag-symbol-grid button,
+.clan-shield-choice-grid button {
+  color: #46321d;
+  border-color: rgba(82, 62, 40, .58);
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #5b564e, #34312d);
+}
+
+.flag-option-grid button,
+.flag-symbol-grid button {
+  color: #f1e7cf;
+}
+
+.clan-shield-choice-grid button.active,
+.flag-option-grid button.active,
+.flag-symbol-grid button.active {
+  color: var(--cl-ivory);
+  border-color: #3c171b;
+  background: linear-gradient(180deg, #7a373b, #512129);
+  box-shadow: inset 0 1px rgba(255, 236, 194, .16), 0 4px 8px rgba(0,0,0,.18);
+}
+
+.clan-shield-choice-grid button.active > span {
+  color: #f0dfb5;
+}
+
+.clan-shield-preview-stage {
+  border: 1px solid #2a1a11;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(231, 214, 176, .04) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #4d3221, #2c1e16);
+  box-shadow: inset 0 0 18px rgba(0,0,0,.38);
+}
+
+:is(
+  .city-list-empty,
+  .battle-report-empty,
+  .leaderboard-empty,
+  .incoming-attack-empty,
+  .inventory-selection-empty,
+  .clan-empty,
+  .citadel-reign-empty,
+  .holding-reinforcement-empty,
+  .daily-mission-empty,
+  .camp-reward-loading,
+  .common-gear-empty-strip
+) {
+  position: relative;
+  border-left: 4px solid #80643b;
+  border-radius: 3px;
+  color: #49341e;
+  background:
+    repeating-linear-gradient(0deg, rgba(77, 52, 27, .045) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #dfd0ab, #c1a978);
+  box-shadow: inset 0 0 0 1px rgba(255,248,220,.25);
+}
+
+:is(.camp-reward-loading.error, .skill-preset-error, .city-list-sync-error, .daily-reward-error, .seasonal-achievement-error) {
+  border-left: 4px solid var(--cl-rust);
+  border-radius: 3px;
+  color: #57272a;
+  background:
+    repeating-linear-gradient(0deg, rgba(93, 36, 36, .055) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, #dec7a4, #bd9b72);
+}
+
+[role="tooltip"],
+.tooltip,
+[data-tooltip]::after {
+  color: #f1e8cf;
+  border: 1px solid #17110d;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 7px),
+    #35251b;
+  box-shadow: 0 6px 12px rgba(0,0,0,.36);
+}
+
+.loading-wheel {
+  border-radius: 50%;
+}
+
+.loading-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  z-index: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(110, 47, 53, .28), rgba(79, 31, 28, .2) 58%, transparent 62%);
+  box-shadow: inset 0 0 0 2px rgba(87, 43, 28, .3);
+}
+
+.loading-wheel-ring {
+  filter: sepia(.38) saturate(.62) brightness(.78) drop-shadow(0 4px 7px rgba(0, 0, 0, .55));
+}
+
+.loading-wheel-crown,
+.level-up-crown-wrap img {
+  filter: sepia(.24) saturate(.72) brightness(.86) drop-shadow(0 4px 7px rgba(0, 0, 0, .58));
+}
+
+.setup-screen.loading .setup-card {
+  border-color: rgba(150, 118, 61, .54);
+  box-shadow:
+    0 0 0 2px rgba(14, 9, 6, .7),
+    0 22px 44px rgba(0,0,0,.56),
+    inset 0 0 0 1px rgba(230, 214, 174, .1);
+}
+/* Crownlands global HUD and identity pass 3G ----------------------------- */
+
+.profile-action-row {
+  background:
+    linear-gradient(180deg, rgba(67, 46, 30, .95), rgba(28, 20, 14, .97)),
+    repeating-linear-gradient(90deg, rgba(225, 210, 176, .045) 0 1px, transparent 1px 7px);
+  box-shadow: 0 7px 15px rgba(0, 0, 0, .34), inset 0 0 0 1px rgba(232, 216, 176, .07);
+}
+
+.profile-button,
+.profile-rank-btn,
+.resource-pill.bag-btn,
+.resource-pill.shop-btn,
+.resource-pill.city-list-btn,
+.resource-pill.island-switch-btn,
+.bottom-nav .nav-btn {
+  transition: filter 120ms ease, transform 90ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.profile-button:active,
+.profile-rank-btn:active,
+.resource-pill.bag-btn:active,
+.resource-pill.shop-btn:active,
+.resource-pill.city-list-btn:active,
+.resource-pill.island-switch-btn:active,
+.bottom-nav .nav-btn:active {
+  transform: translateY(1px) scale(.98);
+  filter: brightness(.82) saturate(.86);
+}
+
+.profile-rank-icon,
+.bag-icon,
+.shop-icon,
+.city-list-icon,
+.island-switch-icon,
+.nav-icon,
+.daily-login-reward-icon {
+  object-fit: contain;
+  filter: saturate(.88) contrast(1.05) drop-shadow(0 4px 5px rgba(0, 0, 0, .42));
+}
+
+.profile-button::before {
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, .42));
+}
+
+.profile-button .kingdom-flag-small {
+  left: 13.5%;
+  top: 15%;
+  width: 73%;
+  height: 70%;
+}
+
+.character-level-badge {
+  right: 4%;
+  bottom: 3%;
+  color: #f0dfb8;
+  border: 1px solid rgba(43, 30, 20, .9);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #523724, #24180f);
+  box-shadow: inset 0 0 0 1px rgba(226, 207, 164, .12), 0 2px 4px rgba(0, 0, 0, .4);
+  text-shadow: 0 1px rgba(0, 0, 0, .62);
+}
+
+.daily-login-reward-badge,
+.report-unread-badge,
+.clan-hud-btn.has-rallies::before,
+.profile-tabs button.has-rallies::after {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  color: #fff2dc;
+  border: 1px solid rgba(255, 226, 196, .62);
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #9d433b, #612321 66%, #351312);
+  box-shadow: inset 0 0 0 2px rgba(62, 13, 16, .26), 0 3px 5px rgba(0, 0, 0, .42);
+  font-family: Arial, sans-serif;
+  text-shadow: 0 1px rgba(0, 0, 0, .55);
+}
+
+.clan-hud-btn.is-search::after {
+  content: "";
+  border-color: rgba(244, 226, 190, .76);
+  color: transparent;
+  background:
+    linear-gradient(45deg, transparent 57%, #ead8ae 58% 66%, transparent 67%),
+    radial-gradient(circle at 40% 38%, transparent 0 25%, #ead8ae 27% 36%, transparent 38%),
+    linear-gradient(180deg, #4c3422, #21170f);
+  box-shadow: inset 0 0 0 1px rgba(231, 221, 196, .08), 0 3px 6px rgba(0, 0, 0, .42);
+}
+
+.daily-login-reward-btn.is-claimable .daily-login-reward-icon {
+  animation: dailyRewardLedgerLift 1.8s ease-in-out infinite;
+}
+
+@keyframes dailyRewardLedgerLift {
+  0%, 100% { transform: translateY(0); filter: saturate(.88) contrast(1.05) drop-shadow(0 4px 5px rgba(0,0,0,.42)); }
+  50% { transform: translateY(-2px); filter: saturate(.95) contrast(1.08) brightness(1.05) drop-shadow(0 5px 6px rgba(0,0,0,.46)); }
+}
+
+.profile-gold {
+  border-left: 3px solid #a7854d;
+}
+
+.profile-gold .cl-icon {
+  color: #b89551;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .64));
+}
+
+.citadel-assault-countdown {
+  position: relative;
+  padding-left: .68rem;
+  border-left: 4px solid #8d6b35;
+}
+
+.citadel-assault-countdown.imminent {
+  border-left-color: #a24a3d;
+  animation: citadelDispatchPulse 1.35s ease-in-out infinite alternate;
+}
+
+@keyframes citadelDispatchPulse {
+  from { filter: brightness(.96); }
+  to { filter: brightness(1.08); }
+}
+
+.bottom-nav .nav-btn.active {
+  color: var(--cl-ivory);
+  border-color: rgba(150, 118, 61, .72);
+  background:
+    linear-gradient(180deg, rgba(91, 56, 35, .94), rgba(36, 24, 16, .98)),
+    repeating-linear-gradient(90deg, rgba(225, 210, 176, .045) 0 1px, transparent 1px 7px);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .22), inset 0 0 0 1px rgba(231, 221, 196, .08);
+}
+
+.incoming-attack-btn,
+.incoming-attack-btn.active {
+  border-color: rgba(136, 72, 44, .9);
+  background: var(--cl-oxblood-panel);
+}
+
+.outgoing-attack-btn,
+.outgoing-attack-btn.active {
+  border-color: rgba(72, 88, 105, .82);
+  background: var(--cl-indigo-panel);
+}
+
+.incoming-attack-btn.active,
+.outgoing-attack-btn.active {
+  animation: operationDispatchPulse 1.35s ease-in-out infinite;
+}
+
+@keyframes operationDispatchPulse {
+  0%, 100% { filter: brightness(.97); box-shadow: inset 0 -3px 0 rgba(0,0,0,.24), 0 5px 10px rgba(0,0,0,.3); }
+  50% { filter: brightness(1.08); box-shadow: inset 0 -2px 0 rgba(0,0,0,.2), 0 6px 12px rgba(0,0,0,.36); }
+}
+
+.incoming-attack-badge,
+.incoming-scout-card .incoming-attack-badge,
+.outgoing-attack-card .incoming-attack-badge,
+.outgoing-scout-card .incoming-attack-badge {
+  color: var(--cl-ivory);
+  border: 1px solid rgba(44, 40, 34, .78);
+  border-radius: 3px;
+  background: var(--cl-oxblood-panel);
+  box-shadow: inset 0 0 0 1px rgba(231, 221, 196, .08);
+}
+
+.incoming-scout-card .incoming-attack-badge,
+.outgoing-scout-card .incoming-attack-badge,
+.outgoing-attack-card .incoming-attack-badge {
+  background: var(--cl-indigo-panel);
+}
+
+.incoming-attack-badge strong,
+.incoming-attack-badge small,
+.incoming-scout-card .incoming-attack-badge strong,
+.incoming-scout-card .incoming-attack-badge small,
+.outgoing-attack-card .incoming-attack-badge strong,
+.outgoing-attack-card .incoming-attack-badge small {
+  color: var(--cl-ivory);
+}
+
+.loading-wheel::after {
+  inset: 22%;
+  background: radial-gradient(circle, rgba(88, 38, 42, .22), rgba(43, 27, 20, .14) 58%, transparent 62%);
+  box-shadow: inset 0 0 0 1px rgba(121, 86, 49, .3);
+}
+
+.loading-wheel-ring {
+  animation-duration: 2.4s;
+  filter: drop-shadow(0 5px 7px rgba(0, 0, 0, .58));
+}
+
+.loading-wheel-crown {
+  width: 72%;
+  height: 72%;
+  animation: loadingCrownSettle 1.8s ease-in-out infinite;
+  filter: saturate(.82) contrast(1.08) drop-shadow(0 5px 6px rgba(0, 0, 0, .6));
+}
+
+.level-up-crown-wrap img {
+  width: 54%;
+  height: 54%;
+  animation: loadingCrownSettle 1.8s ease-in-out infinite;
+  filter: saturate(.82) contrast(1.08) drop-shadow(0 5px 6px rgba(0, 0, 0, .6));
+}
+
+@keyframes loadingCrownSettle {
+  0%, 100% { transform: translateY(0) scale(.98); }
+  50% { transform: translateY(-1px) scale(1); }
+}
+
+.setup-screen.loading .setup-card,
+.map-loading-panel {
+  border-color: rgba(91, 69, 43, .78);
+  background: var(--cl-parchment-royal);
+  box-shadow: 0 0 0 2px rgba(14, 9, 6, .66), 0 20px 42px rgba(0, 0, 0, .56), inset 0 0 0 1px rgba(230, 214, 174, .12);
+}
+
+.crownlands-map-transition__part--mist {
+  background:
+    radial-gradient(circle at 48% 46%, rgba(226, 222, 206, .97), rgba(184, 185, 171, .9) 58%, rgba(126, 132, 123, .78) 100%),
+    #cbc9bb;
+}
+
+.crownlands-map-transition__part--cloud-back,
+.crownlands-map-transition__part--cloud-front {
+  filter: grayscale(.24) sepia(.18) saturate(.46) brightness(.94);
+  mix-blend-mode: screen;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-wheel-crown,
+  .daily-login-reward-btn.is-claimable .daily-login-reward-icon,
+  .incoming-attack-btn.active,
+  .outgoing-attack-btn.active,
+  .citadel-assault-countdown.imminent {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-button {
+    width: 74px;
+    height: 58px;
+  }
+}
+
+.crownlands-map-transition__part--mist {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(229, 226, 210, .98), rgba(194, 196, 184, .92) 58%, rgba(139, 146, 137, .85) 100%),
+    #d5d4c8;
+}
+
+.crownlands-map-transition__part--cloud-back,
+.crownlands-map-transition__part--cloud-front {
+  filter: sepia(.28) saturate(.5) brightness(.92);
+  mix-blend-mode: screen;
+}
+
+.crownlands-map-transition__part--cloud-back {
+  --map-cloud-layer-opacity: .5;
+}
+
+.crownlands-map-transition__part--cloud-front {
+  --map-cloud-layer-opacity: .68;
+}
+
+.toast {
+  border-radius: 3px;
+  color: var(--cl-ink);
+  border: 2px solid var(--cl-panel-edge);
+  background: var(--cl-parchment-sheet);
+}
+
+.toast::before {
+  content: "";
+  position: absolute;
+  left: .7rem;
+  top: 50%;
+  width: 15px;
+  height: 15px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #9a4538, #5a201e 68%, #31100f);
+  box-shadow: inset 0 0 0 2px rgba(129, 47, 36, .44);
+}
+
+.toast {
+  padding-left: 2.2rem;
+}
+
+.toast.success,
+.battle-report-card.victory {
+  border-left-color: var(--cl-moss);
+}
+
+.toast.warning,
+.toast.error,
+.battle-report-card.defeat,
+.incoming-attack-card {
+  border-left-color: var(--cl-rust);
+}
+
+.incoming-attack-card:not(.incoming-scout-card),
+.incoming-attack-btn.active {
+  background:
+    linear-gradient(180deg, rgba(212, 188, 151, .96), rgba(158, 112, 85, .94)),
+    repeating-linear-gradient(0deg, rgba(88, 38, 42, .08) 0 1px, transparent 1px 9px);
+}
+
+.incoming-scout-card,
+.outgoing-scout-card {
+  background:
+    linear-gradient(180deg, rgba(214, 206, 187, .96), rgba(158, 166, 166, .94)),
+    repeating-linear-gradient(0deg, rgba(72, 88, 105, .08) 0 1px, transparent 1px 9px);
+}
+
+.realm-announcement-banner {
+  border-radius: 3px;
+  background: var(--cl-parchment-royal);
+}
+
+.realm-announcement.citadel .realm-announcement-banner,
+.realm-announcement.stronghold .realm-announcement-banner {
+  color: var(--cl-ivory);
+  border-color: rgba(150, 118, 61, .78);
+  background:
+    linear-gradient(180deg, #5a3b24, #24180f 72%, #15100c),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .045) 0 1px, transparent 1px 7px);
+}
+
+@media (max-width: 760px) {
+  .profile-action-row {
+    gap: .2rem;
+    padding: .18rem;
+  }
+
+  .profile-rank-btn,
+  .profile-button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .profile-gold {
+    min-height: 28px;
+    font-size: .76rem;
+  }
+
+  .bottom-nav .nav-btn {
+    min-height: 54px;
+  }
+}
+/* Crownlands high-frequency item art pass 3F ------------------------------ */
+
+.shop-modal .modal-card,
+.inventory-modal .modal-card,
+.common-gear-box-modal .modal-card {
+  border-color: #6b5138;
+  background: var(--cl-timber-panel);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, .58), inset 0 0 0 2px rgba(222, 203, 160, .1);
+}
+
+.shop-balance,
+.inventory-summary,
+.shop-rewarded-section,
+.shop-item,
+.inventory-slot,
+.inventory-selection,
+.rewarded-ad-disclosure {
+  color: var(--cl-ink);
+  border-color: rgba(84, 55, 31, .72);
+  border-radius: 4px;
+  background: var(--cl-parchment-sheet);
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 216, .24), 0 5px 10px rgba(18, 12, 8, .28);
+}
+
+.shop-rewarded-section {
+  border-left: 4px solid var(--cl-faded-indigo);
+}
+
+.shop-panel .shop-balance,
+.inventory-panel .inventory-summary {
+  background: var(--cl-parchment-sheet);
+}
+
+.shop-item,
+.inventory-slot.filled {
+  border-left: 4px solid var(--cl-muted-brass);
+}
+
+.shop-item[data-shop-item="shield_12h"],
+.inventory-slot.filled:has(img[src*="peace-shield"]) {
+  border-left-color: var(--cl-burgundy);
+}
+
+.shop-item[data-shop-item="veil_of_silence_30m"],
+.inventory-slot.filled:has(img[src*="veil-of-silence"]) {
+  border-left-color: var(--cl-faded-indigo);
+}
+
+.shop-item[data-shop-item="war_drums_30m"],
+.inventory-slot.filled:has(img[src*="war-drums"]) {
+  border-left-color: var(--cl-oxblood);
+}
+
+.shop-item[data-shop-item="swift_march_order"],
+.inventory-slot.filled:has(img[src*="swift-march"]) {
+  border-left-color: var(--cl-moss);
+}
+
+.shop-item-image-placeholder,
+.inventory-slot-icon,
+.inventory-selection-icon,
+.rewarded-ad-disclosure img,
+.level-up-reward-icon {
+  overflow: hidden;
+  border-color: rgba(67, 63, 55, .76);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(88, 84, 74, .94), rgba(39, 37, 31, .97)),
+    repeating-linear-gradient(90deg, rgba(236, 224, 190, .04) 0 1px, transparent 1px 6px);
+  box-shadow: inset 0 0 0 1px rgba(233, 220, 181, .12), 0 3px 7px rgba(26, 17, 10, .3);
+}
+
+.shop-item-image,
+.inventory-slot-image,
+.inventory-selection-image,
+.rewarded-ad-disclosure img,
+.level-up-reward-icon img {
+  object-fit: contain;
+  filter: drop-shadow(0 3px 3px rgba(18, 12, 8, .58));
+}
+
+.shop-item-copy strong,
+.inventory-slot-name,
+.inventory-selection-copy strong,
+.inventory-selection-empty strong,
+.shop-balance strong,
+.inventory-summary strong,
+.rewarded-ad-disclosure strong {
+  color: #47271f;
+}
+
+.shop-balance span,
+.inventory-summary span,
+.shop-item-copy span,
+.shop-item-copy small,
+.inventory-slot-count,
+.inventory-selection-copy span,
+.inventory-selection-copy small,
+.inventory-selection-empty small,
+.shop-rewarded-heading span,
+.shop-rewarded-heading small,
+.rewarded-ad-disclosure p,
+.rewarded-ad-disclosure small {
+  color: #5b4935;
+}
+
+.shop-rewarded-heading strong,
+.rewarded-ad-shop-copy .rewarded-ad-availability {
+  color: var(--cl-faded-indigo);
+}
+
+.inventory-slot.filled.selected {
+  border-color: #6e2f35;
+  background: var(--cl-parchment-royal);
+  box-shadow: inset 4px 0 0 var(--cl-burgundy), 0 5px 10px rgba(18, 12, 8, .3);
+}
+
+.shop-buy-btn,
+.inventory-use-btn,
+.rewarded-ad-disclosure-actions .profile-primary-btn {
+  border-color: #40291b;
+  border-radius: 3px;
+  color: var(--cl-ivory);
+  background: var(--cl-oxblood-panel);
+  box-shadow: inset 0 0 0 1px rgba(236, 219, 178, .12), 0 4px 7px rgba(18, 12, 8, .3);
+}
+
+.shop-buy-btn:disabled,
+.inventory-use-btn:disabled {
+  color: rgba(231, 221, 196, .58);
+  border-color: rgba(69, 68, 62, .55);
+  background: var(--cl-iron-panel);
+}
+
+.active-item-effects-stack {
+  --effect-badge-size: 62px;
+  --effect-icon-size: 50px;
+  --effect-stack-gap: .34rem;
+}
+
+.effect-status-badge,
+.active-item-effects-stack.compact .effect-status-badge,
+.active-item-effects-stack.dense .effect-status-badge {
+  min-height: calc(var(--effect-badge-size) * 1.14);
+  grid-template-rows: var(--effect-icon-size) auto;
+  gap: .12rem;
+  padding: .18rem .2rem .25rem;
+  border: 1px solid #25221d;
+  border-left: 4px solid var(--cl-muted-brass);
+  border-radius: 3px;
+  background: var(--cl-timber-panel);
+  box-shadow: 0 7px 13px rgba(0, 0, 0, .42), inset 0 0 0 1px rgba(233, 220, 181, .12);
+}
+
+.shield-status-badge { border-left-color: var(--cl-burgundy); }
+.war-drums-status-badge { border-left-color: var(--cl-oxblood); }
+.tax-decree-status-badge { border-left-color: var(--cl-muted-brass); }
+.veil-status-badge { border-left-color: var(--cl-faded-indigo); }
+
+.effect-status-icon,
+.active-item-effects-stack.compact .effect-status-icon,
+.active-item-effects-stack.dense .effect-status-icon,
+.war-drums-status-icon,
+.tax-decree-status-icon,
+.veil-status-icon {
+  width: var(--effect-icon-size);
+  height: var(--effect-icon-size);
+  object-fit: contain;
+  border-radius: 0;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .56));
+  box-shadow: none;
+}
+
+.effect-status-badge strong,
+.active-item-effects-stack.compact .effect-status-badge strong {
+  width: calc(100% - 4px);
+  padding: .16rem .1rem;
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 2px;
+  color: #39271b;
+  background: linear-gradient(180deg, #d8c69e, #aa9063);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 220, .3);
+  text-shadow: none;
+}
+
+.harvest-bonus-node {
+  --pickup-glow-bright: rgba(255, 232, 122, .96);
+  --pickup-glow-core: rgba(255, 205, 54, .88);
+  --pickup-glow-wide: rgba(232, 151, 20, .62);
+  border-radius: 0;
+  animation: harvestMarkerIdle 2.2s ease-in-out infinite;
+}
+
+.harvest-bonus-node::before {
+  inset: 1px;
+  border: 2px solid var(--pickup-glow-bright);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--pickup-glow-core), var(--pickup-glow-wide) 48%, transparent 74%);
+  box-shadow:
+    0 0 14px var(--pickup-glow-bright),
+    0 0 30px var(--pickup-glow-core),
+    0 0 48px var(--pickup-glow-wide),
+    inset 0 0 10px var(--pickup-glow-bright);
+}
+
+.harvest-bonus-node::after,
+.harvest-bonus-node.harvest-bonus-troops::after {
+  inset: -6px;
+  border: 2px solid var(--pickup-glow-bright);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--pickup-glow-core);
+  animation: harvestMapNotation 1.8s ease-out infinite;
+}
+
+.harvest-bonus-node.harvest-bonus-troops {
+  --pickup-glow-bright: rgba(255, 154, 142, .98);
+  --pickup-glow-core: rgba(255, 63, 54, .9);
+  --pickup-glow-wide: rgba(185, 19, 24, .66);
+}
+
+.harvest-bonus-node.harvest-bonus-troops::before {
+  border-color: var(--pickup-glow-bright);
+  background: radial-gradient(circle, var(--pickup-glow-core), var(--pickup-glow-wide) 48%, transparent 74%);
+  box-shadow:
+    0 0 14px var(--pickup-glow-bright),
+    0 0 30px var(--pickup-glow-core),
+    0 0 48px var(--pickup-glow-wide),
+    inset 0 0 10px var(--pickup-glow-bright);
+}
+
+.harvest-bonus-icon {
+  width: 62px;
+  height: 62px;
+  filter:
+    drop-shadow(0 0 9px rgba(255, 222, 92, .98))
+    drop-shadow(0 0 19px rgba(225, 145, 18, .78))
+    drop-shadow(0 4px 4px rgba(25, 16, 9, .52));
+}
+
+.harvest-bonus-node.harvest-bonus-troops .harvest-bonus-icon {
+  width: 62px;
+  height: 62px;
+  filter:
+    drop-shadow(0 0 9px rgba(255, 105, 92, .98))
+    drop-shadow(0 0 19px rgba(190, 18, 24, .82))
+    drop-shadow(0 4px 4px rgba(25, 16, 9, .52));
+}
+
+@keyframes harvestMarkerIdle {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, calc(-50% - 2px)); }
+}
+
+@keyframes harvestMapNotation {
+  0% { opacity: .76; transform: scale(.78); }
+  58% { opacity: .5; }
+  100% { opacity: 0; transform: scale(1.26); }
+}
+
+.city-shield-field {
+  bottom: -14px;
+  width: calc(var(--city-art-size, 66px) * .5);
+  height: calc(var(--city-art-size, 66px) * .5);
+  opacity: .96;
+  filter:
+    drop-shadow(0 3px 3px rgba(27, 17, 10, .64))
+    drop-shadow(0 0 5px rgba(230, 189, 89, .54));
+  animation: cityShieldAuthority 2.8s ease-in-out infinite;
+}
+
+.city-shield-field img,
+.foreign-city-shield-field img {
+  filter: none;
+}
+
+@keyframes cityShieldAuthority {
+  0%, 100% { opacity: .9; transform: translateX(-50%) scale(.98); }
+  50% { opacity: 1; transform: translateX(-50%) translateY(-1px) scale(1.04); }
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin,
+.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop {
+  width: 29px;
+  height: 29px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  object-fit: contain;
+  object-position: center;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin::after {
+  display: none;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin > .crownlands-vfx__asset,
+.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop > .crownlands-vfx__asset {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(25, 16, 9, .5));
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__part--arrival,
+.crownlands-vfx--reward-troops .crownlands-vfx__part--arrival {
+  border-width: 1px;
+  border-style: dashed;
+  border-color: rgba(151, 112, 49, .72);
+  box-shadow: none;
+}
+
+.crownlands-vfx--reward-troops .crownlands-vfx__part--arrival {
+  border-color: rgba(85, 97, 61, .74);
+}
+
+.crownlands-vfx-target-pulse--reward-gold,
+.crownlands-vfx-target-pulse--reward-troops {
+  animation-name: crownlandsVfxRewardStamp;
+}
+
+@keyframes crownlandsVfxRewardStamp {
+  0% { outline: 1px solid transparent; outline-offset: 0; }
+  38% { outline: 2px solid var(--vfx-pulse-color); outline-offset: 4px; }
+  100% { outline: 1px solid transparent; outline-offset: 8px; }
+}
+
+.common-gear-reveal-shell {
+  background:
+    linear-gradient(90deg, transparent 0 49.7%, rgba(126, 91, 53, .42) 49.7% 50.3%, transparent 50.3%),
+    repeating-linear-gradient(0deg, rgba(230, 214, 174, .026) 0 1px, transparent 1px 8px),
+    #251c16;
+}
+
+.common-gear-box-art {
+  position: relative;
+  display: block;
+  width: min(35vh, 230px);
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.common-gear-box-open .common-gear-box-art > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+  border-radius: 0;
+  filter: drop-shadow(0 12px 12px rgba(18, 12, 8, .72));
+}
+
+.gear-box-open-state {
+  opacity: 0;
+  transform: translateY(5%) scale(.92);
+}
+
+.gear-box-latch {
+  position: absolute;
+  left: 47%;
+  top: 52%;
+  z-index: 2;
+  width: 7%;
+  height: 9%;
+  border-radius: 2px;
+  background: #655747;
+  box-shadow: inset 0 0 0 1px #211a13, 0 2px 2px rgba(0, 0, 0, .46);
+  transform-origin: 50% 10%;
+}
+
+.common-gear-box-open.opening .gear-box-latch {
+  animation: commonGearLatch 180ms ease-in both;
+}
+
+.common-gear-box-open.opening .gear-box-closed-state {
+  animation: commonGearBoxClosed 420ms ease-in-out both;
+}
+
+.common-gear-box-open.opening .gear-box-open-state {
+  animation: commonGearBoxOpened 420ms ease-out both;
+}
+
+.common-gear-box-open.opening > strong,
+.common-gear-box-open.opening > small {
+  animation: commonGearPromptDismiss 180ms ease-in both;
+}
+
+@keyframes commonGearLatch {
+  0% { transform: rotate(0); }
+  70%, 100% { transform: rotate(78deg); opacity: .2; }
+}
+
+@keyframes commonGearBoxClosed {
+  0%, 30% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(4%) scale(.96); }
+}
+
+@keyframes commonGearBoxOpened {
+  0%, 28% { opacity: 0; transform: translateY(5%) scale(.92); }
+  72% { opacity: 1; transform: translateY(-1%) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes commonGearPromptDismiss {
+  to { opacity: 0; transform: translateY(4px); }
+}
+
+.common-gear-reveal-shell.revealed .common-gear-reveal-card {
+  animation: commonGearCardSettle 360ms ease-out both;
+}
+
+.common-gear-reveal-shell.revealed .common-gear-reveal-card:nth-child(2) { animation-delay: 70ms; }
+.common-gear-reveal-shell.revealed .common-gear-reveal-card:nth-child(3) { animation-delay: 140ms; }
+
+@keyframes commonGearCardSettle {
+  0% { opacity: 0; transform: translateY(-12px) rotate(-1deg); }
+  72% { opacity: 1; transform: translateY(2px) rotate(.3deg); }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+.level-up-reward-modal::backdrop {
+  background: rgba(18, 12, 8, .82);
+  backdrop-filter: blur(2px);
+}
+
+.level-up-reward-modal .level-up-reward-card {
+  border: 2px solid #54371f;
+  border-radius: 5px;
+  color: var(--cl-ink);
+  background: var(--cl-parchment-royal);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .62), inset 0 0 0 2px rgba(255, 247, 216, .24);
+}
+
+.level-up-crown-glow {
+  background: rgba(110, 47, 53, .2);
+  box-shadow: inset 0 0 0 2px rgba(88, 38, 42, .28);
+}
+
+.level-up-reward-header,
+.level-up-reward-grid,
+.level-up-reward-item {
+  border-color: rgba(84, 55, 31, .34);
+}
+
+.level-up-eyebrow,
+.level-up-reward-item small,
+.level-up-reward-item p {
+  color: #5b4935;
+}
+
+.level-up-reward-card .level-up-reward-header h2,
+.level-up-reward-item strong {
+  color: #47271f;
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .active-item-effects-stack {
+    --effect-badge-size: 49px;
+    --effect-icon-size: 39px;
+    --effect-timer-font: .5rem;
+    --effect-stack-gap: .16rem;
+  }
+
+  .common-gear-box-art {
+    width: min(42vh, 164px);
+  }
+}
+/* Visual correction pass 4A-R ------------------------------------------- */
+
+/* The restored artwork provides its own framing; wrappers remain full-size
+   controls for pointer, keyboard, and mobile interaction. */
+.profile-action-row {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-button,
+.profile-rank-btn {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-button {
+  width: 100px;
+  height: 78px;
+}
+
+.profile-button:hover,
+.profile-rank-btn:hover,
+.profile-button:focus-visible,
+.profile-rank-btn:focus-visible {
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-button:focus-visible,
+.profile-rank-btn:focus-visible {
+  outline-color: #d8c7a1;
+}
+
+.profile-rank-icon,
+.daily-login-reward-icon {
+  filter: saturate(.94) contrast(1.04) drop-shadow(0 4px 5px rgba(18, 12, 8, .48));
+}
+
+.profile-button::before {
+  filter: drop-shadow(0 6px 8px rgba(18, 12, 8, .5));
+}
+
+@media (hover: hover) {
+  .profile-button:not(:disabled):hover,
+  .profile-rank-btn:not(:disabled):hover {
+    filter: brightness(1.06) drop-shadow(0 0 4px rgba(216, 199, 161, .48));
+  }
+}
+
+/* The gateway stays a generous tap target while its painted arrow and halo
+   are visually quieter than the previous 1.14-scale blue treatment. */
+.teleport-node {
+  --teleport-render-scale: 1;
+  color: #f1e6cc;
+  filter:
+    drop-shadow(0 7px 5px rgba(18, 12, 8, .72))
+    drop-shadow(0 0 4px rgba(216, 199, 161, .58));
+}
+
+.teleport-node::before {
+  inset: 9%;
+  background: radial-gradient(circle, rgba(216, 199, 161, .22) 0 34%, rgba(203, 183, 143, .1) 48%, transparent 67%);
+  filter: blur(2px);
+}
+
+.teleport-arrow-icon {
+  width: 88%;
+  height: 88%;
+}
+
+.teleport-node:active,
+.map-frame.zooming .teleport-node,
+.map-frame.low-zoom .teleport-node {
+  filter:
+    drop-shadow(0 5px 4px rgba(18, 12, 8, .68))
+    drop-shadow(0 0 3px rgba(203, 183, 143, .52));
+}
+
+.teleport-label {
+  color: #f1e6cc;
+  border-color: rgba(216, 199, 161, .58);
+  border-radius: 3px;
+  background: rgba(38, 29, 21, .9);
+}
+
+/* Shared readability contract: dark ink on paper, warm ivory on command
+   surfaces, and plain sans-serif detail copy at compact sizes. */
+:is(
+  .modal .modal-card,
+  .profile-screen,
+  .shop-balance,
+  .shop-item,
+  .inventory-summary,
+  .inventory-slot,
+  .inventory-selection,
+  .city-list-summary,
+  .city-list-row,
+  .battle-report-card,
+  .battle-report-detail-head,
+  .battle-report-detail-grid > div,
+  .battle-result,
+  .leaderboard-row,
+  .incoming-attack-summary,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .scout-report-city,
+  .scout-report-overview > div,
+  .scout-breakdown-row,
+  .scout-skill-list,
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .city-stat-panel,
+  .stat-wide,
+  .stat-chip,
+  .main-city-action-panel,
+  .city-level-up-panel,
+  .relinquish-city-action-panel,
+  .profile-settings-section,
+  .profile-skill-summary > div,
+  .profile-skill-reset,
+  .profile-skill-list .skill-row,
+  .kingdom-stat,
+  .profile-notification-row,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-war-room-panel,
+  .daily-mission-row,
+  .daily-mission-detail-stat,
+  .daily-mission-recommendation,
+  .seasonal-achievement-row
+) {
+  color: #211c16;
+}
+
+:is(
+  .bottom-nav,
+  .commander-panel,
+  .profile-screen-header,
+  .map-loading-panel,
+  .realm-activity-card.citadel,
+  .effect-status-badge,
+  .incoming-attack-badge,
+  .battle-report-result,
+  .troop-command-icon,
+  .daily-mission-icon,
+  .seasonal-achievement-row-icon
+) :is(span, small, strong, h2, h3) {
+  color: #f1e6cc;
+}
+
+.daily-mission-row.complete :is(strong, span, small),
+.daily-mission-row :is(strong, span, small),
+.daily-mission-detail :is(strong, span, small, p),
+.seasonal-achievement-row :is(strong, span, small, p),
+.seasonal-achievement-row.complete :is(strong, span, small),
+.battle-report-card :is(strong, span, small),
+.battle-report-card.victory :is(strong, span, small),
+.battle-report-card.defeat :is(strong, span, small),
+.incoming-attack-card :is(strong, span, small),
+.outgoing-attack-card :is(strong, span, small),
+.scout-report-city :is(strong, span, small, b),
+.scout-report-overview :is(strong, span, small),
+.scout-breakdown-row :is(strong, span, small, b),
+.scout-skill-list :is(strong, span, small),
+.troop-route-city :is(strong, span, small, b),
+.troop-slider-control :is(strong, span, small),
+.troop-slider-preview :is(strong, span, small) {
+  color: #2f241a;
+}
+
+.profile-screen :is(
+  .profile-name-row h3,
+  .profile-level-row strong,
+  .profile-section-heading h3,
+  .profile-section-heading span,
+  .profile-skill-summary strong,
+  .profile-skill-summary span,
+  .profile-skill-reset strong,
+  .profile-skill-reset small,
+  .profile-skill-list .skill-row strong,
+  .profile-notification-row strong,
+  .profile-notification-row small,
+  .kingdom-stat strong,
+  .kingdom-stat span
+) {
+  color: #2f241a;
+}
+
+.profile-skill-summary > div,
+.profile-skill-group > header,
+.profile-skill-reset {
+  color: #f1e6cc !important;
+}
+
+.profile-skill-summary > div :is(strong, span, small),
+.profile-skill-group > header :is(strong, span, small),
+.profile-skill-reset :is(strong, span, small) {
+  color: #f1e6cc !important;
+}
+
+.troop-route-city,
+.troop-slider-control,
+.troop-slider-preview > div,
+.send-confirm-card,
+.send-outcome {
+  color: #f1e6cc !important;
+}
+
+.troop-route-city :is(strong, span, small, b),
+.troop-slider-control :is(strong, span, small),
+.troop-slider-preview :is(strong, span, small),
+.send-confirm-card :is(strong, span, small),
+.send-outcome :is(strong, span, small) {
+  color: #f1e6cc !important;
+}
+
+.troop-slider-confirm .send-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.clan-view :is(
+  .clan-list-row,
+  .clan-member-row,
+  .clan-card,
+  .clan-panel,
+  .clan-quest-card,
+  .clan-objective-card
+) :is(strong, span, small, p, label) {
+  color: #33291f;
+}
+
+.clan-hero-copy > span,
+.clan-hero-copy h3,
+.clan-hero-copy p,
+.clan-power strong,
+.clan-power span,
+.clan-power small {
+  color: #33291f;
+}
+
+.clan-overview-panel {
+  color: #211c16;
+}
+
+.profile-section-heading,
+.daily-missions-heading,
+.battle-visual-section-title {
+  padding-bottom: .36rem;
+  border-bottom: 1px solid rgba(84, 55, 31, .3);
+}
+
+.modal-card h2,
+.profile-screen-header h2 {
+  font-family: var(--font-display);
+}
+
+.shop-modal .modal-card,
+.inventory-modal .modal-card,
+.common-gear-box-modal .modal-card {
+  color: #f1e6cc;
+}
+
+.shop-modal .modal-title,
+.inventory-modal .modal-title,
+.common-gear-box-modal .modal-title {
+  color: #f1e6cc;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .62);
+}
+
+.shop-modal > .modal-card > h2,
+.inventory-modal > .modal-card > h2,
+.common-gear-box-modal > .modal-card > h2 {
+  color: #f1e6cc !important;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .62);
+}
+
+.shop-buy-btn:disabled,
+.inventory-use-btn:disabled {
+  color: rgba(241, 230, 204, .78);
+  opacity: .68;
+}
+
+.inventory-slot.empty,
+.inventory-slot.empty :is(span, small, strong, p) {
+  color: #4a3a2a;
+}
+
+.battle-visual-target > span,
+.battle-visual-target > small,
+.battle-visual-rule,
+.battle-visual-ruler small,
+.battle-visual-power span,
+.battle-visual-detail-row small,
+.battle-visual-bonus-row small,
+.battle-visual-wall-grid span,
+.battle-visual-wall-grid small,
+.battle-visual-no-bonus {
+  color: #d8c8a8;
+}
+
+.battle-visual-target > strong,
+.battle-visual-side-label,
+.battle-visual-power strong,
+.battle-visual-troop-flow,
+.battle-visual-troop-flow strong,
+.battle-visual-troop-flow span,
+.battle-visual-section-title,
+.battle-visual-section-title h3,
+.battle-visual-detail-card h4,
+.battle-visual-bonus-card h4,
+.battle-visual-detail-row > div > span,
+.battle-visual-bonus-row > div > strong,
+.battle-visual-detail-row > strong,
+.battle-visual-bonus-row > b,
+.battle-visual-wall-grid strong,
+.battle-visual-outcome > strong {
+  color: #f1e6cc;
+}
+
+.modal-card p,
+.modal-card li,
+.profile-screen p,
+.profile-screen small,
+.battle-report-detail small,
+.scout-report-modal small {
+  font-family: var(--font-ui);
+}
+
+.modal-close,
+.profile-screen-close {
+  min-width: 40px;
+  min-height: 40px;
+}
+
+@media (max-width: 760px) {
+  .profile-action-row {
+    padding: 0;
+  }
+
+  .profile-button {
+    width: 74px;
+    height: 58px;
+  }
+
+  .profile-rank-btn {
+    width: 46px;
+    height: 46px;
+  }
+}

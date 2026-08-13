@@ -170,12 +170,12 @@
     {
       "id": "status-peace-shield-field",
       "category": "status",
-      "source": "assets/royal-peace-shield-field.png",
-      "output": "assets/optimized/status-peace-shield-field-192x192-9392b160d654.webp",
+      "source": "assets/royal-peace-shield-icon.webp",
+      "output": "assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp",
       "width": 192,
       "height": 192,
-      "bytes": 12044,
-      "sha256": "9392b160d654eb6814a8d0a5a5f4a90e734ec73d998653b6f54ca8835ce543a8",
+      "bytes": 13390,
+      "sha256": "ca4a297c750b269f7eb7bfffaf40eb11de060cf0daf10453ae03ce35c660dcfb",
       "hasAlpha": true
     },
     {
@@ -193,11 +193,11 @@
       "id": "item-peace-shield",
       "category": "item",
       "source": "assets/royal-peace-shield-icon.webp",
-      "output": "assets/optimized/item-peace-shield-160x160-5fd9cc116a40.webp",
+      "output": "assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
       "width": 160,
       "height": 160,
-      "bytes": 5204,
-      "sha256": "5fd9cc116a409f1732b746e59421f346c4dd187d51a55b0ce9708b7f381178b3",
+      "bytes": 8270,
+      "sha256": "4cc2aabe008714e6f7d09a62cb2cc6e6a0475d021ee63b093c6685d6c667ed35",
       "hasAlpha": true
     },
     {
@@ -215,22 +215,22 @@
       "id": "item-royal-tax-decree",
       "category": "item",
       "source": "assets/royal-tax-decree-icon.webp",
-      "output": "assets/optimized/item-royal-tax-decree-160x160-d7e2adb1b120.webp",
+      "output": "assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
       "width": 160,
       "height": 160,
-      "bytes": 8434,
-      "sha256": "d7e2adb1b120f15be7d2ef3101cd5b13b1027e7bb04c321d16070ab86fa70157",
+      "bytes": 7548,
+      "sha256": "d160f6b40e1410cf88f23f4542b953bee9af20ecd1926541498e9067e74d6e95",
       "hasAlpha": true
     },
     {
       "id": "item-veil-of-silence",
       "category": "item",
       "source": "assets/veil-of-silence-icon.webp",
-      "output": "assets/optimized/item-veil-of-silence-160x160-1e09f4efdbff.webp",
+      "output": "assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
       "width": 160,
       "height": 160,
-      "bytes": 5060,
-      "sha256": "1e09f4efdbff12c502bfd3e67b785007c7ea4275c60c7343efe148ba5eefbd50",
+      "bytes": 4476,
+      "sha256": "ea2992af0cd141a9987f5f09f7f831cb56da0b604f11e5955383af8f29aec4f8",
       "hasAlpha": true
     },
     {

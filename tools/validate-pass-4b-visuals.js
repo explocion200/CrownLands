@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const game = read("game.js");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const publicStyles = read("site-info.css");
 const editorStyles = read("tools/map-editor/styles.css");
 const editorHud = read("tools/map-editor/hud-editor.js");
@@ -36,6 +36,7 @@ assert.match(game, /updateClanProfile\(\{ shield \}\)/);
 assert.match(styles, /Pass 4B: secondary heraldry workspaces and dispatch states/);
 assert.match(styles, /--flag-swatch/);
 assert.match(styles, /\.patch-notes-modal \.modal-card::before[\s\S]*background:\s*#d8c7a4/);
+assert.doesNotMatch(styles, /\.setup-card::after/, "The login card must not render a decorative status orb.");
 
 assert.match(serviceWorker, new RegExp(cacheVersion));
 assert.match(indexHtml, new RegExp(cacheVersion));

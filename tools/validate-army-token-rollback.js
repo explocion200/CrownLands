@@ -3,7 +3,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const sourceGame = fs.readFileSync(path.join(root, "game.js"), "utf8");
-const sourceStyles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const sourceStyles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -41,8 +41,13 @@ validate(sourceGame, sourceStyles, "source");
 
 const distGamePath = path.join(root, "dist", "game.js");
 const distStylesPath = path.join(root, "dist", "styles.css");
-if (fs.existsSync(distGamePath) && fs.existsSync(distStylesPath)) {
-  validate(fs.readFileSync(distGamePath, "utf8"), fs.readFileSync(distStylesPath, "utf8"), "production artifact");
+const distInterfaceThemePath = path.join(root, "dist", "interface-theme.css");
+if (fs.existsSync(distGamePath) && fs.existsSync(distStylesPath) && fs.existsSync(distInterfaceThemePath)) {
+  validate(
+    fs.readFileSync(distGamePath, "utf8"),
+    `${fs.readFileSync(distStylesPath, "utf8")}\n${fs.readFileSync(distInterfaceThemePath, "utf8")}`,
+    "production artifact"
+  );
 }
 
 console.log("Army token visual rollback validation passed.");

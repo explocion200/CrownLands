@@ -5,7 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gameSource = read("game.js");
-const stylesSource = read("styles.css");
+const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
 const serverSource = read("functions/index.js");

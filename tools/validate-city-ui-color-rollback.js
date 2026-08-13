@@ -35,8 +35,11 @@ function validate(styles, label) {
   }
 }
 
-validate(fs.readFileSync(path.join(root, "styles.css"), "utf8"), "source");
+validate(`${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`, "source");
 const distStyles = path.join(root, "dist", "styles.css");
-if (fs.existsSync(distStyles)) validate(fs.readFileSync(distStyles, "utf8"), "production artifact");
+const distInterfaceTheme = path.join(root, "dist", "interface-theme.css");
+if (fs.existsSync(distStyles) && fs.existsSync(distInterfaceTheme)) {
+  validate(`${fs.readFileSync(distStyles, "utf8")}\n${fs.readFileSync(distInterfaceTheme, "utf8")}`, "production artifact");
+}
 
 console.log("City UI color rollback validation passed.");

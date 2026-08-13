@@ -8,7 +8,7 @@ const requireMatch = (source, pattern, message) => {
 };
 
 const html = read("index.html");
-const css = read("styles.css");
+const css = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const game = read("game.js");
 const worker = read("service-worker.js");
 const publicHome = read("home.html");

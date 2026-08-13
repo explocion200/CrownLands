@@ -6,8 +6,9 @@ const vm = require("node:vm");
 const gamePath = path.resolve(__dirname, "..", "game.js");
 const instantActionsPath = path.resolve(__dirname, "..", "instant-economy-actions.js");
 const stylesPath = path.resolve(__dirname, "..", "styles.css");
+const interfaceThemePath = path.resolve(__dirname, "..", "interface-theme.css");
 const source = `${fs.readFileSync(instantActionsPath, "utf8")}\n${fs.readFileSync(gamePath, "utf8")}`;
-const stylesSource = fs.readFileSync(stylesPath, "utf8");
+const stylesSource = `${fs.readFileSync(stylesPath, "utf8")}\n${fs.readFileSync(interfaceThemePath, "utf8")}`;
 
 function extractFunction(name) {
   const start = source.indexOf(`function ${name}(`);

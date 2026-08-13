@@ -111,7 +111,7 @@ const economyResultSection = game.slice(
   game.indexOf("function mergeServerEconomyRefreshOptions")
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
-const css = read("styles.css");
+const css = `${read("styles.css")}\n${read("interface-theme.css")}`;
 assert.match(
   css,
   /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,

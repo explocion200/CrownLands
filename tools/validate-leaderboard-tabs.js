@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 const modalSource = client.slice(
   client.indexOf("function showLeaderboardModal()"),
   client.indexOf("function showLogModal(")

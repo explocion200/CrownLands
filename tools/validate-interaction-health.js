@@ -8,7 +8,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const worker = fs.readFileSync(path.join(root, "route-worker.js"), "utf8");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 
 function extractFunction(name) {
   const plainStart = game.indexOf(`function ${name}(`);

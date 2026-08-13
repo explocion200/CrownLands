@@ -8,7 +8,7 @@ const server = read("functions/index.js");
 const client = read("game.js");
 const firebase = read("firebaseClient.js");
 const rules = read("firestore.rules");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const worker = read("service-worker.js");
 const docs = ["README.md", "game-rules.html", "how-to-play.html", "privacy.html", "FIREBASE_SETUP.md"]
   .map(read)

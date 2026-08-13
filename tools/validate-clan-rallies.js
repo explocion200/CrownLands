@@ -8,7 +8,7 @@ const server = read("functions/index.js");
 const client = read("game.js");
 const firebaseClient = read("firebaseClient.js");
 const rules = read("firestore.rules");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const indexes = JSON.parse(read("firestore.indexes.json"));
 
 function requires(source, pattern, message) {

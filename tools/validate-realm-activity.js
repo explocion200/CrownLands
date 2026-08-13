@@ -11,7 +11,7 @@ const server = read("functions/index.js");
 const rules = read("firestore.rules");
 const indexes = JSON.parse(read("firestore.indexes.json"));
 const markup = read("index.html");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const packageJson = JSON.parse(read("functions/package.json"));
 
 function functionBody(source, name) {

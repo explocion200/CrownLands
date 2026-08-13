@@ -10,7 +10,7 @@ const api = read("firebaseClient.js");
 const server = read("functions/index.js");
 const rules = read("firestore.rules");
 const markup = read("index.html");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 
 function functionBody(source, name) {
   const marker = `function ${name}`;

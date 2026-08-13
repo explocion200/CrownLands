@@ -1485,7 +1485,7 @@ function main() {
   const gameSource = `${readSource("instant-economy-actions.js")}\n${readSource("game.js")}`;
   const serverSource = readSource("functions/index.js");
   const indexSource = readSource("index.html");
-  const stylesSource = readSource("styles.css");
+  const stylesSource = `${readSource("styles.css")}\n${readSource("interface-theme.css")}`;
   const serviceWorkerSource = readSource("service-worker.js");
   const runtimeSource = `${audioManagerSource}\n${gameSource}\n${indexSource}`;
 

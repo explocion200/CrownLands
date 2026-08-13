@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
-const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 const firestoreRulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const realmConfig = JSON.parse(
   fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8")

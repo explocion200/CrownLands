@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Manuscript UI Prototype — Visual QA</title>
+  <style>
+    :root { color-scheme: dark; --paper:#efe0b9; --ink:#2b241c; --wine:#702f38; --line:#9a7544; --night:#17130f; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:#eadfca; background:var(--night); font:16px/1.55 Georgia,serif; }
+    header,main,footer { width:min(1440px,calc(100% - 32px)); margin-inline:auto; }
+    header { padding:44px 0 26px; border-bottom:1px solid #5d4930; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { max-width:900px; margin-bottom:10px; color:#fff4d7; font-size:clamp(2rem,5vw,4.2rem); line-height:1; }
+    h2 { margin:52px 0 18px; color:#edc993; }
+    h3 { margin-bottom:8px; color:#f7e8c7; }
+    .lede { max-width:900px; color:#cdbd9e; font-size:1.08rem; }
+    .facts,.details { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; }
+    .fact { padding:14px; border:1px solid #5d4930; background:#211b15; }
+    .fact strong { display:block; color:#e8bf78; }
+    .screen { padding:24px 0 40px; border-bottom:1px solid #4b3b29; }
+    .viewport { margin-top:24px; }
+    .pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    figure { margin:0; min-width:0; padding:10px; border:1px solid #5d4930; background:#211b15; }
+    figcaption { display:flex; justify-content:space-between; gap:8px; margin-bottom:8px; color:#d8c7a6; }
+    figcaption b { color:#edc993; }
+    img { display:block; width:100%; height:auto; border:1px solid #6f5739; background:#100e0b; }
+    .detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+    code { color:#f3d49f; }
+    footer { padding:32px 0 52px; color:#a99779; }
+    @media (max-width:720px) { .pair { grid-template-columns:1fr; } header,main,footer { width:min(100% - 20px,1440px); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Royal Ledger UI Prototype</h1>
+    <p class="lede">A scoped visual pass for five Crownlands screens. It keeps the existing Cinzel / Cinzel Decorative / IM Fell English font system, login artwork, game icons, and gameplay behavior intact.</p>
+    <div class="facts">
+      <div class="fact"><strong>Prototype scope</strong>Profile, Shop, Daily Missions, Attack Preparation, Battle Report</div>
+      <div class="fact"><strong>Viewports</strong>Desktop 1440×900 and Android landscape 844×390</div>
+      <div class="fact"><strong>Direction</strong>Illuminated manuscript, royal ledger, parchment, ink, burgundy, ochre</div>
+      <div class="fact"><strong>Baseline</strong>Same representative markup with the prototype stylesheet disabled</div>
+    </div>
+  </header>
+  <main id="gallery"></main>
+  <footer>Generated from the actual Crownlands CSS cascade and existing asset library. See <code>QA_NOTES.md</code> and <code>metrics.json</code> for verification details.</footer>
+  <script>
+    const screens = [
+      ["profile","Profile","Identity and kingdom overview become a ruled ledger with a compact seasonal-achievement summary."],
+      ["shop","Shop","Quartermaster rows use preserved item art, clearer hierarchy, and immediate button states."],
+      ["daily","Daily Missions","Three assignments fit as a readable posted-orders list with compact progress bars."],
+      ["attack","Attack Preparation","Route, troop count, forecast, item option, and actions read as one command parchment."],
+      ["battle","Battle Report","The outcome becomes a campaign chronicle with side-by-side forces, wall result, and rewards."]
+    ];
+    const viewports = [["desktop","Desktop · 1440×900"],["android-landscape","Android landscape · 844×390"]];
+    const gallery = document.querySelector("#gallery");
+    const section = (screen,title,copy) => {
+      const el=document.createElement("section"); el.className="screen";
+      el.innerHTML=`<h2>${title}</h2><p>${copy}</p>`+viewports.map(([key,label])=>`<div class="viewport"><h3>${label}</h3><div class="pair"><figure><figcaption><b>Before</b><span>Current baseline</span></figcaption><img src="screenshots/before-${screen}-${key}.jpg" alt="${title} before prototype at ${label}"></figure><figure><figcaption><b>After</b><span>Manuscript prototype</span></figcaption><img src="screenshots/after-${screen}-${key}.jpg" alt="${title} after prototype at ${label}"></figure></div></div>`).join("");
+      return el;
+    };
+    screens.forEach(args=>gallery.append(section(...args)));
+    gallery.insertAdjacentHTML("beforeend",`<section class="screen"><h2>Component details</h2><p>Close crops used to compare the treatment of repeatable primitives.</p><div class="detail-grid">${[
+      ["button-treatment","Button treatment"],["progress-bar","Progress bar"],["list-row","Ledger row"],["major-title","Chapter ribbon"],["text-readability","Text readability"],["modal-panel","Parchment panel"]
+    ].map(([file,label])=>`<figure><figcaption><b>${label}</b></figcaption><img src="screenshots/detail-${file}.jpg" alt="${label} detail"></figure>`).join("")}</div></section>`);
+  </script>
+</body>
+</html>

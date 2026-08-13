@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Manuscript Prototype Capture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../../styles.css">
+  <link rel="stylesheet" href="../../../daily-rewards.css">
+  <link rel="stylesheet" href="../../../readability.css">
+  <script>
+    if (new URLSearchParams(location.search).get("mode") !== "before") {
+      document.write('<link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260813-manuscript-prototype-r4">');
+    }
+  </script>
+  <style>
+    html,body { width:100%; height:100%; overflow:hidden; }
+    body { margin:0; background:#17130f; }
+    .qa-stage { position:relative; width:100vw; height:100vh; padding:16px; display:grid; place-items:center; overflow:hidden; background:linear-gradient(150deg,#24201a,#17130f); }
+    .qa-stage > .modal { position:relative; inset:auto; width:100%; height:100%; padding:0; display:grid; place-items:center; background:transparent; opacity:1 !important; visibility:visible !important; }
+    .qa-stage > .modal > .modal-card { position:relative; width:min(900px,calc(100% - 1rem)); max-height:calc(100vh - 32px); overflow:auto; opacity:1 !important; transform:none !important; }
+    .qa-stage > .profile-screen { position:relative; inset:auto; width:min(960px,calc(100% - 1rem)); height:min(760px,calc(100vh - 32px)); display:grid; transform:none; opacity:1; visibility:visible; pointer-events:auto; }
+    .qa-stage > [hidden] { display:none !important; }
+    .qa-watermark { position:fixed; z-index:9999; left:8px; top:8px; padding:3px 7px; color:#f3ead5; border:1px solid #765d3d; border-radius:2px; background:#241a14e8; font:700 10px/1.2 var(--font-ui); letter-spacing:.08em; text-transform:uppercase; }
+    .qa-shop-art { width:100%; height:100%; object-fit:contain; }
+    @media (max-height:560px) and (orientation:landscape) {
+      .qa-stage { padding:4px; }
+      .qa-stage > .modal > .modal-card { max-height:calc(100vh - 8px); }
+      .qa-stage > .profile-screen { width:calc(100% - 8px); height:calc(100vh - 8px); }
+      .qa-watermark { left:4px; top:4px; font-size:8px; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="cl-icon-attack" viewBox="0 0 32 32"><path d="M8 5l5 2 12 15-3 3L7 10zm16 0l-5 2L7 22l3 3 15-15z"/><path d="M5 23l4 4 3-3-4-4zm22 0l-4 4-3-3 4-4z"/></symbol>
+    <symbol id="cl-icon-crown" viewBox="0 0 32 32"><path d="M4 24L5 11l5 6 3-10 3 8 3-8 3 10 5-6 1 13z"/><path d="M5 25h22v3H5z"/></symbol>
+    <symbol id="cl-icon-city" viewBox="0 0 32 32"><path d="M5 26h22v3H5zM7 13h5v13H7zm7-7h4v20h-4zm6 9h5v11h-5z"/><path d="M7 10l3-4 2 4zm7-4l2-4 2 4zm6 6l3-4 2 4z"/></symbol>
+    <symbol id="cl-icon-achievements" viewBox="0 0 32 32"><path d="M8 5h16v17l-8 6-8-6z"/><path d="M12 13l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="cl-icon-gold" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 19l1-7 3 3 2-5 2 5 3-3 1 7z"/></symbol>
+    <symbol id="cl-icon-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-back" viewBox="0 0 32 32"><path d="M19 7l-9 9 9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-forward" viewBox="0 0 32 32"><path d="M13 7l9 9-9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-check" viewBox="0 0 32 32"><path d="M7 17l6 6 13-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+  <div id="watermark" class="qa-watermark"></div>
+  <main id="stage" class="qa-stage"></main>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const screen = params.get("screen") || "profile";
+    const mode = params.get("mode") === "before" ? "Before" : "Prototype";
+    document.querySelector("#watermark").textContent = `${mode} · ${screen.replaceAll("-", " ")}`;
+    const icon = name => `<svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-${name}"></use></svg>`;
+
+    const profile = `
+      <section class="profile-screen open" aria-label="Kingdom profile">
+        <header class="profile-screen-header">
+          <div class="profile-screen-heading"><span>Kingdom</span><h2>Profile</h2></div>
+          <div class="profile-tabs"><button class="active">Profile</button><button>Clan</button><button>Skills</button><button>Settings</button></div>
+          <button class="profile-icon-btn profile-screen-close" aria-label="Close">${icon("close")}</button>
+        </header>
+        <div class="profile-view">
+          <section class="profile-identity">
+            <button class="profile-flag-button"><span class="kingdom-flag kingdom-flag-large pattern-cross" style="--flag-primary:#6e2f35;--flag-secondary:#d2b06a"><span class="flag-symbol">${icon("crown")}</span></span><span class="profile-flag-edit">Edit flag</span></button>
+            <div class="profile-name-block"><div class="profile-name-row"><h3>Ricky Montalvan</h3><button class="profile-icon-btn">Edit</button></div><div class="profile-level-row"><strong>Level 38</strong><span>142,500 / 180,000 XP</span></div><div class="profile-xp-track"><span style="width:79%"></span></div></div>
+          </section>
+          <section class="kingdom-overview"><div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div><div class="kingdom-stat-grid"><div class="kingdom-stat kingdom-stat-wide kingdom-stat-power"><span>King Power</span><strong>24.8M</strong></div><div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong>17</strong></div><div class="kingdom-stat"><span>Gold</span><strong>1.24B</strong></div><div class="kingdom-stat"><span>Troops</span><strong>842,610</strong></div><div class="kingdom-stat"><span>Gold production</span><strong>2.8M/h</strong></div><div class="kingdom-stat"><span>Troops production</span><strong>18,400/h</strong></div></div></section>
+          <section class="profile-achievement-summary"><div class="profile-section-heading"><span>Season</span><h3>Achievements</h3></div><div class="profile-achievement-summary-grid"><div><span>Complete</span><strong>19 / 40</strong></div><div><span>Claimed</span><strong>17 / 40</strong></div><div><span>Remaining</span><strong>21 days</strong></div></div><button class="profile-view-achievements-btn">View Achievements</button></section>
+        </div>
+      </section>`;
+
+    const shopRow = (image,name,price,owned,description,disabled=false) => `<article class="shop-item"><div class="shop-item-image-placeholder has-image"><img class="shop-item-image qa-shop-art" src="${image}" alt=""></div><div class="shop-item-copy"><strong>${name}</strong><span>${price} gold</span><small>Owned: ${owned}</small><small>${description}</small></div><button class="shop-buy-btn" ${disabled ? "disabled" : ""}>${disabled ? "Purchased" : "Buy"}</button></article>`;
+    const shop = `<section class="modal shop-modal"><article class="modal-card"><button class="modal-close">${icon("close")}</button><h2>Shop</h2><div id="modalBody"><div class="shop-panel"><section class="shop-balance"><span>Gold available</span><strong>1,438,220,000</strong></section><section class="shop-rewarded-section"><header class="shop-rewarded-heading"><div><span>Optional rewards</span><strong>Free .5h Boosts</strong></div><small>One shared 30-minute cooldown</small></header></section><div class="shop-items">${shopRow("../../../assets/optimized/item-common-gear-box-192x192-d31500be5747.webp","Common Gear Box","1,000,000,000","2","One Common Gear piece · limit 1 per UTC day")}${shopRow("../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp","War Drums","2,500,000","6","Increase troop production for thirty minutes")}${shopRow("../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp","Royal Tax Decree","1,750,000","3","Increase gold production for thirty minutes")}${shopRow("../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp","Royal Peace Shield","8,000,000","1","Protect your realm while you reorganize",true)}</div></div></div></article></section>`;
+
+    const mission = (name,detail,current,target,reward,status="Claim") => `<article class="daily-mission-row ${current >= target ? "complete" : ""}"><span class="daily-mission-icon">${icon(current >= target ? "check" : "achievements")}</span><div class="daily-mission-copy"><div><strong>${name}</strong><span>${current}/${target}</span></div><small>${detail}</small><div class="daily-mission-progress"><i style="width:${Math.min(100,current/target*100)}%"></i></div></div><div class="daily-mission-reward"><small>Reward</small><strong>${reward}</strong></div><div class="daily-mission-action"><button ${current < target ? "disabled" : ""}>${current >= target ? status : "In progress"}</button></div></article>`;
+    const daily = `<section class="modal daily-mission-modal"><article class="modal-card"><button class="modal-close">${icon("close")}</button><h2>Daily Missions</h2><div id="modalBody"><section class="daily-missions-section"><header class="daily-missions-heading"><div class="profile-section-heading"><span>Royal assignments</span><h3>Today’s Orders</h3></div><div class="daily-missions-meta"><span>Resets in 8h 41m</span><span>1 free reroll</span></div></header><div class="daily-missions-list">${mission("Raise the banners","Launch two attacks against valid targets",2,2,"125,000 gold")}${mission("Strengthen the realm","Add two total levels across your cities",1,2,"2,500 troops")}${mission("Secure a camp","Capture one reward camp",0,1,"Royal Tax Decree")}</div></section></div></article></section>`;
+
+    const attack = `<section class="modal troop-slider-modal"><article class="modal-card"><button class="modal-close">${icon("close")}</button><h2>Attack Troops</h2><div id="modalBody"><div class="troop-slider-panel attack"><div class="troop-route-summary"><div class="troop-route-city"><span>From</span><strong>Highwatch Keep</strong><small>Redbanner Fields · <b>684,210</b> of 850,000 remain</small></div><div class="troop-command-icon">${icon("attack")}</div><div class="troop-route-city destination"><span>To</span><strong>Blackstone Hold</strong><small>Ironfall Hills · Enemy city</small></div></div><div class="troop-slider-control"><div class="troop-slider-readout"><span>Troops to attack with</span><strong>165,790</strong></div><input class="troop-amount-slider" style="--slider-progress:62%" type="range" min="1" max="265000" value="165790"><div class="troop-slider-limits"><span>1</span><span>Protected max 265,000</span></div></div><div class="swift-march-launch-option"><div class="swift-march-launch-copy"><strong>Swift March Order</strong><small>Available: 3</small></div><label class="swift-march-launch-toggle"><span>Off</span><input type="checkbox"><i></i></label></div><div class="troop-slider-preview"><div><span>Battle forecast</span><strong>Likely victory</strong><small>Estimated losses: 14,200–19,700</small></div><div><span>Travel time</span><strong>About 17m 40s</strong><small>Cross-map route · 3 regions</small><small>Capture requires the wall and garrison defeated</small></div></div><div class="troop-slider-actions"><button class="troop-slider-confirm attack"><span class="send-icon">${icon("attack")}</span>Attack</button><button class="troop-slider-cancel">Cancel</button></div></div></div></article></section>`;
+
+    const detailRow = (iconName,label,value,help="") => `<div class="battle-visual-detail-row"><span class="battle-visual-detail-icon">${icon(iconName)}</span><div><span>${label}</span>${help ? `<small>${help}</small>` : ""}</div><strong>${value}</strong></div>`;
+    const battle = `<section class="modal battle-report-modal"><article class="modal-card"><button class="modal-close">${icon("close")}</button><h2>Battle Report</h2><div id="modalBody"><div class="battle-report-detail battle-visual-report detailed-battle-report victory"><div class="battle-visual-navigation"><button class="battle-report-back">${icon("back")} Back to reports</button><div class="battle-visual-title"><strong>Victory at Blackstone Hold</strong><small>Ironfall Hills · 4 minutes ago</small></div></div><div class="battle-visual-target"><span>Enemy holding</span><strong>Blackstone Hold · Level 42</strong><small>Captured after the wall and garrison fell</small></div><section class="battle-visual-hero"><article class="battle-visual-hero-side attacker viewer"><span class="battle-visual-side-label">Your side</span><div class="battle-visual-ruler"><strong>Ricky Montalvan</strong><small>Attacker</small></div><div class="battle-visual-power attacker"><span>Resolved power</span><strong>1,982,440</strong></div><div class="battle-visual-troop-flow"><strong>165,790 → 148,220</strong><span>17,570 lost</span></div></article><div class="battle-visual-outcome victory"><span>${icon("crown")}</span><strong>Victory</strong></div><article class="battle-visual-hero-side defender opponent"><span class="battle-visual-side-label">Opponent side</span><div class="battle-visual-ruler"><strong>Lord Varrek</strong><small>Defender</small></div><div class="battle-visual-power defender"><span>Resolved power</span><strong>1,744,900</strong></div><div class="battle-visual-troop-flow"><strong>128,400 → 0</strong><span>128,400 lost</span></div></article></section><section class="battle-visual-section"><div class="battle-visual-section-title"><span>${icon("attack")}</span><h3>Battle Details</h3></div><div class="battle-visual-two-column"><article class="battle-visual-detail-card attacker"><h4>Attacker</h4>${detailRow("attack","Troops committed","165,790")}${detailRow("crown","Attack bonuses","+247,300","Skills and objectives")}${detailRow("check","Troops surviving","148,220")}</article><article class="battle-visual-detail-card defender"><h4>Defender</h4>${detailRow("city","Garrison","128,400")}${detailRow("crown","Defense bonuses","+191,220","Skills and objectives")}${detailRow("check","Troops surviving","0")}</article></div></section><section class="battle-visual-wall breached"><div class="battle-visual-section-title"><span>${icon("city")}</span><h3>Wall Result</h3></div><div class="battle-visual-wall-grid"><div><span>Before battle</span><strong>100%</strong><small>312,000 wall power</small></div><span class="battle-visual-wall-arrow">${icon("forward")}</span><div><span>After battle</span><strong>Breached</strong><small>30 minute repair window</small></div></div></section><section class="battle-visual-rewards"><div class="battle-visual-section-title"><span>${icon("achievements")}</span><h3>Rewards</h3></div><div class="battle-viewer-rewards"><div><span>XP</span><strong>+18,400</strong></div><div><span>Gold</span><strong>+640,000</strong></div></div></section></div></div></article></section>`;
+
+    const screens = { profile, shop, daily, attack, battle };
+    document.querySelector("#stage").innerHTML = screens[screen] || profile;
+  </script>
+</body>
+</html>

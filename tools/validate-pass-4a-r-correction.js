@@ -32,7 +32,7 @@ for (const source of requiredManifestSources) {
   assert.equal(sha256(read(asset.output)), asset.sha256, `${asset.output} hash differs from the manifest.`);
 }
 
-const css = text("styles.css");
+const css = `${text("styles.css")}\n${text("interface-theme.css")}`;
 const html = text("index.html");
 const game = text("game.js");
 const worker = text("service-worker.js");

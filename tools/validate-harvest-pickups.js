@@ -5,6 +5,28 @@ const vm = require("node:vm");
 
 const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "utf8");
 const serverSource = fs.readFileSync(path.resolve(__dirname, "..", "functions", "index.js"), "utf8");
+const styleSource = `${fs.readFileSync(path.resolve(__dirname, "..", "styles.css"), "utf8")}\n${fs.readFileSync(path.resolve(__dirname, "..", "interface-theme.css"), "utf8")}`;
+
+assert.match(
+  styleSource,
+  /\.harvest-bonus-node\s*\{[\s\S]{0,280}?--pickup-glow-core:\s*rgba\(255, 205, 54, \.88\);/,
+  "Gold pickups must define a bright gold map glow.",
+);
+assert.match(
+  styleSource,
+  /\.harvest-bonus-node\.harvest-bonus-troops\s*\{[\s\S]{0,280}?--pickup-glow-core:\s*rgba\(255, 63, 54, \.9\);/,
+  "Troop pickups must override the map glow with red.",
+);
+assert.match(
+  styleSource,
+  /\.harvest-bonus-icon\s*\{[\s\S]{0,320}?drop-shadow\(0 0 9px rgba\(255, 222, 92, \.98\)\)/,
+  "Gold pickup artwork must retain its gold halo.",
+);
+assert.match(
+  styleSource,
+  /\.harvest-bonus-node\.harvest-bonus-troops \.harvest-bonus-icon\s*\{[\s\S]{0,320}?drop-shadow\(0 0 9px rgba\(255, 105, 92, \.98\)\)/,
+  "Troop pickup artwork must retain its red halo.",
+);
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
