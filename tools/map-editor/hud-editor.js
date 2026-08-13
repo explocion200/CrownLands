@@ -5,17 +5,17 @@
     desktop: { label: "Desktop", width: 1440, height: 900 },
   };
   const COMPONENTS = [
-    { id: "profile", label: "Profile, Level & Gold", group: "Identity", icon: "♔", aspect: false, minW: 110, minH: 70 },
-    { id: "fullscreen", label: "Fullscreen Button", group: "Buttons", icon: "⛶", aspect: true, minW: 36, minH: 36 },
+    { id: "profile", label: "Profile, Level & Gold", group: "Identity", icon: "Profile", aspect: false, minW: 110, minH: 70 },
+    { id: "fullscreen", label: "Fullscreen Button", group: "Buttons", icon: "Fullscreen", aspect: true, minW: 36, minH: 36 },
     { id: "inventory", label: "Bag / Inventory", group: "Buttons", icon: "Bag", aspect: true, minW: 40, minH: 40 },
     { id: "shop", label: "Shop", group: "Buttons", icon: "Shop", aspect: true, minW: 40, minH: 40 },
     { id: "activeEffects", label: "Active Effect Badges", group: "Status", icon: "Effects", aspect: false, minW: 56, minH: 40 },
     { id: "cityList", label: "City List", group: "Buttons", icon: "Cities", aspect: true, minW: 40, minH: 40 },
     { id: "islandSwitch", label: "Island Switch", group: "Buttons", icon: "Map", aspect: true, minW: 40, minH: 40 },
-    { id: "returnHome", label: "Return to Main City", group: "Buttons", icon: "⌂", aspect: true, minW: 40, minH: 40 },
+    { id: "returnHome", label: "Return to Main City", group: "Buttons", icon: "Main City", aspect: true, minW: 40, minH: 40 },
     { id: "commanderPanel", label: "Commander / City Panel", group: "Panels", icon: "Commander", aspect: false, minW: 220, minH: 100 },
-    { id: "outgoingMarch", label: "Outgoing Marches", group: "Status", icon: "➤", aspect: false, minW: 62, minH: 44 },
-    { id: "incomingMarch", label: "Incoming Threats", group: "Status", icon: "⚔", aspect: false, minW: 62, minH: 44 },
+    { id: "outgoingMarch", label: "Outgoing Marches", group: "Status", icon: "Outgoing", aspect: false, minW: 62, minH: 44 },
+    { id: "incomingMarch", label: "Incoming Threats", group: "Status", icon: "Incoming", aspect: false, minW: 62, minH: 44 },
     { id: "reportsNav", label: "Reports Navigation", group: "Navigation", icon: "Reports", aspect: false, minW: 86, minH: 52 },
   ];
   const COMPONENT_MAP = Object.fromEntries(COMPONENTS.map(component => [component.id, component]));
@@ -157,15 +157,15 @@
     if (id === "profile") return `<div class="hud-preview-profile">
       <div class="hud-preview-profile-row">
         <div class="hud-preview-profile-frame"><span class="hud-preview-flag">♔</span><b>Lv 42</b></div>
-        ${icon("/assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new", "King Power ranks")}
+        ${icon("/assets/leaderboard-icon.png?v=20260812-global-hud-pass-3g-r1", "King Power ranks")}
       </div>
       <div class="hud-preview-gold"><span>🪙</span><strong>1,250,000</strong></div>
     </div>`;
     if (id === "fullscreen") return `<div class="hud-preview-fullscreen">⛶</div>`;
-    if (id === "inventory") return icon("/assets/bag-icon.png?v=20260623-bag-inventory", "Bag");
-    if (id === "shop") return icon("/assets/shop-icon.png?v=20260623-shop-ui", "Shop");
-    if (id === "cityList") return icon("/assets/city-list-icon.png?v=20260623-city-icon-hud", "City list");
-    if (id === "islandSwitch") return icon("/assets/map-icon.png?v=20260623-map-icon-framed", "Island map");
+    if (id === "inventory") return icon("/assets/bag-icon.png?v=20260812-global-hud-pass-3g-r1", "Bag");
+    if (id === "shop") return icon("/assets/shop-icon.png?v=20260812-global-hud-pass-3g-r1", "Shop");
+    if (id === "cityList") return icon("/assets/city-list-icon.png?v=20260812-global-hud-pass-3g-r1", "City list");
+    if (id === "islandSwitch") return icon("/assets/map-icon.png?v=20260812-global-hud-pass-3g-r1", "Island map");
     if (id === "returnHome") return `<div class="hud-preview-home">⌂</div>`;
     if (id === "activeEffects") return `<div class="hud-preview-effects">
       <div>${icon("/assets/royal-peace-shield-icon.webp?v=20260703-shop-icons", "Shield")}<strong>11:42</strong></div>
@@ -178,7 +178,7 @@
     </div>`;
     if (id === "outgoingMarch") return `<div class="hud-preview-march outgoing"><span>➤</span><strong>2</strong><small>Marches</small></div>`;
     if (id === "incomingMarch") return `<div class="hud-preview-march incoming"><span>⚔</span><strong>1</strong><small>Incoming</small></div>`;
-    if (id === "reportsNav") return `<div class="hud-preview-reports">${icon("/assets/report-icon.png?v=20260702-report-icon", "Reports")}<strong>Reports</strong></div>`;
+    if (id === "reportsNav") return `<div class="hud-preview-reports">${icon("/assets/report-icon.png?v=20260812-global-hud-pass-3g-r1", "Reports")}<strong>Reports</strong></div>`;
     return COMPONENT_MAP[id]?.label || id;
   }
 

@@ -14,6 +14,7 @@ const CITY_CLEARANCE = 46;
 const OBJECTIVE_CLEARANCE = 88;
 const DEFAULT_STRONGHOLD_SIZE = 154;
 const DEFAULT_CAMP_SIZE = 132;
+const CROWN_CITADEL_SIZE = 260;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -169,6 +170,15 @@ function getPoint(item) {
   return { x: Number(point?.x) || 0, y: Number(point?.y) || 0 };
 }
 
+function isCrownCitadelObjective(objective = {}) {
+  const type = String(objective?.strongholdType || objective?.type || "").toLowerCase();
+  return type === "crown" || type === "crown_citadel" || String(objective?.id || "") === "center_crown_citadel";
+}
+
+function getObjectiveVisualSize(objective = {}) {
+  return isCrownCitadelObjective(objective) ? CROWN_CITADEL_SIZE : DEFAULT_STRONGHOLD_SIZE;
+}
+
 function getTargetRegionId(zone) {
   return cleanRegionId(zone?.connectsToRegionId || zone?.targetRegionId || zone?.target);
 }
@@ -226,7 +236,7 @@ function createMapModels(worldConfig, editorData, terrainBlockers) {
         id: String(objective?.id || `${map.id}_objective_${index + 1}`),
         name: String(objective?.name || `Objective ${index + 1}`),
         regionId: map.id,
-        size: imageSizeToWorld(model, objective?.size, DEFAULT_STRONGHOLD_SIZE),
+        size: getObjectiveVisualSize(objective),
         x: Math.round(point.x),
         y: Math.round(point.y),
       };
@@ -237,7 +247,7 @@ function createMapModels(worldConfig, editorData, terrainBlockers) {
         id: String(camp?.id || `${map.id}_camp_${index + 1}`),
         name: String(camp?.name || `Camp ${index + 1}`),
         regionId: map.id,
-        size: imageSizeToWorld(model, camp?.size, DEFAULT_CAMP_SIZE),
+        size: DEFAULT_CAMP_SIZE,
         x: Math.round(point.x),
         y: Math.round(point.y),
       };

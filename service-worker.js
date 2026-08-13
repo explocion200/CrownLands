@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260810-daily-mission-camp-fix-v1";
+const CACHE_VERSION = "20260813-login-title-position-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,26 +11,27 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260810-daily-mission-camp-fix-v1",
+  "/styles.css?v=20260813-login-title-position-r1",
+  "/readability.css?v=20260813-login-title-position-r1",
   "/release-config.js",
   "/patch-notes.js?v=20260807-login-resilience-v1",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",
-  "/common-gear.js?v=20260811-common-gear-v1",
+  "/common-gear.js?v=20260812-visual-correction-pass-4a-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
-  "/firebaseClient.js?v=20260810-daily-mission-camp-fix-v1",
-  "/audio-manager.js?v=20260729-starter-sound-pack-v1",
+  "/firebaseClient.js?v=20260812-local-session-login-fix-v2",
+  "/audio-manager.js?v=20260812-core-visual-pass-2",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
   "/instant-economy-actions.js?v=20260810-instant-economy-actions-v1",
-  "/game.js?v=20260810-daily-mission-camp-fix-v1",
+  "/game.js?v=20260813-login-title-position-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
-  "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
-  "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
-  "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
-  "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp"
+  "/assets/map-editor-data.js?v=20260812-pre-pass-4a-gameplay-maps-r2",
+  "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
+  "/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+  "/assets/optimized/loading-crown-256x256-2038de353a91.webp"
 ];
 
-const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0b111d"/></svg>`;
+const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#17110d"/></svg>`;
 
 try {
   self.window = self;
@@ -61,8 +62,8 @@ try {
         tag,
         renotify: true,
         requireInteraction: data.kind === "attack",
-        icon: resolveAppUrl("assets/optimized/hud-report-192x192-c712b2f6c417.webp"),
-        badge: resolveAppUrl("assets/optimized/hud-report-192x192-c712b2f6c417.webp"),
+        icon: resolveAppUrl("assets/optimized/hud-report-192x192-21644b7390fb.webp"),
+        badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
         data: {
           ...data,
           url: resolveAppUrl(data.url || ""),
@@ -134,6 +135,11 @@ function isNetworkFirstAsset(url) {
   );
 }
 
+function getNavigationFallbackUrl(url) {
+  const pathname = String(url?.pathname || "").replace(/\/+$/, "") || "/";
+  return pathname === "/play" || pathname === "/index.html" ? resolveAppUrl("index.html") : null;
+}
+
 async function putInCache(request, response) {
   if (!isCacheableResponse(response)) return false;
   try {
@@ -147,7 +153,8 @@ async function putInCache(request, response) {
 }
 
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   await putInCache(request, response);
@@ -160,9 +167,10 @@ async function networkFirst(request, fallbackUrl = "/index.html") {
     await putInCache(request, response);
     return response;
   } catch (error) {
-    const cached = await caches.match(request);
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(request);
     if (cached) return cached;
-    const fallback = fallbackUrl ? await caches.match(fallbackUrl) : null;
+    const fallback = fallbackUrl ? await cache.match(fallbackUrl) : null;
     if (fallback) return fallback;
     throw error;
   }
@@ -204,7 +212,7 @@ self.addEventListener("fetch", event => {
   if (isAudioMediaRequest(url)) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, resolveAppUrl("index.html")));
+    event.respondWith(networkFirst(request, getNavigationFallbackUrl(url)));
     return;
   }
 
@@ -238,7 +246,7 @@ self.addEventListener("message", event => {
 self.addEventListener("notificationclick", event => {
   const notificationData = event.notification?.data || {};
   event.notification.close();
-  const url = resolveAppUrl(notificationData.url || "");
+  const url = resolveAppUrl(notificationData.url || "play/");
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
     const sameOriginClient = windowClients.find(client => {

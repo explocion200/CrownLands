@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Pass 3A Visual QA</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #17130f;
+      --panel: #2b2118;
+      --paper: #d6c6a2;
+      --ink: #2f2116;
+      --edge: #96763d;
+      --burgundy: #6e2f35;
+      --muted: #b9a47a;
+    }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--paper);
+      background: var(--bg);
+    }
+    header,
+    section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 12px;
+      line-height: 1.1;
+    }
+    p {
+      max-width: 820px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      border: 2px solid rgba(150, 118, 61, .72);
+      border-radius: 4px;
+      background: linear-gradient(180deg, #3a2518, #20170f);
+      box-shadow: 0 14px 30px rgba(0,0,0,.4), inset 0 0 0 1px rgba(230,214,174,.12);
+      overflow: hidden;
+    }
+    .card h3 {
+      padding: 12px 14px 0;
+      color: #eadfbe;
+      font-size: 18px;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      padding: 12px;
+    }
+    .asset-box {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      color: var(--ink);
+      background:
+        linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%),
+        linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%),
+        #d8c89f;
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+    }
+    .asset-box img {
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 10px rgba(25, 14, 6, .38));
+    }
+    .asset-box.gameplay {
+      min-height: 96px;
+    }
+    .asset-box.gameplay img {
+      max-width: 96px;
+      max-height: 96px;
+    }
+    .label {
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--paper);
+      background: rgba(0,0,0,.22);
+    }
+    .wide img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .note {
+      padding: 14px;
+      color: var(--muted);
+      border-top: 1px solid rgba(150,118,61,.35);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Crownlands Pass 3A Visual QA</h1>
+    <p>Development-only gallery for the core world raster replacement pass. These previews compare the old source assets, new source masters, optimized gameplay derivatives, and actual map composites.</p>
+  </header>
+
+  <section>
+    <h2>Login Background</h2>
+    <div class="grid">
+      <article class="card wide">
+        <h3>Old</h3>
+        <img src="old-assets/assets__game-menu-background.jpg" alt="Old login background" />
+      </article>
+      <article class="card wide">
+        <h3>New Source</h3>
+        <img src="../../../assets/game-menu-background.jpg" alt="New login background" />
+      </article>
+      <article class="card wide">
+        <h3>Desktop UI Capture</h3>
+        <img src="login-desktop.png" alt="Desktop login screenshot with new art" />
+      </article>
+      <article class="card wide">
+        <h3>Mobile Landscape UI Capture</h3>
+        <img src="login-mobile-landscape.png" alt="Mobile landscape login screenshot with new art" />
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>City Progression</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>Stage 1</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__castles__shack.png" alt="Old stage 1" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/castles/shack.png" alt="New stage 1" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/castle-shack-256x185-b600c028b73a.webp" alt="Optimized stage 1" /></div>
+      </article>
+      <article class="card">
+        <h3>Stage 2</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__castles__fort.png" alt="Old stage 2" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/castles/fort.png" alt="New stage 2" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/castle-fort-256x204-7ab0460a1905.webp" alt="Optimized stage 2" /></div>
+      </article>
+      <article class="card">
+        <h3>Stage 3</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__castles__keep.png" alt="Old stage 3" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/castles/keep.png" alt="New stage 3" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/castle-keep-256x214-2f7dc51d63ea.webp" alt="Optimized stage 3" /></div>
+      </article>
+      <article class="card">
+        <h3>Stage 4</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__castles__castle.png" alt="Old stage 4" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/castles/castle.png" alt="New stage 4" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/castle-castle-249x256-8d845bc1c20e.webp" alt="Optimized stage 4" /></div>
+      </article>
+      <article class="card">
+        <h3>Stage 5</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__castles__city.png" alt="Old stage 5" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/castles/city.png" alt="New stage 5" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/castle-city-237x256-b20d1c9e3097.webp" alt="Optimized stage 5" /></div>
+      </article>
+      <article class="card">
+        <h3>Crown Citadel</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__crown-citadel.png" alt="Old Crown Citadel" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/crown-citadel.png" alt="New Crown Citadel" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/crown-citadel-346x384-114e4bd7375e.webp" alt="Optimized Crown Citadel" /></div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cohesion Sheets</h2>
+    <div class="grid">
+      <article class="card wide"><h3>Old vs New</h3><img src="old-new-core-assets-comparison.png" alt="Old and new core assets" /></article>
+      <article class="card wide"><h3>Gameplay Size Progression</h3><img src="gameplay-size-progression.png" alt="Gameplay-size progression" /></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Actual Map Composites</h2>
+    <div class="grid">
+      <article class="card wide"><h3>Crownlands Heart</h3><img src="map-qa-crownlands-heart.png" alt="Core art on Crownlands Heart map" /></article>
+      <article class="card wide"><h3>Redbanner Fields</h3><img src="map-qa-redbanner-fields.png" alt="Core art on Redbanner Fields map" /></article>
+    </div>
+    <div class="note">Regional map backgrounds were not repainted in Pass 3A. These composites exist only to check scale, transparency, contact shadow, palette, and silhouette fit.</div>
+  </section>
+</body>
+</html>

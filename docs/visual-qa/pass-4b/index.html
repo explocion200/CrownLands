@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Pass 4B Visual QA</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink:#eadfc8;
+      --muted:#b7a98e;
+      --wood:#17110d;
+      --panel:#241a14;
+      --panel-deep:#100c09;
+      --line:#765d3d;
+      --burgundy:#6d2d34;
+      --parchment:#d7c7a5;
+      --parchment-dark:#bba47a;
+      --paper-ink:#2a2119;
+      --iron:#34383a;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--wood); color:var(--ink); font:15px/1.45 Georgia,serif; }
+    header { padding:24px clamp(16px,4vw,56px); border-bottom:1px solid var(--line); background:#1d1510; }
+    h1,h2,h3,p,figure { margin-top:0; }
+    h1 { margin-bottom:5px; font-size:clamp(26px,4vw,42px); }
+    h2 { margin-bottom:12px; padding-top:6px; font-size:24px; }
+    h3 { margin-bottom:8px; font-size:16px; }
+    main { padding:24px clamp(12px,3vw,42px) 60px; }
+    section { max-width:1800px; margin:0 auto 42px; }
+    .lede,.caption { color:var(--muted); }
+    .metrics,.grid,.contexts,.state-grid { display:grid; gap:14px; }
+    .metrics { grid-template-columns:repeat(4,minmax(140px,1fr)); margin-top:18px; }
+    .metric,.frame,.workbench,.context,.dispatch { border:1px solid var(--line); border-radius:4px; background:var(--panel); }
+    .metric { padding:13px; }
+    .metric strong { display:block; font-size:21px; }
+    .metric span { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    .grid { grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
+    .frame { overflow:hidden; }
+    .frame img { display:block; width:100%; height:auto; background:var(--panel-deep); }
+    .frame figcaption { padding:8px 11px; color:var(--muted); }
+    .compare { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1px; background:var(--line); }
+    .compare figure { min-width:0; margin:0; background:var(--panel-deep); }
+    .compare img { display:block; width:100%; max-width:100%; height:auto; }
+    .compare figcaption { padding:7px 10px; }
+    .workbench { padding:18px; background:linear-gradient(115deg,#241810,#35261a 55%,#1d1713); }
+    .workbench-grid { display:grid; grid-template-columns:minmax(250px,.8fr) minmax(360px,1.2fr); gap:18px; }
+    .preview-well { min-height:320px; display:grid; place-items:center; border:1px solid #55442f; background:#15100c; box-shadow:inset 0 0 28px #0008; }
+    .control-sheet { padding:16px; color:var(--paper-ink); background:linear-gradient(#ded0b2,#cbb993); border:1px solid #776043; box-shadow:inset 0 0 20px #705b3e22; }
+    .swatches { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 18px; }
+    .swatch { width:32px; height:32px; border:2px solid #47392d; box-shadow:inset 0 0 0 2px #f1e2bf44; }
+    .swatch.is-active { outline:3px solid var(--burgundy); outline-offset:2px; }
+    .command { display:inline-block; padding:7px 13px; color:#f5ead5; background:#6d2d34; border:1px solid #2f1718; font-weight:700; text-transform:uppercase; }
+    .flag-row,.shield-row { display:flex; flex-wrap:wrap; align-items:end; justify-content:center; gap:18px; }
+    .banner { position:relative; width:116px; height:78px; overflow:hidden; border:1px solid #271b13; border-left:7px solid #342b24; box-shadow:0 8px 12px #0006; clip-path:polygon(0 0,100% 4%,94% 49%,100% 95%,0 100%); }
+    .banner::before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg,#fff0 0 5px,#fff1 6px,#0001 7px); mix-blend-mode:soft-light; }
+    .banner::after { content:""; position:absolute; inset:3px; border:1px dashed #e8d9b366; }
+    .b-quarter { background:conic-gradient(from 90deg,#8f3d3a 0 25%,#d9d1bb 0 50%,#8f3d3a 0 75%,#d9d1bb 0); }
+    .b-pale { background:linear-gradient(90deg,#526a49 0 50%,#a9853e 50%); }
+    .b-fess { background:linear-gradient(#536f83 0 50%,#d9d1bb 50%); }
+    .b-chevron { background:linear-gradient(135deg,transparent 0 37%,#61506f 38% 58%,transparent 59%),#a9853e; }
+    .charge { position:absolute; inset:18px 35px; z-index:2; color:#eee1c3; filter:drop-shadow(0 1px #21160e); }
+    .shield-row svg { width:108px; height:116px; max-width:100%; filter:drop-shadow(0 8px 7px #0008); }
+    .wood-lines { stroke:#1e140e; stroke-width:1.2; opacity:.28; }
+    .paint-wear { fill:url(#grain); opacity:.5; }
+    .contexts { grid-template-columns:repeat(4,minmax(210px,1fr)); margin-top:18px; }
+    .context { position:relative; min-height:170px; padding:14px; background:#201711; }
+    .context strong { display:block; margin-bottom:10px; color:#dcc89c; text-transform:uppercase; }
+    .context .mini-flag { transform:scale(.55); transform-origin:top left; }
+    .map-context { background:linear-gradient(#756d45bb,#6a6f45aa),url('../../../assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp') center/cover; }
+    .map-pin { position:absolute; left:50%; top:53%; width:52px; height:52px; transform:translate(-50%,-50%); border:2px solid #6d2d34; border-radius:50%; }
+    .profile-strip,.war-strip { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid #5d4932; background:#17110d; }
+    .profile-strip .portrait { width:54px; height:54px; border:3px solid #4b4e4f; background:#75634b; }
+    .roster-row { display:grid; grid-template-columns:52px 1fr auto; gap:10px; align-items:center; padding:8px; border-bottom:1px solid #493925; }
+    .roster-row svg,.war-strip svg { width:46px !important; height:50px !important; }
+    .state-grid { grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
+    .dispatch { min-height:154px; padding:18px; color:var(--paper-ink); background:linear-gradient(#dfd1b2,#c8b48c); border-color:#745f42; box-shadow:inset 0 0 22px #5b452833; }
+    .dispatch h3 { padding-bottom:6px; border-bottom:1px solid #8e7656; }
+    .dispatch.warning { border-left:8px solid #9b6b2f; }
+    .dispatch.error { border-left:8px solid #813438; }
+    .seal { float:right; width:38px; height:38px; border:5px double #4d1f25; border-radius:50%; background:#792e37; box-shadow:0 3px 4px #3b1d1d55; }
+    .tooltip-demo { display:grid; place-items:center; background:#19120e; color:var(--ink); }
+    .tooltip { max-width:230px; padding:8px 10px; border:1px solid #7d6848; border-radius:2px; color:#eaddc5; background:#2c2118; box-shadow:0 5px 13px #0008; }
+    .pill { display:inline-block; padding:3px 7px; border:1px solid #866f49; color:#eadfc8; background:#35271b; font-size:12px; }
+    @media (max-width:900px) { .contexts { grid-template-columns:1fr 1fr; } .workbench-grid { grid-template-columns:1fr; } }
+    @media (max-width:620px) { .metrics,.contexts { grid-template-columns:1fr 1fr; } .grid,.compare { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Pass 4B: Public, Heraldry, and Cleanup QA</h1>
+  <p class="lede">Development-only review of the public parchment/timber system, persistence-compatible heraldry treatment, secondary dispatch states, responsive behavior, and restrained editor shell.</p>
+  <div class="metrics">
+    <div class="metric"><strong>16</strong><span>public HTML pages</span></div>
+    <div class="metric"><strong>8</strong><span>cloth dye treatments</span></div>
+    <div class="metric"><strong>0</strong><span>new production rasters</span></div>
+    <div class="metric"><strong>0</strong><span>category A gaps</span></div>
+  </div>
+</header>
+<main>
+  <section>
+    <h2>Entry: Old / New</h2>
+    <div class="compare">
+      <figure><img src="../pass-2/login-desktop.png" alt="Earlier Crownlands login presentation"><figcaption>Pass 2 reference: earlier entry treatment.</figcaption></figure>
+      <figure><img src="01-login-desktop.png" alt="Pass 4B Crownlands login presentation"><figcaption>Pass 4B: approved settlement art with grounded timber, parchment, iron, and burgundy UI.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Public Pages</h2>
+    <div class="grid">
+      <figure class="frame"><img src="02-home-desktop.png" alt="Crownlands home page"><figcaption>Home, 1440x900.</figcaption></figure>
+      <figure class="frame"><img src="03-guides-desktop.png" alt="Crownlands guides page"><figcaption>Guides field library.</figcaption></figure>
+      <figure class="frame"><img src="04-updates-desktop.png" alt="Crownlands updates page"><figcaption>Updates chronicle.</figcaption></figure>
+      <figure class="frame"><img src="05-rules-desktop.png" alt="Crownlands rules page"><figcaption>Rules charter.</figcaption></figure>
+      <figure class="frame"><img src="06-support-desktop.png" alt="Crownlands support page"><figcaption>Support petition desk.</figcaption></figure>
+      <figure class="frame"><img src="07-privacy-desktop.png" alt="Crownlands privacy page"><figcaption>Privacy administrative charter.</figcaption></figure>
+      <figure class="frame"><img src="08-patch-notes.png" alt="Crownlands patch notes modal"><figcaption>Patch Notes royal record.</figcaption></figure>
+      <figure class="frame"><img src="09-public-android-landscape.png" alt="Crownlands public page on Android landscape"><figcaption>Android landscape, 844x390.</figcaption></figure>
+      <figure class="frame"><img src="10-public-portrait.png" alt="Crownlands guide page at portrait width"><figcaption>Portrait public reading, 390x844.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Kingdom Flag Workbench</h2>
+    <div class="workbench workbench-grid">
+      <div class="preview-well">
+        <div class="banner b-quarter" style="width:230px;height:150px">
+          <svg class="charge" viewBox="0 0 64 64" aria-label="Crown charge"><path fill="currentColor" d="M8 48h48l-4 8H12l-4-8zm2-30 13 12 9-19 9 19 13-12-4 25H14L10 18z"/></svg>
+        </div>
+      </div>
+      <div class="control-sheet">
+        <h3>Royal banner ledger</h3>
+        <p>Saved primary/accent hex, pattern, and symbol data remains unchanged. The renderer presents those values as believable cloth dyes.</p>
+        <strong>Primary dye</strong>
+        <div class="swatches"><span class="swatch is-active" style="background:#8f3d3a"></span><span class="swatch" style="background:#536f83"></span><span class="swatch" style="background:#526a49"></span><span class="swatch" style="background:#61506f"></span><span class="swatch" style="background:#a9853e"></span><span class="swatch" style="background:#30373b"></span><span class="swatch" style="background:#d9d1bb"></span><span class="swatch" style="background:#755037"></span></div>
+        <span class="command">Save banner</span>
+      </div>
+    </div>
+    <h3 style="margin-top:20px">Generated family</h3>
+    <div class="flag-row">
+      <div class="banner b-quarter"><svg class="charge" viewBox="0 0 64 64"><path fill="currentColor" d="M8 48h48l-4 8H12l-4-8zm2-30 13 12 9-19 9 19 13-12-4 25H14L10 18z"/></svg></div>
+      <div class="banner b-pale"><svg class="charge" viewBox="0 0 64 64"><path fill="currentColor" d="M12 54V22l20-13 20 13v32H38V39H26v15H12zm7-27h8v8h-8v-8zm18 0h8v8h-8v-8z"/></svg></div>
+      <div class="banner b-fess"><svg class="charge" viewBox="0 0 64 64"><path fill="currentColor" d="M32 7l7 17h18L43 35l5 19-16-10-16 10 5-19L7 24h18z"/></svg></div>
+      <div class="banner b-chevron"><svg class="charge" viewBox="0 0 64 64"><path fill="currentColor" d="M8 51l12-30 12 13 12-22 12 39H8zm12-7h24L41 32l-8 13-11-12z"/></svg></div>
+    </div>
+    <div class="contexts">
+      <article class="context map-context"><strong>Map</strong><div class="map-pin"></div><div class="banner b-quarter mini-flag"></div></article>
+      <article class="context"><strong>Profile</strong><div class="profile-strip"><span class="portrait"></span><div class="banner b-pale" style="width:72px;height:48px"></div><span>Willowford<br><small class="caption">Level 14</small></span></div></article>
+      <article class="context"><strong>Compact HUD</strong><div class="profile-strip"><div class="banner b-fess" style="width:58px;height:39px"></div><span>Kingdom identity remains legible at small scale.</span></div></article>
+      <article class="context"><strong>Save contract</strong><span class="pill">primary</span> <span class="pill">accent</span> <span class="pill">pattern</span> <span class="pill">symbol</span><p class="caption" style="margin-top:12px">Presentation changes do not rewrite player data.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Clan Shield Workbench</h2>
+    <div class="workbench workbench-grid">
+      <div class="preview-well"><div class="shield-row" id="large-shield"></div></div>
+      <div class="control-sheet">
+        <h3>Painted campaign shield</h3>
+        <p>Wood grain, plank joints, worn paint, scratches, and forged edge depth are visual layers over the existing shape, field, charge, trim, and finish schema.</p>
+        <strong>Paint</strong>
+        <div class="swatches"><span class="swatch is-active" style="background:#6d2d34"></span><span class="swatch" style="background:#546879"></span><span class="swatch" style="background:#9a7a39"></span><span class="swatch" style="background:#4f6548"></span></div>
+        <span class="command">Save shield</span>
+      </div>
+    </div>
+    <h3 style="margin-top:20px">Generated family</h3>
+    <div class="shield-row" id="shield-family"></div>
+    <div class="contexts">
+      <article class="context"><strong>Roster</strong><div class="roster-row"><span class="shield-slot"></span><span>Marshal Edric<br><small class="caption">Officer</small></span><span>Online</span></div><div class="roster-row"><span class="shield-slot alt"></span><span>Lady Mara<br><small class="caption">Quartermaster</small></span><span>Away</span></div></article>
+      <article class="context"><strong>War Room</strong><div class="war-strip"><span class="shield-slot"></span><span>House Willow<br><small class="caption">Rally forming</small></span></div></article>
+      <article class="context"><strong>Editor scale</strong><div class="profile-strip"><span class="shield-slot alt"></span><span>Charges stay readable over material wear.</span></div></article>
+      <article class="context"><strong>Save contract</strong><span class="pill">shape</span> <span class="pill">division</span> <span class="pill">charges</span> <span class="pill">trim</span><p class="caption" style="margin-top:12px">Clan profile persistence remains schema-compatible.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Secondary States</h2>
+    <div class="state-grid">
+      <article class="dispatch"><span class="seal"></span><h3>Campaign ledger</h3><p>No outgoing marches. Orders issued from your cities will be recorded here.</p></article>
+      <article class="dispatch warning"><h3>Steward's warning</h3><p>This city cannot be relinquished while troops are still traveling to it.</p></article>
+      <article class="dispatch error"><h3>Dispatch failed</h3><p>The realm could not confirm this order. Your troops have not been removed.</p></article>
+      <article class="dispatch tooltip-demo"><div class="tooltip"><strong>Peace Shield</strong><br>Protection remains active until the seal expires.</div></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Retained Editor</h2>
+    <figure class="frame"><img src="11-editor-admin.png" alt="Crownlands map editor with restrained administrative styling"><figcaption>The editor keeps diagnostic owner colors, resize handles, grid feedback, and data workflow. Presentation moves toward timber, parchment, iron, and burgundy without decorative overhead.</figcaption></figure>
+  </section>
+</main>
+<script>
+  const defs = `
+    <defs>
+      <pattern id="grain" width="15" height="19" patternUnits="userSpaceOnUse"><path d="M1 4c4-2 8 1 13-1M2 12c5 2 8-2 13 0M3 17c4-1 7 1 11 0" fill="none" stroke="#ead8ad" stroke-width=".7"/></pattern>
+    </defs>`;
+  const shields = [
+    ["#6d2d34","#d7c9a8","M50 18l9 19h20L64 50l6 22-20-12-20 12 6-22-15-13h20z"],
+    ["#536f83","#a9853e","M19 25h62v14H57v39H43V39H19z"],
+    ["#526a49","#d9d1bb","M21 73l14-42 15 18 15-31 14 55H21z"],
+    ["#755037","#8f3d3a","M26 26h48v48H26zM33 33v34h34V33z"]
+  ];
+  const shieldSvg = ([a,b,charge], large = false) => `<svg viewBox="0 0 100 108" role="img" aria-label="Painted Crownlands clan shield" style="${large ? 'width:230px;height:250px' : ''}">${defs}<path d="M10 8Q50 2 90 8V56Q87 83 50 101Q13 83 10 56Z" fill="#251811" stroke="#12100d" stroke-width="7"/><clipPath id="clip-${Math.random().toString(36).slice(2)}"><path d="M10 8Q50 2 90 8V56Q87 83 50 101Q13 83 10 56Z"/></clipPath><path d="M10 8Q50 2 90 8V56Q87 83 50 101Q13 83 10 56Z" fill="${a}"/><path d="M50 4h42v54Q88 84 50 102Z" fill="${b}"/><path class="wood-lines" d="M26 5v90M49 3v98M73 5v90"/><path d="${charge}" fill="#eadfc8" stroke="#291c14" stroke-width="1.4"/><path d="M10 8Q50 2 90 8V56Q87 83 50 101Q13 83 10 56Z" fill="url(#grain)" opacity=".25"/><path d="M10 8Q50 2 90 8V56Q87 83 50 101Q13 83 10 56Z" fill="none" stroke="#55595a" stroke-width="4"/><path d="M19 27l20 13M68 18L46 64M73 57L55 85" fill="none" stroke="#efe2c4" stroke-width="1" opacity=".3"/></svg>`;
+  document.querySelector('#large-shield').innerHTML = shieldSvg(shields[0], true);
+  document.querySelector('#shield-family').innerHTML = shields.map(s => shieldSvg(s)).join('');
+  document.querySelectorAll('.shield-slot').forEach((node,index) => { node.innerHTML = shieldSvg(shields[index % shields.length]); });
+</script>
+</body>
+</html>

@@ -233,7 +233,7 @@ const rewardModalSource = game.slice(
   game.indexOf("async function showDailyLoginRewardsModal")
 );
 requireMatch(rewardTabsSource, /role="tablist"[\s\S]*aria-label="Daily rewards, quests, and achievements"[\s\S]*aria-selected[\s\S]*aria-controls/, "The reward modal is missing its accessible icon tabs.");
-requireMatch(rewardTabsSource, /daily-reward-160x151-f4cebc4a7ccb\.webp[\s\S]*hud-report-192x192-c712b2f6c417\.webp[\s\S]*hud-achievements-192x192-6126eda4c9e8\.webp/, "Reward, Quest, and Achievement tab artwork drifted.");
+requireMatch(rewardTabsSource, /daily-reward-160x160-9bd7a936016f\.webp[\s\S]*hud-report-192x192-21644b7390fb\.webp[\s\S]*hud-achievements-192x192-1efe6767ace6\.webp/, "Reward, Quest, and Achievement tab artwork drifted.");
 requireMatch(rewardTabsSource, /aria-label="\$\{accessibleLabel\}" title="\$\{tab\.label\}"[\s\S]*<img[^>]*alt=""[^>]*>[\s\S]*<\/button>/, "Reward tabs must be icon-only while retaining names, claim alerts, and tooltips.");
 requireMatch(game, /\["ArrowLeft", "ArrowRight", "Home", "End"\][\s\S]*activateTab/, "Reward tabs lost keyboard arrow, Home, or End navigation.");
 requireMatch(game, /async function showDailyLoginRewardsModal[\s\S]*options\.initialTab[\s\S]*:\s*"rewards"/, "Opening the modal no longer defaults to Daily Login or accept direct tab navigation.");
@@ -253,14 +253,15 @@ requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily
 requireMatch(styles, /\.daily-login-reward-modal \.modal-card #modalBody\s*\{[\s\S]*?overflow:\s*hidden/, "Daily rewards can still scroll inside the modal.");
 requireMatch(styles, /\.daily-reward-grid\s*\{[\s\S]*repeat\(8,[\s\S]*overflow:\s*hidden[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(7,[\s\S]*@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*repeat\(8,/, "Daily reward grid must fit desktop, portrait phone, and short-landscape viewports without scrolling.");
 requireMatch(styles, /\.daily-reward-card\s*\{[\s\S]*min-height:\s*0[\s\S]*grid-template-rows:\s*minmax\(0,\s*1fr\) auto/, "Reward cards are not constrained to image-and-amount rows.");
-requireMatch(styles, /\.daily-reward-card\.claimed\s*\{[\s\S]*rgba\(81, 157, 57,[\s\S]*\.daily-reward-card\.claimed::after\s*\{[\s\S]*content:\s*"✓"[\s\S]*color:\s*#c7ed29/, "Collected cards lost their green frame or visual check treatment.");
-requireMatch(styles, /\.daily-reward-card\.available\s*\{[\s\S]*border-color:\s*#63e2ef[\s\S]*rgba\(240, 173, 39,[\s\S]*animation:\s*dailyRewardClaimPulse/, "Claimable cards lost their cyan-and-gold highlight treatment.");
+requireMatch(styles, /\.daily-reward-card\.claimed\s*\{[\s\S]*rgba\(85, 97, 61,[\s\S]*\.daily-reward-card\.claimed::after\s*\{[\s\S]*content:\s*""[\s\S]*radial-gradient\(circle at 45% 38%, #7f372e, #4f1d1c\)/, "Collected cards lost their moss frame or wax-seal check treatment.");
+requireMatch(styles, /\.daily-reward-card\.available\s*\{[\s\S]*border-color:\s*rgba\(110, 47, 53, \.82\)[\s\S]*rgba\(110, 47, 53, \.16\)/, "Claimable cards lost their oxblood-and-parchment highlight treatment.");
+requireMatch(styles, /@keyframes dailyRewardClaimPulse[\s\S]*rgba\(110, 47, 53, \.12\)[\s\S]*rgba\(110, 47, 53, \.2\)/, "Claimable-card pulse no longer uses the subdued oxblood treatment.");
 requireMatch(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.daily-reward-card\.available[\s\S]*animation:\s*none/, "Claimable-card motion is not disabled for reduced-motion users.");
 requireMatch(styles, /\.daily-reward-tabs\s*\{[\s\S]*position:\s*absolute[\s\S]*right:\s*6rem[\s\S]*repeat\(3,\s*44px\)[\s\S]*gap:\s*1\.2rem[\s\S]*\.daily-reward-tabs button:focus-visible[\s\S]*outline:/, "Desktop icon tabs are not spaced across the upper-right with a visible focus state.");
 requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*38px\)[\s\S]*gap:\s*\.9rem/, "Portrait icon tabs no longer preserve clearance from the close button.");
 requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer preserve clearance from the close button.");
 requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*6/, "The close button is not kept above reward content.");
-requireMatch(html, /daily-rewards\.css\?v=20260810-reference-refresh-v1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
+requireMatch(html, /daily-rewards\.css\?v=20260812-visual-correction-pass-4a-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
 requireMatch(
   serviceWorker,
   /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null\)/,

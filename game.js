@@ -81,8 +81,9 @@ const COMMON_GEAR_BOX_ITEM = Object.freeze({
   id: "common_gear_box",
   label: "Common Gear Box",
   description: "Open to receive exactly 3 random Common gear pieces for your Inner Castle officers.",
-  icon: "assets/optimized/item-common-gear-box-192x192-0f7ac5409316.webp",
+  icon: "assets/optimized/item-common-gear-box-192x192-d31500be5747.webp",
 });
+const COMMON_GEAR_BOX_OPEN_ART = "assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp";
 
 function normalizeCommonGearState(raw = null) {
   return COMMON_GEAR?.normalizeState(raw) || { commonGearBoxes: 0, instances: {}, equipped: {}, newMarkers: {} };
@@ -102,57 +103,57 @@ const REWARDED_AD_ITEMS = Object.freeze([
     id: "gold",
     label: "Gold .5h Boost",
     rewardLabel: "gold",
-    icon: "assets/optimized/pickup-gold-192x192-13064480d6c7.webp",
+    icon: "assets/optimized/pickup-gold-192x192-a1de679b797d.webp",
   },
   {
     id: "troops",
     label: "Troop .5h Boost",
     rewardLabel: "troops",
-    icon: "assets/optimized/pickup-troops-192x192-866b66c49b83.webp",
+    icon: "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp",
   },
 ]);
-const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-d8f2d46c803c.webp";
+const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-82bf384e502b.webp";
 const INNER_CASTLE_BUILDINGS = Object.freeze([
   Object.freeze({
     key: "treasury",
     label: "Treasury",
     role: "Gold storage / gold production",
-    artSrc: "assets/optimized/inner-castle-treasury-512x512-026b41509470.webp",
+    artSrc: "assets/optimized/inner-castle-treasury-512x512-d0d9addb0fa0.webp",
     hotspot: Object.freeze({ left: 19, top: 24 }),
   }),
   Object.freeze({
     key: "great-hall",
     label: "Great Hall",
     role: "Ruler power / kingdom upgrades",
-    artSrc: "assets/optimized/inner-castle-great-hall-512x512-4f969e8204ca.webp",
+    artSrc: "assets/optimized/inner-castle-great-hall-512x512-d8cadbae3772.webp",
     hotspot: Object.freeze({ left: 50, top: 20 }),
   }),
   Object.freeze({
     key: "barracks",
     label: "Barracks",
     role: "Troop production / military strength",
-    artSrc: "assets/optimized/inner-castle-barracks-512x512-bb5086409f06.webp",
+    artSrc: "assets/optimized/inner-castle-barracks-512x512-2d0a5881e963.webp",
     hotspot: Object.freeze({ left: 81, top: 25 }),
   }),
   Object.freeze({
     key: "alehouse",
     label: "Alehouse",
     role: "Morale / recovery / small boosts",
-    artSrc: "assets/optimized/inner-castle-alehouse-512x512-ffa1b0a7a9e3.webp",
+    artSrc: "assets/optimized/inner-castle-alehouse-512x512-8374747f6500.webp",
     hotspot: Object.freeze({ left: 19, top: 57 }),
   }),
   Object.freeze({
     key: "gatehouse",
     label: "Gatehouse",
     role: "City defense / wall strength",
-    artSrc: "assets/optimized/inner-castle-gatehouse-512x512-fdc7494d2d4f.webp",
+    artSrc: "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp",
     hotspot: Object.freeze({ left: 50, top: 75 }),
   }),
   Object.freeze({
     key: "royal-stables",
     label: "Royal Stables",
     role: "Movement / march speed",
-    artSrc: "assets/optimized/inner-castle-royal-stables-512x512-79a51faecd7c.webp",
+    artSrc: "assets/optimized/inner-castle-royal-stables-512x512-7791897ddc01.webp",
     hotspot: Object.freeze({ left: 81, top: 58 }),
   }),
 ]);
@@ -177,7 +178,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
-    icon: "assets/optimized/item-peace-shield-160x160-dcb8dddc35ea.webp",
+    icon: "assets/optimized/item-peace-shield-160x160-5fd9cc116a40.webp",
   },
   {
     id: "war_drums_30m",
@@ -185,14 +186,14 @@ const SHOP_ITEMS = [
     label: "War Drums",
     description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
-    icon: "assets/optimized/item-war-drums-160x160-48ecb3c2150b.webp",
+    icon: "assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
   },
   {
     id: "royal_tax_decree_30m",
     label: "Royal Tax Decree",
     description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000),
-    icon: "assets/optimized/item-royal-tax-decree-160x160-eaa5b941fe82.webp",
+    icon: "assets/optimized/item-royal-tax-decree-160x160-d7e2adb1b120.webp",
   },
   {
     id: "veil_of_silence_30m",
@@ -200,21 +201,21 @@ const SHOP_ITEMS = [
     label: "Veil of Silence",
     description: `Blocks enemy scouting for ${economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5)} minutes.`,
     cost: economyNumber("shopItems.veil_of_silence_30m.cost", 125_000),
-    icon: "assets/optimized/item-veil-of-silence-160x160-5d50be41ce93.webp",
+    icon: "assets/optimized/item-veil-of-silence-160x160-1e09f4efdbff.webp",
   },
   {
     id: "swift_march_order",
     label: "Swift March Order",
     description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.",
     cost: economyNumber("shopItems.swift_march_order.cost", 300_000),
-    icon: "assets/optimized/item-swift-march-160x160-f1cb9c8471ca.webp",
+    icon: "assets/optimized/item-swift-march-160x160-e857cc4d8977.webp",
   },
   {
     id: "recall_horn",
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: economyNumber("shopItems.recall_horn.cost", 500_000),
-    icon: "assets/optimized/item-recall-horn-160x160-eb20879b085e.webp",
+    icon: "assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp",
   },
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
@@ -429,9 +430,9 @@ const LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD = 0.78;
 const MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE = 72;
 const MARCH_ENDPOINT_INTERACTION_SIZE_RATIO = 0.62;
 const ISLAND_MAP_PADDING = 560;
-const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-866b66c49b83.webp";
-const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-13064480d6c7.webp";
-const MAP_SWITCH_ARROW_ICON_SRC = "assets/optimized/hud-map-switch-arrow-192x211-2f1bad4c5121.webp";
+const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp";
+const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-a1de679b797d.webp";
+const MAP_SWITCH_ARROW_ICON_SRC = "assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp";
 const DEFAULT_PORTAL_VISUAL_SIZE = 92;
 const MIN_PORTAL_VISUAL_SIZE = 60;
 const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
@@ -442,6 +443,7 @@ const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 1;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const MIN_CAMP_VISUAL_SIZE = 1;
+const CROWN_CITADEL_VISUAL_SIZE = 260;
 const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
   { minimumReward: 20000, productionHours: 0.5 },
   { minimumReward: 40000, productionHours: 1 },
@@ -534,25 +536,25 @@ const REWARD_CAMP_CONFIG = {
 const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
-const GOLD_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-gold-384x384-6f50e7c0121f.webp";
+const GOLD_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const TRAINING_STRONGHOLD_NAME = "Greybanner Hold";
-const TRAINING_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-training-384x384-9b1a1f45402d.webp";
+const TRAINING_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-training-384x384-649892a49e02.webp";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const SPEED_STRONGHOLD_NAME = "Swiftgate";
-const SPEED_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-speed-384x384-3965edb84f9c.webp";
+const SPEED_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const DEFENSE_STRONGHOLD_NAME = "Ironwatch";
-const DEFENSE_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-defense-384x384-d0a669653957.webp";
+const DEFENSE_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
@@ -582,7 +584,7 @@ const CITADEL_ASSAULT_EASTERN_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", 
   minute: "2-digit",
   timeZoneName: "short",
 });
-const CROWN_CITADEL_ART_SRC = "assets/optimized/crown-citadel-384x384-d4605eb1c094.webp";
+const CROWN_CITADEL_ART_SRC = "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
@@ -591,7 +593,6 @@ const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const CROWN_CITADEL_LEVEL = 100;
 const CROWN_CITADEL_START_TROOPS = 50000000;
-const CROWN_CITADEL_VISUAL_SIZE = 260;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -599,7 +600,7 @@ const STRONGHOLD_IDS = new Set([
   DEFENSE_STRONGHOLD_ID,
   CROWN_CITADEL_ID,
 ]);
-const WEST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/west-west-2-1783019399438.webp";
+const WEST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/versioned/west-west-2-1783019399438-92a533147c7f.webp";
 const WEST_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp";
 const WEST_ISLAND_IMAGE_WIDTH = 1448;
 const WEST_ISLAND_IMAGE_HEIGHT = 1086;
@@ -629,7 +630,7 @@ const WEST_ISLAND_CITY_POINTS = [
   { x: 720, y: 860 }, { x: 390, y: 680 }, { x: 420, y: 950 }, { x: 400, y: 1000 },
   { x: 810, y: 620 }, { x: 810, y: 940 },
 ];
-const NORTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/north-north-1-1783019201680.webp";
+const NORTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/versioned/north-north-1-1783019201680-0b6b6b19ea6e.webp";
 const NORTH_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
 const NORTH_ISLAND_IMAGE_HEIGHT = 1086;
@@ -662,7 +663,7 @@ const NORTH_ISLAND_CITY_POINTS = [
   { x: 720, y: 810 }, { x: 860, y: 810 }, { x: 980, y: 810 }, { x: 1100, y: 810 },
   { x: 490, y: 480 }, { x: 760, y: 770 },
 ];
-const EAST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/east-east-4-1783020191215.webp";
+const EAST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/versioned/east-east-4-1783020191215-19805a740a73.webp";
 const EAST_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp";
 const EAST_ISLAND_IMAGE_WIDTH = 1448;
 const EAST_ISLAND_IMAGE_HEIGHT = 1086;
@@ -694,7 +695,7 @@ const EAST_ISLAND_CITY_POINTS = [
   { x: 580, y: 1160 }, { x: 640, y: 1070 }, { x: 360, y: 690 }, { x: 420, y: 660 },
   { x: 660, y: 800 }, { x: 720, y: 790 },
 ];
-const SOUTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/south-south-5-1783020401484.webp";
+const SOUTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/versioned/south-south-5-1783020401484-675929711e1c.webp";
 const SOUTH_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp";
 const SOUTH_ISLAND_IMAGE_WIDTH = 1448;
 const SOUTH_ISLAND_IMAGE_HEIGHT = 1086;
@@ -729,7 +730,7 @@ const SOUTH_ISLAND_CITY_POINTS = [
   { x: 1020, y: 360 }, { x: 640, y: 800 },
 ];
 const CENTER_REGION_CITY_COUNT = 70;
-const CENTER_ISLAND_ART_SRC = "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp";
+const CENTER_ISLAND_ART_SRC = "assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp";
 const CENTER_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp";
 const CENTER_ISLAND_IMAGE_WIDTH = 1448;
 const CENTER_ISLAND_IMAGE_HEIGHT = 1086;
@@ -1004,7 +1005,76 @@ const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 4, unlockLevel: 100 }),
 ]);
 
+const CROWNLANDS_ICON_KEYS = new Set([
+  "attack",
+  "transfer",
+  "scout",
+  "crown",
+  "shield",
+  "city",
+  "reports",
+  "gold",
+  "troops",
+  "map",
+  "bag",
+  "shop",
+  "clan",
+  "leaderboard",
+  "daily-rewards",
+  "achievements",
+  "incoming",
+  "outgoing",
+  "rally",
+  "reinforcement",
+  "locate",
+  "information",
+  "upgrade",
+  "close",
+  "back",
+  "forward",
+  "fullscreen",
+  "sound",
+  "sound-off",
+  "install",
+  "check",
+  "edit",
+  "replace",
+]);
+
+const CROWNLANDS_ICON_ALIASES = Object.freeze({
+  banner: "rally",
+  camp: "city",
+  "camp-types": "city",
+  castle: "city",
+  deed: "achievements",
+  gift: "daily-rewards",
+  hammer: "upgrade",
+  helmet: "troops",
+  march: "outgoing",
+  relic: "shield",
+  scroll: "reports",
+  seal: "achievements",
+  siege: "attack",
+  star: "achievements",
+  stronghold: "shield",
+  "stronghold-march": "outgoing",
+  swords: "attack",
+  targets: "locate",
+  tower: "city",
+  warband: "attack",
+});
+
 const FLAG_COLORS = ["#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f"];
+const FLAG_DYE_TREATMENTS = Object.freeze({
+  "#1f5f91": Object.freeze({ display: "#536f83", label: "Faded blue" }),
+  "#b23a35": Object.freeze({ display: "#8f3d3a", label: "Burgundy red" }),
+  "#2f7a4a": Object.freeze({ display: "#526a49", label: "Moss green" }),
+  "#6d4aa2": Object.freeze({ display: "#61506f", label: "Faded indigo" }),
+  "#d3a62e": Object.freeze({ display: "#a9853e", label: "Ochre" }),
+  "#202a38": Object.freeze({ display: "#30373b", label: "Charcoal" }),
+  "#d9e2e8": Object.freeze({ display: "#d9d1bb", label: "Unbleached linen" }),
+  "#8d5a2f": Object.freeze({ display: "#755037", label: "Walnut brown" }),
+});
 const FLAG_PATTERNS = [
   { key: "split", label: "Split" },
   { key: "diagonal", label: "Diagonal" },
@@ -1018,18 +1088,18 @@ const FLAG_PATTERNS = [
   { key: "bend", label: "Bend" },
 ];
 const FLAG_SYMBOLS = [
-  { key: "crown", label: "Crown", glyph: "\u265B" },
-  { key: "castle", label: "Castle", glyph: "\u265C" },
-  { key: "star", label: "Star", glyph: "\u2726" },
-  { key: "swords", label: "Swords", glyph: "\u2694" },
-  { key: "fleur", label: "Fleur-de-lis", glyph: "\u269C" },
-  { key: "cross", label: "Templar Cross", glyph: "\u2720" },
-  { key: "sun", label: "Sun", glyph: "\u2600" },
-  { key: "moon", label: "Moon", glyph: "\u263E" },
-  { key: "knight", label: "Knight", glyph: "\u265E" },
-  { key: "tower", label: "Tower", glyph: "\u2656" },
-  { key: "diamond", label: "Gem", glyph: "\u25C6" },
-  { key: "spire", label: "Spire", glyph: "\u25B2" },
+  { key: "crown", label: "Crown", icon: "crown" },
+  { key: "castle", label: "Castle", icon: "city" },
+  { key: "star", label: "Star", icon: "achievements" },
+  { key: "swords", label: "Swords", icon: "attack" },
+  { key: "fleur", label: "Fleur-de-lis", icon: "shield" },
+  { key: "cross", label: "Pilgrim Cross", icon: "check" },
+  { key: "sun", label: "Sun Mark", icon: "gold" },
+  { key: "moon", label: "Moon Mark", icon: "scout" },
+  { key: "knight", label: "Rider", icon: "transfer" },
+  { key: "tower", label: "Tower", icon: "city" },
+  { key: "diamond", label: "Deed Seal", icon: "achievements" },
+  { key: "spire", label: "Spearhead", icon: "rally" },
 ];
 const CLAN_SHIELD_COLORS = [
   { value: "#7a2638", label: "Castilian crimson" },
@@ -1060,14 +1130,14 @@ const CLAN_SHIELD_DIVISIONS = [
   { key: "chevron", label: "Chevron" },
 ];
 const CLAN_SHIELD_CHARGES = [
-  { key: "none", label: "None", glyph: "\u2014" },
-  { key: "castle", label: "Castle", glyph: "\u265C" },
-  { key: "lion", label: "Lion rampant", glyph: "\u264C" },
-  { key: "eagle", label: "Heraldic eagle", glyph: "\uD83E\uDD85" },
-  { key: "crown", label: "Crown", glyph: "\u265B" },
-  { key: "swords", label: "Crossed swords", glyph: "\u2694" },
-  { key: "fleur", label: "Fleur-de-lis", glyph: "\u269C" },
-  { key: "sun", label: "Sun", glyph: "\u2600" },
+  { key: "none", label: "None" },
+  { key: "castle", label: "Castle" },
+  { key: "lion", label: "Lion rampant" },
+  { key: "eagle", label: "Heraldic eagle" },
+  { key: "crown", label: "Crown" },
+  { key: "swords", label: "Crossed swords" },
+  { key: "fleur", label: "Fleur-de-lis" },
+  { key: "sun", label: "Sun" },
 ];
 const CLAN_SHIELD_CHARGE_LAYOUTS = [
   { key: "center", label: "Single" },
@@ -1117,11 +1187,11 @@ function getCastleStage(level) {
 
 function getCastleAsset(stage) {
   const assets = {
-    1: "assets/optimized/castle-shack-256x212-4e1e1629aa98.webp",
-    2: "assets/optimized/castle-fort-256x239-da740533080d.webp",
-    3: "assets/optimized/castle-keep-256x249-426604b045ca.webp",
-    4: "assets/optimized/castle-castle-256x242-706cbf23f837.webp",
-    5: "assets/optimized/castle-city-256x244-2c9a66fb7153.webp",
+    1: "assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+    2: "assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+    3: "assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+    4: "assets/optimized/castle-castle-256x256-5e8edd306418.webp",
+    5: "assets/optimized/castle-city-256x256-96961dc8d50b.webp",
   };
   return assets[stage] || assets[1];
 }
@@ -1142,7 +1212,8 @@ function getPortalVisualSize(portal) {
 }
 
 function getStrongholdVisualSize(city) {
-  return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, readVisualSize(city?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE));
+  if (isCrownCitadel(city)) return CROWN_CITADEL_VISUAL_SIZE;
+  return DEFAULT_STRONGHOLD_VISUAL_SIZE;
 }
 
 function isGoldStronghold(city) {
@@ -1368,11 +1439,11 @@ function canMigrateCitySetToBases(cities, bases) {
 }
 
 const OWNER = {
-  player: { label: "You", css: "player", flag: "\u25C6" },
-  player2: { label: "Player 2", css: "player2", flag: "\u2161" },
-  player3: { label: "Player 3", css: "player3", flag: "\u2162" },
-  enemy: { label: "Enemy", css: "enemy", flag: "\u265C" },
-  neutral: { label: "Neutral", css: "neutral", flag: "\u2022" },
+  player: { label: "You", css: "player", flagIcon: "crown" },
+  player2: { label: "Player 2", css: "player2", flagIcon: "shield" },
+  player3: { label: "Player 3", css: "player3", flagIcon: "clan" },
+  enemy: { label: "Enemy", css: "enemy", flagIcon: "attack" },
+  neutral: { label: "Neutral", css: "neutral", flagIcon: "city" },
 };
 
 const BASE_CITIES = [
@@ -4277,15 +4348,15 @@ function getEditorCampDefinitions(regionId) {
 function getCampConfigForType(type) {
   const campType = String(type || "gold").trim().toLowerCase();
   if (campType === "troops" || campType === "troop") {
-    return { type: "troops", name: "Warband Camp", artSrc: "assets/optimized/camp-troops-384x384-7f8c0ed10be8.webp" };
+    return { type: "troops", name: "Warband Camp", artSrc: "assets/optimized/camp-troops-384x384-2f712333e891.webp" };
   }
   if (campType === "items" || campType === "item" || campType === "relic") {
-    return { type: "items", name: "Relic Camp", artSrc: "assets/optimized/camp-items-384x384-b8bc026d8a29.webp" };
+    return { type: "items", name: "Relic Camp", artSrc: "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp" };
   }
   if (campType === "deed" || campType === "city_deed") {
-    return { type: "deed", name: "Deed Camp", artSrc: "assets/optimized/camp-deed-384x384-0cd9568f52ca.webp" };
+    return { type: "deed", name: "Deed Camp", artSrc: "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp" };
   }
-  return { type: "gold", name: "Gold Camp", artSrc: "assets/optimized/camp-gold-384x384-a8c4d3199d86.webp" };
+  return { type: "gold", name: "Gold Camp", artSrc: "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp" };
 }
 
 function getRewardCampConfig(campOrType = {}) {
@@ -4404,7 +4475,7 @@ function generateEditorStrongholdSlots() {
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
         artSrc: String(config.artSrc || objective?.artSrc || ""),
-        size: islandImageVisualSizeToWorld(region.id, objective?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE),
+        size: config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE,
       }));
     });
   }
@@ -4426,7 +4497,7 @@ function generateWorldCampSlots() {
         y: Math.round(point.y),
         campType: config.type,
         artSrc: String(config.artSrc || camp?.artSrc || ""),
-        size: islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
+        size: DEFAULT_CAMP_VISUAL_SIZE,
         rewardSchedule: Array.isArray(camp?.rewardSchedule)
           ? camp.rewardSchedule.map(entry => ({
               minimumReward: Math.max(0, Math.floor(Number(entry?.minimumReward) || 0)),
@@ -4512,7 +4583,7 @@ function generateStrongholdSlots() {
 }
 
 function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "" }) {
-  const visualSize = getStrongholdVisualSize({ size });
+  const visualSize = getStrongholdVisualSize({ id, strongholdType: type, size });
   return {
     id,
     name,
@@ -6790,7 +6861,7 @@ function renderClanShield(value = null, options = {}) {
   const path = getClanShieldPath(shield.shape);
   const label = escapeHtml(options.label || "Clan heraldic shield");
   const size = ["mini", "small", "large", "editor"].includes(options.size) ? options.size : "large";
-  const textureOpacity = shield.finish === "battleworn" ? 0.24 : shield.finish === "weathered" ? 0.13 : 0.035;
+  const textureOpacity = shield.finish === "battleworn" ? 0.29 : shield.finish === "weathered" ? 0.18 : 0.075;
   const doubleTrim = shield.trim === "double"
     ? `<path d="${path}" transform="translate(50 53) scale(.9) translate(-50 -53)" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="1.8" opacity=".9"/>`
     : "";
@@ -6802,19 +6873,24 @@ function renderClanShield(value = null, options = {}) {
       <defs>
         <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><path d="${path}"/></clipPath>
         <pattern id="${textureId}" width="17" height="19" patternUnits="userSpaceOnUse">
-          <path d="M2 3l5-1M11 9l4 2M4 15l3-4M15 17l1-4" stroke="#f7e6bd" stroke-width=".8" opacity=".8"/>
-          <path d="M8 5l2 5M1 10l4 1M12 2l3 4" stroke="#15110d" stroke-width=".65" opacity=".8"/>
+          <path d="M1 4c4-2 7 1 11-1M2 11c4 2 8-1 14 1M1 17c5-2 9 1 15-1" fill="none" stroke="#f2dfb5" stroke-width=".65" opacity=".75"/>
+          <path d="M4 1c2 5-1 10 2 17M13 0c-2 5 2 11-1 19" fill="none" stroke="#17110d" stroke-width=".55" opacity=".68"/>
         </pattern>
       </defs>
+      <path d="${path}" fill="#2a1c13" stroke="#15100c" stroke-width="7" stroke-linejoin="round"/>
       <g class="clan-shield-boundary" clip-path="url(#${clipId})">
-        <path d="${path}" fill="#111712" stroke="#19140f" stroke-width="7" stroke-linejoin="round"/>
         ${renderClanShieldField(shield, clipId)}
+        <g class="clan-shield-planks" fill="none" stroke="#24190f" stroke-width="1.1" opacity=".28">
+          <path d="M25 4v91M49 2v98M73 4v91"/>
+        </g>
         ${renderClanShieldCharges(shield, clipId)}
         <rect width="100" height="106" fill="url(#${textureId})" opacity="${textureOpacity}"/>
-        ${shield.finish === "battleworn" ? `<g fill="none" stroke="#efe2c4" stroke-width="1.2" opacity=".24"><path d="M18 24l24 17M66 15L43 68M71 55L52 90M20 71l15-10"/></g>` : ""}
+        <g fill="none" stroke="#291b11" stroke-width=".9" opacity="${shield.finish === "polished" ? ".08" : ".2"}"><path d="M18 23l18 13M65 17L49 48M73 56L57 84M22 72l13-9"/></g>
+        ${shield.finish === "battleworn" ? `<g fill="none" stroke="#efe2c4" stroke-width="1.2" opacity=".28"><path d="M18 24l24 17M66 15L43 68M71 55L52 90M20 71l15-10"/></g>` : ""}
         <path d="${path}" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="4.5" stroke-linejoin="round"/>
         ${doubleTrim}${rivets}
-        <path d="${path}" fill="none" stroke="#fff4d0" stroke-width=".9" opacity=".28"/>
+        <path d="${path}" fill="none" stroke="#17120d" stroke-width="1.15" opacity=".45" transform="translate(50 53) scale(.96) translate(-50 -53)"/>
+        <path d="${path}" fill="none" stroke="#fff4d0" stroke-width=".7" opacity=".18"/>
       </g>
     </svg>
   </span>`;
@@ -7062,12 +7138,12 @@ function renderLevelUpReward(reward) {
   levelUpRewardBody.innerHTML = `
     <div class="level-up-step" aria-label="Level ${formatLevelUpRewardAmount(reward.fromLevel)} to level ${formatLevelUpRewardAmount(reward.toLevel)}">
       <span>Level ${formatLevelUpRewardAmount(reward.fromLevel)}</span>
-      <strong aria-hidden="true">→</strong>
+      <strong aria-hidden="true">${renderCrownlandsIcon("forward")}</strong>
       <span class="current">Level ${formatLevelUpRewardAmount(reward.toLevel)}</span>
     </div>
     <section class="level-up-reward-grid" aria-label="Level-up rewards">
       <article class="level-up-reward-item skill">
-        <span class="level-up-reward-icon" aria-hidden="true">✦</span>
+        <span class="level-up-reward-icon" aria-hidden="true">${renderCrownlandsIcon("achievements")}</span>
         <div>
           <small>Skill ${reward.skillPoints === 1 ? "Point" : "Points"}</small>
           <strong>+${formatLevelUpRewardAmount(reward.skillPoints)}</strong>
@@ -9619,7 +9695,7 @@ function getRealmActivityArtSrc(event = {}) {
     kind: "stronghold",
     strongholdType: event.strongholdType,
   });
-  return artSrc || "assets/optimized/hud-report-192x192-c712b2f6c417.webp";
+  return artSrc || "assets/optimized/hud-report-192x192-21644b7390fb.webp";
 }
 
 function renderRealmActivityCard(event = {}) {
@@ -12062,7 +12138,7 @@ function normalizeOfflineProductionCities(cities = []) {
         strongholdType: city.strongholdType || base.strongholdType || "",
         bonus: city.bonus || base.bonus || "",
         bonusPercent: Number(city.bonusPercent ?? base.bonusPercent) || 0,
-        size: isStronghold(city) || isStronghold(base) ? getStrongholdVisualSize({ size: base.size ?? city.size }) : undefined,
+        size: isStronghold(city) || isStronghold(base) ? getStrongholdVisualSize(isStronghold(base) ? base : city) : undefined,
         regionId: city.regionId || base.regionId || getCityRegionId(id),
       };
     })
@@ -14886,7 +14962,7 @@ function getCurrentDocumentBuildId() {
 }
 
 function getUpdateCheckUrl() {
-  const url = new URL("index.html", `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, "")}`);
+  const url = new URL("/play/", window.location.origin);
   url.searchParams.set("updateCheck", Date.now().toString());
   return url;
 }
@@ -15939,6 +16015,7 @@ function normalizeOnlineCampState(raw = {}) {
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
     artSrc,
+    size: DEFAULT_CAMP_VISUAL_SIZE,
     activeArmyIds: Array.isArray(raw.activeArmyIds) ? raw.activeArmyIds.map(String) : [],
     state: ["neutral", "held", "contested"].includes(raw.state) ? raw.state : raw.holderUid ? "held" : "neutral",
   };
@@ -16071,6 +16148,7 @@ function getCampTargetById(campId) {
     combatVersion: config.combatVersion,
     troopPower: config.troopPower,
     baseReward: config.baseReward,
+    size: DEFAULT_CAMP_VISUAL_SIZE,
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
     heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
     payoutPending: Boolean(online.payoutPending),
@@ -22020,13 +22098,20 @@ function updateActiveItemEffectsStackDensity() {
 function applyFlagToElement(element, flag) {
   if (!element) return;
   const normalized = normalizeFlag(flag);
-  element.style.setProperty("--flag-primary", normalized.primary);
-  element.style.setProperty("--flag-secondary", normalized.secondary);
+  const primaryDye = FLAG_DYE_TREATMENTS[normalized.primary] || { display: normalized.primary, label: normalized.primary };
+  const secondaryDye = FLAG_DYE_TREATMENTS[normalized.secondary] || { display: normalized.secondary, label: normalized.secondary };
+  element.style.setProperty("--flag-primary", primaryDye.display);
+  element.style.setProperty("--flag-secondary", secondaryDye.display);
+  element.dataset.flagPrimaryDye = primaryDye.label;
+  element.dataset.flagSecondaryDye = secondaryDye.label;
   for (const option of FLAG_PATTERNS) element.classList.remove(`pattern-${option.key}`);
   element.classList.add(`pattern-${normalized.pattern}`);
   const symbol = FLAG_SYMBOLS.find(option => option.key === normalized.symbol) || FLAG_SYMBOLS[0];
   const symbolElement = element.querySelector(".flag-symbol");
-  if (symbolElement) symbolElement.textContent = symbol.glyph;
+  if (symbolElement) {
+    symbolElement.dataset.flagSymbol = symbol.key;
+    symbolElement.innerHTML = renderCrownlandsIcon(symbol.icon || symbol.key, "flag-symbol-icon");
+  }
 }
 
 function getCityOwnerFlag(city) {
@@ -22044,7 +22129,7 @@ function renderCityOwnerFlag(city) {
   if (flag) {
     return `<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`;
   }
-  return `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner]?.flag || OWNER.neutral.flag}</span>`;
+  return `<span class="city-owner-flag owner-flag" aria-hidden="true">${renderCrownlandsIcon(OWNER[city.owner]?.flagIcon || OWNER.neutral.flagIcon, "owner-flag-icon")}</span>`;
 }
 
 function applyCityOwnerFlags(container, city) {
@@ -23395,18 +23480,18 @@ function renderClanSectionNavigation(canManageApplications = false) {
   }).length;
   const rewardReadyCount = readyQuestCount + (pendingMinutes > 0 ? 1 : 0);
   const definitions = [
-    { key: "overview", label: "Overview", mark: "◆", count: 0, countLabel: "" },
+    { key: "overview", label: "Overview", mark: renderCrownlandsIcon("information"), count: 0, countLabel: "" },
     {
       key: "warroom",
       label: "War Room",
-      mark: "⚔",
+      mark: renderCrownlandsIcon("attack"),
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
     },
     {
       key: "rewards",
       label: "Rewards",
-      mark: "✦",
+      mark: renderCrownlandsIcon("daily-rewards"),
       count: rewardReadyCount,
       countLabel: `${rewardReadyCount} ready ${rewardReadyCount === 1 ? "reward" : "rewards"}`,
       alert: rewardReadyCount > 0,
@@ -23414,7 +23499,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
     {
       key: "members",
       label: "Members",
-      mark: "♟",
+      mark: renderCrownlandsIcon("clan"),
       count: canManageApplications && clanApplications.length ? clanApplications.length : clanMembers.length,
       countLabel: canManageApplications && clanApplications.length
         ? `${clanApplications.length} pending ${clanApplications.length === 1 ? "application" : "applications"}`
@@ -23442,8 +23527,8 @@ function renderClanSectionNavigation(canManageApplications = false) {
 
 function renderClanBrowserNavigation() {
   const definitions = [
-    { key: "discover", label: "Find Clan", mark: "⌕" },
-    { key: "create", label: "Create Clan", mark: "+" },
+    { key: "discover", label: "Find Clan", mark: renderCrownlandsIcon("locate") },
+    { key: "create", label: "Create Clan", mark: renderCrownlandsIcon("clan") },
   ];
   return `
     <nav class="clan-browser-nav" role="tablist" aria-label="Find or create a clan">
@@ -24010,7 +24095,7 @@ function renderClanView() {
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
   const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
   if (heroLevel < 10) {
-    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">♜</span><h3>Clans unlock at Level 10</h3><p>Raise your Hero to Level 10 to create or join a clan.</p><strong>Level ${heroLevel} / 10</strong></section>`;
+    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">${renderCrownlandsIcon("clan")}</span><h3>Clans unlock at Level 10</h3><p>Raise your Hero to Level 10 to create or join a clan.</p><strong>Level ${heroLevel} / 10</strong></section>`;
     return;
   }
   if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length) || (state?.clanId && !clanSnapshot)) {
@@ -24821,7 +24906,7 @@ function renderFlagEditor() {
     });
   });
 
-  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => `<button type="button" data-flag-symbol="${option.key}" class="${flagDraft.symbol === option.key ? "active" : ""}" aria-label="${option.label}" title="${option.label}">${option.glyph}</button>`).join("");
+  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => `<button type="button" data-flag-symbol="${option.key}" class="${flagDraft.symbol === option.key ? "active" : ""}" aria-label="${option.label}" title="${option.label}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}</button>`).join("");
   flagSymbolOptions.querySelectorAll("button[data-flag-symbol]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
       flagDraft.symbol = buttonElement.dataset.flagSymbol;
@@ -24832,7 +24917,10 @@ function renderFlagEditor() {
 
 function renderFlagSwatches(container, key) {
   if (!container || !flagDraft) return;
-  container.innerHTML = FLAG_COLORS.map(color => `<button type="button" data-flag-color="${color}" class="${flagDraft[key] === color ? "active" : ""}" style="background:${color}" aria-label="Select ${color}"></button>`).join("");
+  container.innerHTML = FLAG_COLORS.map(color => {
+    const dye = FLAG_DYE_TREATMENTS[color] || { display: color, label: color };
+    return `<button type="button" data-flag-color="${color}" class="${flagDraft[key] === color ? "active" : ""}" style="--flag-swatch:${dye.display}" aria-label="Select ${escapeHtml(dye.label)}" title="${escapeHtml(dye.label)}"></button>`;
+  }).join("");
   container.querySelectorAll("button[data-flag-color]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
       flagDraft[key] = buttonElement.dataset.flagColor;
@@ -25456,7 +25544,7 @@ function renderCities(force = false) {
     const ownerName = getCityOwnerDisplayName(city);
     const ownerFlag = renderCityOwnerFlag(city);
     const crownBadge = cityOwnerHoldsCrownCitadel(city)
-      ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">&#9819;</span>`
+      ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">${renderCrownlandsIcon("crown")}</span>`
       : "";
     const clanIdentity = city.owner === "player"
       ? { clanId: state.clanId, clanTag: state.clanTag }
@@ -25519,7 +25607,7 @@ function renderCities(force = false) {
       <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${escapeHtml(getStrongholdArtSrc(city))}" alt="" draggable="false" decoding="async" /></span>`
       : `
       <span class="city-ring"></span>
-        ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-5b5b95051830.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
+        ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-9392b160d654.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" decoding="async" /></span>`;
     btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
     btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
@@ -25603,25 +25691,25 @@ function renderSelectedCityWheel(city) {
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" ${levelDisabled ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">\u265C\u2191</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("upgrade")}</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${levelCostLabel}</span>
     </button>
     <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">\u2694</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("outgoing")}</span>
       <span class="wheel-action-name">Send</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
-      <span class="wheel-icon" aria-hidden="true">i</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("information")}</span>
     </button>
     ${bulkOrdersSupported ? `
       <button class="city-wheel-action wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || (bulkOrderBusy && !scoutNearbyBusy) ? "disabled" : ""}>
-        <span class="wheel-icon" aria-hidden="true">&#8857;</span>
+        <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
         <span class="wheel-action-name">${scoutNearbyBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : scoutNearbyActive ? "Send All" : "Nearby"}</span>
         <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
       </button>
       <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""} ${regroupBusy ? "busy" : ""}" type="button" aria-label="${regroupBusy ? "Preparing regroup" : regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}" aria-busy="${regroupBusy}" ${bulkOrderBusy && !regroupBusy ? "disabled" : ""}>
-        <span class="wheel-icon" aria-hidden="true">&#8649;</span>
+        <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("reinforcement")}</span>
         <span class="wheel-action-name">${regroupBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : regroupActive ? "Confirm" : "Regroup"}</span>
         <span class="wheel-cost">${formatNumber(REGROUP_COST)}</span>
       </button>
@@ -25672,19 +25760,19 @@ function renderSelectedForeignWheel(city) {
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action wheel-scout" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" ${canScout ? "" : "disabled"}>
-      <span class="wheel-icon" aria-hidden="true">&#128301;</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action wheel-attack${clanAlly ? " wheel-reinforce" : ""}" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
-      <span class="wheel-icon" aria-hidden="true">${clanAlly ? "&#8649;" : "&#9876;"}</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
-      <span class="wheel-icon" aria-hidden="true">i</span>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("information")}</span>
     </button>
     ${report ? `
       <button class="city-wheel-action wheel-report" type="button" aria-label="Open scout report for ${escapeHtml(city.name)}" data-audio-effect="none">
-        <span class="wheel-icon" aria-hidden="true">&#128221;</span>
+        <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <span class="wheel-action-name">Report</span>
       </button>
     ` : ""}
@@ -25734,26 +25822,26 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
   wheel.innerHTML = `
     <button class="gold-camp-wheel-action camp-scout-action" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
-      <span aria-hidden="true">${owned ? "&#9876;" : "&#128301;"}</span>
+      <span aria-hidden="true">${renderCrownlandsIcon(owned ? "outgoing" : "scout")}</span>
       <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
-      <span aria-hidden="true">i</span>
+      <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
       <strong>Info</strong>
     </button>
     <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${owned || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
-      <span aria-hidden="true">${owned || clanAlly ? "&#8649;" : "&#9876;"}</span>
+      <span aria-hidden="true">${renderCrownlandsIcon(owned || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${owned || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${canRally ? `
       <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(stronghold.name)}">
-        <span aria-hidden="true">&#9873;</span>
+        <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
         <strong>Rally</strong>
       </button>
     ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}" data-audio-effect="none">
-        <span aria-hidden="true">&#128221;</span>
+        <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <strong>Report</strong>
       </button>
     ` : ""}`;
@@ -25823,26 +25911,26 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.style.setProperty("--camp-action-offset", `${Math.max(82, Math.min(116, wheelSize * .7))}px`);
   wheel.innerHTML = `
     <button class="gold-camp-wheel-action ${isHeldByPlayer ? "camp-recall-action" : "camp-scout-action"}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : clanAlly ? "Clan allies cannot be scouted" : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
-      <span aria-hidden="true">${isHeldByPlayer ? "&#8630;" : "&#128301;"}</span>
+      <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer ? "back" : "scout")}</span>
       <strong>${isHeldByPlayer ? rewardCampRecallRequests.has(camp.id) ? "Recalling" : "Recall" : clanAlly ? "Clan Ally" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(camp.name)} information">
-      <span aria-hidden="true">i</span>
+      <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
       <strong>Info</strong>
     </button>
     <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
-      <span aria-hidden="true">${isHeldByPlayer || clanAlly ? "&#8649;" : "&#9876;"}</span>
+      <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${canRally ? `
       <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
-        <span aria-hidden="true">&#9873;</span>
+        <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
         <strong>Rally</strong>
       </button>
     ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
-        <span aria-hidden="true">&#128221;</span>
+        <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <strong>Report</strong>
       </button>
     ` : ""}`;
@@ -26089,7 +26177,7 @@ function relicCampProgressMarkup(config, progress, status = "ready") {
           : "Time unavailable";
         return `
           <li class="camp-reward-row claimed relic-reward-history-row">
-            <span class="camp-reward-check" aria-hidden="true">&#10003;</span>
+            <span class="camp-reward-check" aria-hidden="true">${renderCrownlandsIcon("check")}</span>
             <span class="camp-reward-copy"><small>${escapeHtml(entry.rarity || "Item reward")}</small><strong>${escapeHtml(entry.itemName || "Usable item")}</strong></span>
             <em>${escapeHtml(awardedAt)}</em>
           </li>`;
@@ -26145,7 +26233,7 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
     const stateLabel = isClaimed ? "Claimed" : isNext ? "Next" : "Upcoming";
     return `
       <li class="camp-reward-row ${rowState}">
-        <span class="camp-reward-check" aria-hidden="true">${isClaimed ? "&#10003;" : index + 1}</span>
+        <span class="camp-reward-check" aria-hidden="true">${isClaimed ? renderCrownlandsIcon("check") : index + 1}</span>
         <span class="camp-reward-copy">
           <small>Claim ${index + 1}${rewardHours[index] ? ` &middot; ${formatNumber(rewardHours[index])}h base production` : ""}</small>
           <strong>${formatNumber(reward)} ${escapeHtml(config.rewardLabel)}</strong>
@@ -26215,13 +26303,13 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
         const cityName = getDeedCampHistoryCityName(entry);
         return `
           <li class="deed-camp-history-row">
-            <span class="deed-history-city" aria-hidden="true">&#9813;</span>
+            <span class="deed-history-city" aria-hidden="true">${renderCrownlandsIcon("city")}</span>
             <span class="deed-history-copy">
               <strong>${escapeHtml(cityName)}</strong>
               <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
               <small>Awarded to ${renderPlayerNameLink(entry.awardedToPlayerId, entry.awardedToDisplayName || "Ruler", "deed-history-player-link")} &middot; ${escapeHtml(awardedAt)}</small>
             </span>
-            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">&#8982;</button>
+            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">${renderCrownlandsIcon("locate")}</button>
           </li>`;
       }).join("")}
     </ol>
@@ -26338,7 +26426,7 @@ function showRewardCampInfoModal(campId) {
       ${report ? `<p class="camp-scout-expiry">Scout snapshot expires in <strong>${formatDuration(reportRemaining)}</strong>. Reinforcements or battles after the scout arrived are not revealed.</p>` : ""}`
     : `
       <div class="camp-stats-locked">
-        <span class="camp-stats-lock" aria-hidden="true">&#128274;</span>
+        <span class="camp-stats-lock" aria-hidden="true">${renderCrownlandsIcon("shield")}</span>
         <strong>Camp defenses hidden</strong>
         <p>Scout this camp to reveal its stationed troops. Camps have no level or walls, and every stationed troop supplies exactly 1.00 defense power.</p>
       </div>`;
@@ -26485,7 +26573,7 @@ function showScoutReportModal(cityId) {
           <span id="scoutReportPlayerFlag" class="kingdom-flag scout-report-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
           <div>${renderPlayerNameLink(currentPlayerUid, state.playerName, "scout-report-player-link")}<small>Hero Lv ${formatNumber(state.character.level)}</small></div>
         </div>
-        <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
+        <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">${renderCrownlandsIcon("scout")}</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
           <div>${renderPlayerNameLink(reportedOwnerUid, reportedOwnerName, "scout-report-owner-link")}<small>${rewardCampTarget ? "Camp defenders" : `City Lv ${formatNumber(cityLevel)}`}</small></div>
           <span id="scoutReportDefenderFlag" class="kingdom-flag scout-report-enemy-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
@@ -26512,13 +26600,13 @@ function showScoutReportModal(cityId) {
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
-          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
+          ${scoutDefenderRow(renderCrownlandsIcon("troops"), reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
+          ${reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
           ${rewardCampTarget
-            ? scoutBreakdownRow("&#9819;", "Walls", "Camp objectives have no wall layer", 0)
+            ? scoutBreakdownRow(renderCrownlandsIcon("city"), "Walls", "Camp objectives have no wall layer", 0)
             : siege
-            ? `${scoutBreakdownRow("&#9819;", "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks`, siege.startingWallPower)}${scoutBreakdownRow("&#128737;", "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
-            : `${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
+            ? `${scoutBreakdownRow(renderCrownlandsIcon("city"), "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks`, siege.startingWallPower)}${scoutBreakdownRow(renderCrownlandsIcon("shield"), "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
+            : `${scoutBreakdownRow(renderCrownlandsIcon("shield"), "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow(renderCrownlandsIcon("city"), "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
       </section>
@@ -27161,8 +27249,8 @@ function createArmyTokenElement(attack) {
     <strong class="army-token-count"></strong>
     <small class="army-token-time"></small>
     <span class="army-token-nav" hidden>
-      <button type="button" data-army-endpoint="from" title="Go to march origin" aria-label="Go to march origin"><span aria-hidden="true">&#8592;</span><small>From</small></button>
-      <button type="button" data-army-endpoint="to" title="Go to march destination" aria-label="Go to march destination"><span aria-hidden="true">&#8594;</span><small>To</small></button>
+      <button type="button" data-army-endpoint="from" title="Go to march origin" aria-label="Go to march origin"><span aria-hidden="true">${renderCrownlandsIcon("back")}</span><small>From</small></button>
+      <button type="button" data-army-endpoint="to" title="Go to march destination" aria-label="Go to march destination"><span aria-hidden="true">${renderCrownlandsIcon("forward")}</span><small>To</small></button>
     </span>`;
   getArmyTokenParts(token);
   token.addEventListener("click", event => {
@@ -27205,7 +27293,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
   token.style.transform = `translate(${mapPoint.x}px, ${mapPoint.y}px) translate(-50%, -50%)`;
 
-  const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u265E" : "\u2694";
+  const armyIcon = attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
     icon: iconElement,
     count: countElement,
@@ -27214,7 +27302,12 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     fromButton,
     toButton,
   } = getArmyTokenParts(token);
-  if (iconElement && iconElement.textContent !== armyIcon) iconElement.textContent = armyIcon;
+  if (attack.kind === "scout") {
+    setCrownlandsIconContent(iconElement, "scout", "army-token-svg");
+  } else if (iconElement && (iconElement.childElementCount || iconElement.textContent !== armyIcon)) {
+    delete iconElement.dataset.clIcon;
+    iconElement.textContent = armyIcon;
+  }
   if (countElement) {
     if (countElement.hidden === showTroops) countElement.hidden = !showTroops;
     if (showTroops) {
@@ -27529,7 +27622,7 @@ function renderSendConfirmPanel(source, target) {
   }
 
   const isTransfer = target.owner === "player";
-  const icon = isTransfer ? "\u265E" : "\u2694";
+  const iconName = isTransfer ? "transfer" : "attack";
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
@@ -27553,11 +27646,11 @@ function renderSendConfirmPanel(source, target) {
   }
 
 
-  panelTitle.textContent = `${icon} ${label} troops`;
+  panelTitle.textContent = `${label} troops`;
   panelSubtitle.textContent = `${source.name} \u2192 ${target.name}`;
   selectedInfo.innerHTML = `
     <div class="send-confirm-card">
-      <div class="send-icon">${icon}</div>
+      <div class="send-icon">${renderCrownlandsIcon(iconName)}</div>
       <div class="send-main">
         <strong>${escapeHtml(source.name)} \u2192 ${escapeHtml(target.name)}</strong>
         <span>${formatPercent(selectedMarchPercent)} selected \u00B7 ${formatNumber(sendAmount)} troops</span>
@@ -27568,7 +27661,7 @@ function renderSendConfirmPanel(source, target) {
   `;
 
   renderMarchButtons();
-  actionButtons.appendChild(button(`${icon} ${label}`, () => confirmSendOrder(), !route || sendAmount < 1, isTransfer ? "move-action" : "attack-action"));
+  actionButtons.appendChild(button(label, () => confirmSendOrder(), !route || sendAmount < 1, isTransfer ? "move-action" : "attack-action"));
   actionButtons.appendChild(button("Cancel", cancelSendMode, false, "secondary"));
 }
 function renderMarchButtons() {
@@ -28035,7 +28128,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     return;
   }
   const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const commandIcon = rallyOrder ? "rally" : isTransfer ? "transfer" : isReinforcement ? "reinforcement" : "attack";
   const shieldDropWarning = rallyOrder
     ? getActivePeaceShieldExpiresAtMs() > Date.now()
       ? "Committing rally troops immediately removes your Royal Peace Shield. It will not be restored if you withdraw or the rally is cancelled."
@@ -28066,7 +28159,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
           <strong>${escapeHtml(source.name)}</strong>
           <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> of ${formatNumber(source.troops)} remain</small>
         </div>
-        <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
+        <div class="troop-command-icon" aria-hidden="true">${renderCrownlandsIcon(commandIcon, "troop-command-svg")}</div>
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
@@ -28106,7 +28199,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
 
       <div class="troop-slider-actions">
         <button id="troopSliderConfirm" class="troop-slider-confirm ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
-          <span aria-hidden="true">${commandIcon}</span>${commandLabel}
+          <span class="send-icon" aria-hidden="true">${renderCrownlandsIcon(commandIcon)}</span>${commandLabel}
         </button>
         <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
       </div>
@@ -29651,7 +29744,7 @@ function renderInnerCastle(cityId) {
             ${renderInnerCastlePreview(selectedBuilding)}
           </div>
           <button class="inner-castle-back-btn" type="button" data-inner-castle-back>
-            <span aria-hidden="true">&#10094;</span>
+            <span aria-hidden="true">${renderCrownlandsIcon("back")}</span>
             Back to City Details
           </button>
         </aside>
@@ -29957,7 +30050,7 @@ function renderCityListModal() {
           <span>Lv.</span><small>${getCityListSortLabel("level")}</small>
         </button>
         <button class="${cityListSortKey === "troops" ? "active" : ""}" data-city-list-sort="troops" type="button" aria-pressed="${cityListSortKey === "troops"}">
-          <span>&#9817;</span><small>${getCityListSortLabel("troops")}</small>
+          <span>${renderCrownlandsIcon("troops")}</span><small>${getCityListSortLabel("troops")}</small>
         </button>
       </div>
 
@@ -29968,9 +30061,9 @@ function renderCityListModal() {
       </div>
 
       <div class="city-list-pager">
-        <button data-city-list-page="prev" type="button" ${cityListPage <= 0 ? "disabled" : ""} aria-label="Previous city page">&#10094;</button>
+        <button data-city-list-page="prev" type="button" ${cityListPage <= 0 ? "disabled" : ""} aria-label="Previous city page">${renderCrownlandsIcon("back")}</button>
         <strong>${formatNumber(cityListPage + 1)}/${formatNumber(pageCount)}</strong>
-        <button data-city-list-page="next" type="button" ${cityListPage >= pageCount - 1 ? "disabled" : ""} aria-label="Next city page">&#10095;</button>
+        <button data-city-list-page="next" type="button" ${cityListPage >= pageCount - 1 ? "disabled" : ""} aria-label="Next city page">${renderCrownlandsIcon("forward")}</button>
       </div>
     </div>
   `;
@@ -30093,13 +30186,13 @@ function renderCityListRow(city) {
   const locationLabel = statusLabel ? `${statusLabel} - ${regionLabel}` : regionLabel;
   return `
     <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}">
-      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${isMain ? "&#8962;" : "&#128205;"}</button>
-      <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : "&#127984;"}</span>
+      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
+      <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : renderCrownlandsIcon("city")}</span>
       <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
-      <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">&#9817;</span></strong>
+      <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">${renderCrownlandsIcon("troops")}</span></strong>
       <span class="city-list-name">${escapeHtml(city.name)}</span>
       <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
-      <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">&#9432;</button>
+      <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">${renderCrownlandsIcon("information")}</button>
     </article>
   `;
 }
@@ -30212,28 +30305,28 @@ function clearPendingRewardedAdClaim(intentId = "") {
 }
 
 const DAILY_MISSION_ICONS = Object.freeze({
-  city: "♜",
-  swords: "⚔",
-  helmet: "♞",
-  banner: "⚑",
-  targets: "◎",
-  march: "➜",
-  camp: "⌂",
-  gold: "●",
-  warband: "⚔",
-  relic: "◆",
-  deed: "▣",
-  "camp-types": "♣",
-  upgrade: "▲",
-  tower: "♜",
-  cities: "♜",
-  hammer: "⚒",
-  treasury: "●",
-  troops: "♟",
-  stronghold: "♜",
-  siege: "⚔",
-  "stronghold-march": "➜",
-  gift: "✦",
+  city: "city",
+  swords: "attack",
+  helmet: "troops",
+  banner: "rally",
+  targets: "locate",
+  march: "outgoing",
+  camp: "city",
+  gold: "gold",
+  warband: "attack",
+  relic: "shield",
+  deed: "achievements",
+  "camp-types": "city",
+  upgrade: "upgrade",
+  tower: "city",
+  cities: "city",
+  hammer: "upgrade",
+  treasury: "gold",
+  troops: "troops",
+  stronghold: "shield",
+  siege: "attack",
+  "stronghold-march": "outgoing",
+  gift: "daily-rewards",
 });
 
 function normalizeDailyMissionReward(raw = null) {
@@ -30496,7 +30589,7 @@ function renderDailyMissions() {
     const icon = DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner;
     return `
       <article class="daily-mission-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""}" data-daily-mission-row="${escapeHtml(mission.id)}" tabindex="0" aria-label="${escapeHtml(`${mission.title}. ${mission.description}. Progress ${mission.progress} of ${mission.target}. Reward ${formatDailyMissionReward(mission.reward)}.`)}">
-        <span class="daily-mission-icon" aria-hidden="true">${escapeHtml(icon)}</span>
+        <span class="daily-mission-icon" aria-hidden="true">${renderCrownlandsIcon(icon)}</span>
         <div class="daily-mission-copy">
           <div><strong>${escapeHtml(mission.title)}</strong><span>${formatNumber(mission.progress)}/${formatNumber(mission.target)}</span></div>
           <small>${escapeHtml(mission.description)}</small>
@@ -30505,11 +30598,11 @@ function renderDailyMissions() {
         <div class="daily-mission-reward"><small>Reward</small><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
         <div class="daily-mission-action">
           ${claimed
-            ? `<span class="daily-mission-completed">✓ Completed</span>`
+              ? `<span class="daily-mission-completed">${renderCrownlandsIcon("check")} Completed</span>`
             : complete
               ? `<button class="daily-mission-claim" type="button" data-daily-mission-claim="${escapeHtml(mission.id)}" ${busy ? "disabled" : ""}>${busy ? "Claiming…" : "Claim"}</button>`
-              : rerollAvailable
-                ? `<button class="daily-mission-reroll" type="button" data-daily-mission-reroll="${escapeHtml(mission.id)}" aria-label="Replace ${escapeHtml(mission.title)}">↻</button>`
+            : rerollAvailable
+                ? `<button class="daily-mission-reroll" type="button" data-daily-mission-reroll="${escapeHtml(mission.id)}" aria-label="Replace ${escapeHtml(mission.title)}">${renderCrownlandsIcon("replace")}</button>`
                 : `<span class="daily-mission-difficulty">${escapeHtml(mission.difficulty)}</span>`}
         </div>
       </article>`;
@@ -30538,7 +30631,7 @@ function showDailyMissionDetails(missionId = "") {
     <small>${escapeHtml(getRegionLabel(recommendation.regionId))}${recommendation.sourceCityName ? ` · From ${escapeHtml(recommendation.sourceCityName)}` : ""} · ≤${formatNumber(recommendation.recommendedTroops)} troops · ~${formatNumber(recommendation.estimatedLosses)} losses</small><button class="profile-primary-btn" type=button>View on Map</button><p>Recheck forecast before marching.</p></section>` : "";
   if (!openDailyMissionModal(mission.title, `
     <section class="daily-mission-detail">
-      <span class="daily-mission-detail-icon" aria-hidden="true">${escapeHtml(DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner)}</span>
+      <span class="daily-mission-detail-icon" aria-hidden="true">${renderCrownlandsIcon(DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner)}</span>
       <div><span>${escapeHtml(mission.difficulty)} mission</span><h3>${escapeHtml(mission.description)}</h3></div>
       <div class="daily-mission-detail-stat"><span>Progress</span><strong>${formatNumber(mission.progress)} / ${formatNumber(mission.target)}</strong></div>
       <div class="daily-mission-detail-stat"><span>Reward</span><strong>${escapeHtml(formatDailyMissionReward(mission.reward))}</strong></div>
@@ -31032,28 +31125,28 @@ function getDailyLoginRewardPresentation(reward = {}) {
   }
   return {
     kind: "unknown",
-    icon: "assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp",
+    icon: "assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
     amountLabel: "×1",
     title: "Royal Reward",
   };
 }
 
 const SEASONAL_ACHIEVEMENT_ICONS = Object.freeze({
-  castle: "♜",
-  banner: "⚑",
-  crown: "♛",
-  swords: "⚔",
-  helmet: "♞",
-  march: "➜",
-  camp: "⌂",
-  hammer: "⚒",
-  tower: "♜",
-  city: "♜",
-  stronghold: "♜",
-  siege: "⚔",
-  gift: "✦",
-  scroll: "▤",
-  seal: "◆",
+  castle: "city",
+  banner: "rally",
+  crown: "crown",
+  swords: "attack",
+  helmet: "troops",
+  march: "outgoing",
+  camp: "city",
+  hammer: "upgrade",
+  tower: "city",
+  city: "city",
+  stronghold: "shield",
+  siege: "attack",
+  gift: "daily-rewards",
+  scroll: "reports",
+  seal: "achievements",
 });
 
 const SEASONAL_ACHIEVEMENT_FILTERS = Object.freeze([
@@ -31409,7 +31502,7 @@ function renderSeasonalAchievementTab() {
         : `${formatNumber(Math.ceil(remaining))} remaining`;
     return `
       <article class="seasonal-achievement-row ${complete ? "complete" : ""} ${claimed ? "claimed" : ""} ${expanded ? "expanded" : ""}" data-seasonal-achievement-toggle="${escapeHtml(entry.id)}" role="button" tabindex="0" aria-expanded="${expanded}" aria-controls="${detailId}">
-        <span class="seasonal-achievement-row-icon" aria-hidden="true">${SEASONAL_ACHIEVEMENT_ICONS[entry.icon] || "◆"}</span>
+        <span class="seasonal-achievement-row-icon" aria-hidden="true">${renderCrownlandsIcon(SEASONAL_ACHIEVEMENT_ICONS[entry.icon] || "achievements")}</span>
         <div class="seasonal-achievement-row-copy">
           <span>${escapeHtml(entry.categoryLabel)}</span>
           <strong>${escapeHtml(entry.title)}</strong>
@@ -31495,17 +31588,17 @@ function renderDailyRewardModalTabs() {
     {
       id: "rewards",
       label: "Daily Login",
-      icon: "assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp",
+      icon: "assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
     },
     {
       id: "quests",
       label: "Quests",
-      icon: "assets/optimized/hud-report-192x192-c712b2f6c417.webp",
+      icon: "assets/optimized/hud-report-192x192-21644b7390fb.webp",
     },
     {
       id: "achievements",
       label: "Achievements",
-      icon: "assets/optimized/hud-achievements-192x192-6126eda4c9e8.webp",
+      icon: "assets/optimized/hud-achievements-192x192-1efe6767ace6.webp",
     },
   ];
   return `
@@ -32296,7 +32389,7 @@ function renderCommonGearShopItem() {
   const purchase = state?.gear?.shopPurchase || {};
   const purchasedToday = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
   const price = getCommonGearBoxShopPrice();
-  return `<article class="shop-item common-gear-shop-item">
+  return `<article class="shop-item common-gear-shop-item" data-shop-item="common_gear_box">
     <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
     <div class="shop-item-copy"><strong>Common Gear Box</strong><span>${formatNumber(price)} gold</span>
       <small>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>Limit: 1 per UTC day · fixed price</small></div>
@@ -32445,7 +32538,11 @@ function showCommonGearBoxReveal(receipt = null) {
     </section>` : `
     <section class="common-gear-reveal-shell">
       <button class="common-gear-box-open" type="button" data-open-common-gear aria-label="Open Common Gear Box">
-        <img src="${COMMON_GEAR_BOX_ITEM.icon}" alt="Closed Common Gear Box" draggable="false" />
+        <span class="common-gear-box-art" aria-hidden="true">
+          <img class="gear-box-closed-state" src="${COMMON_GEAR_BOX_ITEM.icon}" alt="" draggable="false" />
+          <img class="gear-box-open-state" src="${COMMON_GEAR_BOX_OPEN_ART}" alt="" draggable="false" />
+          <span class="gear-box-latch"></span>
+        </span>
         <strong>Tap to open</strong>
         <small>Exactly 3 Common pieces</small>
       </button>
@@ -33859,7 +33956,7 @@ function renderIncomingAttackCard(attack) {
         ${renderPlayerNameLink(attack.ownerUid, attack.attackerName || "Enemy", "incoming-attacker-link")}
         <small>${forceDetails}</small>
       </div>
-      <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>
+      <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">${renderCrownlandsIcon("locate")}</button>
     </article>
   `;
 }
@@ -34152,7 +34249,7 @@ function renderHeldStrongholdOperationCard(stronghold) {
 }
 
 function renderActiveOperationLocationButton(target, type) {
-  return `<button class="incoming-attack-locate" data-operation-location="${escapeHtml(target.id)}" data-operation-region="${escapeHtml(getCityRegionId(target))}" data-operation-type="${escapeHtml(type)}" type="button" aria-label="Go to ${escapeHtml(target.name)}">&#8982;</button>`;
+  return `<button class="incoming-attack-locate" data-operation-location="${escapeHtml(target.id)}" data-operation-region="${escapeHtml(getCityRegionId(target))}" data-operation-type="${escapeHtml(type)}" type="button" aria-label="Go to ${escapeHtml(target.name)}">${renderCrownlandsIcon("locate")}</button>`;
 }
 
 async function focusActiveOperationLocation({ id = "", regionId = "", type = "" } = {}) {
@@ -34277,8 +34374,8 @@ function renderOutgoingAttackCard(mission) {
   const onlineId = getOnlineArmyResolutionId(mission);
   const marchId = String(mission.key || onlineId || "").trim();
   const locateButton = marchId
-    ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">&#8982;</button>`
-    : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>&#8982;</button>`;
+    ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">${renderCrownlandsIcon("locate")}</button>`
+    : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>${renderCrownlandsIcon("locate")}</button>`;
   const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
   const swiftItemCount = getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID);
   const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
@@ -34717,7 +34814,7 @@ function renderBattleReportCard(report, index = 0) {
         <strong>${escapeHtml(report.cityName)}</strong>
       </div>
       <div class="battle-report-troops">
-        <span aria-hidden="true">${report.type === "scout" ? "&#128301;" : "&#9817;"}</span>
+        <span aria-hidden="true">${renderCrownlandsIcon(report.type === "scout" ? "scout" : "troops")}</span>
         <strong>${formatNumber(troopValue)}</strong>
         <small>${troopLabel}</small>
       </div>
@@ -34727,7 +34824,7 @@ function renderBattleReportCard(report, index = 0) {
       </div>
       <div class="battle-report-actions">
         ${locateButton}
-        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="Open report details">&#128203;</button>
+        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="Open report details">${renderCrownlandsIcon("reports")}</button>
       </div>
     </article>
   `;
@@ -34744,12 +34841,12 @@ function applyBattleReportTargetFlags(reports = []) {
 function renderBattleReportLocateButton(report, extraClass = "") {
   const cityId = getResolvableReportCityId(report?.cityId);
   if (!cityId) {
-    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
+    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>${renderCrownlandsIcon("locate")}</button>`;
   }
   const loadedCity = getArmyTargetById(cityId);
   const regionId = report.regionId || getCityRegionId(loadedCity || cityId);
   const label = report.cityName || "target city";
-  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">&#8982;</button>`;
+  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${renderCrownlandsIcon("locate")}</button>`;
 }
 
 function getResolvableReportCityId(cityId) {
@@ -35273,7 +35370,7 @@ function renderBattleReportNavigation(report = null, target = {}) {
   ].filter(Boolean).join(" · ");
   return `
     <div class="battle-visual-navigation">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none" aria-label="Back to reports">&#9664; Reports</button>
+      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none" aria-label="Back to reports">${renderCrownlandsIcon("back")} Reports</button>
       <div class="battle-visual-title">
         <strong>${escapeHtml(getBattleReportTypeLabel(report?.type))}</strong>
         <small>${renderBattleReportAge(report)}</small>
@@ -35305,7 +35402,7 @@ function renderBattleHeroSide(side = {}, viewer = false) {
       </div>
       <div class="battle-visual-troop-flow" aria-label="Troops before and after battle">
         <strong>${escapeHtml(formatBattleReportValue(side.startingTroops))}</strong>
-        <span aria-hidden="true">&#10140;</span>
+        <span aria-hidden="true">${renderCrownlandsIcon("forward", "battle-flow-icon")}</span>
         <strong>${escapeHtml(formatBattleReportValue(side.survivors))}</strong>
       </div>
       <small class="battle-visual-losses">${escapeHtml(formatBattleReportValue(side.losses))} lost</small>
@@ -35338,16 +35435,16 @@ function renderBattleSideDetails(side = {}) {
   return `
     <article class="battle-visual-detail-card ${side.role}">
       <h4>${escapeHtml(roleLabel)}</h4>
-      ${renderBattleDetailRow("&#9817;", "Starting troops", side.startingTroops, side.participantSummary)}
-      ${renderBattleDetailRow(side.role === "attacker" ? "&#9876;" : "&#128737;", "Base troop power", side.basePower, side.basePowerHelp)}
+      ${renderBattleDetailRow(renderCrownlandsIcon("troops"), "Starting troops", side.startingTroops, side.participantSummary)}
+      ${renderBattleDetailRow(renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), "Base troop power", side.basePower, side.basePowerHelp)}
       ${side.role === "defender" && (side.wallPower || typeof side.wallPower === "string")
-        ? renderBattleDetailRow("&#9820;", "Wall power at battle", side.wallPower, side.wallHelp)
+        ? renderBattleDetailRow(renderCrownlandsIcon("city"), "Wall power at battle", side.wallPower, side.wallHelp)
         : ""}
-      ${renderBattleDetailRow(side.role === "attacker" ? "&#9876;" : "&#128737;", "Final resolved power", side.finalPower, side.role === "attacker" ? "Attack power" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall")}
-      ${renderBattleDetailRow("&#8722;", "Troops lost", side.losses)}
-      ${renderBattleDetailRow("&#10003;", "Troops surviving", side.survivors)}
+      ${renderBattleDetailRow(renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), "Final resolved power", side.finalPower, side.role === "attacker" ? "Attack power" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall")}
+      ${renderBattleDetailRow(renderCrownlandsIcon("close"), "Troops lost", side.losses)}
+      ${renderBattleDetailRow(renderCrownlandsIcon("check"), "Troops surviving", side.survivors)}
       ${side.reinforcementCount > 0
-        ? renderBattleDetailRow("&#9876;", "Allied reinforcements", side.reinforcementTroops, `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}`)
+        ? renderBattleDetailRow(renderCrownlandsIcon("reinforcement"), "Allied reinforcements", side.reinforcementTroops, `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}`)
         : ""}
     </article>`;
 }
@@ -35359,21 +35456,21 @@ function getBattleSideBonusEntries(side = {}) {
   const entries = [];
   if (Number(side.skillBonusPower) > 0) {
     entries.push({
-      icon: side.role === "attacker" ? "&#9876;" : "&#128737;",
+      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
       label: side.skillLabel,
       value: `+${formatNumber(side.skillBonusPower)} power`,
       help: side.skillPercentText,
     });
   }
   if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
-    entries.push({ icon: "&#9813;", label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
+    entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
   }
   if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
-    entries.push({ icon: "&#9823;", label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
+    entries.push({ icon: renderCrownlandsIcon("clan"), label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
   }
   if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
     entries.push({
-      icon: "&#9820;",
+      icon: renderCrownlandsIcon("city"),
       label: "Stoneworks",
       value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
       help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
@@ -35407,10 +35504,10 @@ function renderBattleWallResult(defender = {}, siege = null) {
   const repairWindowMinutes = Math.max(0, Math.floor(Number(siege.repairWindowMinutes) || 0));
   return `
     <section class="battle-visual-wall ${String(defender.wallAfter || "").startsWith("Breached") ? "breached" : ""}">
-      <div class="battle-visual-section-title"><span aria-hidden="true">&#9820;</span><h3>Wall Result</h3></div>
+      <div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("city")}</span><h3>Wall Result</h3></div>
       <div class="battle-visual-wall-grid">
         <div><span>Before battle</span><strong>${escapeHtml(formatWallIntegrity(startingIntegrityBps))}</strong><small>${escapeHtml(formatBattleReportValue(defender.wallPower))} wall power</small></div>
-        <span class="battle-visual-wall-arrow" aria-hidden="true">&#10140;</span>
+        <span class="battle-visual-wall-arrow" aria-hidden="true">${renderCrownlandsIcon("forward")}</span>
         <div><span>After battle</span><strong>${escapeHtml(defender.wallAfter || "Not recorded")}</strong>${repairWindowMinutes > 0 ? `<small>${formatNumber(repairWindowMinutes)} minute repair window</small>` : ""}</div>
       </div>
     </section>`;
@@ -35419,14 +35516,14 @@ function renderBattleWallResult(defender = {}, siege = null) {
 function renderBattleComparisonSections(left = {}, right = {}, defender = {}, siege = null) {
   return `
     <section class="battle-visual-section battle-visual-details">
-      <div class="battle-visual-section-title"><span aria-hidden="true">&#9876;</span><h3>Battle Details</h3></div>
+      <div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("attack")}</span><h3>Battle Details</h3></div>
       <div class="battle-visual-two-column">
         ${renderBattleSideDetails(left)}
         ${renderBattleSideDetails(right)}
       </div>
     </section>
     <section class="battle-visual-section battle-visual-bonuses">
-      <div class="battle-visual-section-title"><span aria-hidden="true">&#9813;</span><h3>Bonuses</h3></div>
+      <div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("crown")}</span><h3>Bonuses</h3></div>
       <div class="battle-visual-two-column">
         ${renderBattleBonusCard(left)}
         ${renderBattleBonusCard(right)}
@@ -35538,7 +35635,7 @@ function renderBattleRewards(report = null) {
       report?.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
       report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
     ].filter(Boolean).join("");
-  return rewardMetrics ? `<section class="battle-visual-rewards"><div class="battle-visual-section-title"><span aria-hidden="true">&#9733;</span><h3>Rewards</h3></div><div class="battle-viewer-rewards">${rewardMetrics}</div></section>` : "";
+  return rewardMetrics ? `<section class="battle-visual-rewards"><div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("achievements")}</span><h3>Rewards</h3></div><div class="battle-viewer-rewards">${rewardMetrics}</div></section>` : "";
 }
 
 function getLegacyBattleResultLabel(report = null) {
@@ -35713,7 +35810,7 @@ function renderScoutAttemptReportDetail(report, badge) {
   const explanation = report.summary || "The scout did not return usable intelligence.";
   return `
     <div class="battle-report-detail scout">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
+      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">${renderCrownlandsIcon("back")} Back to reports</button>
       <div class="battle-report-detail-head">
         <span>${badge.label}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
@@ -35750,7 +35847,7 @@ async function showBattleReportDetail(reportId) {
       ? renderLegacyBattleReportDetail(report, badge)
     : `
       <div class="battle-report-detail ${badge.tone}">
-        <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
+        <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">${renderCrownlandsIcon("back")} Back to reports</button>
         <div class="battle-report-detail-head"><span>${badge.label}</span><strong>${escapeHtml(report.cityName)}</strong><small>Loading participant battle statistics…</small></div>
         <div class="battle-report-detail-loading" role="status">Loading the authoritative battle snapshot…</div>
       </div>`;
@@ -35997,8 +36094,8 @@ function updateFullscreenButton() {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
     button.innerHTML = isActive
-      ? "<span class=\"fullscreen-glyph\" aria-hidden=\"true\">&times;</span>"
-      : "<span class=\"fullscreen-glyph\" aria-hidden=\"true\">&#x26F6;</span>";
+      ? `<span class="fullscreen-glyph" aria-hidden="true">${renderCrownlandsIcon("close")}</span>`
+      : `<span class="fullscreen-glyph" aria-hidden="true">${renderCrownlandsIcon("fullscreen")}</span>`;
   });
 }
 
@@ -36112,6 +36209,32 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function getCrownlandsIconKey(name) {
+  const normalized = String(name || "").trim().toLowerCase().replace(/_/g, "-");
+  const key = CROWNLANDS_ICON_ALIASES[normalized] || normalized;
+  return CROWNLANDS_ICON_KEYS.has(key) ? key : "information";
+}
+
+function renderCrownlandsIcon(name, className = "") {
+  const iconKey = getCrownlandsIconKey(name);
+  const extraClass = String(className || "").trim();
+  const classes = extraClass ? `cl-icon ${escapeHtml(extraClass)}` : "cl-icon";
+  return `<svg class="${classes}" aria-hidden="true" focusable="false"><use href="#cl-icon-${iconKey}"></use></svg>`;
+}
+
+function renderCrownlandsGlyph(name, className = "") {
+  const classes = ["cl-glyph", String(className || "").trim()].filter(Boolean).join(" ");
+  return `<span class="${escapeHtml(classes)}" aria-hidden="true">${renderCrownlandsIcon(name)}</span>`;
+}
+
+function setCrownlandsIconContent(element, name, className = "") {
+  if (!element) return;
+  const iconKey = getCrownlandsIconKey(name);
+  if (element.dataset.clIcon === iconKey) return;
+  element.dataset.clIcon = iconKey;
+  element.innerHTML = renderCrownlandsIcon(iconKey, className);
 }
 
 function formatPercent(percent) {

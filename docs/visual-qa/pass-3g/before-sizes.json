@@ -1,0 +1,66 @@
+﻿[
+    {
+        "path":  "assets/leaderboard-icon.png",
+        "bytes":  1656901
+    },
+    {
+        "path":  "assets/city-list-icon.png",
+        "bytes":  1293388
+    },
+    {
+        "path":  "assets/map-icon.png",
+        "bytes":  1680872
+    },
+    {
+        "path":  "assets/shop-icon.png",
+        "bytes":  1680164
+    },
+    {
+        "path":  "assets/bag-icon.png",
+        "bytes":  1243736
+    },
+    {
+        "path":  "assets/report-icon.png",
+        "bytes":  1609387
+    },
+    {
+        "path":  "assets/achievement-icon.png",
+        "bytes":  1562062
+    },
+    {
+        "path":  "assets/profile-hud-frame.png",
+        "bytes":  1178479
+    },
+    {
+        "path":  "assets/map-switch-arrow.png",
+        "bytes":  540768
+    },
+    {
+        "path":  "assets/daily-reward-icon-cutout.webp",
+        "bytes":  69600
+    },
+    {
+        "path":  "assets/loading-ring.png",
+        "bytes":  781128
+    },
+    {
+        "path":  "assets/loading-crown.png",
+        "bytes":  1090696
+    },
+    {
+        "path":  "assets/icons/crownlands-icon-192.png",
+        "bytes":  39286
+    },
+    {
+        "path":  "assets/icons/crownlands-icon-512.png",
+        "bytes":  224439
+    },
+    {
+        "path":  "assets/icons/crownlands-maskable-192.png",
+        "bytes":  27322
+    },
+    {
+        "path":  "assets/icons/crownlands-maskable-512.png",
+        "bytes":  148804
+    }
+]

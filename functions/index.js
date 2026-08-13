@@ -668,6 +668,9 @@ const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
+const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
+const DEFAULT_CAMP_VISUAL_SIZE = 132;
+const CROWN_CITADEL_VISUAL_SIZE = 260;
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;
@@ -2575,13 +2578,6 @@ function serverImagePointToWorld(regionId = "", point = {}) {
   };
 }
 
-function serverImageSizeToWorld(regionId = "", size = 1) {
-  const map = getServerWorldMap(regionId);
-  const bounds = getServerMapBounds(regionId);
-  if (!map || !bounds) return Math.max(1, Math.floor(safeNumber(size, 1)));
-  return Math.max(1, Math.round(Math.max(1, safeNumber(size, 1)) * bounds.width / getServerMapImageDimensions(map).width));
-}
-
 function getAuthoritativeIslandSeed(regionId = "") {
   const targetRegionId = requireKnownWorldRegionId(regionId);
   const map = getServerWorldMap(targetRegionId);
@@ -2612,7 +2608,11 @@ function getAuthoritativeIslandSeed(regionId = "") {
       strongholdType: objective.strongholdType || objective.type,
       bonus: objective.bonus,
       bonusPercent: objective.bonusPercent,
-      size: serverImageSizeToWorld(targetRegionId, objective.size || 154),
+      size: getServerStrongholdVisualSize({
+        id: objective.id || `${targetRegionId}_stronghold_${index + 1}`,
+        strongholdType: objective.strongholdType || objective.type,
+        kind: "stronghold",
+      }),
       artSrc: objective.artSrc,
       startTroops: objective.startTroops || objective.troops,
       level: objective.level,
@@ -2627,7 +2627,7 @@ function getAuthoritativeIslandSeed(regionId = "") {
       mapId: targetRegionId,
       x: Math.round(point.x),
       y: Math.round(point.y),
-      size: serverImageSizeToWorld(targetRegionId, camp.size || 132),
+      size: DEFAULT_CAMP_VISUAL_SIZE,
       artSrc: camp.artSrc,
       campType: camp.campType || camp.type,
       rewardSchedule: camp.rewardSchedule,
@@ -2718,6 +2718,10 @@ function isDefenseStronghold(city = {}) {
 function isCrownCitadel(city = {}) {
   const type = String(city.strongholdType || "").toLowerCase();
   return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
+}
+
+function getServerStrongholdVisualSize(city = {}) {
+  return isCrownCitadel(city) ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;
 }
 
 function getPublicStrongholdSnapshot(city = {}) {
@@ -5885,7 +5889,7 @@ function cleanServerCampLayoutSeed(camp = {}) {
     regionId: normalizeRegionId(camp.regionId || camp.mapId),
     x: safeNumber(camp.x, 0),
     y: safeNumber(camp.y, 0),
-    size: Math.max(1, Math.floor(safeNumber(camp.size, 132))),
+    size: DEFAULT_CAMP_VISUAL_SIZE,
     artSrc: safeString(camp.artSrc || config.artSrc, 180),
     kind: config.kind,
     targetType: "camp",
@@ -5977,7 +5981,7 @@ function cleanServerCityLayoutSeed(city = {}) {
     strongholdType: isStrongholdCity ? safeString(city.strongholdType, 32) : "",
     bonus: isStrongholdCity ? safeString(city.bonus, 32) : "",
     bonusPercent: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.bonusPercent, 0))) : 0,
-    size: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.size, 0))) : 0,
+    size: isStrongholdCity ? getServerStrongholdVisualSize(city) : 0,
     artSrc: isStrongholdCity ? safeString(city.artSrc, 180) : "",
     startTroops: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.startTroops, safeNumber(city.troops, 0)))) : 0,
     level: clampCityLevel(city.level || (isStrongholdCity ? 50 : 1)),

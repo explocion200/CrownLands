@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crownlands City Progression Correction QA</title>
+  <style>
+    :root { color-scheme: dark; font-family: Georgia, serif; background: #17110d; color: #efe3c8; }
+    body { margin: 0; padding: 24px; }
+    h1, h2 { font-weight: 600; letter-spacing: 0; }
+    section { margin: 28px 0; }
+    .wide { display: block; max-width: 100%; border: 1px solid #806b49; }
+    .grid { display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 12px; }
+    figure { margin: 0; padding: 10px; border: 1px solid #66573f; background: #241b14; }
+    figure img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background-color: #a9976d; background-image: linear-gradient(45deg,#d5c79e 25%,transparent 25%),linear-gradient(-45deg,#d5c79e 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d5c79e 75%),linear-gradient(-45deg,transparent 75%,#d5c79e 75%); background-size: 32px 32px; background-position: 0 0,0 16px,16px -16px,-16px 0; }
+    figcaption { margin-top: 8px; text-align: center; }
+    @media (max-width: 850px) { .grid { grid-template-columns: repeat(2, minmax(140px,1fr)); } }
+  </style>
+</head>
+<body>
+  <h1>City Progression Correction</h1>
+  <section><h2>Previous Family</h2><img class="wide" src="old-city-progression.png" alt="Previous five city stages"></section>
+  <section><h2>Corrected Family</h2><img class="wide" src="new-city-progression.png" alt="Corrected five city stages"></section>
+  <section><h2>Actual Runtime Scale</h2><img class="wide" src="runtime-size-progression.png" alt="Corrected stages at runtime scale"></section>
+  <section>
+    <h2>Transparent Source Masters</h2>
+    <div class="grid">
+      <figure><img src="../../../assets/castles/shack.png" alt="Stage 1"><figcaption>Stage 1</figcaption></figure>
+      <figure><img src="../../../assets/castles/fort.png" alt="Stage 2"><figcaption>Stage 2</figcaption></figure>
+      <figure><img src="../../../assets/castles/keep.png" alt="Stage 3"><figcaption>Stage 3</figcaption></figure>
+      <figure><img src="../../../assets/castles/castle.png" alt="Stage 4"><figcaption>Stage 4</figcaption></figure>
+      <figure><img src="../../../assets/castles/city.png" alt="Stage 5"><figcaption>Stage 5</figcaption></figure>
+    </div>
+  </section>
+  <section><h2>In-Game QA</h2><img class="wide" src="runtime-desktop-1440x900.png" alt="Desktop gameplay QA"><br><img class="wide" src="runtime-android-landscape-844x390.png" alt="Android landscape gameplay QA"></section>
+</body>
+</html>

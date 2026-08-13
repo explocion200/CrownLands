@@ -44,6 +44,7 @@
     activeSessionActivatedUid: "",
     activeSessionActivationBlockedUid: "",
     activeSessionSnapshot: null,
+    activeSessionWatcherReady: false,
     activeSessionRetryTimer: 0,
     activeSessionRetryAtMs: 0,
     activeSessionRetryIndex: 0,
@@ -141,6 +142,7 @@
       client.activeSessionUnsubscribe();
     }
     client.activeSessionUnsubscribe = null;
+    client.activeSessionWatcherReady = false;
   }
 
   function resetActiveSessionActivation(uid = "") {
@@ -228,7 +230,16 @@
         const activeSession = profile.activeSession || {};
         const remoteSessionId = String(activeSession.id || "");
         const localSessionId = getActiveSessionId();
-        if (!remoteSessionId || !localSessionId || remoteSessionId === localSessionId) return;
+        if (!remoteSessionId || !localSessionId) return;
+        if (remoteSessionId === localSessionId) {
+          client.activeSessionWatcherReady = true;
+          return;
+        }
+        if (!client.activeSessionWatcherReady) {
+          const remoteLoginAtMs = timestampToMs(activeSession.loginAtMs);
+          const localLoginAtMs = timestampToMs(client.activeSessionSnapshot?.loginAtMs);
+          if (!remoteLoginAtMs || !localLoginAtMs || remoteLoginAtMs <= localLoginAtMs) return;
+        }
         signOutForSessionReplacement(activeSession);
       },
       error => {
@@ -246,7 +257,6 @@
     if (client.activeSessionActivatedUid === uid && client.activeSessionSnapshot) return client.activeSessionSnapshot;
     if (client.activeSessionRetryAtMs > Date.now()) return null;
     if (client.activeSessionActivationPromise) return client.activeSessionActivationPromise;
-    startActiveSessionWatcher(uid);
     const activationGeneration = client.activeSessionActivationGeneration;
     const activationPromise = (async () => {
       const { doc, setDoc, serverTimestamp } = client.modules.firestore;
@@ -274,6 +284,7 @@
         client.activeSessionSnapshot = activeSession;
         client.activeSessionRetryIndex = 0;
         client.activeSessionRetryAtMs = 0;
+        startActiveSessionWatcher(uid);
         return activeSession;
       } catch (error) {
         if (activationGeneration !== client.activeSessionActivationGeneration) return null;

@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { createDailyPatchNoteReleases, getUtcDateKey } = require("./patch-note-history");
+const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
 const { fingerprintWorldThumbnails } = require("./fingerprint-world-thumbnails");
 
 const projectRoot = path.resolve(__dirname, "..");
@@ -137,7 +138,10 @@ function createPatchNotesSource(currentBuildId) {
 const buildId = getBuildId();
 if (!buildId) throw new Error("Could not determine a Crownlands deployment build ID.");
 
-if (artifactRoot === projectRoot) fingerprintWorldThumbnails({ checkOnly });
+if (artifactRoot === projectRoot) {
+  fingerprintWorldMaps({ checkOnly });
+  fingerprintWorldThumbnails({ checkOnly });
+}
 
 readProjectFile("patch-notes.js");
 const patchNotesSource = createPatchNotesSource(buildId);

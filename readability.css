@@ -1,0 +1,1130 @@
+/* Crownlands UI readability and cohesion contract ------------------------ */
+
+:root {
+  --cl-readable-paper: #211a13;
+  --cl-readable-paper-strong: #17110d;
+  --cl-readable-paper-muted: #4f3f2d;
+  --cl-readable-paper-soft: #66533a;
+  --cl-readable-dark: #f3ead5;
+  --cl-readable-dark-strong: #fff8e7;
+  --cl-readable-dark-muted: #d2c3a3;
+  --cl-readable-dark-soft: #baa987;
+  --cl-readable-gold-paper: #5f431b;
+  --cl-readable-gold-dark: #e5c67d;
+  --cl-readable-success-paper: #304526;
+  --cl-readable-warning-paper: #694516;
+  --cl-readable-error-paper: #6b2928;
+  --cl-disabled-dark: #c2b69e;
+  --cl-focus-ring: #ead59a;
+  --cl-paper-separator: rgba(73, 49, 26, .34);
+}
+
+body { color: var(--cl-readable-dark); }
+
+:where(button, input, select, textarea, a, [tabindex]):focus-visible {
+  outline: 3px solid var(--cl-focus-ring);
+  outline-offset: 2px;
+}
+
+:where(button):disabled {
+  opacity: .78;
+  cursor: not-allowed;
+  filter: saturate(.58);
+}
+
+:where(input, select, textarea) {
+  color: var(--cl-readable-paper-strong);
+  caret-color: var(--cl-oxblood);
+}
+
+:where(input, textarea)::placeholder {
+  color: #695d4c;
+  opacity: 1;
+}
+
+/* Paper surfaces use ink, never inherited ivory. */
+:where(
+  .modal .modal-card,
+  .profile-screen,
+  .panel,
+  .cl-panel,
+  .online-login,
+  .login-game-info,
+  .profile-settings-section,
+  .audio-channel-card,
+  .kingdom-stat,
+  .profile-achievement-summary,
+  .profile-achievement-summary-grid > div,
+  .profile-notification-row,
+  .profile-skill-summary > div,
+  .profile-skill-reset,
+  .profile-skill-list .skill-row,
+  .skill-preset-detail,
+  .skill-preset-allocation-group,
+  .shop-balance,
+  .shop-rewarded-section,
+  .shop-item,
+  .inventory-summary,
+  .inventory-slot,
+  .inventory-selection,
+  .city-list-summary,
+  .city-list-row,
+  .city-list-empty,
+  .leaderboard-row,
+  .leaderboard-empty,
+  .battle-report-card,
+  .battle-report-empty,
+  .battle-report-detail-head,
+  .battle-report-detail-grid > div,
+  .incoming-attack-summary,
+  .incoming-attack-card,
+  .incoming-attack-empty,
+  .outgoing-attack-card,
+  .active-objective-card,
+  .held-camp-operation-card,
+  .held-stronghold-operation-card,
+  .reinforcement-operation-card,
+  .holding-reinforcement-panel,
+  .holding-reinforcement-row,
+  .scout-report-city,
+  .scout-report-overview > div,
+  .scout-breakdown-row,
+  .scout-skill-list,
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .send-outcome,
+  .camp-public-status > div,
+  .gold-camp-info-grid > div,
+  .camp-reward-overview > div,
+  .camp-reward-row,
+  .relic-drop-row,
+  .deed-camp-condition,
+  .deed-camp-history-row,
+  .citadel-reign-row,
+  .citadel-reign-note,
+  .citadel-reign-empty,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-rename-card,
+  .clan-list-row,
+  .clan-member-row,
+  .clan-applications article,
+  .clan-rally-card,
+  .clan-quest-card,
+  .public-profile-section,
+  .public-profile-location,
+  .public-profile-clan,
+  .public-clan-details dl div,
+  .public-clan-member,
+  .daily-reward-panel,
+  .daily-reward-card,
+  .daily-reward-loading,
+  .daily-reward-error,
+  .daily-mission-row,
+  .daily-mission-detail-stat,
+  .daily-mission-recommendation,
+  .seasonal-achievement-panel,
+  .seasonal-achievement-hero,
+  .seasonal-achievement-row,
+  .seasonal-achievement-details,
+  .offline-reward-grid > div,
+  .offline-lost-cities,
+  .level-up-reward-card,
+  .level-up-reward-item,
+  .patch-notes-intro,
+  .patch-notes-release-list article
+) {
+  color: var(--cl-readable-paper);
+}
+
+:where(
+  .modal .modal-card,
+  .profile-screen,
+  .profile-settings-section,
+  .shop-item,
+  .inventory-slot,
+  .inventory-selection,
+  .city-list-row,
+  .leaderboard-row,
+  .battle-report-card,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .camp-info-tab-panel,
+  .clan-panel,
+  .clan-card,
+  .daily-reward-card,
+  .daily-mission-row,
+  .seasonal-achievement-row
+) :where(p, li, dd, dt, label, span, small) {
+  color: var(--cl-readable-paper-muted);
+  opacity: 1;
+}
+
+:where(
+  .modal .modal-card,
+  .profile-screen,
+  .profile-settings-section,
+  .shop-item,
+  .inventory-slot,
+  .inventory-selection,
+  .city-list-row,
+  .leaderboard-row,
+  .battle-report-card,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .camp-info-tab-panel,
+  .clan-panel,
+  .clan-card,
+  .daily-reward-card,
+  .daily-mission-row,
+  .seasonal-achievement-row
+) :where(h2, h3, h4, strong, b) {
+  color: var(--cl-readable-paper-strong);
+  opacity: 1;
+}
+
+.modal-card h2,
+.profile-section-heading h3,
+.daily-missions-heading h3,
+.clan-panel-heading h3,
+.clan-quest-heading h3,
+.camp-info-tab-panel h3,
+.relic-reward-heading,
+.level-up-reward-header h2 {
+  color: var(--cl-readable-paper-strong);
+  text-shadow: 0 1px rgba(255, 248, 224, .55);
+}
+
+.profile-section-heading span,
+.daily-missions-meta span,
+.shop-balance span,
+.inventory-summary span,
+.city-list-summary span,
+.camp-public-status span,
+.gold-camp-info-grid span,
+.camp-reward-overview span,
+.seasonal-achievement-row-copy > span,
+.seasonal-achievement-details > span,
+.daily-mission-copy > div > span,
+.level-up-eyebrow {
+  color: var(--cl-readable-paper-muted);
+  font-weight: 900;
+  opacity: 1;
+}
+
+.kingdom-stat strong,
+.profile-achievement-summary-grid strong,
+.shop-balance strong,
+.inventory-summary strong,
+.city-list-summary strong,
+.leaderboard-power strong,
+.battle-report-troops strong,
+.incoming-attack-force strong,
+.troop-slider-readout strong,
+.city-level-up-copy strong,
+.gold-camp-info-grid strong,
+.camp-total-defense strong,
+.camp-reward-overview strong,
+.citadel-reign-rank,
+.level-up-reward-item strong {
+  color: var(--cl-readable-gold-paper);
+  text-shadow: none;
+}
+
+/* Timber, iron, and artwork-backed surfaces use ivory. */
+:where(
+  .setup-card,
+  .online-login,
+  .login-game-info,
+  .commander-panel,
+  .bottom-nav,
+  .map-loading-panel,
+  .profile-screen-header,
+  .shop-modal .modal-card,
+  .inventory-modal .modal-card,
+  .common-gear-box-modal .modal-card,
+  .common-gear-building-modal .modal-card,
+  .inner-castle-modal .modal-card,
+  .inner-castle-preview-tray,
+  .common-gear-building-shell,
+  .common-gear-character-panel,
+  .common-gear-slot,
+  .common-gear-reveal-shell,
+  .battle-visual-target,
+  .battle-visual-rule,
+  .battle-visual-section,
+  .battle-visual-wall,
+  .battle-visual-rewards,
+  .battle-visual-hero,
+  .battle-visual-detail-card,
+  .battle-visual-bonus-card,
+  .battle-visual-outcome,
+  .camp-stats-locked,
+  .clan-shield-editor,
+  .clan-shield-editor-preview,
+  .clan-shield-preview-stage,
+  .clan-shield-control,
+  .clan-shield-color-group,
+  .realm-activity-card.citadel,
+  .effect-status-badge
+) {
+  color: var(--cl-readable-dark);
+}
+
+:where(
+  .setup-card,
+  .online-login,
+  .login-game-info,
+  .commander-panel,
+  .bottom-nav,
+  .map-loading-panel,
+  .profile-screen-header,
+  .shop-modal .modal-card,
+  .inventory-modal .modal-card,
+  .common-gear-box-modal .modal-card,
+  .common-gear-building-modal .modal-card,
+  .inner-castle-modal .modal-card,
+  .inner-castle-preview-tray,
+  .common-gear-building-shell,
+  .battle-visual-report,
+  .camp-stats-locked,
+  .clan-shield-editor,
+  .realm-activity-card.citadel
+) :where(p, li, span, small, label) {
+  color: var(--cl-readable-dark-muted);
+  opacity: 1;
+}
+
+:where(
+  .setup-card,
+  .online-login,
+  .login-game-info,
+  .commander-panel,
+  .bottom-nav,
+  .map-loading-panel,
+  .profile-screen-header,
+  .shop-modal .modal-card,
+  .inventory-modal .modal-card,
+  .common-gear-box-modal .modal-card,
+  .common-gear-building-modal .modal-card,
+  .inner-castle-modal .modal-card,
+  .inner-castle-preview-tray,
+  .common-gear-building-shell,
+  .battle-visual-report,
+  .camp-stats-locked,
+  .clan-shield-editor,
+  .realm-activity-card.citadel
+) :where(h1, h2, h3, h4, strong, b) {
+  color: var(--cl-readable-dark-strong);
+  opacity: 1;
+}
+
+.setup-card :where(h1, h2, strong),
+.commander-panel .panel-header strong,
+.profile-screen-header h2,
+.shop-modal > .modal-card > h2,
+.inventory-modal > .modal-card > h2,
+.common-gear-box-modal > .modal-card > h2,
+.common-gear-building-modal > .modal-card > h2,
+.inner-castle-modal > .modal-card > h2,
+.inner-castle-preview-copy strong,
+.battle-visual-title strong,
+.battle-visual-section-title,
+.battle-visual-side-label,
+.camp-stats-locked > strong {
+  color: var(--cl-readable-dark-strong);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .76);
+}
+
+.online-login small,
+.login-game-info p,
+.login-game-info li,
+.commander-panel .panel-header small,
+.commander-panel .selected-info,
+.bottom-nav .nav-btn small,
+.inner-castle-intro,
+.inner-castle-preview-copy span,
+.inner-castle-preview-copy small,
+.battle-visual-title small,
+.battle-visual-rule,
+.battle-visual-detail-row small,
+.battle-visual-bonus-row small,
+.battle-visual-wall-grid small,
+.camp-stats-locked p {
+  color: var(--cl-readable-dark-muted) !important;
+}
+
+.setup-card :where(.online-login, .login-game-info),
+.setup-card :where(.online-login, .login-game-info) :where(p, li, span, small, label) {
+  color: var(--cl-readable-paper-muted) !important;
+  opacity: 1;
+  text-shadow: none;
+}
+
+.setup-card :where(.online-login, .login-game-info) :where(h1, h2, h3, strong, b) {
+  color: var(--cl-readable-paper-strong) !important;
+  text-shadow: 0 1px rgba(255, 248, 224, .55);
+}
+
+/* Shared controls keep their role legible in every surface context. */
+:where(
+  .primary-btn,
+  .profile-primary-btn,
+  .shop-buy-btn,
+  .inventory-use-btn,
+  .offline-collect-btn,
+  .troop-slider-confirm,
+  .main-city-change-btn,
+  .city-level-up-btn,
+  .skill-row button,
+  .profile-skill-reset button,
+  .leaderboard-toolbar button,
+  .action-buttons button,
+  .daily-mission-action button,
+  .seasonal-achievement-reward button,
+  .level-up-collect-btn,
+  .modal-actions button
+):not(:disabled) {
+  color: var(--cl-readable-dark-strong);
+  font-weight: 900;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .72);
+}
+
+:where(
+  .ghost-btn,
+  .profile-secondary-btn,
+  .battle-report-back,
+  .battle-report-detail-btn,
+  .battle-report-locate-btn,
+  .city-list-toolbar button,
+  .city-list-locate,
+  .city-list-info,
+  .city-list-pager button,
+  .troop-slider-cancel,
+  .incoming-attack-locate,
+  .realm-activity-location-btn,
+  .recall-horn-btn,
+  .modal-actions .safe-action,
+  .modal-close,
+  .profile-screen-close,
+  .profile-icon-btn,
+  .audio-mute-button
+):not(:disabled) {
+  color: var(--cl-readable-dark-strong);
+  font-weight: 850;
+}
+
+:where(
+  .primary-btn,
+  .profile-primary-btn,
+  .shop-buy-btn,
+  .inventory-use-btn,
+  .offline-collect-btn,
+  .troop-slider-confirm,
+  .main-city-change-btn,
+  .city-level-up-btn,
+  .skill-row button,
+  .profile-skill-reset button,
+  .leaderboard-toolbar button,
+  .action-buttons button,
+  .daily-mission-action button,
+  .seasonal-achievement-reward button,
+  .level-up-collect-btn,
+  .modal-actions button
+):disabled {
+  color: #514638;
+  opacity: .84;
+  font-weight: 850;
+  text-shadow: 0 1px rgba(255, 249, 229, .42);
+}
+
+:where(
+  .profile-tabs button,
+  .push-alerts-option,
+  .animation-mode-option,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .seasonal-achievement-filters button,
+  .active-operations-tab,
+  .clan-section-nav button,
+  .clan-browser-nav button
+) {
+  color: #3b2b1d;
+  font-weight: 900;
+  opacity: 1;
+}
+
+:where(
+  .profile-tabs button.active,
+  .profile-tabs button[aria-selected="true"],
+  .push-alerts-option.active,
+  .push-alerts-option[aria-pressed="true"],
+  .animation-mode-option.active,
+  .animation-mode-option[aria-pressed="true"],
+  .skill-preset-tabs button.active,
+  .skill-preset-tabs button[aria-selected="true"],
+  .battle-report-filters button.active,
+  .seasonal-achievement-filters button.active,
+  .active-operations-tab.active,
+  .clan-section-nav button.active,
+  .clan-browser-nav button.active
+) {
+  color: var(--cl-readable-dark-strong);
+  text-shadow: 0 1px rgba(0, 0, 0, .7);
+}
+
+/* Profile, skills, and settings. */
+.profile-screen-header :where(span, small) {
+  color: var(--cl-readable-dark-muted);
+}
+
+.profile-screen :where(
+  .profile-name-row h3,
+  .profile-level-row strong,
+  .profile-section-heading h3,
+  .profile-skill-summary strong,
+  .profile-skill-reset strong,
+  .profile-skill-list .skill-row strong,
+  .profile-notification-row strong,
+  .kingdom-stat strong
+) {
+  color: var(--cl-readable-paper-strong);
+}
+
+.profile-screen :where(
+  .profile-flag-edit,
+  .profile-level-row span,
+  .profile-section-heading span,
+  .profile-skill-summary span,
+  .profile-skill-reset small,
+  .profile-skill-list .skill-row small,
+  .profile-notification-row small,
+  .kingdom-stat span,
+  .settings-card-description,
+  .settings-section-header p
+) {
+  color: var(--cl-readable-paper-muted);
+  opacity: 1;
+}
+
+.profile-skill-summary > div,
+.profile-skill-reset,
+.profile-skill-group > header,
+.audio-channel-card {
+  color: var(--cl-readable-dark);
+}
+
+.profile-skill-summary > div :where(strong, span, small),
+.profile-skill-reset :where(strong, span, small),
+.profile-skill-group > header :where(strong, span, small),
+.audio-channel-card :where(strong, span, small, output) {
+  color: var(--cl-readable-dark-strong) !important;
+  opacity: 1;
+}
+
+.audio-channel-card .audio-channel-copy small {
+  color: var(--cl-readable-dark-muted) !important;
+  font-size: max(.7rem, 11px);
+  font-weight: 750;
+}
+
+.audio-channel-card output {
+  color: var(--cl-readable-gold-dark) !important;
+}
+
+.settings-card-description,
+.settings-section-header p {
+  font-size: max(.72rem, 11px);
+  line-height: 1.45;
+}
+
+.push-alerts-status {
+  color: var(--cl-readable-dark-muted);
+  opacity: 1;
+}
+
+.animation-mode-status {
+  color: var(--cl-readable-paper-muted) !important;
+  opacity: 1;
+  font-weight: 800;
+}
+
+.profile-achievement-summary,
+.profile-achievement-summary :where(h3, strong) {
+  color: var(--cl-readable-dark-strong) !important;
+  text-shadow: 0 1px rgba(0, 0, 0, .72);
+}
+
+.profile-achievement-summary :where(span, small, p) {
+  color: var(--cl-readable-dark-muted) !important;
+  opacity: 1;
+}
+
+.profile-achievement-summary-grid > div {
+  color: var(--cl-readable-dark);
+}
+
+/* Shop and inventory use dark frames around readable parchment entries. */
+.shop-modal > .modal-card > :where(h2, .modal-title),
+.inventory-modal > .modal-card > :where(h2, .modal-title),
+.common-gear-box-modal > .modal-card > :where(h2, .modal-title),
+.common-gear-building-modal > .modal-card > :where(h2, .modal-title) {
+  color: var(--cl-readable-dark-strong) !important;
+}
+
+:where(.shop-item, .inventory-slot, .inventory-selection, .shop-balance, .inventory-summary) :where(strong, b) {
+  color: var(--cl-readable-paper-strong);
+}
+
+:where(.shop-item, .inventory-slot, .inventory-selection, .shop-balance, .inventory-summary) :where(span, small, p) {
+  color: var(--cl-readable-paper-muted);
+  opacity: 1;
+}
+
+.shop-rewarded-items {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.shop-item.rewarded-ad-shop-item {
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
+}
+
+.rewarded-ad-shop-copy {
+  display: grid;
+  align-content: center;
+  gap: .16rem;
+}
+
+.rewarded-ad-shop-copy :where(strong, span, small) {
+  margin-top: 0;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.inventory-slot.empty,
+.inventory-slot.empty :where(span, small, strong, p) {
+  color: #584936;
+  opacity: 1;
+}
+
+/* Troop, march, scout, and battle information remains ink on paper. */
+:where(
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .send-outcome,
+  .battle-report-card,
+  .battle-report-detail-head,
+  .battle-report-detail-grid > div,
+  .incoming-attack-summary,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .scout-report-city,
+  .scout-report-overview > div,
+  .scout-breakdown-row,
+  .scout-skill-list
+) :where(strong, b, h3, h4) {
+  color: var(--cl-readable-paper-strong) !important;
+  opacity: 1;
+}
+
+:where(
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .send-outcome,
+  .battle-report-card,
+  .battle-report-detail-head,
+  .battle-report-detail-grid > div,
+  .incoming-attack-summary,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .scout-report-city,
+  .scout-report-overview > div,
+  .scout-breakdown-row,
+  .scout-skill-list
+) :where(span, small, p, label) {
+  color: var(--cl-readable-paper-muted) !important;
+  opacity: 1;
+}
+
+/* City information nests dark military/economic tiles inside a parchment modal. */
+:where(
+  .modal-city-stats .stat-wide,
+  .modal-city-stats .stat-chip,
+  .modal-city-stats .main-city-action-panel,
+  .modal-city-stats .city-level-up-panel,
+  .modal-city-stats .relinquish-city-action-panel,
+  .modal-city-stats .holding-reinforcement-panel,
+  .modal-city-stats .holding-reinforcement-row
+) :where(strong, b, h3, h4, .player-name-link) {
+  color: var(--cl-readable-dark-strong) !important;
+  opacity: 1;
+}
+
+:where(
+  .modal-city-stats .stat-wide,
+  .modal-city-stats .stat-chip,
+  .modal-city-stats .main-city-action-panel,
+  .modal-city-stats .city-level-up-panel,
+  .modal-city-stats .relinquish-city-action-panel,
+  .modal-city-stats .holding-reinforcement-panel,
+  .modal-city-stats .holding-reinforcement-row
+) :where(span, small, p, label) {
+  color: var(--cl-readable-dark-muted) !important;
+  opacity: 1;
+}
+
+.modal-city-stats .city-level-up-panel :where(strong, span, small) {
+  color: #f0d79b !important;
+}
+
+.modal-city-stats .relinquish-city-action-panel :where(strong, span, small, p) {
+  color: #f2d7ce !important;
+}
+
+.modal-city-stats :where(.main-city-change-btn, .city-level-up-btn, .relinquish-city-btn) :where(span, small) {
+  color: inherit !important;
+}
+
+.modal-city-stats :where(.main-city-change-btn, .city-level-up-btn, .relinquish-city-btn):disabled :where(span, small) {
+  color: var(--cl-readable-dark-muted) !important;
+}
+
+.incoming-attack-badge :where(strong, small),
+.battle-report-result :where(strong, small),
+.troop-command-icon :where(span, small) {
+  color: var(--cl-readable-dark-strong) !important;
+}
+
+.battle-visual-report :where(
+  .battle-visual-target,
+  .battle-visual-rule,
+  .battle-visual-section,
+  .battle-visual-wall,
+  .battle-visual-rewards,
+  .battle-visual-hero,
+  .battle-visual-detail-card,
+  .battle-visual-bonus-card,
+  .battle-visual-outcome
+) :where(strong, b, h3, h4) {
+  color: var(--cl-readable-dark-strong);
+}
+
+.battle-visual-report :where(
+  .battle-visual-target,
+  .battle-visual-rule,
+  .battle-visual-section,
+  .battle-visual-wall,
+  .battle-visual-rewards,
+  .battle-visual-hero,
+  .battle-visual-detail-card,
+  .battle-visual-bonus-card,
+  .battle-visual-outcome
+) :where(span, small, p) {
+  color: var(--cl-readable-dark-muted);
+  opacity: 1;
+}
+
+/* Objective and clan panels use one parchment information language. */
+:where(
+  .camp-info-tab-panel,
+  .camp-public-status > div,
+  .gold-camp-info-grid > div,
+  .gold-camp-description,
+  .camp-reward-overview > div,
+  .camp-reward-row,
+  .relic-drop-row,
+  .deed-camp-condition,
+  .deed-camp-history-row,
+  .citadel-reign-row,
+  .citadel-reign-note,
+  .citadel-reign-empty,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-rename-card,
+  .clan-list-row,
+  .clan-member-row,
+  .clan-applications article,
+  .clan-rally-card,
+  .clan-quest-card,
+  .clan-objective-card
+) {
+  color: var(--cl-readable-paper);
+}
+
+:where(
+  .camp-info-tab-panel,
+  .camp-public-status > div,
+  .gold-camp-info-grid > div,
+  .gold-camp-description,
+  .camp-reward-overview > div,
+  .camp-reward-row,
+  .relic-drop-row,
+  .deed-camp-condition,
+  .deed-camp-history-row,
+  .citadel-reign-row,
+  .citadel-reign-note,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-list-row,
+  .clan-member-row,
+  .clan-rally-card,
+  .clan-quest-card,
+  .clan-objective-card
+) :where(strong, b, h3, h4) {
+  color: var(--cl-readable-paper-strong) !important;
+  opacity: 1;
+}
+
+:where(
+  .camp-info-tab-panel,
+  .camp-public-status > div,
+  .gold-camp-info-grid > div,
+  .gold-camp-description,
+  .camp-reward-overview > div,
+  .camp-reward-row,
+  .relic-drop-row,
+  .deed-camp-condition,
+  .deed-camp-history-row,
+  .citadel-reign-row,
+  .citadel-reign-note,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-list-row,
+  .clan-member-row,
+  .clan-rally-card,
+  .clan-quest-card,
+  .clan-objective-card
+) :where(span, small, p, label, dt, dd) {
+  color: var(--cl-readable-paper-muted) !important;
+  opacity: 1;
+}
+
+.camp-stats-locked,
+.camp-stats-locked :where(strong, span, small, p) {
+  color: var(--cl-readable-dark-strong) !important;
+}
+
+.camp-stats-locked p {
+  color: var(--cl-readable-dark-muted) !important;
+}
+
+/* Daily rewards, missions, and achievements share high-contrast ink. */
+:where(
+  .daily-reward-panel,
+  .daily-reward-card,
+  .daily-reward-loading,
+  .daily-reward-error,
+  .daily-mission-row,
+  .daily-mission-detail-stat,
+  .daily-mission-recommendation,
+  .seasonal-achievement-panel,
+  .seasonal-achievement-hero,
+  .seasonal-achievement-row,
+  .seasonal-achievement-details
+) :where(strong, b, h3, h4) {
+  color: var(--cl-readable-paper-strong) !important;
+  opacity: 1;
+}
+
+:where(
+  .daily-reward-panel,
+  .daily-reward-card,
+  .daily-reward-loading,
+  .daily-reward-error,
+  .daily-mission-row,
+  .daily-mission-detail-stat,
+  .daily-mission-recommendation,
+  .seasonal-achievement-panel,
+  .seasonal-achievement-hero,
+  .seasonal-achievement-row,
+  .seasonal-achievement-details
+) :where(span, small, p, label) {
+  color: var(--cl-readable-paper-muted) !important;
+  opacity: 1;
+}
+
+.daily-mission-copy > div > span,
+.seasonal-achievement-row-copy > span,
+.seasonal-achievement-hero > div:first-child > span,
+.seasonal-achievement-reward > span {
+  color: var(--cl-oxblood) !important;
+}
+
+.daily-missions-section .daily-missions-heading .profile-section-heading :where(span, h3, strong) {
+  color: var(--cl-readable-dark-strong) !important;
+  text-shadow: 0 1px rgba(0, 0, 0, .72);
+}
+
+.daily-missions-section .daily-missions-meta span {
+  color: var(--cl-readable-dark-muted) !important;
+}
+
+.daily-missions-section .daily-missions-meta span:last-child {
+  color: var(--cl-readable-gold-dark) !important;
+}
+
+.daily-mission-reward strong,
+.seasonal-achievement-reward strong,
+.seasonal-achievement-totals strong {
+  color: var(--cl-readable-gold-paper) !important;
+}
+
+.daily-mission-copy small,
+.daily-mission-reward small,
+.seasonal-achievement-row-copy small,
+.seasonal-achievement-reward small,
+.seasonal-achievement-details small,
+.camp-info-tab-panel small,
+.citadel-reign-row small,
+.clan-view small,
+.shop-item small,
+.inventory-selection small,
+.battle-report-card small,
+.incoming-attack-card small,
+.outgoing-attack-card small,
+.troop-slider-panel small {
+  font-size: max(.625rem, 10px);
+  line-height: 1.35;
+}
+
+.daily-mission-copy small,
+.seasonal-achievement-row-copy small,
+.seasonal-achievement-details small {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.daily-mission-row.complete :where(strong, span, small),
+.seasonal-achievement-row.complete :where(strong, span, small) {
+  opacity: 1;
+}
+
+.daily-reward-card.locked {
+  opacity: .84;
+}
+
+.daily-reward-card-amount {
+  color: var(--cl-readable-dark-strong) !important;
+  font-weight: 950;
+  text-shadow: 0 2px 1px rgba(0, 0, 0, .92);
+}
+
+/* Status language reserves stronger color for meaning, not decoration. */
+.toast {
+  color: var(--cl-readable-dark-strong);
+  border-color: rgba(203, 183, 143, .72);
+  background:
+    linear-gradient(180deg, rgba(66, 43, 27, .99), rgba(25, 18, 13, .99)),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .04) 0 1px, transparent 1px 7px);
+}
+
+.toast.success {
+  border-left-color: #778d55;
+}
+
+.toast.warning {
+  border-left-color: #bd8b3f;
+}
+
+.toast.error,
+.toast.danger {
+  border-left-color: #a85042;
+}
+
+.toast :where(strong, span, small),
+.realm-activity-card :where(strong, span, small, p, b) {
+  color: inherit;
+  opacity: 1;
+}
+
+.realm-activity-card:not(.citadel) {
+  color: var(--cl-readable-paper);
+}
+
+.realm-activity-card:not(.citadel) :where(strong, h3, h4, b) {
+  color: var(--cl-readable-paper-strong);
+}
+
+.realm-activity-card:not(.citadel) :where(span, small, p) {
+  color: var(--cl-readable-paper-muted);
+}
+
+:where([role="tooltip"], .tooltip, [data-tooltip]::after) {
+  color: var(--cl-readable-dark-strong);
+  background: #251a13;
+  border-color: rgba(203, 183, 143, .7);
+  font-family: var(--font-ui);
+  font-size: max(.72rem, 11px);
+  line-height: 1.35;
+  text-shadow: none;
+}
+
+:where(.success, .status-success, .safe-status) {
+  --status-readable-color: var(--cl-readable-success-paper);
+}
+
+:where(.warning, .status-warning, .limit-warning) {
+  --status-readable-color: var(--cl-readable-warning-paper);
+}
+
+:where(.error, .danger, .status-error) {
+  --status-readable-color: var(--cl-readable-error-paper);
+}
+
+/* Map labels sit over detailed art and need a restrained physical backing. */
+.city-label,
+.city-owner-name,
+.city-clan-tag,
+.map-city-clan-tag,
+.army-token-label,
+.camp-label,
+.stronghold-label,
+.teleport-label {
+  text-shadow:
+    0 1px 0 rgba(20, 14, 9, .96),
+    1px 0 0 rgba(20, 14, 9, .8),
+    -1px 0 0 rgba(20, 14, 9, .8);
+}
+
+.profile-gold strong,
+.citadel-assault-countdown,
+.effect-status-badge,
+.bottom-nav .nav-btn,
+.bottom-nav .nav-btn small {
+  color: var(--cl-readable-dark-strong);
+}
+
+.profile-gold-production,
+.effect-status-badge small,
+.bottom-nav .nav-btn small {
+  color: var(--cl-readable-dark-muted) !important;
+  opacity: 1;
+}
+
+/* Compact landscape keeps supporting copy readable without enlarging panels. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .modal-card #modalBody,
+  .profile-screen :where(p, li, label, dd),
+  .daily-mission-row,
+  .seasonal-achievement-row,
+  .battle-report-card,
+  .incoming-attack-card,
+  .outgoing-attack-card,
+  .troop-slider-panel,
+  .camp-info-tab-panel,
+  .clan-view,
+  .shop-panel,
+  .inventory-panel {
+    font-size: max(.75rem, 12px);
+  }
+
+  :where(
+    .settings-card-description,
+    .settings-section-header p,
+    .audio-channel-copy small,
+    .daily-mission-copy small,
+    .daily-mission-reward small,
+    .seasonal-achievement-row-copy small,
+    .seasonal-achievement-details small,
+    .battle-report-card small,
+    .incoming-attack-card small,
+    .outgoing-attack-card small,
+    .troop-slider-panel small,
+    .camp-info-tab-panel small,
+    .clan-view small,
+    .shop-item small,
+    .inventory-selection small
+  ) {
+    font-size: max(.65rem, 10px);
+    line-height: 1.35;
+  }
+
+  .daily-mission-copy strong,
+  .seasonal-achievement-row-copy strong,
+  .battle-report-card strong,
+  .incoming-attack-card strong,
+  .outgoing-attack-card strong {
+    font-size: max(.7rem, 11px);
+  }
+
+  :where(
+    .profile-tabs,
+    .skill-preset-tabs,
+    .battle-report-filters,
+    .seasonal-achievement-filters,
+    .active-operations-tabs,
+    .clan-section-nav,
+    .clan-browser-nav
+  ) {
+    min-width: 0;
+  }
+
+  :where(
+    .profile-tabs button,
+    .skill-preset-tabs button,
+    .battle-report-filters button,
+    .seasonal-achievement-filters button,
+    .active-operations-tab,
+    .clan-section-nav button,
+    .clan-browser-nav button
+  ) {
+    min-width: 0;
+    padding-inline: clamp(.32rem, 1.2vw, .62rem);
+    font-size: max(.64rem, 10px);
+    white-space: normal;
+  }
+}
+
+@media (max-width: 760px) {
+  .modal-card h2,
+  .profile-screen-header h2 {
+    overflow-wrap: anywhere;
+  }
+
+  :where(.modal-actions, .troop-slider-actions, .action-buttons) button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
 
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "dist");
@@ -11,14 +12,16 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 const rootFiles = [
   "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js",
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
-  "battle-guide-calculations.js", "common-gear.js", "economy-config.js", "firebase-config.js",
+  "battle-guide-calculations.js", "battle-reports-guide.html", "clans-rallies-guide.html",
+  "common-gear.js", "economy-config.js", "firebase-config.js",
   "daily-rewards.css",
+  "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js", "instant-economy-actions.js",
-  "how-to-play.html", "index.html", "manifest.webmanifest", "patch-notes.js",
-  "privacy.html", "release-config.js", "release-manifest.js", "robots.txt",
-  "route-worker.js", "service-worker.js", "site-info.css", "sitemap.xml",
+  "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
+  "privacy.html", "readability.css", "release-config.js", "release-manifest.js", "robots.txt",
+  "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
-  "world-config.js",
+  "terms.html", "updates.html", "public-site.js", "world-config.js",
 ];
 
 function copy(relativeSource, relativeDestination = relativeSource) {
@@ -37,13 +40,27 @@ function copyDirectoryFiles(relativeDirectory, predicate = () => true) {
   }
 }
 
+fingerprintWorldMaps();
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
-copyDirectoryFiles("assets/icons");
+copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
 copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
-copyDirectoryFiles("assets/worlds/world_01/maps", relativePath => relativePath.endsWith(".webp"));
+copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
+copy("assets/worlds/world_01/map-manifest.json");
+const productionMapManifestPath = path.join(output, "assets", "worlds", "world_01", "map-manifest.json");
+const productionMapManifest = JSON.parse(fs.readFileSync(productionMapManifestPath, "utf8"));
+productionMapManifest.description = "Immutable regional gameplay maps included in this production artifact.";
+productionMapManifest.editableSourcesExcluded = true;
+productionMapManifest.maps = productionMapManifest.maps.map(({ id, output: runtimePath, bytes, sha256 }) => ({
+  id,
+  output: runtimePath,
+  bytes,
+  sha256,
+}));
+fs.writeFileSync(productionMapManifestPath, `${JSON.stringify(productionMapManifest, null, 2)}\n`, "utf8");
+copyDirectoryFiles("assets/worlds/world_01/maps/versioned", relativePath => relativePath.endsWith(".webp"));
 copyDirectoryFiles("assets/worlds/world_01/thumbnails/versioned", relativePath => relativePath.endsWith(".webp"));
 copy("audio/manifest.json");
 copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath));

@@ -1,13 +1,14 @@
 {
   "name": "Crownlands",
   "short_name": "Crownlands",
+  "id": "/play/",
   "description": "A medieval real-time browser strategy game.",
-  "start_url": "/",
+  "start_url": "/play/",
   "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#0b111d",
-  "theme_color": "#10233a",
+  "background_color": "#17110d",
+  "theme_color": "#5a262b",
   "categories": ["games", "strategy"],
   "icons": [
     {

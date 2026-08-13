@@ -1,0 +1,86 @@
+[
+  {
+    "id": "inner-castle-hub",
+    "label": "Hub",
+    "source": "assets/inner-castle/inner-castle-hub.png",
+    "source_dimensions": "1448x1086",
+    "old_source_bytes": 3230073,
+    "new_source_bytes": 3336275,
+    "optimized": "assets/optimized/inner-castle-hub-1280x960-82bf384e502b.webp",
+    "optimized_dimensions": "1280x960",
+    "old_optimized_bytes": 362130,
+    "new_optimized_bytes": 395664
+  },
+  {
+    "id": "inner-castle-treasury",
+    "label": "Treasury",
+    "source": "assets/inner-castle/treasury.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2970431,
+    "new_source_bytes": 1803582,
+    "optimized": "assets/optimized/inner-castle-treasury-512x512-d0d9addb0fa0.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 84368,
+    "new_optimized_bytes": 47994
+  },
+  {
+    "id": "inner-castle-great-hall",
+    "label": "Great Hall",
+    "source": "assets/inner-castle/great-hall.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2916524,
+    "new_source_bytes": 1943520,
+    "optimized": "assets/optimized/inner-castle-great-hall-512x512-d8cadbae3772.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 83272,
+    "new_optimized_bytes": 56720
+  },
+  {
+    "id": "inner-castle-barracks",
+    "label": "Barracks",
+    "source": "assets/inner-castle/barracks.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2906193,
+    "new_source_bytes": 2002019,
+    "optimized": "assets/optimized/inner-castle-barracks-512x512-2d0a5881e963.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 79760,
+    "new_optimized_bytes": 59942
+  },
+  {
+    "id": "inner-castle-alehouse",
+    "label": "Alehouse",
+    "source": "assets/inner-castle/alehouse.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2936024,
+    "new_source_bytes": 1809940,
+    "optimized": "assets/optimized/inner-castle-alehouse-512x512-8374747f6500.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 82284,
+    "new_optimized_bytes": 50644
+  },
+  {
+    "id": "inner-castle-gatehouse",
+    "label": "Gatehouse",
+    "source": "assets/inner-castle/gatehouse.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2743217,
+    "new_source_bytes": 1970877,
+    "optimized": "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 74426,
+    "new_optimized_bytes": 57966
+  },
+  {
+    "id": "inner-castle-royal-stables",
+    "label": "Royal Stables",
+    "source": "assets/inner-castle/royal-stables.png",
+    "source_dimensions": "1254x1254",
+    "old_source_bytes": 2871966,
+    "new_source_bytes": 1973638,
+    "optimized": "assets/optimized/inner-castle-royal-stables-512x512-7791897ddc01.webp",
+    "optimized_dimensions": "512x512",
+    "old_optimized_bytes": 72820,
+    "new_optimized_bytes": 58194
+  }
+]

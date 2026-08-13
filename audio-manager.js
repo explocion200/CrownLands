@@ -30,6 +30,19 @@
     effectsMuted: false,
   });
 
+  function renderCrownlandsAudioIcon(name) {
+    const key = name === "sound-off" ? "sound-off" : "sound";
+    return `<svg class="cl-icon" aria-hidden="true" focusable="false"><use href="#cl-icon-${key}"></use></svg>`;
+  }
+
+  function setCrownlandsAudioIcon(element, muted) {
+    if (!element) return;
+    const key = muted ? "sound-off" : "sound";
+    if (element.dataset.clIcon === key) return;
+    element.dataset.clIcon = key;
+    element.innerHTML = renderCrownlandsAudioIcon(key);
+  }
+
   function clampVolume(value, fallback) {
     const number = Number(value);
     return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
@@ -1350,7 +1363,7 @@
         button.setAttribute("title", label);
         button.dataset.audioMuted = String(muted);
         const icon = button.querySelector?.("[data-audio-mute-icon]");
-        if (icon) icon.textContent = muted ? "\u{1F507}" : "\u{1F50A}";
+        setCrownlandsAudioIcon(icon, muted);
       };
       syncProfileMuteButton(musicMute, this.preferences.musicMuted, "music");
       syncProfileMuteButton(effectsMute, this.preferences.effectsMuted, "effects");
@@ -1362,7 +1375,7 @@
         loginMusicMute.setAttribute("title", label);
         loginMusicMute.dataset.musicMuted = String(this.preferences.musicMuted);
         const icon = loginMusicMute.querySelector?.("[data-music-icon]");
-        if (icon) icon.textContent = this.preferences.musicMuted ? "\u{1F507}" : "\u{1F50A}";
+        setCrownlandsAudioIcon(icon, this.preferences.musicMuted);
         const visibleLabel = loginMusicMute.querySelector?.("[data-music-label]");
         if (visibleLabel) visibleLabel.textContent = label;
       }

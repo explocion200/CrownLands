@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const fsp = require("node:fs/promises");
 const path = require("node:path");
 const { buildCompatibilityMapData, readWorldData } = require("./editor-server");
+const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
 
 const root = path.resolve(__dirname, "..");
 const checkOnly = process.argv.includes("--check");
@@ -65,6 +66,8 @@ async function main() {
     await fsp.readFile(paths.browserCommonGear, "utf8"),
     "Server Common Gear definitions",
   );
+
+  fingerprintWorldMaps({ checkOnly });
 
   const mode = checkOnly ? "Validated" : "Synchronized";
   console.log(`${mode} economy, realm, Common Gear, and ${world.maps.length} world regions from canonical sources.`);

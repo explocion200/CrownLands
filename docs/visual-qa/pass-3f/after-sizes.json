@@ -1,0 +1,72 @@
+{
+  "common-gear-box": {
+    "path": "assets/gear/common-gear-box.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1276242
+  },
+  "royal-peace-shield": {
+    "path": "assets/royal-peace-shield-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 879530
+  },
+  "war-drums": {
+    "path": "assets/war-drums-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 841214
+  },
+  "royal-tax-decree": {
+    "path": "assets/royal-tax-decree-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 904370
+  },
+  "veil-of-silence": {
+    "path": "assets/veil-of-silence-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 792332
+  },
+  "swift-march-order": {
+    "path": "assets/swift-march-order-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 767376
+  },
+  "recall-horn": {
+    "path": "assets/recall-horn-icon.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 523530
+  },
+  "gold-pickup": {
+    "path": "assets/gold-pickup.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1100803
+  },
+  "troop-pickup": {
+    "path": "assets/troop-pickup.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 964425
+  },
+  "peace-shield-field": {
+    "path": "assets/royal-peace-shield-field.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 392514
+  }
+}

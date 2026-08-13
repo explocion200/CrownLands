@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Pass 3B Stronghold QA</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #17130f;
+      --panel: #2b2118;
+      --paper: #d6c6a2;
+      --ink: #2f2116;
+      --edge: #96763d;
+      --muted: #b9a47a;
+    }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--paper);
+      background: var(--bg);
+    }
+    header,
+    section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 12px;
+      line-height: 1.1;
+    }
+    p {
+      max-width: 840px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      border: 2px solid rgba(150, 118, 61, .72);
+      border-radius: 4px;
+      background: linear-gradient(180deg, #3a2518, #20170f);
+      box-shadow: 0 14px 30px rgba(0,0,0,.4), inset 0 0 0 1px rgba(230,214,174,.12);
+      overflow: hidden;
+    }
+    .card h3 {
+      padding: 12px 14px 0;
+      color: #eadfbe;
+      font-size: 18px;
+    }
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      padding: 12px;
+    }
+    .asset-box {
+      min-height: 160px;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      color: var(--ink);
+      background:
+        linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%),
+        linear-gradient(45deg, rgba(0,0,0,.08) 25%, transparent 25% 75%, rgba(0,0,0,.08) 75%),
+        #d8c89f;
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+    }
+    .asset-box img {
+      max-width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 10px rgba(25, 14, 6, .38));
+    }
+    .asset-box.gameplay {
+      min-height: 96px;
+    }
+    .asset-box.gameplay img {
+      max-width: 112px;
+      max-height: 112px;
+    }
+    .label {
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--paper);
+      background: rgba(0,0,0,.22);
+    }
+    .wide img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .note {
+      padding: 14px;
+      color: var(--muted);
+      border-top: 1px solid rgba(150,118,61,.35);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Crownlands Pass 3B Stronghold QA</h1>
+    <p>Development-only gallery for the four role Stronghold replacements. Strongholds are compared against the approved Pass 3A Stage 5 city and Crown Citadel, then checked on their actual regional maps.</p>
+  </header>
+
+  <section>
+    <h2>Old vs New</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>Gold Stronghold</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__gold-stronghold.png" alt="Old Gold Stronghold" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/gold-stronghold.png" alt="New Gold Stronghold" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/stronghold-gold-384x384-27daf74041f8.webp" alt="Optimized Gold Stronghold" /></div>
+      </article>
+      <article class="card">
+        <h3>Training Stronghold</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__training-stronghold.png" alt="Old Training Stronghold" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/training-stronghold.png" alt="New Training Stronghold" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/stronghold-training-384x384-649892a49e02.webp" alt="Optimized Training Stronghold" /></div>
+      </article>
+      <article class="card">
+        <h3>Speed Stronghold</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__speed-stronghold.png" alt="Old Speed Stronghold" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/speed-stronghold.png" alt="New Speed Stronghold" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/stronghold-speed-384x384-6d38eb192581.webp" alt="Optimized Speed Stronghold" /></div>
+      </article>
+      <article class="card">
+        <h3>Defense Stronghold</h3>
+        <div class="pair"><div><div class="label">Old</div><div class="asset-box"><img src="old-assets/assets__defense-stronghold.png" alt="Old Defense Stronghold" /></div></div><div><div class="label">New</div><div class="asset-box"><img src="../../../assets/defense-stronghold.png" alt="New Defense Stronghold" /></div></div></div>
+        <div class="label">Gameplay derivative</div><div class="asset-box gameplay"><img src="../../../assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp" alt="Optimized Defense Stronghold" /></div>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Hierarchy And Scale</h2>
+    <div class="grid">
+      <article class="card wide"><h3>City -> Strongholds -> Citadel</h3><img src="stronghold-hierarchy-comparison.png" alt="Stronghold hierarchy comparison" /></article>
+      <article class="card wide"><h3>Gameplay Size</h3><img src="gameplay-size-strongholds.png" alt="Gameplay-size Stronghold comparison" /></article>
+      <article class="card wide"><h3>Old/New Sheet</h3><img src="old-new-strongholds-comparison.png" alt="Old and new Stronghold comparison sheet" /></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Actual Regional Maps</h2>
+    <div class="grid">
+      <article class="card wide"><h3>Gold - West Marches</h3><img src="map-qa-gold-west.png" alt="Gold Stronghold on West Marches" /></article>
+      <article class="card wide"><h3>Training - North Frontier</h3><img src="map-qa-training-north.png" alt="Training Stronghold on North Frontier" /></article>
+      <article class="card wide"><h3>Speed - East Reach</h3><img src="map-qa-speed-east.png" alt="Speed Stronghold on East Reach" /></article>
+      <article class="card wide"><h3>Defense - Southfields</h3><img src="map-qa-defense-south.png" alt="Defense Stronghold on Southfields" /></article>
+    </div>
+    <div class="note">Regional map backgrounds and objective coordinates were not changed in Pass 3B.</div>
+  </section>
+</body>
+</html>

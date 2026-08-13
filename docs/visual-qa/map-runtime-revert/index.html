@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Gameplay Map Revert QA</title>
+  <style>
+    :root { color-scheme: dark; font-family: Georgia, serif; background: #17110d; color: #f1e6cc; }
+    body { margin: 0; padding: 24px; }
+    h1, h2 { color: #d8c7a1; }
+    p { max-width: 78ch; line-height: 1.5; }
+    .region { margin: 28px 0 40px; border-top: 1px solid #6e5a43; padding-top: 18px; }
+    .pair { display: grid; grid-template-columns: minmax(220px, 420px) minmax(420px, 1fr); gap: 18px; align-items: start; }
+    figure { margin: 0; }
+    img { display: block; width: 100%; height: auto; border: 1px solid #8a7355; background: #0d0a08; }
+    figcaption { margin-top: 8px; color: #cbb78f; }
+    .placeholder { aspect-ratio: 16 / 10; display: grid; place-items: center; border: 1px dashed #8a7355; color: #b6a386; padding: 24px; text-align: center; }
+    @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Gameplay Map Revert QA</h1>
+  <p>The left image in each row is the exact restored source used to derive the Map UI preview. The right image is authenticated live gameplay or the automated path-verification record. Runtime maps use immutable content-fingerprinted URLs.</p>
+
+  <section class="region">
+    <h2>Crownlands Heart</h2>
+    <div class="pair">
+      <figure><img src="../../../assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp" alt="Restored Crownlands Heart source"><figcaption>Restored Map UI/source art</figcaption></figure>
+      <figure><img src="center-gameplay-renderer-desktop.png" alt="Crownlands Heart gameplay renderer QA"><figcaption>Actual gameplay renderer at 1440x900</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="region">
+    <h2>North Frontier</h2>
+    <div class="pair">
+      <figure><img src="../../../assets/worlds/world_01/maps/north-north-1-1783019201680.webp" alt="Restored North Frontier source"><figcaption>Restored Map UI/source art</figcaption></figure>
+      <figure><img src="north-gameplay-renderer-desktop.png" alt="North Frontier gameplay renderer QA"><figcaption>Actual gameplay renderer at 1440x900</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="region">
+    <h2>Southfields</h2>
+    <div class="pair">
+      <figure><img src="../../../assets/worlds/world_01/maps/south-south-5-1783020401484.webp" alt="Restored Southfields source"><figcaption>Restored Map UI/source art</figcaption></figure>
+      <figure><img src="south-gameplay-renderer-desktop.png" alt="Southfields gameplay renderer QA"><figcaption>Actual gameplay renderer at 1440x900</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="region">
+    <h2>Ashenfen March</h2>
+    <div class="pair">
+      <figure><img src="../../../assets/worlds/world_01/maps/region_14-14-1783024960400.webp" alt="Restored Ashenfen March source"><figcaption>Restored Map UI/source art</figcaption></figure>
+      <figure><img src="ashenfen-gameplay-desktop.png" alt="Ashenfen March live gameplay QA"><figcaption>Authenticated gameplay at 1440x900</figcaption></figure>
+    </div>
+    <figure style="max-width:844px;margin-top:18px"><img src="ashenfen-gameplay-android-landscape.png" alt="Ashenfen March Android landscape QA"><figcaption>Authenticated gameplay at Android landscape 844x390</figcaption></figure>
+  </section>
+</body>
+</html>

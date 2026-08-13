@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Pass 3G Visual QA</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --parchment: #d6c49a;
+      --ink: #2b2117;
+      --wood: #2a1c13;
+      --wood-light: #4c3422;
+      --iron: #373733;
+      --burgundy: #6e2f35;
+      --oxblood: #58262a;
+      --indigo: #485869;
+      --brass: #a7854d;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #eadfca; background: #17110d; font-family: Georgia, serif; }
+    header { padding: 22px clamp(18px, 4vw, 54px); border-bottom: 1px solid #5d4934; background: #21170f; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 6px; font-size: 26px; letter-spacing: 0; }
+    header p { margin: 0; color: #bcae94; }
+    main { display: grid; gap: 28px; padding: 28px clamp(18px, 4vw, 54px) 54px; }
+    section { min-width: 0; }
+    h2 { margin-bottom: 12px; color: #e9d6ad; font-size: 18px; }
+    .comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .compare-card { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; border: 1px solid #5c4732; background: #2a1d14; }
+    .compare-card h3 { grid-column: 1 / -1; margin-bottom: 0; font-size: 13px; }
+    .asset-stage { position: relative; min-height: 128px; display: grid; place-items: center; overflow: hidden; background-color: #c8b88f; background-image: linear-gradient(45deg,#a99267 25%,transparent 25%),linear-gradient(-45deg,#a99267 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#a99267 75%),linear-gradient(-45deg,transparent 75%,#a99267 75%); background-size: 24px 24px; background-position: 0 0,0 12px,12px -12px,-12px 0; }
+    .asset-stage img { max-width: 110px; max-height: 110px; object-fit: contain; }
+    .asset-stage small { position: absolute; left: 5px; bottom: 4px; padding: 2px 4px; color: #2a1b10; background: rgba(232,218,181,.84); font: 11px Arial, sans-serif; }
+    .wide .asset-stage img { max-width: 150px; }
+    .runtime-frame { position: relative; width: min(100%, 1320px); aspect-ratio: 16 / 9; min-height: 390px; overflow: hidden; border: 2px solid #5d4934; background: url("../../../assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp") center / cover no-repeat, #6f8054; box-shadow: 0 18px 38px rgba(0,0,0,.42); }
+    .runtime-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 80px rgba(24,14,8,.4); }
+    .top-hud { position: absolute; z-index: 5; inset: 12px 12px auto; display: flex; justify-content: space-between; align-items: flex-start; }
+    .identity { display: grid; grid-template-columns: 100px repeat(3, 56px); grid-template-rows: 62px 34px; gap: 5px; padding: 5px; border: 1px solid #39271a; background: linear-gradient(#4a3120,#21160f); }
+    .profile { position: relative; grid-row: 1; width: 100px; height: 62px; background: url("../../../assets/optimized/hud-profile-frame-256x200-48472ae34b88.webp") center / 100% 100% no-repeat; }
+    .flag { position: absolute; inset: 10px 14px 9px; display: grid; place-items: center; color: #ead6a7; border: 1px solid #3d261c; background: linear-gradient(135deg,#6e2f35 50%,#65704b 50%); font-weight: 700; }
+    .level { position: absolute; right: 3px; bottom: 2px; padding: 2px 4px; color: #f0dfb8; border: 1px solid #25170f; background: #342216; font: bold 10px Arial,sans-serif; }
+    .hud-icon { position: relative; width: 56px; height: 56px; display: grid; place-items: center; border: 1px solid #45413a; background: linear-gradient(#4d3523,#21160f); }
+    .hud-icon img { width: 52px; height: 52px; object-fit: contain; }
+    .wax { position: absolute; right: -3px; top: -4px; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 4px; border: 1px solid #e3c8aa; border-radius: 50%; color: #fff0dd; background: radial-gradient(circle at 35% 30%,#984138,#5a211f 68%); font: bold 10px Arial,sans-serif; }
+    .gold { grid-column: 1 / 3; align-self: start; justify-self: start; padding: 7px 10px 7px 8px; border: 1px solid #4b4439; border-left: 3px solid var(--brass); background: linear-gradient(#3a281c,#17100b); font: bold 14px Arial,sans-serif; }
+    .siege { padding: 8px 12px; border: 1px solid #744439; border-left: 4px solid #9d493e; background: linear-gradient(#6c2d32,#34171a); text-align: center; font: 11px Arial,sans-serif; }
+    .siege strong { display: block; margin-top: 2px; font-size: 16px; }
+    .map-actions { position: absolute; z-index: 5; right: 14px; bottom: 86px; display: flex; gap: 10px; }
+    .map-actions button { width: 62px; height: 62px; padding: 3px; border: 1px solid #48423a; background: linear-gradient(#503723,#21160f); }
+    .map-actions img { width: 100%; height: 100%; object-fit: contain; }
+    .effects { position: absolute; z-index: 5; right: 14px; bottom: 158px; display: flex; gap: 5px; }
+    .effect { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid #45413a; background: linear-gradient(#493421,#20160f); }
+    .effect img { width: 40px; height: 40px; object-fit: contain; }
+    .effect small { position: absolute; margin-top: 40px; padding: 1px 3px; color: #281c12; background: #d6c49a; font: 9px Arial,sans-serif; }
+    .city-selected { position: absolute; left: 43%; top: 47%; width: 94px; height: 94px; display: grid; place-items: center; border: 3px dashed rgba(106,45,52,.92); border-radius: 50%; background: rgba(224,205,157,.13); }
+    .city-selected img { width: 74px; height: 74px; object-fit: contain; }
+    .city-selected span { position: absolute; top: -22px; padding: 3px 6px; color: #2a1d12; background: #d8c69b; font: bold 11px Arial,sans-serif; white-space: nowrap; }
+    .bottom-nav { position: absolute; z-index: 5; left: 0; bottom: 0; width: 330px; height: 74px; display: grid; grid-template-columns: 82px 124px 124px; gap: 5px; padding: 6px; border-top: 1px solid #352419; background: linear-gradient(#49311f,#1c130d); }
+    .bottom-nav button { position: relative; color: #eadfca; border: 1px solid #4b453c; background: linear-gradient(#4d3422,#21160f); font: bold 11px Georgia,serif; }
+    .bottom-nav img { display: block; width: 34px; height: 34px; margin: auto; object-fit: contain; }
+    .bottom-nav .outgoing { background: linear-gradient(#526171,#2f3944); }
+    .bottom-nav .incoming { background: linear-gradient(#76343a,#4b2024); }
+    .loading-grid { display: grid; grid-template-columns: minmax(250px,1fr) minmax(250px,1fr); gap: 14px; }
+    .loading-demo, .transition-demo, .pwa-demo { min-height: 260px; display: grid; place-items: center; overflow: hidden; border: 1px solid #5c4732; background: radial-gradient(circle,#493725,#1d1510 68%); }
+    .seal { position: relative; width: 150px; height: 150px; display: grid; place-items: center; }
+    .seal img:first-child { position: absolute; inset: 0; width: 100%; height: 100%; animation: spin 2.4s linear infinite; }
+    .seal img:last-child { width: 72%; height: 72%; object-fit: contain; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .transition-demo { position: relative; background: url("../../../assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp") center / cover; }
+    .mist { position: absolute; inset: 0; background: radial-gradient(circle at 48% 46%,rgba(226,222,206,.95),rgba(184,185,171,.88) 58%,rgba(126,132,123,.75)); mix-blend-mode: screen; opacity: .8; }
+    .transition-demo strong { z-index: 1; padding: 8px 12px; color: #2b2117; background: rgba(217,203,168,.9); }
+    .pwa-row { display: flex; align-items: end; gap: 22px; padding: 24px; }
+    .pwa-row figure { margin: 0; text-align: center; }
+    .pwa-row img { display: block; margin: 0 auto 8px; box-shadow: 0 8px 18px rgba(0,0,0,.42); }
+    .pwa-row figcaption { font: 11px Arial,sans-serif; }
+    @media (max-width: 900px) {
+      header { display: none; }
+      main { padding: 0; gap: 0; }
+      main > section:not(#runtime) { display: none; }
+      #runtime h2 { display: none; }
+      .runtime-frame { width: 100vw; height: 100vh; min-height: 0; border: 0; aspect-ratio: auto; }
+      .top-hud { inset: 5px 5px auto; }
+      .identity { grid-template-columns: 74px repeat(3,44px); grid-template-rows: 48px 28px; gap: 3px; padding: 3px; }
+      .profile { width: 74px; height: 46px; }
+      .hud-icon { width: 44px; height: 44px; }
+      .hud-icon img { width: 42px; height: 42px; }
+      .gold { padding: 5px 7px; font-size: 11px; }
+      .siege { padding: 5px 8px; font-size: 9px; }
+      .siege strong { font-size: 12px; }
+      .map-actions { right: 6px; bottom: 62px; gap: 5px; }
+      .map-actions button { width: 52px; height: 52px; }
+      .effects { right: 6px; bottom: 120px; }
+      .effect { width: 44px; height: 44px; }
+      .effect img { width: 34px; height: 34px; }
+      .city-selected { width: 76px; height: 76px; }
+      .city-selected img { width: 58px; height: 58px; }
+      .bottom-nav { width: 286px; height: 58px; grid-template-columns: 70px 102px 102px; padding: 4px; gap: 4px; }
+      .bottom-nav img { width: 28px; height: 28px; }
+      .bottom-nav button { font-size: 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .seal img:first-child { animation: none; } }
+  </style>
+</head>
+<body>
+  <header><h1>Pass 3G: Global HUD, Loading, Navigation, and PWA Identity</h1><p>Development-only visual comparison and responsive state board.</p></header>
+  <main>
+    <section id="runtime">
+      <h2>Production HUD State Board</h2>
+      <div class="runtime-frame">
+        <div class="top-hud">
+          <div class="identity">
+            <div class="profile"><div class="flag">CL</div><span class="level">Lv 14</span></div>
+            <div class="hud-icon"><img src="../../../assets/optimized/hud-leaderboard-192x192-803e7e19a3f8.webp" alt="" /></div>
+            <div class="hud-icon"><img src="../../../assets/optimized/daily-reward-160x160-dd344d97ca70.webp" alt="" /><span class="wax">!</span></div>
+            <div class="hud-icon"><img src="../../../assets/optimized/hud-achievements-192x192-1efe6767ace6.webp" alt="" /></div>
+            <div class="gold">Coin 11K</div>
+          </div>
+          <div class="siege">Citadel assault<strong>00:08:42</strong></div>
+        </div>
+        <div class="city-selected"><span>Redhaven / Lv 12</span><img src="../../../assets/optimized/castle-city-237x256-b20d1c9e3097.webp" alt="" /></div>
+        <div class="effects"><div class="effect"><img src="../../../assets/optimized/item-peace-shield-160x160-5fd9cc116a40.webp" alt="" /><small>11:42</small></div><div class="effect"><img src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /><small>24:18</small></div></div>
+        <div class="map-actions"><button><img src="../../../assets/optimized/hud-bag-192x192-8d79a1879913.webp" alt="Bag" /></button><button><img src="../../../assets/optimized/hud-shop-192x192-631cf3c626d5.webp" alt="Shop" /></button><button><img src="../../../assets/optimized/hud-city-list-192x192-29705553a45a.webp" alt="Cities" /></button><button><img src="../../../assets/optimized/hud-map-192x192-f330cd084a9f.webp" alt="Map" /></button></div>
+        <nav class="bottom-nav"><button><img src="../../../assets/optimized/hud-report-192x192-0bfa89caeb96.webp" alt="" />Reports<span class="wax">3</span></button><button class="outgoing">2<br />Marches</button><button class="incoming">1<br />Incoming</button></nav>
+      </div>
+    </section>
+    <section><h2>Old / New Asset Comparison</h2><div class="comparison" id="comparisons"></div></section>
+    <section id="identity-qa"><h2>Loading, Transition, and Installed Identity</h2><div class="loading-grid"><div class="loading-demo"><div class="seal"><img src="../../../assets/optimized/loading-ring-256x256-38fb3df7217c.webp" alt="" /><img src="../../../assets/optimized/loading-crown-256x256-2038de353a91.webp" alt="" /></div></div><div class="transition-demo"><div class="mist"></div><strong>Crossing into Crownlands Heart</strong></div><div class="pwa-demo" style="grid-column:1/-1"><div class="pwa-row"><figure><img src="../../../assets/icons/crownlands-favicon-32.png" width="32" height="32" alt="" /><figcaption>32px</figcaption></figure><figure><img src="../../../assets/icons/crownlands-icon-192.png" width="96" height="96" alt="" /><figcaption>192px</figcaption></figure><figure><img src="../../../assets/icons/crownlands-maskable-512.png" width="144" height="144" alt="" /><figcaption>Maskable safe area</figcaption></figure></div></div></div></section>
+  </main>
+  <script>
+    const items = [
+      ["Leaderboard","leaderboard-icon.png","leaderboard-icon.png"], ["City List","city-list-icon.png","city-list-icon.png"],
+      ["Map","map-icon.png","map-icon.png"], ["Shop","shop-icon.png","shop-icon.png"], ["Bag","bag-icon.png","bag-icon.png"],
+      ["Reports","report-icon.png","report-icon.png"], ["Achievements","achievement-icon.png","achievement-icon.png"],
+      ["Daily Rewards","daily-reward-icon-cutout.webp","daily-reward-icon-cutout.webp"], ["Profile Frame","profile-hud-frame.png","profile-hud-frame.png","wide"],
+      ["Map Arrow","map-switch-arrow.png","map-switch-arrow.png"], ["Loading Crown","loading-crown.png","loading-crown.png"],
+      ["Loading Ring","loading-ring.png","loading-ring.png"], ["PWA Icon","crownlands-icon-512.png","icons/crownlands-icon-512.png"]
+    ];
+    document.querySelector("#comparisons").innerHTML = items.map(([label,oldName,newName,wide]) => `<article class="compare-card ${wide || ""}"><h3>${label}</h3><div class="asset-stage"><img src="old-assets/${oldName}" alt="" /><small>Old</small></div><div class="asset-stage"><img src="../../../assets/${newName}" alt="" /><small>New</small></div></article>`).join("");
+  </script>
+</body>
+</html>

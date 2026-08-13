@@ -1,0 +1,838 @@
+{
+  "mapSize": [
+    1448,
+    1086
+  ],
+  "maps": [
+    {
+      "id": "center",
+      "name": "Crownlands Heart",
+      "type": "crownlands_main",
+      "gridX": 0,
+      "gridY": 0,
+      "imagePath": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp",
+      "cities": 102,
+      "strongholds": 1,
+      "camps": 0,
+      "neighbors": {
+        "north": "north",
+        "east": "east",
+        "south": "south",
+        "west": "west"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "center_north_road",
+            "side": "north",
+            "start": 0.488,
+            "end": 0.515,
+            "type": "road",
+            "connectsToRegionId": "north",
+            "arrowXNorm": 0.509,
+            "arrowYNorm": 0.067,
+            "intentionalOuter": false,
+            "notes": "Northern road continues into North Frontier."
+          }
+        ],
+        "south": [
+          {
+            "id": "center_south_road",
+            "side": "south",
+            "start": 0.477,
+            "end": 0.497,
+            "type": "road",
+            "connectsToRegionId": "south",
+            "arrowXNorm": 0.496,
+            "arrowYNorm": 0.914,
+            "intentionalOuter": false,
+            "notes": "Southern road continues into Southfields."
+          }
+        ],
+        "east": [
+          {
+            "id": "center_east_road",
+            "side": "east",
+            "start": 0.48,
+            "end": 0.512,
+            "type": "road",
+            "connectsToRegionId": "east",
+            "arrowXNorm": 0.937,
+            "arrowYNorm": 0.486,
+            "intentionalOuter": false,
+            "notes": "Eastern road continues into East Reach."
+          }
+        ],
+        "west": [
+          {
+            "id": "center_west_road",
+            "side": "west",
+            "start": 0.441,
+            "end": 0.479,
+            "type": "road",
+            "connectsToRegionId": "west",
+            "arrowXNorm": 0.056,
+            "arrowYNorm": 0.458,
+            "intentionalOuter": false,
+            "notes": "Western road continues into West Marches."
+          }
+        ]
+      }
+    },
+    {
+      "id": "west",
+      "name": "West Marches",
+      "type": "endgame",
+      "gridX": -1,
+      "gridY": 0,
+      "imagePath": "assets/worlds/world_01/maps/west-west-2-1783019399438.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp",
+      "cities": 61,
+      "strongholds": 1,
+      "camps": 0,
+      "neighbors": {
+        "north": null,
+        "east": "center",
+        "south": null,
+        "west": null
+      },
+      "edges": {
+        "north": [],
+        "south": [],
+        "east": [
+          {
+            "id": "west_center_road",
+            "side": "east",
+            "start": 0.427,
+            "end": 0.528,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "arrowXNorm": 0.905,
+            "arrowYNorm": 0.48,
+            "intentionalOuter": false,
+            "notes": "Eastern road continues into Crownlands Heart."
+          }
+        ],
+        "west": []
+      }
+    },
+    {
+      "id": "east",
+      "name": "East Reach",
+      "type": "endgame",
+      "gridX": 1,
+      "gridY": 0,
+      "imagePath": "assets/worlds/world_01/maps/east-east-4-1783020191215.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp",
+      "cities": 65,
+      "strongholds": 1,
+      "camps": 0,
+      "neighbors": {
+        "north": null,
+        "east": null,
+        "south": null,
+        "west": "center"
+      },
+      "edges": {
+        "north": [],
+        "south": [],
+        "east": [],
+        "west": [
+          {
+            "id": "east_center_road",
+            "side": "west",
+            "start": 0.448,
+            "end": 0.536,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "arrowXNorm": 0.09,
+            "arrowYNorm": 0.487,
+            "intentionalOuter": false,
+            "notes": "Western road continues into Crownlands Heart."
+          }
+        ]
+      }
+    },
+    {
+      "id": "north",
+      "name": "North Frontier",
+      "type": "endgame",
+      "gridX": 0,
+      "gridY": -1,
+      "imagePath": "assets/worlds/world_01/maps/north-north-1-1783019201680.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp",
+      "cities": 70,
+      "strongholds": 1,
+      "camps": 0,
+      "neighbors": {
+        "north": null,
+        "east": null,
+        "south": "center",
+        "west": null
+      },
+      "edges": {
+        "north": [],
+        "south": [
+          {
+            "id": "north_center_road",
+            "side": "south",
+            "start": 0.46,
+            "end": 0.537,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "arrowXNorm": 0.497,
+            "arrowYNorm": 0.905,
+            "intentionalOuter": false,
+            "notes": "Southern road continues into Crownlands Heart."
+          }
+        ],
+        "east": [],
+        "west": []
+      }
+    },
+    {
+      "id": "south",
+      "name": "Southfields",
+      "type": "endgame",
+      "gridX": 0,
+      "gridY": 1,
+      "imagePath": "assets/worlds/world_01/maps/south-south-5-1783020401484.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp",
+      "cities": 57,
+      "strongholds": 1,
+      "camps": 0,
+      "neighbors": {
+        "north": "center",
+        "east": null,
+        "south": "region_8",
+        "west": null
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "south_center_road",
+            "side": "north",
+            "start": 0.368,
+            "end": 0.424,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "arrowXNorm": 0.4,
+            "arrowYNorm": 0.094,
+            "intentionalOuter": false,
+            "notes": "Northern road continues into Crownlands Heart."
+          }
+        ],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.486,
+            "end": 0.543,
+            "type": "road",
+            "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.513,
+            "arrowYNorm": 0.907,
+            "intentionalOuter": false,
+            "notes": "Connects to Lowroad Vale"
+          }
+        ],
+        "east": [],
+        "west": []
+      }
+    },
+    {
+      "id": "region_6",
+      "name": "Graywood Hollow",
+      "type": "midgame",
+      "gridX": -2,
+      "gridY": 2,
+      "imagePath": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_6-thumb-57d0504e3a17.webp",
+      "cities": 49,
+      "strongholds": 0,
+      "camps": 1,
+      "neighbors": {
+        "north": null,
+        "east": "region_7",
+        "south": "region_11",
+        "west": null
+      },
+      "edges": {
+        "north": [],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.406,
+            "end": 0.472,
+            "type": "road",
+            "connectsToRegionId": "region_11",
+            "arrowXNorm": 0.442,
+            "arrowYNorm": 0.909,
+            "intentionalOuter": false,
+            "notes": "Connects to Bandit Wastes"
+          }
+        ],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.126,
+            "end": 0.173,
+            "type": "road",
+            "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.928,
+            "arrowYNorm": 0.17,
+            "intentionalOuter": false,
+            "notes": "Connects to Greenrook Vale"
+          }
+        ],
+        "west": []
+      }
+    },
+    {
+      "id": "region_7",
+      "name": "Greenrook Vale",
+      "type": "midgame",
+      "gridX": -1,
+      "gridY": 2,
+      "imagePath": "assets/worlds/world_01/maps/region_7-7-1783022207943.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_7-thumb-d609f5032e3b.webp",
+      "cities": 71,
+      "strongholds": 0,
+      "camps": 1,
+      "neighbors": {
+        "north": null,
+        "east": "region_8",
+        "south": "region_12",
+        "west": "region_6"
+      },
+      "edges": {
+        "north": [],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.431,
+            "end": 0.501,
+            "type": "road",
+            "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.466,
+            "arrowYNorm": 0.88,
+            "intentionalOuter": false,
+            "notes": "Connects to Ironfall Hills"
+          }
+        ],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.418,
+            "end": 0.46,
+            "type": "road",
+            "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.914,
+            "arrowYNorm": 0.442,
+            "intentionalOuter": false,
+            "notes": "Connects to Lowroad Vale"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.394,
+            "end": 0.454,
+            "type": "road",
+            "connectsToRegionId": "region_6",
+            "arrowXNorm": 0.084,
+            "arrowYNorm": 0.424,
+            "intentionalOuter": false,
+            "notes": "Connects to Graywood Hollow"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_8",
+      "name": "Lowroad Vale",
+      "type": "midgame",
+      "gridX": 0,
+      "gridY": 2,
+      "imagePath": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_8-thumb-f2862b9c6883.webp",
+      "cities": 93,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "south",
+        "east": "region_9",
+        "south": "region_13",
+        "west": "region_7"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.497,
+            "end": 0.543,
+            "type": "road",
+            "connectsToRegionId": "south",
+            "arrowXNorm": 0.52,
+            "arrowYNorm": 0.077,
+            "intentionalOuter": false,
+            "notes": "Connects to Southfields"
+          }
+        ],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.469,
+            "end": 0.534,
+            "type": "road",
+            "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.5,
+            "arrowYNorm": 0.916,
+            "intentionalOuter": false,
+            "notes": "Connects to Redbanner Fields"
+          }
+        ],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.436,
+            "end": 0.512,
+            "type": "road",
+            "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.919,
+            "arrowYNorm": 0.474,
+            "intentionalOuter": false,
+            "notes": "Connects to Stonebrook Farms"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.43,
+            "end": 0.506,
+            "type": "road",
+            "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.075,
+            "arrowYNorm": 0.467,
+            "intentionalOuter": false,
+            "notes": "Connects to Greenrook Vale"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_9",
+      "name": "Stonebrook Farms",
+      "type": "midgame",
+      "gridX": 1,
+      "gridY": 2,
+      "imagePath": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_9-thumb-99c5af2bc6ef.webp",
+      "cities": 80,
+      "strongholds": 0,
+      "camps": 1,
+      "neighbors": {
+        "north": null,
+        "east": "region_10",
+        "south": "region_14",
+        "west": "region_8"
+      },
+      "edges": {
+        "north": [],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.518,
+            "end": 0.57,
+            "type": "road",
+            "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.541,
+            "arrowYNorm": 0.899,
+            "intentionalOuter": false,
+            "notes": "Connects to Ashenfen March"
+          }
+        ],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.405,
+            "end": 0.467,
+            "type": "road",
+            "connectsToRegionId": "region_10",
+            "arrowXNorm": 0.934,
+            "arrowYNorm": 0.441,
+            "intentionalOuter": false,
+            "notes": "Connects to Goldmere Plains"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.288,
+            "end": 0.351,
+            "type": "road",
+            "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.083,
+            "arrowYNorm": 0.325,
+            "intentionalOuter": false,
+            "notes": "Connects to Lowroad Vale"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_10",
+      "name": "Goldmere Plains",
+      "type": "midgame",
+      "gridX": 2,
+      "gridY": 2,
+      "imagePath": "assets/worlds/world_01/maps/region_10-10-1783023599661.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_10-thumb-997a419e8640.webp",
+      "cities": 39,
+      "strongholds": 0,
+      "camps": 1,
+      "neighbors": {
+        "north": null,
+        "east": null,
+        "south": "region_15",
+        "west": "region_9"
+      },
+      "edges": {
+        "north": [],
+        "south": [
+          {
+            "id": "south_road",
+            "side": "south",
+            "start": 0.424,
+            "end": 0.476,
+            "type": "road",
+            "connectsToRegionId": "region_15",
+            "arrowXNorm": 0.45,
+            "arrowYNorm": 0.88,
+            "intentionalOuter": false,
+            "notes": "Connects to Relic Vale"
+          }
+        ],
+        "east": [],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.384,
+            "end": 0.448,
+            "type": "road",
+            "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.416,
+            "intentionalOuter": false,
+            "notes": "Connects to Stonebrook Farms"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_11",
+      "name": "Bandit Wastes",
+      "type": "starter",
+      "gridX": -2,
+      "gridY": 3,
+      "imagePath": "assets/worlds/world_01/maps/region_11-11-1783024323781.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_11-thumb-eefb297beab7.webp",
+      "cities": 79,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "region_6",
+        "east": "region_12",
+        "south": null,
+        "west": null
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.409,
+            "end": 0.465,
+            "type": "road",
+            "connectsToRegionId": "region_6",
+            "arrowXNorm": 0.439,
+            "arrowYNorm": 0.099,
+            "intentionalOuter": false,
+            "notes": "Connects to Graywood Hollow"
+          }
+        ],
+        "south": [],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.496,
+            "end": 0.567,
+            "type": "road",
+            "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.926,
+            "arrowYNorm": 0.528,
+            "intentionalOuter": false,
+            "notes": "Connects to Ironfall Hills"
+          }
+        ],
+        "west": []
+      }
+    },
+    {
+      "id": "region_12",
+      "name": "Ironfall Hills",
+      "type": "starter",
+      "gridX": -1,
+      "gridY": 3,
+      "imagePath": "assets/worlds/world_01/maps/region_12-12-1783024478267.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_12-thumb-1ab8f25b5b0e.webp",
+      "cities": 74,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "region_7",
+        "east": "region_13",
+        "south": null,
+        "west": "region_11"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.476,
+            "end": 0.531,
+            "type": "road",
+            "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.504,
+            "arrowYNorm": 0.12,
+            "intentionalOuter": false,
+            "notes": "Connects to Greenrook Vale"
+          }
+        ],
+        "south": [],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.394,
+            "end": 0.472,
+            "type": "road",
+            "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.917,
+            "arrowYNorm": 0.437,
+            "intentionalOuter": false,
+            "notes": "Connects to Redbanner Fields"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.394,
+            "end": 0.458,
+            "type": "road",
+            "connectsToRegionId": "region_11",
+            "arrowXNorm": 0.079,
+            "arrowYNorm": 0.425,
+            "intentionalOuter": false,
+            "notes": "Connects to Bandit Wastes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_13",
+      "name": "Redbanner Fields",
+      "type": "starter",
+      "gridX": 0,
+      "gridY": 3,
+      "imagePath": "assets/worlds/world_01/maps/region_13-13-1783024786859.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_13-thumb-67d54b202eb2.webp",
+      "cities": 76,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "region_8",
+        "east": "region_14",
+        "south": null,
+        "west": "region_12"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.457,
+            "end": 0.528,
+            "type": "road",
+            "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.493,
+            "arrowYNorm": 0.12,
+            "intentionalOuter": false,
+            "notes": "Connects to Lowroad Vale"
+          }
+        ],
+        "south": [],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.431,
+            "end": 0.509,
+            "type": "road",
+            "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.91,
+            "arrowYNorm": 0.467,
+            "intentionalOuter": false,
+            "notes": "Connects to Ashenfen March"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.415,
+            "end": 0.496,
+            "type": "road",
+            "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.089,
+            "arrowYNorm": 0.461,
+            "intentionalOuter": false,
+            "notes": "Connects to Ironfall Hills"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_14",
+      "name": "Ashenfen March",
+      "type": "starter",
+      "gridX": 1,
+      "gridY": 3,
+      "imagePath": "assets/worlds/world_01/maps/region_14-14-1783024960400.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_14-thumb-d8d4feafc66c.webp",
+      "cities": 61,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "region_9",
+        "east": "region_15",
+        "south": null,
+        "west": "region_13"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.508,
+            "end": 0.546,
+            "type": "road",
+            "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.523,
+            "arrowYNorm": 0.084,
+            "intentionalOuter": false,
+            "notes": "Connects to Stonebrook Farms"
+          }
+        ],
+        "south": [],
+        "east": [
+          {
+            "id": "east_road",
+            "side": "east",
+            "start": 0.373,
+            "end": 0.437,
+            "type": "road",
+            "connectsToRegionId": "region_15",
+            "arrowXNorm": 0.915,
+            "arrowYNorm": 0.41,
+            "intentionalOuter": false,
+            "notes": "Connects to Relic Vale"
+          }
+        ],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.39,
+            "end": 0.436,
+            "type": "road",
+            "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.079,
+            "arrowYNorm": 0.411,
+            "intentionalOuter": false,
+            "notes": "Connects to Redbanner Fields"
+          }
+        ]
+      }
+    },
+    {
+      "id": "region_15",
+      "name": "Relic Vale",
+      "type": "starter",
+      "gridX": 2,
+      "gridY": 3,
+      "imagePath": "assets/worlds/world_01/maps/region_15-15-1783025218871.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_15-thumb-8a2499737d59.webp",
+      "cities": 73,
+      "strongholds": 0,
+      "camps": 0,
+      "neighbors": {
+        "north": "region_10",
+        "east": null,
+        "south": null,
+        "west": "region_14"
+      },
+      "edges": {
+        "north": [
+          {
+            "id": "north_road",
+            "side": "north",
+            "start": 0.44,
+            "end": 0.508,
+            "type": "road",
+            "connectsToRegionId": "region_10",
+            "arrowXNorm": 0.473,
+            "arrowYNorm": 0.095,
+            "intentionalOuter": false,
+            "notes": "Connects to Goldmere Plains"
+          }
+        ],
+        "south": [],
+        "east": [],
+        "west": [
+          {
+            "id": "west_road",
+            "side": "west",
+            "start": 0.46,
+            "end": 0.53,
+            "type": "road",
+            "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.09,
+            "arrowYNorm": 0.499,
+            "intentionalOuter": false,
+            "notes": "Connects to Ashenfen March"
+          }
+        ]
+      }
+    }
+  ],
+  "oldMapBytes": 8927742,
+  "oldThumbnailBytes": 391236
+}

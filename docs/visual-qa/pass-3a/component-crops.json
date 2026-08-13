@@ -1,0 +1,140 @@
+[
+  {
+    "name": "shack",
+    "component": {
+      "bbox": [
+        20,
+        57,
+        476,
+        391
+      ],
+      "area": 94920,
+      "center": [
+        247.5,
+        223.5
+      ]
+    },
+    "crop": [
+      2,
+      39,
+      494,
+      409
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/shack-chroma.png"
+  },
+  {
+    "name": "fort",
+    "component": {
+      "bbox": [
+        529,
+        52,
+        987,
+        419
+      ],
+      "area": 108135,
+      "center": [
+        757.5,
+        235.0
+      ]
+    },
+    "crop": [
+      511,
+      34,
+      1005,
+      437
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/fort-chroma.png"
+  },
+  {
+    "name": "keep",
+    "component": {
+      "bbox": [
+        1025,
+        29,
+        1519,
+        439
+      ],
+      "area": 136783,
+      "center": [
+        1271.5,
+        233.5
+      ]
+    },
+    "crop": [
+      1007,
+      11,
+      1536,
+      457
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/keep-chroma.png"
+  },
+  {
+    "name": "castle",
+    "component": {
+      "bbox": [
+        13,
+        445,
+        512,
+        949
+      ],
+      "area": 173235,
+      "center": [
+        262.0,
+        696.5
+      ]
+    },
+    "crop": [
+      0,
+      427,
+      530,
+      967
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/castle-chroma.png"
+  },
+  {
+    "name": "city",
+    "component": {
+      "bbox": [
+        516,
+        449,
+        1013,
+        983
+      ],
+      "area": 176086,
+      "center": [
+        764.0,
+        715.5
+      ]
+    },
+    "crop": [
+      498,
+      431,
+      1031,
+      1001
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/city-chroma.png"
+  },
+  {
+    "name": "crown-citadel",
+    "component": {
+      "bbox": [
+        995,
+        417,
+        1528,
+        1010
+      ],
+      "area": 213123,
+      "center": [
+        1261.0,
+        713.0
+      ]
+    },
+    "crop": [
+      977,
+      399,
+      1536,
+      1024
+    ],
+    "chroma": "docs/visual-qa/pass-3a/generated-candidates/city-sheet-crops-chroma/crown-citadel-chroma.png"
+  }
+]

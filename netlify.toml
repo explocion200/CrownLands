@@ -3,6 +3,18 @@
   command = "node tools/sync-runtime-data.js --check && node tools/generate-release-manifest.js && node tools/build-production-client.js && node tools/validate-production-artifact.js"
 
 [[redirects]]
+  from = "/play/"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/"
+  to = "/home.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/Crownlands-current-build"
   to = "/"
   status = 301
@@ -93,6 +105,11 @@
 
 [[headers]]
   for = "/assets/worlds/world_01/maps/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/assets/worlds/world_01/maps/versioned/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 

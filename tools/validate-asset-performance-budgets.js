@@ -36,10 +36,16 @@ const categoryFileBudgets = {
   status: 24 * 1024,
   item: 16 * 1024,
   objective: 80 * 1024,
+  "stronghold-object": 80 * 1024,
+  "camp-object": 80 * 1024,
+  "citadel-object": 80 * 1024,
   camp: 80 * 1024,
   city: 64 * 1024,
+  "city-object": 64 * 1024,
   "inner-castle": 400 * 1024,
   gear: 140 * 1024,
+  "gear-item": 140 * 1024,
+  "gear-box": 140 * 1024,
 };
 
 const entrypointBudgets = {

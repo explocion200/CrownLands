@@ -1,0 +1,128 @@
+[
+  {
+    "path": "assets/leaderboard-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1368757
+  },
+  {
+    "path": "assets/city-list-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1713190
+  },
+  {
+    "path": "assets/map-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1310166
+  },
+  {
+    "path": "assets/shop-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1021179
+  },
+  {
+    "path": "assets/bag-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1568070
+  },
+  {
+    "path": "assets/report-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1085472
+  },
+  {
+    "path": "assets/achievement-icon.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1143978
+  },
+  {
+    "path": "assets/daily-reward-icon-cutout.webp",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 898482
+  },
+  {
+    "path": "assets/map-switch-arrow.png",
+    "width": 654,
+    "height": 720,
+    "mode": "RGBA",
+    "bytes": 325787
+  },
+  {
+    "path": "assets/loading-ring.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 1156688
+  },
+  {
+    "path": "assets/loading-crown.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "bytes": 555582
+  },
+  {
+    "path": "assets/profile-hud-frame.png",
+    "width": 1419,
+    "height": 1108,
+    "mode": "RGBA",
+    "bytes": 910093
+  },
+  {
+    "path": "assets/icons/crownlands-icon-master.png",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGB",
+    "bytes": 3091505
+  },
+  {
+    "path": "assets/icons/crownlands-icon-192.png",
+    "width": 192,
+    "height": 192,
+    "mode": "P",
+    "bytes": 25234
+  },
+  {
+    "path": "assets/icons/crownlands-icon-512.png",
+    "width": 512,
+    "height": 512,
+    "mode": "P",
+    "bytes": 177868
+  },
+  {
+    "path": "assets/icons/crownlands-maskable-192.png",
+    "width": 192,
+    "height": 192,
+    "mode": "P",
+    "bytes": 25234
+  },
+  {
+    "path": "assets/icons/crownlands-maskable-512.png",
+    "width": 512,
+    "height": 512,
+    "mode": "P",
+    "bytes": 177868
+  },
+  {
+    "path": "assets/icons/crownlands-favicon-32.png",
+    "width": 32,
+    "height": 32,
+    "mode": "P",
+    "bytes": 1247
+  }
+]

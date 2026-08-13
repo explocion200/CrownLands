@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Pass 4A Regional Map QA</title>
+  <style>
+    :root { color-scheme: dark; --ink:#eadfc8; --muted:#b9aa8e; --wood:#17110d; --panel:#241a14; --line:#765d3d; --burgundy:#6d2d34; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--wood); color:var(--ink); font:15px/1.45 Georgia,serif; }
+    header { padding:24px clamp(16px,4vw,56px); border-bottom:1px solid var(--line); background:#1d1510; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:clamp(26px,4vw,42px); margin-bottom:5px; }
+    h2 { padding-top:6px; font-size:24px; }
+    main { padding:24px clamp(12px,3vw,42px) 60px; }
+    section { margin:0 auto 42px; max-width:1800px; }
+    .lede { color:var(--muted); max-width:920px; }
+    .metrics,.grid { display:grid; gap:14px; }
+    .metrics { grid-template-columns:repeat(4,minmax(140px,1fr)); margin-top:18px; }
+    .metric,.compare,.frame { background:var(--panel); border:1px solid var(--line); border-radius:4px; }
+    .metric { padding:13px; }
+    .metric strong { display:block; font-size:21px; }
+    .metric span { color:var(--muted); font-size:12px; text-transform:uppercase; }
+    .hero { width:100%; height:auto; display:block; border:1px solid var(--line); background:#0f0b08; }
+    .grid { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .compare { overflow:hidden; }
+    .compare h3 { margin:0; padding:9px 12px; font-size:15px; background:#1f1712; }
+    .pair { display:grid; grid-template-columns:1fr 1fr; }
+    .pair figure { margin:0; min-width:0; }
+    .pair img { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; background:#0e0b08; }
+    figcaption { padding:6px 9px; color:var(--muted); font-size:12px; }
+    .frame { overflow:hidden; }
+    .frame img { width:100%; height:auto; display:block; }
+    .frame p { margin:0; padding:9px 12px; color:var(--muted); }
+    .edge-grid { grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); }
+    .edge-grid img { max-height:560px; object-fit:contain; background:#100c09; }
+    .check { display:inline-block; padding:4px 8px; border:1px solid #8d6f45; background:#312218; color:#e8d8b8; font-size:12px; margin:2px; }
+    @media (max-width:700px) { .metrics { grid-template-columns:1fr 1fr; } .grid { grid-template-columns:1fr; } }
+    @media (max-height:500px) {
+      header { display:none; }
+      main { padding:8px 12px 24px; }
+      section { margin-bottom:24px; }
+      h2 { margin-bottom:6px; font-size:21px; }
+      #world-cohesion p { margin-bottom:6px; white-space:nowrap; }
+      #world-cohesion .check { padding:3px 6px; font-size:10px; }
+      #world-cohesion .hero { height:292px; object-fit:contain; object-position:center top; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Pass 4A: Regional World Map QA</h1>
+  <p class="lede">Fifteen maps, one connected Crownlands continent. This development-only gallery compares rollback sources, final art, reciprocal edges, actual coordinate overlays, thumbnails, and the natural-mist transition.</p>
+  <div class="metrics">
+    <div class="metric"><strong>15</strong><span>maps replaced</span></div>
+    <div class="metric"><strong>18</strong><span>connected edge pairs</span></div>
+    <div class="metric"><strong>4.49 MB</strong><span>new map payload</span></div>
+    <div class="metric"><strong>187 KB</strong><span>new thumbnails</span></div>
+  </div>
+</header>
+<main>
+  <section id="world-cohesion">
+    <h2>World Cohesion</h2>
+    <p><span class="check">Shared camera</span><span class="check">Shared daylight</span><span class="check">Continental geography</span><span class="check">No baked objectives</span><span class="check">One road per open edge</span></p>
+    <img class="hero" src="new-world-overview.jpg" alt="All fifteen new Crownlands regions in world layout">
+  </section>
+
+  <section>
+    <h2>Old / New</h2>
+    <div class="grid" id="comparisons"></div>
+  </section>
+
+  <section>
+    <h2>Connected Edges</h2>
+    <p class="lede">Every authoritative east/south neighbor pair is shown once. Vertical or horizontal seam rules mark the transition; roads need plausible continuity, not pixel-perfect stitching hidden by the mist transition.</p>
+    <div class="grid edge-grid" id="edges"></div>
+  </section>
+
+  <section>
+    <h2>Runtime Overlay Density</h2>
+    <p class="lede">Representative renders use real region coordinates and current 66px City, 132px Camp, 154px Stronghold, and 200px Crown Citadel visual classes.</p>
+    <img class="hero" src="runtime-overlay-contact.jpg" alt="All fifteen maps with actual-coordinate runtime overlays">
+    <div class="grid">
+      <article class="frame"><img src="runtime-overlays/center-runtime-overlay.jpg" alt="Crownlands Heart with runtime city and Citadel overlays"><p>Crownlands Heart: 100-city density plus Crown Citadel.</p></article>
+      <article class="frame"><img src="runtime-overlays/east-runtime-overlay.jpg" alt="East Reach with runtime city and Stronghold overlays"><p>East Reach: city density plus Speed Stronghold.</p></article>
+      <article class="frame"><img src="runtime-overlays/region_6-runtime-overlay.jpg" alt="Graywood Hollow with runtime city and Camp overlays"><p>Graywood Hollow: forest terrain plus Gold Camp.</p></article>
+      <article class="frame"><img src="runtime-overlays/region_14-runtime-overlay.jpg" alt="Ashenfen March with runtime city overlays"><p>Ashenfen March: wetland contrast and label readability.</p></article>
+    </div>
+  </section>
+
+  <section>
+    <h2>Picker Thumbnails</h2>
+    <img class="hero" src="thumbnail-contact.jpg" alt="All fifteen generated map thumbnails">
+  </section>
+
+  <section>
+    <h2>Transition Mist</h2>
+    <div class="grid">
+      <article class="frame"><img src="transition-mist-preview.jpg" alt="Natural map transition mist over the Crownlands Heart"><p>Neutral ivory and weathered-gray low mist, shown over final terrain.</p></article>
+      <article class="frame"><img src="../../../assets/map-transition-clouds.png" alt="Transparent transition mist source"><p>1254x1254 RGBA authoritative source; 448x448 RGBA runtime WebP.</p></article>
+    </div>
+  </section>
+</main>
+<script>
+  const maps = [
+    ["center","Crownlands Heart","center-crownlands-heart-1783019616021.webp"],
+    ["west","West Marches","west-west-2-1783019399438.webp"],
+    ["east","East Reach","east-east-4-1783020191215.webp"],
+    ["north","North Frontier","north-north-1-1783019201680.webp"],
+    ["south","Southfields","south-south-5-1783020401484.webp"],
+    ["region_6","Graywood Hollow","region_6-6-1783021585258.webp"],
+    ["region_7","Greenrook Vale","region_7-7-1783022207943.webp"],
+    ["region_8","Lowroad Vale","region_8-8-1783022783978.webp"],
+    ["region_9","Stonebrook Farms","region_9-9-1783023202200.webp"],
+    ["region_10","Goldmere Plains","region_10-10-1783023599661.webp"],
+    ["region_11","Bandit Wastes","region_11-11-1783024323781.webp"],
+    ["region_12","Ironfall Hills","region_12-12-1783024478267.webp"],
+    ["region_13","Redbanner Fields","region_13-13-1783024786859.webp"],
+    ["region_14","Ashenfen March","region_14-14-1783024960400.webp"],
+    ["region_15","Relic Vale","region_15-15-1783025218871.webp"]
+  ];
+  document.querySelector("#comparisons").innerHTML = maps.map(([id,name,file]) => `
+    <article class="compare"><h3>${name}</h3><div class="pair">
+      <figure><img loading="lazy" src="old-assets/${file}" alt="Old ${name}"><figcaption>Old</figcaption></figure>
+      <figure><img loading="lazy" src="../../../assets/worlds/world_01/maps/${file}" alt="New ${name}"><figcaption>New</figcaption></figure>
+    </div></article>`).join("");
+  fetch("qa-data.json").then(response => response.json()).then(data => {
+    document.querySelector("#edges").innerHTML = data.edgePairs.map(pair => `
+      <article class="frame"><img loading="lazy" src="${pair.file}" alt="${pair.first} to ${pair.second} edge check"><p>${pair.first} to ${pair.second}: ${pair.direction}</p></article>`).join("");
+  });
+</script>
+</body>
+</html>

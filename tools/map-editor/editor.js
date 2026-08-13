@@ -13,10 +13,13 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
+  const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
+  const DEFAULT_CAMP_VISUAL_SIZE = 132;
+  const CROWN_CITADEL_VISUAL_SIZE = 260;
   const CITY_UI_LABEL_WIDTH = 190;
   const CITY_UI_LABEL_HEIGHT = 64;
   const CITY_UI_LABEL_OFFSET = 58;
-  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
+  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260812-global-hud-pass-3g-r1";
   const CITY_UI_MARKER_FOOTPRINT = 72;
   const CITY_EDITOR_MAX_GAME_SCALE = 1;
   const CITY_VICTORY_POINT_FORMULA = Object.freeze({
@@ -87,7 +90,7 @@
       level: 100,
       troops: 50000000,
       artSrc: "assets/crown-citadel.png?v=20260703-crown-citadel-art",
-      size: 260,
+      size: CROWN_CITADEL_VISUAL_SIZE,
     },
     gold_stronghold: {
       name: "Aurum Keep",
@@ -96,7 +99,7 @@
       level: 50,
       troops: 50000000,
       artSrc: "assets/gold-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     troop_stronghold: {
       name: "Greybanner Hold",
@@ -105,7 +108,7 @@
       level: 50,
       troops: 50000000,
       artSrc: "assets/training-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     defense_stronghold: {
       name: "Ironwatch",
@@ -114,7 +117,7 @@
       level: 50,
       troops: 50000000,
       artSrc: "assets/defense-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     march_speed_stronghold: {
       name: "Swiftgate",
@@ -123,7 +126,7 @@
       level: 50,
       troops: 50000000,
       artSrc: "assets/speed-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     upgrade_discount_stronghold: {
       name: "Upgrade Discount Stronghold",
@@ -132,29 +135,29 @@
       level: 50,
       troops: 50000000,
       artSrc: "assets/gold-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
   };
   const CAMP_DEFAULTS = {
     gold: {
       name: "Gold Camp",
       artSrc: "assets/camps/gold.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     troops: {
       name: "Warband Camp",
       artSrc: "assets/camps/troops.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     items: {
       name: "Relic Camp",
       artSrc: "assets/camps/items.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     deed: {
       name: "Deed Camp",
       artSrc: "assets/camps/deed.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
   };
   const CAMP_REWARD_DEFAULTS = {

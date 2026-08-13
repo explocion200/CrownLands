@@ -67,9 +67,9 @@
       intensity: "standard",
       duration: 850,
       reducedDuration: 380,
-      particles: 9,
-      reducedParticles: 3,
-      maxParticles: 12,
+      particles: 5,
+      reducedParticles: 2,
+      maxParticles: 7,
       builder: "buildGoldReward",
     }),
     "reward-troops": Object.freeze({
@@ -77,9 +77,9 @@
       intensity: "standard",
       duration: 850,
       reducedDuration: 380,
-      particles: 6,
+      particles: 4,
       reducedParticles: 2,
-      maxParticles: 8,
+      maxParticles: 5,
       builder: "buildTroopReward",
     }),
     "camp-gold": Object.freeze({
@@ -697,12 +697,12 @@
       let requested = mode === "reduced" ? definition.reducedParticles : definition.particles;
       if (event.type === "reward-gold" || canonicalEffectType(event.type) === "reward-gold") {
         requested = mode === "reduced"
-          ? ({ small: 2, medium: 3, large: 3 }[tier] || 3)
-          : ({ small: 6, medium: 9, large: 12 }[tier] || 9);
+          ? 2
+          : ({ small: 3, medium: 5, large: 7 }[tier] || 5);
       } else if (event.type === "reward-troops" || canonicalEffectType(event.type) === "reward-troops") {
         requested = mode === "reduced"
           ? 2
-          : ({ small: 4, medium: 6, large: 8 }[tier] || 6);
+          : ({ small: 3, medium: 4, large: 5 }[tier] || 4);
       }
       if (Number.isFinite(Number(event.particleCount))) requested = Number(event.particleCount);
       if (event.degraded) requested = Math.min(requested, mode === "reduced" ? 1 : 2);
