@@ -8,6 +8,7 @@ const versionedRoot = path.join(thumbnailRoot, "versioned");
 const manifestPath = path.join(projectRoot, "assets", "worlds", "world_01", "thumbnail-manifest.json");
 
 const referenceFiles = [
+  "game.js",
   "assets/map-editor-data.js",
   "functions/world-layout.json",
   "assets/worlds/world_01/world-layout.json",
@@ -85,12 +86,22 @@ function writeManifest(entries, { write }) {
   fs.writeFileSync(manifestPath, manifest, "utf8");
 }
 
+function removeStaleVersionedThumbnails(entries, { write }) {
+  if (!write || !fs.existsSync(versionedRoot)) return;
+  const current = new Set(entries.map(entry => path.basename(entry.output)));
+  for (const name of fs.readdirSync(versionedRoot)) {
+    if (!/^(?:center|east|north|south|west|region_?\d+)-thumb-[0-9a-f]{12}\.webp$/.test(name)) continue;
+    if (!current.has(name)) fs.unlinkSync(path.join(versionedRoot, name));
+  }
+}
+
 function fingerprintWorldThumbnails({ checkOnly = false } = {}) {
   const options = { write: !checkOnly };
   const entries = createThumbnailEntries(options);
   if (entries.length !== 15) throw new Error(`Expected 15 source thumbnails, found ${entries.length}.`);
   updateReferences(entries, options);
   writeManifest(entries, options);
+  removeStaleVersionedThumbnails(entries, options);
   return entries;
 }
 

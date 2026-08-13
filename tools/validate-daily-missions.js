@@ -328,7 +328,7 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const apiSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const cssSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const cssSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 
 [
   "exports.getDailyMissionStatus",

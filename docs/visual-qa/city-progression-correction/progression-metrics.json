@@ -1,0 +1,67 @@
+[
+  {
+    "name": "shack",
+    "source": "docs/visual-qa/city-progression-correction/prepared/shack.png",
+    "visibleBounds": [
+      65,
+      256,
+      702,
+      756
+    ],
+    "visibleWidth": 637,
+    "visibleHeight": 500,
+    "visibleArea": 159560
+  },
+  {
+    "name": "fort",
+    "source": "docs/visual-qa/city-progression-correction/prepared/fort.png",
+    "visibleBounds": [
+      59,
+      201,
+      708,
+      756
+    ],
+    "visibleWidth": 649,
+    "visibleHeight": 555,
+    "visibleArea": 194896
+  },
+  {
+    "name": "keep",
+    "source": "docs/visual-qa/city-progression-correction/prepared/keep.png",
+    "visibleBounds": [
+      61,
+      146,
+      707,
+      756
+    ],
+    "visibleWidth": 646,
+    "visibleHeight": 610,
+    "visibleArea": 228724
+  },
+  {
+    "name": "castle",
+    "source": "docs/visual-qa/city-progression-correction/prepared/castle.png",
+    "visibleBounds": [
+      65,
+      111,
+      703,
+      756
+    ],
+    "visibleWidth": 638,
+    "visibleHeight": 645,
+    "visibleArea": 258283
+  },
+  {
+    "name": "city",
+    "source": "docs/visual-qa/city-progression-correction/prepared/city.png",
+    "visibleBounds": [
+      44,
+      6,
+      723,
+      756
+    ],
+    "visibleWidth": 679,
+    "visibleHeight": 750,
+    "visibleArea": 313474
+  }
+]

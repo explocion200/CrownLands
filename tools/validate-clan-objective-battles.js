@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const server = read("functions/index.js");
 const client = read("game.js");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const firebaseClient = read("firebaseClient.js");
 const rules = read("firestore.rules");
 const packageJson = JSON.parse(read("functions/package.json"));

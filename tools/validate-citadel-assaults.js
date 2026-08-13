@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const server = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 const rules = fs.readFileSync(path.join(root, "game-rules.html"), "utf8");
 
 function requireMatch(source, pattern, message) {

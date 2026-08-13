@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Pass 3E Visual QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; color: #eadfc7; background: #17120e; font-family: Georgia, serif; }
+    main { width: min(1440px, calc(100% - 24px)); margin: 0 auto; padding: 18px 0 48px; }
+    h1, h2 { margin: 0 0 12px; color: #f0e3c5; }
+    h2 { margin-top: 30px; padding-bottom: 8px; border-bottom: 1px solid #6d5640; }
+    .qa-note { color: #cbbd9f; }
+    .portrait-grid, .pair-grid, .gear-groups { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .qa-card { min-width: 0; padding: 10px; border: 1px solid #665441; border-radius: 5px; background: #2a2018; box-shadow: 0 5px 12px #0008; }
+    .qa-card h3 { margin: 0 0 8px; color: #dbc69b; font-size: 15px; }
+    .old-new { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .old-new figure, .pair figure { margin: 0; }
+    .old-new img, .pair img { width: 100%; display: block; aspect-ratio: 3 / 4; object-fit: cover; border: 1px solid #17110d; }
+    .pair { display: grid; grid-template-columns: .86fr 1fr; gap: 8px; align-items: end; }
+    .pair .building { aspect-ratio: 1; }
+    figcaption { margin-top: 4px; color: #b9a98b; font-size: 11px; }
+    .gear-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .gear-item { min-width: 0; margin: 0; padding: 5px; border: 1px solid #594a3a; background: #211a15; text-align: center; }
+    .gear-item img { width: 100%; display: block; aspect-ratio: 1; object-fit: contain; }
+    .gear-item figcaption { overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+    .equipped-demo { height: min(710px, 78vh); border: 1px solid #6b5945; border-radius: 6px; overflow: hidden; background: #17120e; }
+    .equipped-demo .common-gear-building-shell { box-sizing: border-box; }
+    .equipped-demo .common-gear-character-panel > img { object-fit: contain; }
+    .qa-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .qa-tabs button { border: 1px solid #6d5943; border-radius: 4px; color: #eadfc7; background: #382920; }
+    .qa-tabs button[aria-pressed="true"] { border-color: #ac8450; background: #652a30; }
+    .runtime-shots { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+    .runtime-shots img { width: 100%; display: block; border: 1px solid #594a3a; }
+    @media (max-width: 900px) { .portrait-grid, .pair-grid, .gear-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 620px) { .portrait-grid, .pair-grid, .gear-groups, .runtime-shots { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Pass 3E — Officer Portraits and Common Gear</h1>
+  <p class="qa-note">Development-only gallery. Runtime images below are the optimized files consumed by the game.</p>
+
+  <h2>Old vs New Officers</h2>
+  <section class="portrait-grid" id="portraitGrid"></section>
+
+  <h2>Officer and Building Inheritance</h2>
+  <section class="pair-grid" id="pairGrid"></section>
+
+  <h2>Equipped Gear UI</h2>
+  <nav class="qa-tabs" id="officerTabs" aria-label="Officer preview"></nav>
+  <section class="equipped-demo" id="equippedDemo"></section>
+
+  <h2>Responsive Runtime Captures</h2>
+  <section class="runtime-shots">
+    <figure class="qa-card"><img src="equipped-gear-desktop.png" alt="Desktop equipped gear QA" /><figcaption>Desktop 1440x900</figcaption></figure>
+    <figure class="qa-card"><img src="equipped-gear-mobile-landscape.png" alt="Mobile landscape equipped gear QA" /><figcaption>Mobile landscape 844x390</figcaption></figure>
+  </section>
+
+  <h2>All 32 Common Gear Pieces</h2>
+  <section class="gear-groups" id="gearGroups"></section>
+</main>
+<script>
+  const officers = [
+    { id: "barracks", role: "War Captain", portrait: "gear-war-captain-768x1024-874eece78b2b.webp", source: "war-captain", building: "barracks", buildingArt: "inner-castle-barracks-512x512-2d0a5881e963.webp", color: "burgundy" },
+    { id: "treasury", role: "Master of Coin", portrait: "gear-master-of-coin-768x1024-c419371e4af4.webp", source: "master-of-coin", building: "treasury", buildingArt: "inner-castle-treasury-512x512-d0d9addb0fa0.webp", color: "parchment" },
+    { id: "royal-stables", role: "Cavalry Master", portrait: "gear-cavalry-master-768x1024-8fb4bc09583d.webp", source: "cavalry-master", building: "royal-stables", buildingArt: "inner-castle-royal-stables-512x512-7791897ddc01.webp", color: "moss" },
+    { id: "gatehouse", role: "Defensive Commander", portrait: "gear-defensive-commander-768x1024-d70e34617770.webp", source: "defensive-commander", building: "gatehouse", buildingArt: "inner-castle-gatehouse-512x512-2a07ac7597ac.webp", color: "iron" },
+  ];
+  const slots = ["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"];
+  const gear = {
+    barracks: ["ddfca042092e","5bf7f2f81d43","aa7681a0d218","31f6f4acf5a8","3650d294bb20","22c149def2a2","b7b87ac61ab5","cb826e33fc7c"],
+    treasury: ["59a799630050","8282ca8e8c95","815cef42162e","48fc893bf662","29229880978c","320ede3cd1c6","a0b3ce1bda06","3b8ab65f56c8"],
+    "royal-stables": ["f1b0833a9acc","776cca04e358","c51b1877bfbb","4878bf5c812e","be3b5af1f591","9c96454e7d12","41b2b4d9099a","7e68b4ce42ec"],
+    gatehouse: ["9b6a2150f2a2","11e03cd6c3d7","8c7aa54422f0","219020eda9de","1f3d86bddd0e","e86b7289c8d4","13df55207b92","3218af1d5559"],
+  };
+  const optimized = name => `../../../assets/optimized/${name}`;
+  const itemPath = (officer, slot, index) => optimized(`gear-${officer.id}-${slot}-192x192-${gear[officer.id][index]}.webp`);
+  portraitGrid.innerHTML = officers.map(officer => `<article class="qa-card"><h3>${officer.role}</h3><div class="old-new"><figure><img src="old-assets/officers/${officer.source}.png" alt="Old ${officer.role}" /><figcaption>Old</figcaption></figure><figure><img src="${optimized(officer.portrait)}" alt="New ${officer.role}" /><figcaption>Pass 3E</figcaption></figure></div></article>`).join("");
+  pairGrid.innerHTML = officers.map(officer => `<article class="qa-card"><h3>${officer.role} — ${officer.building.replace("-", " ")}</h3><div class="pair"><figure><img src="${optimized(officer.portrait)}" alt="${officer.role}" /><figcaption>Officer</figcaption></figure><figure><img class="building" src="${optimized(officer.buildingArt)}" alt="${officer.building}" /><figcaption>Pass 3D building</figcaption></figure></div></article>`).join("");
+  gearGroups.innerHTML = officers.map(officer => `<article class="qa-card"><h3>${officer.role}</h3><div class="gear-grid">${slots.map((slot, index) => `<figure class="gear-item"><img src="${itemPath(officer, slot, index)}" alt="${slot}" /><figcaption>${slot === "weapon" && officer.id === "treasury" ? "ledger tool" : slot}</figcaption></figure>`).join("")}</div></article>`).join("");
+  officerTabs.innerHTML = officers.map((officer, index) => `<button type="button" data-officer="${officer.id}" aria-pressed="${index === 0}">${officer.role}</button>`).join("");
+  function renderEquipped(officer) {
+    const item = (slot, index) => `<img src="${itemPath(officer, slot, index)}" alt="" /><span>${slot === "weapon" && officer.id === "treasury" ? "ledger" : slot}</span><b>L3</b>`;
+    equippedDemo.innerHTML = `<section class="common-gear-building-shell"><div class="common-gear-character-panel"><img src="${optimized(officer.portrait)}" alt="${officer.role}" /><div class="common-gear-equipped-slots">${slots.map((slot, index) => `<button class="common-gear-slot filled${index === 0 ? " selected" : ""}" type="button">${item(slot, index)}</button>`).join("")}</div></div><aside class="common-gear-detail-panel"><img class="common-gear-detail-art" src="${itemPath(officer, "head", 0)}" alt="" /><span class="common-gear-rarity">Common · L3/5 · head</span><strong>${officer.role}'s Equipment</strong><small>Pass 3E visual QA preview</small><div class="common-gear-actions"><button type="button">Unequip</button><button type="button">Upgrade</button></div></aside><div class="common-gear-inventory-strip"><button class="common-gear-back" type="button">‹ Inner Castle</button><div class="common-gear-grouped-cards">${slots.slice(0, 4).map((slot, index) => `<button class="common-gear-mini-card${index === 0 ? " selected" : ""}" type="button"><img src="${itemPath(officer, slot, index)}" alt="" /><b>L3 · E</b><span>${slot}</span><small>x1</small></button>`).join("")}</div></div></section>`;
+  }
+  officerTabs.addEventListener("click", event => {
+    const button = event.target.closest("[data-officer]");
+    if (!button) return;
+    officerTabs.querySelectorAll("button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+    renderEquipped(officers.find(officer => officer.id === button.dataset.officer));
+  });
+  renderEquipped(officers[0]);
+</script>
+</body>
+</html>

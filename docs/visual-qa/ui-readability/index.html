@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands UI Readability QA</title>
+  <link rel="stylesheet" href="../../../styles.css">
+  <link rel="stylesheet" href="../../../daily-rewards.css">
+  <link rel="stylesheet" href="../../../readability.css">
+  <style>
+    body { min-height: 100vh; margin: 0; overflow: auto; background: #18120d; }
+    .qa-shell { width: min(1180px, calc(100% - 24px)); margin: 0 auto; padding: 18px 0 48px; }
+    .qa-title { color: var(--cl-readable-dark-strong); font: 700 1.4rem/1.2 var(--font-display); }
+    .qa-subtitle { margin: 4px 0 16px; color: var(--cl-readable-dark-muted); font-family: var(--font-ui); }
+    .qa-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .qa-card { min-width: 0; border: 2px solid #5a3b21; background: var(--cl-parchment-sheet); box-shadow: var(--cl-inset-edge), var(--cl-hard-shadow); }
+    .qa-card > header { padding: 10px 12px; color: var(--cl-readable-dark-strong); background: var(--cl-timber-panel); }
+    .qa-card > header h2 { margin: 0; color: inherit; font-size: 1rem; }
+    .qa-body { display: grid; gap: 9px; padding: 12px; color: var(--cl-readable-paper); }
+    .qa-body p { margin: 0; color: var(--cl-readable-paper-muted); }
+    .qa-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .qa-actions button { min-height: 38px; padding: .42rem .68rem; }
+    .qa-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px; border: 1px solid var(--cl-paper-separator); background: rgba(255, 250, 226, .18); }
+    .qa-row strong, .qa-row span, .qa-row small { display: block; }
+    .qa-row small { color: var(--cl-readable-paper-muted); }
+    .qa-dark { padding: 10px; color: var(--cl-readable-dark); background: var(--cl-timber-panel); border: 1px solid rgba(203,183,143,.35); }
+    .qa-dark strong { color: var(--cl-readable-dark-strong); }
+    .qa-dark small { color: var(--cl-readable-dark-muted); }
+    .qa-army-tokens { position: relative; min-height: 54px; display: flex; align-items: center; gap: 12px; padding: 8px; overflow: visible; background: #6f7144; }
+    .qa-army-tokens .army-token { position: relative; inset: auto; transform: none; transition: none; }
+    .qa-army-tokens .army-token small { font-size: 10px; }
+    .qa-city-palette { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; padding: 10px; background: #6f7144; }
+    .qa-city-node { position: relative; inset: auto; width: auto; height: auto; transform: none; }
+    .qa-city-node .city-label { position: relative; inset: auto; transform: none; }
+    .qa-city-node .foreign-city-shield { position: relative; }
+    .qa-statuses { display: grid; gap: 7px; }
+    .qa-statuses .toast { position: static; transform: none; opacity: 1; visibility: visible; width: auto; }
+    .qa-tabs { position: static; display: flex; }
+    .qa-tabs button { flex: 1; min-height: 34px; }
+    .qa-body.profile-screen {
+      position: static;
+      width: auto;
+      height: auto;
+      display: grid;
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+      overflow: visible;
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: none;
+    }
+    @media (max-width: 760px) {
+      .qa-shell { width: calc(100% - 12px); padding-top: 8px; }
+      .qa-grid { grid-template-columns: 1fr; gap: 8px; }
+      .qa-card > header, .qa-body { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="qa-shell">
+    <h1 class="qa-title">Crownlands Readability Contract</h1>
+    <p class="qa-subtitle">Representative runtime families at desktop and Android landscape widths.</p>
+    <div class="qa-grid">
+      <section class="qa-card">
+        <header><h2>Profile and Settings</h2></header>
+        <div class="qa-body profile-screen">
+          <div class="profile-tabs qa-tabs"><button class="active">Profile</button><button>Skills</button><button>Settings</button></div>
+          <div class="kingdom-stat"><span>Gold production</span><strong>1.0B/h (+450M/h)</strong></div>
+          <article class="audio-channel-card"><span class="audio-channel-copy"><strong>Music</strong><small>Soundtrack and ambient themes</small></span><output>70%</output></article>
+          <p class="animation-mode-status">Full animations selected from your system preference.</p>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>Shop and Inventory</h2></header>
+        <div class="qa-body">
+          <article class="shop-item"><span class="shop-item-copy"><strong>Royal Peace Shield</strong><span>1.3M gold</span><small>Protects regular cities for 12 hours.</small></span><button class="shop-buy-btn" disabled>Cooldown</button></article>
+          <article class="inventory-selection"><span class="inventory-selection-copy"><strong>War Drums</strong><span>Owned: 4</span><small>Troop production bonus</small></span></article>
+          <div class="qa-actions"><button class="primary-btn">Use Item</button><button class="ghost-btn">Close</button></div>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>Troops and Battle</h2></header>
+        <div class="qa-body">
+          <div class="troop-route-city"><strong>Stonewatch to Highworth</strong><span>Arrival in 04:18</span><small>54,000 troops selected</small></div>
+          <div class="qa-army-tokens" aria-label="Original army token samples">
+            <div class="army-token player"><span class="army-token-icon">&#9822;</span><strong class="army-token-count">54K</strong><small class="army-token-time">04:18</small></div>
+            <div class="army-token enemy"><span class="army-token-icon">&#9876;</span><strong class="army-token-count">12K</strong><small class="army-token-time">02:46</small></div>
+          </div>
+          <div class="troop-slider-preview"><div><span>Troops remaining</span><strong>123,500</strong></div></div>
+          <article class="battle-report-card victory"><strong>Victory at Redbury</strong><span>Battle resolved on arrival</span><small>12 minutes ago</small></article>
+          <div class="qa-actions"><button class="troop-slider-confirm">Send Troops</button><button class="troop-slider-cancel">Cancel</button></div>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>Objectives and Clan</h2></header>
+        <div class="qa-body">
+          <article class="camp-info-tab-panel"><h3>Warband Camp</h3><p>Neutral defenders hold this military objective.</p><strong>10K troops reward</strong></article>
+          <article class="clan-card"><strong>[HAR] Hit And Run</strong><span>34 members</span><small>Weekly contribution: 18.4M</small></article>
+          <article class="citadel-reign-row"><strong class="citadel-reign-rank">#1</strong><span class="citadel-reign-ruler">Crown Citadel<small>Current ruler</small></span><strong class="citadel-reign-time">02:41:18</strong></article>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>City Ownership Colors</h2></header>
+        <div class="qa-body">
+          <div class="qa-city-palette">
+            <div class="city-node player qa-city-node"><span class="city-label"><span class="player-city-banner"><span class="city-owner-column"><span class="city-label-level">25</span></span><span class="player-city-data"><strong class="city-army-count">54K troops</strong><strong class="city-name">Owned</strong></span></span></span></div>
+            <div class="city-node enemy qa-city-node"><span class="city-label"><span class="foreign-city-shield"><span class="city-label-level">25</span></span><strong class="city-name">Enemy</strong></span></div>
+            <div class="city-node player2 qa-city-node"><span class="city-label"><span class="foreign-city-shield"><span class="city-label-level">25</span></span><strong class="city-name">Player 2</strong></span></div>
+            <div class="city-node player3 qa-city-node"><span class="city-label"><span class="foreign-city-shield"><span class="city-label-level">25</span></span><strong class="city-name">Friendly</strong></span></div>
+            <div class="city-node clan-ally qa-city-node"><span class="city-label"><span class="foreign-city-shield"><span class="city-label-level">25</span></span><strong class="city-name">Clan ally</strong></span></div>
+            <div class="city-node neutral qa-city-node"><span class="city-label"><span class="foreign-city-shield"><span class="city-label-level">25</span></span><strong class="city-name">Neutral</strong></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>Rewards and Achievements</h2></header>
+        <div class="qa-body">
+          <article class="daily-mission-row complete"><span class="daily-mission-icon" aria-hidden="true">+</span><div class="daily-mission-copy"><div><strong>Muster the Host</strong><span>9.6M/9.6M</span></div><small>Send 9,600,000 troops into battle</small><span class="daily-mission-progress"><i style="width:100%"></i></span></div><div class="daily-mission-reward"><small>Reward</small><strong>874K troops</strong></div><div class="daily-mission-action"><span class="daily-mission-completed">Completed</span></div></article>
+          <article class="seasonal-achievement-row"><span class="seasonal-achievement-row-copy"><strong>Conqueror III</strong><span>Conquest</span><small>Capture 100 enemy cities</small></span><span class="seasonal-achievement-reward"><small>Reward</small><strong>2h production</strong></span></article>
+          <div class="profile-achievement-summary qa-dark"><strong>Achievements 6 / 40</strong><br><small>18d 21h remaining</small></div>
+        </div>
+      </section>
+
+      <section class="qa-card">
+        <header><h2>Alerts and Hierarchy</h2></header>
+        <div class="qa-body">
+          <div class="qa-dark"><strong>Incoming attack</strong><br><small>Arrives at Crowport Rise in 08:42</small></div>
+          <div class="qa-statuses"><div class="toast">Kingdom state synchronized.</div><div class="toast warning">City upgrade requires more gold.</div><div class="toast error">March could not be sent.</div></div>
+          <div class="qa-actions"><button class="primary-btn">Confirm</button><button class="ghost-btn">Review</button><button class="primary-btn" disabled>Unavailable</button></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

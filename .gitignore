@@ -12,3 +12,10 @@ functions/release-manifest.json
 .codex-remote-attachments/
 .codex_tmp_*
 /tmp/
+
+# Local Netlify folder
+.netlify
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]

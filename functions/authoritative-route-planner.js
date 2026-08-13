@@ -17,6 +17,7 @@ const CITY_CLEARANCE = 46;
 const STRUCTURE_CLEARANCE = 88;
 const DEFAULT_STRONGHOLD_SIZE = 154;
 const DEFAULT_CAMP_SIZE = 132;
+const CROWN_CITADEL_SIZE = 260;
 const BASE_BITMAP_REGION_IDS = new Set(["west", "north", "east", "south", "center"]);
 const SIDES = Object.freeze(["north", "south", "east", "west"]);
 const OPPOSITE_SIDE = Object.freeze({
@@ -41,12 +42,6 @@ function cleanRegionId(value) {
 function safeNumber(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
-}
-
-function positiveInteger(value, fallback = 1) {
-  const parsed = Math.floor(Number(value));
-  if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  return Math.max(1, Math.floor(Number(fallback) || 1));
 }
 
 function getWorldSize(layout = {}) {
@@ -109,13 +104,17 @@ function imagePointToWorld(model = {}, point = {}) {
   };
 }
 
-function imageSizeToWorld(model = {}, value, fallback) {
-  const size = positiveInteger(value, fallback);
-  return Math.max(1, Math.round(size * model.bounds.width / model.dimensions.width));
-}
-
 function getEditorPoint(item = {}) {
   return item?.point && typeof item.point === "object" ? item.point : item;
+}
+
+function isCrownCitadelObjective(objective = {}) {
+  const type = String(objective?.strongholdType || objective?.type || "").toLowerCase();
+  return type === "crown" || type === "crown_citadel" || String(objective?.id || "") === "center_crown_citadel";
+}
+
+function getObjectiveVisualSize(objective = {}) {
+  return isCrownCitadelObjective(objective) ? CROWN_CITADEL_SIZE : DEFAULT_STRONGHOLD_SIZE;
 }
 
 function getConnectionTargetId(connection = {}) {
@@ -205,13 +204,13 @@ function createStructureObstacles(model) {
   (Array.isArray(model.map?.objectives) ? model.map.objectives : []).forEach(objective => {
     addObstacle(
       objective,
-      Math.max(STRUCTURE_CLEARANCE, imageSizeToWorld(model, objective?.size, DEFAULT_STRONGHOLD_SIZE) * 0.55)
+      Math.max(STRUCTURE_CLEARANCE, getObjectiveVisualSize(objective) * 0.55)
     );
   });
   (Array.isArray(model.map?.camps) ? model.map.camps : []).forEach(camp => {
     addObstacle(
       camp,
-      Math.max(STRUCTURE_CLEARANCE, imageSizeToWorld(model, camp?.size, DEFAULT_CAMP_SIZE) * 0.55)
+      Math.max(STRUCTURE_CLEARANCE, DEFAULT_CAMP_SIZE * 0.55)
     );
   });
   return obstacles;
@@ -457,6 +456,7 @@ module.exports = Object.freeze({
   STRUCTURE_CLEARANCE,
   DEFAULT_STRONGHOLD_SIZE,
   DEFAULT_CAMP_SIZE,
+  CROWN_CITADEL_SIZE,
   cleanRegionId,
   getWorldSize,
   getGridSize,

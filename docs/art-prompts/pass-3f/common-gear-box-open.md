@@ -1,0 +1,3 @@
+# Common Gear Box - Open Reveal State
+
+Create the exact matching open state of the Pass 3F Crownlands quartermaster chest: same scratched oak planks, forged iron corners, hinges, latch, burned crown-and-wall mark, camera, scale, and upper-left daylight. The lid is physically raised; inside are folded burgundy and linen packing cloth plus three plain parchment equipment cards or wrapped gear bundles. The interior is practical and dim, with no light source inside the chest. Centered three-quarter view on the shared 1254x1254 chroma canvas. Avoid coins, jewels, magic, glow, rays, particles, floating cards, text, and treasure overflow.

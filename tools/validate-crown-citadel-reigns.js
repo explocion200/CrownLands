@@ -7,7 +7,7 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const indexesSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
-const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);

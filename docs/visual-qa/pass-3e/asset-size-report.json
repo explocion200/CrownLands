@@ -1,0 +1,21 @@
+{
+  "officers": {
+    "oldSourceBytes": 9237351,
+    "newSourceBytes": 10103433,
+    "oldRuntimeBytes": 411414,
+    "newRuntimeBytes": 476516
+  },
+  "gearItems": {
+    "count": 32,
+    "oldSourceBytes": 46281771,
+    "newSourceBytes": 17925461,
+    "oldRuntimeBytes": 295250,
+    "newRuntimeBytes": 170194
+  },
+  "perOfficer": [
+    { "id": "gear-war-captain", "oldSourceBytes": 2220033, "newSourceBytes": 2412074, "oldRuntimeBytes": 90512, "newRuntimeBytes": 111854 },
+    { "id": "gear-master-of-coin", "oldSourceBytes": 2250454, "newSourceBytes": 2411040, "oldRuntimeBytes": 97266, "newRuntimeBytes": 106692 },
+    { "id": "gear-cavalry-master", "oldSourceBytes": 2282942, "newSourceBytes": 2562848, "oldRuntimeBytes": 105446, "newRuntimeBytes": 139806 },
+    { "id": "gear-defensive-commander", "oldSourceBytes": 2483922, "newSourceBytes": 2717471, "oldRuntimeBytes": 118190, "newRuntimeBytes": 118164 }
+  ]
+}

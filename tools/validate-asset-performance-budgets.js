@@ -13,9 +13,12 @@ const indexSource = read("index.html");
 const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const gameSource = read("game.js");
+const baseCitiesSource = read("base-cities.js");
 const instantEconomyActionsSource = read("instant-economy-actions.js");
 const commonGearSource = read("common-gear.js");
 const stylesSource = read("styles.css");
+const interfaceThemeSource = read("interface-theme.css");
+const manuscriptPrototypeSource = read("manuscript-prototype.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const layout = JSON.parse(read("functions/world-layout.json"));
@@ -36,16 +39,25 @@ const categoryFileBudgets = {
   status: 24 * 1024,
   item: 16 * 1024,
   objective: 80 * 1024,
+  "stronghold-object": 80 * 1024,
+  "camp-object": 80 * 1024,
+  "citadel-object": 80 * 1024,
   camp: 80 * 1024,
   city: 64 * 1024,
+  "city-object": 64 * 1024,
   "inner-castle": 400 * 1024,
   gear: 140 * 1024,
+  "gear-item": 140 * 1024,
+  "gear-box": 140 * 1024,
 };
 
 const entrypointBudgets = {
   "game.js": 1600 * 1024,
+  "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   "styles.css": 400 * 1024,
+  "interface-theme.css": 128 * 1024,
+  "manuscript-prototype.css": 64 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   "firebaseClient.js": 150 * 1024,
   "animation-manager.js": 80 * 1024,
@@ -178,7 +190,7 @@ assert.deepEqual(
     .sort(),
   "Only login-critical artwork belongs in the installation cache; transition clouds are runtime-cached."
 );
-for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css"]) {
+for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css", "audio-manager.js"]) {
   assert(
     !staticCacheUrls.some(url => localPathFromUrl(url) === runtimeOnlyPage),
     `${runtimeOnlyPage} should be cached on demand, not during service-worker installation.`
@@ -188,6 +200,9 @@ for (const requiredShellFile of [
   "index.html",
   "manifest.webmanifest",
   "styles.css",
+  "interface-theme.css",
+  "manuscript-prototype.css",
+  "base-cities.js",
   "instant-economy-actions.js",
   "game.js",
   "animation-manager.js",
@@ -204,7 +219,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, commonGearSource, instantEconomyActionsSource, stylesSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

@@ -20,9 +20,24 @@ OUTPUT_DIR = ROOT / "assets" / "optimized"
 MANIFEST_PATH = OUTPUT_DIR / "manifest.json"
 
 
+FIXED_LAYOUT_CATEGORIES = {
+    "loading",
+    "hud",
+    "stronghold-object",
+    "camp-object",
+    "citadel-object",
+    "gear-item",
+    "item",
+    "pickup",
+    "status",
+    "gear-box",
+    "city-object",
+}
+
+
 ASSETS = (
     # id, source, maximum width, maximum height, quality, category
-    ("login-background", "assets/game-menu-background.jpg", 1448, 1086, 82, "login"),
+    ("login-background", "assets/game-menu-background.jpg", 1448, 1086, 81, "login"),
     ("loading-ring", "assets/loading-ring.png", 256, 256, 88, "loading"),
     ("loading-crown", "assets/loading-crown.png", 256, 256, 88, "loading"),
     ("map-transition-clouds", "assets/map-transition-clouds.png", 448, 448, 25, "transition"),
@@ -37,7 +52,7 @@ ASSETS = (
     ("hud-map-switch-arrow", "assets/map-switch-arrow.png", 192, 212, 88, "hud"),
     ("pickup-gold", "assets/gold-pickup.png", 192, 192, 88, "pickup"),
     ("pickup-troops", "assets/troop-pickup.png", 192, 192, 88, "pickup"),
-    ("status-peace-shield-field", "assets/royal-peace-shield-field.png", 192, 192, 92, "status"),
+    ("status-peace-shield-field", "assets/royal-peace-shield-icon.webp", 192, 192, 92, "status"),
     ("daily-reward", "assets/daily-reward-icon-cutout.webp", 160, 160, 92, "hud"),
     ("item-peace-shield", "assets/royal-peace-shield-icon.webp", 160, 160, 86, "item"),
     ("item-war-drums", "assets/war-drums-icon.webp", 160, 160, 86, "item"),
@@ -45,20 +60,20 @@ ASSETS = (
     ("item-veil-of-silence", "assets/veil-of-silence-icon.webp", 160, 160, 86, "item"),
     ("item-swift-march", "assets/swift-march-order-icon.webp", 160, 160, 86, "item"),
     ("item-recall-horn", "assets/recall-horn-icon.webp", 160, 160, 86, "item"),
-    ("stronghold-gold", "assets/gold-stronghold.png", 384, 384, 88, "objective"),
-    ("stronghold-training", "assets/training-stronghold.png", 384, 384, 88, "objective"),
-    ("stronghold-speed", "assets/speed-stronghold.png", 384, 384, 88, "objective"),
-    ("stronghold-defense", "assets/defense-stronghold.png", 384, 384, 88, "objective"),
-    ("crown-citadel", "assets/crown-citadel.png", 384, 384, 88, "objective"),
-    ("camp-gold", "assets/camps/gold.png", 384, 384, 88, "camp"),
-    ("camp-troops", "assets/camps/troops.png", 384, 384, 88, "camp"),
-    ("camp-items", "assets/camps/items.png", 384, 384, 88, "camp"),
-    ("camp-deed", "assets/camps/deed.png", 384, 384, 88, "camp"),
-    ("castle-shack", "assets/castles/shack.png", 256, 256, 92, "city"),
-    ("castle-fort", "assets/castles/fort.png", 256, 256, 92, "city"),
-    ("castle-keep", "assets/castles/keep.png", 256, 256, 92, "city"),
-    ("castle-castle", "assets/castles/castle.png", 256, 256, 92, "city"),
-    ("castle-city", "assets/castles/city.png", 256, 256, 92, "city"),
+    ("stronghold-gold", "assets/gold-stronghold.png", 384, 384, 88, "stronghold-object"),
+    ("stronghold-training", "assets/training-stronghold.png", 384, 384, 88, "stronghold-object"),
+    ("stronghold-speed", "assets/speed-stronghold.png", 384, 384, 88, "stronghold-object"),
+    ("stronghold-defense", "assets/defense-stronghold.png", 384, 384, 88, "stronghold-object"),
+    ("crown-citadel", "assets/crown-citadel.png", 384, 384, 88, "citadel-object"),
+    ("camp-gold", "assets/camps/gold.png", 384, 384, 88, "camp-object"),
+    ("camp-troops", "assets/camps/troops.png", 384, 384, 88, "camp-object"),
+    ("camp-items", "assets/camps/items.png", 384, 384, 88, "camp-object"),
+    ("camp-deed", "assets/camps/deed.png", 384, 384, 88, "camp-object"),
+    ("castle-shack", "assets/castles/shack.png", 256, 256, 92, "city-object"),
+    ("castle-fort", "assets/castles/fort.png", 256, 256, 92, "city-object"),
+    ("castle-keep", "assets/castles/keep.png", 256, 256, 92, "city-object"),
+    ("castle-castle", "assets/castles/castle.png", 256, 256, 92, "city-object"),
+    ("castle-city", "assets/castles/city.png", 256, 256, 92, "city-object"),
     ("inner-castle-hub", "assets/inner-castle/inner-castle-hub.png", 1280, 960, 84, "inner-castle"),
     ("inner-castle-treasury", "assets/inner-castle/treasury.png", 512, 512, 84, "inner-castle"),
     ("inner-castle-great-hall", "assets/inner-castle/great-hall.png", 512, 512, 84, "inner-castle"),
@@ -69,40 +84,41 @@ ASSETS = (
     ("gear-war-captain", "assets/gear/war-captain.png", 768, 1024, 82, "gear"),
     ("gear-master-of-coin", "assets/gear/master-of-coin.png", 768, 1024, 82, "gear"),
     ("gear-cavalry-master", "assets/gear/cavalry-master.png", 768, 1024, 82, "gear"),
-    ("gear-defensive-commander", "assets/gear/defensive-commander.png", 768, 1024, 82, "gear"),
-    ("item-common-gear-box", "assets/gear/common-gear-box.png", 192, 192, 88, "gear"),
-    ("gear-barracks-head", "assets/gear/barracks/head.png", 192, 192, 84, "gear"),
-    ("gear-barracks-chest", "assets/gear/barracks/chest.png", 192, 192, 84, "gear"),
-    ("gear-barracks-pants", "assets/gear/barracks/pants.png", 192, 192, 84, "gear"),
-    ("gear-barracks-boots", "assets/gear/barracks/boots.png", 192, 192, 84, "gear"),
-    ("gear-barracks-gloves", "assets/gear/barracks/gloves.png", 192, 192, 84, "gear"),
-    ("gear-barracks-belt", "assets/gear/barracks/belt.png", 192, 192, 84, "gear"),
-    ("gear-barracks-weapon", "assets/gear/barracks/weapon.png", 192, 192, 84, "gear"),
-    ("gear-barracks-necklace", "assets/gear/barracks/necklace.png", 192, 192, 84, "gear"),
-    ("gear-treasury-head", "assets/gear/treasury/head.png", 192, 192, 84, "gear"),
-    ("gear-treasury-chest", "assets/gear/treasury/chest.png", 192, 192, 84, "gear"),
-    ("gear-treasury-pants", "assets/gear/treasury/pants.png", 192, 192, 84, "gear"),
-    ("gear-treasury-boots", "assets/gear/treasury/boots.png", 192, 192, 84, "gear"),
-    ("gear-treasury-gloves", "assets/gear/treasury/gloves.png", 192, 192, 84, "gear"),
-    ("gear-treasury-belt", "assets/gear/treasury/belt.png", 192, 192, 84, "gear"),
-    ("gear-treasury-weapon", "assets/gear/treasury/weapon.png", 192, 192, 84, "gear"),
-    ("gear-treasury-necklace", "assets/gear/treasury/necklace.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-head", "assets/gear/royal-stables/head.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-chest", "assets/gear/royal-stables/chest.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-pants", "assets/gear/royal-stables/pants.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-boots", "assets/gear/royal-stables/boots.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-gloves", "assets/gear/royal-stables/gloves.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-belt", "assets/gear/royal-stables/belt.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-weapon", "assets/gear/royal-stables/weapon.png", 192, 192, 84, "gear"),
-    ("gear-royal-stables-necklace", "assets/gear/royal-stables/necklace.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-head", "assets/gear/gatehouse/head.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-chest", "assets/gear/gatehouse/chest.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-pants", "assets/gear/gatehouse/pants.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-boots", "assets/gear/gatehouse/boots.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-gloves", "assets/gear/gatehouse/gloves.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-belt", "assets/gear/gatehouse/belt.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-weapon", "assets/gear/gatehouse/weapon.png", 192, 192, 84, "gear"),
-    ("gear-gatehouse-necklace", "assets/gear/gatehouse/necklace.png", 192, 192, 84, "gear"),
+    ("gear-defensive-commander", "assets/gear/defensive-commander.png", 768, 1024, 76, "gear"),
+    ("item-common-gear-box", "assets/gear/common-gear-box.png", 192, 192, 88, "gear-box"),
+    ("item-common-gear-box-open", "assets/gear/common-gear-box-open.png", 256, 256, 88, "gear-box"),
+    ("gear-barracks-head", "assets/gear/barracks/head.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-chest", "assets/gear/barracks/chest.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-pants", "assets/gear/barracks/pants.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-boots", "assets/gear/barracks/boots.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-gloves", "assets/gear/barracks/gloves.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-belt", "assets/gear/barracks/belt.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-weapon", "assets/gear/barracks/weapon.png", 192, 192, 84, "gear-item"),
+    ("gear-barracks-necklace", "assets/gear/barracks/necklace.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-head", "assets/gear/treasury/head.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-chest", "assets/gear/treasury/chest.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-pants", "assets/gear/treasury/pants.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-boots", "assets/gear/treasury/boots.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-gloves", "assets/gear/treasury/gloves.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-belt", "assets/gear/treasury/belt.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-weapon", "assets/gear/treasury/weapon.png", 192, 192, 84, "gear-item"),
+    ("gear-treasury-necklace", "assets/gear/treasury/necklace.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-head", "assets/gear/royal-stables/head.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-chest", "assets/gear/royal-stables/chest.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-pants", "assets/gear/royal-stables/pants.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-boots", "assets/gear/royal-stables/boots.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-gloves", "assets/gear/royal-stables/gloves.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-belt", "assets/gear/royal-stables/belt.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-weapon", "assets/gear/royal-stables/weapon.png", 192, 192, 84, "gear-item"),
+    ("gear-royal-stables-necklace", "assets/gear/royal-stables/necklace.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-head", "assets/gear/gatehouse/head.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-chest", "assets/gear/gatehouse/chest.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-pants", "assets/gear/gatehouse/pants.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-boots", "assets/gear/gatehouse/boots.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-gloves", "assets/gear/gatehouse/gloves.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-belt", "assets/gear/gatehouse/belt.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-weapon", "assets/gear/gatehouse/weapon.png", 192, 192, 84, "gear-item"),
+    ("gear-gatehouse-necklace", "assets/gear/gatehouse/necklace.png", 192, 192, 84, "gear-item"),
 )
 
 
@@ -110,12 +126,24 @@ def relative(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
+def fit_image(image: Image.Image, max_width: int, max_height: int, category: str) -> Image.Image:
+    image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS, reducing_gap=3.0)
+    if category not in FIXED_LAYOUT_CATEGORIES:
+        return image
+    canvas = Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))
+    left = (max_width - image.width) // 2
+    top = (max_height - image.height) // 2
+    canvas.alpha_composite(image.convert("RGBA"), (left, top))
+    return canvas
+
+
 def build_asset(asset_id: str, source_name: str, max_width: int, max_height: int, quality: int, category: str) -> dict:
     source_path = ROOT / source_name
     with Image.open(source_path) as original:
         has_alpha = "A" in original.getbands() or "transparency" in original.info
         image = original.convert("RGBA" if has_alpha else "RGB")
-        image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS, reducing_gap=3.0)
+        image = fit_image(image, max_width, max_height, category)
+        has_alpha = "A" in image.getbands() or "transparency" in image.info
 
         buffer = io.BytesIO()
         image.save(

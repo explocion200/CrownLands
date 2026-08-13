@@ -8,6 +8,7 @@ const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "ut
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const layout = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
+const mapManifest = JSON.parse(fs.readFileSync(path.join(root, "assets", "worlds", "world_01", "map-manifest.json"), "utf8"));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -67,6 +68,12 @@ assert(
   "Map images should continue using cache-first service-worker delivery."
 );
 assert(
+  worker.includes("const cache = await caches.open(CACHE_NAME)")
+    && worker.includes("const cached = await cache.match(request)")
+    && !worker.includes("const cached = await caches.match(request)"),
+  "Static assets must only resolve from the active build cache."
+);
+assert(
   worker.includes("function isWorldMapImageRequest(url)")
     && worker.includes("if (isWorldMapImageRequest(url)) return Response.error();"),
   "A failed world map must not masquerade as a successfully decoded generic image fallback."
@@ -99,7 +106,7 @@ for (const map of layout.maps || []) {
     const strongholdType = String(objective.strongholdType || objective.type || "").toLowerCase();
     const artSrc = String(objective.artSrc || "");
     assert(
-      /^assets\/optimized\/(?:crown-citadel|stronghold-[\w-]+)-384x384-[0-9a-f]{12}\.webp$/.test(artSrc),
+      /^assets\/optimized\/(?:crown-citadel|stronghold-[\w-]+)-[1-9]\d{1,3}x[1-9]\d{1,3}-[0-9a-f]{12}\.webp$/.test(artSrc),
       `${objective.id} should use content-hashed optimized objective artwork.`
     );
     assert(fs.existsSync(path.join(root, artSrc)), `${objective.id} objective artwork is missing.`);
@@ -109,7 +116,7 @@ for (const map of layout.maps || []) {
     const campType = String(camp.campType || camp.type || "gold").toLowerCase();
     const artSrc = String(camp.artSrc || "");
     assert(
-      /^assets\/optimized\/camp-[\w-]+-[0-9a-f]{12}\.webp$/.test(artSrc),
+      /^assets\/optimized\/camp-[\w-]+-[1-9]\d{1,3}x[1-9]\d{1,3}-[0-9a-f]{12}\.webp$/.test(artSrc),
       `${camp.id} should use content-hashed optimized camp artwork.`
     );
     assert(fs.existsSync(path.join(root, artSrc)), `${camp.id} camp artwork is missing.`);
@@ -153,6 +160,7 @@ const normalizeOnlineCampState = vm.runInNewContext(
   `(${extractFunction(game, "normalizeOnlineCampState")})`,
   {
     REWARD_CAMP_COMBAT_VERSION: 1,
+    DEFAULT_CAMP_VISUAL_SIZE: 132,
     WORLD_CAMPS_BY_ID: staleCampBases,
     getRewardCampConfig(camp) {
       return {
@@ -211,6 +219,10 @@ for (const map of layout.maps || []) {
   const thumbnailPath = path.join(root, String(map.thumbnailSrc || ""));
   assert(map.thumbnailSrc, `${map.id} should use an optimized map-picker thumbnail.`);
   assert(
+    /^assets\/worlds\/world_01\/maps\/versioned\/[\w-]+-[0-9a-f]{12}\.webp$/.test(map.imageSrc),
+    `${map.id} should use a content-hashed immutable gameplay map.`
+  );
+  assert(
     /^assets\/worlds\/world_01\/thumbnails\/versioned\/[\w-]+-[0-9a-f]{12}\.webp$/.test(map.thumbnailSrc),
     `${map.id} should use a content-hashed immutable thumbnail.`
   );
@@ -220,6 +232,7 @@ for (const map of layout.maps || []) {
   fullMapBytes += fs.statSync(fullMapPath).size;
   thumbnailBytes += fs.statSync(thumbnailPath).size;
 }
+assert(mapManifest.maps?.length === 15, "The immutable gameplay-map manifest must contain all 15 regions.");
 assert(thumbnailBytes < fullMapBytes * 0.1, "Map-picker thumbnails should stay below 10% of full map art size.");
 
 console.log(`Map image loading validation passed (${thumbnailBytes} thumbnail bytes vs ${fullMapBytes} full-map bytes).`);

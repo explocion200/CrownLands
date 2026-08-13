@@ -7,6 +7,16 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gear = require(path.join(root, "common-gear.js"));
 
+function pngMetadata(relativePath) {
+  const buffer = fs.readFileSync(path.join(root, relativePath));
+  assert.equal(buffer.toString("ascii", 1, 4), "PNG", `${relativePath} must be a PNG.`);
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    colorType: buffer[25],
+  };
+}
+
 assert.equal(gear.DEFINITIONS.length, 32, "Common Gear must define four complete eight-slot sets.");
 assert.deepEqual(gear.SLOTS, ["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"]);
 assert.equal(new Set(gear.DEFINITIONS.map(item => item.gearKey)).size, 32, "Gear keys must be unique.");
@@ -15,11 +25,26 @@ gear.DEFINITIONS.forEach(definition => {
   assert.match(definition.art, new RegExp(`^assets/optimized/gear-${definition.buildingId}-${definition.slot}-`), `Incorrect art mapping for ${definition.gearKey}.`);
   const sourcePath = path.join(root, "assets", "gear", definition.buildingId, `${definition.slot}.png`);
   assert(fs.existsSync(sourcePath), `Missing source artwork for ${definition.gearKey}.`);
-  const png = fs.readFileSync(sourcePath);
-  assert.equal(png.toString("ascii", 1, 4), "PNG", `${sourcePath} must be a PNG.`);
-  assert(png.readUInt32BE(16) >= 512 && png.readUInt32BE(20) >= 512, `${sourcePath} is too small for a quality source asset.`);
-  assert([4, 6].includes(png[25]), `${sourcePath} must retain transparency.`);
+  const metadata = pngMetadata(path.relative(root, sourcePath));
+  assert.equal(metadata.width, 1254, `${sourcePath} must use the canonical Common Gear source width.`);
+  assert.equal(metadata.height, 1254, `${sourcePath} must use the canonical Common Gear source height.`);
+  assert([4, 6].includes(metadata.colorType), `${sourcePath} must retain transparency.`);
 });
+const officerSources = {
+  barracks: "assets/gear/war-captain.png",
+  treasury: "assets/gear/master-of-coin.png",
+  "royal-stables": "assets/gear/cavalry-master.png",
+  gatehouse: "assets/gear/defensive-commander.png",
+};
+Object.entries(officerSources).forEach(([buildingId, source]) => {
+  const metadata = pngMetadata(source);
+  assert.equal(metadata.width, 1086, `${source} must use the canonical officer portrait width.`);
+  assert.equal(metadata.height, 1448, `${source} must use the canonical officer portrait height.`);
+  assert.equal(metadata.colorType, 2, `${source} must remain an opaque RGB portrait.`);
+  assert.equal(gear.BUILDINGS[buildingId].gender, "male", `${buildingId} officer must remain explicitly male.`);
+});
+assert.equal(gear.getDefinition("treasury_weapon_common_01").isToolInsteadOfWeapon, true, "Treasury weapon slot must remain an administrative tool.");
+assert.match(gear.getDefinition("treasury_weapon_common_01").gearName, /Ledger/, "Treasury tool must remain visibly identified as a ledger.");
 assert.equal(gear.BOX_REVEAL_COUNT, 3);
 assert.equal(gear.SHOP_DAILY_LIMIT, 1);
 assert.equal(gear.SHOP_PRICE_GOLD, 1_000_000_000, "The Common Gear Box must cost exactly 1 billion gold.");
@@ -86,7 +111,7 @@ const economyResultSection = game.slice(
   game.indexOf("function mergeServerEconomyRefreshOptions")
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
-const css = read("styles.css");
+const css = `${read("styles.css")}\n${read("interface-theme.css")}`;
 assert.match(
   css,
   /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,
@@ -132,6 +157,11 @@ expectedAssets.forEach(id => {
   const asset = manifest.assets.find(entry => entry.id === id);
   assert(asset, `Missing optimized Common Gear artwork: ${id}`);
   assert(fs.existsSync(path.join(root, asset.output)), `Missing optimized file for ${id}`);
+  if (id.startsWith("gear-")) {
+    assert.equal(asset.width, 768, `${id} optimized portrait width drifted.`);
+    assert.equal(asset.height, 1024, `${id} optimized portrait height drifted.`);
+    assert.equal(asset.hasAlpha, false, `${id} optimized portrait must remain opaque.`);
+  }
 });
 gear.DEFINITIONS.forEach(definition => {
   const id = `gear-${definition.buildingId}-${definition.slot}`;
@@ -139,6 +169,9 @@ gear.DEFINITIONS.forEach(definition => {
   assert(asset, `Missing optimized item artwork: ${id}`);
   assert.equal(asset.output, definition.art, `Definition path does not match optimized manifest for ${id}.`);
   assert.equal(asset.hasAlpha, true, `${id} must preserve alpha transparency.`);
+  assert.equal(asset.category, "gear-item", `${id} must use the fixed-layout gear-item category.`);
+  assert.equal(asset.width, 192, `${id} optimized width must remain fixed at 192px.`);
+  assert.equal(asset.height, 192, `${id} optimized height must remain fixed at 192px.`);
   assert(asset.bytes <= 140 * 1024, `${id} exceeds the per-file gear art budget.`);
   assert(fs.existsSync(path.join(root, asset.output)), `Missing optimized file for ${id}.`);
 });
@@ -148,4 +181,4 @@ browserContext.window = browserContext;
 vm.runInNewContext(read("common-gear.js"), browserContext);
 assert.equal(browserContext.CROWNLANDS_COMMON_GEAR.DEFINITIONS.length, 32, "Browser Common Gear config failed to load.");
 
-console.log("Validated Common Gear definitions, authoritative rewards/actions, secure storage, UI, bonuses, and optimized art.");
+console.log("Validated Common Gear definitions, male officer standard, canonical art dimensions, authoritative rewards/actions, secure storage, UI, bonuses, and optimized art.");

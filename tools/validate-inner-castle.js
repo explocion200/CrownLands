@@ -5,7 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gameSource = read("game.js");
-const stylesSource = read("styles.css");
+const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
 const serverSource = read("functions/index.js");
@@ -15,13 +15,74 @@ const serverEconomySource = read("functions/economy-config.json");
 const functionsPackage = JSON.parse(read("functions/package.json"));
 const optimizedArtManifest = JSON.parse(read("assets/optimized/manifest.json"));
 
-function optimizedAsset(id) {
-  const output = optimizedArtManifest.assets.find(asset => asset.id === id)?.output;
-  assert.ok(output, `Missing optimized artwork manifest entry: ${id}.`);
-  return output;
+function optimizedAssetEntry(id) {
+  const entry = optimizedArtManifest.assets.find(asset => asset.id === id);
+  assert.ok(entry, `Missing optimized artwork manifest entry: ${id}.`);
+  return entry;
 }
 
-const BUILD_ID = "20260810-daily-mission-camp-fix-v1";
+function optimizedAsset(id) {
+  return optimizedAssetEntry(id).output;
+}
+
+function readUInt24LE(buffer, offset) {
+  return buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16);
+}
+
+function getPngMetadata(buffer) {
+  assert.equal(buffer.toString("hex", 0, 8), "89504e470d0a1a0a", "PNG is missing its signature.");
+  assert.equal(buffer.toString("ascii", 12, 16), "IHDR", "PNG is missing its IHDR chunk.");
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    colorType: buffer[25],
+  };
+}
+
+function getWebpMetadata(buffer) {
+  assert.equal(buffer.toString("ascii", 0, 4), "RIFF", "WebP is missing its RIFF header.");
+  assert.equal(buffer.toString("ascii", 8, 12), "WEBP", "WebP is missing its WEBP format header.");
+  let offset = 12;
+  let hasAlpha = false;
+  while (offset + 8 <= buffer.length) {
+    const chunkType = buffer.toString("ascii", offset, offset + 4);
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    const dataOffset = offset + 8;
+    if (chunkType === "VP8X") {
+      hasAlpha = Boolean(buffer[dataOffset] & 0x10);
+      return {
+        width: readUInt24LE(buffer, dataOffset + 4) + 1,
+        height: readUInt24LE(buffer, dataOffset + 7) + 1,
+        hasAlpha,
+      };
+    }
+    if (chunkType === "VP8 ") {
+      assert.equal(buffer.toString("hex", dataOffset + 3, dataOffset + 6), "9d012a", "Invalid lossy WebP frame.");
+      return {
+        width: buffer.readUInt16LE(dataOffset + 6) & 0x3fff,
+        height: buffer.readUInt16LE(dataOffset + 8) & 0x3fff,
+        hasAlpha,
+      };
+    }
+    if (chunkType === "VP8L") {
+      assert.equal(buffer[dataOffset], 0x2f, "Invalid lossless WebP frame.");
+      const b1 = buffer[dataOffset + 1];
+      const b2 = buffer[dataOffset + 2];
+      const b3 = buffer[dataOffset + 3];
+      const b4 = buffer[dataOffset + 4];
+      return {
+        width: 1 + b1 + ((b2 & 0x3f) << 8),
+        height: 1 + (b2 >> 6) + (b3 << 2) + ((b4 & 0x0f) << 10),
+        hasAlpha: Boolean(b4 & 0x10),
+      };
+    }
+    if (chunkType === "ALPH") hasAlpha = true;
+    offset = dataOffset + chunkSize + (chunkSize % 2);
+  }
+  throw new Error("WebP does not contain a supported frame.");
+}
+
+const BUILD_ID = "20260813-login-title-position-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
@@ -61,6 +122,32 @@ const BUILDINGS = [
     artSrc: optimizedAsset("inner-castle-gatehouse"),
   },
 ];
+const ART_STANDARDS = [
+  {
+    id: "inner-castle-hub",
+    source: "assets/inner-castle/inner-castle-hub.png",
+    sourceWidth: 1448,
+    sourceHeight: 1086,
+    runtimeWidth: 1280,
+    runtimeHeight: 960,
+  },
+  ...BUILDINGS.map(building => ({
+    id: `inner-castle-${building.key}`,
+    source: `assets/inner-castle/${building.key}.png`,
+    sourceWidth: 1254,
+    sourceHeight: 1254,
+    runtimeWidth: 512,
+    runtimeHeight: 512,
+  })),
+];
+const HOTSPOTS = new Map([
+  ["treasury", { left: 19, top: 24 }],
+  ["great-hall", { left: 50, top: 20 }],
+  ["barracks", { left: 81, top: 25 }],
+  ["alehouse", { left: 19, top: 57 }],
+  ["gatehouse", { left: 50, top: 75 }],
+  ["royal-stables", { left: 81, top: 58 }],
+]);
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -155,8 +242,29 @@ for (const building of BUILDINGS) {
   requireLiteral(entrySource, "role", building.role, `${building.label} has the wrong placeholder role.`);
   requireLiteral(entrySource, "artSrc", building.artSrc, `${building.label} has the wrong card-art path.`);
   assert.match(entrySource, /\bhotspot\s*:/, `${building.label} is missing hotspot coordinates.`);
-  assert.match(entrySource, /\bleft\s*:\s*\d+(?:\.\d+)?/, `${building.label} is missing a numeric left hotspot coordinate.`);
-  assert.match(entrySource, /\btop\s*:\s*\d+(?:\.\d+)?/, `${building.label} is missing a numeric top hotspot coordinate.`);
+  const expectedHotspot = HOTSPOTS.get(building.key);
+  assert.match(entrySource, new RegExp(`\\bleft\\s*:\\s*${expectedHotspot.left}\\b`), `${building.label} left hotspot drifted.`);
+  assert.match(entrySource, new RegExp(`\\btop\\s*:\\s*${expectedHotspot.top}\\b`), `${building.label} top hotspot drifted.`);
+}
+
+for (const standard of ART_STANDARDS) {
+  const sourcePath = path.join(root, standard.source);
+  assert.ok(fs.existsSync(sourcePath), `Missing Inner Castle source master: ${standard.source}.`);
+  const sourceMeta = getPngMetadata(fs.readFileSync(sourcePath));
+  assert.equal(sourceMeta.width, standard.sourceWidth, `${standard.source} source width must remain canonical.`);
+  assert.equal(sourceMeta.height, standard.sourceHeight, `${standard.source} source height must remain canonical.`);
+  assert.equal(sourceMeta.colorType, 2, `${standard.source} should remain an opaque scene PNG, not a transparent token.`);
+  const optimized = optimizedAssetEntry(standard.id);
+  assert.equal(optimized.category, "inner-castle", `${standard.id} must stay in the inner-castle optimized category.`);
+  assert.equal(optimized.source, standard.source, `${standard.id} manifest source drifted.`);
+  assert.equal(optimized.width, standard.runtimeWidth, `${standard.id} optimized width must remain canonical.`);
+  assert.equal(optimized.height, standard.runtimeHeight, `${standard.id} optimized height must remain canonical.`);
+  assert.equal(optimized.hasAlpha, false, `${standard.id} must stay an opaque runtime scene.`);
+  assert.ok(fs.existsSync(path.join(root, optimized.output)), `${standard.id} optimized output is missing.`);
+  const encoded = getWebpMetadata(fs.readFileSync(path.join(root, optimized.output)));
+  assert.equal(encoded.width, standard.runtimeWidth, `${standard.id} encoded WebP width drifted.`);
+  assert.equal(encoded.height, standard.runtimeHeight, `${standard.id} encoded WebP height drifted.`);
+  assert.equal(encoded.hasAlpha, false, `${standard.id} encoded WebP should remain opaque.`);
 }
 
 const guardSource = extractFunction(gameSource, "canEnterInnerCastle");

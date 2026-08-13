@@ -5,7 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
-const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 const indexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
 
 assert.match(firebaseSource, /function subscribePlayerCamps[\s\S]*?collectionGroup\(client\.db, "camps"\)[\s\S]*?where\("holderUid", "==", client\.user\.uid\)/, "Held camps should use one ownership-only collection-group listener.");

@@ -13,6 +13,10 @@ let networkFetchCount = 0;
 let cacheWarningCount = 0;
 
 const cache = {
+  async match(request) {
+    const url = typeof request === "string" ? request : request.url;
+    return cacheEntries.get(url);
+  },
   async put(request, response) {
     cachePutCount += 1;
     const url = typeof request === "string" ? request : request.url;

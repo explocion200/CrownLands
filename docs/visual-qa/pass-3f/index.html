@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Pass 3F Visual QA</title>
+  <link rel="stylesheet" href="../../../styles.css?v=20260812-items-pass-3f-r3" />
+  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260812-items-pass-3f-r3" />
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #eadfc7; background: #17120e; font-family: Georgia, serif; }
+    main { width: min(1440px, calc(100% - 24px)); margin: 0 auto; padding: 18px 0 48px; }
+    h1, h2 { margin: 0 0 12px; color: #f0e3c5; }
+    h2 { margin-top: 30px; padding-bottom: 8px; border-bottom: 1px solid #6d5640; }
+    .qa-note { color: #cbbd9f; }
+    .qa-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .qa-card { min-width: 0; padding: 10px; border: 1px solid #665441; border-radius: 5px; background: #2a2018; box-shadow: 0 5px 12px #0008; }
+    .qa-card h3 { margin: 0 0 8px; color: #dbc69b; font-size: 15px; }
+    .old-new { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    figure { margin: 0; }
+    .old-new img { width: 100%; display: block; aspect-ratio: 1; object-fit: contain; border: 1px solid #17110d; background: #b9a77c; }
+    figcaption { margin-top: 4px; color: #b9a98b; font-size: 11px; }
+    .context-list { display: grid; gap: 18px; }
+    .context { position: relative; min-width: 0; min-height: 420px; overflow: hidden; border: 1px solid #665441; border-radius: 5px; background: #201812; }
+    .context > h3 { margin: 0; padding: 8px 12px; color: #e4d3ae; border-bottom: 1px solid #665441; background: #33251c; font-size: 14px; }
+    .context-stage { position: relative; height: calc(100% - 35px); min-height: 385px; padding: 12px; overflow: auto; }
+    .qa-modal-card { width: min(920px, 100%); margin: 0 auto; padding: 12px; border: 2px solid #54371f; border-radius: 5px; background: var(--cl-timber-panel); }
+    .qa-modal-card > h4 { margin: 0 0 9px; color: #f0e3c5; }
+    .shop-panel, .inventory-panel { max-width: 880px; margin: 0 auto; }
+    .shop-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .shop-item { min-height: 92px; }
+    .shop-item-copy { color: #35271c; }
+    .shop-buy-btn { min-width: 78px; }
+    .inventory-slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .inventory-slot { min-height: 118px; }
+    .hud-scene, .map-scene { min-height: 490px; background: url("../../../assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp") center / cover; }
+    .hud-scene .active-item-effects-stack { top: 50%; right: 18px; }
+    .hud-caption { position: absolute; left: 18px; bottom: 18px; max-width: 390px; padding: 9px 12px; color: #37271c; border: 1px solid #54371f; background: var(--cl-parchment-sheet); }
+    .active-item-effects-stack .effect-status-badge { display: grid; }
+    .reward-contexts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .daily-reward-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .daily-missions-section, .seasonal-achievement-panel { min-height: 0; }
+    .map-scene { position: relative; overflow: hidden; }
+    .map-pickup { position: absolute; left: var(--left); top: var(--top); }
+    .protected-city { position: absolute; left: 66%; top: 54%; width: 110px; height: 110px; transform: translate(-50%, -50%); }
+    .protected-city .city-castle { position: absolute; inset: 20px; display: grid; place-items: center; }
+    .protected-city .city-castle img { width: 88px; height: 88px; object-fit: contain; filter: drop-shadow(0 5px 5px #0009); }
+    .protected-city .city-shield-field { --city-art-size: 94px; bottom: 4px; }
+    .protected-city-label { position: absolute; left: 50%; top: -12px; padding: 3px 6px; color: #f2e6ca; background: #251a12de; transform: translateX(-50%); white-space: nowrap; }
+    .reveal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .reveal-state { min-height: 360px; display: grid; align-content: center; border: 1px solid #5d4938; background: #251c16; }
+    .reveal-state .common-gear-reveal-shell { min-height: 350px; }
+    .reveal-state.open .gear-box-closed-state { opacity: 0; }
+    .reveal-state.open .gear-box-open-state { opacity: 1; transform: none; }
+    .reveal-state.open .gear-box-latch { opacity: .2; transform: rotate(78deg); }
+    .common-gear-reveal-cards { width: 96%; }
+    .common-gear-reveal-card { color: #302419; }
+    body.focus-mode main { width: 100vw; height: 100vh; padding: 0; }
+    body.focus-mode main > :not(.context-list), body.focus-mode .context:not(.focused) { display: none; }
+    body.focus-mode .context-list, body.focus-mode .context.focused { display: block; height: 100%; }
+    body.focus-mode .context.focused { min-height: 100vh; border: 0; }
+    body.focus-mode .context.focused > h3 { height: 35px; }
+    body.focus-mode .context.focused .context-stage { height: calc(100vh - 35px); }
+    @media (max-width: 900px) { .qa-grid, .reward-contexts, .reveal-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 700px) { .qa-grid, .shop-items, .reward-contexts, .reveal-grid { grid-template-columns: 1fr; } }
+    @media (max-height: 560px) and (orientation: landscape) {
+      .context-stage { min-height: 0; }
+      .qa-modal-card { padding: 7px; }
+      .qa-modal-card > h4 { margin-bottom: 5px; font-size: 14px; }
+      .shop-items { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+      .shop-item { min-height: 66px; padding: 5px 6px; }
+      .shop-item-copy small:nth-of-type(n+2) { display: none; }
+      .inventory-slots { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
+      .inventory-slot { min-height: 100px; padding: 5px 3px; }
+      .reward-contexts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .daily-reward-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Pass 3F - High-Frequency Item Artwork</h1>
+  <p class="qa-note">Development-only visual QA. Use <code>?view=shop</code>, <code>bag</code>, <code>hud</code>, <code>rewards</code>, <code>map</code>, or <code>reveal</code> for responsive captures.</p>
+
+  <h2>Old vs New</h2>
+  <section class="qa-grid" id="comparisonGrid"></section>
+
+  <h2>Runtime Contexts</h2>
+  <section class="context-list">
+    <article class="context" data-view="shop">
+      <h3>Royal Quartermaster Shop</h3>
+      <div class="context-stage"><div class="qa-modal-card"><h4>Shop</h4><div class="shop-panel">
+        <section class="shop-balance"><span>Gold available</span><strong>12,840,000</strong></section>
+        <div class="shop-items" id="shopItems"></div>
+      </div></div></div>
+    </article>
+
+    <article class="context" data-view="bag">
+      <h3>Bag and Active Supplies</h3>
+      <div class="context-stage"><div class="qa-modal-card"><h4>Bag</h4><div class="inventory-panel">
+        <section class="inventory-summary"><span>Item slots <small>Shield 8h 42m | Drums 18m</small></span><strong>8/8</strong></section>
+        <div class="inventory-slots" id="inventorySlots"></div>
+        <section class="inventory-selection"><span class="inventory-selection-icon has-image"><img class="inventory-selection-image" src="../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" alt="" /></span><div class="inventory-selection-copy"><strong>Royal Peace Shield</strong><small>The Crown places regular cities under temporary protection.</small><span>Owned: 2</span></div><button class="inventory-use-btn" type="button">Use</button></section>
+      </div></div></div>
+    </article>
+
+    <article class="context" data-view="hud">
+      <h3>Active Effect HUD</h3>
+      <div class="context-stage hud-scene">
+        <div class="active-item-effects-stack">
+          <div class="effect-status-badge shield-status-badge"><img class="effect-status-icon" src="../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" alt="" /><strong>8:42:17</strong></div>
+          <div class="effect-status-badge war-drums-status-badge"><img class="effect-status-icon" src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /><strong>18:04</strong></div>
+          <div class="effect-status-badge tax-decree-status-badge"><img class="effect-status-icon" src="../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" alt="" /><strong>24:51</strong></div>
+          <div class="effect-status-badge veil-status-badge"><img class="effect-status-icon" src="../../../assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp" alt="" /><strong>03:48</strong></div>
+        </div>
+        <p class="hud-caption">Compact physical-object markers and parchment timers stay legible over the map without glowing icon tiles.</p>
+      </div>
+    </article>
+
+    <article class="context" data-view="rewards">
+      <h3>Daily, Mission, and Achievement Rewards</h3>
+      <div class="context-stage"><div class="qa-modal-card"><h4>Rewards</h4><div class="reward-contexts">
+        <section><h3>Daily Login</h3><div class="daily-reward-grid" id="dailyGrid"></div></section>
+        <section class="daily-missions-section"><h3>Mission Reward</h3><article class="daily-mission-row complete"><span class="daily-mission-icon">M</span><div class="daily-mission-copy"><div><strong>Raise the Levy</strong><span>5/5</span></div><small>Complete five troop orders.</small><span class="daily-mission-progress"><i style="width:100%"></i></span></div><div class="daily-mission-reward"><small>Reward</small><strong>1.0h troops</strong></div><div class="daily-mission-action"><button class="daily-mission-claim">Claim</button></div></article></section>
+        <section class="seasonal-achievement-panel"><h3>Achievement Reward</h3><article class="seasonal-achievement-row complete"><span class="seasonal-achievement-row-icon">A</span><div class="seasonal-achievement-row-copy"><span>Growth</span><strong>Royal Stores</strong><p>Secure the kingdom's supply.</p><div class="seasonal-achievement-progress"><span style="width:100%"></span></div><small>10 / 10</small></div><div class="seasonal-achievement-reward"><span>Reward</span><strong>Royal Tax Decree</strong><button>Claim</button></div></article></section>
+      </div></div></div>
+    </article>
+
+    <article class="context" data-view="map">
+      <h3>Map Pickups and Protected City</h3>
+      <div class="context-stage map-scene">
+        <button class="harvest-bonus-node map-pickup" style="--left:28%;--top:38%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-gold-192x192-a1de679b797d.webp" alt="Gold pickup" /></span></button>
+        <button class="harvest-bonus-node harvest-bonus-troops map-pickup" style="--left:45%;--top:66%"><span><img class="harvest-bonus-icon" src="../../../assets/optimized/pickup-troops-192x192-ed370610c5b6.webp" alt="Troop pickup" /></span></button>
+        <div class="protected-city"><span class="protected-city-label">Redhaven | Protected</span><span class="city-shield-field"><img src="../../../assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" /></span><span class="city-castle"><img src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span></div>
+      </div>
+    </article>
+
+    <article class="context" data-view="reveal">
+      <h3>Common Gear Box Reveal Sequence</h3>
+      <div class="context-stage"><div class="reveal-grid">
+        <section class="reveal-state"><div class="common-gear-reveal-shell"><button class="common-gear-box-open" type="button"><span class="common-gear-box-art"><img class="gear-box-closed-state" src="../../../assets/optimized/item-common-gear-box-192x192-d31500be5747.webp" alt="" /><img class="gear-box-open-state" src="../../../assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp" alt="" /><span class="gear-box-latch"></span></span><strong>Tap to open</strong><small>Exactly 3 Common pieces</small></button></div></section>
+        <section class="reveal-state open"><div class="common-gear-reveal-shell"><button class="common-gear-box-open" type="button"><span class="common-gear-box-art"><img class="gear-box-closed-state" src="../../../assets/optimized/item-common-gear-box-192x192-d31500be5747.webp" alt="" /><img class="gear-box-open-state" src="../../../assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp" alt="" /><span class="gear-box-latch"></span></span><strong>Chest opened</strong><small>Latch, lid, cloth, and packed gear</small></button></div></section>
+        <section class="reveal-state"><div class="common-gear-reveal-shell revealed"><div class="common-gear-reveal-cards"><article class="common-gear-reveal-card"><img src="../../../assets/optimized/gear-barracks-head-192x192-ddfca042092e.webp" alt="" /><span class="common-gear-rarity">Common - Level 1</span><strong>Iron Helm</strong><small>Barracks</small><b>+0.25%</b></article><article class="common-gear-reveal-card"><img src="../../../assets/optimized/gear-treasury-weapon-192x192-a0b3ce1bda06.webp" alt="" /><span class="common-gear-rarity">Common - Level 1</span><strong>Royal Ledger</strong><small>Treasury</small><b>+0.25%</b></article><article class="common-gear-reveal-card"><img src="../../../assets/optimized/gear-royal-stables-boots-192x192-4878bf5c812e.webp" alt="" /><span class="common-gear-rarity">Common - Level 1</span><strong>Silver Spurs</strong><small>Royal Stables</small><b>+0.25%</b></article></div></div></section>
+      </div></div>
+    </article>
+  </section>
+</main>
+<script>
+  const root = "../../../";
+  const items = [
+    ["Common Gear Box", "item-common-gear-box-192x192-d31500be5747.webp", "1,000,000,000 gold", "common_gear_box"],
+    ["Royal Peace Shield", "item-peace-shield-160x160-4cc2aabe0087.webp", "1,250,000 gold", "shield_12h"],
+    ["War Drums", "item-war-drums-160x160-0d7a58c4b986.webp", "75,000 gold", "war_drums_30m"],
+    ["Royal Tax Decree", "item-royal-tax-decree-160x160-d160f6b40e14.webp", "150,000 gold", "royal_tax_decree_30m"],
+    ["Veil of Silence", "item-veil-of-silence-160x160-ea2992af0cd1.webp", "125,000 gold", "veil_of_silence_30m"],
+    ["Swift March Order", "item-swift-march-160x160-e857cc4d8977.webp", "300,000 gold", "swift_march_order"],
+    ["Recall Horn", "item-recall-horn-160x160-b261d10e9c8b.webp", "500,000 gold", "recall_horn"],
+  ];
+  const comparisons = [
+    ["Common Gear Box", "common-gear-box.png", "item-common-gear-box-192x192-d31500be5747.webp"],
+    ["Royal Peace Shield", "royal-peace-shield-icon.webp", "item-peace-shield-160x160-4cc2aabe0087.webp"],
+    ["War Drums", "war-drums-icon.webp", "item-war-drums-160x160-0d7a58c4b986.webp"],
+    ["Royal Tax Decree", "royal-tax-decree-icon.webp", "item-royal-tax-decree-160x160-d160f6b40e14.webp"],
+    ["Veil of Silence", "veil-of-silence-icon.webp", "item-veil-of-silence-160x160-ea2992af0cd1.webp"],
+    ["Swift March Order", "swift-march-order-icon.webp", "item-swift-march-160x160-e857cc4d8977.webp"],
+    ["Recall Horn", "recall-horn-icon.webp", "item-recall-horn-160x160-b261d10e9c8b.webp"],
+    ["Gold Pickup", "gold-pickup.png", "pickup-gold-192x192-a1de679b797d.webp"],
+    ["Troop Pickup", "troop-pickup.png", "pickup-troops-192x192-ed370610c5b6.webp"],
+  ];
+  comparisonGrid.innerHTML = comparisons.map(([label, oldArt, newArt]) => `<article class="qa-card"><h3>${label}</h3><div class="old-new"><figure><img src="old-assets/${oldArt}" alt="Old ${label}" /><figcaption>Old</figcaption></figure><figure><img src="${root}assets/optimized/${newArt}" alt="New ${label}" /><figcaption>Pass 3F</figcaption></figure></div></article>`).join("");
+  shopItems.innerHTML = items.map(([label, art, price, id]) => `<article class="shop-item" data-shop-item="${id}"><div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="${root}assets/optimized/${art}" alt="" /></div><div class="shop-item-copy"><strong>${label}</strong><span>${price}</span><small>Grounded Crownlands supply item</small></div><button class="shop-buy-btn" type="button">Buy</button></article>`).join("");
+  inventorySlots.innerHTML = [...items, ["Gold Pickup", "pickup-gold-192x192-a1de679b797d.webp", "x1", "gold"]].map(([label, art], index) => `<button class="inventory-slot filled${index === 1 ? " selected" : ""}" type="button"><span class="inventory-slot-icon has-image"><img class="inventory-slot-image" src="${root}assets/optimized/${art}" alt="" /></span><span class="inventory-slot-name">${label}</span><span class="inventory-slot-count">x${index + 1}</span></button>`).join("");
+  const daily = [items[1], items[2], items[3], items[4], items[5], items[6], ["Gold", "pickup-gold-192x192-a1de679b797d.webp"], ["Troops", "pickup-troops-192x192-ed370610c5b6.webp"], items[0], items[3]];
+  dailyGrid.innerHTML = daily.map(([label, art], index) => `<article class="daily-reward-card ${index < 3 ? "claimed" : index === 3 ? "available" : "locked"}"><img class="daily-reward-card-icon" src="${root}assets/optimized/${art}" alt="" /><strong class="daily-reward-card-amount">${index % 3 === 0 ? "1h" : "x1"}</strong><span class="sr-only">${label}</span></article>`).join("");
+  const requested = new URLSearchParams(location.search).get("view");
+  if (requested) {
+    const selected = document.querySelector(`[data-view="${CSS.escape(requested)}"]`);
+    if (selected) { document.body.classList.add("focus-mode"); selected.classList.add("focused"); }
+  }
+</script>
+</body>
+</html>

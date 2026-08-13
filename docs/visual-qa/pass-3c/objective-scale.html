@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Crownlands Pass 3C Objective Scale QA</title>
+<style>
+  :root { color-scheme: dark; font-family: Georgia, 'Times New Roman', serif; background:#241f19; color:#e9dec3; }
+  body { margin:0; padding:28px; background:#241f19; }
+  h1, h2 { color:#e5c989; margin:0 0 16px; }
+  p { max-width:940px; color:#cbb890; }
+  .sheet { display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:16px; align-items:end; }
+  .asset-card, .map-card { margin:0; border:1px solid #876638; background:#1f1a15; padding:12px; }
+  .preview { height:275px; display:grid; place-items:end center; background:linear-gradient(#2c261f,#211b16); border:1px solid #5e4729; }
+  .preview img { object-fit:contain; image-rendering:auto; filter: drop-shadow(0 8px 6px rgba(0,0,0,.45)); }
+  figcaption { display:flex; justify-content:space-between; gap:12px; margin-top:8px; font-size:14px; color:#cbb890; }
+  figcaption strong { color:#efe2c3; }
+  .map-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:18px; }
+  .map-card img { width:100%; height:auto; display:block; }
+  .full { margin:20px 0; max-width:100%; border:1px solid #876638; background:#1f1a15; }
+</style>
+</head>
+<body>
+<h1>Crownlands Pass 3C Objective Scale QA</h1>
+<p>All previews below use actual runtime display sizes: City stages 66/72/78px, Camps 132px, Strongholds 154px, Crown Citadel 260px.</p>
+<h2>Actual Map Render Sizes</h2>
+<section class="sheet">
+<figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/castle-shack-256x185-b600c028b73a.webp" style="width:66px;height:66px" alt="City Stage 1" /></div>
+  <figcaption><strong>City Stage 1</strong><span>66px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/castle-keep-256x214-2f7dc51d63ea.webp" style="width:72px;height:72px" alt="City Stage 3" /></div>
+  <figcaption><strong>City Stage 3</strong><span>72px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" style="width:78px;height:78px" alt="City Stage 5" /></div>
+  <figcaption><strong>City Stage 5</strong><span>78px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/camp-gold-384x384-1d2f43c018ae.webp" style="width:132px;height:132px" alt="Gold Camp" /></div>
+  <figcaption><strong>Gold Camp</strong><span>132px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/camp-troops-384x384-2f712333e891.webp" style="width:132px;height:132px" alt="Warband Camp" /></div>
+  <figcaption><strong>Warband Camp</strong><span>132px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/camp-items-384x384-1d7cc179b5fe.webp" style="width:132px;height:132px" alt="Relic Camp" /></div>
+  <figcaption><strong>Relic Camp</strong><span>132px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp" style="width:132px;height:132px" alt="Deed Camp" /></div>
+  <figcaption><strong>Deed Camp</strong><span>132px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/stronghold-gold-384x384-27daf74041f8.webp" style="width:154px;height:154px" alt="Gold Stronghold" /></div>
+  <figcaption><strong>Gold Stronghold</strong><span>154px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/stronghold-training-384x384-649892a49e02.webp" style="width:154px;height:154px" alt="Training Stronghold" /></div>
+  <figcaption><strong>Training Stronghold</strong><span>154px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/stronghold-speed-384x384-6d38eb192581.webp" style="width:154px;height:154px" alt="Speed Stronghold" /></div>
+  <figcaption><strong>Speed Stronghold</strong><span>154px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp" style="width:154px;height:154px" alt="Defense Stronghold" /></div>
+  <figcaption><strong>Defense Stronghold</strong><span>154px render</span></figcaption>
+</figure><figure class="asset-card">
+  <div class="preview"><img src="../../../assets/optimized/crown-citadel-384x384-a23c30392f3c.webp" style="width:260px;height:260px" alt="Crown Citadel" /></div>
+  <figcaption><strong>Crown Citadel</strong><span>260px render</span></figcaption>
+</figure>
+</section>
+<h2>Generated Scale Sheet</h2>
+<img class="full" src="objective-scale.png" alt="Objective scale comparison sheet" />
+<h2>Old vs New Camps</h2>
+<img class="full" src="old-new-camps-comparison.png" alt="Old versus new camp comparison" />
+<h2>Actual Map Camp QA</h2>
+<section class="map-grid">
+<figure class="map-card"><img src="map-qa-region-10-camp.png" alt="map-qa-region-10-camp" /><figcaption>map-qa-region-10-camp</figcaption></figure><figure class="map-card"><img src="map-qa-region-6-camp.png" alt="map-qa-region-6-camp" /><figcaption>map-qa-region-6-camp</figcaption></figure><figure class="map-card"><img src="map-qa-region-7-camp.png" alt="map-qa-region-7-camp" /><figcaption>map-qa-region-7-camp</figcaption></figure><figure class="map-card"><img src="map-qa-region-9-camp.png" alt="map-qa-region-9-camp" /><figcaption>map-qa-region-9-camp</figcaption></figure>
+</section>
+</body>
+</html>

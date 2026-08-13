@@ -124,7 +124,7 @@ const functions = read("functions/index.js");
 const client = read("firebaseClient.js");
 const game = read("game.js");
 const html = read("index.html");
-const styles = `${read("styles.css")}\n${read("daily-rewards.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("daily-rewards.css")}`;
 const rules = read("firestore.rules");
 const artManifest = JSON.parse(read("assets/optimized/manifest.json"));
 

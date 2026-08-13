@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Pass 4A-R Correction QA</title>
+  <style>
+    :root { color-scheme:dark; --ink:#f1e6cc; --muted:#c9b99a; --wood:#17110d; --panel:#241a14; --line:#765d3d; --burgundy:#6d2d34; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--wood); color:var(--ink); font:15px/1.45 Georgia,serif; }
+    header,main { width:min(1800px,100%); margin:auto; padding:24px clamp(14px,3vw,48px); }
+    header { border-bottom:1px solid var(--line); }
+    h1,h2,h3,p,figure { margin-top:0; }
+    h1 { margin-bottom:6px; font-size:clamp(27px,4vw,44px); }
+    h2 { margin-top:42px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+    .lede,.note,figcaption { color:var(--muted); }
+    .metrics,.grid,.four { display:grid; gap:14px; }
+    .metrics { grid-template-columns:repeat(4,minmax(130px,1fr)); margin-top:18px; }
+    .grid { grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); }
+    .four { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .metric,.card,figure { overflow:hidden; margin:0; border:1px solid var(--line); border-radius:4px; background:var(--panel); }
+    .metric { padding:12px; }
+    .metric strong { display:block; font-size:21px; }
+    .metric span { color:var(--muted); font-size:11px; text-transform:uppercase; }
+    h3,figcaption { margin:0; padding:8px 10px; }
+    h3 { font-size:15px; background:#1f1712; }
+    figure img,.screen { display:block; width:100%; height:auto; background:#0f0b08; }
+    .map-pair { display:grid; grid-template-columns:1fr 1fr; }
+    .map-pair img { width:100%; aspect-ratio:4/3; object-fit:cover; }
+    .asset-pair { display:grid; grid-template-columns:1fr 1fr; min-height:220px; }
+    .asset-pair figure { display:grid; grid-template-rows:1fr auto; border:0; border-radius:0; }
+    .asset-pair img { width:100%; height:220px; object-fit:contain; background:repeating-conic-gradient(#31271f 0 25%,#211914 0 50%) 50%/18px 18px; }
+    .hud-demo { min-height:150px; display:flex; align-items:center; justify-content:center; gap:8px; padding:18px; background:linear-gradient(#59644b,#313b2d); }
+    .hud-demo img { width:74px; height:74px; object-fit:contain; }
+    .hud-demo.before img { border:1px solid #6a5740; border-radius:6px; background:#221914; box-shadow:0 6px 16px #0008; }
+    .hud-demo.after img { filter:drop-shadow(0 4px 3px #000a); }
+    .profile-sample { width:110px !important; }
+    .screen { object-fit:contain; max-height:720px; }
+    .light { background:#a49368; }
+    .dark { background:#252c20; }
+    code { color:#efdba9; }
+    @media (max-width:720px) { .metrics { grid-template-columns:1fr 1fr; } .map-pair,.asset-pair { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Pass 4A-R: Visual Correction QA</h1>
+  <p class="lede">Exact map, transition, and selected HUD rollback with targeted readability and interaction polish. Development-only; excluded from production.</p>
+  <div class="metrics">
+    <div class="metric"><strong>15</strong><span>maps restored</span></div>
+    <div class="metric"><strong>5</strong><span>legacy maps restored</span></div>
+    <div class="metric"><strong>4</strong><span>HUD masters restored</span></div>
+    <div class="metric"><strong>844x390</strong><span>mobile QA</span></div>
+  </div>
+</header>
+<main>
+  <h2>Representative Map Rollback</h2>
+  <p class="note">Left: rejected Pass 4A repaint retained only for comparison. Right: exact restored pre-Pass-4A production source.</p>
+  <div class="grid" id="representativeMaps"></div>
+
+  <h2>All Restored Regional Maps</h2>
+  <div class="grid" id="allMaps"></div>
+
+  <h2>Transition Clouds</h2>
+  <div class="grid">
+    <article class="card"><h3>Pass 4A mist</h3><img class="screen" src="pre-correction-hud/map-transition-clouds.png" alt="Pass 4A map transition mist"></article>
+    <article class="card"><h3>Restored pre-Pass-4A clouds</h3><img class="screen" src="../../../assets/map-transition-clouds.png" alt="Restored map transition clouds"></article>
+    <article class="card"><h3>Live full-motion preview</h3><img class="screen" src="screenshots/after-transition-clouds-desktop.jpg" alt="Restored clouds during a live map transition"></article>
+  </div>
+
+  <h2>Selected HUD Art</h2>
+  <div class="grid" id="hudAssets"></div>
+
+  <h2>Top HUD Containers</h2>
+  <div class="grid">
+    <article class="card"><h3>Before: visible card wrappers</h3><div class="hud-demo before" id="hudBefore"></div></article>
+    <article class="card"><h3>After: independent restored controls</h3><div class="hud-demo after" id="hudAfter"></div></article>
+  </div>
+
+  <h2>Map Arrow</h2>
+  <p class="note">The hit target remains 92x92. The visible marker uses a tight <code>#D8C7A1</code>/<code>#CBB78F</code> halo instead of the former blue 9px/16px bloom.</p>
+  <div class="grid">
+    <article class="card dark"><h3>Dark terrain</h3><img class="screen" src="screenshots/after-arrow-dark-desktop.jpg" alt="Warm map arrow over dark terrain"></article>
+    <article class="card light"><h3>Light farmland</h3><img class="screen" src="screenshots/after-arrow-light-desktop.jpg" alt="Warm map arrow over light terrain"></article>
+  </div>
+
+  <h2>Readability And Panel Polish</h2>
+  <div class="grid" id="uiScreens"></div>
+
+  <h2>Android Landscape</h2>
+  <div class="grid" id="mobileScreens"></div>
+
+  <h2>Exact Desktop Viewport Proof</h2>
+  <figure><h3>1440x900 layout viewport</h3><img class="screen" src="screenshots/desktop-viewport-1440x900.jpg" alt="Crownlands at an exact 1440 by 900 CSS viewport"><figcaption>DOM viewport and scroll width both measured 1440px.</figcaption></figure>
+</main>
+<script>
+  const maps = [
+    ["center","Crownlands Heart","center-crownlands-heart-1783019616021.webp"],
+    ["west","West Marches","west-west-2-1783019399438.webp"],
+    ["east","East Reach","east-east-4-1783020191215.webp"],
+    ["north","North Frontier","north-north-1-1783019201680.webp"],
+    ["south","Southfields","south-south-5-1783020401484.webp"],
+    ["region_6","Graywood Hollow","region_6-6-1783021585258.webp"],
+    ["region_7","Greenrook Vale","region_7-7-1783022207943.webp"],
+    ["region_8","Lowroad Vale","region_8-8-1783022783978.webp"],
+    ["region_9","Stonebrook Farms","region_9-9-1783023202200.webp"],
+    ["region_10","Goldmere Plains","region_10-10-1783023599661.webp"],
+    ["region_11","Bandit Wastes","region_11-11-1783024323781.webp"],
+    ["region_12","Ironfall Hills","region_12-12-1783024478267.webp"],
+    ["region_13","Redbanner Fields","region_13-13-1783024786859.webp"],
+    ["region_14","Ashenfen March","region_14-14-1783024960400.webp"],
+    ["region_15","Relic Vale","region_15-15-1783025218871.webp"]
+  ];
+  const mapPair = ([id,name,file]) => `<article class="card"><h3>${name}</h3><div class="map-pair"><figure><img loading="lazy" src="pass-4a-assets/${file}" alt="Pass 4A ${name}"><figcaption>Pass 4A</figcaption></figure><figure><img loading="lazy" src="../../../assets/worlds/world_01/maps/${file}" alt="Restored ${name}"><figcaption>Restored pre-Pass-4A</figcaption></figure></div></article>`;
+  document.querySelector("#representativeMaps").innerHTML = [maps[0],maps[5],maps[9],maps[13]].map(mapPair).join("");
+  document.querySelector("#allMaps").innerHTML = maps.map(([id,name,file]) => `<figure><h3>${name}</h3><img loading="lazy" src="../../../assets/worlds/world_01/maps/${file}" alt="Restored ${name}"><figcaption>1448x1086 authoritative source</figcaption></figure>`).join("");
+
+  const hud = [
+    ["Leaderboard","leaderboard-icon.png"],
+    ["Daily Rewards","daily-reward-icon-cutout.webp"],
+    ["Profile frame","profile-hud-frame.png"],
+    ["Reports","report-icon.png"]
+  ];
+  document.querySelector("#hudAssets").innerHTML = hud.map(([name,file]) => `<article class="card"><h3>${name}</h3><div class="asset-pair"><figure><img loading="lazy" src="pre-correction-hud/${file}" alt="Pass 3G ${name}"><figcaption>Pass 3G</figcaption></figure><figure><img loading="lazy" src="../../../assets/${file}" alt="Restored ${name}"><figcaption>Restored pre-Pass-3G</figcaption></figure></div></article>`).join("");
+  const hudFiles = ["profile-hud-frame.png","leaderboard-icon.png","daily-reward-icon-cutout.webp","report-icon.png"];
+  for (const id of ["hudBefore","hudAfter"]) document.querySelector(`#${id}`).innerHTML = hudFiles.map((file,i)=>`<img class="${i===0?'profile-sample':''}" src="../../../assets/${file}" alt="">`).join("");
+
+  const desktop = [
+    ["World HUD","after-world-hud-desktop.png"],
+    ["Profile","after-profile-desktop.png"],
+    ["Skills","after-skills-desktop.png"],
+    ["Clan","after-clan-desktop.png"],
+    ["Shop","after-shop-desktop.png"],
+    ["Bag","after-bag-desktop.png"],
+    ["Attack preparation","after-attack-preparation-desktop.jpg"],
+    ["Battle reports","after-battle-reports-desktop.png"],
+    ["Battle report detail","after-battle-report-detail-desktop.png"],
+    ["Daily missions","after-daily-missions-desktop.jpg"],
+    ["Achievements","after-achievements-desktop.jpg"]
+  ];
+  document.querySelector("#uiScreens").innerHTML = desktop.map(([name,file])=>`<figure><h3>${name}</h3><img class="screen" loading="lazy" src="screenshots/${file}" alt="${name} correction QA"><figcaption>Authenticated local game at desktop QA size</figcaption></figure>`).join("");
+  const mobile = [
+    ["World HUD","after-world-hud-android-landscape.jpg"],
+    ["Profile","after-profile-android-landscape.jpg"],
+    ["Daily Rewards","after-daily-android-landscape.jpg"],
+    ["Reports","after-reports-android-landscape.jpg"]
+  ];
+  document.querySelector("#mobileScreens").innerHTML = mobile.map(([name,file])=>`<figure><h3>${name}</h3><img class="screen" loading="lazy" src="screenshots/${file}" alt="${name} at 844 by 390"><figcaption>844x390, no page overflow</figcaption></figure>`).join("");
+</script>
+</body>
+</html>

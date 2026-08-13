@@ -396,7 +396,7 @@
 }
 
 .daily-reward-card.claimed::after {
-  content: "✓";
+  content: "";
   position: absolute;
   z-index: 4;
   top: 46%;
@@ -707,4 +707,355 @@ button.daily-reward-card.available:disabled {
   .daily-reward-card.available {
     animation: none;
   }
+}
+
+/* Frontier kingdom daily systems ------------------------------------------ */
+
+.daily-login-reward-modal .modal-card {
+  color: var(--cl-ink);
+  border: 2px solid #54371f;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(90, 50, 26, .16), transparent 14% 86%, rgba(90, 50, 26, .16)),
+    linear-gradient(180deg, #dfd0ad, #c5b17f 58%, #ad9464),
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .08) 0 1px, transparent 1px 10px);
+  box-shadow:
+    0 0 0 2px rgba(23, 14, 7, .58),
+    0 30px 80px rgba(0, 0, 0, .66),
+    inset 0 0 0 1px rgba(255, 247, 216, .36);
+}
+
+.daily-login-reward-modal .modal-card::before {
+  border-bottom-color: rgba(84, 55, 31, .46);
+  background:
+    linear-gradient(180deg, rgba(102, 64, 34, .34), rgba(80, 49, 27, .18)),
+    repeating-linear-gradient(90deg, rgba(255, 247, 216, .12) 0 1px, transparent 1px 14px);
+  box-shadow: inset 0 -1px 0 rgba(255, 247, 216, .2);
+}
+
+.daily-login-reward-modal .modal-card h2 {
+  color: #3b2412;
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  text-shadow: 0 1px rgba(255, 247, 216, .62);
+}
+
+.daily-reward-tabs button {
+  border-color: rgba(69, 68, 62, .72);
+  border-radius: 5px 5px 9px 9px;
+  color: var(--cl-ivory);
+  background:
+    linear-gradient(180deg, #555047, #2e2b26),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .035) 0 1px, transparent 1px 6px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    inset 0 -3px 0 rgba(0, 0, 0, .24),
+    0 5px 10px rgba(0, 0, 0, .28);
+}
+
+.daily-reward-tabs button.active {
+  border-color: rgba(90, 38, 42, .82);
+  color: var(--cl-ivory);
+  background: linear-gradient(180deg, #7a373b, #5a262b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 236, 190, .2),
+    0 4px 10px rgba(0, 0, 0, .2);
+}
+
+.daily-reward-tab-alert {
+  border-color: #d8c49a;
+  color: #fff5e8;
+  background: linear-gradient(180deg, #88482c, #58262a);
+  box-shadow: 0 3px 7px rgba(0, 0, 0, .46);
+}
+
+.daily-reward-panel,
+.seasonal-achievement-panel {
+  border-color: rgba(111, 82, 45, .52);
+  border-radius: var(--ui-radius);
+  background:
+    linear-gradient(180deg, rgba(224, 211, 177, .94), rgba(185, 164, 122, .92)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .06) 0 1px, transparent 1px 9px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 226, .24),
+    inset 0 -2px 0 rgba(85, 54, 25, .12);
+}
+
+.seasonal-achievement-hero,
+.seasonal-achievement-row,
+.seasonal-achievement-details,
+.daily-reward-card,
+.daily-reward-loading,
+.daily-reward-error {
+  color: var(--cl-ink);
+  border-color: rgba(111, 82, 45, .52);
+  border-radius: var(--ui-radius);
+  background:
+    linear-gradient(180deg, rgba(224, 211, 177, .96), rgba(185, 164, 122, .95)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .06) 0 1px, transparent 1px 9px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 226, .24),
+    0 5px 10px rgba(0, 0, 0, .13);
+}
+
+.seasonal-achievement-hero > div:first-child > span,
+.seasonal-achievement-row-copy > span,
+.seasonal-achievement-reward > span,
+.seasonal-achievement-details > span {
+  color: var(--cl-oxblood);
+  letter-spacing: .04em;
+}
+
+.seasonal-achievement-hero h3,
+.seasonal-achievement-row-copy strong,
+.seasonal-achievement-details > strong,
+.daily-reward-card-amount {
+  color: #3b2412;
+}
+
+.seasonal-achievement-hero p,
+.seasonal-achievement-row p,
+.seasonal-achievement-row-copy small,
+.seasonal-achievement-details > small,
+.daily-reward-loading,
+.daily-reward-error {
+  color: #5f482b;
+}
+
+.seasonal-achievement-totals {
+  border-color: rgba(84, 55, 31, .36);
+  border-radius: var(--ui-radius-small);
+  background: rgba(71, 48, 28, .16);
+}
+
+.seasonal-achievement-totals strong,
+.seasonal-achievement-reward strong {
+  color: #5b3a24;
+}
+
+.seasonal-achievement-totals span,
+.seasonal-achievement-reward small {
+  color: #6b5633;
+}
+
+.seasonal-achievement-filters {
+  border-color: rgba(84, 55, 31, .42);
+  background: rgba(71, 48, 28, .16);
+}
+
+.seasonal-achievement-filters button {
+  color: #49341d;
+  border-color: rgba(84, 55, 31, .24);
+  border-radius: var(--ui-radius-small);
+}
+
+.seasonal-achievement-filters button.active {
+  color: var(--cl-ivory);
+  border-color: rgba(90, 38, 42, .82);
+  background: linear-gradient(180deg, #7a373b, #5a262b);
+}
+
+.seasonal-achievement-progress,
+.daily-reward-card-progress,
+.daily-mission-progress {
+  border-radius: 2px;
+  background: rgba(65, 45, 25, .28);
+}
+
+.seasonal-achievement-progress span,
+.daily-mission-progress i {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cl-faded-indigo), var(--cl-ochre));
+}
+
+.seasonal-achievement-row.complete .seasonal-achievement-progress span,
+.daily-mission-row.complete .daily-mission-progress i {
+  background: linear-gradient(90deg, var(--cl-moss), #8c965b);
+}
+
+.seasonal-achievement-row.complete,
+.daily-reward-card.claimed {
+  border-color: rgba(85, 97, 61, .64);
+  background:
+    linear-gradient(180deg, rgba(214, 204, 169, .96), rgba(165, 166, 120, .94)),
+    repeating-linear-gradient(0deg, rgba(54, 65, 40, .08) 0 1px, transparent 1px 9px);
+}
+
+.daily-reward-card.claimed::after {
+  color: #f3e7c9;
+  border: 1px solid rgba(73, 35, 25, .52);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #88482c, #58262a);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .32);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .48);
+}
+
+.daily-reward-card.available,
+.daily-reward-card.item.available {
+  border-color: rgba(90, 38, 42, .76);
+  background:
+    linear-gradient(180deg, rgba(222, 203, 163, .97), rgba(175, 131, 86, .94)),
+    repeating-linear-gradient(0deg, rgba(110, 47, 53, .07) 0 1px, transparent 1px 9px);
+  box-shadow:
+    0 0 0 2px rgba(110, 47, 53, .14),
+    0 6px 12px rgba(0, 0, 0, .18),
+    inset 0 0 0 1px rgba(255, 250, 226, .24);
+}
+
+.daily-reward-card.locked {
+  opacity: .72;
+  filter: saturate(.72);
+}
+
+.daily-reward-card-icon {
+  border-radius: var(--ui-radius-small);
+  background:
+    linear-gradient(180deg, rgba(70, 53, 35, .24), rgba(37, 28, 19, .14));
+  box-shadow: inset 0 0 0 1px rgba(84, 55, 31, .22);
+}
+
+.daily-reward-error button,
+.seasonal-achievement-reward button,
+.seasonal-achievement-panel .daily-mission-empty button {
+  color: var(--cl-ivory);
+  border: 1px solid rgba(90, 38, 42, .78);
+  border-radius: var(--ui-radius-small);
+  background: linear-gradient(180deg, #7a373b, #5a262b 66%, #361417);
+}
+
+/* Pass 3F: reward notices retain ink contrast on parchment surfaces. */
+.seasonal-achievement-panel > h3,
+.daily-mission-copy strong {
+  color: #3b2412;
+  text-shadow: 0 1px rgba(255, 247, 216, .36);
+}
+
+.daily-missions-section > h3 {
+  color: var(--cl-ivory);
+  text-shadow: 0 1px rgba(0, 0, 0, .52);
+}
+
+.daily-mission-copy > div > span {
+  color: var(--cl-faded-indigo);
+}
+
+.daily-mission-copy small,
+.daily-mission-reward small {
+  color: #5f482b;
+}
+
+.daily-mission-reward strong {
+  color: #5b3a24;
+}
+
+@keyframes dailyRewardClaimPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px rgba(110, 47, 53, .12),
+      0 6px 12px rgba(0, 0, 0, .18),
+      inset 0 0 0 1px rgba(255, 250, 226, .24);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(110, 47, 53, .2),
+      0 7px 13px rgba(0, 0, 0, .2),
+      inset 0 0 0 1px rgba(255, 250, 226, .28);
+  }
+}
+
+/* Crownlands daily systems pass 2 ----------------------------------------- */
+
+.daily-login-reward-modal .modal-card {
+  border-radius: 4px;
+  border-color: #54371f;
+  background:
+    linear-gradient(90deg, rgba(90, 50, 26, .16), transparent 14% 86%, rgba(90, 50, 26, .14)),
+    linear-gradient(180deg, #dfd0ad, #c5b17f 58%, #ad9464),
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .08) 0 1px, transparent 1px 10px);
+}
+
+.daily-reward-tabs button {
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, #5c3b25, #2a1d14 72%, #17110d),
+    repeating-linear-gradient(90deg, rgba(232, 216, 176, .045) 0 1px, transparent 1px 8px);
+}
+
+.daily-reward-card,
+.seasonal-achievement-row {
+  border-radius: 4px;
+  border-color: rgba(84, 55, 31, .58);
+  color: var(--cl-ink);
+  background:
+    linear-gradient(90deg, rgba(89, 56, 26, .1), transparent 13% 87%, rgba(89, 56, 26, .08)),
+    linear-gradient(180deg, rgba(226, 214, 181, .98), rgba(193, 174, 127, .97)),
+    repeating-linear-gradient(0deg, rgba(82, 58, 31, .055) 0 1px, transparent 1px 10px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 250, 226, .24),
+    0 5px 10px rgba(0, 0, 0, .16);
+}
+
+.daily-reward-card.available {
+  border-color: rgba(110, 47, 53, .82);
+  background:
+    linear-gradient(90deg, rgba(110, 47, 53, .14), transparent 18% 82%, rgba(110, 47, 53, .1)),
+    linear-gradient(180deg, #e1d1ac, #c8b17c 66%, #a98e5b);
+  box-shadow:
+    0 0 0 2px rgba(110, 47, 53, .16),
+    0 6px 12px rgba(0, 0, 0, .2),
+    inset 0 0 0 1px rgba(255, 250, 226, .28);
+}
+
+.daily-reward-card.queued {
+  border-color: rgba(72, 88, 105, .56);
+  background:
+    linear-gradient(180deg, rgba(214, 206, 187, .96), rgba(158, 166, 166, .94)),
+    repeating-linear-gradient(0deg, rgba(72, 88, 105, .08) 0 1px, transparent 1px 9px);
+  box-shadow: inset 0 0 0 1px rgba(255, 250, 226, .18), 0 5px 10px rgba(0, 0, 0, .14);
+}
+
+.daily-reward-card.item:not(.claimed) {
+  border-color: rgba(150, 118, 61, .62);
+  background:
+    linear-gradient(180deg, rgba(216, 197, 157, .96), rgba(177, 150, 102, .94)),
+    repeating-linear-gradient(0deg, rgba(84, 59, 31, .08) 0 1px, transparent 1px 9px);
+}
+
+.daily-reward-card.claimed::after {
+  content: "";
+  color: #e3d5ad;
+  border-color: rgba(79, 47, 20, .72);
+  background:
+    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%),
+    radial-gradient(circle at 45% 38%, #7f372e, #4f1d1c);
+  box-shadow: 0 3px 0 rgba(45, 22, 10, .78), inset 0 0 0 3px rgba(123, 51, 38, .42);
+  text-shadow: none;
+}
+
+.daily-reward-card-amount {
+  color: var(--cl-ivory);
+  background: linear-gradient(180deg, transparent, rgba(31, 21, 14, .74));
+}
+
+.seasonal-achievement-row-icon {
+  border-radius: 3px;
+  color: var(--cl-ivory);
+  border-color: rgba(69, 68, 62, .72);
+  background:
+    linear-gradient(180deg, #555047, #2e2b26),
+    repeating-linear-gradient(90deg, rgba(231, 221, 196, .035) 0 1px, transparent 1px 6px);
+}
+
+.seasonal-achievement-row-icon .cl-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.seasonal-achievement-progress span {
+  background: linear-gradient(90deg, var(--cl-oxblood), var(--cl-muted-brass));
+}
+
+.seasonal-achievement-row.complete .seasonal-achievement-progress span {
+  background: linear-gradient(90deg, var(--cl-moss), #8c965b);
 }

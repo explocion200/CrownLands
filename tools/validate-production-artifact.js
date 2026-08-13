@@ -4,8 +4,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
-  "index.html", "game.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
-  "assets/map-editor-data.js", "audio/manifest.json", "functions/clanQuestPeriod.js",
+  "index.html", "styles.css", "interface-theme.css", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
+  "assets/map-editor-data.js", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js",
   "artifact-manifest.json",
 ];
 const forbidden = [
@@ -19,6 +19,19 @@ for (const relativePath of required) {
 }
 for (const relativePath of forbidden) {
   if (fs.existsSync(path.join(dist, relativePath))) throw new Error(`Production artifact includes forbidden source data ${relativePath}.`);
+}
+
+const productionMapManifest = JSON.parse(fs.readFileSync(
+  path.join(dist, "assets", "worlds", "world_01", "map-manifest.json"),
+  "utf8",
+));
+if (productionMapManifest.maps?.length !== 15 || productionMapManifest.editableSourcesExcluded !== true) {
+  throw new Error("Production map manifest must contain 15 immutable runtime entries without editable sources.");
+}
+for (const entry of productionMapManifest.maps) {
+  if (entry.source || !/^assets\/worlds\/world_01\/maps\/versioned\/[\w-]+-[0-9a-f]{12}\.webp$/.test(entry.output || "")) {
+    throw new Error(`${entry.id || "Unknown region"} has an invalid production gameplay map entry.`);
+  }
 }
 
 const files = [];

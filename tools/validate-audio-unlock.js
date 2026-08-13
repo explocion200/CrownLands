@@ -687,10 +687,12 @@ async function run() {
   assert.equal(manager.preferences.effectsMuted, false, "Music mute must not alter the effects preference.");
   assert.equal(musicMute.getAttribute("aria-pressed"), "true", "The profile setting must mirror login mute.");
   assert.equal(musicMute.getAttribute("aria-label"), "Unmute music");
-  assert.equal(musicMute.icon.textContent, "\u{1F507}");
+  assert.equal(musicMute.icon.dataset.clIcon, "sound-off");
+  assert.match(musicMute.icon.innerHTML, /href="#cl-icon-sound-off"/);
   assert.equal(loginMusicMute.getAttribute("aria-pressed"), "true");
   assert.equal(loginMusicMute.getAttribute("aria-label"), "Unmute music");
-  assert.equal(loginMusicMute.icon.textContent, "\u{1F507}");
+  assert.equal(loginMusicMute.icon.dataset.clIcon, "sound-off");
+  assert.match(loginMusicMute.icon.innerHTML, /href="#cl-icon-sound-off"/);
 
   now += 100;
   const mutedMusicEffectStart = effectSourceStarts.length;
@@ -710,7 +712,8 @@ async function run() {
   assert.equal(manager.currentMusic.paused, false, "Unmuting must resume music inside the control gesture.");
   assert.equal(loginMusicMute.getAttribute("aria-pressed"), "false");
   assert.equal(loginMusicMute.getAttribute("aria-label"), "Mute music");
-  assert.equal(loginMusicMute.icon.textContent, "\u{1F50A}");
+  assert.equal(loginMusicMute.icon.dataset.clIcon, "sound");
+  assert.match(loginMusicMute.icon.innerHTML, /href="#cl-icon-sound"/);
 
   dispatchDocumentEvent("click", musicMute);
   assert.equal(manager.preferences.musicMuted, true);
@@ -1124,7 +1127,8 @@ async function run() {
   assert.equal(manager.effectMasterGain.gain.value, 0);
   assert.equal(effectsMute.getAttribute("aria-pressed"), "true");
   assert.equal(effectsMute.getAttribute("aria-label"), "Unmute effects");
-  assert.equal(effectsMute.icon.textContent, "\u{1F507}");
+  assert.equal(effectsMute.icon.dataset.clIcon, "sound-off");
+  assert.match(effectsMute.icon.innerHTML, /href="#cl-icon-sound-off"/);
   dispatchDocumentEvent("click", effectsMute);
   assert.equal(manager.effectMasterGain.gain.value, 0.8);
   assert.equal(effectsMute.getAttribute("aria-pressed"), "false");

@@ -5,39 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
   <meta name="description" content="Crownlands is a medieval real-time browser strategy game." />
+  <meta name="robots" content="noindex, nofollow" />
   <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
+  <link rel="canonical" href="https://playcrownlands.com/play/" />
+  <base href="/" />
   <meta name="application-name" content="Crownlands" />
-  <meta name="theme-color" content="#10233a" />
+  <meta name="theme-color" content="#5a262b" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260810-daily-mission-camp-fix-v1" />
+  <meta name="crownlands-build" content="20260813-login-title-position-r1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260810-daily-mission-camp-fix-v1" />
-  <link rel="stylesheet" href="daily-rewards.css?v=20260810-reference-refresh-v1" />
-  <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-cec197d384ba.webp" fetchpriority="high" />
-  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" fetchpriority="high" />
-  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" fetchpriority="high" />
+  <link rel="stylesheet" href="styles.css?v=20260813-login-title-position-r1" />
+  <link rel="stylesheet" href="interface-theme.css?v=20260813-interface-theme-split-r1" />
+  <link rel="stylesheet" href="daily-rewards.css?v=20260812-visual-correction-pass-4a-r1" />
+  <link rel="stylesheet" href="readability.css?v=20260813-login-title-position-r1" />
+  <link rel="stylesheet" href="manuscript-prototype.css?v=20260813-manuscript-prototype-r4" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-c8507d1988d6.webp" fetchpriority="high" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" fetchpriority="high" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-2038de353a91.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp" fetchpriority="low" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/crownlands-favicon-32.png" />
   <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
 </head>
 <body>
+  <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="cl-icon-attack" viewBox="0 0 32 32"><path d="M8 5l5 2 12 15-3 3L7 10zm16 0l-5 2L7 22l3 3 15-15z"/><path d="M5 23l4 4 3-3-4-4zm22 0l-4 4-3-3 4-4z"/></symbol>
+    <symbol id="cl-icon-transfer" viewBox="0 0 32 32"><path d="M4 18h4l3-6h9l5 6h3v5h-3a4 4 0 0 1-8 0h-5a4 4 0 0 1-8 0zM13 14l-2 4h9l-3-4z"/><path d="M7 23a1.8 1.8 0 1 0 3.6 0A1.8 1.8 0 0 0 7 23zm13 0a1.8 1.8 0 1 0 3.6 0A1.8 1.8 0 0 0 20 23z"/></symbol>
+    <symbol id="cl-icon-scout" viewBox="0 0 32 32"><path d="M16 7c6 0 10 5 12 9-2 4-6 9-12 9S6 20 4 16c2-4 6-9 12-9zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="M16 14a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/></symbol>
+    <symbol id="cl-icon-crown" viewBox="0 0 32 32"><path d="M4 24L5 11l5 6 3-10 3 8 3-8 3 10 5-6 1 13z"/><path d="M5 25h22v3H5z"/></symbol>
+    <symbol id="cl-icon-shield" viewBox="0 0 32 32"><path d="M16 3l10 4v8c0 7-4 12-10 15C10 27 6 22 6 15V7z"/><path d="M16 7v17" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="cl-icon-city" viewBox="0 0 32 32"><path d="M5 26h22v3H5zM7 13h5v13H7zm7-7h4v20h-4zm6 9h5v11h-5z"/><path d="M7 10l3-4 2 4zm7-4l2-4 2 4zm6 6l3-4 2 4z"/></symbol>
+    <symbol id="cl-icon-reports" viewBox="0 0 32 32"><path d="M8 4h14l4 4v20H8z"/><path d="M22 4v6h5M11 14h12M11 18h12M11 22h8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-gold" viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10 19l1-7 3 3 2-5 2 5 3-3 1 7z" fill="currentColor"/></symbol>
+    <symbol id="cl-icon-troops" viewBox="0 0 32 32"><path d="M16 4l5 6-2 5h-6l-2-5z"/><path d="M9 26c1-5 4-8 7-8s6 3 7 8v2H9z"/></symbol>
+    <symbol id="cl-icon-map" viewBox="0 0 32 32"><path d="M4 7l7-3 10 4 7-3v20l-7 3-10-4-7 3z"/><path d="M11 4v20M21 8v20" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-bag" viewBox="0 0 32 32"><path d="M10 11c0-4 3-7 6-7s6 3 6 7l4 3v11c0 3-2 5-5 5H11c-3 0-5-2-5-5V14z"/><path d="M11 11h10" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-shop" viewBox="0 0 32 32"><path d="M5 12l3-7h16l3 7v4H5z"/><path d="M8 16v11h16V16M12 27v-7h8v7" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-clan" viewBox="0 0 32 32"><path d="M16 3l10 5v7c0 7-4 11-10 14C10 26 6 22 6 15V8z"/><path d="M10 12h12M16 7v17" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-leaderboard" viewBox="0 0 32 32"><path d="M5 25h22v4H5zM8 17h5v8H8zm6-7h5v15h-5zm6 4h5v11h-5z"/><path d="M16 3l2 4 4 .5-3 3 .8 4-3.8-2-3.8 2 .8-4-3-3 4-.5z"/></symbol>
+    <symbol id="cl-icon-daily-rewards" viewBox="0 0 32 32"><path d="M7 8h18v20H7z"/><path d="M7 13h18M11 5v6M21 5v6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l2 3 4 .5-3 2.3.8 3.7-3.8-2-3.8 2 .8-3.7-3-2.3 4-.5z"/></symbol>
+    <symbol id="cl-icon-achievements" viewBox="0 0 32 32"><path d="M8 5h16v17l-8 6-8-6z"/><path d="M12 13l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="cl-icon-incoming" viewBox="0 0 32 32"><path d="M26 6L12 20"/><path d="M12 10v10h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M7 24l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+    <symbol id="cl-icon-outgoing" viewBox="0 0 32 32"><path d="M6 26L20 12"/><path d="M10 12h10v10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M21 4l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+    <symbol id="cl-icon-rally" viewBox="0 0 32 32"><path d="M8 29V4"/><path d="M10 5h15l-3 6 3 6H10z"/><path d="M5 29h8" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+    <symbol id="cl-icon-reinforcement" viewBox="0 0 32 32"><path d="M14 4l8 3v6c0 6-3 10-8 13-5-3-8-7-8-13V7z"/><path d="M19 15h8m-3-4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+    <symbol id="cl-icon-locate" viewBox="0 0 32 32"><path d="M16 5v6M16 21v6M5 16h6M21 16h6" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+    <symbol id="cl-icon-information" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16 14v8M16 9v2" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+    <symbol id="cl-icon-upgrade" viewBox="0 0 32 32"><path d="M6 26h20v3H6zM9 15h5v11H9zm9 0h5v11h-5z"/><path d="M16 4l6 7h-4v8h-4v-8h-4z"/></symbol>
+    <symbol id="cl-icon-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-back" viewBox="0 0 32 32"><path d="M19 7l-9 9 9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-forward" viewBox="0 0 32 32"><path d="M13 7l9 9-9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-fullscreen" viewBox="0 0 32 32"><path d="M5 13V5h8M19 5h8v8M27 19v8h-8M13 27H5v-8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-sound" viewBox="0 0 32 32"><path d="M6 13h5l7-6v18l-7-6H6z"/><path d="M22 11c2 3 2 7 0 10M25 8c4 5 4 11 0 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-sound-off" viewBox="0 0 32 32"><path d="M6 13h5l7-6v18l-7-6H6z"/><path d="M23 12l6 8M29 12l-6 8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-install" viewBox="0 0 32 32"><path d="M16 4v13"/><path d="M10 12l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 21v6h18v-6" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+    <symbol id="cl-icon-check" viewBox="0 0 32 32"><path d="M7 17l6 6 13-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-edit" viewBox="0 0 32 32"><path d="M7 22l-1 5 5-1L25 12l-4-4z"/><path d="M18 11l4 4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-replace" viewBox="0 0 32 32"><path d="M24 10a9 9 0 0 0-15-3l-3 3"/><path d="M6 5v5h5M8 22a9 9 0 0 0 15 3l3-3"/><path d="M26 27v-5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-flag-castle" viewBox="0 0 32 32"><path fill-rule="evenodd" d="M5 6h5v5h4V6h4v5h4V6h5v9l-3 3v11H8V18l-3-3zm9 23v-7a2 2 0 0 1 4 0v7z"/></symbol>
+    <symbol id="cl-icon-flag-star" viewBox="0 0 32 32"><path d="M16 3l3.9 7.8 8.6 1.3-6.2 6 1.4 8.6-7.7-4-7.7 4 1.4-8.6-6.2-6 8.6-1.3z"/></symbol>
+    <symbol id="cl-icon-flag-fleur" viewBox="0 0 32 32"><path d="M16 2c-4 4-5 8-3 12-3-4-8-3-9 1 1 5 4 8 9 8l-3 6h12l-3-6c5 0 8-3 9-8-2-4-6-4-9-1 2-4 1-8-3-12z"/></symbol>
+    <symbol id="cl-icon-flag-cross" viewBox="0 0 32 32"><path d="M13 3h6v8h8v6h-8v12h-6V17H5v-6h8z"/></symbol>
+    <symbol id="cl-icon-flag-sun" viewBox="0 0 32 32"><circle cx="16" cy="16" r="6"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M6 6l4 4M22 22l4 4M26 6l-4 4M10 22l-4 4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-flag-moon" viewBox="0 0 32 32"><path fill-rule="evenodd" d="M18 3a13 13 0 1 0 11 20A10 10 0 1 1 18 3z"/></symbol>
+    <symbol id="cl-icon-flag-horse" viewBox="0 0 32 32"><path d="M8 27h18v3H6v-5c1-5 3-9 7-12l-2-8 7 3 5-5 4 7-5 4c3 3 4 7 4 13h-5c0-5-1-8-4-10-3 2-4 5-4 10H8z"/></symbol>
+    <symbol id="cl-icon-flag-tower" viewBox="0 0 32 32"><path fill-rule="evenodd" d="M6 4h5v4h3V4h4v4h3V4h5v9l-3 3v13H9V16l-3-3zm8 25v-7a2 2 0 0 1 4 0v7z"/></symbol>
+    <symbol id="cl-icon-flag-lozenge" viewBox="0 0 32 32"><path d="M16 2l11 14-11 14L5 16z"/><path d="M16 8l6 8-6 8-6-8z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="cl-icon-flag-spearhead" viewBox="0 0 32 32"><path d="M16 2l11 17-8-3v14h-6V16l-8 3z"/></symbol>
+  </svg>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
-      <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
+      <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-fullscreen"></use></svg></span></button>
       <a class="discord-home-link" href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer" aria-label="Join the Crownlands Discord" title="Join the Crownlands Discord">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.08.08 0 0 0-.023.012c-.211.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.1.1 0 0 0-.023-.012A19.74 19.74 0 0 0 3.787 4.37C.533 9.256-.349 14.019.089 18.725c.002.023.013.046.031.06a19.9 19.9 0 0 0 5.993 3.03.08.08 0 0 0 .094-.032c.462-.63.873-1.295 1.226-1.994a.08.08 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.08.08 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.07.07 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .079.009c.12.099.246.198.373.292a.08.08 0 0 1-.007.128 12.3 12.3 0 0 1-1.873.891.08.08 0 0 0-.041.107c.36.698.772 1.363 1.225 1.993a.08.08 0 0 0 .093.031 19.84 19.84 0 0 0 6.002-3.029.08.08 0 0 0 .032-.06c.524-5.439-.877-10.158-3.548-14.357a.06.06 0 0 0-.031-.028ZM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419s.956-2.419 2.157-2.419c1.211 0 2.176 1.095 2.157 2.419 0 1.333-.956 2.419-2.157 2.419Zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419s.955-2.419 2.157-2.419c1.211 0 2.176 1.095 2.157 2.419 0 1.333-.946 2.419-2.157 2.419Z" />
         </svg>
       </a>
       <button id="loginMusicMuteBtn" class="login-music-mute-btn" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
-        <span data-music-icon aria-hidden="true">&#128266;</span>
+        <span data-music-icon aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
       </button>
       <aside class="login-game-info" aria-label="About Crownlands">
         <span class="login-game-info-eyebrow">Free browser strategy game</span>
@@ -54,8 +105,8 @@
         <h1 class="sr-only">Crownlands</h1>
         <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
         <div id="menuLoadingWheel" class="loading-wheel menu-loading-wheel" hidden aria-hidden="true">
-          <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" width="256" height="256" alt="" draggable="false" />
-          <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" draggable="false" />
+          <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" width="256" height="256" alt="" draggable="false" />
+          <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-2038de353a91.webp" width="256" height="256" alt="" draggable="false" />
         </div>
         <div class="online-login" aria-label="Online account status">
           <div>
@@ -65,7 +116,7 @@
           <section id="serverRealmList" class="server-realm-list" aria-label="Crownlands realms" hidden>
             <span class="server-realm-heading">Choose Realm</span>
             <button id="serverRealmBtn" class="server-realm-card selected" type="button" aria-pressed="true">
-              <span class="server-realm-crest" aria-hidden="true">&#9813;</span>
+              <span class="server-realm-crest" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-crown"></use></svg></span>
               <strong>The Crown Marches</strong>
             </button>
             <div id="serverQueueStatus" class="server-queue-status" role="status" hidden>
@@ -77,17 +128,17 @@
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
             <button id="enterKingdomBtn" class="primary-btn" type="button" hidden>Enter Kingdom</button>
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
-            <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden>Install Crownlands</button>
+            <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden><span class="install-app-icon" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-install"></use></svg></span><span>Install Crownlands</span></button>
             <button id="patchNotesBtn" class="ghost-btn patch-notes-btn" type="button" aria-label="Open patch notes">
-              <span class="patch-notes-btn-icon" aria-hidden="true">&#128220;</span>
+              <span class="patch-notes-btn-icon" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-reports"></use></svg></span>
               <span>Patch Notes</span>
               <span id="patchNotesBadge" class="patch-notes-badge" aria-hidden="true" hidden>New</span>
             </button>
           </div>
           <nav class="public-site-links" aria-label="Crownlands information">
-            <a href="/about.html">About</a>
-            <a href="/how-to-play.html">How to Play</a>
-            <a href="/battle-economy-guide.html">Battle Guide</a>
+            <a href="/">Home</a>
+            <a href="/guides.html">Guides</a>
+            <a href="/updates.html">Updates</a>
             <a href="/game-rules.html">Rules</a>
             <a href="/support.html">Support</a>
             <a href="/privacy.html">Privacy</a>
@@ -105,17 +156,17 @@
               <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
-              <img class="profile-rank-icon" src="assets/optimized/hud-leaderboard-192x192-fcd05104c9d8.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+              <img class="profile-rank-icon" src="assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
             </button>
             <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan" data-audio-effect="menu_open">
               <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
             </button>
             <button id="dailyLoginRewardBtn" class="profile-rank-btn daily-login-reward-btn" type="button" aria-label="Open daily rewards">
-              <img class="daily-login-reward-icon" src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" width="160" height="151" alt="" draggable="false" decoding="async" />
+              <img class="daily-login-reward-icon" src="assets/optimized/daily-reward-160x160-9bd7a936016f.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
               <span id="dailyLoginRewardBadge" class="daily-login-reward-badge" aria-hidden="true" hidden>!</span>
             </button>
           </div>
-          <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
+          <div class="profile-gold"><span aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-gold"></use></svg></span><strong id="goldText">0</strong></div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
@@ -125,7 +176,7 @@
           <small id="citadelAssaultCountdownDetail">10:00 AM Eastern</small>
         </div>
         <div class="resource-bar">
-          <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
+          <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-fullscreen"></use></svg></span></button>
         </div>
       </header>
 
@@ -134,35 +185,35 @@
         <span class="main-city-return-house" aria-hidden="true">&#8962;</span>
       </button>
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
-        <img class="bag-icon" src="assets/optimized/hud-bag-192x192-d9689d3e5371.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="bag-icon" src="assets/optimized/hud-bag-192x192-8d79a1879913.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
       </button>
       <button id="shopBtn" class="resource-pill shop-btn" type="button" aria-label="Open shop">
-        <img class="shop-icon" src="assets/optimized/hud-shop-192x192-9b436f6a888e.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="shop-icon" src="assets/optimized/hud-shop-192x192-631cf3c626d5.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
       </button>
       <div id="activeItemEffectsStack" class="active-item-effects-stack" aria-live="polite">
         <div id="shieldStatusBadge" class="effect-status-badge shield-status-badge" hidden role="status">
-          <img class="effect-status-icon shield-status-icon" src="assets/optimized/item-peace-shield-160x160-dcb8dddc35ea.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon shield-status-icon" src="assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="shieldStatusTime">0:00</strong>
         </div>
         <div id="warDrumsStatusBadge" class="effect-status-badge war-drums-status-badge" hidden role="status">
-          <img class="effect-status-icon war-drums-status-icon" src="assets/optimized/item-war-drums-160x160-48ecb3c2150b.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon war-drums-status-icon" src="assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="warDrumsStatusTime">0:00</strong>
         </div>
         <div id="taxDecreeStatusBadge" class="effect-status-badge tax-decree-status-badge" hidden role="status">
-          <img class="effect-status-icon tax-decree-status-icon" src="assets/optimized/item-royal-tax-decree-160x160-eaa5b941fe82.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon tax-decree-status-icon" src="assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="taxDecreeStatusTime">0:00</strong>
         </div>
         <div id="veilStatusBadge" class="effect-status-badge veil-status-badge" hidden role="status">
-          <img class="effect-status-icon veil-status-icon" src="assets/optimized/item-veil-of-silence-160x160-5d50be41ce93.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon veil-status-icon" src="assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="veilStatusTime">0:00</strong>
         </div>
       </div>
       <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
-        <img class="city-list-icon" src="assets/optimized/hud-city-list-192x192-b7d360548c26.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="city-list-icon" src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
         <span id="cityText" class="sr-only">0 cities</span>
       </button>
       <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" data-audio-effect="menu_open" hidden>
-        <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-e08b9f3cdf6d.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+        <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-f330cd084a9f.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
         <span id="islandSwitchLabel" class="sr-only">Map</span>
       </button>
 
@@ -181,8 +232,8 @@
         <div id="mapLoadingOverlay" class="map-loading-overlay" aria-hidden="true">
           <div class="map-loading-panel">
             <div class="loading-wheel map-loading-wheel">
-              <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" width="256" height="256" alt="" draggable="false" />
-              <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" draggable="false" />
+              <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" width="256" height="256" alt="" draggable="false" />
+              <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-2038de353a91.webp" width="256" height="256" alt="" draggable="false" />
             </div>
             <span id="mapLoadingLabel" class="map-loading-label">Loading island...</span>
           </div>
@@ -192,7 +243,7 @@
 
       <aside id="realmAnnouncement" class="realm-announcement" role="status" aria-live="assertive" aria-atomic="true" hidden>
         <div class="realm-announcement-banner">
-          <img id="realmAnnouncementIcon" class="realm-announcement-icon" src="assets/optimized/hud-report-192x192-c712b2f6c417.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
+          <img id="realmAnnouncementIcon" class="realm-announcement-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
           <div class="realm-announcement-copy">
             <strong id="realmAnnouncementTitle"></strong>
             <span id="realmAnnouncementMessage"></span>
@@ -208,21 +259,21 @@
             <strong id="panelTitle">Select a blue city</strong>
             <small id="panelSubtitle">Tap a blue city, then tap any target.</small>
           </div>
-          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">&times;</button>
+          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
         </div>
         <div id="selectedInfo" class="selected-info"></div>
         <div id="actionButtons" class="action-buttons"></div>
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-c712b2f6c417.webp" width="192" height="192" alt="" draggable="false" decoding="async" /><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span>Reports</button>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" draggable="false" decoding="async" /><span id="reportUnreadBadge" class="report-unread-badge" aria-label="0 unread reports" hidden>0</span>Reports</button>
         <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Active marches" data-audio-effect="menu_open" hidden>
-          <span aria-hidden="true">&#10148;</span>
+          <span aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-outgoing"></use></svg></span>
           <strong id="outgoingAttackCount">0</strong>
           <small id="outgoingAttackTime">Marches</small>
         </button>
         <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming threats" data-audio-effect="menu_open" hidden>
-          <span aria-hidden="true">&#9876;</span>
+          <span aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-incoming"></use></svg></span>
           <strong id="incomingAttackCount">0</strong>
           <small id="incomingAttackTime">Incoming</small>
         </button>
@@ -237,7 +288,7 @@
             <button id="skillsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="skillsView">Skills</button>
             <button id="settingsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="settingsView">Settings</button>
           </div>
-          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile">&times;</button>
+          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
         </header>
 
         <div id="profileView" class="profile-view" role="tabpanel" aria-labelledby="profileTabBtn">
@@ -250,12 +301,12 @@
             <div class="profile-name-block">
               <div id="profileNameDisplay" class="profile-name-row">
                 <h3 id="profileNameText">Ruler</h3>
-                <button id="profileNameEditBtn" class="profile-icon-btn profile-edit-btn" type="button" aria-label="Edit ruler name">&#9998;</button>
+                <button id="profileNameEditBtn" class="profile-icon-btn profile-edit-btn" type="button" aria-label="Edit ruler name"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-edit"></use></svg></button>
               </div>
               <div id="profileNameEditor" class="profile-name-editor" hidden>
                 <input id="profileNameInput" maxlength="18" aria-label="Ruler name, 18 characters maximum" title="Maximum 18 characters" />
-                <button id="profileNameSaveBtn" class="profile-icon-btn confirm" type="button" aria-label="Save ruler name">&#10003;</button>
-                <button id="profileNameCancelBtn" class="profile-icon-btn" type="button" aria-label="Cancel name edit">&times;</button>
+                <button id="profileNameSaveBtn" class="profile-icon-btn confirm" type="button" aria-label="Save ruler name"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-check"></use></svg></button>
+                <button id="profileNameCancelBtn" class="profile-icon-btn" type="button" aria-label="Cancel name edit"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
               </div>
 
               <div class="profile-level-row">
@@ -312,11 +363,11 @@
             <div class="audio-channel-grid">
               <article class="audio-channel-card" data-audio-channel="music">
                 <div class="audio-channel-header">
-                  <span class="audio-channel-glyph" aria-hidden="true">&#9835;</span>
+                  <span class="audio-channel-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
                   <span class="audio-channel-copy"><strong>Music</strong><small>Soundtrack and ambient themes</small></span>
                   <output id="musicVolumeValue" for="musicVolume">70%</output>
                   <button id="musicMute" class="audio-mute-button" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
-                    <span data-audio-mute-icon aria-hidden="true">&#128266;</span>
+                    <span data-audio-mute-icon aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
                   </button>
                 </div>
                 <label class="audio-volume-control" for="musicVolume">
@@ -326,11 +377,11 @@
               </article>
               <article class="audio-channel-card" data-audio-channel="effects">
                 <div class="audio-channel-header">
-                  <span class="audio-channel-glyph" aria-hidden="true">&#9876;</span>
+                  <span class="audio-channel-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-attack"></use></svg></span>
                   <span class="audio-channel-copy"><strong>Effects</strong><small>Interface, battle, and reward cues</small></span>
                   <output id="effectsVolumeValue" for="effectsVolume">80%</output>
                   <button id="effectsMute" class="audio-mute-button" type="button" aria-label="Mute effects" aria-pressed="false" title="Mute effects" data-audio-control>
-                    <span data-audio-mute-icon aria-hidden="true">&#128266;</span>
+                    <span data-audio-mute-icon aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
                   </button>
                 </div>
                 <label class="audio-volume-control" for="effectsVolume">
@@ -403,7 +454,7 @@
 
   <dialog id="modal" class="modal" aria-labelledby="modalTitle">
     <article class="modal-card">
-      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
       <h2 id="modalTitle">Info</h2>
       <div id="modalBody"></div>
     </article>
@@ -419,7 +470,7 @@
       <header class="level-up-reward-header">
         <div class="level-up-crown-wrap" aria-hidden="true">
           <span class="level-up-crown-glow"></span>
-          <img src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" decoding="async" />
+          <img src="assets/optimized/loading-crown-256x256-2038de353a91.webp" width="256" height="256" alt="" decoding="async" />
         </div>
         <div>
           <span class="level-up-eyebrow">Hero Level Up</span>
@@ -434,22 +485,23 @@
     </article>
   </dialog>
 
-  <script src="assets/map-editor-data.js?v=20260723-utc-responsive-v1"></script>
+  <script src="assets/map-editor-data.js?v=20260812-pre-pass-4a-gameplay-maps-r2"></script>
   <script src="release-config.js"></script>
   <script src="release-manifest.js"></script>
   <script src="patch-notes.js?v=20260807-login-resilience-v1"></script>
   <script src="world-config.js"></script>
   <script src="economy-config.js?v=20260805-linear-walls-v1"></script>
-  <script src="common-gear.js?v=20260811-common-gear-v1"></script>
+  <script src="common-gear.js?v=20260812-visual-correction-pass-4a-r1"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
   <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
   <script src="functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2"></script>
-  <script src="firebaseClient.js?v=20260810-daily-mission-camp-fix-v1"></script>
-  <script src="audio-manager.js?v=20260729-starter-sound-pack-v1"></script>
+  <script src="firebaseClient.js?v=20260812-local-session-login-fix-v2"></script>
+  <script src="audio-manager.js?v=20260812-core-visual-pass-2"></script>
   <script src="animation-manager.js?v=20260810-daily-mission-camp-fix-v1"></script>
   <script src="instant-economy-actions.js?v=20260810-instant-economy-actions-v1"></script>
-  <script src="game.js?v=20260810-daily-mission-camp-fix-v1"></script>
+  <script src="base-cities.js?v=20260813-base-cities-split-r1"></script>
+  <script src="game.js?v=20260813-login-title-position-r1"></script>
   <script src="ui-layout-runtime.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>

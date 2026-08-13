@@ -1,0 +1,3 @@
+# Active Peace Shield Field
+
+Create a restrained city-protection overlay rather than a physical item: a complete thin circular royal seal perimeter made from faded parchment-gilt linework, four small burgundy wax-seal crown markers at the cardinal points, and a very faint translucent cream heraldic veil inside the ring. The center must remain mostly transparent so the city art stays visible. Symmetrical, readable at 192px, and visually distinct from attack/selection rings. Follow the Pass 3F shared lighting and palette. Avoid a solid shield, sci-fi bubble, blue force field, magic runes, strong glow, thick opaque center, particles, and text.

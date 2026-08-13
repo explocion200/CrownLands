@@ -1,0 +1,116 @@
+{
+  "edgePairs": [
+    {
+      "first": "center",
+      "second": "east",
+      "direction": "east",
+      "file": "edge-pairs/01-center-east.jpg"
+    },
+    {
+      "first": "center",
+      "second": "south",
+      "direction": "south",
+      "file": "edge-pairs/02-center-south.jpg"
+    },
+    {
+      "first": "west",
+      "second": "center",
+      "direction": "east",
+      "file": "edge-pairs/03-west-center.jpg"
+    },
+    {
+      "first": "north",
+      "second": "center",
+      "direction": "south",
+      "file": "edge-pairs/04-north-center.jpg"
+    },
+    {
+      "first": "south",
+      "second": "region_8",
+      "direction": "south",
+      "file": "edge-pairs/05-south-region_8.jpg"
+    },
+    {
+      "first": "region_6",
+      "second": "region_7",
+      "direction": "east",
+      "file": "edge-pairs/06-region_6-region_7.jpg"
+    },
+    {
+      "first": "region_6",
+      "second": "region_11",
+      "direction": "south",
+      "file": "edge-pairs/07-region_6-region_11.jpg"
+    },
+    {
+      "first": "region_7",
+      "second": "region_8",
+      "direction": "east",
+      "file": "edge-pairs/08-region_7-region_8.jpg"
+    },
+    {
+      "first": "region_7",
+      "second": "region_12",
+      "direction": "south",
+      "file": "edge-pairs/09-region_7-region_12.jpg"
+    },
+    {
+      "first": "region_8",
+      "second": "region_9",
+      "direction": "east",
+      "file": "edge-pairs/10-region_8-region_9.jpg"
+    },
+    {
+      "first": "region_8",
+      "second": "region_13",
+      "direction": "south",
+      "file": "edge-pairs/11-region_8-region_13.jpg"
+    },
+    {
+      "first": "region_9",
+      "second": "region_10",
+      "direction": "east",
+      "file": "edge-pairs/12-region_9-region_10.jpg"
+    },
+    {
+      "first": "region_9",
+      "second": "region_14",
+      "direction": "south",
+      "file": "edge-pairs/13-region_9-region_14.jpg"
+    },
+    {
+      "first": "region_10",
+      "second": "region_15",
+      "direction": "south",
+      "file": "edge-pairs/14-region_10-region_15.jpg"
+    },
+    {
+      "first": "region_11",
+      "second": "region_12",
+      "direction": "east",
+      "file": "edge-pairs/15-region_11-region_12.jpg"
+    },
+    {
+      "first": "region_12",
+      "second": "region_13",
+      "direction": "east",
+      "file": "edge-pairs/16-region_12-region_13.jpg"
+    },
+    {
+      "first": "region_13",
+      "second": "region_14",
+      "direction": "east",
+      "file": "edge-pairs/17-region_13-region_14.jpg"
+    },
+    {
+      "first": "region_14",
+      "second": "region_15",
+      "direction": "east",
+      "file": "edge-pairs/18-region_14-region_15.jpg"
+    }
+  ],
+  "oldMapBytes": 8927742,
+  "newMapBytes": 4486884,
+  "oldThumbnailBytes": 391236,
+  "newThumbnailBytes": 187148
+}

@@ -32,6 +32,9 @@ const MAP_ASPECT_RATIO = MAP_ASPECT_WIDTH / MAP_ASPECT_HEIGHT;
 const MAP_ASPECT_TOLERANCE = 0.02;
 const DEFAULT_MAP_WIDTH = 2048;
 const DEFAULT_MAP_HEIGHT = 1536;
+const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
+const DEFAULT_CAMP_VISUAL_SIZE = 132;
+const CROWN_CITADEL_VISUAL_SIZE = 260;
 const ROOT_STATIC_FILES = new Set([
   "/about.html",
   "/game-rules.html",
@@ -666,7 +669,7 @@ function getStrongholdDefaults(type) {
       level: 100,
       troops: 50000000,
       artSrc: "assets/crown-citadel.png?v=20260703-crown-citadel-art",
-      size: 260,
+      size: CROWN_CITADEL_VISUAL_SIZE,
     },
     gold_stronghold: {
       name: "Aurum Keep",
@@ -675,7 +678,7 @@ function getStrongholdDefaults(type) {
       level: 50,
       troops: 50000000,
       artSrc: "assets/gold-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     troop_stronghold: {
       name: "Greybanner Hold",
@@ -684,7 +687,7 @@ function getStrongholdDefaults(type) {
       level: 50,
       troops: 50000000,
       artSrc: "assets/training-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     defense_stronghold: {
       name: "Ironwatch",
@@ -693,7 +696,7 @@ function getStrongholdDefaults(type) {
       level: 50,
       troops: 50000000,
       artSrc: "assets/defense-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     march_speed_stronghold: {
       name: "Swiftgate",
@@ -702,7 +705,7 @@ function getStrongholdDefaults(type) {
       level: 50,
       troops: 50000000,
       artSrc: "assets/speed-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
     upgrade_discount_stronghold: {
       name: "Upgrade Discount Stronghold",
@@ -711,7 +714,7 @@ function getStrongholdDefaults(type) {
       level: 50,
       troops: 50000000,
       artSrc: "assets/gold-stronghold.png",
-      size: 154,
+      size: DEFAULT_STRONGHOLD_VISUAL_SIZE,
     },
   };
   return defaults[normalized] || defaults.gold_stronghold;
@@ -728,22 +731,22 @@ function getCampDefaults(type) {
     gold: {
       name: "Gold Camp",
       artSrc: "assets/camps/gold.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     troops: {
       name: "Warband Camp",
       artSrc: "assets/camps/troops.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     items: {
       name: "Relic Camp",
       artSrc: "assets/camps/items.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
     deed: {
       name: "Deed Camp",
       artSrc: "assets/camps/deed.png",
-      size: 132,
+      size: DEFAULT_CAMP_VISUAL_SIZE,
     },
   };
   return defaults[normalized] || defaults.gold;
