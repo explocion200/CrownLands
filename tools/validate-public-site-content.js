@@ -7,6 +7,7 @@ const publicPages = [
   "home.html",
   "guides.html",
   "updates.html",
+  "roadmap.html",
   "about.html",
   "how-to-play.html",
   "battle-economy-guide.html",
@@ -24,6 +25,7 @@ const publicPages = [
 const requiredNavigation = [
   "/guides.html",
   "/updates.html",
+  "/roadmap.html",
   "/play/",
   "/game-rules.html",
   "/support.html",
@@ -58,11 +60,16 @@ const sitemapSource = read("sitemap.xml");
 const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const manifestSource = read("manifest.webmanifest");
+const roadmapSource = read("roadmap.html");
+const roadmapDataSource = read("roadmap-data.js");
+const roadmapScriptSource = read("roadmap.js");
+const roadmapStylesSource = read("roadmap.css");
 
 assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-6031755025291372"/);
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
 assert.match(indexSource, /class="login-game-info"/);
-assert.match(indexSource, /Build a kingdom across living islands/);
+assert.match(indexSource, /Build a kingdom across 15 connected regions/);
+assert.match(indexSource, /href="\/roadmap\.html"/);
 assert.match(indexSource, /name="robots" content="noindex, nofollow"/);
 assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/play\/"/);
 assert.match(homeSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/"/);
@@ -89,7 +96,35 @@ for (const page of publicPages) {
   assert.match(source, /href="\/site-info\.css\?v=[^"]+"/, `${page} must use the public content stylesheet.`);
   assert.doesNotMatch(source, /adsbygoogle|securepubads\.g\.doubleclick\.net|googletag/, `${page} must not request Google-served ads.`);
   assert.ok(visibleWordCount(source) >= 180, `${page} needs at least 180 visible words of original content.`);
+  for (const href of requiredNavigation) {
+    assert.match(source, new RegExp(`href="${href.replaceAll(".", "\\.")}"`), `${page} does not link to ${href}.`);
+  }
 }
+
+assert.match(roadmapSource, /<title>Crownlands Roadmap<\/title>/);
+assert.match(roadmapSource, /See what is playable now, what is being improved, and what is coming next to Crownlands\./);
+assert.match(roadmapSource, /Crownlands is in active development\. Roadmap items may change based on testing, balance, performance, and player feedback\./);
+assert.match(roadmapSource, /id="roadmapSearch"[^>]*type="search"/);
+assert.match(roadmapSource, /id="statusFilters"/);
+assert.match(roadmapSource, /id="categoryFilters"/);
+assert.match(roadmapSource, /15 Regions Live/);
+assert.match(roadmapSource, /Dynamic Expansion In Development/);
+assert.doesNotMatch(roadmapSource, /Five Island|island game|island map|portal system/i);
+assert.ok((roadmapDataSource.match(/\bid:\s*"[a-z0-9-]+"/g) || []).length >= 32, "Roadmap data needs every approved public feature card.");
+assert.match(roadmapDataSource, /id: "achievements"[\s\S]*?status: "Live"/);
+assert.match(roadmapDataSource, /id: "inner-castle-gear"[\s\S]*?status: "In Development"/);
+assert.match(roadmapDataSource, /id: "dynamic-map-expansion"[\s\S]*?status: "In Development"/);
+assert.match(roadmapDataSource, /Each region has its own city capacity and layout balance/);
+for (const category of ["World", "Combat", "Progression", "Clans", "UI/Polish", "Events", "Mobile/PWA"]) {
+  assert.match(roadmapDataSource, new RegExp(`"${category.replace("/", "\\/")}"`), `Roadmap data is missing ${category}.`);
+}
+assert.match(roadmapScriptSource, /function itemMatches\(/);
+assert.match(roadmapScriptSource, /function toggleCard\(/);
+assert.match(roadmapScriptSource, /searchInput\.addEventListener\("input"/);
+assert.match(roadmapScriptSource, /aria-expanded/);
+assert.match(roadmapStylesSource, /grid-template-columns:\s*repeat\(4/);
+assert.match(roadmapStylesSource, /@media \(max-width:\s*700px\)/);
+assert.match(roadmapStylesSource, /@media \(prefers-reduced-motion:\s*reduce\)/);
 
 assert.match(stylesSource, /\.site-header/);
 assert.match(stylesSource, /\.site-hero/);
