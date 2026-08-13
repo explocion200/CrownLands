@@ -53,6 +53,96 @@
   }));
   if (guideCards.length) filterGuides();
 
+  function formatPatchNoteDate(release) {
+    const dateKey = String(release?.dateKey || "").trim();
+    const hasUtcDateKey = /^\d{4}-\d{2}-\d{2}$/.test(dateKey);
+    const date = new Date(hasUtcDateKey ? `${dateKey}T00:00:00.000Z` : release?.publishedAt);
+    if (Number.isNaN(date.getTime())) return "Recent update";
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      ...(hasUtcDateKey ? { timeZone: "UTC" } : {}),
+    });
+  }
+
+  function normalizePatchNoteReleases() {
+    const releases = Array.isArray(window.CROWNLANDS_PATCH_NOTES?.releases)
+      ? window.CROWNLANDS_PATCH_NOTES.releases
+      : [];
+    return releases
+      .map(release => ({
+        buildId: String(release?.buildId || "").trim(),
+        dateKey: String(release?.dateKey || "").trim(),
+        publishedAt: String(release?.publishedAt || "").trim(),
+        notes: (Array.isArray(release?.notes) ? release.notes : [])
+          .map(note => String(note || "").trim())
+          .filter(Boolean),
+      }))
+      .filter(release => release.notes.length)
+      .slice(0, 6);
+  }
+
+  function createPatchNotePost(release, index) {
+    const article = document.createElement("article");
+    article.className = `update-post patch-note-post${index === 0 ? " is-current" : ""}`;
+    article.dataset.updatePost = "patch-notes";
+
+    const meta = document.createElement("div");
+    meta.className = "patch-note-meta";
+    const type = document.createElement("span");
+    type.className = "update-type";
+    type.textContent = index === 0 ? "Latest patch notes" : "Previous patch notes";
+    const time = document.createElement("time");
+    time.dateTime = release.dateKey || release.publishedAt;
+    time.textContent = formatPatchNoteDate(release);
+    meta.append(type, time);
+
+    const heading = document.createElement("h2");
+    heading.textContent = index === 0 ? "Current deployed changes" : "Earlier deployed changes";
+    const list = document.createElement("ul");
+    release.notes.forEach(note => {
+      const item = document.createElement("li");
+      item.textContent = note;
+      list.append(item);
+    });
+
+    const footer = document.createElement("footer");
+    footer.className = "patch-note-footer";
+    const build = document.createElement("span");
+    const shortBuildId = release.buildId.length > 12 ? release.buildId.slice(0, 12) : release.buildId || "dev";
+    build.textContent = `Build ${shortBuildId}`;
+    footer.append(build);
+    if (index === 0) {
+      const current = document.createElement("strong");
+      current.textContent = "Current";
+      footer.append(current);
+    }
+
+    article.append(meta, heading, list, footer);
+    return article;
+  }
+
+  function renderPublicPatchNotes() {
+    const feed = document.querySelector("[data-patch-notes-feed]");
+    if (!feed) return;
+    const releases = normalizePatchNoteReleases();
+    if (!releases.length) {
+      const loadingHeading = feed.querySelector("h2");
+      const loadingCopy = feed.querySelector("p");
+      if (loadingHeading) loadingHeading.textContent = "Patch notes temporarily unavailable";
+      if (loadingCopy) loadingCopy.textContent = "Please try again shortly. The development articles below are still available.";
+      return;
+    }
+    feed.replaceChildren(...releases.map(createPatchNotePost));
+    const currentDate = formatPatchNoteDate(releases[0]);
+    document.querySelectorAll("[data-patch-notes-updated]").forEach(element => {
+      element.textContent = `Latest release ${currentDate}`;
+    });
+  }
+
+  renderPublicPatchNotes();
+
   const planner = document.querySelector("[data-kingdom-planner]");
   if (planner) {
     const stage = planner.querySelector("[name='kingdom-stage']");

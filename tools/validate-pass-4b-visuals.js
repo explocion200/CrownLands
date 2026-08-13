@@ -13,7 +13,8 @@ const editorStyles = read("tools/map-editor/styles.css");
 const editorHud = read("tools/map-editor/hud-editor.js");
 const serviceWorker = read("service-worker.js");
 const indexHtml = read("index.html");
-const cacheVersion = "20260812-pre-pass-4a-gameplay-maps-r2";
+const cacheVersion = indexHtml.match(/<meta\s+name="crownlands-build"\s+content="([^"]+)"/)?.[1] || "";
+assert.ok(cacheVersion, "The game HTML must expose its deployed build ID.");
 
 assert.match(publicStyles, /--page-parchment:\s*#d7c69d/);
 assert.match(publicStyles, /--page-burgundy:\s*#6d2d35/);
@@ -35,7 +36,7 @@ assert.match(game, /async function saveClanShieldEditor\(\)/);
 assert.match(game, /updateClanProfile\(\{ shield \}\)/);
 assert.match(styles, /Pass 4B: secondary heraldry workspaces and dispatch states/);
 assert.match(styles, /--flag-swatch/);
-assert.match(styles, /\.patch-notes-modal \.modal-card::before[\s\S]*background:\s*#d8c7a4/);
+assert.match(`${publicStyles}\n${styles}`, /\.patch-note-post\.is-current[\s\S]*border-left:\s*7px solid var\(--page-burgundy\)/);
 assert.doesNotMatch(styles, /\.setup-card::after/, "The login card must not render a decorative status orb.");
 
 assert.match(serviceWorker, new RegExp(cacheVersion));

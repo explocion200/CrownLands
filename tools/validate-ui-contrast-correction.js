@@ -85,14 +85,51 @@ for (const selector of [
   ".incoming-attack-btn",
 ]) assert.ok(css.includes(selector), `Missing contrast coverage for ${selector}.`);
 
+assert.match(
+  css,
+  /\.effect-status-badge,[\s\S]*?width:\s*var\(--effect-badge-size\);[\s\S]*?height:\s*var\(--effect-badge-size\);[\s\S]*?background:\s*transparent;/,
+  "Active timed items must render as compact square artwork instead of side panels."
+);
+assert.match(
+  css,
+  /\.effect-status-badge strong,[\s\S]*?position:\s*absolute;[\s\S]*?left:\s*50%;[\s\S]*?bottom:\s*7px;[\s\S]*?transform:\s*translateX\(-50%\);/,
+  "Active timed-item countdowns must remain overlaid on their artwork."
+);
+assert.match(css, /\.profile-screen \.profile-tabs button,[\s\S]*?var\(--cl-tab-unselected-bg\)/, "Profile tabs do not share the achievement-tab surface treatment.");
+assert.match(css, /\.profile-screen \.profile-tabs button\.active,[\s\S]*?var\(--cl-tab-selected-bg\)/, "The active Profile tab is not visually distinct.");
+assert.match(css, /\.audio-channel-card \.audio-channel-glyph[\s\S]*?color:\s*#fff2c7 !important/, "Music and Effects channel glyphs are not contrast-safe.");
+assert.match(css, /\.audio-channel-card \.audio-mute-button::after[\s\S]*?content:\s*"On"/, "Audio controls do not expose a visible On state.");
+assert.match(css, /\.audio-channel-card \.audio-mute-button\[aria-pressed="true"\]::after[\s\S]*?content:\s*"Off"/, "Audio controls do not expose a visible Off state.");
+assert.match(css, /\.profile-screen \.kingdom-stat \.profile-production-bonus[\s\S]*?color:\s*#9a6714 !important/, "Kingdom production bonuses are not gold-highlighted.");
+assert.match(css, /\.profile-screen \.flag-option-grid button[\s\S]*?overflow-wrap:\s*anywhere;[\s\S]*?white-space:\s*normal;/, "Player flag pattern names can still overflow their buttons.");
+assert.match(css, /\.clan-shield-editor \.clan-shield-choice-grid button[\s\S]*?color:\s*#f8e9c4 !important/, "Clan shield choices remain low contrast.");
+assert.match(css, /\.clan-shield-editor \.clan-shield-choice-grid button small[\s\S]*?overflow-wrap:\s*anywhere;[\s\S]*?white-space:\s*normal;/, "Clan shield labels can still overflow their choices.");
+assert.match(game, /data-skill-preset-slot="\$\{slot\.slot\}"[\s\S]{0,500}aria-disabled="\$\{!slotUnlocked\}"[\s\S]{0,100}disabled/, "Locked skill preset tabs are not disabled.");
+assert.match(game, /if \(!requestedSlot \|\| !isSkillPresetUnlocked\(requestedSlot, state\?\.character\)\)/, "Locked preset click handling lacks an interaction guard.");
+assert.match(css, /\.profile-screen \.skill-preset-tabs button\.locked[\s\S]*?cursor:\s*not-allowed/, "Locked presets do not have a readable disabled treatment.");
+assert.match(game, /class="battle-report-detail-btn"[\s\S]{0,220}aria-label="View full report" title="View full report"/, "The full-report action lacks a clear label.");
+assert.match(game, /aria-label="View full report" title="View full report">\$\{renderCrownlandsIcon\("forward"\)\}/, "The full-report action does not use the visible forward icon.");
+assert.match(css, /\.battle-report-card \.battle-report-detail-btn[\s\S]*?background:\s*linear-gradient\(180deg, #fff0c7, #d5ae67\) !important/, "The full-report action is not visibly styled.");
+
 assert.match(css, /\.profile-screen \.flag-swatch-grid button[\s\S]*?var\(--flag-swatch\) !important;/, "Flag dyes can still be overwritten by the shared button face.");
 assert.match(game, /data-flag-color[\s\S]{0,400}aria-pressed="\$\{selected\}"/, "Flag swatches must expose their selected state.");
 assert.doesNotMatch(index, /M8 27h18v3H6v-5c1-5 3-9 7-12/, "The ambiguous legacy horse charge remains in the production sprite.");
 assert.match(index, /id="cl-icon-flag-horse"[\s\S]{0,260}M6 29h21v-4/, "The corrected heraldic horse charge is missing.");
 assert.match(index, /hud-report-192x192-21644b7390fb\.webp/, "The approved Report artwork changed.");
+assert.match(index, /id="logBtn"[\s\S]{0,420}class="nav-btn-label">Reports<\/small>/, "Reports is missing the shared bottom-nav label treatment.");
+assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,220}class="nav-btn-icon"[\s\S]{0,260}class="nav-btn-label">Marches<\/small>/, "Troop Movements is missing the shared icon and label treatment.");
+assert.match(index, /id="incomingAttackBtn"[\s\S]{0,220}class="nav-btn-icon"[\s\S]{0,260}class="nav-btn-label">Incoming<\/small>/, "Incoming Attacks is missing the shared icon and label treatment.");
+assert.match(css, /--cl-operation-button-width:\s*clamp\(78px,[\s\S]{0,120}98px\)/, "The shared bottom-nav button width is not responsive.");
+assert.match(css, /\.bottom-nav :is\(\.report-nav-btn, \.outgoing-attack-btn, \.incoming-attack-btn\) \{[\s\S]*?width:\s*var\(--cl-operation-button-width\);[\s\S]*?height:\s*46px;[\s\S]*?padding:\s*3px 5px;[\s\S]*?border:\s*3px solid #b28c58 !important;/, "The three bottom-nav controls do not share one frame and sizing contract.");
+assert.match(css, /\.bottom-nav :is\(\.report-nav-btn, \.outgoing-attack-btn, \.incoming-attack-btn\)\[hidden\] \{\s*display:\s*none !important;/, "Shared bottom-nav styles can override dynamic hidden states.");
+assert.match(css, /\.bottom-nav \.report-nav-btn \{[\s\S]*?var\(--cl-contrast-paper-light\), var\(--cl-contrast-paper\)/, "Reports is missing its beige inner surface.");
+assert.match(css, /\.bottom-nav \.outgoing-attack-btn,[\s\S]{0,180}background:\s*var\(--cl-state-outgoing\) !important;/, "Troop Movements is missing its muted medieval-blue inner surface.");
+assert.match(css, /\.bottom-nav \.incoming-attack-btn,[\s\S]{0,180}background:\s*var\(--cl-state-incoming\) !important;/, "Incoming Attacks is missing its muted medieval-red inner surface.");
+assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "Incoming Attacks no longer preserves dynamic visibility.");
+assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260813-ui-contrast-correction-r1");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260813-bottom-nav-family-r1");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");

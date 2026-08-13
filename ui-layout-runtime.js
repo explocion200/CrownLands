@@ -55,6 +55,7 @@
     Object.entries(preset?.components || {}).forEach(([id, component]) => {
       const element = document.querySelector(selectors[id]);
       if (!element || !component || typeof component !== "object") return;
+      if (id === "returnHome" && element.classList.contains("hud-home-return")) return;
       if ((id === "outgoingMarch" || id === "incomingMarch") && element.parentElement?.classList.contains("bottom-nav")) {
         document.querySelector(".game-view")?.appendChild(element);
       }

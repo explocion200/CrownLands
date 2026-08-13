@@ -7,6 +7,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 const index = read("index.html");
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const game = read("game.js");
+const layoutRuntime = read("ui-layout-runtime.js");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 
 assert.match(
@@ -25,13 +26,33 @@ assert.match(
   "The Main City return behavior must remain wired to returnToMainCity.",
 );
 assert.match(
+  game,
+  /if \(!isHomeIslandActive\) \{[\s\S]{0,220}?setMainCityReturnHudMode\(true\)[\s\S]{0,220}?mainCityReturnBtn\.hidden = false/,
+  "Leaving the Home City map must show the Home control in HUD mode.",
+);
+assert.match(
+  game,
+  /resourceBar\?\.classList\.toggle\("has-home-return"[\s\S]{0,700}?resourceBar\.querySelector\("#fullscreenBtn"\)[\s\S]{0,180}?insertBefore\(mainCityReturnBtn, fullscreenControl/,
+  "HUD mode must place Home immediately before the fullscreen control.",
+);
+assert.match(
+  styles,
+  /\.resource-bar\.has-home-return\s*\{\s*padding-right:\s*calc\(38px \+ \.35rem\);\s*\}[\s\S]*?\.main-city-return\.hud-home-return\s*\{[\s\S]{0,520}?position:\s*static !important[\s\S]{0,420}?width:\s*38px !important[\s\S]{0,160}?height:\s*38px !important[\s\S]{0,220}?transform:\s*none !important/,
+  "The Home control must reserve space beside fullscreen and resist absolute editor positioning.",
+);
+assert.match(
+  layoutRuntime,
+  /id === "returnHome" && element\.classList\.contains\("hud-home-return"\)/,
+  "The layout runtime must not reposition the off-map Home control.",
+);
+assert.match(
   index,
-  /id="outgoingAttackBtn"[\s\S]{0,260}?<span aria-hidden="true">&#10148;<\/span>/,
+  /id="outgoingAttackBtn"[\s\S]{0,300}?<span[^>]*aria-hidden="true">&#10148;<\/span>/,
   "The Outgoing Marches button must use its original heavy forward arrow.",
 );
 assert.match(
   index,
-  /id="incomingAttackBtn"[\s\S]{0,260}?<span aria-hidden="true">&#9876;<\/span>/,
+  /id="incomingAttackBtn"[\s\S]{0,300}?<span[^>]*aria-hidden="true">&#9876;<\/span>/,
   "The Incoming Attacks and Scouts button must use its original crossed-swords icon.",
 );
 assert.doesNotMatch(

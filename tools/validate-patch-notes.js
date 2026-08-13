@@ -6,25 +6,25 @@ const { createDailyPatchNoteReleases, getUtcDateKey } = require("./patch-note-hi
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const html = read("index.html");
-const game = read("game.js");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const updates = read("updates.html");
+const publicSite = read("public-site.js");
+const styles = read("site-info.css");
 const worker = read("service-worker.js");
 const deployStamp = read("tools/stamp-deploy-build.js");
 const patchNotes = read("patch-notes.js");
 
-assert.match(html, /id="patchNotesBtn"[\s\S]*?id="patchNotesBadge"[^>]*hidden/, "The main menu must include a Patch Notes button with a hidden-by-default New badge.");
-assert.ok(html.indexOf('src="patch-notes.js') < html.indexOf('src="game.js'), "Patch-note data must load before the game runtime.");
-assert.match(worker, /"\/patch-notes\.js\?v=[^"]+"/, "Patch notes must be available from the offline app cache.");
+assert.doesNotMatch(html, /patchNotesBtn|patchNotesBadge|src="patch-notes\.js/, "Patch notes must not remain on the game login screen.");
+assert.match(html, /href="\/updates\.html">Patch Notes<\/a>/, "The login information links must direct players to the website Patch Notes page.");
+assert.ok(updates.indexOf('src="/patch-notes.js"') < updates.indexOf('src="/public-site.js'), "Patch-note data must load before the public website runtime.");
+assert.match(updates, /data-patch-notes-feed[\s\S]*?data-update-post="patch-notes"/, "The website must provide a resilient Patch Notes feed and fallback.");
+assert.doesNotMatch(worker, /"\/patch-notes\.js\?v=[^"]+"/, "Website Patch Notes must not inflate the game installation cache.");
 assert.match(patchNotes, /window\.CROWNLANDS_PATCH_NOTES\s*=\s*Object\.freeze/, "Patch-note data must expose the browser configuration object.");
 assert.match(patchNotes, /"?dateKey"?:\s*"\d{4}-\d{2}-\d{2}"/, "Patch-note releases must include a stable UTC date key.");
 
-assert.match(game, /PATCH_NOTES_SEEN_STORAGE_KEY/, "The menu must remember which deployed patch notes were viewed.");
-assert.match(game, /localStorage\.getItem\(PATCH_NOTES_SEEN_STORAGE_KEY\)\s*!==\s*buildId/, "The New badge must compare the viewed release with the current build.");
-assert.match(game, /function showPatchNotesModal\(\)[\s\S]*?markPatchNotesSeen\(\)[\s\S]*?modal\.showModal\(\)/, "Opening Patch Notes must render the modal and clear its New state.");
-assert.match(game, /timeZone:\s*"UTC"/, "Daily patch-note dates must render with a stable UTC boundary.");
-assert.match(game, /hasUtcDateKey\s*\?[\s\S]{0,100}:\s*release\?\.publishedAt/, "Legacy cached releases without a date key must still use their published timestamp.");
-assert.match(styles, /\.patch-notes-btn\.has-new-patch-notes/, "The unread Patch Notes button needs a visible update treatment.");
-assert.match(styles, /\.patch-notes-release\.is-latest/, "The current release needs distinct modal styling.");
+assert.match(publicSite, /function renderPublicPatchNotes\(\)[\s\S]*?normalizePatchNoteReleases\(\)[\s\S]*?feed\.replaceChildren/, "The website must render deployment-generated Patch Notes.");
+assert.match(publicSite, /hasUtcDateKey[\s\S]*?timeZone:\s*"UTC"/, "Daily patch-note dates must render with a stable UTC boundary.");
+assert.match(publicSite, /item\.textContent\s*=\s*note/, "Patch-note content must be rendered as text rather than executable markup.");
+assert.match(styles, /\.patch-note-post\.is-current/, "The current website release needs a visible treatment.");
 
 assert.match(deployStamp, /function getPatchNoteReleases\(currentBuildId\)/, "Deployment stamping must generate release history.");
 assert.match(deployStamp, /git[\s\S]*?--first-parent[\s\S]*?--format=%H%x09%cI/, "Generated release history must follow deployed mainline commits.");
@@ -71,4 +71,4 @@ const limitedReleases = createDailyPatchNoteReleases(sevenDaysOfRows, {
 assert.equal(limitedReleases.length, 6, "The release limit must apply after commits are grouped into UTC days.");
 assert.equal(limitedReleases[0].notes.length, 2, "Same-day notes must not consume additional history cards.");
 
-console.log("Validated daily UTC patch-note consolidation, unread state, release history, and offline delivery.");
+console.log("Validated website-hosted Patch Notes, daily UTC consolidation, release history, and login removal.");

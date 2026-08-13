@@ -1,7 +1,3 @@
-/* Crownlands contrast, visibility, and state-color correction contract. ----
-   This file intentionally loads last. It corrects presentation only and keeps
-   the established font, artwork, layout, and gameplay systems unchanged. */
-
 :root {
   --cl-contrast-ivory: #f4e8ce;
   --cl-contrast-ivory-bright: #fff8ea;
@@ -173,8 +169,6 @@
   filter: brightness(1.04);
 }
 
-/* An applied skill build can differ from the tab being inspected. Keep the
-   active build visible without making it look like the selected tab. */
 .skill-preset-tabs button.active:not(.selected):not([aria-selected="true"]) {
   border-color: var(--cl-state-scout);
   box-shadow: inset 0 0 0 2px rgba(184, 138, 50, .28);
@@ -299,7 +293,6 @@
   opacity: 1;
 }
 
-/* War Room remains a purposeful military surface, with ivory copy. */
 .clan-rallies-panel {
   color: var(--cl-dark-surface-text);
   border-color: rgba(178, 139, 81, .58);
@@ -339,7 +332,6 @@
   color: #f0cd88 !important;
 }
 
-/* Danger actions retain clear wording in every interaction state. */
 :is(
   .clan-leave.danger-action,
   .clan-disband-confirmation .danger-action,
@@ -600,30 +592,68 @@
   transform: none;
 }
 
-/* The approved dark-ink report artwork needs a light button surface. */
+.bottom-nav {
+  --cl-operation-button-width: clamp(78px, calc((100vw - 42px) / 3), 98px);
+  width: max-content !important;
+  min-width: 0 !important;
+}
+
+.bottom-nav :is(.report-nav-btn, .outgoing-attack-btn, .incoming-attack-btn) {
+  flex: 0 0 var(--cl-operation-button-width);
+  width: var(--cl-operation-button-width);
+  height: 46px;
+  min-height: 46px;
+  padding: 3px 5px;
+  display: grid;
+  grid-auto-flow: row;
+  place-content: center;
+  place-items: center;
+  gap: 0;
+  border: 3px solid #b28c58 !important;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(255, 239, 196, .28), 0 4px 8px rgba(39, 24, 13, .34);
+  line-height: 1;
+  text-align: center;
+}
+
+.bottom-nav :is(.report-nav-btn, .outgoing-attack-btn, .incoming-attack-btn)[hidden] {
+  display: none !important;
+}
+
+.bottom-nav :is(.report-nav-btn, .outgoing-attack-btn, .incoming-attack-btn) :is(.report-icon, .nav-btn-icon) {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto;
+  font-size: 1.05rem;
+  line-height: 22px;
+}
+
+.bottom-nav :is(.report-nav-btn, .outgoing-attack-btn, .incoming-attack-btn) .nav-btn-label {
+  max-width: 100%;
+  font-size: .58rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.bottom-nav :is(.outgoing-attack-btn, .incoming-attack-btn) strong {
+  font-size: .68rem;
+}
+
 .bottom-nav .report-nav-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   color: var(--cl-contrast-ink) !important;
-  border-color: var(--cl-contrast-border) !important;
   background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper)) !important;
   text-shadow: 0 1px rgba(255, 250, 232, .5);
 }
 
 .bottom-nav .report-nav-btn .report-icon {
-  display: block;
-  margin-inline: auto;
   object-fit: contain;
-  object-position: center;
   filter: none;
 }
 
 .bottom-nav .report-nav-btn:not(:disabled):hover,
 .bottom-nav .report-nav-btn.active {
   color: #451d22 !important;
-  border-color: var(--cl-contrast-burgundy) !important;
   background: linear-gradient(180deg, #fff0ce, #ddc18b) !important;
 }
 
@@ -655,14 +685,12 @@
 .bottom-nav .outgoing-attack-btn,
 .bottom-nav .outgoing-attack-btn.active {
   color: var(--cl-contrast-ivory-bright) !important;
-  border-color: #274559 !important;
   background: var(--cl-state-outgoing) !important;
 }
 
 .bottom-nav .incoming-attack-btn,
 .bottom-nav .incoming-attack-btn.active {
   color: var(--cl-contrast-ivory-bright) !important;
-  border-color: #5f2020 !important;
   background: var(--cl-state-incoming) !important;
 }
 
@@ -673,8 +701,6 @@
   opacity: 1;
 }
 
-/* Global dark-surface safety net. Scope only semantic command/status
-   surfaces so parchment information panels continue using dark ink. */
 :is(
   .effect-status-badge,
   .incoming-attack-badge,
@@ -715,5 +741,359 @@
 @media (prefers-reduced-motion: reduce) {
   :is(.bottom-nav .outgoing-attack-btn, .bottom-nav .incoming-attack-btn) {
     animation: none;
+  }
+}
+
+/* Active timed items --------------------------------------------------- */
+
+.active-item-effects-stack {
+  --effect-badge-size: 58px;
+  --effect-icon-size: 58px;
+  --effect-timer-font: .58rem;
+  --effect-stack-gap: .42rem;
+  width: var(--effect-badge-size);
+}
+
+.effect-status-badge,
+.active-item-effects-stack.compact .effect-status-badge,
+.active-item-effects-stack.dense .effect-status-badge {
+  position: relative;
+  display: block;
+  width: var(--effect-badge-size);
+  height: var(--effect-badge-size);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.effect-status-badge[hidden] {
+  display: none;
+}
+
+.effect-status-icon,
+.active-item-effects-stack.compact .effect-status-icon,
+.active-item-effects-stack.dense .effect-status-icon,
+.war-drums-status-icon,
+.tax-decree-status-icon,
+.veil-status-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .72));
+}
+
+.effect-status-badge strong,
+.active-item-effects-stack.compact .effect-status-badge strong,
+.active-item-effects-stack.dense .effect-status-badge strong {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  right: auto;
+  bottom: 7px;
+  transform: translateX(-50%);
+  width: auto;
+  min-width: 34px;
+  max-width: calc(100% - 4px);
+  padding: .14rem .22rem;
+  overflow: hidden;
+  color: #fff7df !important;
+  border: 1px solid rgba(244, 221, 165, .72);
+  border-radius: 3px;
+  background: rgba(24, 18, 13, .9);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .58);
+  font-size: var(--effect-timer-font);
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 1px #000;
+  white-space: nowrap;
+}
+
+.active-item-effects-stack.compact {
+  --effect-badge-size: 50px;
+  --effect-icon-size: 50px;
+  --effect-timer-font: .5rem;
+  --effect-stack-gap: .3rem;
+}
+
+.active-item-effects-stack.dense {
+  --effect-badge-size: 46px;
+  --effect-icon-size: 46px;
+  --effect-timer-font: .46rem;
+  --effect-stack-gap: .22rem;
+}
+
+.profile-screen .profile-tabs {
+  gap: .28rem;
+  padding: .25rem;
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(232, 215, 176, .9), rgba(190, 164, 111, .9));
+  box-shadow: inset 0 1px 0 rgba(255, 249, 226, .36);
+}
+
+.profile-screen .profile-tabs button,
+.profile-screen .profile-tabs button:last-child {
+  min-width: 0;
+  min-height: 38px;
+  padding: .34rem .48rem;
+  color: var(--cl-tab-unselected-text) !important;
+  border: 1px solid rgba(85, 58, 39, .62);
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-tab-unselected-bg));
+  box-shadow: inset 0 1px 0 rgba(255, 253, 239, .48), 0 2px 0 rgba(54, 35, 20, .2);
+  font-size: clamp(.62rem, 1.25vw, .76rem);
+  line-height: 1.1;
+  text-align: center;
+  text-shadow: 0 1px rgba(255, 250, 232, .5);
+}
+
+.profile-screen .profile-tabs button.active,
+.profile-screen .profile-tabs button[aria-selected="true"] {
+  color: var(--cl-tab-selected-text) !important;
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-tab-selected-bg));
+  box-shadow: inset 0 1px 0 rgba(255, 240, 209, .24), inset 0 -3px 0 rgba(43, 13, 16, .28);
+  text-shadow: 0 1px 1px rgba(31, 9, 11, .8);
+}
+
+.audio-channel-card .audio-channel-glyph {
+  color: #fff2c7 !important;
+  border: 1px solid #b98a39;
+  background: linear-gradient(180deg, #285d7b, #0c314c);
+  box-shadow: inset 0 1px 0 rgba(255, 249, 220, .2), 0 3px 7px rgba(29, 18, 8, .3);
+}
+
+.audio-channel-card .audio-channel-glyph .cl-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: inherit !important;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .72));
+}
+
+.audio-channel-card .audio-channel-copy strong {
+  color: #34261a !important;
+}
+
+.audio-channel-card .audio-channel-copy small {
+  color: #604b35 !important;
+  opacity: 1;
+}
+
+.audio-channel-card .audio-mute-button {
+  width: 62px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: .2rem;
+  padding: 0 .38rem;
+  color: #f8edcf !important;
+  border-color: #936c31;
+  background: linear-gradient(180deg, #315f78, #12344a);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 225, .18), 0 4px 8px rgba(38, 23, 12, .3);
+}
+
+.audio-channel-card .audio-mute-button [data-audio-mute-icon] {
+  display: grid;
+  place-items: center;
+  color: #ffe3a0 !important;
+}
+
+.audio-channel-card .audio-mute-button::after {
+  content: "On";
+  color: #fff7df;
+  font-size: .58rem;
+  font-weight: 1000;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.audio-channel-card .audio-mute-button[aria-pressed="true"] {
+  color: #fff0dd !important;
+  border-color: #7b3035;
+  background: linear-gradient(180deg, #864149, #57252b);
+}
+
+.audio-channel-card .audio-mute-button[aria-pressed="true"]::after {
+  content: "Off";
+}
+
+.profile-screen .kingdom-stat .profile-production-bonus {
+  color: #9a6714 !important;
+  font-weight: 1000;
+  text-shadow: 0 1px rgba(255, 246, 207, .48);
+}
+
+.profile-screen .flag-option-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.profile-screen .flag-option-grid button {
+  min-width: 0;
+  min-height: 46px;
+  padding: .32rem .36rem;
+  overflow: hidden;
+  font-size: clamp(.56rem, 1.2vw, .7rem);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.profile-screen .flag-symbol-grid button {
+  color: #f8e9c4 !important;
+  border-color: #8b693b;
+  background: linear-gradient(180deg, #315f78, #12344a);
+}
+
+.profile-screen .flag-symbol-grid button .cl-icon {
+  color: inherit !important;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .72));
+}
+
+.profile-screen .flag-symbol-grid button.active {
+  color: #2b2118 !important;
+  border-color: #6d2d35;
+  background: linear-gradient(180deg, #f5e7c8, #d4b87d);
+}
+
+.clan-shield-editor .clan-shield-control,
+.clan-shield-editor .clan-shield-color-group {
+  color: #f6e9ca;
+  border-color: #8e6b39;
+  background: linear-gradient(180deg, #173e57, #09283d);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 211, .12), 0 4px 9px rgba(34, 20, 9, .2);
+}
+
+.clan-shield-editor .clan-shield-control legend,
+.clan-shield-editor .clan-shield-color-group legend {
+  color: #ffe4a0 !important;
+  background: #123248;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72);
+}
+
+.clan-shield-editor .clan-shield-choice-grid button {
+  color: #f8e9c4 !important;
+  border-color: rgba(219, 180, 99, .56);
+  background: linear-gradient(180deg, #315f78, #12344a);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 219, .12);
+}
+
+.clan-shield-editor .clan-shield-choice-grid button :is(span, small) {
+  color: inherit !important;
+  opacity: 1;
+}
+
+.clan-shield-editor .clan-shield-choice-grid button {
+  min-width: 0;
+  grid-template-columns: minmax(22px, auto) minmax(0, 1fr);
+}
+
+.clan-shield-editor .clan-shield-choice-grid button small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.12;
+  text-align: center;
+  white-space: normal;
+}
+
+.clan-shield-editor .clan-shield-choice-grid button svg,
+.clan-shield-editor .clan-shield-choice-grid button svg * {
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .72));
+}
+
+.clan-shield-editor .clan-shield-choice-grid button.active {
+  color: #2b2118 !important;
+  border-color: #fff0bd;
+  background: linear-gradient(180deg, #f6df9b, #c9953c);
+  box-shadow: 0 0 0 2px rgba(109, 45, 53, .42), inset 0 1px 0 rgba(255, 251, 229, .5);
+}
+
+.clan-shield-editor .clan-shield-choice-grid button:not(.active):hover {
+  border-color: #f0cf83;
+  filter: brightness(1.08);
+}
+
+.profile-screen .skill-preset-tabs button.locked,
+.profile-screen .skill-preset-tabs button.locked.selected,
+.profile-screen .skill-preset-tabs button.locked[aria-selected="true"] {
+  color: #e9dcc2 !important;
+  border-color: #6e675b;
+  background: linear-gradient(180deg, #605d56, #3e3c38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+  cursor: not-allowed;
+  filter: saturate(.55);
+  opacity: .78;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72);
+}
+
+.profile-screen .skill-preset-tabs button.locked :is(strong, small) {
+  color: inherit !important;
+}
+
+.profile-screen .skill-preset-tabs button.locked small {
+  font-size: .55rem;
+}
+
+.profile-screen .skill-preset-detail.locked {
+  color: #3e3328;
+  border-color: #87765d;
+  background: linear-gradient(180deg, #ded1b5, #c4b18a);
+}
+
+.battle-report-card .battle-report-detail-btn {
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  color: #3d2414 !important;
+  border-color: #704b27 !important;
+  background: linear-gradient(180deg, #fff0c7, #d5ae67) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .58), 0 4px 8px rgba(49, 29, 13, .32) !important;
+}
+
+.battle-report-card .battle-report-detail-btn .cl-icon {
+  width: 1.18rem;
+  height: 1.18rem;
+  color: inherit !important;
+  filter: drop-shadow(0 1px 0 rgba(255, 249, 225, .52));
+}
+
+.battle-report-card .battle-report-detail-btn:hover,
+.battle-report-card .battle-report-detail-btn:focus-visible {
+  color: #f8e9c8 !important;
+  border-color: #3f1b20 !important;
+  background: linear-gradient(180deg, #7d3941, #552229) !important;
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .profile-screen .profile-tabs button {
+    min-height: 32px;
+    padding: .24rem .32rem;
+    font-size: .6rem;
+  }
+
+  .audio-channel-card .audio-mute-button {
+    width: 56px;
+  }
+
+  .profile-screen .flag-option-grid button {
+    min-height: 38px;
+    padding: .22rem .26rem;
+    font-size: .54rem;
+  }
+
+  .clan-shield-editor .clan-shield-choice-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
