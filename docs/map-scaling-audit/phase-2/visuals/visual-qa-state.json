@@ -1,0 +1,707 @@
+{
+  "generatedAt": "2026-08-13T20:04:26.401Z",
+  "method": "Browser skill; exact viewport rendered in same-origin visual QA iframe and scaled only for capture framing",
+  "runs": [
+    {
+      "label": "scenario-c-desktop-far-1440x900",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-desktop-far-1440x900.png",
+      "critical": {
+        "armyTokens": 100,
+        "hiddenArmyCounts": 100,
+        "hiddenArmyTimes": 100,
+        "hiddenGenericCityNames": 135,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame crowded-map low-zoom detail-far",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.9",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.68) 0px 5px 4px) drop-shadow(rgba(203, 183, 143, 0.52) 0px 0px 3px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "label": "scenario-c-desktop-medium-1440x900",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-desktop-medium-1440x900.png",
+      "critical": {
+        "armyTokens": 70,
+        "hiddenArmyCounts": 0,
+        "hiddenArmyTimes": 0,
+        "hiddenGenericCityNames": 0,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame crowded-map low-zoom detail-medium",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.9",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.68) 0px 5px 4px) drop-shadow(rgba(203, 183, 143, 0.52) 0px 0px 3px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "label": "scenario-c-desktop-close-1440x900",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-desktop-close-1440x900.png",
+      "critical": {
+        "armyTokens": 41,
+        "hiddenArmyCounts": 0,
+        "hiddenArmyTimes": 0,
+        "hiddenGenericCityNames": 0,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame detail-close crowded-map",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "drop-shadow(rgba(0, 0, 0, 0.42) 0px 10px 8px)",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.9",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.72) 0px 7px 5px) drop-shadow(rgba(216, 199, 161, 0.58) 0px 0px 4px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "label": "scenario-c-mobile-far-844x390",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-mobile-far-844x390.png",
+      "critical": {
+        "armyTokens": 69,
+        "hiddenArmyCounts": 69,
+        "hiddenArmyTimes": 69,
+        "hiddenGenericCityNames": 129,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame low-zoom detail-far crowded-map",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "none",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.9",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.68) 0px 5px 4px) drop-shadow(rgba(203, 183, 143, 0.52) 0px 0px 3px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      }
+    },
+    {
+      "label": "scenario-c-mobile-medium-844x390",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-mobile-medium-844x390.png",
+      "critical": {
+        "armyTokens": 30,
+        "hiddenArmyCounts": 0,
+        "hiddenArmyTimes": 0,
+        "hiddenGenericCityNames": 0,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame low-zoom detail-medium crowded-map",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.9",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.68) 0px 5px 4px) drop-shadow(rgba(203, 183, 143, 0.52) 0px 0px 3px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      }
+    },
+    {
+      "label": "scenario-c-mobile-close-844x390",
+      "file": "C:\\Users\\ricmo\\OneDrive\\Documents\\CrownLands\\work\\map-scaling-audit\\docs\\map-scaling-audit\\phase-2\\visuals\\scenario-c-mobile-close-844x390.png",
+      "critical": {
+        "armyTokens": 16,
+        "hiddenArmyCounts": 0,
+        "hiddenArmyTimes": 0,
+        "hiddenGenericCityNames": 0,
+        "mainCities": 1,
+        "objectives": 0,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "detailClass": "map-frame detail-close",
+      "ready": "true",
+      "styles": {
+        "army": {
+          "animationName": "none",
+          "boxShadow": "rgba(0, 0, 0, 0.36) 0px 10px 22px 0px",
+          "display": "flex",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyCount": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "armyTime": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "0.86",
+          "visibility": "visible"
+        },
+        "camp": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "drop-shadow(rgba(0, 0, 0, 0.42) 0px 10px 8px)",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "city": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "genericCityName": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "objective": null,
+        "ribbon": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "drop-shadow(rgba(25, 16, 10, 0.42) 0px 2px 1px)",
+          "opacity": "0.52",
+          "visibility": "visible"
+        },
+        "route": {
+          "animationName": "dash",
+          "boxShadow": "none",
+          "display": "inline",
+          "filter": "none",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "selectedCityName": {
+          "display": "block",
+          "opacity": "1",
+          "visibility": "visible"
+        },
+        "shield": {
+          "animationName": "cityShieldAuthority",
+          "boxShadow": "none",
+          "display": "block",
+          "filter": "drop-shadow(rgba(27, 17, 10, 0.64) 0px 3px 3px) drop-shadow(rgba(230, 189, 89, 0.54) 0px 0px 5px)",
+          "opacity": "0.969359",
+          "visibility": "visible"
+        },
+        "teleport": {
+          "animationName": "none",
+          "boxShadow": "none",
+          "display": "grid",
+          "filter": "drop-shadow(rgba(18, 12, 8, 0.72) 0px 7px 5px) drop-shadow(rgba(216, 199, 161, 0.58) 0px 0px 4px)",
+          "opacity": "1",
+          "visibility": "visible"
+        }
+      },
+      "viewport": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      }
+    }
+  ]
+}

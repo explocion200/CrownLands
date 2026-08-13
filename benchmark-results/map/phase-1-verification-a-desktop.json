@@ -1,0 +1,3501 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T18:06:42.523Z",
+  "mode": "Phase 1 A desktop verification repeats",
+  "seed": "crownlands-map-phase-0-v1",
+  "environment": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "architecture": "x64",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "logicalCpuCount": 12,
+    "totalMemoryBytes": 17095184384,
+    "node": "v24.19.0",
+    "browser": "Chrome/151.0.7922.109",
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+    "browserExecutable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "headless": true,
+    "runIsolation": "fresh browser process and temporary profile per scenario/profile"
+  },
+  "durations": {
+    "idleMs": 10000,
+    "interactionMs": 5000
+  },
+  "runs": [
+    {
+      "scenario": {
+        "id": "A",
+        "slug": "moderate",
+        "label": "Moderate",
+        "cityCount": 50,
+        "marchCount": 25
+      },
+      "profile": {
+        "id": "desktop-r3",
+        "baseProfileId": "desktop",
+        "repetition": 3,
+        "label": "Desktop repeat 3",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1,
+        "cpuRate": 1
+      },
+      "initialRegionLoadLatencyMs": 1337.2000000029802,
+      "initialRuntime": {
+        "scenario": {
+          "id": "A",
+          "slug": "moderate",
+          "label": "Moderate",
+          "cityCount": 50,
+          "marchCount": 25
+        },
+        "regionId": "region_11",
+        "dataCityCount": 50,
+        "dataMarchCount": 25,
+        "dom": {
+          "totalNodes": 1686,
+          "mapWorldNodes": 1100,
+          "cityNodes": 50,
+          "visibleCityNodes": 50,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 25,
+          "visibleMarchNodes": 25,
+          "labelNodes": 100,
+          "svgElements": 106,
+          "svgPaths": 50,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 4,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 2,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 15,
+          "intervalCreated": 1,
+          "animationFrameRequested": 9,
+          "animationFrameExecuted": 8,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000245
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032001155
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032001155
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032001155
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032001155
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001461
+              }
+            ],
+            "subscribedTotal": 17,
+            "unsubscribedTotal": 0
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000245
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001461
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000246,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001155,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032001403,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001414,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001415,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001463,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001463,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001464,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001468,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001583,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001492,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032002740,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 357
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 12513386,
+          "usedJSHeapSize": 8248882
+        },
+        "camera": {
+          "x": 0,
+          "y": 304.7500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "runtime": {
+        "scenario": {
+          "id": "A",
+          "slug": "moderate",
+          "label": "Moderate",
+          "cityCount": 50,
+          "marchCount": 25
+        },
+        "regionId": "region_11",
+        "dataCityCount": 50,
+        "dataMarchCount": 25,
+        "dom": {
+          "totalNodes": 1707,
+          "mapWorldNodes": 1100,
+          "cityNodes": 50,
+          "visibleCityNodes": 50,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 25,
+          "visibleMarchNodes": 25,
+          "labelNodes": 100,
+          "svgElements": 106,
+          "svgPaths": 50,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 4,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 0,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 266,
+          "intervalCreated": 1,
+          "animationFrameRequested": 2777,
+          "animationFrameExecuted": 2776,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "player": 7,
+              "global": 2,
+              "region": 4
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000016
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000245
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001461
+              },
+              {
+                "id": "listener-22",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032026613
+              },
+              {
+                "id": "listener-23",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032026613
+              },
+              {
+                "id": "listener-24",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032026613
+              },
+              {
+                "id": "listener-25",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032026613
+              }
+            ],
+            "subscribedTotal": 25,
+            "unsubscribedTotal": 8
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000016
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000245
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001155
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001461
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001155,
+              "endedAtMs": 2209032025408
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001155,
+              "endedAtMs": 2209032025408
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001155,
+              "endedAtMs": 2209032025408
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001155,
+              "endedAtMs": 2209032025408
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-18",
+              "key": "region.region_6.1",
+              "category": "region",
+              "startedAtMs": 2209032025413
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-19",
+              "key": "region.region_6.2",
+              "category": "region",
+              "startedAtMs": 2209032025413
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-20",
+              "key": "region.region_6.3",
+              "category": "region",
+              "startedAtMs": 2209032025413
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-21",
+              "key": "region.region_6.4",
+              "category": "region",
+              "startedAtMs": 2209032025413
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-18",
+              "key": "region.region_6.1",
+              "category": "region",
+              "startedAtMs": 2209032025413,
+              "endedAtMs": 2209032026608
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-19",
+              "key": "region.region_6.2",
+              "category": "region",
+              "startedAtMs": 2209032025413,
+              "endedAtMs": 2209032026608
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-20",
+              "key": "region.region_6.3",
+              "category": "region",
+              "startedAtMs": 2209032025413,
+              "endedAtMs": 2209032026608
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-21",
+              "key": "region.region_6.4",
+              "category": "region",
+              "startedAtMs": 2209032025413,
+              "endedAtMs": 2209032026608
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-22",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032026613
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-23",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032026613
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-24",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032026613
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-25",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032026613
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000246,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001155,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032001403,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001414,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001415,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001462,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001463,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001463,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001464,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001468,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001583,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            },
+            {
+              "atMs": 2209032025413,
+              "source": "region.region_6.cities",
+              "documentCount": 49
+            },
+            {
+              "atMs": 2209032025626,
+              "source": "region.region_6.camps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032025637,
+              "source": "region.region_6.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032025637,
+              "source": "region.region_6.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032026613,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032026861,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032026882,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032026882,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032027806,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001492,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032002740,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 357
+            },
+            {
+              "atMs": 2209032025642,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_6",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032026888,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 17751499,
+          "usedJSHeapSize": 8259691
+        },
+        "camera": {
+          "x": 0,
+          "y": 202.2500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "heap": {
+        "usedSize": 6151464,
+        "totalSize": 15618048,
+        "embedderHeapUsedSize": 51177200,
+        "backingStorageSize": 2133451
+      },
+      "finalBrowserMetrics": {
+        "JSHeapUsedSize": 6151476,
+        "JSHeapTotalSize": 15618048,
+        "Nodes": 7413,
+        "Documents": 3,
+        "Frames": 3
+      },
+      "samples": {
+        "idle": {
+          "name": "idle-with-marches",
+          "durationMs": 10006.199999999255,
+          "frame": {
+            "name": "idle-with-marches",
+            "durationMs": 10006.199999999255,
+            "frameCount": 1152,
+            "fps": 115.1286202554502,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 20.699999999999818,
+            "maximumFrameTimeMs": 229.30000000000018,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          },
+          "browserMainThread": {
+            "TaskMs": 2829.1279999999997,
+            "ScriptMs": 623.504,
+            "LayoutMs": 11.300000000000004,
+            "RecalcStyleMs": 228.55900000000003,
+            "LayoutCount": 32,
+            "RecalcStyleCount": 1152
+          }
+        },
+        "pan": {
+          "name": "pan",
+          "durationMs": 5037.10000000149,
+          "frame": {
+            "name": "pan",
+            "durationMs": 5037.10000000149,
+            "frameCount": 714,
+            "fps": 141.74822814710623,
+            "medianFrameTimeMs": 6.900000000001455,
+            "p95FrameTimeMs": 7.100000000000364,
+            "maximumFrameTimeMs": 55.399999999999636,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          },
+          "browserMainThread": {
+            "TaskMs": 1647.9669999999994,
+            "ScriptMs": 263.56,
+            "LayoutMs": 1.1940000000000006,
+            "RecalcStyleMs": 100.81299999999999,
+            "LayoutCount": 5,
+            "RecalcStyleCount": 792
+          }
+        },
+        "zoom": {
+          "name": "zoom",
+          "durationMs": 5137.199999999255,
+          "frame": {
+            "name": "zoom",
+            "durationMs": 5137.199999999255,
+            "frameCount": 463,
+            "fps": 90.12691738691645,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 41.599999999998545,
+            "maximumFrameTimeMs": 513.9000000000015,
+            "longTaskCount": 11,
+            "longTaskTotalMs": 597,
+            "longestTaskMs": 67
+          },
+          "browserMainThread": {
+            "TaskMs": 2576.1580000000004,
+            "ScriptMs": 225.53400000000013,
+            "LayoutMs": 26.01400000000001,
+            "RecalcStyleMs": 1353.936,
+            "LayoutCount": 39,
+            "RecalcStyleCount": 497
+          }
+        },
+        "cityInfo": {
+          "name": "city-selection-and-info",
+          "durationMs": 2261.89999999851,
+          "frame": {
+            "name": "city-selection-and-info",
+            "durationMs": 2261.89999999851,
+            "frameCount": 87,
+            "fps": 38.46323887000191,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 90.29999999999927,
+            "maximumFrameTimeMs": 659.7000000000007,
+            "longTaskCount": 10,
+            "longTaskTotalMs": 702,
+            "longestTaskMs": 130
+          },
+          "browserMainThread": {
+            "TaskMs": 1225.703000000001,
+            "ScriptMs": 100.57199999999989,
+            "LayoutMs": 40.038999999999994,
+            "RecalcStyleMs": 770.205,
+            "LayoutCount": 26,
+            "RecalcStyleCount": 129
+          },
+          "actionResult": [
+            "region_11_bench_001",
+            "region_11_bench_020",
+            "region_11_bench_039",
+            "region_11_bench_008",
+            "region_11_bench_027"
+          ]
+        },
+        "mapSwitch": {
+          "name": "neighbor-switch-and-return",
+          "durationMs": 4043,
+          "frame": {
+            "name": "neighbor-switch-and-return",
+            "durationMs": 4043,
+            "frameCount": 195,
+            "fps": 48.231511254019296,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 35,
+            "maximumFrameTimeMs": 847.2000000000007,
+            "longTaskCount": 5,
+            "longTaskTotalMs": 2218,
+            "longestTaskMs": 829
+          },
+          "browserMainThread": {
+            "TaskMs": 2860.3229999999994,
+            "ScriptMs": 525.1120000000001,
+            "LayoutMs": 25.554999999999993,
+            "RecalcStyleMs": 247.00900000000024,
+            "LayoutCount": 30,
+            "RecalcStyleCount": 220
+          },
+          "actionResult": {
+            "neighborResult": true,
+            "returnResult": true,
+            "neighborLatencyMs": 1201,
+            "returnLatencyMs": 1197.5999999977648,
+            "before": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000245
+                },
+                {
+                  "id": "listener-5",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032001155
+                },
+                {
+                  "id": "listener-6",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032001155
+                },
+                {
+                  "id": "listener-7",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032001155
+                },
+                {
+                  "id": "listener-8",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032001155
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                }
+              ],
+              "subscribedTotal": 17,
+              "unsubscribedTotal": 0
+            },
+            "atNeighbor": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "player": 7,
+                "global": 2,
+                "region": 4
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000245
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-18",
+                  "key": "region.region_6.1",
+                  "category": "region",
+                  "startedAtMs": 2209032025413
+                },
+                {
+                  "id": "listener-19",
+                  "key": "region.region_6.2",
+                  "category": "region",
+                  "startedAtMs": 2209032025413
+                },
+                {
+                  "id": "listener-20",
+                  "key": "region.region_6.3",
+                  "category": "region",
+                  "startedAtMs": 2209032025413
+                },
+                {
+                  "id": "listener-21",
+                  "key": "region.region_6.4",
+                  "category": "region",
+                  "startedAtMs": 2209032025413
+                }
+              ],
+              "subscribedTotal": 21,
+              "unsubscribedTotal": 4
+            },
+            "after": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "player": 7,
+                "global": 2,
+                "region": 4
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000016
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000245
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001461
+                },
+                {
+                  "id": "listener-22",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032026613
+                },
+                {
+                  "id": "listener-23",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032026613
+                },
+                {
+                  "id": "listener-24",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032026613
+                },
+                {
+                  "id": "listener-25",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032026613
+                }
+              ],
+              "subscribedTotal": 25,
+              "unsubscribedTotal": 8
+            }
+          }
+        }
+      },
+      "network": {
+        "requestCount": 74,
+        "completedRequestCount": 71,
+        "failedRequestCount": 0,
+        "encodedBytes": 7129325,
+        "externalRequestCount": 7,
+        "externalHosts": [
+          "data:",
+          "fonts.googleapis.com",
+          "fonts.gstatic.com"
+        ],
+        "productionBackendRequestCount": 0,
+        "mapAssetRequests": 4,
+        "byType": {
+          "Document": 1,
+          "Stylesheet": 6,
+          "Image": 30,
+          "Script": 20,
+          "Manifest": 1,
+          "Font": 4,
+          "Fetch": 5,
+          "Media": 4,
+          "Other": 3
+        }
+      },
+      "consoleErrors": [],
+      "limitations": {
+        "paintAndCompositeTiming": "Unavailable from stable headless CDP Performance metrics; capture a DevTools trace for layer-level attribution.",
+        "physicalMobile": false,
+        "cpuThrottle": "none"
+      }
+    },
+    {
+      "scenario": {
+        "id": "A",
+        "slug": "moderate",
+        "label": "Moderate",
+        "cityCount": 50,
+        "marchCount": 25
+      },
+      "profile": {
+        "id": "desktop-r4",
+        "baseProfileId": "desktop",
+        "repetition": 4,
+        "label": "Desktop repeat 4",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1,
+        "cpuRate": 1
+      },
+      "initialRegionLoadLatencyMs": 1596.199999999255,
+      "initialRuntime": {
+        "scenario": {
+          "id": "A",
+          "slug": "moderate",
+          "label": "Moderate",
+          "cityCount": 50,
+          "marchCount": 25
+        },
+        "regionId": "region_11",
+        "dataCityCount": 50,
+        "dataMarchCount": 25,
+        "dom": {
+          "totalNodes": 1686,
+          "mapWorldNodes": 1100,
+          "cityNodes": 50,
+          "visibleCityNodes": 50,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 25,
+          "visibleMarchNodes": 25,
+          "labelNodes": 100,
+          "svgElements": 106,
+          "svgPaths": 50,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 4,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 2,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 15,
+          "intervalCreated": 1,
+          "animationFrameRequested": 9,
+          "animationFrameExecuted": 8,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000375
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032001625
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032001625
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032001625
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032001625
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001894
+              }
+            ],
+            "subscribedTotal": 17,
+            "unsubscribedTotal": 0
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000375
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001894
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000376,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001625,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032001847,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001857,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001857,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001894,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001894,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001896,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001900,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001972,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001913,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032003018,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 357
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 11455235,
+          "usedJSHeapSize": 8354543
+        },
+        "camera": {
+          "x": 0,
+          "y": 304.7500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "runtime": {
+        "scenario": {
+          "id": "A",
+          "slug": "moderate",
+          "label": "Moderate",
+          "cityCount": 50,
+          "marchCount": 25
+        },
+        "regionId": "region_11",
+        "dataCityCount": 50,
+        "dataMarchCount": 25,
+        "dom": {
+          "totalNodes": 1707,
+          "mapWorldNodes": 1100,
+          "cityNodes": 50,
+          "visibleCityNodes": 50,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 25,
+          "visibleMarchNodes": 25,
+          "labelNodes": 100,
+          "svgElements": 106,
+          "svgPaths": 50,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 4,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 0,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 266,
+          "intervalCreated": 1,
+          "animationFrameRequested": 2814,
+          "animationFrameExecuted": 2813,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "player": 7,
+              "global": 2,
+              "region": 4
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000201
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000375
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001894
+              },
+              {
+                "id": "listener-22",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032027089
+              },
+              {
+                "id": "listener-23",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032027089
+              },
+              {
+                "id": "listener-24",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032027089
+              },
+              {
+                "id": "listener-25",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032027089
+              }
+            ],
+            "subscribedTotal": 25,
+            "unsubscribedTotal": 8
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000201
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000375
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001625
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001894
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001625,
+              "endedAtMs": 2209032025893
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001625,
+              "endedAtMs": 2209032025893
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001625,
+              "endedAtMs": 2209032025893
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001625,
+              "endedAtMs": 2209032025893
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-18",
+              "key": "region.region_6.1",
+              "category": "region",
+              "startedAtMs": 2209032025898
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-19",
+              "key": "region.region_6.2",
+              "category": "region",
+              "startedAtMs": 2209032025898
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-20",
+              "key": "region.region_6.3",
+              "category": "region",
+              "startedAtMs": 2209032025898
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-21",
+              "key": "region.region_6.4",
+              "category": "region",
+              "startedAtMs": 2209032025898
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-18",
+              "key": "region.region_6.1",
+              "category": "region",
+              "startedAtMs": 2209032025898,
+              "endedAtMs": 2209032027087
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-19",
+              "key": "region.region_6.2",
+              "category": "region",
+              "startedAtMs": 2209032025898,
+              "endedAtMs": 2209032027087
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-20",
+              "key": "region.region_6.3",
+              "category": "region",
+              "startedAtMs": 2209032025898,
+              "endedAtMs": 2209032027087
+            },
+            {
+              "action": "unsubscribe",
+              "id": "listener-21",
+              "key": "region.region_6.4",
+              "category": "region",
+              "startedAtMs": 2209032025898,
+              "endedAtMs": 2209032027087
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-22",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032027089
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-23",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032027089
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-24",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032027089
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-25",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032027089
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000376,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001625,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032001847,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001857,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001857,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001894,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001894,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001895,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001896,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001900,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001972,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            },
+            {
+              "atMs": 2209032025898,
+              "source": "region.region_6.cities",
+              "documentCount": 49
+            },
+            {
+              "atMs": 2209032026102,
+              "source": "region.region_6.camps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032026119,
+              "source": "region.region_6.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032026119,
+              "source": "region.region_6.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032027089,
+              "source": "region.region_11.cities",
+              "documentCount": 50
+            },
+            {
+              "atMs": 2209032027330,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032027353,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032027353,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032028269,
+              "source": "region.region_11.armies",
+              "documentCount": 25,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001913,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032003018,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 357
+            },
+            {
+              "atMs": 2209032026126,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_6",
+              "payloadSize": 358
+            },
+            {
+              "atMs": 2209032027358,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 358
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:63559/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 17487460,
+          "usedJSHeapSize": 9640852
+        },
+        "camera": {
+          "x": 0,
+          "y": 202.2500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "heap": {
+        "usedSize": 7534484,
+        "totalSize": 15355904,
+        "embedderHeapUsedSize": 30481040,
+        "backingStorageSize": 2131556
+      },
+      "finalBrowserMetrics": {
+        "JSHeapUsedSize": 7534484,
+        "JSHeapTotalSize": 15355904,
+        "Nodes": 5000,
+        "Documents": 3,
+        "Frames": 3
+      },
+      "samples": {
+        "idle": {
+          "name": "idle-with-marches",
+          "durationMs": 10006.199999999255,
+          "frame": {
+            "name": "idle-with-marches",
+            "durationMs": 10006.199999999255,
+            "frameCount": 1166,
+            "fps": 116.52775279327685,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 20.700000000000728,
+            "maximumFrameTimeMs": 236.19999999999982,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          },
+          "browserMainThread": {
+            "TaskMs": 3207.887,
+            "ScriptMs": 673.4849999999999,
+            "LayoutMs": 12.391999999999987,
+            "RecalcStyleMs": 245.264,
+            "LayoutCount": 33,
+            "RecalcStyleCount": 1166
+          }
+        },
+        "pan": {
+          "name": "pan",
+          "durationMs": 5082.699999999255,
+          "frame": {
+            "name": "pan",
+            "durationMs": 5082.699999999255,
+            "frameCount": 721,
+            "fps": 141.85373915440724,
+            "medianFrameTimeMs": 6.900000000001455,
+            "p95FrameTimeMs": 7.100000000000364,
+            "maximumFrameTimeMs": 62.600000000000364,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          },
+          "browserMainThread": {
+            "TaskMs": 1889.9420000000005,
+            "ScriptMs": 286.30100000000016,
+            "LayoutMs": 0.9379999999999944,
+            "RecalcStyleMs": 110.48200000000003,
+            "LayoutCount": 5,
+            "RecalcStyleCount": 800
+          }
+        },
+        "zoom": {
+          "name": "zoom",
+          "durationMs": 5054.60000000149,
+          "frame": {
+            "name": "zoom",
+            "durationMs": 5054.60000000149,
+            "frameCount": 456,
+            "fps": 90.21485379651517,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 41.599999999998545,
+            "maximumFrameTimeMs": 493,
+            "longTaskCount": 5,
+            "longTaskTotalMs": 285,
+            "longestTaskMs": 63
+          },
+          "browserMainThread": {
+            "TaskMs": 2565.456,
+            "ScriptMs": 235.71199999999993,
+            "LayoutMs": 27.39300000000003,
+            "RecalcStyleMs": 1285.1699999999998,
+            "LayoutCount": 37,
+            "RecalcStyleCount": 489
+          }
+        },
+        "cityInfo": {
+          "name": "city-selection-and-info",
+          "durationMs": 2185.199999999255,
+          "frame": {
+            "name": "city-selection-and-info",
+            "durationMs": 2185.199999999255,
+            "frameCount": 96,
+            "fps": 43.93190554641805,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 62.70000000000073,
+            "maximumFrameTimeMs": 562.5,
+            "longTaskCount": 9,
+            "longTaskTotalMs": 578,
+            "longestTaskMs": 83
+          },
+          "browserMainThread": {
+            "TaskMs": 1192.5569999999989,
+            "ScriptMs": 102.57499999999986,
+            "LayoutMs": 35.138000000000005,
+            "RecalcStyleMs": 700.3580000000001,
+            "LayoutCount": 31,
+            "RecalcStyleCount": 138
+          },
+          "actionResult": [
+            "region_11_bench_001",
+            "region_11_bench_020",
+            "region_11_bench_039",
+            "region_11_bench_008",
+            "region_11_bench_027"
+          ]
+        },
+        "mapSwitch": {
+          "name": "neighbor-switch-and-return",
+          "durationMs": 3810.699999999255,
+          "frame": {
+            "name": "neighbor-switch-and-return",
+            "durationMs": 3810.699999999255,
+            "frameCount": 210,
+            "fps": 55.10798540951559,
+            "medianFrameTimeMs": 7,
+            "p95FrameTimeMs": 20.900000000001455,
+            "maximumFrameTimeMs": 715.3000000000029,
+            "longTaskCount": 5,
+            "longTaskTotalMs": 2009,
+            "longestTaskMs": 703
+          },
+          "browserMainThread": {
+            "TaskMs": 2656.149000000001,
+            "ScriptMs": 517.8130000000003,
+            "LayoutMs": 22.665999999999965,
+            "RecalcStyleMs": 189.36300000000017,
+            "LayoutCount": 31,
+            "RecalcStyleCount": 236
+          },
+          "actionResult": {
+            "neighborResult": true,
+            "returnResult": true,
+            "neighborLatencyMs": 1195.9000000022352,
+            "returnLatencyMs": 1183.199999999255,
+            "before": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000375
+                },
+                {
+                  "id": "listener-5",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032001625
+                },
+                {
+                  "id": "listener-6",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032001625
+                },
+                {
+                  "id": "listener-7",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032001625
+                },
+                {
+                  "id": "listener-8",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032001625
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                }
+              ],
+              "subscribedTotal": 17,
+              "unsubscribedTotal": 0
+            },
+            "atNeighbor": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "player": 7,
+                "global": 2,
+                "region": 4
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000375
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-18",
+                  "key": "region.region_6.1",
+                  "category": "region",
+                  "startedAtMs": 2209032025898
+                },
+                {
+                  "id": "listener-19",
+                  "key": "region.region_6.2",
+                  "category": "region",
+                  "startedAtMs": 2209032025898
+                },
+                {
+                  "id": "listener-20",
+                  "key": "region.region_6.3",
+                  "category": "region",
+                  "startedAtMs": 2209032025898
+                },
+                {
+                  "id": "listener-21",
+                  "key": "region.region_6.4",
+                  "category": "region",
+                  "startedAtMs": 2209032025898
+                }
+              ],
+              "subscribedTotal": 21,
+              "unsubscribedTotal": 4
+            },
+            "after": {
+              "active": 17,
+              "categories": {
+                "player/session": 4,
+                "player": 7,
+                "global": 2,
+                "region": 4
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000201
+                },
+                {
+                  "id": "listener-4",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000375
+                },
+                {
+                  "id": "listener-9",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-10",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-11",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-12",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-13",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-14",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-15",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-16",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-17",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032001894
+                },
+                {
+                  "id": "listener-22",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032027089
+                },
+                {
+                  "id": "listener-23",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032027089
+                },
+                {
+                  "id": "listener-24",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032027089
+                },
+                {
+                  "id": "listener-25",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032027089
+                }
+              ],
+              "subscribedTotal": 25,
+              "unsubscribedTotal": 8
+            }
+          }
+        }
+      },
+      "network": {
+        "requestCount": 73,
+        "completedRequestCount": 70,
+        "failedRequestCount": 0,
+        "encodedBytes": 7761916,
+        "externalRequestCount": 7,
+        "externalHosts": [
+          "data:",
+          "fonts.googleapis.com",
+          "fonts.gstatic.com"
+        ],
+        "productionBackendRequestCount": 0,
+        "mapAssetRequests": 5,
+        "byType": {
+          "Document": 1,
+          "Stylesheet": 6,
+          "Image": 29,
+          "Script": 20,
+          "Manifest": 1,
+          "Font": 4,
+          "Fetch": 5,
+          "Media": 4,
+          "Other": 3
+        }
+      },
+      "consoleErrors": [],
+      "limitations": {
+        "paintAndCompositeTiming": "Unavailable from stable headless CDP Performance metrics; capture a DevTools trace for layer-level attribution.",
+        "physicalMobile": false,
+        "cpuThrottle": "none"
+      }
+    }
+  ],
+  "failures": []
+}

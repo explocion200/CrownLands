@@ -1037,6 +1037,7 @@ input {
   line-height: 1.2;
 }
 .map-world {
+  --map-hit-size: 58px;
   position: absolute;
   left: 0;
   top: 0;
@@ -1046,6 +1047,9 @@ input {
   contain: layout style;
   backface-visibility: hidden;
 }
+.map-frame.detail-far .map-world { --map-hit-size: 110px; }
+.map-frame.detail-medium .map-world { --map-hit-size: 84px; }
+.map-frame.detail-close .map-world { --map-hit-size: 58px; }
 .map-frame.camera-moving .map-world,
 .map-frame.dragging .map-world,
 .map-frame.zooming .map-world {
@@ -1324,6 +1328,7 @@ input {
 .paths .army-route-flow.clan-support-route { stroke: rgba(143, 226, 165, .98); }
 .paths .army-route-flow.clan-hostile-route { stroke: rgba(143, 226, 165, .98); }
 .paths .army-route-flow.scout-route { stroke-dasharray: 8 15; }
+.map-frame.detail-far .paths .army-route-flow { display: none; }
 @keyframes dash { to { stroke-dashoffset: -12; } }
 .harvest-layer,
 .portal-layer,
@@ -1505,13 +1510,10 @@ input {
   white-space: nowrap;
   text-shadow: 0 1px 0 rgba(0,0,0,.7);
 }
+.map-frame.camera-moving .teleport-node,
 .map-frame.zooming .teleport-node,
 .map-frame.low-zoom .teleport-node {
-  filter:
-    drop-shadow(0 7px 4px rgba(2, 10, 25, .72))
-    drop-shadow(0 0 3px rgba(255, 244, 175, .72))
-    drop-shadow(0 0 7px rgba(76, 205, 255, .36))
-    drop-shadow(0 0 14px rgba(35, 116, 255, .22));
+  filter: none;
 }
 
 .camp-node {
@@ -2327,9 +2329,10 @@ input {
 .gold-camp-description p + p {
   margin-top: 10px;
 }
+.map-frame.camera-moving .camp-node,
 .map-frame.zooming .camp-node,
 .map-frame.low-zoom .camp-node {
-  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .52));
+  filter: none;
 }
 
 .city-node {
@@ -2674,6 +2677,18 @@ input {
 .map-frame.camera-moving .city-label,
 .map-frame.zooming .city-label {
   opacity: 1;
+}
+.map-frame.detail-far .city-node:not(.selected):not(.targeted):not(.main-city-node):not(.stronghold-node) .player-city-data,
+.map-frame.detail-far .city-node:not(.selected):not(.targeted):not(.main-city-node):not(.stronghold-node) .foreign-city-label > .city-name,
+.map-frame.detail-far .city-node:not(.selected):not(.targeted):not(.main-city-node):not(.stronghold-node) .city-ruler-row,
+.map-frame.detail-far .city-node:not(.selected):not(.targeted):not(.main-city-node):not(.stronghold-node) .foreign-garrison,
+.map-frame.detail-medium .city-node:not(.selected):not(.targeted) .city-army-count,
+.map-frame.detail-medium .city-node:not(.selected):not(.targeted) .foreign-garrison {
+  display: none;
+}
+.map-frame.detail-far .army-token:not(.selected) .army-token-count,
+.map-frame.detail-far .army-token:not(.selected) .army-token-time {
+  display: none;
 }
 .city-castle.stage-1,
 .city-castle.stage-2,

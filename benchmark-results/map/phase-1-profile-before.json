@@ -1,0 +1,1997 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T17:10:42.234Z",
+  "mode": "Phase 1 march profile",
+  "seed": "crownlands-map-phase-0-v1",
+  "environment": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "architecture": "x64",
+    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
+    "logicalCpuCount": 12,
+    "totalMemoryBytes": 17095184384,
+    "node": "v24.19.0",
+    "browser": "Chrome/151.0.7922.109",
+    "browserUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+    "browserExecutable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "headless": true,
+    "runIsolation": "fresh browser process and temporary profile per scenario/profile"
+  },
+  "durations": {
+    "idleMs": 10000,
+    "interactionMs": 5000
+  },
+  "runs": [
+    {
+      "scenario": {
+        "id": "B",
+        "slug": "busy",
+        "label": "Busy",
+        "cityCount": 100,
+        "marchCount": 50
+      },
+      "profile": {
+        "id": "desktop",
+        "label": "Desktop",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1,
+        "cpuRate": 1
+      },
+      "initialRegionLoadLatencyMs": 1785.6000000014901,
+      "initialRuntime": {
+        "scenario": {
+          "id": "B",
+          "slug": "busy",
+          "label": "Busy",
+          "cityCount": 100,
+          "marchCount": 50
+        },
+        "regionId": "region_11",
+        "dataCityCount": 100,
+        "dataMarchCount": 50,
+        "dom": {
+          "totalNodes": 2753,
+          "mapWorldNodes": 2167,
+          "cityNodes": 100,
+          "visibleCityNodes": 100,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 50,
+          "visibleMarchNodes": 50,
+          "labelNodes": 200,
+          "svgElements": 210,
+          "svgPaths": 100,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 4,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 1,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 16,
+          "intervalCreated": 1,
+          "animationFrameRequested": 13,
+          "animationFrameExecuted": 12,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000334
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001876
+              }
+            ],
+            "subscribedTotal": 17,
+            "unsubscribedTotal": 0
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000334
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001876
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000335,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001042,
+              "source": "region.region_11.cities",
+              "documentCount": 100
+            },
+            {
+              "atMs": 2209032001711,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001744,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001745,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001876,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001876,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001878,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001878,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001883,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032002120,
+              "source": "region.region_11.armies",
+              "documentCount": 50,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001926,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 359
+            },
+            {
+              "atMs": 2209032012305,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 359
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 18034420,
+          "usedJSHeapSize": 11176904
+        },
+        "camera": {
+          "x": 0,
+          "y": 304.7500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "runtime": {
+        "scenario": {
+          "id": "B",
+          "slug": "busy",
+          "label": "Busy",
+          "cityCount": 100,
+          "marchCount": 50
+        },
+        "regionId": "region_11",
+        "dataCityCount": 100,
+        "dataMarchCount": 50,
+        "dom": {
+          "totalNodes": 2753,
+          "mapWorldNodes": 2167,
+          "cityNodes": 100,
+          "visibleCityNodes": 100,
+          "campNodes": 2,
+          "visibleCampNodes": 2,
+          "strongholdNodes": 0,
+          "marchNodes": 50,
+          "visibleMarchNodes": 50,
+          "labelNodes": 200,
+          "svgElements": 210,
+          "svgPaths": 100,
+          "worldVfxNodes": 0,
+          "screenVfxNodes": 0
+        },
+        "animations": {
+          "running": 2,
+          "applicationPersistentRafLoops": 1,
+          "measurementRafLoopsExcluded": 1
+        },
+        "timers": {
+          "activeTimeouts": 0,
+          "activeIntervals": 1,
+          "pendingAnimationFrames": 1,
+          "timeoutCreated": 17,
+          "intervalCreated": 1,
+          "animationFrameRequested": 23,
+          "animationFrameExecuted": 22,
+          "measurementAnimationFrameLoops": 1,
+          "longTaskObserverAvailable": true
+        },
+        "realtime": {
+          "listeners": {
+            "active": 17,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000334
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032001042
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001876
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001876
+              }
+            ],
+            "subscribedTotal": 17,
+            "unsubscribedTotal": 0
+          },
+          "lifecycle": [
+            {
+              "action": "subscribe",
+              "id": "listener-1",
+              "key": "session.active",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-2",
+              "key": "player.dailyMission",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-3",
+              "key": "player.seasonalAchievement",
+              "category": "player/session",
+              "startedAtMs": 2209032000161
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-4",
+              "key": "session.gameServerMembership",
+              "category": "player/session",
+              "startedAtMs": 2209032000334
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-5",
+              "key": "region.region_11.1",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-6",
+              "key": "region.region_11.2",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-7",
+              "key": "region.region_11.3",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-8",
+              "key": "region.region_11.4",
+              "category": "region",
+              "startedAtMs": 2209032001042
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-9",
+              "key": "player.armies.1",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-10",
+              "key": "player.armies.2",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-11",
+              "key": "player.reinforcements.1",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-12",
+              "key": "player.reinforcements.2",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-13",
+              "key": "player.heldCamps",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-14",
+              "key": "player.serverReports",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-15",
+              "key": "global.realmActivity",
+              "category": "global",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-16",
+              "key": "player.globalStats",
+              "category": "player",
+              "startedAtMs": 2209032001876
+            },
+            {
+              "action": "subscribe",
+              "id": "listener-17",
+              "key": "global.crownCitadel",
+              "category": "global",
+              "startedAtMs": 2209032001876
+            }
+          ],
+          "eventTraffic": [
+            {
+              "atMs": 2209032000335,
+              "source": "session.gameServerMembership",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001042,
+              "source": "region.region_11.cities",
+              "documentCount": 100
+            },
+            {
+              "atMs": 2209032001711,
+              "source": "region.region_11.camps",
+              "documentCount": 2
+            },
+            {
+              "atMs": 2209032001744,
+              "source": "region.region_11.armies",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001745,
+              "source": "region.region_11.presence",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001876,
+              "source": "player.armies.outgoing",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001876,
+              "source": "player.armies.incoming",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.reinforcements",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.heldCamps",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001877,
+              "source": "player.serverReports",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001878,
+              "source": "global.realmActivity",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032001878,
+              "source": "player.globalStats",
+              "documentCount": 1
+            },
+            {
+              "atMs": 2209032001883,
+              "source": "global.crownCitadel",
+              "documentCount": 0
+            },
+            {
+              "atMs": 2209032002120,
+              "source": "region.region_11.armies",
+              "documentCount": 50,
+              "benchmarkUpdate": true
+            }
+          ],
+          "writes": [
+            {
+              "atMs": 2209032001926,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 359
+            },
+            {
+              "atMs": 2209032012305,
+              "source": "presence",
+              "islandId": "main-fresh-2026-07-26-server-reset-region_11",
+              "payloadSize": 359
+            }
+          ]
+        },
+        "images": {
+          "decodedBytesEstimate": 10340032,
+          "loadedUniqueImages": 20,
+          "images": [
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/loading-crown-256x256-2038de353a91.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-leaderboard-192x192-8817d6f254ec.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-bag-192x192-8d79a1879913.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-shop-192x192-631cf3c626d5.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+              "width": 160,
+              "height": 160,
+              "decodedBytesEstimate": 102400
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-city-list-192x192-29705553a45a.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-map-192x192-f330cd084a9f.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+              "width": 1448,
+              "height": 1086,
+              "decodedBytesEstimate": 6290112
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp",
+              "width": 192,
+              "height": 212,
+              "decodedBytesEstimate": 162816
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+              "width": 256,
+              "height": 256,
+              "decodedBytesEstimate": 262144
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/camp-troops-384x384-2f712333e891.webp",
+              "width": 384,
+              "height": 384,
+              "decodedBytesEstimate": 589824
+            },
+            {
+              "source": "http://127.0.0.1:57235/assets/optimized/hud-report-192x192-21644b7390fb.webp",
+              "width": 192,
+              "height": 192,
+              "decodedBytesEstimate": 147456
+            }
+          ]
+        },
+        "performanceMemory": {
+          "jsHeapSizeLimit": 4395630592,
+          "totalJSHeapSize": 18035976,
+          "usedJSHeapSize": 11412200
+        },
+        "camera": {
+          "x": 0,
+          "y": 304.7500000000001,
+          "zoom": 0.44499381953028433
+        }
+      },
+      "idle": {
+        "name": "march-profile-idle",
+        "durationMs": 11580.60000000149,
+        "frame": {
+          "name": "march-profile-idle",
+          "durationMs": 11580.60000000149,
+          "frameCount": 6,
+          "fps": 0.5181078700584795,
+          "medianFrameTimeMs": 1895.800000000003,
+          "p95FrameTimeMs": 2222.199999999997,
+          "maximumFrameTimeMs": 2222.199999999997,
+          "longTaskCount": 6,
+          "longTaskTotalMs": 11573,
+          "longestTaskMs": 2221
+        },
+        "browserMainThread": {
+          "TaskMs": 13481.511,
+          "ScriptMs": 13400.617,
+          "LayoutMs": 5.1219999999999875,
+          "RecalcStyleMs": 35.82599999999997,
+          "LayoutCount": 7,
+          "RecalcStyleCount": 7
+        }
+      },
+      "marchProfile": {
+        "enabled": true,
+        "durationMs": 15536.5,
+        "functions": {
+          "updatePerformancePanel": {
+            "calls": 8,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "samplePerformancePanel": {
+            "calls": 8,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.024999999906867743,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateDeploymentCheck": {
+            "calls": 8,
+            "totalMs": 0.10000000149011612,
+            "selfMs": 0.10000000149011612,
+            "averageMs": 0.012500000186264515,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getCityStats": {
+            "calls": 62640,
+            "totalMs": 13518.599999785423,
+            "selfMs": 13518.599999785423,
+            "averageMs": 0.21581417624178517,
+            "maxMs": 1.9000000022351742,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "playerCities": {
+            "calls": 6568,
+            "totalMs": 3.5999999940395355,
+            "selfMs": 3.5999999940395355,
+            "averageMs": 0.0005481120575577856,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getGoldPerSecond": {
+            "calls": 16,
+            "totalMs": 41.899999998509884,
+            "selfMs": 0.4000000059604645,
+            "averageMs": 2.6187499999068677,
+            "maxMs": 3.300000000745058,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateEconomy": {
+            "calls": 8,
+            "totalMs": 42.100000005215406,
+            "selfMs": 0.30000000074505806,
+            "averageMs": 5.262500000651926,
+            "maxMs": 6.600000001490116,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateHarvestBonuses": {
+            "calls": 8,
+            "totalMs": 0.29999999329447746,
+            "selfMs": 0.29999999329447746,
+            "averageMs": 0.03749999916180968,
+            "maxMs": 0.09999999776482582,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getOnlineArmyResolutionId": {
+            "calls": 856,
+            "totalMs": 0.3999999985098839,
+            "selfMs": 0.3999999985098839,
+            "averageMs": 0.0004672897178853784,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "usesServerArmyAuthority": {
+            "calls": 64,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getOnlineArmyRemainingSeconds": {
+            "calls": 744,
+            "totalMs": 0.8000000007450581,
+            "selfMs": 0.8000000007450581,
+            "averageMs": 0.0010752688182057231,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateAttacks": {
+            "calls": 8,
+            "totalMs": 0.3999999985098839,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.049999999813735485,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "checkGameOver": {
+            "calls": 8,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateGame": {
+            "calls": 8,
+            "totalMs": 42.79999999701977,
+            "selfMs": 0,
+            "averageMs": 5.349999999627471,
+            "maxMs": 6.699999999254942,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getVisibleWorldBounds": {
+            "calls": 16,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.012499999953433871,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "resolvePlayerIdentityForUid": {
+            "calls": 131984,
+            "totalMs": 15538.999999988824,
+            "selfMs": 1718.7000002339482,
+            "averageMs": 0.11773396775358244,
+            "maxMs": 8.099999997764826,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getRenderableRemoteArmy": {
+            "calls": 344,
+            "totalMs": 3.1999999955296516,
+            "selfMs": 2.6999999955296516,
+            "averageMs": 0.00930232556840015,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getRenderableArmies": {
+            "calls": 48,
+            "totalMs": 5.600000001490116,
+            "selfMs": 1.8000000081956387,
+            "averageMs": 0.11666666669771075,
+            "maxMs": 1.300000000745058,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getArmyTargetById": {
+            "calls": 1160,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.0006896551762675416,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getArmyTravelProgress": {
+            "calls": 400,
+            "totalMs": 0.4999999962747097,
+            "selfMs": 0.4999999962747097,
+            "averageMs": 0.0012499999906867743,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getMissionRouteSegments": {
+            "calls": 800,
+            "totalMs": 0.30000000074505806,
+            "selfMs": 0.30000000074505806,
+            "averageMs": 0.00037500000093132257,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "pointAlongRoute": {
+            "calls": 400,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.0004999999981373549,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getMissionPointAtProgress": {
+            "calls": 400,
+            "totalMs": 1.999999988824129,
+            "selfMs": 1.5999999903142452,
+            "averageMs": 0.004999999972060323,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "worldToMapPoint": {
+            "calls": 400,
+            "totalMs": 7.000000026077032,
+            "selfMs": 7.000000026077032,
+            "averageMs": 0.01750000006519258,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "isMarchInsideEndpointInteractionClearance": {
+            "calls": 400,
+            "totalMs": 1.4000000022351742,
+            "selfMs": 1.4000000022351742,
+            "averageMs": 0.0035000000055879356,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "isCurrentClanmateArmy": {
+            "calls": 744,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.0010752688232128337,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "isPersonalArmy": {
+            "calls": 920,
+            "totalMs": 0.3999999947845936,
+            "selfMs": 0.3999999947845936,
+            "averageMs": 0.00043478260302673216,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "DOM.Element.setAttribute": {
+            "calls": 543,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.001473296509153496,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getArmyTokenParts": {
+            "calls": 400,
+            "totalMs": 0.20000000298023224,
+            "selfMs": 0.20000000298023224,
+            "averageMs": 0.0005000000074505806,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getArmyTroopDisplayText": {
+            "calls": 800,
+            "totalMs": 20.599999982863665,
+            "selfMs": 20.49999998509884,
+            "averageMs": 0.02574999997857958,
+            "maxMs": 0.20000000298023224,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateArmyTokenElement": {
+            "calls": 400,
+            "totalMs": 38.99999998137355,
+            "selfMs": 17.099999986588955,
+            "averageMs": 0.09749999995343388,
+            "maxMs": 0.30000000074505806,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateMapDensityMode": {
+            "calls": 16,
+            "totalMs": 0.10000000149011612,
+            "selfMs": 0.10000000149011612,
+            "averageMs": 0.0062500000931322575,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "renderArmies": {
+            "calls": 8,
+            "totalMs": 59.50000000745058,
+            "selfMs": 3.400000002235174,
+            "averageMs": 7.437500000931323,
+            "maxMs": 10.399999998509884,
+            "medianMs": 7.100000001490116,
+            "p95Ms": 10.399999998509884
+          },
+          "DOM.Element.querySelector": {
+            "calls": 150,
+            "totalMs": 0.20000000298023224,
+            "selfMs": 0.20000000298023224,
+            "averageMs": 0.0013333333532015482,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "DOM.Element.querySelectorAll": {
+            "calls": 80,
+            "totalMs": 1.4999999850988388,
+            "selfMs": 1.4999999850988388,
+            "averageMs": 0.018749999813735485,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "updateVisibleCityDynamicText": {
+            "calls": 16,
+            "totalMs": 6.699999991804361,
+            "selfMs": 5.00000000372529,
+            "averageMs": 0.4187499994877726,
+            "maxMs": 0.7999999970197678,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "DOM.classList.toggle": {
+            "calls": 40,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "renderHud": {
+            "calls": 8,
+            "totalMs": 23.30000000447035,
+            "selfMs": 1.3000000081956387,
+            "averageMs": 2.9125000005587935,
+            "maxMs": 3.5,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "renderHudStatusPanels": {
+            "calls": 8,
+            "totalMs": 14909.29999999702,
+            "selfMs": 122.39999997615814,
+            "averageMs": 1863.6624999996275,
+            "maxMs": 2143.199999999255,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getMissionSegmentsForRegion": {
+            "calls": 400,
+            "totalMs": 0.9000000022351742,
+            "selfMs": 0.8000000007450581,
+            "averageMs": 0.0022500000055879353,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "getArmyRouteRelationshipClass": {
+            "calls": 400,
+            "totalMs": 1.0999999977648258,
+            "selfMs": 0.5,
+            "averageMs": 0.0027499999944120643,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "renderPaths": {
+            "calls": 8,
+            "totalMs": 2.599999997764826,
+            "selfMs": 0.5999999977648258,
+            "averageMs": 0.3249999997206032,
+            "maxMs": 0.5,
+            "medianMs": 0.3999999985098839,
+            "p95Ms": 0.5
+          },
+          "getCityRenderSignature": {
+            "calls": 8,
+            "totalMs": 395.30000000074506,
+            "selfMs": 4.200000002980232,
+            "averageMs": 49.41250000009313,
+            "maxMs": 52.19999999925494,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          "renderCities": {
+            "calls": 8,
+            "totalMs": 400.29999999701977,
+            "selfMs": 1.9000000022351742,
+            "averageMs": 50.03749999962747,
+            "maxMs": 52.899999998509884,
+            "medianMs": 50.100000001490116,
+            "p95Ms": 52.899999998509884
+          },
+          "renderPanel": {
+            "calls": 8,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.024999999906867743,
+            "maxMs": 0.10000000149011612,
+            "medianMs": 0,
+            "p95Ms": 0.10000000149011612
+          },
+          "frame": {
+            "calls": 8,
+            "totalMs": 15442.5,
+            "selfMs": 0.5000000037252903,
+            "averageMs": 1930.3125,
+            "maxMs": 2208.199999999255,
+            "medianMs": null,
+            "p95Ms": null
+          }
+        },
+        "rankedBySelfTime": [
+          {
+            "name": "getCityStats",
+            "calls": 62640,
+            "totalMs": 13518.599999785423,
+            "selfMs": 13518.599999785423,
+            "averageMs": 0.21581417624178517,
+            "maxMs": 1.9000000022351742,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "resolvePlayerIdentityForUid",
+            "calls": 131984,
+            "totalMs": 15538.999999988824,
+            "selfMs": 1718.7000002339482,
+            "averageMs": 0.11773396775358244,
+            "maxMs": 8.099999997764826,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderHudStatusPanels",
+            "calls": 8,
+            "totalMs": 14909.29999999702,
+            "selfMs": 122.39999997615814,
+            "averageMs": 1863.6624999996275,
+            "maxMs": 2143.199999999255,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getArmyTroopDisplayText",
+            "calls": 800,
+            "totalMs": 20.599999982863665,
+            "selfMs": 20.49999998509884,
+            "averageMs": 0.02574999997857958,
+            "maxMs": 0.20000000298023224,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateArmyTokenElement",
+            "calls": 400,
+            "totalMs": 38.99999998137355,
+            "selfMs": 17.099999986588955,
+            "averageMs": 0.09749999995343388,
+            "maxMs": 0.30000000074505806,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "worldToMapPoint",
+            "calls": 400,
+            "totalMs": 7.000000026077032,
+            "selfMs": 7.000000026077032,
+            "averageMs": 0.01750000006519258,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateVisibleCityDynamicText",
+            "calls": 16,
+            "totalMs": 6.699999991804361,
+            "selfMs": 5.00000000372529,
+            "averageMs": 0.4187499994877726,
+            "maxMs": 0.7999999970197678,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getCityRenderSignature",
+            "calls": 8,
+            "totalMs": 395.30000000074506,
+            "selfMs": 4.200000002980232,
+            "averageMs": 49.41250000009313,
+            "maxMs": 52.19999999925494,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "playerCities",
+            "calls": 6568,
+            "totalMs": 3.5999999940395355,
+            "selfMs": 3.5999999940395355,
+            "averageMs": 0.0005481120575577856,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderArmies",
+            "calls": 8,
+            "totalMs": 59.50000000745058,
+            "selfMs": 3.400000002235174,
+            "averageMs": 7.437500000931323,
+            "maxMs": 10.399999998509884,
+            "medianMs": 7.100000001490116,
+            "p95Ms": 10.399999998509884
+          },
+          {
+            "name": "getRenderableRemoteArmy",
+            "calls": 344,
+            "totalMs": 3.1999999955296516,
+            "selfMs": 2.6999999955296516,
+            "averageMs": 0.00930232556840015,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderCities",
+            "calls": 8,
+            "totalMs": 400.29999999701977,
+            "selfMs": 1.9000000022351742,
+            "averageMs": 50.03749999962747,
+            "maxMs": 52.899999998509884,
+            "medianMs": 50.100000001490116,
+            "p95Ms": 52.899999998509884
+          },
+          {
+            "name": "getRenderableArmies",
+            "calls": 48,
+            "totalMs": 5.600000001490116,
+            "selfMs": 1.8000000081956387,
+            "averageMs": 0.11666666669771075,
+            "maxMs": 1.300000000745058,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getMissionPointAtProgress",
+            "calls": 400,
+            "totalMs": 1.999999988824129,
+            "selfMs": 1.5999999903142452,
+            "averageMs": 0.004999999972060323,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "DOM.Element.querySelectorAll",
+            "calls": 80,
+            "totalMs": 1.4999999850988388,
+            "selfMs": 1.4999999850988388,
+            "averageMs": 0.018749999813735485,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "isMarchInsideEndpointInteractionClearance",
+            "calls": 400,
+            "totalMs": 1.4000000022351742,
+            "selfMs": 1.4000000022351742,
+            "averageMs": 0.0035000000055879356,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderHud",
+            "calls": 8,
+            "totalMs": 23.30000000447035,
+            "selfMs": 1.3000000081956387,
+            "averageMs": 2.9125000005587935,
+            "maxMs": 3.5,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getArmyTargetById",
+            "calls": 1160,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.0006896551762675416,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "isCurrentClanmateArmy",
+            "calls": 744,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.0010752688232128337,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "DOM.Element.setAttribute",
+            "calls": 543,
+            "totalMs": 0.8000000044703484,
+            "selfMs": 0.8000000044703484,
+            "averageMs": 0.001473296509153496,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getOnlineArmyRemainingSeconds",
+            "calls": 744,
+            "totalMs": 0.8000000007450581,
+            "selfMs": 0.8000000007450581,
+            "averageMs": 0.0010752688182057231,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getMissionSegmentsForRegion",
+            "calls": 400,
+            "totalMs": 0.9000000022351742,
+            "selfMs": 0.8000000007450581,
+            "averageMs": 0.0022500000055879353,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderPaths",
+            "calls": 8,
+            "totalMs": 2.599999997764826,
+            "selfMs": 0.5999999977648258,
+            "averageMs": 0.3249999997206032,
+            "maxMs": 0.5,
+            "medianMs": 0.3999999985098839,
+            "p95Ms": 0.5
+          },
+          {
+            "name": "frame",
+            "calls": 8,
+            "totalMs": 15442.5,
+            "selfMs": 0.5000000037252903,
+            "averageMs": 1930.3125,
+            "maxMs": 2208.199999999255,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getArmyRouteRelationshipClass",
+            "calls": 400,
+            "totalMs": 1.0999999977648258,
+            "selfMs": 0.5,
+            "averageMs": 0.0027499999944120643,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getArmyTravelProgress",
+            "calls": 400,
+            "totalMs": 0.4999999962747097,
+            "selfMs": 0.4999999962747097,
+            "averageMs": 0.0012499999906867743,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getGoldPerSecond",
+            "calls": 16,
+            "totalMs": 41.899999998509884,
+            "selfMs": 0.4000000059604645,
+            "averageMs": 2.6187499999068677,
+            "maxMs": 3.300000000745058,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getOnlineArmyResolutionId",
+            "calls": 856,
+            "totalMs": 0.3999999985098839,
+            "selfMs": 0.3999999985098839,
+            "averageMs": 0.0004672897178853784,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "isPersonalArmy",
+            "calls": 920,
+            "totalMs": 0.3999999947845936,
+            "selfMs": 0.3999999947845936,
+            "averageMs": 0.00043478260302673216,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateEconomy",
+            "calls": 8,
+            "totalMs": 42.100000005215406,
+            "selfMs": 0.30000000074505806,
+            "averageMs": 5.262500000651926,
+            "maxMs": 6.600000001490116,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getMissionRouteSegments",
+            "calls": 800,
+            "totalMs": 0.30000000074505806,
+            "selfMs": 0.30000000074505806,
+            "averageMs": 0.00037500000093132257,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateHarvestBonuses",
+            "calls": 8,
+            "totalMs": 0.29999999329447746,
+            "selfMs": 0.29999999329447746,
+            "averageMs": 0.03749999916180968,
+            "maxMs": 0.09999999776482582,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getArmyTokenParts",
+            "calls": 400,
+            "totalMs": 0.20000000298023224,
+            "selfMs": 0.20000000298023224,
+            "averageMs": 0.0005000000074505806,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "DOM.Element.querySelector",
+            "calls": 150,
+            "totalMs": 0.20000000298023224,
+            "selfMs": 0.20000000298023224,
+            "averageMs": 0.0013333333532015482,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "samplePerformancePanel",
+            "calls": 8,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.024999999906867743,
+            "maxMs": 0.19999999925494194,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateAttacks",
+            "calls": 8,
+            "totalMs": 0.3999999985098839,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.049999999813735485,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "getVisibleWorldBounds",
+            "calls": 16,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.012499999953433871,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "pointAlongRoute",
+            "calls": 400,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.0004999999981373549,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "renderPanel",
+            "calls": 8,
+            "totalMs": 0.19999999925494194,
+            "selfMs": 0.19999999925494194,
+            "averageMs": 0.024999999906867743,
+            "maxMs": 0.10000000149011612,
+            "medianMs": 0,
+            "p95Ms": 0.10000000149011612
+          },
+          {
+            "name": "updateDeploymentCheck",
+            "calls": 8,
+            "totalMs": 0.10000000149011612,
+            "selfMs": 0.10000000149011612,
+            "averageMs": 0.012500000186264515,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateMapDensityMode",
+            "calls": 16,
+            "totalMs": 0.10000000149011612,
+            "selfMs": 0.10000000149011612,
+            "averageMs": 0.0062500000931322575,
+            "maxMs": 0.10000000149011612,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updatePerformancePanel",
+            "calls": 8,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "usesServerArmyAuthority",
+            "calls": 64,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "checkGameOver",
+            "calls": 8,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "updateGame",
+            "calls": 8,
+            "totalMs": 42.79999999701977,
+            "selfMs": 0,
+            "averageMs": 5.349999999627471,
+            "maxMs": 6.699999999254942,
+            "medianMs": null,
+            "p95Ms": null
+          },
+          {
+            "name": "DOM.classList.toggle",
+            "calls": 40,
+            "totalMs": 0,
+            "selfMs": 0,
+            "averageMs": 0,
+            "maxMs": 0,
+            "medianMs": null,
+            "p95Ms": null
+          }
+        ],
+        "tokenDomNodes": 766,
+        "tokenCount": 50,
+        "routeSvgNodes": 100
+      },
+      "heap": {
+        "usedSize": 7410100,
+        "totalSize": 15880192,
+        "embedderHeapUsedSize": 33818704,
+        "backingStorageSize": 2156171
+      },
+      "network": {
+        "requestCount": 64,
+        "completedRequestCount": 62,
+        "failedRequestCount": 0,
+        "encodedBytes": 5849434,
+        "externalRequestCount": 5,
+        "externalHosts": [
+          "fonts.googleapis.com",
+          "fonts.gstatic.com"
+        ],
+        "productionBackendRequestCount": 0,
+        "mapAssetRequests": 3,
+        "byType": {
+          "Document": 1,
+          "Stylesheet": 6,
+          "Image": 25,
+          "Script": 20,
+          "Manifest": 1,
+          "Font": 4,
+          "Fetch": 2,
+          "Media": 2,
+          "Other": 3
+        }
+      },
+      "consoleErrors": []
+    }
+  ],
+  "failures": []
+}

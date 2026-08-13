@@ -1,0 +1,1544 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T20:43:03.190Z",
+  "sources": {
+    "baseline": "2026-08-13T16:40:08.248Z",
+    "after": "2026-08-13T17:32:54.189Z",
+    "verification": "2026-08-13T18:01:45.577Z",
+    "aDesktopVerification": "2026-08-13T18:06:42.523Z"
+  },
+  "policy": "Five-run median for variable A/desktop; three-run nominal medians for remaining A/B/D profiles; full Phase 1 run for C/E and invariants.",
+  "passed": true,
+  "checks": 216,
+  "failures": [],
+  "results": [
+    {
+      "scope": "regression",
+      "label": "A/desktop repeat count",
+      "passed": true,
+      "actual": 5,
+      "expected": 5
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop idle FPS median",
+      "passed": true,
+      "actual": 114.97010777200498,
+      "expected": ">= 60"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop idle p95 median",
+      "passed": true,
+      "actual": 20.799999999999272,
+      "expected": "<= 40 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop idle long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 12"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop pan FPS median",
+      "passed": true,
+      "actual": 141.74822814710623,
+      "expected": ">= 75"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop pan p95 median",
+      "passed": true,
+      "actual": 7.100000000000364,
+      "expected": "<= 20 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop pan long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 8"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop zoom FPS median",
+      "passed": true,
+      "actual": 90.12691738691645,
+      "expected": ">= 45"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop zoom p95 median",
+      "passed": true,
+      "actual": 41.599999999998545,
+      "expected": "<= 75 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop zoom long-task median",
+      "passed": true,
+      "actual": 11,
+      "expected": "<= 20"
+    },
+    {
+      "scope": "regression",
+      "label": "A/desktop ready median",
+      "passed": true,
+      "actual": 1343.9000000022352,
+      "expected": "<= 5000 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape repeat count",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape idle FPS median",
+      "passed": true,
+      "actual": 110.91127098321343,
+      "expected": ">= 55"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape idle p95 median",
+      "passed": true,
+      "actual": 14.100000000000364,
+      "expected": "<= 50 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape idle long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 12"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape pan FPS median",
+      "passed": true,
+      "actual": 142.40224679106788,
+      "expected": ">= 70"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape pan p95 median",
+      "passed": true,
+      "actual": 7.100000000002183,
+      "expected": "<= 20 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape pan long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 8"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape zoom FPS median",
+      "passed": true,
+      "actual": 93.08406837876409,
+      "expected": ">= 35"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape zoom p95 median",
+      "passed": true,
+      "actual": 41.599999999998545,
+      "expected": "<= 90 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape zoom long-task median",
+      "passed": true,
+      "actual": 9,
+      "expected": "<= 20"
+    },
+    {
+      "scope": "regression",
+      "label": "A/mobile-landscape ready median",
+      "passed": true,
+      "actual": 1592.1000000014901,
+      "expected": "<= 5000 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop repeat count",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop idle FPS median",
+      "passed": true,
+      "actual": 121.75129948020792,
+      "expected": ">= 90"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop idle p95 median",
+      "passed": true,
+      "actual": 7.100000000000364,
+      "expected": "<= 16.7 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop idle long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 8"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop pan FPS median",
+      "passed": true,
+      "actual": 140.90343970159552,
+      "expected": ">= 90"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop pan long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 2"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop zoom FPS median",
+      "passed": true,
+      "actual": 59.54954600837674,
+      "expected": ">= 50"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop zoom p95 median",
+      "passed": true,
+      "actual": 76.40000000000146,
+      "expected": "<= 80 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop zoom long-task median",
+      "passed": true,
+      "actual": 30,
+      "expected": "<= 40"
+    },
+    {
+      "scope": "regression",
+      "label": "D/desktop ready median",
+      "passed": true,
+      "actual": 2206.800000000745,
+      "expected": "<= 5000 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape repeat count",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape idle FPS median",
+      "passed": true,
+      "actual": 117.15940870954854,
+      "expected": ">= 90"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape idle p95 median",
+      "passed": true,
+      "actual": 7.199999999998909,
+      "expected": "<= 16.7 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape idle long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 8"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape pan FPS median",
+      "passed": true,
+      "actual": 137.35402461003906,
+      "expected": ">= 90"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape pan long-task median",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 2"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape zoom FPS median",
+      "passed": true,
+      "actual": 59.25001949012939,
+      "expected": ">= 50"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape zoom p95 median",
+      "passed": true,
+      "actual": 76.70000000000073,
+      "expected": "<= 80 ms"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape zoom long-task median",
+      "passed": true,
+      "actual": 32,
+      "expected": "<= 40"
+    },
+    {
+      "scope": "regression",
+      "label": "D/mobile-landscape ready median",
+      "passed": true,
+      "actual": 2324.199999999255,
+      "expected": "<= 5000 ms"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop repeat count",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop idle FPS median",
+      "passed": true,
+      "actual": 79.443595047534,
+      "expected": ">= 30"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop pan FPS median",
+      "passed": true,
+      "actual": 139.98063891577928,
+      "expected": ">= 30"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop zoom FPS median",
+      "passed": true,
+      "actual": 23.30770150206571,
+      "expected": ">= 20"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop idle p95 median",
+      "passed": true,
+      "actual": 55.400000000001455,
+      "expected": "<= 100 ms"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/desktop ready median",
+      "passed": true,
+      "actual": 1955.6000000014901,
+      "expected": "<= 15000 ms"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape repeat count",
+      "passed": true,
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape idle FPS median",
+      "passed": true,
+      "actual": 88.69356771873751,
+      "expected": ">= 24"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape pan FPS median",
+      "passed": true,
+      "actual": 138.15802439941777,
+      "expected": ">= 24"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape zoom FPS median",
+      "passed": true,
+      "actual": 54.00946638644049,
+      "expected": ">= 15"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape idle p95 median",
+      "passed": true,
+      "actual": 34.899999999999636,
+      "expected": "<= 150 ms"
+    },
+    {
+      "scope": "scenario-b",
+      "label": "B/mobile-landscape ready median",
+      "passed": true,
+      "actual": 2222.5,
+      "expected": "<= 15000 ms"
+    },
+    {
+      "scope": "scenario-c",
+      "label": "C/desktop initialized",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "scope": "scenario-c",
+      "label": "C/desktop ready",
+      "passed": true,
+      "actual": 2664.7999999970198,
+      "expected": "<= 20000 ms"
+    },
+    {
+      "scope": "scenario-c",
+      "label": "C/mobile-landscape initialized",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "scope": "scenario-c",
+      "label": "C/mobile-landscape ready",
+      "passed": true,
+      "actual": 2085.699999999255,
+      "expected": "<= 20000 ms"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/desktop idle FPS",
+      "passed": true,
+      "actual": 65.98746238213265,
+      "expected": ">= 18"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/desktop pan FPS",
+      "passed": true,
+      "actual": 138.47423004401776,
+      "expected": ">= 28"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/desktop zoom FPS",
+      "passed": true,
+      "actual": 9.361803840334227,
+      "expected": ">= 6"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/desktop idle improvement",
+      "passed": true,
+      "actual": 2.8961549937086586,
+      "expected": ">= 1.5x"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/mobile-landscape idle FPS",
+      "passed": true,
+      "actual": 45.482716567700884,
+      "expected": ">= 9"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/mobile-landscape pan FPS",
+      "passed": true,
+      "actual": 136.33969845329597,
+      "expected": ">= 16"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/mobile-landscape zoom FPS",
+      "passed": true,
+      "actual": 7.562580352411984,
+      "expected": ">= 2"
+    },
+    {
+      "scope": "scenario-e",
+      "label": "E/mobile-landscape idle improvement",
+      "passed": true,
+      "actual": 3.849770837080775,
+      "expected": ">= 1.5x"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop total DOM",
+      "passed": true,
+      "actual": 1707,
+      "expected": "<= 1800"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop map DOM",
+      "passed": true,
+      "actual": 1100,
+      "expected": "<= 1200"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop SVG paths",
+      "passed": true,
+      "actual": 50,
+      "expected": "<= 55"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop march fixture",
+      "passed": true,
+      "actual": 25,
+      "expected": 25
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop browser requests",
+      "passed": true,
+      "actual": 75,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop encoded transfer",
+      "passed": true,
+      "actual": 7148551,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop JS heap",
+      "passed": true,
+      "actual": 5967608,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape total DOM",
+      "passed": true,
+      "actual": 1707,
+      "expected": "<= 1800"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape map DOM",
+      "passed": true,
+      "actual": 1100,
+      "expected": "<= 1200"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape SVG paths",
+      "passed": true,
+      "actual": 50,
+      "expected": "<= 55"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape march fixture",
+      "passed": true,
+      "actual": 25,
+      "expected": 25
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape browser requests",
+      "passed": true,
+      "actual": 75,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape encoded transfer",
+      "passed": true,
+      "actual": 7151795,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape JS heap",
+      "passed": true,
+      "actual": 4927700,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x total DOM",
+      "passed": true,
+      "actual": 1707,
+      "expected": "<= 1800"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x map DOM",
+      "passed": true,
+      "actual": 1100,
+      "expected": "<= 1200"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x SVG paths",
+      "passed": true,
+      "actual": 50,
+      "expected": "<= 55"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x march fixture",
+      "passed": true,
+      "actual": 25,
+      "expected": 25
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x browser requests",
+      "passed": true,
+      "actual": 76,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x encoded transfer",
+      "passed": true,
+      "actual": 7156230,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x JS heap",
+      "passed": true,
+      "actual": 5633632,
+      "expected": "<= 24 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop total DOM",
+      "passed": true,
+      "actual": 2774,
+      "expected": "<= 2900"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop map DOM",
+      "passed": true,
+      "actual": 2167,
+      "expected": "<= 2300"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop SVG paths",
+      "passed": true,
+      "actual": 100,
+      "expected": "<= 110"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop city fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop march fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop browser requests",
+      "passed": true,
+      "actual": 75,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop encoded transfer",
+      "passed": true,
+      "actual": 7170147,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop JS heap",
+      "passed": true,
+      "actual": 5137496,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape total DOM",
+      "passed": true,
+      "actual": 2774,
+      "expected": "<= 2900"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape map DOM",
+      "passed": true,
+      "actual": 2167,
+      "expected": "<= 2300"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape SVG paths",
+      "passed": true,
+      "actual": 100,
+      "expected": "<= 110"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape city fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape march fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape browser requests",
+      "passed": true,
+      "actual": 76,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape encoded transfer",
+      "passed": true,
+      "actual": 7863452,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape JS heap",
+      "passed": true,
+      "actual": 5266304,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop city fixture",
+      "passed": true,
+      "actual": 150,
+      "expected": 150
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop march fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop browser requests",
+      "passed": true,
+      "actual": 75,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop encoded transfer",
+      "passed": true,
+      "actual": 7190958,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop JS heap",
+      "passed": true,
+      "actual": 5600032,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape city fixture",
+      "passed": true,
+      "actual": 150,
+      "expected": 150
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape march fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape browser requests",
+      "passed": true,
+      "actual": 72,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape encoded transfer",
+      "passed": true,
+      "actual": 7107872,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape JS heap",
+      "passed": true,
+      "actual": 7259688,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop total DOM",
+      "passed": true,
+      "actual": 1908,
+      "expected": "<= 2000"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop map DOM",
+      "passed": true,
+      "actual": 1301,
+      "expected": "<= 1400"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop SVG paths",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 0"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop city fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop march fixture",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop browser requests",
+      "passed": true,
+      "actual": 69,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop encoded transfer",
+      "passed": true,
+      "actual": 6618993,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop JS heap",
+      "passed": true,
+      "actual": 4774780,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape total DOM",
+      "passed": true,
+      "actual": 1908,
+      "expected": "<= 2000"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape map DOM",
+      "passed": true,
+      "actual": 1301,
+      "expected": "<= 1400"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape SVG paths",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 0"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape city fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape march fixture",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape browser requests",
+      "passed": true,
+      "actual": 69,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape encoded transfer",
+      "passed": true,
+      "actual": 6618187,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape JS heap",
+      "passed": true,
+      "actual": 7698916,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x total DOM",
+      "passed": true,
+      "actual": 1908,
+      "expected": "<= 2000"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x map DOM",
+      "passed": true,
+      "actual": 1301,
+      "expected": "<= 1400"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x SVG paths",
+      "passed": true,
+      "actual": 0,
+      "expected": "<= 0"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x city fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x march fixture",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x browser requests",
+      "passed": true,
+      "actual": 72,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x encoded transfer",
+      "passed": true,
+      "actual": 7339929,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x JS heap",
+      "passed": true,
+      "actual": 5517188,
+      "expected": "<= 24 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop total DOM",
+      "passed": true,
+      "actual": 3008,
+      "expected": "<= 3150"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop map DOM",
+      "passed": true,
+      "actual": 2401,
+      "expected": "<= 2550"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop SVG paths",
+      "passed": true,
+      "actual": 200,
+      "expected": "<= 210"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop march fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop browser requests",
+      "passed": true,
+      "actual": 76,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop encoded transfer",
+      "passed": true,
+      "actual": 7842676,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop JS heap",
+      "passed": true,
+      "actual": 7578288,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape total DOM",
+      "passed": true,
+      "actual": 3008,
+      "expected": "<= 3150"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape map DOM",
+      "passed": true,
+      "actual": 2401,
+      "expected": "<= 2550"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape SVG paths",
+      "passed": true,
+      "actual": 200,
+      "expected": "<= 210"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape march fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape browser requests",
+      "passed": true,
+      "actual": 73,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape encoded transfer",
+      "passed": true,
+      "actual": 7760396,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape JS heap",
+      "passed": true,
+      "actual": 5942220,
+      "expected": "<= 16 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x total DOM",
+      "passed": true,
+      "actual": 3008,
+      "expected": "<= 3150"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x map DOM",
+      "passed": true,
+      "actual": 2401,
+      "expected": "<= 2550"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x SVG paths",
+      "passed": true,
+      "actual": 200,
+      "expected": "<= 210"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x city fixture",
+      "passed": true,
+      "actual": 50,
+      "expected": 50
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x march fixture",
+      "passed": true,
+      "actual": 100,
+      "expected": 100
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x listeners after map switch",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x browser requests",
+      "passed": true,
+      "actual": 73,
+      "expected": "<= 80"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x encoded transfer",
+      "passed": true,
+      "actual": 7090293,
+      "expected": "<= 8 MiB"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x JS heap",
+      "passed": true,
+      "actual": 8100672,
+      "expected": "<= 24 MiB"
+    }
+  ],
+  "diagnosticUnavailableProfiles": [
+    {
+      "scenarioId": "B",
+      "profileId": "mobile-landscape-4x",
+      "at": "2026-08-13T17:20:14.993Z",
+      "reason": "Profile exceeded the 180-second isolated run watchdog.",
+      "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+    },
+    {
+      "scenarioId": "C",
+      "profileId": "mobile-landscape-4x",
+      "at": "2026-08-13T17:25:58.736Z",
+      "reason": "Profile exceeded the 180-second isolated run watchdog.",
+      "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+    }
+  ]
+}

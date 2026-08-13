@@ -419,12 +419,14 @@ const MAP_TOUCH_PAN_THRESHOLD = 12;
 const MAP_TOUCH_TAP_TOLERANCE = 16;
 const MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS = 4;
 const MAP_CITY_TAP_RADIUS_PX = 44;
-const MAP_MIN_INTERACTION_TARGET_PX = 44;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
-const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
 const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD = 0.78;
+const MAP_DETAIL_FAR_ENTER_ZOOM = 0.52;
+const MAP_DETAIL_FAR_EXIT_ZOOM = 0.58;
+const MAP_DETAIL_CLOSE_ENTER_ZOOM = 0.84;
+const MAP_DETAIL_CLOSE_EXIT_ZOOM = 0.76;
 const MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE = 72;
 const MARCH_ENDPOINT_INTERACTION_SIZE_RATIO = 0.62;
 const ISLAND_MAP_PADDING = 560;
@@ -1951,6 +1953,8 @@ let leaderboardLastSaveAt = 0;
 let leaderboardActiveTab = "players";
 let kingPowerCalculationInProgress = false;
 let lastComputedKingPower = 0;
+let kingPowerRenderFrameCacheActive = false;
+let kingPowerRenderFrameCache = null;
 let currentPlayerIdentityKingPowerOverride = null;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
@@ -2092,7 +2096,6 @@ let mapImageSwapToken = 0;
 let interactionRenderLockUntil = 0;
 let cameraInteractionSettleTimer = null;
 let deferredMapRenderPending = false;
-let lastMainCityReturnCameraUpdateAt = 0;
 let cityRenderSignature = "";
 let pathRenderSignature = "";
 const armyTokenCache = new Map();
@@ -2100,6 +2103,7 @@ let visibleCityDensityCount = 0;
 let visibleArmyDensityCount = 0;
 let crowdedMapDensityEnabled = false;
 let lowZoomPerformanceEnabled = false;
+let mapDetailLevel = "";
 let performancePanel = null;
 let performancePanelVisible = false;
 let performanceFrameCount = 0;
@@ -18990,6 +18994,12 @@ function frame(now) {
     simulationUpdateAccumulatorMs = 0;
   }
 
+  // Display consumers resolve the signed-in identity from several independent
+  // surfaces (marches, HUD status, and city signatures). King Power cannot
+  // change between those consumers after this frame's simulation has run, so
+  // share one calculation for the display portion of the frame only.
+  kingPowerRenderFrameCacheActive = true;
+  kingPowerRenderFrameCache = null;
   if (state) {
     if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
       renderArmies();
@@ -19018,6 +19028,8 @@ function frame(now) {
   renderableArmiesFrameCache = null;
   playerCitiesFrameCacheActive = false;
   playerCitiesFrameCache = null;
+  kingPowerRenderFrameCacheActive = false;
+  kingPowerRenderFrameCache = null;
   requestAnimationFrame(frame);
 }
 
@@ -20922,6 +20934,18 @@ function checkGameOver() {
   normalizeGameOverState();
 }
 
+function withKingPowerRenderFrameCache(render) {
+  if (kingPowerRenderFrameCacheActive) return render();
+  kingPowerRenderFrameCacheActive = true;
+  kingPowerRenderFrameCache = null;
+  try {
+    return render();
+  } finally {
+    kingPowerRenderFrameCacheActive = false;
+    kingPowerRenderFrameCache = null;
+  }
+}
+
 function renderAll() {
   if (!state) return;
   const now = performance.now();
@@ -21058,6 +21082,10 @@ function updateCitadelAssaultCountdown() {
 }
 
 function renderHudStatusPanels() {
+  return withKingPowerRenderFrameCache(renderHudStatusPanelsUncached);
+}
+
+function renderHudStatusPanelsUncached() {
   updateScoutReportLifecycle();
   updateShieldStatusBadge();
   updateIslandSwitcherUi();
@@ -21186,9 +21214,13 @@ function getCurrentPlayerIdentityKingPower(fallback = 0) {
 
 function getKingPower() {
   if (!state || !Array.isArray(state.cities)) return 0;
+  if (kingPowerRenderFrameCacheActive && kingPowerRenderFrameCache !== null) {
+    return kingPowerRenderFrameCache;
+  }
   const globalStats = getGlobalStatsSnapshot();
   if (hasUsableGlobalStats(globalStats) && globalStats.version >= KING_POWER_AUTHORITY_VERSION) {
     lastComputedKingPower = normalizePowerValue(globalStats.kingPower);
+    if (kingPowerRenderFrameCacheActive) kingPowerRenderFrameCache = lastComputedKingPower;
     return lastComputedKingPower;
   }
   if (kingPowerCalculationInProgress) return getCachedKingPowerFallback();
@@ -21202,6 +21234,7 @@ function getKingPower() {
     );
     const totalTroops = stationedTroops + getPlayerMarchingTroops();
     lastComputedKingPower = Math.max(0, Math.floor(infrastructurePower + getTroopKingPower(totalTroops)));
+    if (kingPowerRenderFrameCacheActive) kingPowerRenderFrameCache = lastComputedKingPower;
     return lastComputedKingPower;
   } finally {
     kingPowerCalculationInProgress = false;
@@ -24425,6 +24458,11 @@ function updateVisibleCityDynamicText() {
 }
 
 function renderCities(force = false) {
+  // renderCitiesUncached applies getStableEnemyCityPowerBand to every rival city.
+  return withKingPowerRenderFrameCache(() => renderCitiesUncached(force));
+}
+
+function renderCitiesUncached(force = false) {
   if (isCameraInteractionActive()) {
     queueDeferredMapRender();
     return;
@@ -25948,7 +25986,7 @@ function attackForeignCity(cityId) {
 }
 
 function layoutCityLabels() {
-  if (isZoomInteractionActive()) return;
+  if (isZoomInteractionActive() || mapDetailLevel === "far") return;
   const nodes = [...cityLayer.querySelectorAll(".city-node")]
     .sort((a, b) => {
       const ownerPriority = Number(b.classList.contains("player")) - Number(a.classList.contains("player"));
@@ -26377,6 +26415,10 @@ function hasRenderableArmyWork() {
 }
 
 function renderArmies(force = false) {
+  return withKingPowerRenderFrameCache(() => renderArmiesUncached(force));
+}
+
+function renderArmiesUncached(force = false) {
   if (!state) return;
   if (isCameraInteractionActive()) {
     queueDeferredMapRender();
@@ -35160,9 +35202,15 @@ function formatPercent(percent) {
 function updateZoomPerformanceClasses() {
   if (!mapFrame) return;
   const shouldEnable = shouldUseLowZoomPerformance(lowZoomPerformanceEnabled, zoom);
-  if (shouldEnable === lowZoomPerformanceEnabled) return;
-  lowZoomPerformanceEnabled = shouldEnable;
-  mapFrame.classList.toggle("low-zoom", shouldEnable);
+  if (shouldEnable !== lowZoomPerformanceEnabled) {
+    lowZoomPerformanceEnabled = shouldEnable;
+    mapFrame.classList.toggle("low-zoom", shouldEnable);
+  }
+  const nextDetailLevel = getMapDetailLevel(mapDetailLevel, zoom);
+  if (nextDetailLevel === mapDetailLevel) return;
+  mapDetailLevel = nextDetailLevel;
+  mapFrame.classList.remove("detail-far", "detail-medium", "detail-close");
+  mapFrame.classList.add(`detail-${mapDetailLevel}`);
 }
 
 function shouldUseLowZoomPerformance(currentlyEnabled, zoomLevel) {
@@ -35170,6 +35218,26 @@ function shouldUseLowZoomPerformance(currentlyEnabled, zoomLevel) {
     ? LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD
     : LOW_ZOOM_PERFORMANCE_THRESHOLD;
   return Math.max(0, Number(zoomLevel) || 0) <= threshold;
+}
+
+function getMapDetailLevel(currentLevel, zoomLevel) {
+  const normalizedZoom = Math.max(0, Number(zoomLevel) || 0);
+  if (currentLevel === "far") {
+    if (normalizedZoom >= MAP_DETAIL_CLOSE_ENTER_ZOOM) return "close";
+    return normalizedZoom >= MAP_DETAIL_FAR_EXIT_ZOOM ? "medium" : "far";
+  }
+  if (currentLevel === "close") {
+    if (normalizedZoom <= MAP_DETAIL_FAR_ENTER_ZOOM) return "far";
+    return normalizedZoom <= MAP_DETAIL_CLOSE_EXIT_ZOOM ? "medium" : "close";
+  }
+  if (currentLevel === "medium") {
+    if (normalizedZoom <= MAP_DETAIL_FAR_ENTER_ZOOM) return "far";
+    if (normalizedZoom >= MAP_DETAIL_CLOSE_ENTER_ZOOM) return "close";
+    return "medium";
+  }
+  if (normalizedZoom <= MAP_DETAIL_FAR_ENTER_ZOOM) return "far";
+  if (normalizedZoom >= MAP_DETAIL_CLOSE_ENTER_ZOOM) return "close";
+  return "medium";
 }
 
 function getZoomBoundsForViewport(frameRect = null, dimensions = null) {
@@ -35267,11 +35335,7 @@ function markZoomInteraction() {
 }
 
 function updateMainCityReturnButtonForCamera(rect = null) {
-  if (isCameraInteractionActive()) {
-    const now = performance.now();
-    if (now - lastMainCityReturnCameraUpdateAt < MAIN_CITY_RETURN_CAMERA_THROTTLE_MS) return;
-    lastMainCityReturnCameraUpdateAt = now;
-  }
+  if (isCameraInteractionActive()) return;
   updateMainCityReturnButton(rect);
 }
 
@@ -35288,7 +35352,6 @@ function applyCameraTransform() {
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
-  mapWorld.style.setProperty("--map-hit-size", `${Math.max(MAP_MIN_INTERACTION_TARGET_PX, MAP_MIN_INTERACTION_TARGET_PX / Math.max(0.1, zoom))}px`);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
   updateMainCityReturnButtonForCamera(rect);
 }

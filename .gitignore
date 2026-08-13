@@ -19,3 +19,7 @@ functions/release-manifest.json
 # Generated Python bytecode
 __pycache__/
 *.py[cod]
+# Local map-benchmark smoke output
+benchmark-results/map/quick-latest.json
+benchmark-results/map/quick-latest.md
+benchmark-results/map/*.partial.json
