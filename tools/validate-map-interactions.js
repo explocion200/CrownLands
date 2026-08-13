@@ -409,6 +409,41 @@ assert.equal(swiftLocation.point.x, 40, "Swift March should center using acceler
 
 assert.match(stylesSource, /\.army-token\.endpoint-clearance\s*\{[\s\S]*?pointer-events:\s*none;/, "Endpoint march markers must pass pointer input through to cities.");
 assert.match(
+  stylesSource,
+  /\.army-token-nav\s*\{[\s\S]*?width:\s*138px;[\s\S]*?height:\s*46px;[\s\S]*?grid-template-columns:\s*repeat\(2,\s*1fr\);[\s\S]*?gap:\s*3px;[\s\S]*?padding:\s*3px;/,
+  "Army endpoint navigation must retain the compact two-tab layout.",
+);
+assert.match(
+  stylesSource,
+  /\.army-token-nav button\s*\{[\s\S]*?height:\s*34px;[\s\S]*?grid-template-columns:\s*16px 1fr;/,
+  "Army endpoint buttons must use the reduced compact sizing.",
+);
+assert.match(
+  source,
+  /const navigationRelationship = isPersonalArmy\(attack\)[\s\S]*?\? "player"[\s\S]*?clanAlly[\s\S]*?\? "ally"[\s\S]*?: "enemy"[\s\S]*?navigation\.dataset\.armyRelationship = navigationRelationship/,
+  "Army endpoint navigation must expose the selected march's player, ally, or enemy relationship.",
+);
+assert.match(
+  stylesSource,
+  /\.army-token-nav\[data-army-relationship="player"\] button\s*\{[\s\S]*?background:\s*linear-gradient\(#245984,\s*#123a5e\)/,
+  "Personal march navigation tabs must use the owned blue palette.",
+);
+assert.match(
+  stylesSource,
+  /\.army-token-nav\[data-army-relationship="ally"\] button\s*\{[\s\S]*?background:\s*linear-gradient\(#3d9d5b,\s*#1d5e35\)/,
+  "Clan march navigation tabs must use the allied green palette.",
+);
+assert.match(
+  stylesSource,
+  /\.army-token-nav\[data-army-relationship="enemy"\] button\s*\{[\s\S]*?background:\s*linear-gradient\(#bd4d45,\s*#75231f\)/,
+  "Enemy march navigation tabs must use the hostile red palette.",
+);
+const mapLocationAnnouncementSource = extractFunction("showMapLocationAnnouncement");
+assert.match(mapLocationAnnouncementSource, /map-location-announcement[\s\S]*?renderCrownlandsIcon\("map"\)[\s\S]*?Now entering[\s\S]*?Realm map connected/, "Map travel does not build the dedicated location announcement.");
+assert.match(source, /async function switchOnlineIsland[\s\S]*?!getOnlineApi\(\)\?\.isSignedIn\?\.\(\)[\s\S]*?showMapLocationAnnouncement\(targetRegionId\)/, "Local map travel does not show the location announcement.");
+assert.match(source, /async function switchOnlineIsland[\s\S]*?connectOnlineIsland\(targetRegionId,[\s\S]*?announceLocation:\s*true/, "Online map travel does not request the location announcement.");
+assert.match(source, /async function connectOnlineIsland[\s\S]*?announceLocation\s*=\s*false[\s\S]*?if \(announceLocation\) showMapLocationAnnouncement\(targetRegionId\)/, "Online map connection does not distinguish travel announcements from initial connection toasts.");
+assert.match(
   source,
   /function startPan[\s\S]*?resolveMapTapTargets\(event, sendMode, getCityTapExcludedSourceId\(\)\)/,
   "Destination selection must prioritize non-source city targets over overlapping map markers."

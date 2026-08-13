@@ -11,7 +11,7 @@ const server = read("functions/index.js");
 const rules = read("firestore.rules");
 const indexes = JSON.parse(read("firestore.indexes.json"));
 const markup = read("index.html");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
 const packageJson = JSON.parse(read("functions/package.json"));
 
 function functionBody(source, name) {
@@ -55,6 +55,9 @@ assert.ok(indexes.indexes.some(index => (
 assert.match(markup, /id="realmAnnouncement"[\s\S]*?aria-live="assertive"/, "The live Realm announcement layer is missing.");
 assert.match(styles, /\.realm-announcement,[\s\S]*?pointer-events:\s*none\s*!important/, "The Realm announcement can intercept gameplay input.");
 assert.match(styles, /\.realm-announcement\.citadel[\s\S]*?\.realm-announcement-copy/, "Citadel announcements do not receive the royal visual treatment.");
+assert.match(styles, /\.realm-activity-card,[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?linear-gradient\(180deg, #f5e8ca, #dcc391\) !important;/, "Realm Activity history remains dark with brown text.");
+assert.match(styles, /\.realm-activity-card \.realm-activity-proclamation :is\(\.player-name-link, \.clan-name-link\)[\s\S]*?background:\s*transparent !important;/, "Realm Activity identity links retain a conflicting button face.");
+assert.match(styles, /\.realm-activity-card \.realm-activity-location-btn,[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "Realm Activity location controls lack a readable treatment.");
 assert.match(client, /realm_activity[\s\S]*?Realm Activity/, "Battle Reports does not expose the Realm Activity tab.");
 assert.match(functionBody(client, "getUnreadReportCount"), /onlineRealmActivityEvents/, "Realm Activity does not contribute to the Reports unread badge.");
 assert.match(functionBody(client, "enqueueRealmAnnouncement"), /CITADEL_CAPTURED[\s\S]*?aPriority[\s\S]*?occurredAtMs/, "The announcement queue does not prioritize Citadel events while preserving order.");

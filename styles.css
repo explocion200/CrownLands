@@ -3108,12 +3108,12 @@ input {
   left: 50%;
   bottom: calc(100% + 9px);
   transform: translateX(-50%);
-  width: 148px;
-  height: 50px;
+  width: 138px;
+  height: 46px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-  padding: 4px;
+  gap: 3px;
+  padding: 3px;
   border: 2px solid #cda94f;
   border-radius: 6px;
   background: rgba(7, 24, 42, .96);
@@ -3137,12 +3137,12 @@ input {
   position: relative;
   z-index: 1;
   min-width: 0;
-  height: 38px;
+  height: 34px;
   display: grid;
-  grid-template-columns: 18px 1fr;
+  grid-template-columns: 16px 1fr;
   place-items: center;
   gap: 2px;
-  padding: 0 5px;
+  padding: 0 4px;
   border: 1px solid rgba(231, 205, 127, .55);
   border-radius: 4px;
   color: #fff4d4;
@@ -3156,8 +3156,33 @@ input {
   background: linear-gradient(#3475a9, #184b78);
   outline: none;
 }
-.army-token-nav button > span { font-size: 1rem; line-height: 1; }
-.army-token-nav button > small { font-size: .68rem; font-weight: 950; opacity: 1; }
+.army-token-nav[data-army-relationship="player"] button {
+  background: linear-gradient(#245984, #123a5e);
+}
+.army-token-nav[data-army-relationship="player"] button:hover,
+.army-token-nav[data-army-relationship="player"] button:focus-visible {
+  background: linear-gradient(#3475a9, #184b78);
+}
+.army-token-nav[data-army-relationship="ally"] button {
+  border-color: rgba(168, 239, 183, .72);
+  background: linear-gradient(#3d9d5b, #1d5e35);
+}
+.army-token-nav[data-army-relationship="ally"] button:hover,
+.army-token-nav[data-army-relationship="ally"] button:focus-visible {
+  border-color: #c9ffd4;
+  background: linear-gradient(#55b971, #287744);
+}
+.army-token-nav[data-army-relationship="enemy"] button {
+  border-color: rgba(255, 177, 167, .72);
+  background: linear-gradient(#bd4d45, #75231f);
+}
+.army-token-nav[data-army-relationship="enemy"] button:hover,
+.army-token-nav[data-army-relationship="enemy"] button:focus-visible {
+  border-color: #ffd0ca;
+  background: linear-gradient(#d9685f, #94342e);
+}
+.army-token-nav button > span { font-size: .9rem; line-height: 1; }
+.army-token-nav button > small { font-size: .64rem; font-weight: 950; opacity: 1; }
 .army-sync-status {
   position: absolute;
   left: 50%;

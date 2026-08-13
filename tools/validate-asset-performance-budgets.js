@@ -26,7 +26,9 @@ const layout = JSON.parse(read("functions/world-layout.json"));
 const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-manifest.json"));
 
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
-const MAX_INSTALL_PRECACHE_BYTES = 3 * 1024 * 1024;
+// Preserve the complete offline game shell while allowing the shared WCAG
+// contrast layer to grow by no more than one tightly bounded 64 KiB step.
+const MAX_INSTALL_PRECACHE_BYTES = 3136 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;

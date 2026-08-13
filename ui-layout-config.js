@@ -1,6 +1,6 @@
 window.CROWNLANDS_UI_LAYOUT_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T15:39:28.236Z",
+  "updatedAt": "2026-08-13T18:08:00.000Z",
   "presets": {
     "landscapeTablet": {
       "label": "Landscape / Tablet",
@@ -90,19 +90,19 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
         },
         "outgoingMarch": {
           "anchor": "bottomLeft",
-          "offsetX": 122,
-          "offsetY": 18,
-          "width": 94,
-          "height": 50,
+          "offsetX": 118,
+          "offsetY": 12,
+          "width": 98,
+          "height": 46,
           "visible": true,
           "zIndex": 56
         },
         "incomingMarch": {
           "anchor": "bottomLeft",
-          "offsetX": 222,
-          "offsetY": 18,
-          "width": 94,
-          "height": 50,
+          "offsetX": 224,
+          "offsetY": 12,
+          "width": 98,
+          "height": 46,
           "visible": true,
           "zIndex": 56
         },
@@ -205,19 +205,19 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
         },
         "outgoingMarch": {
           "anchor": "bottomLeft",
-          "offsetX": 128,
-          "offsetY": 18,
+          "offsetX": 118,
+          "offsetY": 12,
           "width": 98,
-          "height": 50,
+          "height": 46,
           "visible": true,
           "zIndex": 56
         },
         "incomingMarch": {
           "anchor": "bottomLeft",
-          "offsetX": 232,
-          "offsetY": 18,
+          "offsetX": 224,
+          "offsetY": 12,
           "width": 98,
-          "height": 50,
+          "height": 46,
           "visible": true,
           "zIndex": 56
         },

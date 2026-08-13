@@ -178,6 +178,8 @@ assert.match(game, /const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;/);
 assert.match(game, /const DEFAULT_CAMP_VISUAL_SIZE = 132;/);
 assert.match(game, /const CROWN_CITADEL_VISUAL_SIZE = 260;/);
 assert.match(game, /function getStrongholdVisualSize\(city\) \{\s*const fallback = isCrownCitadel\(city\) \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;\s*return readVisualSize\(city\?\.size, fallback\);\s*\}/);
+assert.match(game, /size: islandImageVisualSizeToWorld\(\s*region\.id,\s*objective\?\.size,/);
+assert.match(game, /size: islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/);
 assert.match(game, /size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*payoutAtMs:/);
 assert.match(game, /artSrc,\s*size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*activeArmyIds:/);
 
