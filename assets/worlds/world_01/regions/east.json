@@ -742,6 +742,7 @@
       "troops": 50000000,
       "artSrc": "assets/speed-stronghold.png",
       "size": 215,
+      "flipX": false,
       "notes": ""
     }
   ],

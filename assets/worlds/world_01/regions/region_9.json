@@ -898,11 +898,12 @@
       "id": "region_9_deed_camp",
       "name": "City Deed Camp",
       "regionId": "region_9",
-      "xNorm": 0.494,
-      "yNorm": 0.468,
+      "xNorm": 0.5,
+      "yNorm": 0.46,
       "campType": "deed",
       "artSrc": "assets/camps/deed.png",
-      "size": 132,
+      "size": 135,
+      "flipX": false,
       "notes": ""
     }
   ],

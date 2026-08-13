@@ -24,6 +24,31 @@ assert.match(
   /mainCityReturnBtn\.addEventListener\("click", returnToMainCity\)/,
   "The Main City return behavior must remain wired to returnToMainCity.",
 );
+assert.match(
+  index,
+  /id="outgoingAttackBtn"[\s\S]{0,260}?<span aria-hidden="true">&#10148;<\/span>/,
+  "The Outgoing Marches button must use its original heavy forward arrow.",
+);
+assert.match(
+  index,
+  /id="incomingAttackBtn"[\s\S]{0,260}?<span aria-hidden="true">&#9876;<\/span>/,
+  "The Incoming Attacks and Scouts button must use its original crossed-swords icon.",
+);
+assert.doesNotMatch(
+  index,
+  /id="(?:outgoing|incoming)AttackBtn"[\s\S]{0,260}?<use href="#cl-icon-(?:outgoing|incoming)">/,
+  "The operation buttons still use the replacement diagonal-arrow SVGs.",
+);
+assert.match(
+  styles,
+  /\.fullscreen-btn\.active,\s*\n\.main-city-return\s*\{[\s\S]{0,420}?color:\s*var\(--cl-ivory\);[\s\S]{0,220}?background:\s*linear-gradient\(180deg,\s*#59534a,\s*#2b2925\);/,
+  "Fullscreen exit and Home City controls must share the iron-and-ivory button treatment.",
+);
+assert.match(
+  styles,
+  /\.main-city-return \.main-city-return-arrow\s*\{\s*color:\s*var\(--cl-ivory\);\s*\}/,
+  "The Home City direction arrow must use the fullscreen control's ivory icon color.",
+);
 assert.doesNotMatch(index, /login-brand-title/, "The login screen still renders a typed-over title layer.");
 assert.match(
   styles,

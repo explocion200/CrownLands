@@ -796,7 +796,8 @@
       "level": 50,
       "troops": 50000000,
       "artSrc": "assets/training-stronghold.png",
-      "size": 120,
+      "size": 215,
+      "flipX": false,
       "notes": ""
     }
   ],

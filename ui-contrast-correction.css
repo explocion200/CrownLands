@@ -1,0 +1,719 @@
+/* Crownlands contrast, visibility, and state-color correction contract. ----
+   This file intentionally loads last. It corrects presentation only and keeps
+   the established font, artwork, layout, and gameplay systems unchanged. */
+
+:root {
+  --cl-contrast-ivory: #f4e8ce;
+  --cl-contrast-ivory-bright: #fff8ea;
+  --cl-contrast-paper: #ead8b3;
+  --cl-contrast-paper-light: #f5e7c8;
+  --cl-contrast-paper-deep: #c9ad77;
+  --cl-contrast-ink: #2b2118;
+  --cl-contrast-ink-muted: #5c4933;
+  --cl-contrast-burgundy: #6e2f35;
+  --cl-contrast-burgundy-deep: #481b21;
+  --cl-contrast-border: #72502f;
+  --cl-tab-selected-bg: var(--cl-contrast-burgundy);
+  --cl-tab-selected-text: var(--cl-contrast-ivory);
+  --cl-tab-unselected-bg: var(--cl-contrast-paper);
+  --cl-tab-unselected-text: var(--cl-contrast-ink);
+  --cl-danger-bg: #742a2e;
+  --cl-danger-border: #46181b;
+  --cl-danger-text: var(--cl-contrast-ivory-bright);
+  --cl-state-outgoing: #355e7a;
+  --cl-state-incoming: #8a3333;
+  --cl-state-victory: #355e7a;
+  --cl-state-scout: #b88a32;
+  --cl-state-defeat: #8a3333;
+  --cl-dark-surface-text: var(--cl-contrast-ivory);
+  --cl-paper-surface-text: var(--cl-contrast-ink);
+}
+
+/* Global tab contract --------------------------------------------------- */
+
+:is(
+  .profile-tabs,
+  .push-alerts-toggle,
+  .animation-mode-toggle,
+  .skill-preset-tabs,
+  .battle-report-filters,
+  .seasonal-achievement-filters,
+  .active-operations-tabs,
+  .clan-section-nav,
+  .clan-browser-nav,
+  .clan-shield-editor-tabs,
+  .camp-info-tabs,
+  .leaderboard-tabs,
+  .daily-reward-tabs
+) {
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(84, 59, 31, .055) 0 1px, transparent 1px 8px),
+    linear-gradient(180deg, rgba(232, 215, 176, .9), rgba(190, 164, 111, .9));
+  box-shadow: inset 0 1px 0 rgba(255, 249, 226, .36);
+}
+
+:is(
+  .profile-tabs button,
+  .push-alerts-option,
+  .animation-mode-option,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .seasonal-achievement-filters button,
+  .active-operations-tab,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .clan-shield-editor-tabs button,
+  .camp-info-tab,
+  .leaderboard-tab,
+  .daily-reward-tabs button
+) {
+  color: var(--cl-tab-unselected-text) !important;
+  border-color: rgba(85, 58, 39, .62);
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-tab-unselected-bg));
+  text-shadow: 0 1px rgba(255, 250, 232, .5);
+  opacity: 1;
+}
+
+:is(
+  .profile-tabs button,
+  .push-alerts-option,
+  .animation-mode-option,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .seasonal-achievement-filters button,
+  .active-operations-tab,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .clan-shield-editor-tabs button,
+  .camp-info-tab,
+  .leaderboard-tab,
+  .daily-reward-tabs button
+) :is(strong, small, b, .cl-icon, span:not(.daily-reward-tab-alert)) {
+  color: inherit !important;
+  opacity: 1;
+}
+
+:is(
+  .profile-tabs button.active,
+  .profile-tabs button[aria-selected="true"],
+  .push-alerts-option.active,
+  .push-alerts-option[aria-pressed="true"],
+  .animation-mode-option.active,
+  .animation-mode-option[aria-pressed="true"],
+  .skill-preset-tabs button.selected,
+  .skill-preset-tabs button[aria-selected="true"],
+  .battle-report-filters button.active,
+  .battle-report-filters button[aria-pressed="true"],
+  .seasonal-achievement-filters button.active,
+  .seasonal-achievement-filters button[aria-pressed="true"],
+  .active-operations-tab.active,
+  .active-operations-tab[aria-selected="true"],
+  .clan-section-nav button.active,
+  .clan-section-nav button[aria-selected="true"],
+  .clan-browser-nav button.active,
+  .clan-browser-nav button[aria-selected="true"],
+  .clan-shield-editor-tabs button.active,
+  .clan-shield-editor-tabs button[aria-selected="true"],
+  .camp-info-tab.active,
+  .camp-info-tab[aria-selected="true"],
+  .leaderboard-tab.active,
+  .leaderboard-tab[aria-selected="true"],
+  .daily-reward-tabs button.active,
+  .daily-reward-tabs button[aria-selected="true"]
+) {
+  color: var(--cl-tab-selected-text) !important;
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-tab-selected-bg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 209, .24),
+    inset 0 -3px 0 rgba(43, 13, 16, .28),
+    0 2px 0 rgba(45, 25, 17, .3);
+  text-shadow: 0 1px 1px rgba(31, 9, 11, .8);
+}
+
+:is(
+  .profile-tabs button,
+  .push-alerts-option,
+  .animation-mode-option,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .seasonal-achievement-filters button,
+  .active-operations-tab,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .clan-shield-editor-tabs button,
+  .camp-info-tab,
+  .leaderboard-tab,
+  .daily-reward-tabs button
+):disabled {
+  color: #695b47 !important;
+  border-color: rgba(86, 68, 46, .42);
+  background: linear-gradient(180deg, #d9cdb5, #c2b397);
+  opacity: .78;
+}
+
+:is(
+  .profile-tabs button,
+  .push-alerts-option,
+  .animation-mode-option,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .seasonal-achievement-filters button,
+  .active-operations-tab,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .clan-shield-editor-tabs button,
+  .camp-info-tab,
+  .leaderboard-tab,
+  .daily-reward-tabs button
+):not(:disabled):hover {
+  border-color: var(--cl-contrast-burgundy);
+  filter: brightness(1.04);
+}
+
+/* An applied skill build can differ from the tab being inspected. Keep the
+   active build visible without making it look like the selected tab. */
+.skill-preset-tabs button.active:not(.selected):not([aria-selected="true"]) {
+  border-color: var(--cl-state-scout);
+  box-shadow: inset 0 0 0 2px rgba(184, 138, 50, .28);
+}
+
+.skill-preset-tabs button.active:not(.selected):not([aria-selected="true"]) small {
+  color: #684b16 !important;
+}
+
+.clan-section-nav button[aria-selected="true"] .clan-section-nav-mark,
+.clan-section-nav button[aria-selected="true"] > span,
+.clan-section-nav button[aria-selected="true"] > b {
+  color: var(--cl-tab-selected-text) !important;
+}
+
+/* Flag editor ----------------------------------------------------------- */
+
+.profile-screen .flag-swatch-grid button {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(65, 45, 26, .72);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .12) 0 1px, transparent 1px 6px),
+    linear-gradient(90deg, rgba(255, 255, 255, .12), transparent 46%, rgba(0, 0, 0, .14)),
+    var(--flag-swatch) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 216, .18), 0 3px 6px rgba(0, 0, 0, .24);
+  opacity: 1;
+}
+
+.profile-screen .flag-swatch-grid button.active,
+.profile-screen .flag-swatch-grid button[aria-pressed="true"] {
+  border-color: var(--cl-contrast-ivory-bright);
+  outline: 3px solid var(--cl-contrast-burgundy);
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px rgba(28, 17, 9, .48), 0 4px 8px rgba(0, 0, 0, .3);
+}
+
+.profile-screen .flag-swatch-grid button:not(:disabled):hover {
+  border-color: var(--cl-contrast-ivory-bright);
+  filter: brightness(1.12) saturate(1.08);
+}
+
+.profile-screen .flag-swatch-grid button:disabled {
+  opacity: .62;
+  filter: grayscale(.18);
+}
+
+/* Clan information panels --------------------------------------------- */
+
+:is(
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-rename-card,
+  .clan-rewards-panel .clan-panel,
+  .clan-applications article
+) {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(93, 66, 39, .48);
+  background:
+    repeating-linear-gradient(0deg, rgba(73, 48, 23, .035) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, var(--cl-contrast-paper-light), #d7c08e);
+  box-shadow: inset 0 1px 0 rgba(255, 251, 232, .46), 0 9px 18px rgba(36, 23, 14, .18);
+}
+
+:is(
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-rename-card,
+  .clan-applications article
+) :is(h3, h4, strong, b, .player-name-link, .clan-name-link, .clan-member-select) {
+  color: var(--cl-contrast-ink) !important;
+  text-shadow: none;
+}
+
+:is(
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-rename-card,
+  .clan-applications article
+) :is(p, span, small, label, .clan-muted) {
+  color: var(--cl-contrast-ink-muted) !important;
+  opacity: 1;
+}
+
+.clan-rewards-panel {
+  padding: .1rem;
+  color: var(--cl-paper-surface-text);
+  background: transparent;
+}
+
+.clan-member-row {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(94, 66, 39, .34);
+  background: rgba(255, 247, 223, .54);
+}
+
+.clan-member-row:nth-child(even) {
+  background: rgba(206, 181, 130, .34);
+}
+
+.clan-member-row.selected {
+  border-color: var(--cl-contrast-burgundy);
+  background: #efdcae;
+  box-shadow: inset 4px 0 0 var(--cl-contrast-burgundy);
+}
+
+.clan-member-row :is(.player-name-link, .clan-member-select, strong, b) {
+  color: #52232a !important;
+}
+
+.clan-member-row :is(span, small) {
+  color: var(--cl-contrast-ink-muted) !important;
+  opacity: 1;
+}
+
+/* War Room remains a purposeful military surface, with ivory copy. */
+.clan-rallies-panel {
+  color: var(--cl-dark-surface-text);
+  border-color: rgba(178, 139, 81, .58);
+  background:
+    repeating-linear-gradient(90deg, rgba(241, 225, 190, .035) 0 1px, transparent 1px 8px),
+    linear-gradient(145deg, #5c3037, #292b31 70%, #1f2529);
+}
+
+.clan-rallies-panel :is(h3, h4, strong, b, .player-name-link) {
+  color: var(--cl-contrast-ivory-bright) !important;
+  text-shadow: 0 1px 1px rgba(20, 10, 10, .75);
+}
+
+.clan-rallies-panel :is(p, span, small, label, .clan-muted) {
+  color: var(--cl-contrast-ivory) !important;
+  opacity: 1;
+}
+
+.clan-rally-card {
+  color: var(--cl-dark-surface-text);
+  border-color: rgba(225, 194, 135, .42);
+  background: rgba(31, 30, 31, .76);
+}
+
+.clan-rally-card.launched {
+  border-color: rgba(232, 155, 147, .66);
+  background: linear-gradient(135deg, rgba(112, 42, 48, .88), rgba(31, 30, 31, .82));
+}
+
+.clan-rally-summary,
+.clan-rally-card li {
+  color: var(--cl-contrast-ivory);
+  background: rgba(255, 248, 229, .075);
+}
+
+.clan-rally-status {
+  color: #f0cd88 !important;
+}
+
+/* Danger actions retain clear wording in every interaction state. */
+:is(
+  .clan-leave.danger-action,
+  .clan-disband-confirmation .danger-action,
+  [data-clan-disband-confirm="accept"]
+) {
+  color: var(--cl-danger-text) !important;
+  border-color: var(--cl-danger-border) !important;
+  background: linear-gradient(180deg, #8a363b, var(--cl-danger-bg)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 234, 218, .2), inset 0 -3px 0 rgba(39, 8, 10, .3), 0 3px 0 rgba(42, 20, 15, .4);
+  text-shadow: 0 1px 1px rgba(35, 7, 9, .75);
+}
+
+:is(
+  .clan-leave.danger-action,
+  .clan-disband-confirmation .danger-action,
+  [data-clan-disband-confirm="accept"]
+):not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+:is(
+  .clan-leave.danger-action,
+  .clan-disband-confirmation .danger-action,
+  [data-clan-disband-confirm="accept"]
+):not(:disabled):active {
+  transform: translateY(2px);
+  filter: brightness(.94);
+}
+
+:is(
+  .clan-leave.danger-action,
+  .clan-disband-confirmation .danger-action,
+  [data-clan-disband-confirm="accept"]
+):disabled {
+  color: #ead8ca !important;
+  border-color: #5d3737 !important;
+  background: linear-gradient(180deg, #785052, #583538) !important;
+  opacity: .76;
+}
+
+:is(button.danger-action, a.danger-action) {
+  color: var(--cl-danger-text) !important;
+  border-color: var(--cl-danger-border);
+  background: linear-gradient(180deg, #8a363b, var(--cl-danger-bg));
+  text-shadow: 0 1px 1px rgba(35, 7, 9, .75);
+}
+
+:is(button.danger-action, a.danger-action):disabled {
+  color: #ead8ca !important;
+  border-color: #5d3737;
+  background: linear-gradient(180deg, #785052, #583538);
+  opacity: .76;
+}
+
+/* Skill presets --------------------------------------------------------- */
+
+.skill-preset-detail,
+.skill-preset-allocation-group {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(94, 66, 39, .44);
+  background:
+    repeating-linear-gradient(0deg, rgba(74, 48, 24, .035) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, var(--cl-contrast-paper-light), #d6bf8d);
+}
+
+.skill-preset-detail :is(h3, h4, strong, b),
+.skill-preset-allocation-group :is(h3, h4, strong, b) {
+  color: var(--cl-contrast-ink) !important;
+  text-shadow: none;
+}
+
+.skill-preset-detail :is(p, span, small, label),
+.skill-preset-allocation-group :is(p, span, small, label) {
+  color: var(--cl-contrast-ink-muted) !important;
+  opacity: 1;
+}
+
+.skill-preset-points {
+  padding: .48rem .58rem;
+  color: #4d2a20 !important;
+  border-left: 4px solid var(--cl-state-scout);
+  background: rgba(255, 246, 218, .64);
+}
+
+.skill-preset-locked-copy {
+  color: #5f4e38 !important;
+}
+
+.skill-preset-error {
+  color: #6f2325 !important;
+}
+
+.profile-screen [data-save-skill-preset],
+.skill-preset-confirmation [data-skill-preset-confirm="accept"] {
+  color: var(--cl-contrast-ivory-bright) !important;
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-contrast-burgundy));
+  text-shadow: 0 1px 1px rgba(34, 9, 11, .72);
+}
+
+.profile-screen [data-save-skill-preset]:disabled,
+.skill-preset-confirmation [data-skill-preset-confirm="accept"]:disabled {
+  color: #e7dac0 !important;
+  background: linear-gradient(180deg, #806468, #62474b);
+}
+
+/* Settings -------------------------------------------------------------- */
+
+.audio-settings-section,
+.notification-settings-section,
+.privacy-settings-section {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(98, 69, 41, .44);
+  background:
+    repeating-linear-gradient(0deg, rgba(74, 48, 24, .035) 0 1px, transparent 1px 10px),
+    linear-gradient(180deg, var(--cl-contrast-paper-light), #d7c08e);
+  box-shadow: inset 0 1px 0 rgba(255, 251, 231, .42), 0 8px 16px rgba(43, 27, 16, .16);
+}
+
+:is(.audio-settings-section, .notification-settings-section, .privacy-settings-section)
+  :is(h3, h4, strong, b, .profile-section-heading span) {
+  color: var(--cl-contrast-ink) !important;
+  text-shadow: none;
+}
+
+:is(.audio-settings-section, .notification-settings-section, .privacy-settings-section)
+  :is(p, span, small, label, .settings-card-description, .settings-section-header p) {
+  color: var(--cl-contrast-ink-muted) !important;
+  opacity: 1;
+}
+
+.audio-channel-card,
+.notification-settings-section .profile-notification-row {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(103, 72, 41, .42);
+  background: linear-gradient(180deg, #f8ebcf, #dfc99b);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 240, .55), 0 4px 9px rgba(57, 36, 20, .14);
+}
+
+.audio-channel-card :is(strong, output),
+.notification-settings-section .profile-notification-row strong {
+  color: var(--cl-contrast-ink) !important;
+}
+
+.audio-channel-card :is(span, small),
+.notification-settings-section .profile-notification-row :is(span, small) {
+  color: var(--cl-contrast-ink-muted) !important;
+}
+
+.audio-channel-glyph {
+  color: var(--cl-contrast-ivory);
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-contrast-burgundy));
+}
+
+.audio-channel-card output {
+  color: #442416 !important;
+  border-color: rgba(100, 66, 36, .4);
+  background: rgba(255, 247, 222, .7);
+}
+
+.audio-mute-button {
+  color: var(--cl-contrast-ink);
+  border-color: rgba(95, 65, 38, .56);
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper));
+}
+
+.audio-mute-button[aria-pressed="true"] {
+  color: var(--cl-contrast-ivory-bright);
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-contrast-burgundy));
+}
+
+.audio-volume-control input[type="range"] {
+  accent-color: var(--cl-contrast-burgundy);
+}
+
+.privacy-settings-link {
+  color: var(--cl-contrast-ink) !important;
+  border: 1px solid var(--cl-contrast-border) !important;
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 252, 238, .52), 0 3px 0 rgba(66, 43, 26, .32);
+  text-shadow: 0 1px rgba(255, 250, 232, .5);
+}
+
+.privacy-settings-link:hover {
+  color: #451d22 !important;
+  border-color: var(--cl-contrast-burgundy) !important;
+  filter: brightness(1.04);
+}
+
+/* Battle reports ------------------------------------------------------- */
+
+.battle-report-card {
+  color: var(--cl-paper-surface-text);
+  border-color: rgba(97, 69, 41, .5);
+  background:
+    repeating-linear-gradient(0deg, rgba(73, 47, 23, .035) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, var(--cl-contrast-paper-light), #d8c18f);
+}
+
+.battle-report-card :is(.battle-report-city, .battle-report-troops, .battle-report-opponent)
+  :is(strong, b, .player-name-link) {
+  color: var(--cl-contrast-ink) !important;
+  text-shadow: none;
+}
+
+.battle-report-card :is(.battle-report-city, .battle-report-troops, .battle-report-opponent)
+  :is(span, small) {
+  color: var(--cl-contrast-ink-muted) !important;
+  text-shadow: none;
+}
+
+.battle-report-card.victory .battle-report-result {
+  color: var(--cl-contrast-ivory-bright);
+  border-color: #28475c;
+  background: var(--cl-state-victory) !important;
+}
+
+.battle-report-card.scout .battle-report-result {
+  color: #261b0d;
+  border-color: #7b591d;
+  background: var(--cl-state-scout) !important;
+}
+
+.battle-report-card.defeat .battle-report-result {
+  color: var(--cl-contrast-ivory-bright);
+  border-color: #5f2020;
+  background: var(--cl-state-defeat) !important;
+}
+
+.battle-report-card.victory .battle-report-result :is(strong, small),
+.battle-report-card.defeat .battle-report-result :is(strong, small) {
+  color: var(--cl-contrast-ivory-bright) !important;
+  text-shadow: 0 1px 1px rgba(20, 8, 8, .68);
+}
+
+.battle-report-card.scout .battle-report-result :is(strong, small) {
+  color: #261b0d !important;
+  text-shadow: 0 1px rgba(255, 232, 174, .28);
+}
+
+.battle-report-locate-btn {
+  display: inline-grid !important;
+  place-items: center !important;
+  padding: 0 !important;
+  color: var(--cl-contrast-ink) !important;
+  border-color: var(--cl-contrast-border) !important;
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper)) !important;
+  line-height: 1 !important;
+}
+
+.battle-report-locate-btn .cl-icon {
+  width: 1.08rem;
+  height: 1.08rem;
+  display: block;
+  margin: 0;
+  transform: none;
+}
+
+/* The approved dark-ink report artwork needs a light button surface. */
+.bottom-nav .report-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--cl-contrast-ink) !important;
+  border-color: var(--cl-contrast-border) !important;
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper)) !important;
+  text-shadow: 0 1px rgba(255, 250, 232, .5);
+}
+
+.bottom-nav .report-nav-btn .report-icon {
+  display: block;
+  margin-inline: auto;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+}
+
+.bottom-nav .report-nav-btn:not(:disabled):hover,
+.bottom-nav .report-nav-btn.active {
+  color: #451d22 !important;
+  border-color: var(--cl-contrast-burgundy) !important;
+  background: linear-gradient(180deg, #fff0ce, #ddc18b) !important;
+}
+
+/* City roster and directional operation states ------------------------ */
+
+.city-list-summary {
+  color: var(--cl-contrast-ivory-bright);
+  border-color: var(--cl-contrast-burgundy-deep);
+  background: linear-gradient(180deg, #7d3941, var(--cl-contrast-burgundy));
+  box-shadow: inset 0 1px 0 rgba(255, 238, 206, .22), 0 5px 10px rgba(42, 24, 15, .24);
+}
+
+.city-list-summary :is(strong, span, small) {
+  color: var(--cl-contrast-ivory-bright) !important;
+  text-shadow: 0 1px 1px rgba(34, 9, 11, .72);
+  opacity: 1;
+}
+
+.city-list-summary .city-list-sync-error {
+  color: #ffe3d4 !important;
+}
+
+.city-list-summary .city-list-sync-retry {
+  color: var(--cl-contrast-ink) !important;
+  border-color: var(--cl-contrast-border);
+  background: linear-gradient(180deg, var(--cl-contrast-paper-light), var(--cl-contrast-paper));
+}
+
+.bottom-nav .outgoing-attack-btn,
+.bottom-nav .outgoing-attack-btn.active {
+  color: var(--cl-contrast-ivory-bright) !important;
+  border-color: #274559 !important;
+  background: var(--cl-state-outgoing) !important;
+}
+
+.bottom-nav .incoming-attack-btn,
+.bottom-nav .incoming-attack-btn.active {
+  color: var(--cl-contrast-ivory-bright) !important;
+  border-color: #5f2020 !important;
+  background: var(--cl-state-incoming) !important;
+}
+
+:is(.bottom-nav .outgoing-attack-btn, .bottom-nav .incoming-attack-btn)
+  :is(.cl-icon, span, strong, small) {
+  color: var(--cl-contrast-ivory-bright) !important;
+  text-shadow: 0 1px 1px rgba(20, 8, 8, .72);
+  opacity: 1;
+}
+
+/* Global dark-surface safety net. Scope only semantic command/status
+   surfaces so parchment information panels continue using dark ink. */
+:is(
+  .effect-status-badge,
+  .incoming-attack-badge,
+  .commander-panel,
+  .citadel-assault-countdown.imminent,
+  .clan-rally-card,
+  .clan-rally-confirmation,
+  .danger-action
+) :is(h2, h3, h4, strong, b, span, small, p, label) {
+  color: var(--cl-dark-surface-text);
+}
+
+@media (max-height: 430px) and (orientation: landscape) {
+  :is(
+    .profile-tabs button,
+    .skill-preset-tabs button,
+    .battle-report-filters button,
+    .seasonal-achievement-filters button,
+    .active-operations-tab,
+    .clan-section-nav button,
+    .clan-browser-nav button,
+    .clan-shield-editor-tabs button,
+    .camp-info-tab,
+    .leaderboard-tab,
+    .daily-reward-tabs button
+  ) {
+    min-height: 32px;
+  }
+
+  .clan-rally-card,
+  .clan-member-row,
+  .audio-channel-card,
+  .notification-settings-section .profile-notification-row {
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.bottom-nav .outgoing-attack-btn, .bottom-nav .incoming-attack-btn) {
+    animation: none;
+  }
+}

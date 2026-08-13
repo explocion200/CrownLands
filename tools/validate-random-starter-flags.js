@@ -9,6 +9,12 @@ const serverPath = path.join(root, "functions", "index.js");
 const gameSource = fs.readFileSync(gamePath, "utf8");
 const serverSource = fs.readFileSync(serverPath, "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+
+assert.match(indexSource, /id="flagSaveBtn"[\s\S]*?id="flagBackBtn"/, "The flag editor must retain Save Flag and Back actions.");
+assert.doesNotMatch(indexSource, /id="flagExitBtn"|>\s*Exit\s*<\/button>/, "The flag editor still includes a redundant Exit action.");
+assert.doesNotMatch(gameSource, /flagExitBtn/, "The removed flag Exit action still has client bindings.");
+assert.match(stylesSource, /\.flag-editor-actions\s*\{[^}]*grid-template-columns:\s*1\.5fr\s+1fr/, "The flag editor action row must use its two-button layout.");
 
 const colors = [
   "#1f5f91",

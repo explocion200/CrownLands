@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202607251952,
-  "updatedAt": "2026-07-25T19:52:40.368Z",
+  "version": 202608131539,
+  "updatedAt": "2026-08-13T15:39:28.240Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
@@ -1267,10 +1267,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_crown_citadel",
           "name": "Crown Citadel",
-          "x": 720,
-          "y": 502,
-          "xNorm": 0.497,
-          "yNorm": 0.462,
+          "x": 710,
+          "y": 498,
+          "xNorm": 0.49,
+          "yNorm": 0.459,
           "type": "crown",
           "strongholdType": "crown",
           "sourceStrongholdType": "crown_citadel",
@@ -1280,7 +1280,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
-          "size": 200
+          "size": 215,
+          "flipX": false
         }
       ],
       "camps": [],
@@ -2119,7 +2120,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp",
-          "size": 200
+          "size": 215,
+          "flipX": true
         }
       ],
       "camps": [],
@@ -2967,7 +2969,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp",
-          "size": 215
+          "size": 215,
+          "flipX": false
         }
       ],
       "camps": [],
@@ -3875,7 +3878,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/optimized/stronghold-training-384x384-649892a49e02.webp",
-          "size": 120
+          "size": 215,
+          "flipX": false
         }
       ],
       "camps": [],
@@ -4627,7 +4631,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp",
-          "size": 215
+          "size": 215,
+          "flipX": false
         }
       ],
       "camps": [],
@@ -5284,14 +5289,15 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "region_6_gold_camp",
           "name": "Gold Camp",
-          "x": 750,
-          "y": 579,
-          "xNorm": 0.518,
-          "yNorm": 0.533,
+          "x": 746,
+          "y": 572,
+          "xNorm": 0.515,
+          "yNorm": 0.527,
           "type": "gold",
           "campType": "gold",
           "artSrc": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
-          "size": 132,
+          "size": 135,
+          "flipX": false,
           "notes": "",
           "rewardSchedule": [
             {
@@ -6230,14 +6236,15 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "region_7_items_camp",
           "name": "Relic Camp",
-          "x": 747,
-          "y": 526,
-          "xNorm": 0.516,
-          "yNorm": 0.484,
+          "x": 744,
+          "y": 523,
+          "xNorm": 0.514,
+          "yNorm": 0.482,
           "type": "items",
           "campType": "items",
           "artSrc": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
-          "size": 132,
+          "size": 135,
+          "flipX": false,
           "notes": "",
           "maxDailyRewards": 2
         }
@@ -8484,14 +8491,15 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "region_9_deed_camp",
           "name": "City Deed Camp",
-          "x": 715,
-          "y": 508,
-          "xNorm": 0.494,
-          "yNorm": 0.468,
+          "x": 724,
+          "y": 500,
+          "xNorm": 0.5,
+          "yNorm": 0.46,
           "type": "deed",
           "campType": "deed",
           "artSrc": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
-          "size": 132,
+          "size": 135,
+          "flipX": false,
           "notes": ""
         }
       ],
@@ -9041,14 +9049,15 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "region_10_troops_camp",
           "name": "Warband Camp",
-          "x": 704,
-          "y": 500,
-          "xNorm": 0.486,
-          "yNorm": 0.46,
+          "x": 701,
+          "y": 478,
+          "xNorm": 0.484,
+          "yNorm": 0.44,
           "type": "troops",
           "campType": "troops",
           "artSrc": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
-          "size": 132,
+          "size": 135,
+          "flipX": false,
           "notes": "",
           "rewardSchedule": [
             {

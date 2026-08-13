@@ -1139,8 +1139,8 @@
       "id": "center_crown_citadel",
       "name": "Crown Citadel",
       "regionId": "center",
-      "xNorm": 0.497,
-      "yNorm": 0.462,
+      "xNorm": 0.49,
+      "yNorm": 0.459,
       "strongholdType": "crown_citadel",
       "bonusType": "crowndominion",
       "bonusAmount": 10,
@@ -1148,7 +1148,8 @@
       "level": 100,
       "troops": 50000000,
       "artSrc": "assets/crown-citadel.png?v=20260703-crown-citadel-art",
-      "size": 200,
+      "size": 215,
+      "flipX": false,
       "notes": ""
     }
   ],

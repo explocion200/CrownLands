@@ -179,6 +179,10 @@ const normalizeOnlineCampState = vm.runInNewContext(
     getCampConfigForType(campType) {
       return { artSrc: campArtByType.get(campType) };
     },
+    readVisualSize(value, fallback) {
+      const parsed = Math.floor(Number(value));
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    },
     normalizeRegionId: value => String(value || ""),
     getRegionIdFromOnlineIslandId: value => String(value || "").replace(/^crownlands-/, ""),
     normalizeTimestampMs: value => Math.max(0, Number(value) || 0),

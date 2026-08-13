@@ -805,6 +805,11 @@ label > span,
   filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.55));
 }
 
+.map-marker img.editor-art-flip-x {
+  transform: scaleX(-1);
+  transform-origin: center;
+}
+
 .map-marker.selected {
   outline: 4px solid rgba(227, 182, 91, 0.66);
   z-index: 10;
