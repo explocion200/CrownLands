@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-08-13T20:43:02.371Z",
+  "sourceGeneratedAt": "2026-08-13T16:40:08.248Z",
+  "regression": {
+    "passed": true,
+    "checks": 253,
+    "failures": []
+  },
+  "capacity": {
+    "passed": false,
+    "checks": 14,
+    "failures": [
+      "B/desktop: idle-with-marches FPS 0.6352836541516217 < 30.",
+      "B/desktop: pan FPS 0.6365625621643127 < 30.",
+      "B/desktop: zoom FPS 0.602615350621608 < 20.",
+      "B/desktop: idle p95 1632 > 100 ms.",
+      "B/mobile-landscape: idle-with-marches FPS 0.45174463779117985 < 24.",
+      "B/mobile-landscape: pan FPS 0.5027430919956662 < 24.",
+      "B/mobile-landscape: zoom FPS 0.4934048222097806 < 15.",
+      "B/mobile-landscape: idle p95 2708.4000000000015 > 150 ms.",
+      "C/desktop: required capacity profile is unavailable.",
+      "C/mobile-landscape: required capacity profile is unavailable."
+    ]
+  }
+}

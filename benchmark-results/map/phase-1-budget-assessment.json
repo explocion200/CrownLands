@@ -1,0 +1,22 @@
+{
+  "generatedAt": "2026-08-13T17:33:22.069Z",
+  "sourceGeneratedAt": "2026-08-13T17:32:54.189Z",
+  "regression": {
+    "passed": false,
+    "checks": 281,
+    "failures": [
+      "A/desktop: zoom long tasks 21 > 20.",
+      "D/desktop: zoom FPS 42.0143319917542 < 50.",
+      "D/desktop: zoom p95 90.40000000000146 > 80 ms.",
+      "D/mobile-landscape: zoom p95 83.5 > 80 ms."
+    ]
+  },
+  "capacity": {
+    "passed": false,
+    "checks": 24,
+    "failures": [
+      "C/desktop: zoom FPS 6.273156770106575 < 15.",
+      "C/mobile-landscape: zoom FPS 6.192531431788328 < 10."
+    ]
+  }
+}

@@ -1,0 +1,1104 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T20:43:05.772Z",
+  "passed": true,
+  "checks": 142,
+  "failures": [],
+  "results": [
+    {
+      "scope": "lod",
+      "label": "production detail-level function exists",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "scope": "lod",
+      "label": "initial at 0.45",
+      "passed": true,
+      "actual": "far",
+      "expected": "far"
+    },
+    {
+      "scope": "lod",
+      "label": "far at 0.57",
+      "passed": true,
+      "actual": "far",
+      "expected": "far"
+    },
+    {
+      "scope": "lod",
+      "label": "far at 0.58",
+      "passed": true,
+      "actual": "medium",
+      "expected": "medium"
+    },
+    {
+      "scope": "lod",
+      "label": "medium at 0.53",
+      "passed": true,
+      "actual": "medium",
+      "expected": "medium"
+    },
+    {
+      "scope": "lod",
+      "label": "medium at 0.52",
+      "passed": true,
+      "actual": "far",
+      "expected": "far"
+    },
+    {
+      "scope": "lod",
+      "label": "medium at 0.83",
+      "passed": true,
+      "actual": "medium",
+      "expected": "medium"
+    },
+    {
+      "scope": "lod",
+      "label": "medium at 0.84",
+      "passed": true,
+      "actual": "close",
+      "expected": "close"
+    },
+    {
+      "scope": "lod",
+      "label": "close at 0.77",
+      "passed": true,
+      "actual": "close",
+      "expected": "close"
+    },
+    {
+      "scope": "lod",
+      "label": "close at 0.76",
+      "passed": true,
+      "actual": "medium",
+      "expected": "medium"
+    },
+    {
+      "scope": "lod",
+      "label": "far at 0.9",
+      "passed": true,
+      "actual": "close",
+      "expected": "close"
+    },
+    {
+      "scope": "lod",
+      "label": "close at 0.45",
+      "passed": true,
+      "actual": "far",
+      "expected": "far"
+    },
+    {
+      "scope": "lod",
+      "label": "far and medium hit sizes are discrete CSS values",
+      "passed": true,
+      "actual": "source scan",
+      "expected": true
+    },
+    {
+      "scope": "lod",
+      "label": "camera transform does not rewrite inherited hit-size custom property",
+      "passed": true,
+      "actual": "source scan",
+      "expected": "no per-frame write"
+    },
+    {
+      "scope": "lod",
+      "label": "far LOD hides route flow but not route ribbon",
+      "passed": true,
+      "actual": "source scan",
+      "expected": true
+    },
+    {
+      "scope": "lod",
+      "label": "far label rule preserves selected, targeted, main, and stronghold nodes",
+      "passed": true,
+      "actual": "source scan",
+      "expected": true
+    },
+    {
+      "scope": "lod",
+      "label": "far march rule preserves selected token detail",
+      "passed": true,
+      "actual": "source scan",
+      "expected": true
+    },
+    {
+      "scope": "primary-gate",
+      "label": "focused C/desktop zoom FPS",
+      "passed": true,
+      "actual": 106.47384835427147,
+      "expected": ">= 15"
+    },
+    {
+      "scope": "primary-gate",
+      "label": "full C/desktop zoom FPS",
+      "passed": true,
+      "actual": 111.21752897719915,
+      "expected": ">= 15"
+    },
+    {
+      "scope": "profile",
+      "label": "C/desktop style recalculation reduced >= 75%",
+      "passed": true,
+      "actual": 0.07516264502811588,
+      "expected": "<= 0.25x"
+    },
+    {
+      "scope": "profile",
+      "label": "C/desktop p95 zoom frame <= 20 ms",
+      "passed": true,
+      "actual": 13.900000000001455,
+      "expected": "<= 20 ms"
+    },
+    {
+      "scope": "profile",
+      "label": "C/desktop focused listener count",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "profile",
+      "label": "C/desktop focused duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "profile",
+      "label": "C/desktop focused production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "primary-gate",
+      "label": "focused C/mobile-landscape zoom FPS",
+      "passed": true,
+      "actual": 111.42390298641318,
+      "expected": ">= 10"
+    },
+    {
+      "scope": "primary-gate",
+      "label": "full C/mobile-landscape zoom FPS",
+      "passed": true,
+      "actual": 106.93726217191922,
+      "expected": ">= 10"
+    },
+    {
+      "scope": "profile",
+      "label": "C/mobile-landscape style recalculation reduced >= 75%",
+      "passed": true,
+      "actual": 0.0726600011180564,
+      "expected": "<= 0.25x"
+    },
+    {
+      "scope": "profile",
+      "label": "C/mobile-landscape p95 zoom frame <= 20 ms",
+      "passed": true,
+      "actual": 14,
+      "expected": "<= 20 ms"
+    },
+    {
+      "scope": "profile",
+      "label": "C/mobile-landscape focused listener count",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "profile",
+      "label": "C/mobile-landscape focused duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "profile",
+      "label": "C/mobile-landscape focused production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "controls",
+      "label": "regression assessment",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "scope": "controls",
+      "label": "capacity assessment",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "scope": "controls",
+      "label": "full matrix has all nominal A-E profiles",
+      "passed": true,
+      "actual": 13,
+      "expected": ">= 10 nominal runs"
+    },
+    {
+      "scope": "controls",
+      "label": "unavailable profiles have explicit watchdog evidence",
+      "passed": true,
+      "actual": [
+        {
+          "scenarioId": "B",
+          "profileId": "mobile-landscape-4x",
+          "at": "2026-08-13T19:24:45.434Z",
+          "reason": "Profile exceeded the 180-second isolated run watchdog.",
+          "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+        },
+        {
+          "scenarioId": "C",
+          "profileId": "mobile-landscape-4x",
+          "at": "2026-08-13T19:30:10.531Z",
+          "reason": "Profile exceeded the 180-second isolated run watchdog.",
+          "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+        }
+      ],
+      "expected": "explicit unavailable watchdog records"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/desktop heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 6384624,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 8549872,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "A/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 5994220,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/desktop heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 7518392,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 8160656,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/desktop heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 8877388,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "C/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 10494664,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/desktop heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 6653680,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 4817832,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "D/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 5184364,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/desktop heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 5745612,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 6473256,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "E/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 6193924,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "six required visual states",
+      "passed": true,
+      "actual": 6,
+      "expected": 6
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      },
+      "expected": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 detail class",
+      "passed": true,
+      "actual": "map-frame crowded-map low-zoom detail-far",
+      "expected": "detail-far"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 screenshot exists",
+      "passed": true,
+      "actual": 224248,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 hides secondary route flows",
+      "passed": true,
+      "actual": "none",
+      "expected": "none"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 hides non-critical labels and march text",
+      "passed": true,
+      "actual": {
+        "armyTokens": 100,
+        "hiddenArmyCounts": 100,
+        "hiddenArmyTimes": 100,
+        "hiddenGenericCityNames": 135,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "expected": "non-zero hidden secondary details"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-far-1440x900 visible objective",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      },
+      "expected": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 detail class",
+      "passed": true,
+      "actual": "map-frame crowded-map low-zoom detail-medium",
+      "expected": "detail-medium"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 screenshot exists",
+      "passed": true,
+      "actual": 204616,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 restores route flows",
+      "passed": true,
+      "actual": "inline",
+      "expected": "visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-medium-1440x900 visible objective",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 900,
+        "width": 1440
+      },
+      "expected": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 detail class",
+      "passed": true,
+      "actual": "map-frame detail-close crowded-map",
+      "expected": "detail-close"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 screenshot exists",
+      "passed": true,
+      "actual": 184000,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-desktop-close-1440x900 restores route flows",
+      "passed": true,
+      "actual": "inline",
+      "expected": "visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      },
+      "expected": {
+        "width": 844,
+        "height": 390
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 detail class",
+      "passed": true,
+      "actual": "map-frame low-zoom detail-far crowded-map",
+      "expected": "detail-far"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 screenshot exists",
+      "passed": true,
+      "actual": 95226,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 hides secondary route flows",
+      "passed": true,
+      "actual": "none",
+      "expected": "none"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 hides non-critical labels and march text",
+      "passed": true,
+      "actual": {
+        "armyTokens": 69,
+        "hiddenArmyCounts": 69,
+        "hiddenArmyTimes": 69,
+        "hiddenGenericCityNames": 129,
+        "mainCities": 1,
+        "objectives": 1,
+        "routeFlows": 100,
+        "routeRibbons": 100,
+        "selectedCities": 1,
+        "shieldedCities": 1
+      },
+      "expected": "non-zero hidden secondary details"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-far-844x390 visible objective",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      },
+      "expected": {
+        "width": 844,
+        "height": 390
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 detail class",
+      "passed": true,
+      "actual": "map-frame low-zoom detail-medium crowded-map",
+      "expected": "detail-medium"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 screenshot exists",
+      "passed": true,
+      "actual": 88124,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 restores route flows",
+      "passed": true,
+      "actual": "inline",
+      "expected": "visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-medium-844x390 visible objective",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 exact viewport",
+      "passed": true,
+      "actual": {
+        "dpr": 1,
+        "height": 390,
+        "width": 844
+      },
+      "expected": {
+        "width": 844,
+        "height": 390
+      }
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 detail class",
+      "passed": true,
+      "actual": "map-frame detail-close",
+      "expected": "detail-close"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 ownership city markers",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 shield marker",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 selected target",
+      "passed": true,
+      "actual": 1,
+      "expected": ">= 1 visible"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 active route ribbons",
+      "passed": true,
+      "actual": 100,
+      "expected": "100 visible ribbons"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 screenshot exists",
+      "passed": true,
+      "actual": 81899,
+      "expected": "> 50000 bytes"
+    },
+    {
+      "scope": "visual-qa",
+      "label": "scenario-c-mobile-close-844x390 restores route flows",
+      "passed": true,
+      "actual": "inline",
+      "expected": "visible"
+    }
+  ],
+  "sources": {
+    "beforeZoomProfile": "2026-08-13T19:10:45.807Z",
+    "afterZoomProfile": "2026-08-13T19:16:30.115Z",
+    "fullAfter": "2026-08-13T19:34:58.392Z",
+    "visualQa": "2026-08-13T20:04:26.401Z"
+  },
+  "unavailableProfiles": [
+    {
+      "scenarioId": "B",
+      "profileId": "mobile-landscape-4x",
+      "at": "2026-08-13T19:24:45.434Z",
+      "reason": "Profile exceeded the 180-second isolated run watchdog.",
+      "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+    },
+    {
+      "scenarioId": "C",
+      "profileId": "mobile-landscape-4x",
+      "at": "2026-08-13T19:30:10.531Z",
+      "reason": "Profile exceeded the 180-second isolated run watchdog.",
+      "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
+    }
+  ]
+}

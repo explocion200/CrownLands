@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-08-13T20:43:04.869Z",
+  "sourceGeneratedAt": "2026-08-13T19:34:58.392Z",
+  "regression": {
+    "passed": true,
+    "checks": 281,
+    "failures": []
+  },
+  "capacity": {
+    "passed": true,
+    "checks": 24,
+    "failures": []
+  }
+}

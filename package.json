@@ -1,0 +1,27 @@
+{
+  "name": "crownlands-development-tools",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Development-only Crownlands benchmark entry points",
+  "scripts": {
+    "benchmark:map": "node tools/map-benchmark/run-map-benchmark.js",
+    "benchmark:map:phase1": "node tools/map-benchmark/run-map-benchmark.js --phase-1-after",
+    "benchmark:map:phase1:verify": "node tools/map-benchmark/run-map-benchmark.js --verify-phase-1 --fresh",
+    "benchmark:map:phase1:verify:a-desktop": "node tools/map-benchmark/run-map-benchmark.js --verify-phase-1-a-desktop --fresh",
+    "benchmark:map:phase2": "node tools/map-benchmark/run-map-benchmark.js --phase-2-after",
+    "benchmark:map:quick": "node tools/map-benchmark/run-map-benchmark.js --quick",
+    "profile:map:marches": "node tools/map-benchmark/run-map-benchmark.js --profile-marches",
+    "profile:map:marches:before": "node tools/map-benchmark/run-map-benchmark.js --profile-marches --profile-before",
+    "profile:map:zoom": "node tools/map-benchmark/run-map-benchmark.js --profile-zoom",
+    "profile:map:zoom:before": "node tools/map-benchmark/run-map-benchmark.js --profile-zoom --profile-before",
+    "validate:map-benchmark": "node tools/validate-map-benchmark.js",
+    "validate:map-budgets": "node tools/validate-map-benchmark-results.js",
+    "validate:map-capacity": "node tools/validate-map-benchmark-results.js --capacity",
+    "validate:map-budgets:phase1": "node tools/validate-map-benchmark-results.js --phase-1-after",
+    "validate:map-capacity:phase1": "node tools/validate-map-benchmark-results.js --phase-1-after --capacity",
+    "validate:map-phase1": "node tools/validate-phase-1-map-results.js",
+    "validate:map-budgets:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after",
+    "validate:map-capacity:phase2": "node tools/validate-map-benchmark-results.js --phase-2-after --capacity",
+    "validate:map-phase2": "node tools/validate-phase-2-map-results.js"
+  }
+}
