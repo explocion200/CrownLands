@@ -1022,15 +1022,41 @@ button.daily-reward-card.available:disabled {
 }
 
 .daily-reward-card.claimed::after {
-  content: "";
-  color: #e3d5ad;
+  content: "✓";
+  color: #f3e7c9;
   border-color: rgba(79, 47, 20, .72);
-  background:
-    linear-gradient(45deg, transparent 43%, currentColor 44% 56%, transparent 57%),
-    linear-gradient(-45deg, transparent 43%, currentColor 44% 56%, transparent 57%),
-    radial-gradient(circle at 45% 38%, #7f372e, #4f1d1c);
+  background: radial-gradient(circle at 45% 38%, #7f372e, #4f1d1c);
   box-shadow: 0 3px 0 rgba(45, 22, 10, .78), inset 0 0 0 3px rgba(123, 51, 38, .42);
-  text-shadow: none;
+  font-family: Arial, sans-serif;
+  font-size: clamp(1rem, 2.2vw, 1.55rem);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .58);
+}
+
+.daily-reward-card-day {
+  position: absolute;
+  z-index: 5;
+  top: .14rem;
+  left: .18rem;
+  max-width: calc(100% - .36rem);
+  padding: .08rem .22rem;
+  overflow: hidden;
+  color: #2b1c10;
+  border: 1px solid rgba(77, 48, 24, .42);
+  border-radius: 3px;
+  background: rgba(239, 222, 180, .9);
+  font-family: var(--font-system);
+  font-size: clamp(.45rem, .82vw, .58rem);
+  font-weight: 1000;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px rgba(255, 248, 220, .52);
+  white-space: nowrap;
+}
+
+.daily-reward-card.claimed .daily-reward-card-day {
+  color: #26311d;
+  border-color: rgba(60, 76, 43, .46);
+  background: rgba(218, 218, 174, .9);
 }
 
 .daily-reward-card-amount {

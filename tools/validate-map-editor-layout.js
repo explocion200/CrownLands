@@ -107,7 +107,21 @@ const editorServer = read("tools/editor-server.js");
 const gameStyles = read("styles.css");
 const editorStyles = read("tools/map-editor/styles.css");
 assert.match(game, /return readVisualSize\(city\?\.size, fallback\);/);
-assert.match(game, /size: readVisualSize\(camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/);
+assert.match(
+  game,
+  /size: islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/,
+  "Live Camp markers do not convert editor-image pixels into live-map world pixels."
+);
+assert.match(
+  game,
+  /size: islandImageVisualSizeToWorld\(\s*region\.id,\s*objective\?\.size,\s*config\.type === "crown" \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE\s*\)/,
+  "Live Stronghold markers do not convert editor-image pixels into live-map world pixels."
+);
+assert.match(
+  game,
+  /function islandImageVisualSizeToWorld\(regionId, size, fallback\)[\s\S]*?const scale = bounds\.width \/ Math\.max\(1, dimensions\.width\);[\s\S]*?Math\.round\(imageSize \* scale\)/,
+  "The live map no longer preserves an editor object's size relative to its stretched map image."
+);
 assert.match(game, /map-art-flip-x/);
 assert.match(editor, /data-field="flipX"/);
 assert.match(editor, /editor-art-flip-x/);

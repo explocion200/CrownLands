@@ -460,7 +460,7 @@ const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entr
 const WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
 const DEED_CAMP_HOLD_DURATION_MS = economyNumber("camps.deed.holdMinutes", 60) * 60 * 1000;
 const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 20_000);
-const DEED_CAMP_HISTORY_LIMIT = 25;
+const DEED_CAMP_HISTORY_LIMIT = 10;
 const DEED_CAMP_CITY_QUERY_LIMIT = 50;
 const DEED_CAMP_EXCLUDED_REGION_ID = "center";
 const RELIC_CAMP_HOLD_DURATION_MS = economyNumber("camps.items.holdMinutes", 30) * 60 * 1000;

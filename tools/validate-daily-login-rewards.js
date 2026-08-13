@@ -239,11 +239,11 @@ requireMatch(game, /\["ArrowLeft", "ArrowRight", "Home", "End"\][\s\S]*activateT
 requireMatch(game, /async function showDailyLoginRewardsModal[\s\S]*options\.initialTab[\s\S]*:\s*"rewards"/, "Opening the modal no longer defaults to Daily Login or accept direct tab navigation.");
 requireMatch(game, /function renderDailyMissionSection[\s\S]*dailyMissionsList[\s\S]*function renderDailyQuestTab[\s\S]*renderDailyMissionSection\(\)/, "Player Daily Missions are not rendered in the reward modal's Quests tab.");
 requireMatch(game, /function bindDailyQuestControls[\s\S]*handleDailyMissionListClick/, "Daily Mission controls are not connected inside the reward modal.");
-requireMatch(rewardModalSource, /const cardTag = isClaimableCard \? "button" : "article"[\s\S]*data-daily-reward-claim-card[\s\S]*daily-reward-card-icon[\s\S]*daily-reward-card-amount/, "Only the available reward card should expose the guarded claim control.");
+requireMatch(rewardModalSource, /const cardTag = isClaimableCard \? "button" : "article"[\s\S]*data-daily-reward-claim-card[\s\S]*class="daily-reward-card-day">Day \$\{reward\.day\}[\s\S]*daily-reward-card-icon[\s\S]*daily-reward-card-amount/, "Reward cards must expose their day number while only the available card exposes the guarded claim control.");
 requireMatch(rewardModalSource, /aria-label="Day \$\{reward\.day\}, \$\{escapeHtml\(presentation\.title\)\},[\s\S]*Ready; activate to claim/, "Reward-card accessible names no longer preserve the day, reward, and state.");
 assert.doesNotMatch(rewardModalSource, /daily-reward-(?:hero|meta|status-row|receipt|progress|actions|claim-btn|card-head|card-label|check)/, "Removed calendar chrome or card text returned to the Daily Login panel.");
 assert.doesNotMatch(rewardModalSource, /data-daily-reward-claim(?:\s|>)/, "A global Daily Login claim button returned.");
-assert.doesNotMatch(rewardModalSource, />\s*(?:Day\s+\$\{|Claimed|Ready|Queued|Next|Locked|Collect)/, "Reward cards expose forbidden day or state text.");
+assert.doesNotMatch(rewardModalSource, />\s*(?:Claimed|Ready|Queued|Next|Locked|Collect)/, "Reward cards expose forbidden state text.");
 const clanRewardsPanelSource = game.slice(
   game.indexOf("function renderClanRewardsPanel()"),
   game.indexOf("function getRallyParticipantForCurrentPlayer")
@@ -253,7 +253,8 @@ requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily
 requireMatch(styles, /\.daily-login-reward-modal \.modal-card #modalBody\s*\{[\s\S]*?overflow:\s*hidden/, "Daily rewards can still scroll inside the modal.");
 requireMatch(styles, /\.daily-reward-grid\s*\{[\s\S]*repeat\(8,[\s\S]*overflow:\s*hidden[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(7,[\s\S]*@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*repeat\(8,/, "Daily reward grid must fit desktop, portrait phone, and short-landscape viewports without scrolling.");
 requireMatch(styles, /\.daily-reward-card\s*\{[\s\S]*min-height:\s*0[\s\S]*grid-template-rows:\s*minmax\(0,\s*1fr\) auto/, "Reward cards are not constrained to image-and-amount rows.");
-requireMatch(styles, /\.daily-reward-card\.claimed\s*\{[\s\S]*rgba\(85, 97, 61,[\s\S]*\.daily-reward-card\.claimed::after\s*\{[\s\S]*content:\s*""[\s\S]*radial-gradient\(circle at 45% 38%, #7f372e, #4f1d1c\)/, "Collected cards lost their moss frame or wax-seal check treatment.");
+requireMatch(styles, /\.daily-reward-card\.claimed\s*\{[\s\S]*rgba\(85, 97, 61,[\s\S]*\.daily-reward-card\.claimed::after\s*\{[\s\S]*content:\s*"✓"[\s\S]*radial-gradient\(circle at 45% 38%, #7f372e, #4f1d1c\)/, "Collected cards lost their moss frame or wax-seal check treatment.");
+requireMatch(styles, /\.daily-reward-card-day\s*\{[\s\S]*position:\s*absolute[\s\S]*top:\s*\.14rem[\s\S]*font-size:\s*clamp\(\.45rem, \.82vw, \.58rem\)/, "Visible Daily Reward day numbers are missing or can overflow compact cards.");
 requireMatch(styles, /\.daily-reward-card\.available\s*\{[\s\S]*border-color:\s*rgba\(110, 47, 53, \.82\)[\s\S]*rgba\(110, 47, 53, \.16\)/, "Claimable cards lost their oxblood-and-parchment highlight treatment.");
 requireMatch(styles, /@keyframes dailyRewardClaimPulse[\s\S]*rgba\(110, 47, 53, \.12\)[\s\S]*rgba\(110, 47, 53, \.2\)/, "Claimable-card pulse no longer uses the subdued oxblood treatment.");
 requireMatch(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.daily-reward-card\.available[\s\S]*animation:\s*none/, "Claimable-card motion is not disabled for reduced-motion users.");
@@ -261,7 +262,7 @@ requireMatch(styles, /\.daily-reward-tabs\s*\{[\s\S]*position:\s*absolute[\s\S]*
 requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*38px\)[\s\S]*gap:\s*\.9rem/, "Portrait icon tabs no longer preserve clearance from the close button.");
 requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer preserve clearance from the close button.");
 requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*6/, "The close button is not kept above reward content.");
-requireMatch(html, /daily-rewards\.css\?v=20260812-visual-correction-pass-4a-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
+requireMatch(html, /daily-rewards\.css\?v=20260813-day-labels-checkmarks-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
 requireMatch(
   serviceWorker,
   /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null\)/,

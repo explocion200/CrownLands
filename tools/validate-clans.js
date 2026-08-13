@@ -7,7 +7,7 @@ const server = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8")
 const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
+const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}\n${fs.readFileSync(path.join(root, "ui-contrast-correction.css"), "utf8")}`;
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8");
 const firestoreIndexes = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
@@ -138,6 +138,11 @@ requires(html, /id="profileKingdomFlag"[\s\S]*?id="profileClanAffiliation"/, "Pl
 requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockReason/, "Client is missing clan-allied city detection.");
 requires(client, /function getVisibleCityGarrisonTroops[\s\S]*?city\.owner === "player" \|\| isClanAllyCity\(city\)[\s\S]*?scoutReport\?\.troops/, "Clanmates cannot see exact city garrisons while enemies remain scout-gated.");
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
+requires(client, /CLAN_MEMBER_ROLE_ORDER\s*=\s*Object\.freeze\(\{\s*leader:\s*0,\s*officer:\s*1,\s*member:\s*2\s*\}\)/, "Clan member roles do not define the required Leader, Officer, Member ordering.");
+requires(client, /function sortClanMembersByRole[\s\S]*?CLAN_MEMBER_ROLE_ORDER[\s\S]*?secondaryComparator[\s\S]*?originalIndex/, "Clan member role grouping is not stable within each rank.");
+requires(client, /function applyClanMembersSnapshot[\s\S]*?nextMembers\s*=\s*sortClanMembersByRole\(members\)/, "Live clan snapshots are not grouped as Leader, Officers, then Members.");
+requires(client, /function showPublicClanDetails[\s\S]*?sortClanMembersByRole\(loadedMembers,[\s\S]*?normalizePowerValue/, "Public clan rosters do not share the Leader, Officer, Member grouping.");
+requires(client, /clanMembers\s*=\s*clanMembers\.map[\s\S]*?clanMembers\s*=\s*sortClanMembersByRole\(clanMembers\)/, "Promotions and demotions do not immediately regroup the live clan roster.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function isCurrentClanmateArmy[\s\S]*?clanMemberUidSet\.has\(ownerUid\)[\s\S]*?identity\?\.clanId/, "Allied march paths do not use current event-driven clan membership with an identity fallback.");
 requires(client, /function isHostileClanMarch[\s\S]*?mission\.returning[\s\S]*?mission\.reinforcementReturn[\s\S]*?mission\.campReturn[\s\S]*?mission\.relinquishTransfer[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.kind === "scout"/, "Active clan attacks and scouts are not distinguished from safe allied support and return marches.");
@@ -184,6 +189,7 @@ requires(client, /function startClanJoinCooldownCountdown[\s\S]*?setInterval\(up
 requires(client, /function renderClanShield[\s\S]*?overflow="hidden"[\s\S]*?clipPathUnits="userSpaceOnUse"[\s\S]*?class="clan-shield-boundary"\s+clip-path="url\(#\$\{clipId\}\)"/, "Clan shield paint is not clipped to the shield silhouette.");
 requires(styles, /\.clan-shield svg\s*\{[^}]*overflow:\s*hidden;/, "Clan shield SVG overflow can bleed beyond its viewport.");
 requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");
+requires(styles, /\.clan-member-selection \.clan-member-profile-link\s*\{[\s\S]*?color:\s*#fff8ea !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "The clan roster View Profile action is not visibly styled.");
 requires(client, /function renderClanMembersPanel[\s\S]*?canLead[\s\S]*?data-clan-action="disband"[\s\S]*?>Disband Clan[\s\S]*?data-clan-action="leave"[\s\S]*?>Leave Clan/, "Clan leaders do not receive a dedicated disband action while members retain Leave Clan.");
 requires(client, /function confirmClanDisband[\s\S]*?This cannot be undone[\s\S]*?data-clan-disband-confirm="cancel"[\s\S]*?data-clan-disband-confirm="accept"[\s\S]*?function runClanDisbandAction[\s\S]*?runClanAction\("disband"/, "Clan disbanding is missing its destructive-action confirmation.");
 requires(client, /function handleClanClick[\s\S]*?action === "disband"[\s\S]*?runClanDisbandAction\(\)/, "The clan disband button is not connected to the confirmed server action.");

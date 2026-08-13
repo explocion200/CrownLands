@@ -10,7 +10,7 @@ const api = read("firebaseClient.js");
 const server = read("functions/index.js");
 const rules = read("firestore.rules");
 const markup = read("index.html");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
 
 function functionBody(source, name) {
   const marker = `function ${name}`;
@@ -65,6 +65,8 @@ assert.match(functionBody(client, "getLegacyBattleSides"), /Not recorded/, "Hist
 assert.match(functionBody(client, "showBattleReportDetail"), /!report\.battleId[\s\S]*?applyLegacyBattleFlags[\s\S]*?catch[\s\S]*?applyLegacyBattleFlags/, "Legacy and unavailable snapshot reports do not hydrate their side flags.");
 assert.match(styles, /\.battle-visual-hero\s*\{[\s\S]*?grid-template-columns:[\s\S]*?\.battle-visual-two-column\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Visual battle sides are not presented in aligned columns.");
 assert.match(styles, /\.battle-report-hero-flag\.kingdom-flag-large[\s\S]*?width:\s*116px[\s\S]*?@media \(max-width: 760px\)[\s\S]*?\.battle-visual-hero/, "Large flags or the responsive visual report layout are missing.");
+assert.match(styles, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?\.battle-report-modal \.battle-visual-outcome > span[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Detailed Victory remains unreadable or retains the full red center block.");
+assert.match(styles, /\.battle-report-modal \.battle-visual-outcome\.defeat > span[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Detailed Defeat does not use the restrained outcome badge.");
 
 const battleSandbox = {
   DEFENSE_COMBAT_VERSION: 1,

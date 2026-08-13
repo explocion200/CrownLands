@@ -466,6 +466,7 @@ const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 
 const WARBAND_CAMP_HOLD_SECONDS = economyNumber("camps.troops.holdMinutes", 15) * 60;
 const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 20000);
 const DEED_CAMP_HOLD_SECONDS = economyNumber("camps.deed.holdMinutes", 60) * 60;
+const DEED_CAMP_HISTORY_DISPLAY_LIMIT = 10;
 const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 20000);
 const RELIC_CAMP_HOLD_SECONDS = economyNumber("camps.items.holdMinutes", 30) * 60;
 const RELIC_CAMP_DAILY_REWARD_LIMIT = economyNumber("camps.items.maxDailyRewards", 2);
@@ -1185,6 +1186,7 @@ const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
+const CLAN_MEMBER_ROLE_ORDER = Object.freeze({ leader: 0, officer: 1, member: 2 });
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
   { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 30 },
@@ -3479,7 +3481,8 @@ function generateEditorStrongholdSlots() {
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
         artSrc: String(objective?.artSrc || config.artSrc || ""),
-        size: readVisualSize(
+        size: islandImageVisualSizeToWorld(
+          region.id,
           objective?.size,
           config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE
         ),
@@ -3505,7 +3508,7 @@ function generateWorldCampSlots() {
         y: Math.round(point.y),
         campType: config.type,
         artSrc: String(camp?.artSrc || config.artSrc || ""),
-        size: readVisualSize(camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
+        size: islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
         flipX: Boolean(camp?.flipX),
         rewardSchedule: Array.isArray(camp?.rewardSchedule)
           ? camp.rewardSchedule.map(entry => ({
@@ -11699,14 +11702,10 @@ async function showPublicClanDetails(clanId = "") {
     if (requestId !== publicClanProfileRequestId || !modal.open) return;
     if (!clan || clan.status !== "active") throw new Error("That clan is unavailable.");
     clanPublicSnapshotCache.set(id, clan);
-    const roleOrder = { leader: 0, officer: 1, member: 2 };
-    const members = (Array.isArray(loadedMembers) ? loadedMembers : [])
-      .filter(member => member?.status !== "removed")
-      .sort((first, second) => (
-        (roleOrder[first?.role] ?? 3) - (roleOrder[second?.role] ?? 3)
-        || normalizePowerValue(second?.kingPower) - normalizePowerValue(first?.kingPower)
-        || String(first?.displayName || "").localeCompare(String(second?.displayName || ""))
-      ));
+    const members = sortClanMembersByRole(loadedMembers, (first, second) => (
+      normalizePowerValue(second?.kingPower) - normalizePowerValue(first?.kingPower)
+      || String(first?.displayName || "").localeCompare(String(second?.displayName || ""))
+    ));
     modalTitle.textContent = `${clan.name || "Clan"} Clan`;
     modalBody.innerHTML = `
       <section class="public-clan-details">
@@ -13263,6 +13262,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
       centerOnRegion(targetRegionId);
       renderAll();
       transitionSettled = finishMapVisualTransition(transition);
+      showMapLocationAnnouncement(targetRegionId);
       return true;
     } finally {
       if (!transitionSettled) cancelMapVisualTransition(transition);
@@ -13309,6 +13309,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
       claimHome: false,
       homeRegionId,
       activateOnFirstSnapshot: true,
+      announceLocation: true,
     });
     if (connected) {
       centerOnRegion(targetRegionId);
@@ -14568,6 +14569,7 @@ async function connectOnlineIsland(regionId, {
   profile = null,
   activateOnFirstSnapshot = false,
   allowWelcomeBack = false,
+  announceLocation = false,
 } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -14659,6 +14661,7 @@ async function connectOnlineIsland(regionId, {
           claimHome: true,
           homeRegionId: redirectedRegionId,
           allowWelcomeBack,
+          announceLocation,
           profile: {
             ...(profile || {}),
             mainIslandId: claim.islandId,
@@ -14712,7 +14715,8 @@ async function connectOnlineIsland(regionId, {
     updateIslandSwitcherUi();
     const activeCount = Math.max(1, getActiveOnlinePlayers().length);
     onlineStatusDetail.textContent = `${getRegionLabel(targetRegionId)} connected. ${formatNumber(activeCount)} ruler${activeCount === 1 ? "" : "s"} online here.`;
-    showToast(`${getRegionLabel(targetRegionId)} connected.`);
+    if (announceLocation) showMapLocationAnnouncement(targetRegionId);
+    else showToast(`${getRegionLabel(targetRegionId)} connected.`);
     saveGame();
     return true;
   } catch (error) {
@@ -21917,7 +21921,7 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
 
 function applyClanMembersSnapshot(members = [], changes = []) {
   const previousMemberUids = clanMemberUidSet;
-  const nextMembers = Array.isArray(members) ? members : [];
+  const nextMembers = sortClanMembersByRole(members);
   const nextMemberUids = new Set(nextMembers
     .map(member => String(member?.uid || member?.id || "").trim())
     .filter(Boolean));
@@ -22298,6 +22302,18 @@ function showClanHub() {
 
 function clanRoleLabel(role = "") {
   return role === "leader" ? "Leader" : role === "officer" ? "Officer" : "Member";
+}
+
+function sortClanMembersByRole(members = [], secondaryComparator = null) {
+  return (Array.isArray(members) ? members : [])
+    .filter(member => member?.status !== "removed")
+    .map((member, originalIndex) => ({ member, originalIndex }))
+    .sort((first, second) => (
+      (CLAN_MEMBER_ROLE_ORDER[first.member?.role] ?? 3) - (CLAN_MEMBER_ROLE_ORDER[second.member?.role] ?? 3)
+      || (typeof secondaryComparator === "function" ? secondaryComparator(first.member, second.member) : 0)
+      || first.originalIndex - second.originalIndex
+    ))
+    .map(entry => entry.member);
 }
 
 function renderClanShieldChoiceButtons(options, key, currentValue) {
@@ -23281,6 +23297,7 @@ async function runClanAction(action, payload = {}) {
             ? { ...member, role, roleChangedAtMs: Date.now() }
             : member
         ));
+        clanMembers = sortClanMembersByRole(clanMembers);
       }
     }
     if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
@@ -25346,12 +25363,16 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
   if (status === "error") {
     return `<div class="camp-reward-loading error"><strong>Reward history unavailable</strong><p>The server history was not changed. Reopen this tab once the connection is ready.</p></div>`;
   }
-  if (!history.length) {
+  const recentHistory = (Array.isArray(history) ? history : [])
+    .slice()
+    .sort((left, right) => normalizeTimestampMs(right?.awardedAtMs) - normalizeTimestampMs(left?.awardedAtMs))
+    .slice(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT);
+  if (!recentHistory.length) {
     return `<div class="camp-reward-loading deed-history-empty"><strong>No cities awarded yet</strong><p>Successful Deed Camp holds will appear here.</p></div>`;
   }
   return `
     <ol class="deed-camp-history-list">
-      ${history.map(entry => {
+      ${recentHistory.map(entry => {
         const awardedAtMs = normalizeTimestampMs(entry.awardedAtMs);
         const awardedAt = awardedAtMs ? new Date(awardedAtMs).toLocaleString() : "Award time unavailable";
         const cityName = getDeedCampHistoryCityName(entry);
@@ -25367,7 +25388,7 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
           </li>`;
       }).join("")}
     </ol>
-    <p class="camp-reward-reset">Showing the latest ${formatNumber(history.length)} awards from this Deed Camp.</p>`;
+    <p class="camp-reward-reset deed-history-limit-note">Showing the latest ${formatNumber(recentHistory.length)} of up to ${formatNumber(DEED_CAMP_HISTORY_DISPLAY_LIMIT)} city awards.</p>`;
 }
 
 function findDeedCampHistoryPanel(campId) {
@@ -25410,9 +25431,12 @@ function refreshDeedCampHistoryPanel(camp, { force = false } = {}) {
   const request = api.loadRewardCampHistory({
     islandId: getOnlineIslandId(camp.regionId),
     campId: camp.id,
-    limitCount: 25,
+    limitCount: DEED_CAMP_HISTORY_DISPLAY_LIMIT,
   }).then(history => {
-    const cleanHistory = Array.isArray(history) ? history.slice(0, 25) : [];
+    const cleanHistory = (Array.isArray(history) ? history : [])
+      .slice()
+      .sort((left, right) => normalizeTimestampMs(right?.awardedAtMs) - normalizeTimestampMs(left?.awardedAtMs))
+      .slice(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT);
     deedCampHistoryCache.set(cacheKey, { history: cleanHistory, fetchedAtMs: Date.now() });
     renderDeedCampHistoryPanel(camp.id, cleanHistory);
     return cleanHistory;
@@ -26376,6 +26400,14 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
   }
   if (navigation) navigation.hidden = !selected;
+  const navigationRelationship = isPersonalArmy(attack)
+    ? "player"
+    : clanAlly
+      ? "ally"
+      : "enemy";
+  if (navigation?.dataset.armyRelationship !== navigationRelationship) {
+    navigation.dataset.armyRelationship = navigationRelationship;
+  }
   if (fromButton) fromButton.disabled = endpointInteractionDisabled;
   if (toButton) toButton.disabled = endpointInteractionDisabled;
   const endpointSignature = `${attack.fromId || ""}:${attack.fromName || ""}:${attack.toId || ""}:${attack.toName || ""}`;
@@ -30804,6 +30836,7 @@ function renderDailyLoginRewardModal() {
             : "";
           return `
             <${cardTag} class="daily-reward-card ${cardState} ${presentation.kind}" ${cardAttributes} aria-label="Day ${reward.day}, ${escapeHtml(presentation.title)}, ${isClaimableCard ? "Ready; activate to claim" : stateLabel}">
+              <span class="daily-reward-card-day">Day ${reward.day}</span>
               <img class="daily-reward-card-icon" src="${escapeHtml(presentation.icon)}" alt="" draggable="false" />
               <strong class="daily-reward-card-amount">${escapeHtml(presentation.amountLabel)}</strong>
             </${cardTag}>
@@ -35074,10 +35107,28 @@ function addLog(message) {
 }
 
 function showToast(message) {
+  toast.classList.remove("map-location-announcement");
+  toast.removeAttribute("aria-label");
   toast.textContent = message;
   toast.classList.add("visible");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 2100);
+}
+
+function showMapLocationAnnouncement(regionId) {
+  const locationName = getRegionLabel(normalizeRegionId(regionId));
+  toast.classList.add("map-location-announcement");
+  toast.setAttribute("aria-label", `Now entering ${locationName}. Map connected.`);
+  toast.innerHTML = `
+    <span class="map-location-announcement-mark" aria-hidden="true">${renderCrownlandsIcon("map")}</span>
+    <span class="map-location-announcement-copy">
+      <small>Now entering</small>
+      <strong>${escapeHtml(locationName)}</strong>
+      <span>Realm map connected</span>
+    </span>`;
+  toast.classList.add("visible");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("visible"), 2800);
 }
 
 function formatNumber(value) {

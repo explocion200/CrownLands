@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260813-login-title-position-r1";
+const CACHE_VERSION = "20260813-map-location-banner-r18";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,11 +11,11 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260813-login-title-position-r1",
+  "/styles.css?v=20260813-map-location-banner-r18",
   "/interface-theme.css?v=20260813-interface-theme-split-r1",
-  "/readability.css?v=20260813-login-title-position-r1",
+  "/readability.css?v=20260813-map-location-banner-r18",
   "/manuscript-prototype.css?v=20260813-manuscript-prototype-r4",
-  "/ui-contrast-correction.css?v=20260813-bottom-nav-family-r1",
+  "/ui-contrast-correction.css?v=20260813-map-location-banner-r11",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",
@@ -26,7 +26,7 @@ const STATIC_CACHE_URLS = [
   "/instant-economy-actions.js?v=20260810-instant-economy-actions-v1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260813-editor-layout-r1",
-  "/game.js?v=20260813-login-title-position-r1",
+  "/game.js?v=20260813-map-location-banner-r18",
   "/ui-layout-runtime.js?v=20260813-editor-layout-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

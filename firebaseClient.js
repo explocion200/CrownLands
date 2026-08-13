@@ -1535,14 +1535,14 @@
     };
   }
 
-  async function loadRewardCampHistory({ islandId = "", campId = "", limitCount = 25 } = {}) {
+  async function loadRewardCampHistory({ islandId = "", campId = "", limitCount = 10 } = {}) {
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
     const safeIslandId = String(islandId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
     const safeCampId = String(campId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
     if (!safeIslandId || !safeCampId) throw new Error("Missing Deed Camp location.");
-    const safeLimit = Math.max(1, Math.min(50, Math.floor(Number(limitCount) || 25)));
+    const safeLimit = Math.max(1, Math.min(10, Math.floor(Number(limitCount) || 10)));
     const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
     const historyRef = collection(client.db, "islands", safeIslandId, "camps", safeCampId, "rewardHistory");
     const historyQuery = firestoreQuery && orderBy && limit
