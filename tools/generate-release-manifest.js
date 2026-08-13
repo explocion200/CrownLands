@@ -67,7 +67,7 @@ function createManifest() {
   serverFiles.push(path.join(root, "firestore.rules"), path.join(root, "firestore.indexes.json"));
 
   const clientFiles = [
-    "index.html", "styles.css", "interface-theme.css", "manuscript-prototype.css", "game.js", "base-cities.js", "common-gear.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
+    "index.html", "styles.css", "interface-theme.css", "manuscript-prototype.css", "ui-contrast-correction.css", "game.js", "base-cities.js", "common-gear.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js",

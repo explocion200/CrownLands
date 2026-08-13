@@ -1222,8 +1222,8 @@ function getPortalVisualSize(portal) {
 }
 
 function getStrongholdVisualSize(city) {
-  if (isCrownCitadel(city)) return CROWN_CITADEL_VISUAL_SIZE;
-  return DEFAULT_STRONGHOLD_VISUAL_SIZE;
+  const fallback = isCrownCitadel(city) ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;
+  return readVisualSize(city?.size, fallback);
 }
 
 function isGoldStronghold(city) {
@@ -1420,12 +1420,14 @@ function applyBaseCityMetadata(city, base) {
   city.bonusPercent = Number(base.bonusPercent) || 0;
   if (isStronghold(base)) {
     city.size = getStrongholdVisualSize(base);
+    city.flipX = Boolean(base.flipX);
     city.name = getStrongholdDisplayName({ ...base, ...city });
     city.level = getStrongholdDefenseLevel(base);
     city.investedGold = 0;
   } else {
     city.name = getCanonicalCityName(base, city);
     if ("size" in city) delete city.size;
+    if ("flipX" in city) delete city.flipX;
   }
 }
 
@@ -2186,7 +2188,6 @@ const flagPatternOptions = document.getElementById("flagPatternOptions");
 const flagSymbolOptions = document.getElementById("flagSymbolOptions");
 const flagSaveBtn = document.getElementById("flagSaveBtn");
 const flagBackBtn = document.getElementById("flagBackBtn");
-const flagExitBtn = document.getElementById("flagExitBtn");
 const mapFrame = document.getElementById("mapFrame");
 const citadelAssaultCountdown = document.getElementById("citadelAssaultCountdown");
 const citadelAssaultCountdownTime = document.getElementById("citadelAssaultCountdownTime");
@@ -3462,8 +3463,12 @@ function generateEditorStrongholdSlots() {
         bonusPercent: Math.max(0, Math.floor(Number(objective?.bonusPercent) || config.bonusPercent)),
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
-        artSrc: String(config.artSrc || objective?.artSrc || ""),
-        size: config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE,
+        artSrc: String(objective?.artSrc || config.artSrc || ""),
+        size: readVisualSize(
+          objective?.size,
+          config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE
+        ),
+        flipX: Boolean(objective?.flipX),
       }));
     });
   }
@@ -3484,8 +3489,9 @@ function generateWorldCampSlots() {
         x: Math.round(point.x),
         y: Math.round(point.y),
         campType: config.type,
-        artSrc: String(config.artSrc || camp?.artSrc || ""),
-        size: DEFAULT_CAMP_VISUAL_SIZE,
+        artSrc: String(camp?.artSrc || config.artSrc || ""),
+        size: readVisualSize(camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
+        flipX: Boolean(camp?.flipX),
         rewardSchedule: Array.isArray(camp?.rewardSchedule)
           ? camp.rewardSchedule.map(entry => ({
               minimumReward: Math.max(0, Math.floor(Number(entry?.minimumReward) || 0)),
@@ -3570,7 +3576,7 @@ function generateStrongholdSlots() {
   ].filter(Boolean);
 }
 
-function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "" }) {
+function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "", flipX = false }) {
   const visualSize = getStrongholdVisualSize({ id, strongholdType: type, size });
   return {
     id,
@@ -3600,6 +3606,7 @@ function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPerce
     bonusPercent,
     size: visualSize,
     artSrc,
+    flipX: Boolean(flipX),
     startTroops: troops,
   };
 }
@@ -15003,7 +15010,8 @@ function normalizeOnlineCampState(raw = {}) {
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
     artSrc,
-    size: DEFAULT_CAMP_VISUAL_SIZE,
+    size: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    flipX: Boolean(base.flipX),
     activeArmyIds: Array.isArray(raw.activeArmyIds) ? raw.activeArmyIds.map(String) : [],
     state: ["neutral", "held", "contested"].includes(raw.state) ? raw.state : raw.holderUid ? "held" : "neutral",
   };
@@ -15136,7 +15144,8 @@ function getCampTargetById(campId) {
     combatVersion: config.combatVersion,
     troopPower: config.troopPower,
     baseReward: config.baseReward,
-    size: DEFAULT_CAMP_VISUAL_SIZE,
+    size: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    flipX: Boolean(base.flipX),
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
     heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
     payoutPending: Boolean(online.payoutPending),
@@ -23907,7 +23916,8 @@ function renderFlagSwatches(container, key) {
   if (!container || !flagDraft) return;
   container.innerHTML = FLAG_COLORS.map(color => {
     const dye = FLAG_DYE_TREATMENTS[color] || { display: color, label: color };
-    return `<button type="button" data-flag-color="${color}" class="${flagDraft[key] === color ? "active" : ""}" style="--flag-swatch:${dye.display}" aria-label="Select ${escapeHtml(dye.label)}" title="${escapeHtml(dye.label)}"></button>`;
+    const selected = flagDraft[key] === color;
+    return `<button type="button" data-flag-color="${color}" class="${selected ? "active" : ""}" style="--flag-swatch:${dye.display}" aria-label="Select ${escapeHtml(dye.label)}" aria-pressed="${selected}" title="${escapeHtml(dye.label)}"></button>`;
   }).join("");
   container.querySelectorAll("button[data-flag-color]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
@@ -24276,6 +24286,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       city.kind || "",
       city.strongholdType || "",
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
+      isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       city.level,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
@@ -24295,6 +24306,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       camp.y,
       camp.artSrc,
       camp.size,
+      camp.flipX ? 1 : 0,
       camp.ownerUid || "",
       camp.ownerName || "",
       getFlagSignature(camp.holderFlag),
@@ -24462,7 +24474,7 @@ function renderCities(force = false) {
       campNode.classList.toggle("deed-hold-active", Boolean(deedHold && camp.ownerUid));
       campNode.style.setProperty("--deed-hold-progress", `${getRewardCampHoldProgress(camp) * 100}%`);
       const campHtml = `
-        <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
+        <img class="camp-art${camp.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
         ${camp.ownerUid ? `<span class="camp-owner-marker" aria-hidden="true">${renderCityOwnerFlag(camp)}</span>` : ""}
         ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
         <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
@@ -24480,7 +24492,7 @@ function renderCities(force = false) {
     } else {
       campNode.tabIndex = -1;
       campNode.setAttribute("aria-hidden", "true");
-      const campHtml = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />`;
+      const campHtml = `<img class="camp-art${camp.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />`;
       if (campNode._renderContent !== campHtml) {
         campNode.innerHTML = campHtml;
         campNode._renderContent = campHtml;
@@ -24592,7 +24604,7 @@ function renderCities(force = false) {
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
-      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${escapeHtml(getStrongholdArtSrc(city))}" alt="" draggable="false" decoding="async" /></span>`
+      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art${city.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(getStrongholdArtSrc(city))}" alt="" draggable="false" decoding="async" /></span>`
       : `
       <span class="city-ring"></span>
         ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
@@ -36248,7 +36260,6 @@ if (profileNameInput) {
 }
 if (flagSaveBtn) flagSaveBtn.addEventListener("click", saveFlagEditor);
 if (flagBackBtn) flagBackBtn.addEventListener("click", showProfileView);
-if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;

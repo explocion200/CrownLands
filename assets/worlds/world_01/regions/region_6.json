@@ -557,11 +557,12 @@
       "id": "region_6_gold_camp",
       "name": "Gold Camp",
       "regionId": "region_6",
-      "xNorm": 0.518,
-      "yNorm": 0.533,
+      "xNorm": 0.515,
+      "yNorm": 0.527,
       "campType": "gold",
       "artSrc": "assets/camps/gold.png",
-      "size": 132,
+      "size": 135,
+      "flipX": false,
       "notes": "",
       "rewardSchedule": [
         {

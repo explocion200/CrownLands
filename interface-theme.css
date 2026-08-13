@@ -640,6 +640,22 @@ body {
   background: linear-gradient(180deg, #59534a, #2b2925);
 }
 
+/* Keep fullscreen exit and Home City controls in the same iron-and-ivory family. */
+.fullscreen-btn.active,
+.main-city-return {
+  color: var(--cl-ivory);
+  border-color: rgba(69, 68, 62, .8);
+  background: linear-gradient(180deg, #59534a, #2b2925);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 238, 177, .15),
+    inset 0 -4px 0 rgba(0, 0, 0, .24),
+    0 9px 20px rgba(0, 0, 0, .38);
+}
+
+.main-city-return .main-city-return-arrow {
+  color: var(--cl-ivory);
+}
+
 .profile-tabs,
 .push-alerts-toggle,
 .animation-mode-toggle,
@@ -858,19 +874,6 @@ body {
   background:
     linear-gradient(180deg, rgba(36, 32, 26, .16), rgba(23, 19, 15, .24)),
     var(--ocean-bg);
-}
-
-.paths .army-route-ribbon.player-route { fill: rgba(161, 120, 50, .72); }
-.paths .army-route-ribbon.enemy-route,
-.paths .army-route-ribbon.clan-hostile-route { fill: rgba(136, 72, 44, .76); }
-.paths .army-route-ribbon.clan-support-route { fill: rgba(85, 97, 61, .76); }
-.paths .army-route-flow.player-route { stroke: rgba(214, 198, 162, .95); }
-.paths .army-route-flow.enemy-route { stroke: rgba(207, 130, 91, .96); }
-.paths .army-route-flow.clan-support-route { stroke: rgba(173, 190, 134, .96); }
-.paths .army-route-flow.clan-hostile-route { stroke: rgba(136, 72, 44, .96); }
-.paths .army-route-flow.scout-route {
-  stroke: rgba(72, 88, 105, .96);
-  stroke-dasharray: 7 13;
 }
 
 .city-ring {
@@ -1595,30 +1598,6 @@ input[type="range"] {
   background:
     linear-gradient(180deg, rgba(36, 32, 26, .12), rgba(23, 19, 15, .2)),
     var(--ocean-bg);
-}
-
-.paths .army-route-ribbon {
-  opacity: .52;
-  filter: drop-shadow(0 2px 1px rgba(25, 16, 10, .42));
-}
-
-.paths .army-route-ribbon.player-route { fill: rgba(95, 72, 43, .62); }
-.paths .army-route-ribbon.enemy-route,
-.paths .army-route-ribbon.clan-hostile-route { fill: rgba(136, 72, 44, .72); }
-.paths .army-route-ribbon.clan-support-route { fill: rgba(85, 97, 61, .7); }
-
-.paths .army-route-flow {
-  stroke-linecap: round;
-  filter: none;
-}
-
-.paths .army-route-flow.player-route { stroke: rgba(174, 140, 86, .95); }
-.paths .army-route-flow.enemy-route { stroke: rgba(156, 73, 50, .96); }
-.paths .army-route-flow.clan-support-route { stroke: rgba(106, 125, 76, .96); }
-.paths .army-route-flow.clan-hostile-route { stroke: rgba(136, 72, 44, .96); }
-.paths .army-route-flow.scout-route {
-  stroke: rgba(64, 73, 80, .94);
-  stroke-dasharray: 4 11;
 }
 
 .city-ring {
@@ -2761,6 +2740,12 @@ input[type="range"] {
 .city-shield-field img,
 .foreign-city-shield-field img {
   filter: none;
+}
+
+.city-node.peace-shielded .city-shield-field img {
+  filter:
+    drop-shadow(0 0 1px rgba(255, 255, 255, .98))
+    drop-shadow(0 0 3px rgba(255, 255, 255, .76));
 }
 
 @keyframes cityShieldAuthority {

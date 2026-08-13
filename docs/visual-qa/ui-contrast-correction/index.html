@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands UI Contrast Correction QA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html { color-scheme: dark; }
+    body { margin: 0; color: #f4e8ce; background: #18120d; font-family: Cinzel, serif; }
+    button, a { font: inherit; }
+    svg { fill: currentColor; }
+    .qa-shell { width: min(1400px, 100%); margin: 0 auto; padding: 24px; }
+    .qa-header { display: grid; gap: 6px; margin-bottom: 20px; }
+    .qa-header h1, .qa-header p, .qa-section h2, .qa-section > p { margin: 0; }
+    .qa-header h1 { color: #fff8ea; font-family: "Cinzel Decorative", serif; font-size: clamp(1.35rem, 3vw, 2.2rem); }
+    .qa-header p, .qa-section > p { color: #d3c3a2; font-family: "IM Fell English", serif; font-size: 1rem; }
+    .qa-section { display: grid; gap: 10px; margin: 0 0 24px; }
+    .qa-section h2 { color: #edcf91; font-size: 1rem; }
+    .qa-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .qa-card { min-width: 0; display: grid; align-content: start; gap: 12px; padding: 14px; overflow: hidden; border: 1px solid #64462c; background: #2a1e15; }
+    .qa-card > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #f4e8ce; font-weight: 900; }
+    .qa-card > header small { color: #bfac8d; font: italic .86rem "IM Fell English", serif; }
+    .qa-stage { min-width: 0; display: grid; gap: 10px; padding: 12px; color: #2b2118; border: 1px solid #785638; background: #d6bf8c; }
+    .qa-stage button, .qa-stage a { min-height: 36px; border-radius: 4px; cursor: default; }
+    .qa-label { margin: 0; color: inherit; font-weight: 900; }
+    .qa-note { margin: 0; color: inherit; font: .9rem "IM Fell English", serif; }
+    .qa-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; padding: 5px; }
+    .qa-tabs button { min-width: 0; padding: 7px 4px; border: 1px solid #72502f; font-size: .68rem; font-weight: 900; }
+    .qa-before .qa-tabs { background: #3b261a; }
+    .qa-before .qa-tabs button { color: #4b301e; background: #c6a66c; }
+    .qa-before .qa-tabs button.active { color: #4e2b20; background: #6e2f35; }
+    .qa-after .qa-tabs button { color: var(--cl-tab-unselected-text); background: var(--cl-tab-unselected-bg); }
+    .qa-after .qa-tabs button.active { color: var(--cl-tab-selected-text); background: var(--cl-tab-selected-bg); }
+    .qa-swatch-grid { display: grid; grid-template-columns: repeat(6, 34px); gap: 7px; }
+    .qa-swatch-grid button { width: 34px; min-height: 34px; padding: 0; border: 2px solid #5a3d24; }
+    .qa-before .qa-swatch-grid button { background: #cbbb9c; }
+    .qa-after .qa-swatch-grid button { background: var(--flag-swatch) !important; }
+    .qa-after .qa-swatch-grid button.active { outline: 3px solid #6e2f35; outline-offset: 2px; }
+    .qa-charge-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 12px; }
+    .qa-charge { width: 52px; height: 52px; color: #5e252d; border: 1px solid #74512e; background: #f3dfb8; }
+    .qa-panel { display: grid; gap: 6px; padding: 10px; border: 1px solid #705036; }
+    .qa-panel :is(strong, span, small, p) { margin: 0; }
+    .qa-before .qa-dark { color: #4b3324; background: #241d1b; }
+    .qa-after .qa-dark { color: #f4e8ce; background: #3b292c; }
+    .qa-before .qa-paper { color: #7a684c; background: #bda778; }
+    .qa-after .qa-paper { color: #2b2118; background: #f0ddb6; }
+    .qa-member { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 8px; border: 1px solid #735035; }
+    .qa-member small { grid-column: 1 / -1; }
+    .qa-action { padding: 7px 10px; border: 1px solid #72502f; font-size: .72rem; font-weight: 900; }
+    .qa-before .qa-danger { color: #552b29; background: #63302e; }
+    .qa-after .qa-danger { color: #fff8ea; border-color: #46181b; background: #742a2e; }
+    .qa-before .qa-save { color: #322b24; background: #352f2a; }
+    .qa-after .qa-save { color: #fff8ea; border-color: #481b21; background: #6e2f35; }
+    .qa-setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .qa-setting { display: grid; gap: 5px; padding: 9px; border: 1px solid #765333; }
+    .qa-before .qa-setting { color: #3c3228; background: #151c20; }
+    .qa-after .qa-setting { color: #2b2118; background: #f2dfb8; }
+    .qa-setting output { justify-self: start; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.38); }
+    .qa-report-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .qa-result { display: grid; place-items: center; min-height: 58px; padding: 6px; border: 1px solid rgba(0,0,0,.35); text-align: center; }
+    .qa-result small { display: block; }
+    .qa-before .qa-victory { color: #244f38; background: #487348; }
+    .qa-before .qa-scout { color: #303238; background: #3c4650; }
+    .qa-before .qa-defeat { color: #522526; background: #653033; }
+    .qa-after .qa-victory { color: #fff8ea; background: #355e7a; }
+    .qa-after .qa-scout { color: #261b0d; background: #b88a32; }
+    .qa-after .qa-defeat { color: #fff8ea; background: #8a3333; }
+    .qa-icon-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .qa-icon-button { width: 48px; min-height: 48px; display: grid; place-items: center; padding: 0; border: 1px solid #705032; }
+    .qa-icon-button svg { width: 20px; height: 20px; }
+    .qa-report-button { width: 78px; min-height: 70px; display: grid; place-items: center; gap: 2px; padding: 5px; border: 1px solid #705032; font-size: .65rem; }
+    .qa-report-button img { width: 38px; height: 38px; object-fit: contain; }
+    .qa-before .qa-report-button { color: #17120e; background: #17120e; }
+    .qa-after .qa-report-button { color: #2b2118; background: #ead8b3; }
+    .qa-before .qa-icon-button svg { translate: 3px -2px; }
+    .qa-after .qa-icon-button { color: #2b2118; background: #ead8b3; }
+    .qa-state-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .qa-state { display: grid; place-items: center; min-height: 58px; padding: 6px; border: 1px solid rgba(0,0,0,.35); font-size: .72rem; font-weight: 900; }
+    .qa-before .qa-state { color: #412f22; background: #5a402c; }
+    .qa-after .qa-outgoing { color: #fff8ea; background: #355e7a; }
+    .qa-after .qa-incoming { color: #fff8ea; background: #8a3333; }
+    .qa-city-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid #5a3a28; }
+    .qa-city-header strong { font-size: 1.25rem; }
+    .qa-before .qa-city-header { color: #5b3d2a; background: #6a4932; }
+    .qa-after .qa-city-header { color: #fff8ea; background: #6e2f35; }
+    .qa-tab-audit { display: grid; gap: 8px; }
+    .qa-tab-audit > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 8px; }
+    .qa-tab-audit > div > strong { font-size: .66rem; }
+    .qa-tab-audit .qa-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .qa-captures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .qa-captures figure { min-width: 0; display: grid; gap: 6px; margin: 0; padding: 10px; border: 1px solid #64462c; background: #2a1e15; }
+    .qa-captures figure:last-child { grid-column: 1 / -1; }
+    .qa-captures figcaption { color: #edcf91; font-size: .72rem; font-weight: 900; }
+    .qa-captures img { display: block; width: 100%; height: auto; border: 1px solid #72502f; }
+    @media (max-width: 900px) {
+      .qa-shell { padding: 12px; }
+      .qa-pair { grid-template-columns: minmax(0, 1fr); }
+      .qa-report-grid, .qa-setting-grid, .qa-captures { grid-template-columns: minmax(0, 1fr); }
+      .qa-captures figure:last-child { grid-column: auto; }
+    }
+    @media (max-width: 520px) {
+      .qa-card, .qa-stage { padding: 9px; }
+      .qa-tab-audit > div { grid-template-columns: minmax(0, 1fr); }
+      .qa-swatch-grid { grid-template-columns: repeat(6, minmax(28px, 1fr)); }
+      .qa-swatch-grid button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="old-horse" viewBox="0 0 32 32"><path d="M8 27h18v3H6v-5c1-5 3-9 7-12l-2-8 7 3 5-5 4 7-5 4c3 3 4 7 4 13h-5c0-5-1-8-4-10-3 2-4 5-4 10H8z"/></symbol>
+    <symbol id="new-horse" viewBox="0 0 32 32"><path d="M6 29h21v-4h-3c0-4-1-7-4-9l6-2 4-6-4-5-5 4-2-8-5 7-7-3 2 8c-4 3-6 8-6 14z"/><path d="M15 11l-8 3 4 3-5 3 4 3-3 4h7c0-5 1-9 4-12z"/></symbol>
+    <symbol id="locate" viewBox="0 0 32 32"><path d="M16 5v6M16 21v6M5 16h6M21 16h6" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="2.4"/></symbol>
+  </svg>
+  <main class="qa-shell">
+    <header class="qa-header">
+      <h1>UI Contrast Correction</h1>
+      <p>Repeatable old/new fixture for Crownlands presentation states. The “after” column uses the production correction tokens.</p>
+    </header>
+
+    <section class="qa-section">
+      <h2>Global tab system</h2>
+      <p>Representative selected and unselected states across every player-facing tab family.</p>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>low-contrast selected states</small></header><div class="qa-stage qa-tab-audit"></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>burgundy + ivory / parchment + ink</small></header><div class="qa-stage qa-tab-audit"></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Flag Editor</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>button face overwrote the dyes</small></header><div class="qa-stage"><p class="qa-label">Primary color</p><div class="qa-swatch-grid"></div><div class="qa-charge-row"><svg class="qa-charge"><use href="#old-horse"/></svg><p class="qa-note">The previous silhouette was hard to parse at flag size.</p></div></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>visible dyes and a heraldic horse</small></header><div class="qa-stage"><p class="qa-label">Primary color</p><div class="qa-swatch-grid"></div><div class="qa-charge-row"><svg class="qa-charge"><use href="#new-horse"/></svg><p class="qa-note">The simplified warhorse profile keeps distinct ears, a long muzzle, mane, and broad neck at flag size.</p></div></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Clan tabs, War Room, Rewards, Members, and danger action</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>dark text on dark panels</small></header><div class="qa-stage"><div class="qa-tabs"><button>Overview</button><button class="active">War Room</button><button>Rewards</button></div><div class="qa-panel qa-dark"><strong>Rally on Ashford</strong><span>Leader · Lady Rowan</span><small>82,500 assembled · 04:18</small></div><div class="qa-panel qa-dark"><strong>Weekly Conquest</strong><span>Reward ready to collect</span></div><div class="qa-member qa-dark"><strong>Sir Cedric</strong><span>Officer</span><small>1,420 power · Online</small></div><button class="qa-action qa-danger">Disband Clan</button></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>semantic military dark + readable parchment</small></header><div class="qa-stage"><div class="qa-tabs"><button>Overview</button><button class="active">War Room</button><button>Rewards</button></div><div class="qa-panel qa-dark"><strong>Rally on Ashford</strong><span>Leader · Lady Rowan</span><small>82,500 assembled · 04:18</small></div><div class="qa-panel qa-paper"><strong>Weekly Conquest</strong><span>Reward ready to collect</span></div><div class="qa-member qa-paper"><strong>Sir Cedric</strong><span>Officer</span><small>1,420 power · Online</small></div><button class="qa-action qa-danger">Disband Clan</button></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Skills preset</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>preset message and action disappear</small></header><div class="qa-stage"><div class="qa-tabs"><button class="active">Preset I</button><button>Preset II</button><button>Locked</button></div><div class="qa-panel qa-dark"><strong>42 points assigned</strong><span>Applying leaves 3 earned points unspent.</span></div><button class="qa-action qa-save">Save Current Build</button></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>allocation state is explicit</small></header><div class="qa-stage"><div class="qa-tabs"><button class="active">Preset I</button><button>Preset II</button><button>Locked</button></div><div class="qa-panel qa-paper"><strong>42 points assigned</strong><span>Applying leaves 3 earned points unspent.</span></div><button class="qa-action qa-save">Save Current Build</button></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Settings</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>isolated dark controls</small></header><div class="qa-stage"><div class="qa-setting-grid"><div class="qa-setting"><strong>Music</strong><small>Kingdom soundtrack</small><output>70%</output></div><div class="qa-setting"><strong>Effects</strong><small>Action feedback</small><output>85%</output></div></div><div class="qa-setting"><strong>Notifications</strong><span>On · Incoming attacks</span></div><button class="qa-action qa-save">View Privacy Policy</button></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>one parchment settings language</small></header><div class="qa-stage"><div class="qa-setting-grid"><div class="qa-setting"><strong>Music</strong><small>Kingdom soundtrack</small><output>70%</output></div><div class="qa-setting"><strong>Effects</strong><small>Action feedback</small><output>85%</output></div></div><div class="qa-setting"><strong>Notifications</strong><span>On · Incoming attacks</span></div><a class="qa-action privacy-settings-link" href="#privacy">View Privacy Policy</a></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Battle Reports</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>muddy badge and icon surfaces</small></header><div class="qa-stage"><div class="qa-report-grid"><div class="qa-result qa-victory"><strong>Victory</strong><small>2m ago</small></div><div class="qa-result qa-scout"><strong>Scout</strong><small>7m ago</small></div><div class="qa-result qa-defeat"><strong>Defeat</strong><small>12m ago</small></div></div><div class="qa-icon-actions"><button class="qa-icon-button" aria-label="Locate"><svg><use href="#locate"/></svg></button><button class="qa-report-button"><img src="../../../assets/optimized/hud-report-192x192-21644b7390fb.webp" alt="" />Reports</button></div></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>blue / ochre / red + centered controls</small></header><div class="qa-stage"><div class="qa-report-grid"><div class="qa-result qa-victory"><strong>Victory</strong><small>2m ago</small></div><div class="qa-result qa-scout"><strong>Scout</strong><small>7m ago</small></div><div class="qa-result qa-defeat"><strong>Defeat</strong><small>12m ago</small></div></div><div class="qa-icon-actions"><button class="qa-icon-button" aria-label="Locate"><svg><use href="#locate"/></svg></button><button class="qa-report-button"><img src="../../../assets/optimized/hud-report-192x192-21644b7390fb.webp" alt="" />Reports</button></div></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>City List and operation alerts</h2>
+      <div class="qa-pair">
+        <article class="qa-card qa-before"><header><span>Before</span><small>same brown treatment for every state</small></header><div class="qa-stage"><div class="qa-city-header"><span>Owned Across Maps</span><strong>27</strong></div><div class="qa-state-row"><div class="qa-state">Outgoing · 3 marches</div><div class="qa-state">Incoming · 1 threat</div></div></div></article>
+        <article class="qa-card qa-after"><header><span>After</span><small>clear count and directional semantics</small></header><div class="qa-stage"><div class="qa-city-header"><span>Owned Across Maps</span><strong>27</strong></div><div class="qa-state-row"><div class="qa-state qa-outgoing">Outgoing · 3 marches</div><div class="qa-state qa-incoming">Incoming · 1 threat</div></div></div></article>
+      </div>
+    </section>
+
+    <section class="qa-section">
+      <h2>Browser captures</h2>
+      <p>Captured from this fixture in the Codex in-app Chromium browser at the required responsive sizes.</p>
+      <div class="qa-captures">
+        <figure><figcaption>Desktop 1440×900 · Flag, Clan, and Skills</figcaption><img src="screenshots/desktop-flag-clan-skills.jpg" alt="Desktop comparison of Flag, Clan, and Skills contrast corrections" /></figure>
+        <figure><figcaption>Desktop 1440×900 · Settings, Reports, City List, and HUD</figcaption><img src="screenshots/desktop-settings-reports-hud.jpg" alt="Desktop comparison of Settings, Battle Reports, City List, and HUD contrast corrections" /></figure>
+        <figure><figcaption>Android landscape 844×390 · global selected and unselected tabs</figcaption><img src="screenshots/android-landscape-tabs.jpg" alt="Android landscape corrected Crownlands tab states" /></figure>
+      </div>
+    </section>
+  </main>
+  <script>
+    const tabFamilies = ["Profile", "Clan", "Skills", "Settings", "Reports", "Achievements", "Camps / Strongholds", "Rewards"];
+    document.querySelectorAll(".qa-tab-audit").forEach(root => {
+      root.innerHTML = tabFamilies.map(label => `<div><strong>${label}</strong><div class="qa-tabs"><button class="active">Selected</button><button>Unselected</button></div></div>`).join("");
+    });
+    const swatches = ["#6e2f35", "#355e7a", "#b88a32", "#3f6746", "#eee1bd", "#251d18"];
+    document.querySelectorAll(".qa-swatch-grid").forEach(root => {
+      root.innerHTML = swatches.map((color, index) => `<button${index === 0 ? ' class="active"' : ""} style="--flag-swatch:${color}" aria-label="Color ${index + 1}"></button>`).join("");
+    });
+  </script>
+</body>
+</html>

@@ -7,9 +7,9 @@ const ROOT_DIR = path.resolve(__dirname, "..");
 const STRONGHOLD_CANVAS_SIZE = 384;
 const CAMP_CANVAS_SIZE = 384;
 const SOURCE_CANVAS_SIZE = 640;
-const STRONGHOLD_RENDER_SIZE = 154;
-const CAMP_RENDER_SIZE = 132;
-const CROWN_CITADEL_RENDER_SIZE = 260;
+const DEFAULT_STRONGHOLD_RENDER_SIZE = 154;
+const DEFAULT_CAMP_RENDER_SIZE = 132;
+const DEFAULT_CROWN_CITADEL_RENDER_SIZE = 260;
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT_DIR, relativePath), "utf8");
@@ -146,20 +146,21 @@ assert(citadel.hasAlpha, "Crown Citadel must preserve transparent padding.");
 let normalStrongholds = 0;
 let citadels = 0;
 let camps = 0;
+let editorSizedObjects = 0;
 for (const map of layout.maps || []) {
   for (const objective of map.objectives || []) {
     const type = String(objective.strongholdType || objective.type || "").toLowerCase();
     const isCitadel = type === "crown" || type === "crown_citadel" || String(objective.id || "") === "center_crown_citadel";
-    assert.equal(
-      Number(objective.size),
-      isCitadel ? CROWN_CITADEL_RENDER_SIZE : STRONGHOLD_RENDER_SIZE,
-      `${map.id}/${objective.id} has a noncanonical objective render size.`
-    );
+    const renderSize = Number(objective.size);
+    assert(Number.isInteger(renderSize) && renderSize > 0, `${map.id}/${objective.id} must have a positive editor render size.`);
+    if (renderSize !== (isCitadel ? DEFAULT_CROWN_CITADEL_RENDER_SIZE : DEFAULT_STRONGHOLD_RENDER_SIZE)) editorSizedObjects += 1;
     if (isCitadel) citadels += 1;
     else normalStrongholds += 1;
   }
   for (const camp of map.camps || []) {
-    assert.equal(Number(camp.size), CAMP_RENDER_SIZE, `${map.id}/${camp.id} has a noncanonical camp render size.`);
+    const renderSize = Number(camp.size);
+    assert(Number.isInteger(renderSize) && renderSize > 0, `${map.id}/${camp.id} must have a positive editor render size.`);
+    if (renderSize !== DEFAULT_CAMP_RENDER_SIZE) editorSizedObjects += 1;
     camps += 1;
   }
 }
@@ -167,8 +168,6 @@ for (const map of layout.maps || []) {
 assert.equal(normalStrongholds, 4, "The world layout must contain four normal Strongholds.");
 assert.equal(citadels, 1, "The world layout must contain one Crown Citadel.");
 assert.equal(camps, 4, "The world layout must contain four reward Camps.");
-assert(CAMP_RENDER_SIZE < STRONGHOLD_RENDER_SIZE, "Camps must render smaller than Strongholds.");
-assert(STRONGHOLD_RENDER_SIZE < CROWN_CITADEL_RENDER_SIZE, "Crown Citadel must render larger than Strongholds.");
 
 const optimizer = read("tools/optimize-game-art.py");
 assert.match(optimizer, /FIXED_LAYOUT_CATEGORIES\s*=\s*\{[^}]*"stronghold-object"[^}]*"camp-object"[^}]*"citadel-object"/s);
@@ -178,9 +177,9 @@ const game = read("game.js");
 assert.match(game, /const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;/);
 assert.match(game, /const DEFAULT_CAMP_VISUAL_SIZE = 132;/);
 assert.match(game, /const CROWN_CITADEL_VISUAL_SIZE = 260;/);
-assert.match(game, /function getStrongholdVisualSize\(city\) \{\s*if \(isCrownCitadel\(city\)\) return CROWN_CITADEL_VISUAL_SIZE;\s*return DEFAULT_STRONGHOLD_VISUAL_SIZE;\s*\}/);
-assert.match(game, /size: DEFAULT_CAMP_VISUAL_SIZE,\s*payoutAtMs:/);
-assert.match(game, /artSrc,\s*size: DEFAULT_CAMP_VISUAL_SIZE,\s*activeArmyIds:/);
+assert.match(game, /function getStrongholdVisualSize\(city\) \{\s*const fallback = isCrownCitadel\(city\) \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;\s*return readVisualSize\(city\?\.size, fallback\);\s*\}/);
+assert.match(game, /size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*payoutAtMs:/);
+assert.match(game, /artSrc,\s*size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*activeArmyIds:/);
 
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 assert.match(styles, /\.city-node\.stronghold-node \{[^}]*width: var\(--stronghold-size, 154px\);[^}]*height: var\(--stronghold-size, 154px\);/s);
@@ -196,7 +195,6 @@ for (const [label, source] of [["editor server", editorServer], ["map editor", m
 }
 
 console.log(
-  `Validated map-object scale standards: camps ${SOURCE_CANVAS_SIZE}x${SOURCE_CANVAS_SIZE} source, ${CAMP_CANVAS_SIZE}x${CAMP_CANVAS_SIZE}/${CAMP_RENDER_SIZE}px runtime, `
-  + `Strongholds ${SOURCE_CANVAS_SIZE}x${SOURCE_CANVAS_SIZE} source, ${STRONGHOLD_CANVAS_SIZE}x${STRONGHOLD_CANVAS_SIZE}/${STRONGHOLD_RENDER_SIZE}px runtime, `
-  + `Crown Citadel ${STRONGHOLD_CANVAS_SIZE}x${STRONGHOLD_CANVAS_SIZE}/${CROWN_CITADEL_RENDER_SIZE}px.`
+  `Validated map-object scale standards and ${editorSizedObjects} editor-sized objects: camps ${SOURCE_CANVAS_SIZE}x${SOURCE_CANVAS_SIZE} source/${CAMP_CANVAS_SIZE}x${CAMP_CANVAS_SIZE} optimized, `
+  + `Strongholds ${SOURCE_CANVAS_SIZE}x${SOURCE_CANVAS_SIZE} source/${STRONGHOLD_CANVAS_SIZE}x${STRONGHOLD_CANVAS_SIZE} optimized.`
 );

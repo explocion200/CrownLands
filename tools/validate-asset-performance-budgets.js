@@ -19,6 +19,7 @@ const commonGearSource = read("common-gear.js");
 const stylesSource = read("styles.css");
 const interfaceThemeSource = read("interface-theme.css");
 const manuscriptPrototypeSource = read("manuscript-prototype.css");
+const uiContrastCorrectionSource = read("ui-contrast-correction.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const layout = JSON.parse(read("functions/world-layout.json"));
@@ -58,6 +59,7 @@ const entrypointBudgets = {
   "styles.css": 400 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
+  "ui-contrast-correction.css": 64 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   "firebaseClient.js": 150 * 1024,
   "animation-manager.js": 80 * 1024,
@@ -202,6 +204,7 @@ for (const requiredShellFile of [
   "styles.css",
   "interface-theme.css",
   "manuscript-prototype.css",
+  "ui-contrast-correction.css",
   "base-cities.js",
   "instant-economy-actions.js",
   "game.js",
@@ -219,7 +222,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

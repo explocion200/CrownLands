@@ -1,11 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-08T12:00:00.000Z",
-  "troopCombat": {
-    "defenseModelVersion": 1,
-    "baseAttackPowerPerTroop": 1.25,
-    "baseDefensePowerPerTroop": 1.3
-  },
+  "updatedAt": "2026-08-13T15:39:28.235Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -51,24 +46,154 @@
     ],
     "tracksByMonthLength": {
       "28": {
-        "itemDays": [5, 9, 14, 19, 23, 28],
-        "goldHours": [3, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24],
-        "troopHours": [3, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24]
+        "itemDays": [
+          5,
+          9,
+          14,
+          19,
+          23,
+          28
+        ],
+        "goldHours": [
+          3,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ],
+        "troopHours": [
+          3,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ]
       },
       "29": {
-        "itemDays": [5, 10, 15, 19, 24, 29],
-        "goldHours": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24],
-        "troopHours": [3, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24]
+        "itemDays": [
+          5,
+          10,
+          15,
+          19,
+          24,
+          29
+        ],
+        "goldHours": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ],
+        "troopHours": [
+          3,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ]
       },
       "30": {
-        "itemDays": [5, 10, 15, 20, 25, 30],
-        "goldHours": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24],
-        "troopHours": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24]
+        "itemDays": [
+          5,
+          10,
+          15,
+          20,
+          25,
+          30
+        ],
+        "goldHours": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ],
+        "troopHours": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ]
       },
       "31": {
-        "itemDays": [5, 10, 16, 21, 26, 31],
-        "goldHours": [1, 2, 3, 4, 5, 6, 8, 10, 10, 10, 12, 16, 24],
-        "troopHours": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24]
+        "itemDays": [
+          5,
+          10,
+          16,
+          21,
+          26,
+          31
+        ],
+        "goldHours": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          10,
+          10,
+          12,
+          16,
+          24
+        ],
+        "troopHours": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8,
+          10,
+          12,
+          16,
+          20,
+          24
+        ]
       }
     }
   },
@@ -100,6 +225,11 @@
     "upgradeMidEndHours": 36,
     "upgradeLevel150Hours": 240,
     "upgradeMaximumHours": 720
+  },
+  "troopCombat": {
+    "defenseModelVersion": 1,
+    "baseAttackPowerPerTroop": 1.25,
+    "baseDefensePowerPerTroop": 1.3
   },
   "siegeCombat": {
     "modelVersion": 1,

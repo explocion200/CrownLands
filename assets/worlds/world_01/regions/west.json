@@ -697,7 +697,8 @@
       "level": 50,
       "troops": 50000000,
       "artSrc": "assets/gold-stronghold.png",
-      "size": 200,
+      "size": 215,
+      "flipX": true,
       "notes": ""
     }
   ],

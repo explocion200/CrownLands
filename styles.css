@@ -1578,6 +1578,10 @@ input {
   pointer-events: none;
   user-select: none;
 }
+.map-art-flip-x {
+  transform: scaleX(-1);
+  transform-origin: center;
+}
 .camp-node.selected,
 .camp-node.attackable,
 .camp-node.supportable {
@@ -9105,7 +9109,7 @@ button.inventory-slot {
 .flag-symbol-grid button { font-size: 1.35rem; }
 .flag-option-grid button.active,
 .flag-symbol-grid button.active { color: #211508; background: #f2b84b; border-color: #fff0bd; }
-.flag-editor-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: .6rem; padding: .4rem .75rem; }
+.flag-editor-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1.5fr 1fr; gap: .6rem; padding: .4rem .75rem; }
 .profile-primary-btn,
 .profile-secondary-btn { min-height: 46px; border-radius: 8px; font-weight: 950; }
 .profile-primary-btn { color: #211508; background: #f2b84b; }

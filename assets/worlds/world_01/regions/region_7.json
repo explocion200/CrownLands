@@ -799,11 +799,12 @@
       "id": "region_7_items_camp",
       "name": "Relic Camp",
       "regionId": "region_7",
-      "xNorm": 0.516,
-      "yNorm": 0.484,
+      "xNorm": 0.514,
+      "yNorm": 0.482,
       "campType": "items",
       "artSrc": "assets/camps/items.png",
-      "size": 132,
+      "size": 135,
+      "flipX": false,
       "notes": "",
       "maxDailyRewards": 2
     }

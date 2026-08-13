@@ -253,6 +253,8 @@ function sanitizeEconomyConfig(config = {}) {
   const skillIds = Object.keys(fallback.skills);
   const campTypes = Object.keys(fallback.camps);
   return {
+    ...fallback,
+    ...config,
     schemaVersion: Math.max(1, Math.floor(number(config.schemaVersion, fallback.schemaVersion, 1, 1000))),
     updatedAt: new Date().toISOString(),
     shopItems: Object.fromEntries(itemIds.map(itemId => {
@@ -624,6 +626,7 @@ function cleanStronghold(stronghold, index, region) {
     troops: Math.max(0, Math.floor(number(stronghold.troops ?? stronghold.startTroops, defaults.troops, 0, 1000000000))),
     artSrc: normalizePathForJson(stronghold.artSrc || defaults.artSrc),
     size: cleanVisualSize(stronghold.size, defaults.size),
+    flipX: Boolean(stronghold.flipX),
     notes: cleanString(stronghold.notes, "").slice(0, 240),
   };
 }
@@ -642,6 +645,7 @@ function cleanCamp(camp, index, region) {
     campType: type,
     artSrc: normalizePathForJson(camp.artSrc || defaults.artSrc),
     size: cleanVisualSize(camp.size, defaults.size),
+    flipX: Boolean(camp.flipX),
     notes: cleanString(camp.notes, "").slice(0, 240),
   };
   if (type === "gold" || type === "troops") {
@@ -897,6 +901,7 @@ async function buildWorldDataFromMapEditorData() {
         troops: objective.troops || objective.startTroops,
         artSrc: objective.artSrc,
         size: objective.size,
+        flipX: Boolean(objective.flipX),
       })),
       camps: (Array.isArray(map.camps) ? map.camps : []).map((camp, campIndex) => ({
         id: camp.id || `${id}_${cleanCampType(camp.campType || camp.type)}_camp_${campIndex + 1}`,
@@ -906,6 +911,7 @@ async function buildWorldDataFromMapEditorData() {
         campType: cleanCampType(camp.campType || camp.type),
         artSrc: camp.artSrc,
         size: camp.size,
+        flipX: Boolean(camp.flipX),
         notes: camp.notes,
         rewardSchedule: camp.rewardSchedule,
         maxDailyRewards: camp.maxDailyRewards,
@@ -1023,6 +1029,7 @@ function buildCompatibilityMapData(layout, regions) {
           startTroops: stronghold.troops,
           artSrc: browserAssetPath(stronghold.artSrc),
           size: stronghold.size,
+          flipX: Boolean(stronghold.flipX),
         };
       }),
       camps: region.camps.map(camp => ({
@@ -1036,6 +1043,7 @@ function buildCompatibilityMapData(layout, regions) {
         campType: camp.campType,
         artSrc: browserAssetPath(camp.artSrc),
         size: camp.size,
+        flipX: Boolean(camp.flipX),
         notes: camp.notes,
         rewardSchedule: camp.rewardSchedule,
         maxDailyRewards: camp.maxDailyRewards,

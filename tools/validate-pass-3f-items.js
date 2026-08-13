@@ -111,6 +111,7 @@ assert.match(styles, /@keyframes commonGearBoxOpened/);
 assert.match(styles, /@keyframes commonGearCardSettle/);
 assert.match(styles, /@keyframes harvestMapNotation/);
 assert.match(styles, /@keyframes cityShieldAuthority/);
+assert.match(styles, /\.city-node\.peace-shielded \.city-shield-field img\s*\{[^}]*drop-shadow\(0 0 1px rgba\(255, 255, 255, \.98\)\)[^}]*drop-shadow\(0 0 3px rgba\(255, 255, 255, \.76\)\)/s);
 assert.match(styles, /@keyframes crownlandsVfxRewardStamp/);
 assert(index.includes(`<meta name="crownlands-build" content="${BUILD_ID}"`), "Index build ID is stale.");
 assert(serviceWorker.includes(`const CACHE_VERSION = "${BUILD_ID}";`), "Service-worker cache version is stale.");

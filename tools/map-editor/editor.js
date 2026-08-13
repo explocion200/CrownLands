@@ -594,6 +594,7 @@
       troops: Math.max(0, Math.floor(Number(stronghold.troops ?? stronghold.startTroops) || defaults.troops)),
       artSrc: String(stronghold.artSrc || defaults.artSrc),
       size: readVisualSize(stronghold.size, defaults.size),
+      flipX: Boolean(stronghold.flipX),
       notes: String(stronghold.notes || ""),
     };
   }
@@ -612,6 +613,7 @@
       campType,
       artSrc: String(camp.artSrc || defaults.artSrc),
       size: readVisualSize(camp.size, defaults.size),
+      flipX: Boolean(camp.flipX),
       notes: String(camp.notes || ""),
     };
     if (campType === "gold" || campType === "troops") {
@@ -2087,14 +2089,14 @@
       const marker = createMarker("stronghold", stronghold, index, region);
       marker.classList.toggle("crown", stronghold.strongholdType === "crown_citadel");
       marker.dataset.strongholdType = stronghold.strongholdType;
-      marker.innerHTML = `<img src="${escapeHtml(resolveAssetPath(stronghold.artSrc))}" alt="" draggable="false" decoding="async" />`;
+      marker.innerHTML = `<img class="${stronghold.flipX ? "editor-art-flip-x" : ""}" src="${escapeHtml(resolveAssetPath(stronghold.artSrc))}" alt="" draggable="false" decoding="async" />`;
       elements.markerLayer.appendChild(marker);
     });
     region.camps.forEach((camp, index) => {
       elements.markerLayer.appendChild(createUiFootprint("camp", camp, index, region));
       const marker = createMarker("camp", camp, index, region);
       marker.dataset.campType = camp.campType;
-      marker.innerHTML = `<img src="${escapeHtml(resolveAssetPath(camp.artSrc))}" alt="" draggable="false" decoding="async" />`;
+      marker.innerHTML = `<img class="${camp.flipX ? "editor-art-flip-x" : ""}" src="${escapeHtml(resolveAssetPath(camp.artSrc))}" alt="" draggable="false" decoding="async" />`;
       elements.markerLayer.appendChild(marker);
     });
   }
@@ -2485,6 +2487,7 @@
       troops: defaults.troops,
       artSrc: defaults.artSrc,
       size: defaults.size,
+      flipX: false,
     }, region.strongholds.length, region);
     region.strongholds.push(stronghold);
     state.selected = { kind: "stronghold", regionId: region.id, index: region.strongholds.length - 1 };
@@ -2504,6 +2507,7 @@
       campType,
       artSrc: defaults.artSrc,
       size: defaults.size,
+      flipX: false,
       rewardSchedule: economyDefaults.rewardSchedule,
       maxDailyRewards: economyDefaults.maxDailyRewards,
     }, region.camps.length, region);
@@ -2659,6 +2663,7 @@
         <label><span>Pixel Y</span><input value="${py}" readonly /></label>
         <label><span>Starting Owner</span><input data-field="startingOwner" value="${escapeHtml(stronghold.startingOwner)}" /></label>
         <label><span>Visual Size</span><input data-field="size" type="number" min="1" value="${stronghold.size}" /></label>
+        <label class="wide check-row"><input data-field="flipX" type="checkbox" ${stronghold.flipX ? "checked" : ""} /><span>Flip image horizontally (X axis)</span></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(stronghold.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(stronghold.notes)}</textarea></label>
       </div>
@@ -2698,6 +2703,7 @@
         <label><span>Pixel X</span><input value="${px}" readonly /></label>
         <label><span>Pixel Y</span><input value="${py}" readonly /></label>
         <label><span>Visual Size</span><input data-field="size" type="number" min="1" value="${camp.size}" /></label>
+        <label class="wide check-row"><input data-field="flipX" type="checkbox" ${camp.flipX ? "checked" : ""} /><span>Flip image horizontally (X axis)</span></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(camp.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(camp.notes)}</textarea></label>
         ${rewardEditor}
@@ -2797,7 +2803,7 @@
     else if (["level", "troops", "bonusAmount", "maxDailyRewards"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
     else if (field === "strongholdType") applyStrongholdType(item, value);
     else if (field === "campType") applyCampType(item, value);
-    else if (field === "intentionalOuter") item[field] = Boolean(value);
+    else if (field === "intentionalOuter" || field === "flipX") item[field] = Boolean(value);
     else item[field] = String(value);
     if (state.selected.kind === "city") item.regionId = state.selected.regionId;
     if (state.selected.kind === "stronghold") item.regionId = state.selected.regionId;

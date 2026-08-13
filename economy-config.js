@@ -1,11 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-08T12:00:00.000Z",
-  "troopCombat": {
-    "defenseModelVersion": 1,
-    "baseAttackPowerPerTroop": 1.25,
-    "baseDefensePowerPerTroop": 1.3
-  },
+  "updatedAt": "2026-08-13T15:39:28.235Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -230,6 +225,11 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "upgradeMidEndHours": 36,
     "upgradeLevel150Hours": 240,
     "upgradeMaximumHours": 720
+  },
+  "troopCombat": {
+    "defenseModelVersion": 1,
+    "baseAttackPowerPerTroop": 1.25,
+    "baseDefensePowerPerTroop": 1.3
   },
   "siegeCombat": {
     "modelVersion": 1,

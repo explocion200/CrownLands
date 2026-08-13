@@ -447,11 +447,12 @@
       "id": "region_10_troops_camp",
       "name": "Warband Camp",
       "regionId": "region_10",
-      "xNorm": 0.486,
-      "yNorm": 0.46,
+      "xNorm": 0.484,
+      "yNorm": 0.44,
       "campType": "troops",
       "artSrc": "assets/camps/troops.png",
-      "size": 132,
+      "size": 135,
+      "flipX": false,
       "notes": "",
       "rewardSchedule": [
         {
