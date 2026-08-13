@@ -1209,13 +1209,13 @@ body {
 }
 
 .cl-glyph,
-:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .patch-notes-btn-icon, .install-app-icon, .audio-channel-glyph) {
+:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .install-app-icon, .audio-channel-glyph) {
   display: inline-grid;
   place-items: center;
   color: currentColor;
 }
 
-:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .patch-notes-btn-icon, .install-app-icon, .audio-channel-glyph) .cl-icon {
+:is(.fullscreen-glyph, .wheel-icon, .send-icon, .troop-command-icon, .install-app-icon, .audio-channel-glyph) .cl-icon {
   width: 1em;
   height: 1em;
 }
@@ -1405,14 +1405,35 @@ input[type="range"] {
   border-left-color: rgba(110, 47, 53, .54);
 }
 
-.login-game-info > a,
-.public-site-links a {
+.login-game-info > a {
   border: 1px solid rgba(84, 55, 31, .62);
   border-radius: 3px;
   color: var(--cl-ink);
   background:
     linear-gradient(180deg, #d9c79b, #aa8c55),
     repeating-linear-gradient(90deg, rgba(55, 32, 15, .06) 0 1px, transparent 1px 6px);
+}
+
+.public-site-links a {
+  min-width: 0;
+  min-height: 0;
+  padding: .08rem 0;
+  color: #4b3523;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: .62rem;
+  line-height: 1.25;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .18em;
+}
+
+.public-site-links a:hover,
+.public-site-links a:focus-visible {
+  color: #6d2d35;
+  background: transparent;
 }
 
 .setup-fullscreen-btn,
@@ -1867,69 +1888,6 @@ input[type="range"] {
   mix-blend-mode: multiply;
 }
 /* Pass 4B: secondary heraldry workspaces and dispatch states. */
-.patch-notes-modal .modal-card {
-  isolation: isolate;
-  overflow: hidden;
-  color: #2b2017;
-  border: 2px solid #4b3523;
-  border-radius: 4px;
-  background:
-    repeating-linear-gradient(0deg, rgba(88, 62, 33, .035) 0 1px, transparent 1px 7px),
-    linear-gradient(180deg, #e1d4b7, #c9b58e);
-  box-shadow: 0 18px 42px rgba(13, 8, 5, .7), inset 0 0 24px rgba(95, 69, 38, .2);
-}
-
-.patch-notes-modal .modal-card::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  border-radius: inherit;
-  background: #d8c7a4;
-  opacity: 1;
-  pointer-events: none;
-}
-
-.patch-notes-modal .modal-title {
-  color: #3a2415;
-  text-shadow: none;
-}
-
-.patch-notes-modal #modalBody { color: #2c2118; }
-
-.patch-notes-intro,
-.patch-notes-release,
-.patch-notes-release.is-latest {
-  border: 1px solid #816947;
-  border-radius: 3px;
-  background: rgba(244, 233, 204, .72);
-  box-shadow: inset 0 0 16px rgba(90, 63, 34, .12);
-}
-
-.patch-notes-intro {
-  border-left: 7px solid #6d2d35;
-}
-
-.patch-notes-intro > span,
-.patch-notes-release header span {
-  color: #71313a;
-}
-
-.patch-notes-intro > strong,
-.patch-notes-release header strong,
-.patch-notes-release li {
-  color: #302117;
-}
-
-.patch-notes-release header em {
-  color: #f5e8cd;
-  border: 1px solid #3e1d20;
-  border-radius: 2px;
-  background: #6d2d35;
-}
-
-.patch-notes-release > small { color: #735e43; }
-
 .flag-editor-view,
 .clan-shield-editor {
   color: var(--cl-ink);

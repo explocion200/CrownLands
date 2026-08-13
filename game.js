@@ -1,7 +1,6 @@
 ﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const MAP_EDITOR_DATA = window.CROWNLANDS_MAP_EDITOR_DATA || {};
 const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
-const PATCH_NOTES_CONFIG = window.CROWNLANDS_PATCH_NOTES || {};
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
@@ -20,7 +19,6 @@ const PUSH_NOTIFICATIONS_PREF_KEY = "crownlands-push-notifications";
 const ANIMATION_MODE_STORAGE_KEY = "crownlands.animation.mode.v1";
 const LEGACY_ANIMATION_MODE_STORAGE_KEY = "crownlands-animation-mode";
 const ANIMATION_MODES = Object.freeze(["full", "reduced", "off"]);
-const PATCH_NOTES_SEEN_STORAGE_KEY = "crownlands-patch-notes-seen-build";
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
@@ -1074,7 +1072,10 @@ const CROWNLANDS_ICON_ALIASES = Object.freeze({
   warband: "attack",
 });
 
-const FLAG_COLORS = ["#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f"];
+const FLAG_COLORS = [
+  "#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f",
+  "#6f2335", "#315b57", "#b56f32", "#6b6b65",
+];
 const FLAG_DYE_TREATMENTS = Object.freeze({
   "#1f5f91": Object.freeze({ display: "#536f83", label: "Faded blue" }),
   "#b23a35": Object.freeze({ display: "#8f3d3a", label: "Burgundy red" }),
@@ -1084,6 +1085,10 @@ const FLAG_DYE_TREATMENTS = Object.freeze({
   "#202a38": Object.freeze({ display: "#30373b", label: "Charcoal" }),
   "#d9e2e8": Object.freeze({ display: "#d9d1bb", label: "Unbleached linen" }),
   "#8d5a2f": Object.freeze({ display: "#755037", label: "Walnut brown" }),
+  "#6f2335": Object.freeze({ display: "#6f3440", label: "Mulberry" }),
+  "#315b57": Object.freeze({ display: "#486b66", label: "Verdigris" }),
+  "#b56f32": Object.freeze({ display: "#9a6638", label: "Burnished copper" }),
+  "#6b6b65": Object.freeze({ display: "#74736b", label: "Weathered silver" }),
 });
 const FLAG_PATTERNS = [
   { key: "split", label: "Split" },
@@ -1096,6 +1101,10 @@ const FLAG_PATTERNS = [
   { key: "pale", label: "Pale" },
   { key: "chief", label: "Chief" },
   { key: "bend", label: "Bend" },
+  { key: "fess", label: "Per Fess" },
+  { key: "pile", label: "Heraldic Pile" },
+  { key: "canton", label: "Canton" },
+  { key: "invertedChevron", label: "Inverted Chevron" },
 ];
 const FLAG_SYMBOLS = [
   { key: "crown", label: "Crown", icon: "crown" },
@@ -1106,10 +1115,14 @@ const FLAG_SYMBOLS = [
   { key: "cross", label: "Pilgrim Cross", icon: "flag-cross" },
   { key: "sun", label: "Sun", icon: "flag-sun" },
   { key: "moon", label: "Crescent Moon", icon: "flag-moon" },
-  { key: "knight", label: "Warhorse", icon: "flag-horse" },
+  { key: "knight", label: "Warhorse", icon: "transfer" },
   { key: "tower", label: "Watchtower", icon: "flag-tower" },
   { key: "diamond", label: "Heraldic Lozenge", icon: "flag-lozenge" },
   { key: "spire", label: "Spearhead", icon: "flag-spearhead" },
+  { key: "guardian", label: "Guardian Shield", icon: "shield" },
+  { key: "banner", label: "War Banner", icon: "rally" },
+  { key: "helm", label: "Knight's Helm", icon: "troops" },
+  { key: "keep", label: "Royal Keep", icon: "city" },
 ];
 const CLAN_SHIELD_COLORS = [
   { value: "#7a2638", label: "Castilian crimson" },
@@ -2108,8 +2121,6 @@ const googleSignInBtn = document.getElementById("googleSignInBtn");
 const enterKingdomBtn = document.getElementById("enterKingdomBtn");
 const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const installAppBtn = document.getElementById("installAppBtn");
-const patchNotesBtn = document.getElementById("patchNotesBtn");
-const patchNotesBadge = document.getElementById("patchNotesBadge");
 const serverRealmList = document.getElementById("serverRealmList");
 const serverRealmBtn = document.getElementById("serverRealmBtn");
 const serverQueueStatus = document.getElementById("serverQueueStatus");
@@ -23625,9 +23636,9 @@ function renderSkillPresetPanel() {
             && presets.activeSlot === slot.slot
             && isValidLocalSkillPresetAllocation(slot.upgrades, state.character)
             && skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
-          return `<button type="button" role="tab" data-skill-preset-slot="${slot.slot}" class="${slot.slot === selected.slot ? "selected" : ""} ${slotActive ? "active" : ""}" aria-selected="${slot.slot === selected.slot}" title="${slotUnlocked ? escapeHtml(slot.name) : `Unlocks at Hero Level ${slot.unlockLevel}`}">
+          return `<button type="button" role="tab" data-skill-preset-slot="${slot.slot}" class="${slot.slot === selected.slot ? "selected" : ""} ${slotActive ? "active" : ""} ${slotUnlocked ? "" : "locked"}" aria-selected="${slot.slot === selected.slot}" aria-disabled="${!slotUnlocked}" ${slotUnlocked ? "" : "disabled"} title="${slotUnlocked ? escapeHtml(slot.name) : `Unlocks at Hero Level ${slot.unlockLevel}`}">
             <strong>${slotUnlocked ? escapeHtml(slot.name) : `Preset ${slot.slot}`}</strong>
-            <small>${slotUnlocked ? slotActive ? "Active" : slot.saved ? "Saved" : "Empty" : `Lv ${slot.unlockLevel}`}</small>
+            <small>${slotUnlocked ? slotActive ? "Active" : slot.saved ? "Saved" : "Empty" : `Locked · Lv ${slot.unlockLevel}`}</small>
           </button>`;
         }).join("")}
       </div>
@@ -23709,7 +23720,12 @@ function bindSkillPresetControls() {
       return;
     }
     if (button.dataset.skillPresetSlot) {
-      selectedSkillPresetSlot = Math.max(1, Math.min(SKILL_PRESET_SLOTS.length, Math.floor(Number(button.dataset.skillPresetSlot) || 1)));
+      const requestedSlot = getSkillPresetSlot(Math.floor(Number(button.dataset.skillPresetSlot) || 0));
+      if (!requestedSlot || !isSkillPresetUnlocked(requestedSlot, state?.character)) {
+        if (requestedSlot) showToast(`Unlocks at Hero Level ${requestedSlot.unlockLevel}.`);
+        return;
+      }
+      selectedSkillPresetSlot = requestedSlot.slot;
       skillPresetMarkupSignature = "";
       renderProfileSkills();
       return;
@@ -33824,7 +33840,7 @@ function renderBattleReportCard(report, index = 0) {
       </div>
       <div class="battle-report-actions">
         ${locateButton}
-        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="Open report details">${renderCrownlandsIcon("reports")}</button>
+        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="View full report" title="View full report">${renderCrownlandsIcon("forward")}</button>
       </div>
     </article>
   `;
@@ -34971,106 +34987,6 @@ function showHelpModal() {
   modal.showModal();
 }
 
-function getPatchNotesBuildId() {
-  return String(PATCH_NOTES_CONFIG.buildId || APP_BUILD_ID || "dev").trim();
-}
-
-function getPatchNoteReleases() {
-  const releases = Array.isArray(PATCH_NOTES_CONFIG.releases) ? PATCH_NOTES_CONFIG.releases : [];
-  return releases
-    .map(release => ({
-      buildId: String(release?.buildId || "").trim(),
-      dateKey: /^\d{4}-\d{2}-\d{2}$/.test(String(release?.dateKey || "").trim())
-        ? String(release.dateKey).trim()
-        : "",
-      publishedAt: String(release?.publishedAt || "").trim(),
-      notes: (Array.isArray(release?.notes) ? release.notes : [])
-        .map(note => String(note || "").trim())
-        .filter(Boolean),
-    }))
-    .filter(release => release.notes.length)
-    .slice(0, 6);
-}
-
-function formatPatchNotesDate(release) {
-  const dateKey = String(release?.dateKey || "").trim();
-  const hasUtcDateKey = /^\d{4}-\d{2}-\d{2}$/.test(dateKey);
-  const date = new Date(hasUtcDateKey ? `${dateKey}T00:00:00.000Z` : release?.publishedAt);
-  if (Number.isNaN(date.getTime())) return "Recent update";
-  return date.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    ...(hasUtcDateKey ? { timeZone: "UTC" } : {}),
-  });
-}
-
-function getShortPatchNotesBuildId(value) {
-  const buildId = String(value || "").trim();
-  return buildId.length > 12 ? buildId.slice(0, 12) : buildId || "dev";
-}
-
-function hasUnseenPatchNotes() {
-  const buildId = getPatchNotesBuildId();
-  try {
-    return localStorage.getItem(PATCH_NOTES_SEEN_STORAGE_KEY) !== buildId;
-  } catch (_) {
-    return true;
-  }
-}
-
-function updatePatchNotesButton() {
-  if (!patchNotesBtn) return;
-  const unseen = hasUnseenPatchNotes();
-  if (patchNotesBadge) patchNotesBadge.hidden = !unseen;
-  patchNotesBtn.classList.toggle("has-new-patch-notes", unseen);
-  patchNotesBtn.setAttribute("aria-label", unseen ? "Open patch notes, new update available" : "Open patch notes");
-}
-
-function markPatchNotesSeen() {
-  try {
-    localStorage.setItem(PATCH_NOTES_SEEN_STORAGE_KEY, getPatchNotesBuildId());
-  } catch (_) {
-    // The notes remain usable when private browsing blocks persistent storage.
-  }
-  updatePatchNotesButton();
-}
-
-function showPatchNotesModal() {
-  const releases = getPatchNoteReleases();
-  const fallbackRelease = {
-    buildId: getPatchNotesBuildId(),
-    dateKey: String(PATCH_NOTES_CONFIG.generatedAt || "").slice(0, 10),
-    publishedAt: PATCH_NOTES_CONFIG.generatedAt,
-    notes: ["Gameplay improvements and fixes are included in this update."],
-  };
-  const visibleReleases = releases.length ? releases : [fallbackRelease];
-  modal.classList.add("patch-notes-modal");
-  modalTitle.textContent = "Patch Notes";
-  modalBody.innerHTML = `
-    <section class="patch-notes-intro">
-      <span>Royal Dispatch</span>
-      <strong>What changed in Crownlands</strong>
-      <p>New deployments are added here automatically whenever an update is pushed.</p>
-    </section>
-    <div class="patch-notes-release-list">
-      ${visibleReleases.map((release, index) => `
-        <article class="patch-notes-release${index === 0 ? " is-latest" : ""}">
-          <header>
-            <div>
-              <span>${index === 0 ? "Latest updates" : "Previous updates"}</span>
-              <strong>${escapeHtml(formatPatchNotesDate(release))}</strong>
-            </div>
-            ${index === 0 ? '<em>Current</em>' : ""}
-          </header>
-          <ul>${release.notes.map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
-          <small>Build ${escapeHtml(getShortPatchNotesBuildId(release.buildId))}</small>
-        </article>`).join("")}
-    </div>`;
-  markPatchNotesSeen();
-  if (!modal.open) modal.showModal();
-}
-
 async function toggleFullscreen() {
   const fullscreenTarget = document.documentElement;
   try {
@@ -35474,11 +35390,16 @@ function getMainCityReturnButtonSize() {
 function setMainCityReturnHudMode(enabled) {
   if (!mainCityReturnBtn) return;
   const resourceBar = document.querySelector(".resource-bar");
+  resourceBar?.classList.toggle("has-home-return", Boolean(enabled));
   mainCityReturnBtn.classList.toggle("hud-home-return", Boolean(enabled));
+  mainCityReturnBtn.classList.remove("hud-layout-managed", "hud-layout-hidden");
+  ["left", "right", "top", "bottom", "transform", "width", "height", "z-index"].forEach(property => {
+    mainCityReturnBtn.style.removeProperty(property);
+  });
   if (enabled) {
     if (resourceBar && mainCityReturnBtn.parentElement !== resourceBar) {
-      const anchor = cityListBtn?.parentElement === resourceBar ? cityListBtn : resourceBar.firstChild;
-      resourceBar.insertBefore(mainCityReturnBtn, anchor);
+      const fullscreenControl = resourceBar.querySelector("#fullscreenBtn");
+      resourceBar.insertBefore(mainCityReturnBtn, fullscreenControl || resourceBar.firstChild);
     }
     return;
   }
@@ -36175,7 +36096,6 @@ if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromIn
 if (serverRealmBtn) serverRealmBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 if (installAppBtn) installAppBtn.addEventListener("click", handleInstallAppClick);
-if (patchNotesBtn) patchNotesBtn.addEventListener("click", showPatchNotesModal);
 window.addEventListener("crownlands:online-ready", () => {
   updateOnlineUi();
   updatePushAlertsUi();
@@ -36472,7 +36392,6 @@ modal.addEventListener("close", () => {
   modal.classList.remove("daily-login-reward-modal");
   modal.classList.remove("daily-mission-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
-  modal.classList.remove("patch-notes-modal");
   const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());
   window.setTimeout(() => {
     if (closedLoginPresentationKind) completeLoginPresentationModal(closedLoginPresentationKind);
@@ -36561,7 +36480,6 @@ renderWorldMap();
 renderIslandTeleporters();
 updateFullscreenButton();
 updateOnlineUi();
-updatePatchNotesButton();
 registerPwaInstallPrompt();
 registerCrownlandsServiceWorker();
 if (new URLSearchParams(window.location.search).has("perf")) togglePerformancePanel(true);

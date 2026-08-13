@@ -70,7 +70,7 @@ for (const [key, label, icon] of [
   ["cross", "Pilgrim Cross", "flag-cross"],
   ["sun", "Sun", "flag-sun"],
   ["moon", "Crescent Moon", "flag-moon"],
-  ["knight", "Warhorse", "flag-horse"],
+  ["knight", "Warhorse", "transfer"],
   ["tower", "Watchtower", "flag-tower"],
   ["diamond", "Heraldic Lozenge", "flag-lozenge"],
   ["spire", "Spearhead", "flag-spearhead"],
@@ -81,7 +81,30 @@ for (const [key, label, icon] of [
   );
   assert.ok(indexSource.includes(`id="cl-icon-${icon}"`), `${label} is missing its SVG symbol.`);
 }
-assert.doesNotMatch(flagSymbolCatalog, /icon:\s*"(?:transfer|scout|gold|achievements|check)"/, "Flag charges still borrow mismatched gameplay icons.");
+assert.doesNotMatch(flagSymbolCatalog, /icon:\s*"(?:scout|gold|achievements|check)"/, "Flag charges still borrow mismatched gameplay icons.");
+assert.match(
+  flagSymbolCatalog,
+  /\{ key: "knight", label: "Warhorse", icon: "transfer" \}/,
+  "The Warhorse flag charge must reuse the troop-movement horse icon."
+);
+for (const [key, label, icon] of [
+  ["guardian", "Guardian Shield", "shield"],
+  ["banner", "War Banner", "rally"],
+  ["helm", "Knight's Helm", "troops"],
+  ["keep", "Royal Keep", "city"],
+]) {
+  assert.ok(
+    flagSymbolCatalog.includes(`{ key: "${key}", label: "${label}", icon: "${icon}" }`),
+    `${label} is missing from the optional player flag charges.`,
+  );
+}
+for (const pattern of ["fess", "pile", "canton", "invertedChevron"]) {
+  assert.ok(gameSource.includes(`{ key: "${pattern}",`), `Missing optional ${pattern} player flag pattern.`);
+  assert.ok(stylesSource.includes(`.kingdom-flag.pattern-${pattern}`), `Missing rendering for ${pattern} player flags.`);
+}
+for (const legacyPattern of patterns) {
+  assert.ok(gameSource.includes(`{ key: "${legacyPattern}",`), `Legacy ${legacyPattern} player flags are no longer supported.`);
+}
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);

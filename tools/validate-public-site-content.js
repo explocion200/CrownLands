@@ -47,6 +47,11 @@ function visibleWordCount(source) {
 
 const indexSource = read("index.html");
 const homeSource = read("home.html");
+const updatesSource = read("updates.html");
+const publicSiteSource = read("public-site.js");
+const gameStylesSource = read("styles.css");
+const interfaceThemeSource = read("interface-theme.css");
+const readabilitySource = read("readability.css");
 const stylesSource = read("site-info.css");
 const robotsSource = read("robots.txt");
 const sitemapSource = read("sitemap.xml");
@@ -63,6 +68,14 @@ assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/
 assert.match(homeSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/"/);
 assert.match(homeSource, /application\/ld\+json/);
 assert.match(homeSource, /data-kingdom-planner/);
+assert.match(updatesSource, /data-patch-notes-feed/);
+assert.match(updatesSource, /src="\/patch-notes\.js"[\s\S]*src="\/public-site\.js/);
+assert.match(publicSiteSource, /renderPublicPatchNotes/);
+assert.match(gameStylesSource, /\.public-site-links a\s*\{[\s\S]*?min-height:\s*0[\s\S]*?font-size:\s*\.62rem[\s\S]*?text-decoration:\s*underline/);
+assert.match(interfaceThemeSource, /\.public-site-links a\s*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*transparent[\s\S]*?text-decoration:\s*underline/);
+assert.match(readabilitySource, /\.setup-card \.server-realm-heading\s*\{[\s\S]*?color:\s*#4b1f25 !important[\s\S]*?text-shadow:\s*none/);
+assert.match(readabilitySource, /\.setup-card #onlineStatusText\s*\{[\s\S]*?color:\s*#2b1a0f !important[\s\S]*?text-shadow:\s*none/);
+assert.match(readabilitySource, /\.setup-card #onlineStatusDetail\s*\{[\s\S]*?color:\s*#4f3f2d !important[\s\S]*?text-shadow:\s*none/);
 for (const href of requiredNavigation) {
   assert.match(homeSource, new RegExp(`href="${href.replaceAll(".", "\\.")}"`), `Homepage does not link to ${href}.`);
 }

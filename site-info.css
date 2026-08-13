@@ -574,10 +574,20 @@ a:focus-visible { color: var(--page-burgundy-dark); }
 
 .updates-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 1.2rem; align-items: start; }
 .update-feed { display: grid; gap: 1rem; }
+.patch-notes-feed { display: contents; }
 .update-post { padding: 1.8rem; border-left: 4px solid var(--page-burgundy); }
 .update-post h2 { margin: .3rem 0 .6rem; font: 850 1.45rem/1.2 var(--page-font-display); }
 .update-post time,
 .update-post .update-type { color: #765537; font-size: .72rem; text-transform: uppercase; }
+.patch-note-post { border-left-color: var(--page-brass); }
+.patch-note-post.is-current { border-color: #805b2e; border-left: 7px solid var(--page-burgundy); box-shadow: inset 0 0 0 1px rgba(255,248,220,.45), 0 12px 24px rgba(0,0,0,.24); }
+.patch-note-meta,
+.patch-note-footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.patch-note-meta { border-bottom: 1px solid rgba(99,72,42,.23); padding-bottom: .55rem; }
+.patch-note-post ul { margin: .8rem 0; padding-left: 1.2rem; }
+.patch-note-post li { margin: .38rem 0; color: var(--page-muted); }
+.patch-note-footer { color: #735e43; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+.patch-note-footer strong { padding: .2rem .5rem; color: #f5e8cd; border: 1px solid #3e1d20; border-radius: 2px; background: var(--page-burgundy); font-size: .64rem; }
 .updates-aside { position: sticky; top: 88px; padding: 1rem; border-top: 3px solid var(--page-moss); }
 .updates-aside h2 { margin-top: 0; font: 800 1rem var(--page-font-display); }
 

@@ -383,6 +383,22 @@ body { color: var(--cl-readable-dark); }
   text-shadow: 0 1px rgba(255, 248, 224, .55);
 }
 
+.setup-card .server-realm-heading {
+  color: #4b1f25 !important;
+  font-weight: 950;
+  text-shadow: none;
+}
+
+.setup-card #onlineStatusText {
+  color: #2b1a0f !important;
+  text-shadow: none;
+}
+
+.setup-card #onlineStatusDetail {
+  color: #4f3f2d !important;
+  text-shadow: none;
+}
+
 /* Shared controls keep their role legible in every surface context. */
 :where(
   .primary-btn,
