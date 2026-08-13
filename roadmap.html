@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Roadmap</title>
+  <meta name="description" content="See what is playable now, what is being improved, and what is coming next to Crownlands." />
+  <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
+  <link rel="canonical" href="https://playcrownlands.com/roadmap.html" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site-info.css?v=20260812-visual-correction-pass-4a-r1" />
+  <link rel="stylesheet" href="/roadmap.css?v=20260813-roadmap-v1" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-brand" href="/">Crownlands</a>
+      <div class="site-nav-links">
+        <a href="/guides.html">Guides</a>
+        <a href="/updates.html">Updates</a>
+        <a href="/about.html">About</a>
+        <a href="/roadmap.html" aria-current="page">Roadmap</a>
+        <a href="/game-rules.html">Rules</a>
+        <a href="/support.html">Support</a>
+        <a href="/privacy.html">Privacy</a>
+        <a class="nav-play" href="/play/">Play free</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="site-main roadmap-main">
+    <section class="roadmap-hero" aria-labelledby="roadmapTitle">
+      <div class="roadmap-hero-copy">
+        <span class="site-eyebrow">The royal war council</span>
+        <h1 id="roadmapTitle">Crownlands Roadmap</h1>
+        <p>See what is live, what is being polished, and where the realm is heading next.</p>
+        <div class="roadmap-stat-chips" aria-label="Roadmap highlights">
+          <span>15 Connected Regions</span>
+          <span>Clans Live</span>
+          <span>Camps &amp; Strongholds Live</span>
+          <span>Achievements Live</span>
+          <span>Gear Beginning Stages</span>
+          <span>Dynamic Maps In Development</span>
+        </div>
+      </div>
+
+      <aside class="realm-expansion" aria-labelledby="realmExpansionTitle">
+        <div class="realm-expansion-heading">
+          <span class="wax-seal" aria-hidden="true">15</span>
+          <div>
+            <span>World dispatch</span>
+            <h2 id="realmExpansionTitle">The connected realm</h2>
+          </div>
+        </div>
+        <div class="realm-node-map" role="img" aria-label="Fifteen live region nodes connected together with future expansion nodes shown beyond the current realm">
+          <div id="liveRegionNodes" class="live-region-nodes" aria-hidden="true"></div>
+          <div id="futureRegionNodes" class="future-region-nodes" aria-hidden="true"></div>
+        </div>
+        <div class="realm-expansion-status">
+          <strong>15 Regions Live</strong>
+          <span>Dynamic Expansion In Development</span>
+        </div>
+      </aside>
+    </section>
+
+    <nav class="campaign-track" aria-label="Development campaign phases">
+      <span class="campaign-track-label">Campaign path</span>
+      <ol>
+        <li class="is-live"><button type="button" data-phase-shortcut="playable"><span>1</span><strong>Live Foundation</strong></button></li>
+        <li class="is-polish"><button type="button" data-phase-shortcut="improving"><span>2</span><strong>Polish &amp; Progression</strong></button></li>
+        <li class="is-development"><button type="button" data-phase-shortcut="development"><span>3</span><strong>World Expansion</strong></button></li>
+        <li class="is-future"><button type="button" data-phase-shortcut="future"><span>4</span><strong>Seasons &amp; Clan Wars</strong></button></li>
+      </ol>
+    </nav>
+
+    <section class="roadmap-controls" aria-labelledby="exploreRoadmapTitle">
+      <div class="roadmap-controls-heading">
+        <div>
+          <span class="site-eyebrow">Council records</span>
+          <h2 id="exploreRoadmapTitle">Explore the campaign plan</h2>
+        </div>
+        <p>Filter the council table, search for a feature, and open any decree for more detail.</p>
+      </div>
+
+      <label class="roadmap-search" for="roadmapSearch">
+        <span>Search the roadmap</span>
+        <span class="roadmap-search-field">
+          <span aria-hidden="true">&#9906;</span>
+          <input id="roadmapSearch" type="search" autocomplete="off" placeholder="Search gear, clans, maps, achievements, seasons..." />
+        </span>
+      </label>
+
+      <div class="filter-block">
+        <span class="filter-label" id="statusFilterLabel">Status</span>
+        <div id="statusFilters" class="roadmap-filter-list" role="group" aria-labelledby="statusFilterLabel"></div>
+      </div>
+
+      <div class="filter-block">
+        <span class="filter-label" id="categoryFilterLabel">Council desk</span>
+        <div id="categoryFilters" class="roadmap-filter-list category-filters" role="group" aria-labelledby="categoryFilterLabel"></div>
+      </div>
+
+      <div class="roadmap-results-line">
+        <p id="roadmapResultsStatus" role="status" aria-live="polite">Loading roadmap records...</p>
+        <button id="clearRoadmapFilters" class="clear-roadmap-filters" type="button">Clear filters</button>
+      </div>
+    </section>
+
+    <section id="roadmapBoard" class="roadmap-board" aria-label="Crownlands development roadmap"></section>
+
+    <section id="roadmapEmpty" class="roadmap-empty" hidden>
+      <span aria-hidden="true">&#128220;</span>
+      <h2>No council records match</h2>
+      <p>Try another search or clear the filters to see the full roadmap.</p>
+      <button type="button" data-clear-roadmap>Show the full roadmap</button>
+    </section>
+
+    <aside class="roadmap-disclaimer">
+      <span class="wax-seal small" aria-hidden="true">C</span>
+      <p>Crownlands is in active development. Roadmap items may change based on testing, balance, performance, and player feedback.</p>
+    </aside>
+
+    <section class="roadmap-cta" aria-labelledby="roadmapCtaTitle">
+      <span class="site-eyebrow">Your banner is welcome</span>
+      <h2 id="roadmapCtaTitle">Join the Realm Early</h2>
+      <p>Crownlands is growing through player testing, balance updates, and community feedback. Jump in now and help shape the realm.</p>
+      <div class="site-actions">
+        <a class="site-button" href="/play/">Play Crownlands</a>
+        <a class="site-button secondary" href="/how-to-play.html">How to Play</a>
+      </div>
+    </section>
+
+    <noscript>
+      <section class="content-section">
+        <h2>Roadmap interactions require JavaScript</h2>
+        <p>Crownlands is playable today across 15 connected regions. Current development is focused on interface polish, achievements, early Inner Castle gear work, performance, and dynamic regional expansion.</p>
+      </section>
+    </noscript>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>&copy; 2026 Crownlands. A browser-based strategy game.</span>
+      <nav aria-label="Footer">
+        <a href="/">Home</a>
+        <a href="/play/">Play</a>
+        <a href="/guides.html">Guides</a>
+        <a href="/updates.html">Updates</a>
+        <a href="/about.html">About</a>
+        <a href="/roadmap.html" aria-current="page">Roadmap</a>
+        <a href="/how-to-play.html">How to Play</a>
+        <a href="/battle-economy-guide.html">Battle Guide</a>
+        <a href="/game-rules.html">Rules</a>
+        <a href="/support.html">Support</a>
+        <a href="/privacy.html">Privacy</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="/roadmap-data.js?v=20260813-roadmap-v1" defer></script>
+  <script src="/roadmap.js?v=20260813-roadmap-v1" defer></script>
+</body>
+</html>

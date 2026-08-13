@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
   "index.html", "styles.css", "interface-theme.css", "ui-contrast-correction.css", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
+  "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
   "assets/map-editor-data.js", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js",
   "artifact-manifest.json",
 ];
