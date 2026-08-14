@@ -82,7 +82,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260814-welcome-back-contrast-r29";
+const BUILD_ID = "20260814-profile-theme-r31";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {

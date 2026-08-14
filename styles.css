@@ -4865,6 +4865,14 @@ button.inventory-slot {
 .battle-report-card.victory { border-color: #92c744; }
 .battle-report-card.defeat { border-color: #dc644f; }
 .battle-report-card.scout { border-color: #c8d3e4; }
+.battle-report-card.scout {
+  border-color: rgba(53, 94, 122, .72) !important;
+  border-left-color: #355e7a !important;
+  background: linear-gradient(180deg, #f5e7c8, #d8c18f) !important;
+}
+.battle-report-card.scout .battle-report-city > span {
+  background: linear-gradient(#2376c8, #145391) !important;
+}
 .battle-report-result {
   display: grid;
   place-items: center;

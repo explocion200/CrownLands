@@ -20,6 +20,7 @@ const stylesSource = read("styles.css");
 const interfaceThemeSource = read("interface-theme.css");
 const manuscriptPrototypeSource = read("manuscript-prototype.css");
 const uiContrastCorrectionSource = read("ui-contrast-correction.css");
+const profileThemeSource = read("profile-theme.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const layout = JSON.parse(read("functions/world-layout.json"));
@@ -28,7 +29,7 @@ const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-mani
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Preserve the complete offline game shell while allowing the shared WCAG
 // contrast layer to grow by no more than one tightly bounded 64 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3136 * 1024;
+const MAX_INSTALL_PRECACHE_BYTES = 3200 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -62,6 +63,7 @@ const entrypointBudgets = {
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
+  "profile-theme.css": 32 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   "firebaseClient.js": 150 * 1024,
   "animation-manager.js": 80 * 1024,
@@ -207,6 +209,7 @@ for (const requiredShellFile of [
   "interface-theme.css",
   "manuscript-prototype.css",
   "ui-contrast-correction.css",
+  "profile-theme.css",
   "base-cities.js",
   "instant-economy-actions.js",
   "game.js",
@@ -224,7 +227,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

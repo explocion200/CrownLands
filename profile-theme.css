@@ -1,0 +1,555 @@
+/* Crownlands unified Profile palette ----------------------------------- */
+
+:root {
+  --cl-profile-canvas: #061926;
+  --cl-profile-surface: #0a2b40;
+  --cl-profile-surface-raised: #123b56;
+  --cl-profile-surface-soft: #173f5e;
+  --cl-profile-border: #507b92;
+  --cl-profile-border-bright: #7ca7ba;
+  --cl-profile-ivory: #fff8e8;
+  --cl-profile-muted: #c5dfeb;
+  --cl-profile-soft: #a9d4e8;
+  --cl-profile-gold: #ffe29a;
+  --cl-profile-gold-deep: #d9a83e;
+  --cl-profile-danger: #65292e;
+  --cl-profile-danger-deep: #3f171d;
+  --cl-profile-success: #285b47;
+  --cl-profile-success-deep: #14382c;
+
+  --cl-soot: var(--cl-profile-canvas);
+  --cl-charcoal: var(--cl-profile-surface);
+  --cl-iron: var(--cl-profile-surface-soft);
+  --cl-iron-dark: var(--cl-profile-surface);
+  --cl-timber: var(--cl-profile-surface-raised);
+  --cl-timber-dark: var(--cl-profile-surface);
+  --cl-parchment: var(--cl-profile-surface-raised);
+  --cl-aged-parchment: var(--cl-profile-surface);
+  --cl-ivory: var(--cl-profile-ivory);
+  --cl-ink: var(--cl-profile-ivory);
+  --cl-muted-brass: var(--cl-profile-gold-deep);
+  --cl-panel-edge: var(--cl-profile-border);
+  --cl-paper-line: rgba(124, 167, 186, .26);
+  --cl-ledger-line: rgba(124, 167, 186, .2);
+  --panel: rgba(6, 25, 38, .96);
+  --panel2: rgba(10, 43, 64, .97);
+  --line: rgba(124, 167, 186, .42);
+  --ink: var(--cl-profile-ivory);
+  --muted: var(--cl-profile-muted);
+  --gold: var(--cl-profile-gold);
+  --blue: var(--cl-profile-surface-soft);
+  --blue2: var(--cl-profile-surface);
+  --ui-midnight: var(--cl-profile-canvas);
+  --ui-navy: var(--cl-profile-surface);
+  --ui-navy-raised: var(--cl-profile-surface-raised);
+  --ui-navy-soft: var(--cl-profile-surface-soft);
+  --ui-gold-dark: var(--cl-profile-gold-deep);
+  --ui-gold: var(--cl-profile-gold);
+  --ui-gold-bright: var(--cl-profile-gold);
+  --ui-parchment: var(--cl-profile-ivory);
+  --ui-border: rgba(124, 167, 186, .64);
+  --ui-border-soft: rgba(124, 167, 186, .34);
+  --ui-blue-border: rgba(124, 167, 186, .48);
+  --ui-surface: linear-gradient(180deg, #123b56, #071b2a);
+  --ui-surface-raised: linear-gradient(180deg, #173f5e, #0a2b40);
+  --cl-parchment-sheet: linear-gradient(180deg, #123b56, #071b2a);
+  --cl-parchment-royal: linear-gradient(180deg, #173f5e, #0a2b40);
+  --cl-timber-panel: linear-gradient(180deg, #123b56, #061926);
+  --cl-iron-panel: linear-gradient(180deg, #173f5e, #071b2a);
+  --cl-indigo-panel: linear-gradient(180deg, #285d7b, #0a2b40);
+  --cl-inset-edge: inset 0 0 0 1px rgba(223, 242, 252, .12), inset 0 -2px 0 rgba(0, 0, 0, .3);
+
+  --cl-readable-paper: var(--cl-profile-ivory);
+  --cl-readable-paper-strong: var(--cl-profile-ivory);
+  --cl-readable-paper-muted: var(--cl-profile-muted);
+  --cl-readable-paper-soft: var(--cl-profile-soft);
+  --cl-readable-dark: var(--cl-profile-ivory);
+  --cl-readable-dark-strong: var(--cl-profile-ivory);
+  --cl-readable-dark-muted: var(--cl-profile-muted);
+  --cl-readable-dark-soft: var(--cl-profile-soft);
+  --cl-readable-gold-paper: var(--cl-profile-gold);
+  --cl-readable-gold-dark: var(--cl-profile-gold);
+  --cl-paper-separator: rgba(124, 167, 186, .32);
+
+  --cl-contrast-paper: var(--cl-profile-surface);
+  --cl-contrast-paper-light: var(--cl-profile-surface-raised);
+  --cl-contrast-paper-deep: var(--cl-profile-canvas);
+  --cl-contrast-ink: var(--cl-profile-ivory);
+  --cl-contrast-ink-muted: var(--cl-profile-muted);
+  --cl-contrast-border: var(--cl-profile-border);
+  --cl-tab-unselected-bg: var(--cl-profile-surface);
+  --cl-tab-unselected-text: var(--cl-profile-ivory);
+  --cl-tab-selected-bg: var(--cl-profile-gold-deep);
+  --cl-tab-selected-text: #122333;
+  --cl-paper-surface-text: var(--cl-profile-ivory);
+  --cl-dark-surface-text: var(--cl-profile-ivory);
+}
+
+body {
+  color: var(--cl-profile-ivory);
+}
+
+/* Every full interface surface uses the Profile screen shell. */
+:is(
+  .setup-card,
+  .online-login,
+  .login-game-info,
+  .commander-panel,
+  .profile-screen,
+  .modal .modal-card,
+  .map-loading-panel,
+  .performance-panel,
+  .rotate-warning > div
+) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #123b56, #061926) !important;
+  box-shadow: inset 0 0 0 1px rgba(223, 242, 252, .1), 0 18px 44px rgba(0, 0, 0, .48) !important;
+}
+
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)::before {
+  border-color: rgba(124, 167, 186, .3) !important;
+}
+
+/* Cards, rows, statistics, and nested panels share one navy hierarchy. */
+:is(
+  .profile-settings-section,
+  .audio-channel-card,
+  .kingdom-stat,
+  .profile-achievement-summary,
+  .profile-achievement-summary-grid > div,
+  .profile-notification-row,
+  .profile-skill-summary > div,
+  .profile-skill-reset,
+  .profile-skill-list .skill-row,
+  .skill-preset-panel,
+  .skill-preset-detail,
+  .skill-preset-allocation-group,
+  .shop-balance,
+  .shop-rewarded-section,
+  .shop-item,
+  .inventory-summary,
+  .inventory-slot,
+  .inventory-selection,
+  .city-list-summary,
+  .city-list-row,
+  .city-list-empty,
+  .island-switch-row,
+  .leaderboard-toolbar,
+  .leaderboard-row,
+  .leaderboard-empty,
+  .battle-report-card,
+  .battle-report-empty,
+  .battle-report-detail-head,
+  .battle-report-detail-grid > div,
+  .battle-visual-target,
+  .battle-visual-rule,
+  .battle-visual-section,
+  .battle-visual-wall,
+  .battle-visual-rewards,
+  .incoming-attack-summary,
+  .incoming-attack-card,
+  .incoming-attack-empty,
+  .outgoing-attack-summary,
+  .outgoing-attack-card,
+  .active-objective-card,
+  .held-camp-operation-card,
+  .held-stronghold-operation-card,
+  .reinforcement-operation-card,
+  .holding-reinforcement-panel,
+  .holding-reinforcement-row,
+  .scout-report-city,
+  .scout-report-overview > div,
+  .scout-defense-breakdown,
+  .scout-breakdown-row,
+  .scout-skill-list,
+  .scouted-report-route > div,
+  .scouted-report-time,
+  .scouted-report-section,
+  .scouted-report-metric,
+  .scout-attempt-explanation,
+  .troop-route-city,
+  .troop-slider-control,
+  .troop-slider-preview > div,
+  .send-confirm-card,
+  .send-outcome,
+  .city-stat-panel,
+  .stat-wide,
+  .stat-chip,
+  .main-city-action-panel,
+  .city-level-up-panel,
+  .relinquish-city-action-panel,
+  .camp-info-tab-panel,
+  .camp-public-status > div,
+  .gold-camp-info-grid > div,
+  .gold-camp-description,
+  .camp-reward-overview > div,
+  .camp-reward-row,
+  .relic-drop-row,
+  .deed-camp-condition,
+  .deed-camp-history-row,
+  .citadel-reign-heading,
+  .citadel-reign-row,
+  .citadel-reign-note,
+  .citadel-reign-empty,
+  .clan-panel,
+  .clan-card,
+  .clan-hero,
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-rename-card,
+  .clan-list-row,
+  .clan-member-row,
+  .clan-applications article,
+  .clan-rally-card,
+  .clan-quest-card,
+  .clan-objective-card,
+  .public-profile-section,
+  .public-profile-location,
+  .public-profile-clan,
+  .public-clan-details dl div,
+  .public-clan-member,
+  .daily-reward-panel,
+  .daily-reward-card,
+  .daily-reward-loading,
+  .daily-reward-error,
+  .daily-mission-row,
+  .daily-mission-detail-stat,
+  .daily-mission-recommendation,
+  .seasonal-achievement-panel,
+  .seasonal-achievement-hero,
+  .seasonal-achievement-row,
+  .seasonal-achievement-details,
+  .offline-reward-grid > div,
+  .offline-lost-cities,
+  .level-up-reward-card,
+  .level-up-reward-item,
+  .patch-notes-intro,
+  .patch-notes-release-list article,
+  .realm-activity-card,
+  .realm-activity-proclamation
+) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #123b56, #0a2b40) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .1), 0 5px 12px rgba(0, 0, 0, .2) !important;
+}
+
+/* Profile typography: gold headings, ivory values, pale-blue supporting copy. */
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)
+  :is(h1, h2, h3, h4, legend, .profile-section-heading h3, .panel-header strong) {
+  color: var(--cl-profile-gold) !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72) !important;
+}
+
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)
+  :is(strong, b, output, .player-name-link, .clan-name-link) {
+  color: var(--cl-profile-ivory) !important;
+  text-shadow: none !important;
+}
+
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)
+  :is(p, li, dd, dt, label, span, small, em) {
+  color: var(--cl-profile-muted) !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.profile-section-heading span, .settings-section-header span, .modal-card > h2, .realm-activity-card-head strong) {
+  color: var(--cl-profile-gold) !important;
+}
+
+:is(.player-name-link, .clan-name-link, .public-profile-clan-link, .deed-history-player-link) {
+  color: var(--cl-profile-gold) !important;
+  background: transparent !important;
+  text-decoration-color: rgba(255, 226, 154, .66);
+}
+
+/* Inputs never fall back to parchment or brown ink. */
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)
+  :is(input:not([type="range"]):not([type="color"]), select, textarea) {
+  color: var(--cl-profile-ivory) !important;
+  caret-color: var(--cl-profile-gold);
+  border-color: var(--cl-profile-border) !important;
+  background: #061926 !important;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .42) !important;
+}
+
+:is(.setup-card, .commander-panel, .profile-screen, .modal .modal-card)
+  :is(input, textarea)::placeholder {
+  color: var(--cl-profile-soft) !important;
+  opacity: 1;
+}
+
+input[type="range"] {
+  accent-color: var(--cl-profile-gold-deep);
+}
+
+/* Standard controls are blue; current selections use the Profile gold tab. */
+.profile-screen-header {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #173f5e, #071b2a) !important;
+  box-shadow: inset 0 -1px 0 rgba(223, 242, 252, .12) !important;
+}
+
+.modal .modal-card > h2,
+.battle-report-modal .modal-card > h2,
+.shop-modal .modal-card > h2,
+.inventory-modal .modal-card > h2 {
+  width: auto !important;
+  padding: .18rem 0 .42rem !important;
+  color: var(--cl-profile-gold) !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72) !important;
+}
+
+.profile-screen .kingdom-stat .profile-production-bonus {
+  color: var(--cl-profile-gold) !important;
+  text-shadow: none !important;
+}
+
+:is(
+  .profile-tabs,
+  .profile-subtabs,
+  .skill-preset-tabs,
+  .battle-report-filters,
+  .leaderboard-tabs,
+  .daily-reward-tabs,
+  .citadel-info-tabs,
+  .clan-section-nav,
+  .clan-browser-nav,
+  .animation-mode-toggle,
+  .push-alerts-toggle
+) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: #061926 !important;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, .34) !important;
+}
+
+:is(
+  .setup-card,
+  .commander-panel,
+  .profile-screen,
+  .modal .modal-card,
+  .bottom-nav
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.primary-btn):not(.profile-primary-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border-bright) !important;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .14), 0 3px 7px rgba(0, 0, 0, .26) !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72) !important;
+}
+
+:is(
+  .profile-tabs button,
+  .profile-subtabs button,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .leaderboard-tab,
+  .daily-reward-tabs button,
+  .camp-info-tab,
+  .citadel-info-tabs button,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .animation-mode-option,
+  .push-alerts-option,
+  .city-list-toolbar button
+):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+}
+
+:is(
+  .profile-tabs button,
+  .profile-subtabs button,
+  .skill-preset-tabs button,
+  .battle-report-filters button,
+  .leaderboard-tab,
+  .daily-reward-tabs button,
+  .camp-info-tab,
+  .citadel-info-tabs button,
+  .clan-section-nav button,
+  .clan-browser-nav button,
+  .animation-mode-option,
+  .push-alerts-option,
+  .city-list-toolbar button
+):is(.active, [aria-selected="true"], [aria-pressed="true"]) {
+  color: #122333 !important;
+  border-color: var(--cl-profile-gold) !important;
+  background: linear-gradient(180deg, var(--cl-profile-gold), var(--cl-profile-gold-deep)) !important;
+  text-shadow: 0 1px rgba(255, 249, 222, .58) !important;
+}
+
+/* The legacy city-list selector is deliberately very specific, so keep this
+   equally explicit to prevent its burgundy active state from resurfacing. */
+.city-list-modal .city-list-toolbar button.active,
+.city-list-modal .city-list-toolbar button[aria-pressed="true"] {
+  color: #122333 !important;
+  border-color: var(--cl-profile-gold) !important;
+  background: linear-gradient(180deg, var(--cl-profile-gold), var(--cl-profile-gold-deep)) !important;
+  text-shadow: 0 1px rgba(255, 249, 222, .58) !important;
+}
+
+.city-list-modal .city-list-toolbar button:is(.active, [aria-pressed="true"]) :is(span, small, .cl-icon) {
+  color: inherit !important;
+}
+
+:is(.primary-btn, .profile-primary-btn, .shop-buy-btn, .inventory-use-btn, .troop-slider-confirm, .offline-collect-btn, .level-up-collect-btn) {
+  color: #122333 !important;
+  border-color: var(--cl-profile-gold) !important;
+  background: linear-gradient(180deg, var(--cl-profile-gold), var(--cl-profile-gold-deep)) !important;
+  text-shadow: 0 1px rgba(255, 249, 222, .58) !important;
+}
+
+:is(.danger-action, .danger-btn, .delete-btn, .relinquish-confirm, .clan-leave, .clan-disband) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: #bd6867 !important;
+  background: linear-gradient(180deg, var(--cl-profile-danger), var(--cl-profile-danger-deep)) !important;
+}
+
+/* The persistent HUD follows the same Profile shell without changing map art. */
+:is(.profile-gold, .resource-pill, .hud-btn, .profile-rank-btn, .main-city-return, .effect-status-badge) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #173f5e, #071b2a) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .12), 0 4px 9px rgba(0, 0, 0, .3) !important;
+}
+
+.bottom-nav .report-nav-btn {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+}
+
+.bottom-nav .report-nav-btn :is(.nav-btn-heading, .nav-btn-label, .nav-btn-count) {
+  color: var(--cl-profile-ivory) !important;
+  text-shadow: none !important;
+}
+
+.realm-announcement-banner,
+.toast,
+.toast.map-location-announcement {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border-bright) !important;
+  background: linear-gradient(180deg, #173f5e, #071b2a) !important;
+  box-shadow: inset 0 0 0 1px rgba(223, 242, 252, .12), 0 10px 24px rgba(0, 0, 0, .4) !important;
+}
+
+:is(.realm-announcement-banner, .toast) :is(strong, b) {
+  color: var(--cl-profile-gold) !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72) !important;
+}
+
+:is(.realm-announcement-banner, .toast) :is(span, small, p) {
+  color: var(--cl-profile-muted) !important;
+  text-shadow: none !important;
+}
+
+/* Reports retain outcome meaning inside the unified navy report family. */
+.battle-report-card,
+.battle-report-card.scout,
+.battle-report-card.victory,
+.battle-report-card.defeat {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border) !important;
+  background: linear-gradient(180deg, #123b56, #0a2b40) !important;
+}
+
+.battle-report-card :is(.battle-report-city, .battle-report-troops, .battle-report-opponent)
+  :is(strong, b, .player-name-link) {
+  color: var(--cl-profile-ivory) !important;
+}
+
+.battle-report-card :is(.battle-report-city, .battle-report-troops, .battle-report-opponent)
+  :is(span, small) {
+  color: var(--cl-profile-muted) !important;
+}
+
+.battle-report-card .battle-report-city > span {
+  color: var(--cl-profile-ivory) !important;
+}
+
+.battle-report-card.victory .battle-report-result {
+  background: linear-gradient(180deg, var(--cl-profile-success), var(--cl-profile-success-deep)) !important;
+}
+
+.battle-report-card.defeat .battle-report-result {
+  background: linear-gradient(180deg, var(--cl-profile-danger), var(--cl-profile-danger-deep)) !important;
+}
+
+.battle-report-card.scout .battle-report-result {
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+}
+
+.battle-report-card .battle-report-result :is(strong, small) {
+  color: var(--cl-profile-ivory) !important;
+}
+
+:is(.modal.scout-report-modal .detailed-scout-report, .battle-report-modal .battle-report-detail.scout, .detailed-battle-report) {
+  color: var(--cl-profile-ivory) !important;
+  background: linear-gradient(180deg, #123b56, #071b2a) !important;
+}
+
+/* Relationship and urgency colors remain meaningful. */
+:is(.incoming-attack-card:not(.incoming-scout-card), .incoming-attack-btn, .scouted-report-alert, .toast.error, .toast.warning) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: #bd6867 !important;
+  background: linear-gradient(180deg, var(--cl-profile-danger), var(--cl-profile-danger-deep)) !important;
+}
+
+:is(.clan-member-row.selected, .holding-reinforcement-row, .scouted-report-reinforcement-row, .toast.success) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: #6fae8c !important;
+  background: linear-gradient(180deg, var(--cl-profile-success), var(--cl-profile-success-deep)) !important;
+}
+
+:is(.incoming-scout-card, .outgoing-attack-card, .outgoing-attack-btn) {
+  color: var(--cl-profile-ivory) !important;
+  border-color: var(--cl-profile-border-bright) !important;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+}
+
+:is(.daily-reward-card.claimed, .daily-mission-row.complete, .seasonal-achievement-row.complete) {
+  border-color: #6fae8c !important;
+  background: linear-gradient(180deg, #285b47, #14382c) !important;
+}
+
+:is(.daily-reward-card.locked, .skill-preset-tabs button.locked, button:disabled) {
+  color: #d7e1e6 !important;
+  border-color: #687f8b !important;
+  background: linear-gradient(180deg, #405766, #263b48) !important;
+}
+
+/* Progress and focus accents use the same gold found in the Profile UI. */
+:is(.profile-xp-track, .daily-mission-progress, .seasonal-achievement-progress, progress) {
+  border-color: var(--cl-profile-border) !important;
+  background: #061926 !important;
+}
+
+:is(.profile-xp-track > span, .daily-mission-progress > i, .seasonal-achievement-progress > i) {
+  background: linear-gradient(90deg, var(--cl-profile-gold-deep), var(--cl-profile-gold)) !important;
+}
+
+:is(button, input, select, textarea, a, [tabindex]):focus-visible {
+  outline-color: var(--cl-profile-gold) !important;
+}
+
+@media (max-width: 620px) {
+  :is(.modal .modal-card, .profile-screen, .commander-panel) {
+    border-color: var(--cl-profile-border) !important;
+  }
+
+  :is(.profile-settings-section, .battle-report-card, .clan-panel, .daily-reward-card, .city-list-row) {
+    box-shadow: inset 0 1px 0 rgba(223, 242, 252, .08), 0 3px 8px rgba(0, 0, 0, .2) !important;
+  }
+}

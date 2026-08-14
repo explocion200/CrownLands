@@ -140,6 +140,10 @@ assert.match(css, /\.realm-activity-card,[\s\S]*?\.realm-activity-card\.citadel[
 assert.match(css, /\.realm-activity-card \.realm-activity-proclamation p,[\s\S]*?\.realm-activity-card\.citadel \.realm-activity-proclamation p[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?text-shadow:\s*none !important;/, "Realm Activity proclamation copy is not readable on its parchment surface.");
 assert.match(css, /\.realm-activity-card \.realm-activity-proclamation \.player-name-link,[\s\S]*?color:\s*#175776 !important;/, "Realm Activity player links are not visibly distinguished.");
 assert.match(css, /\.realm-activity-card \.realm-activity-location-btn,[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "Realm Activity's location action is not high contrast.");
+assert.match(css, /\.battle-report-card \.battle-report-city>span\{color:#fff8ea!important\}/, "Battle report city-level badges can still inherit brown lettering.");
+assert.match(baseCss, /\.battle-report-card\.scout\s*\{[\s\S]*?border-left-color:\s*#355e7a !important;[\s\S]*?linear-gradient\(180deg, #f5e7c8, #d8c18f\) !important;/, "Scout report cards do not share the attack-report parchment and blue accent theme.");
+assert.match(baseCss, /\.battle-report-card\.scout \.battle-report-city > span\s*\{[\s\S]*?background:\s*linear-gradient\(#2376c8, #145391\) !important;/, "Scout report city-level badges do not use the standard attack blue.");
+assert.match(css, /\.battle-report-card\.scout \.battle-report-result\s*\{[\s\S]*?color:\s*var\(--cl-contrast-ivory-bright\);[\s\S]*?background:\s*var\(--cl-state-victory\) !important;/, "Scout report result badges do not use the readable attack-report blue theme.");
 assert.match(css, /:is\(\.modal\.scout-report-modal \.detailed-scout-report,[\s\S]*?\.battle-report-modal \.battle-report-detail\.scout\)\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #123b56, #071b2a\) !important;/, "Scout report detail surfaces are not consistently high contrast.");
 assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-report-overview > div, \.scout-defense-breakdown, \.scout-skill-list\),[\s\S]*?background:\s*#0a2b40 !important;/, "Scout intelligence cards can still inherit paper text on a dark background.");
 assert.match(css, /\.battle-report-modal \.scouted-report-alert\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(135deg, #65292e, #0b2d42\) !important;/, "The You Were Scouted alert is not readable.");
@@ -195,7 +199,7 @@ assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "I
 assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-welcome-back-contrast-r29");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-profile-theme-r31");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");
