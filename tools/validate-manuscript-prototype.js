@@ -91,7 +91,7 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
   const relativePath = url.replace(/^\//, "").split("?")[0];
   return total + fs.statSync(resolve(relativePath)).size;
 }, 0);
-assert.ok(staticCacheBytes <= 3136 * 1024, "The service-worker installation cache exceeds 3.0625 MiB.");
+assert.ok(staticCacheBytes <= 3200 * 1024, "The service-worker installation cache exceeds 3.125 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

@@ -1185,6 +1185,7 @@
   color: var(--cl-contrast-ink-muted) !important;
   text-shadow: none;
 }
+.battle-report-card .battle-report-city>span{color:#fff8ea!important}
 
 .battle-report-card.victory .battle-report-result {
   color: var(--cl-contrast-ivory-bright);
@@ -1193,9 +1194,9 @@
 }
 
 .battle-report-card.scout .battle-report-result {
-  color: #261b0d;
-  border-color: #7b591d;
-  background: var(--cl-state-scout) !important;
+  color: var(--cl-contrast-ivory-bright);
+  border-color: #28475c;
+  background: var(--cl-state-victory) !important;
 }
 
 .battle-report-card.defeat .battle-report-result {
@@ -1211,8 +1212,8 @@
 }
 
 .battle-report-card.scout .battle-report-result :is(strong, small) {
-  color: #261b0d !important;
-  text-shadow: 0 1px rgba(255, 232, 174, .28);
+  color: var(--cl-contrast-ivory-bright) !important;
+  text-shadow: 0 1px 1px rgba(20, 8, 8, .68);
 }
 
 .battle-report-modal .battle-visual-outcome,

@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const SOURCE_SIZE = 1254;
-const BUILD_ID = "20260814-welcome-back-contrast-r29";
+const BUILD_ID = "20260814-profile-theme-r31";
 
 const expected = [
   ["item-common-gear-box", "assets/gear/common-gear-box.png", 192, "gear-box"],
