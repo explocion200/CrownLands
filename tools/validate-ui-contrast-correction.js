@@ -72,7 +72,6 @@ for (const selector of [
   ".camp-info-tab",
   ".leaderboard-tab",
   ".daily-reward-tabs",
-  ".flag-swatch-grid",
   ".clan-rallies-panel",
   ".clan-rewards-panel",
   ".clan-member-row",
@@ -175,10 +174,11 @@ assert.match(game, /class="battle-report-detail-btn"[\s\S]{0,220}aria-label="Vie
 assert.match(game, /aria-label="View full report" title="View full report">\$\{renderCrownlandsIcon\("forward"\)\}/, "The full-report action does not use the visible forward icon.");
 assert.match(css, /\.battle-report-card \.battle-report-detail-btn[\s\S]*?background:\s*linear-gradient\(180deg, #fff0c7, #d5ae67\) !important/, "The full-report action is not visibly styled.");
 
-assert.match(css, /\.profile-screen \.flag-swatch-grid button[\s\S]*?var\(--flag-swatch\) !important;/, "Flag dyes can still be overwritten by the shared button face.");
+assert.match(baseCss, /\.flag-swatch-grid \.flag-color-swatch[\s\S]*?background-color:\s*var\(--flag-swatch\)/, "Flag swatches do not paint their actual heraldic colors.");
+assert.match(profileCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Profile button theme can still overwrite inactive flag swatches.");
+assert.match(paletteCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Crownlands palette can still overwrite inactive flag swatches.");
 assert.match(game, /data-flag-color[\s\S]{0,400}aria-pressed="\$\{selected\}"/, "Flag swatches must expose their selected state.");
-assert.doesNotMatch(index, /M8 27h18v3H6v-5c1-5 3-9 7-12/, "The ambiguous legacy horse charge remains in the production sprite.");
-assert.match(index, /id="cl-icon-flag-horse"[\s\S]{0,260}M6 29h21v-4/, "The corrected heraldic horse charge is missing.");
+assert.match(index, /id="cl-icon-flag-horse"[\s\S]{0,260}M8 29l1-11/, "The dedicated heraldic horse charge is missing.");
 assert.match(index, /hud-report-192x192-21644b7390fb\.webp/, "The approved Report artwork changed.");
 assert.match(index, /id="logBtn"[\s\S]{0,520}class="nav-btn-heading">Reports<\/strong>[\s\S]{0,160}nav-btn-timer-placeholder/, "Reports is missing the aligned heading and reserved timer row.");
 assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="outgoingAttackCount"[\s\S]{0,100}Outgoing<\/strong>[\s\S]{0,160}id="outgoingAttackTime"/, "Troop Movements is missing its aligned count, label, and timer treatment.");
@@ -201,7 +201,7 @@ assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "I
 assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-main-city-r36");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-readability-r38");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");

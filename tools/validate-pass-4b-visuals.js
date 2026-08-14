@@ -24,16 +24,16 @@ assert.match(publicStyles, /max-height:\s*500px\)[\s\S]*orientation:\s*landscape
 assert.doesNotMatch(publicStyles, /backdrop-filter/);
 assert.doesNotMatch(publicStyles, /border-radius:\s*(?:1[0-9]|2[0-9]|999)px/);
 
-assert.match(game, /const FLAG_DYE_TREATMENTS = Object\.freeze/);
-assert.match(game, /element\.style\.setProperty\("--flag-primary", primaryDye\.display\)/);
-assert.match(game, /data-flag-color="\$\{color\}"/);
-assert.match(game, /FLAG_COLORS\.includes\(flag\?\.primary\)/);
-assert.match(game, /FLAG_COLORS\.includes\(flag\?\.secondary\)/);
-assert.match(game, /FLAG_COLORS\.includes\(flag\?\.symbolColor\)/);
+assert.doesNotMatch(game, /FLAG_DYE_TREATMENTS/, "Player-selected flag colors must not be substituted by presentation dyes.");
+assert.match(game, /element\.style\.setProperty\("--flag-primary", normalized\.primary\)/);
+assert.match(game, /data-flag-color="\$\{option\.value\}"/);
+assert.match(game, /PLAYER_FLAG_CONFIG\.normalizeFlag\(flag, identityKey\)/);
 assert.match(game, /setProperty\("--flag-symbol-color"/);
+assert.match(game, /setProperty\("--flag-symbol-outline"/);
 assert.match(indexHtml, /id="flagSymbolColors"/);
 assert.match(styles, /\.flag-symbol-control[\s\S]*grid-column:\s*1\s*\/\s*-1/);
 assert.match(styles, /\.kingdom-flag \.flag-symbol\s*\{[^}]*color:\s*var\(--flag-symbol-color,[^)]*\) !important/);
+assert.match(styles, /\.flag-color-swatch[\s\S]*background-color:\s*var\(--flag-swatch\)/);
 assert.match(game, /clan-shield-planks/);
 assert.match(game, /async function saveFlagEditor\(\)/);
 assert.match(game, /syncPlayerIdentityToAllOwnedCities/);

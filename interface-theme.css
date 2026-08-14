@@ -1768,13 +1768,23 @@ input[type="range"] {
   z-index: 2;
   display: grid;
   place-items: center;
-  color: var(--flag-symbol-color, #f6efd8);
+  color: var(--flag-symbol-color, #f2e2bf);
   filter: drop-shadow(0 1px 0 rgba(0,0,0,.58));
 }
 
 .flag-symbol .cl-icon {
   width: .9em;
   height: .9em;
+}
+
+.kingdom-flag .flag-symbol .flag-symbol-icon {
+  fill: currentColor;
+  stroke: var(--flag-symbol-outline, rgba(32, 36, 38, .82));
+  stroke-width: .72;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  paint-order: stroke fill;
+  shape-rendering: geometricPrecision;
 }
 
 .kingdom-flag-large .flag-symbol .cl-icon {
@@ -1853,19 +1863,6 @@ input[type="range"] {
   color: #523c27;
 }
 
-.flag-swatch-grid button {
-  position: relative;
-  overflow: hidden;
-  border: 2px solid rgba(65, 45, 26, .56);
-  border-radius: 3px;
-  background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,.1) 0 1px, transparent 1px 6px),
-    linear-gradient(90deg, rgba(255,255,255,.08), transparent 45%, rgba(0,0,0,.12)),
-    var(--flag-swatch);
-  box-shadow: inset 0 0 0 1px rgba(255,247,216,.13), 0 3px 6px rgba(0,0,0,.2);
-}
-
-.flag-swatch-grid button.active,
 .clan-shield-swatch-grid button.active {
   border-color: #f0e1b8;
   outline: 2px solid #6d2d35;

@@ -198,10 +198,10 @@ const precachedOptimizedArt = staticCacheUrls
   .filter(relativePath => relativePath.startsWith("assets/optimized/"));
 assert.deepEqual(
   precachedOptimizedArt.sort(),
-  ["loading-crown", "loading-ring", "login-background"]
+  ["loading-ring", "login-background"]
     .map(id => manifest.assets.find(asset => asset.id === id)?.output)
     .sort(),
-  "Only login-critical artwork belongs in the installation cache; transition clouds are runtime-cached."
+  "Only the essential login background and loading ring belong in the installation cache; decorative loading art and transition clouds are runtime-cached."
 );
 for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css", "audio-manager.js"]) {
   assert(

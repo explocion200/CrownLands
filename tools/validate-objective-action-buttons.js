@@ -123,7 +123,7 @@ for (const [label, source] of [["Stronghold/Citadel", wheelFunctions[2]], ["Camp
 assert.ok(wheelFunctions[2].includes("cl-action-send"), "Owned Stronghold/Citadel Send is missing its movement token.");
 assert.ok(wheelFunctions[3].includes("cl-action-send camp-recall-action"), "Held Camp Recall is missing its movement token.");
 
-const releaseId = "20260814-main-city-r36";
+const releaseId = "20260814-readability-r38";
 const styleTag = `action-buttons.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The shared action-button stylesheet is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("profile-theme.css"), "The shared action-button stylesheet must load after legacy and Profile theme layers.");

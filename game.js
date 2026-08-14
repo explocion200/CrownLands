@@ -1040,16 +1040,30 @@ const CROWNLANDS_ICON_KEYS = new Set([
   "check",
   "edit",
   "replace",
-  "flag-castle",
-  "flag-star",
-  "flag-fleur",
-  "flag-cross",
-  "flag-sun",
-  "flag-moon",
+  "flag-crown",
+  "flag-lion",
+  "flag-eagle",
+  "flag-double-eagle",
+  "flag-wolf",
+  "flag-stag",
+  "flag-boar",
+  "flag-bear",
   "flag-horse",
-  "flag-tower",
-  "flag-lozenge",
+  "flag-dragon",
+  "flag-griffin",
+  "flag-raven",
+  "flag-falcon",
+  "flag-serpent",
+  "flag-crossed-swords",
+  "flag-battle-axe",
+  "flag-war-hammer",
   "flag-spearhead",
+  "flag-gauntlet",
+  "flag-tower",
+  "flag-castle-gate",
+  "flag-fleur-de-lis",
+  "flag-oak-tree",
+  "flag-sunburst",
 ]);
 
 const CROWNLANDS_ICON_ALIASES = Object.freeze({
@@ -1075,58 +1089,12 @@ const CROWNLANDS_ICON_ALIASES = Object.freeze({
   warband: "attack",
 });
 
-const FLAG_COLORS = [
-  "#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f",
-  "#6f2335", "#315b57", "#b56f32", "#6b6b65",
-];
-const FLAG_DYE_TREATMENTS = Object.freeze({
-  "#1f5f91": Object.freeze({ display: "#536f83", label: "Faded blue" }),
-  "#b23a35": Object.freeze({ display: "#8f3d3a", label: "Burgundy red" }),
-  "#2f7a4a": Object.freeze({ display: "#526a49", label: "Moss green" }),
-  "#6d4aa2": Object.freeze({ display: "#61506f", label: "Faded indigo" }),
-  "#d3a62e": Object.freeze({ display: "#a9853e", label: "Ochre" }),
-  "#202a38": Object.freeze({ display: "#30373b", label: "Charcoal" }),
-  "#d9e2e8": Object.freeze({ display: "#d9d1bb", label: "Unbleached linen" }),
-  "#8d5a2f": Object.freeze({ display: "#755037", label: "Walnut brown" }),
-  "#6f2335": Object.freeze({ display: "#6f3440", label: "Mulberry" }),
-  "#315b57": Object.freeze({ display: "#486b66", label: "Verdigris" }),
-  "#b56f32": Object.freeze({ display: "#9a6638", label: "Burnished copper" }),
-  "#6b6b65": Object.freeze({ display: "#74736b", label: "Weathered silver" }),
-});
-const FLAG_PATTERNS = [
-  { key: "split", label: "Split" },
-  { key: "diagonal", label: "Diagonal" },
-  { key: "band", label: "Band" },
-  { key: "cross", label: "Cross" },
-  { key: "saltire", label: "Saltire" },
-  { key: "chevron", label: "Chevron" },
-  { key: "quartered", label: "Quartered" },
-  { key: "pale", label: "Pale" },
-  { key: "chief", label: "Chief" },
-  { key: "bend", label: "Bend" },
-  { key: "fess", label: "Per Fess" },
-  { key: "pile", label: "Heraldic Pile" },
-  { key: "canton", label: "Canton" },
-  { key: "invertedChevron", label: "Inverted Chevron" },
-];
-const FLAG_SYMBOLS = [
-  { key: "crown", label: "Crown", icon: "crown" },
-  { key: "castle", label: "Castle", icon: "flag-castle" },
-  { key: "star", label: "Star", icon: "flag-star" },
-  { key: "swords", label: "Swords", icon: "attack" },
-  { key: "fleur", label: "Fleur-de-lis", icon: "flag-fleur" },
-  { key: "cross", label: "Pilgrim Cross", icon: "flag-cross" },
-  { key: "sun", label: "Sun", icon: "flag-sun" },
-  { key: "moon", label: "Crescent Moon", icon: "flag-moon" },
-  { key: "knight", label: "Warhorse", icon: "flag-horse" },
-  { key: "tower", label: "Watchtower", icon: "flag-tower" },
-  { key: "diamond", label: "Heraldic Lozenge", icon: "flag-lozenge" },
-  { key: "spire", label: "Spearhead", icon: "flag-spearhead" },
-  { key: "guardian", label: "Guardian Shield", icon: "shield" },
-  { key: "banner", label: "War Banner", icon: "rally" },
-  { key: "helm", label: "Knight's Helm", icon: "troops" },
-  { key: "keep", label: "Royal Keep", icon: "city" },
-];
+const PLAYER_FLAG_CONFIG = globalThis.CrownlandsPlayerFlags;
+if (!PLAYER_FLAG_CONFIG) throw new Error("Crownlands player flag configuration did not load.");
+const FLAG_COLOR_OPTIONS = PLAYER_FLAG_CONFIG.COLORS;
+const FLAG_COLORS = PLAYER_FLAG_CONFIG.COLOR_VALUES;
+const FLAG_PATTERNS = PLAYER_FLAG_CONFIG.PATTERNS;
+const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG.SYMBOLS;
 const CLAN_SHIELD_COLORS = [
   { value: "#7a2638", label: "Castilian crimson" },
   { value: "#a84432", label: "Brick red" },
@@ -5677,7 +5645,7 @@ function normalizeMarchPercent(value) {
 }
 
 function createDefaultFlag() {
-  return { primary: "#1f5f91", secondary: "#d3a62e", pattern: "diagonal", symbol: "crown" };
+  return { ...PLAYER_FLAG_CONFIG.DEFAULT_FLAG };
 }
 
 function randomFrom(list) {
@@ -5685,32 +5653,12 @@ function randomFrom(list) {
 }
 
 function createRandomFlag() {
-  const primaryOptions = FLAG_COLORS.filter(color => color !== "#d9e2e8");
-  const primary = randomFrom(primaryOptions) || createDefaultFlag().primary;
-  const secondaryOptions = FLAG_COLORS.filter(color => color !== primary);
-  const flag = {
-    primary,
-    secondary: randomFrom(secondaryOptions) || createDefaultFlag().secondary,
-    pattern: randomFrom(FLAG_PATTERNS)?.key || createDefaultFlag().pattern,
-    symbol: randomFrom(FLAG_SYMBOLS)?.key || createDefaultFlag().symbol,
-  };
-  const defaults = createDefaultFlag();
-  const matchesDefault = Object.keys(defaults).every(key => flag[key] === defaults[key]);
-  if (matchesDefault) {
-    flag.symbol = FLAG_SYMBOLS.find(option => option.key !== defaults.symbol)?.key || defaults.symbol;
-  }
-  return flag;
+  return PLAYER_FLAG_CONFIG.createRandomFlag();
 }
 
-function normalizeFlag(flag) {
-  const defaults = createDefaultFlag();
-  return {
-    primary: FLAG_COLORS.includes(flag?.primary) ? flag.primary : defaults.primary,
-    secondary: FLAG_COLORS.includes(flag?.secondary) ? flag.secondary : defaults.secondary,
-    symbolColor: FLAG_COLORS.includes(flag?.symbolColor) ? flag.symbolColor : "#d9e2e8",
-    pattern: FLAG_PATTERNS.some(option => option.key === flag?.pattern) ? flag.pattern : defaults.pattern,
-    symbol: FLAG_SYMBOLS.some(option => option.key === flag?.symbol) ? flag.symbol : defaults.symbol,
-  };
+function normalizeFlag(flag, stableKey = "") {
+  const identityKey = String(stableKey || getCurrentOnlineUid?.() || state?.playerName || "local-player");
+  return PLAYER_FLAG_CONFIG.normalizeFlag(flag, identityKey);
 }
 
 function createDefaultClanShield() {
@@ -11097,7 +11045,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.clanRole = String(profile.clanRole || "");
   state.clanJoinCooldownUntilMs = normalizeTimestampMs(profile.clanJoinCooldownUntilMs);
   state.pendingClanApplicationId = String(profile.pendingClanApplicationId || "");
-  state.flag = normalizeFlag(profile.flag);
+  state.flag = normalizeFlag(profile.flag, getCurrentOnlineUid() || profile.uid || profile.playerName);
   state.character = normalizeCharacterProgress(profile.character);
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
   state.skillPresets = normalizeSkillPresets(profile.skillPresets);
@@ -11477,7 +11425,7 @@ function normalizePresence(raw) {
   return {
     uid,
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
-    flag: raw.flag || null,
+    flag: normalizeFlag(raw.flag, uid),
     mainCityId: String(raw.mainCityId || ""),
     mainRegionId: normalizeRegionId(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId)),
     mainIslandId: String(raw.mainIslandId || ""),
@@ -11495,7 +11443,7 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
   return {
     uid,
     displayName: cleanName(raw.playerName || raw.displayName || raw.ownerName || raw.name || "") || "",
-    flag: raw.flag || raw.ownerFlag || null,
+    flag: normalizeFlag(raw.flag || raw.ownerFlag, uid),
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     mainCityId: getKnownCityId(raw.mainCityId),
@@ -11637,7 +11585,7 @@ function renderPublicPlayerProfile(profile) {
           : `<p class="public-profile-empty">Not in a clan.</p>`}
       </section>
     </div>`;
-  applyFlagToElement(modalBody.querySelector("#publicPlayerFlag"), profile.flag);
+  applyFlagToElement(modalBody.querySelector("#publicPlayerFlag"), profile.flag, profile.uid);
 }
 
 async function showPublicPlayerProfile(uid = "") {
@@ -21022,7 +20970,7 @@ function renderHud() {
   const flagSignature = getFlagSignature(state.flag);
   if (hudKingdomFlag && flagSignature !== lastHudFlagSignature) {
     lastHudFlagSignature = flagSignature;
-    applyFlagToElement(hudKingdomFlag, state.flag);
+    applyFlagToElement(hudKingdomFlag, state.flag, getCurrentOnlineUid() || state.playerName);
   }
   renderClanHudAccess();
   renderDailyLoginRewardButton();
@@ -21173,16 +21121,20 @@ function updateActiveItemEffectsStackDensity() {
   activeItemEffectsStack.classList.toggle("dense", activeCount > 3);
 }
 
-function applyFlagToElement(element, flag) {
+function applyFlagToElement(element, flag, stableKey = "") {
   if (!element) return;
-  const normalized = normalizeFlag(flag);
-  const primaryDye = FLAG_DYE_TREATMENTS[normalized.primary] || { display: normalized.primary, label: normalized.primary };
-  const secondaryDye = FLAG_DYE_TREATMENTS[normalized.secondary] || { display: normalized.secondary, label: normalized.secondary };
-  element.style.setProperty("--flag-primary", primaryDye.display);
-  element.style.setProperty("--flag-secondary", secondaryDye.display);
-  element.style.setProperty("--flag-symbol-color", (FLAG_DYE_TREATMENTS[normalized.symbolColor] || {}).display || normalized.symbolColor);
-  element.dataset.flagPrimaryDye = primaryDye.label;
-  element.dataset.flagSecondaryDye = secondaryDye.label;
+  const normalized = normalizeFlag(flag, stableKey);
+  const renderSignature = `${normalized.primary}:${normalized.secondary}:${normalized.symbolColor}:${normalized.pattern}:${normalized.symbol}`;
+  const existingSymbol = element.querySelector(".flag-symbol");
+  if (element.dataset.flagRenderSignature === renderSignature && existingSymbol?.firstElementChild) return;
+  const primaryOption = PLAYER_FLAG_CONFIG.getColorOption(normalized.primary);
+  const secondaryOption = PLAYER_FLAG_CONFIG.getColorOption(normalized.secondary);
+  element.style.setProperty("--flag-primary", normalized.primary);
+  element.style.setProperty("--flag-secondary", normalized.secondary);
+  element.style.setProperty("--flag-symbol-color", normalized.symbolColor);
+  element.style.setProperty("--flag-symbol-outline", PLAYER_FLAG_CONFIG.getSymbolOutline(normalized.symbolColor));
+  element.dataset.flagPrimaryDye = primaryOption?.label || "Custom heraldic color";
+  element.dataset.flagSecondaryDye = secondaryOption?.label || "Custom heraldic color";
   for (const option of FLAG_PATTERNS) element.classList.remove(`pattern-${option.key}`);
   element.classList.add(`pattern-${normalized.pattern}`);
   const symbol = FLAG_SYMBOLS.find(option => option.key === normalized.symbol) || FLAG_SYMBOLS[0];
@@ -21191,14 +21143,15 @@ function applyFlagToElement(element, flag) {
     symbolElement.dataset.flagSymbol = symbol.key;
     symbolElement.innerHTML = renderCrownlandsIcon(symbol.icon || symbol.key, "flag-symbol-icon");
   }
+  element.dataset.flagRenderSignature = renderSignature;
 }
 
 function getCityOwnerFlag(city) {
   if (!city) return null;
-  if (city.owner === "player") return state.flag;
+  if (city.owner === "player") return normalizeFlag(state.flag, getCurrentOnlineUid() || "local-player");
   if (city.ownerKind === "player" && city.ownerUid) {
     const identity = resolvePlayerIdentityForUid(city.ownerUid, city);
-    return identity.flag || city.ownerFlag || createDefaultFlag();
+    return normalizeFlag(identity.flag || city.ownerFlag, city.ownerUid);
   }
   return null;
 }
@@ -21214,7 +21167,8 @@ function renderCityOwnerFlag(city) {
 function applyCityOwnerFlags(container, city) {
   const flag = getCityOwnerFlag(city);
   if (!flag) return;
-  container.querySelectorAll(".city-kingdom-flag").forEach(element => applyFlagToElement(element, flag));
+  const stableKey = city.ownerUid || (city.owner === "player" ? getCurrentOnlineUid() : "");
+  container.querySelectorAll(".city-kingdom-flag").forEach(element => applyFlagToElement(element, flag, stableKey));
 }
 
 function getCityOwnerDisplayName(city) {
@@ -22706,10 +22660,10 @@ function renderClanApplicantFlag(index) {
 
 function applyClanRosterFlags() {
   clanMembers.forEach((member, index) => {
-    applyFlagToElement(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag());
+    applyFlagToElement(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag(), member.uid);
   });
   clanApplications.forEach((application, index) => {
-    applyFlagToElement(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag());
+    applyFlagToElement(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag(), application.uid);
   });
 }
 
@@ -23661,7 +23615,7 @@ function renderProfileScreen() {
       ? `View Achievements · ${claimable} Ready`
       : "View Achievements";
   }
-  applyFlagToElement(profileKingdomFlag, state.flag);
+  applyFlagToElement(profileKingdomFlag, state.flag, getCurrentOnlineUid() || state.playerName);
   renderProfileClanAffiliation();
   updatePushAlertsUi();
 }
@@ -23996,12 +23950,15 @@ function showFlagEditor() {
 
 function renderFlagEditor() {
   if (!flagDraft) return;
-  applyFlagToElement(flagEditorPreview, flagDraft);
+  applyFlagToElement(flagEditorPreview, flagDraft, getCurrentOnlineUid() || state.playerName);
   renderFlagSwatches(flagPrimaryColors, "primary");
   renderFlagSwatches(flagSecondaryColors, "secondary");
   renderFlagSwatches(flagSymbolColors, "symbolColor");
 
-  flagPatternOptions.innerHTML = FLAG_PATTERNS.map(option => `<button type="button" data-flag-pattern="${option.key}" class="${flagDraft.pattern === option.key ? "active" : ""}">${option.label}</button>`).join("");
+  flagPatternOptions.innerHTML = FLAG_PATTERNS.map(option => {
+    const selected = flagDraft.pattern === option.key;
+    return `<button type="button" data-flag-pattern="${option.key}" class="${selected ? "active" : ""}" aria-pressed="${selected}">${option.label}</button>`;
+  }).join("");
   flagPatternOptions.querySelectorAll("button[data-flag-pattern]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
       flagDraft.pattern = buttonElement.dataset.flagPattern;
@@ -24009,7 +23966,10 @@ function renderFlagEditor() {
     });
   });
 
-  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => `<button type="button" data-flag-symbol="${option.key}" class="${flagDraft.symbol === option.key ? "active" : ""}" aria-label="${option.label}" title="${option.label}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}</button>`).join("");
+  flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => {
+    const selected = flagDraft.symbol === option.key;
+    return `<button type="button" data-flag-symbol="${option.key}" class="${selected ? "active" : ""}" aria-label="${option.label}" aria-pressed="${selected}" title="${option.label}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}</button>`;
+  }).join("");
   flagSymbolOptions.querySelectorAll("button[data-flag-symbol]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
       flagDraft.symbol = buttonElement.dataset.flagSymbol;
@@ -24020,10 +23980,13 @@ function renderFlagEditor() {
 
 function renderFlagSwatches(container, key) {
   if (!container || !flagDraft) return;
-  container.innerHTML = FLAG_COLORS.map(color => {
-    const dye = FLAG_DYE_TREATMENTS[color] || { display: color, label: color };
-    const selected = flagDraft[key] === color;
-    return `<button type="button" data-flag-color="${color}" class="${selected ? "active" : ""}" style="--flag-swatch:${dye.display}" aria-label="Select ${escapeHtml(dye.label)}" aria-pressed="${selected}" title="${escapeHtml(dye.label)}"></button>`;
+  const currentColor = PLAYER_FLAG_CONFIG.normalizeHexColor(flagDraft[key]);
+  const options = FLAG_COLOR_OPTIONS.some(option => option.value === currentColor)
+    ? FLAG_COLOR_OPTIONS
+    : [Object.freeze({ value: currentColor, label: "Current saved color" }), ...FLAG_COLOR_OPTIONS].filter(option => option.value);
+  container.innerHTML = options.map(option => {
+    const selected = flagDraft[key] === option.value;
+    return `<button type="button" data-flag-color="${option.value}" class="flag-color-swatch${selected ? " active" : ""}" style="--flag-swatch:${option.value}" aria-label="Select ${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}"></button>`;
   }).join("");
   container.querySelectorAll("button[data-flag-color]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
@@ -24035,12 +23998,13 @@ function renderFlagSwatches(container, key) {
 
 async function saveFlagEditor() {
   if (!state || !flagDraft) return;
-  state.flag = normalizeFlag(flagDraft);
+  state.flag = normalizeFlag(flagDraft, getCurrentOnlineUid() || state.playerName);
   playerCities().forEach(city => {
     city.ownerFlag = state.flag;
     markOwnedCityChanged(city, false);
   });
   saveGame();
+  rememberCurrentPlayerIdentity();
   renderHud();
   renderCities(true);
   showProfileView();
@@ -24362,9 +24326,9 @@ function getRewardCampStatusText(camp) {
   return `${stateLabel} by ${holder} - ${formatDuration(countdown)}`;
 }
 
-function getFlagSignature(flag) {
+function getFlagSignature(flag, stableKey = "") {
   if (!flag) return "";
-  const normalized = normalizeFlag(flag);
+  const normalized = normalizeFlag(flag, stableKey);
   return `${normalized.primary}:${normalized.secondary}:${normalized.symbolColor}:${normalized.pattern}:${normalized.symbol}`;
 }
 
@@ -24387,7 +24351,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
       clanAlly ? 1 : 0,
-      getFlagSignature(city.ownerFlag),
+      getFlagSignature(getCityOwnerFlag(city), city.ownerUid || (city.owner === "player" ? getCurrentOnlineUid() : "")),
       getStableEnemyCityPowerBand(city),
       city.kind || "",
       city.strongholdType || "",
@@ -24415,7 +24379,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       camp.flipX ? 1 : 0,
       camp.ownerUid || "",
       camp.ownerName || "",
-      getFlagSignature(camp.holderFlag),
+      getFlagSignature(getCityOwnerFlag(camp) || camp.holderFlag, camp.ownerUid || camp.holderUid || ""),
       isClanAllyCity(camp) ? 1 : 0,
       camp.currentGarrison || 0,
       camp.alliedReinforcementTroops || 0,
@@ -24729,8 +24693,8 @@ function renderCitiesUncached(force = false) {
     if (btn._renderContent !== cityHtml) {
       btn.innerHTML = cityHtml;
       btn._renderContent = cityHtml;
-      applyCityOwnerFlags(btn, city);
     }
+    applyCityOwnerFlags(btn, city);
     if (!existingCityNode) cityFragment.appendChild(btn);
   });
   existingCampNodes.forEach(node => node.remove());
@@ -25758,8 +25722,8 @@ function showScoutReportModal(cityId) {
       <div class="scout-report-timing"><span>Report age: <b data-scout-report-age>${formatDuration(age)}</b></span><span>Expires in: <b data-scout-report-expires>${formatDuration(remaining)}</b></span></div>
     </div>
   `;
-  applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag);
-  applyFlagToElement(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag);
+  applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag, currentPlayerUid);
+  applyFlagToElement(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag, reportedOwnerUid);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
@@ -33681,7 +33645,7 @@ function renderLeaderboardRows(rows) {
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
   entries.forEach((entry, index) => {
-    applyFlagToElement(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag());
+    applyFlagToElement(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag(), entry.uid);
   });
 }
 
@@ -33962,7 +33926,7 @@ function applyBattleReportTargetFlags(reports = []) {
   reports.forEach((report, index) => {
     if (!report?.opponentFlag) return;
     const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
-    applyFlagToElement(flag, report.opponentFlag);
+    applyFlagToElement(flag, report.opponentFlag, report.opponentUid);
   });
 }
 
@@ -34919,7 +34883,8 @@ function applyDetailedBattleFlags(snapshot) {
     ["defender", snapshot.defender.ownerFlag],
   ]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
-    applyFlagToElement(element, flags.get(element.dataset.battleParticipantFlag) || createDefaultFlag());
+    const side = element.dataset.battleParticipantFlag;
+    applyFlagToElement(element, flags.get(side) || createDefaultFlag(), snapshot[side]?.ownerUid || side);
   });
 }
 
@@ -34930,7 +34895,11 @@ function applyLegacyBattleFlags(report = null) {
     ? new Map([["attacker", opponentFlag], ["defender", playerFlag]])
     : new Map([["attacker", playerFlag], ["defender", opponentFlag]]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
-    applyFlagToElement(element, flags.get(element.dataset.battleParticipantFlag) || createDefaultFlag());
+    const side = element.dataset.battleParticipantFlag;
+    const stableKey = side === (report?.type === "defense" ? "defender" : "attacker")
+      ? getCurrentOnlineUid()
+      : report?.opponentUid || side;
+    applyFlagToElement(element, flags.get(side) || createDefaultFlag(), stableKey);
   });
 }
 
@@ -35008,7 +34977,8 @@ async function showBattleReportDetail(reportId) {
     if (isDefenderScoutReport(report)) {
       applyFlagToElement(
         modalBody.querySelector("#scoutedReportAttackerFlag"),
-        report.opponentFlag || createDefaultFlag()
+        report.opponentFlag || createDefaultFlag(),
+        report.opponentUid
       );
     }
     return;

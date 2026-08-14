@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Mobile Report and Leaderboard QA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px; color: #f2e2bf; background: #17110d; font-family: Georgia, serif; }
+    h1 { margin: 0 0 6px; font-size: 1.3rem; }
+    p { margin: 0 0 16px; color: #d0b98e; }
+    main { display: grid; gap: 18px; }
+    section { display: grid; gap: 7px; }
+    h2 { margin: 0; color: #e7d6b4; font-size: .85rem; }
+    .frame-shell { max-width: 100%; overflow: auto; padding: 8px; border: 1px solid #72563a; background: #0f0b08; }
+    iframe { display: block; border: 1px solid #997643; background: #17110d; }
+  </style>
+</head>
+<body>
+  <h1>Mobile readability matrix</h1>
+  <p>Exact 390×844 portrait and 844×390 landscape viewports.</p>
+  <main>
+    <section><h2>Portrait · Battle Reports</h2><div class="frame-shell"><iframe title="Portrait Battle Reports" src="index.html?panel=reports" width="390" height="844"></iframe></div></section>
+    <section><h2>Portrait · Leaderboards</h2><div class="frame-shell"><iframe title="Portrait Leaderboards" src="index.html?panel=leaderboards" width="390" height="844"></iframe></div></section>
+    <section><h2>Landscape · Battle Reports</h2><div class="frame-shell"><iframe title="Landscape Battle Reports" src="index.html?panel=reports" width="844" height="390"></iframe></div></section>
+    <section><h2>Landscape · Leaderboards</h2><div class="frame-shell"><iframe title="Landscape Leaderboards" src="index.html?panel=leaderboards" width="844" height="390"></iframe></div></section>
+  </main>
+</body>
+</html>

@@ -4,6 +4,7 @@ const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestor
 const realm = require("../release-config.json");
 const economyConfig = require("../economy-config.json");
 const { getClanQuestPeriod } = require("../clanQuestPeriod.js");
+const playerFlagConfig = require("../playerFlagConfig.js");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -55,53 +56,16 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-const starterFlagColors = [
-  "#1f5f91",
-  "#b23a35",
-  "#2f7a4a",
-  "#6d4aa2",
-  "#d3a62e",
-  "#202a38",
-  "#d9e2e8",
-  "#8d5a2f",
-];
-const starterFlagPatterns = [
-  "split",
-  "diagonal",
-  "band",
-  "cross",
-  "saltire",
-  "chevron",
-  "quartered",
-  "pale",
-  "chief",
-  "bend",
-];
-const starterFlagSymbols = [
-  "crown",
-  "castle",
-  "star",
-  "swords",
-  "fleur",
-  "cross",
-  "sun",
-  "moon",
-  "knight",
-  "tower",
-  "diamond",
-  "spire",
-];
-const sharedDefaultFlag = {
-  primary: "#1f5f91",
-  secondary: "#d3a62e",
-  pattern: "diagonal",
-  symbol: "crown",
-};
+const starterFlagColors = playerFlagConfig.COLOR_VALUES;
+const starterFlagPatterns = playerFlagConfig.PATTERN_KEYS;
+const starterFlagSymbols = playerFlagConfig.SYMBOL_KEYS;
+const sharedDefaultFlag = playerFlagConfig.DEFAULT_FLAG;
 
 function assertRandomStarterFlag(flag, label) {
   assert(starterFlagColors.includes(flag?.primary), `${label} has an invalid primary flag color.`);
   assert(starterFlagColors.includes(flag?.secondary), `${label} has an invalid secondary flag color.`);
   assert(flag.primary !== flag.secondary, `${label} received matching flag colors.`);
+  assert(starterFlagColors.includes(flag?.symbolColor), `${label} has an invalid flag symbol color.`);
   assert(starterFlagPatterns.includes(flag?.pattern), `${label} has an invalid flag pattern.`);
   assert(starterFlagSymbols.includes(flag?.symbol), `${label} has an invalid flag symbol.`);
   assert(JSON.stringify(flag) !== JSON.stringify(sharedDefaultFlag), `${label} received the shared default flag.`);
@@ -421,7 +385,11 @@ async function main() {
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   assert(profile.playerName === "Preserved Ruler", "Ruler name was not preserved.");
-  assert(JSON.stringify(profile.flag) === JSON.stringify(preservedFlag), "Personal flag was not preserved.");
+  const expectedPreservedFlag = playerFlagConfig.normalizeFlag(preservedFlag, users[0].uid);
+  assert(
+    JSON.stringify(profile.flag) === JSON.stringify(expectedPreservedFlag),
+    "Personal flag components were not preserved through legacy-field migration."
+  );
   assert(profile.gold === 100, "Starting gold was not reset to 100.");
   assert(profile.character?.level === 1 && profile.character?.xp === 0, "Character progression was not reset.");
   assert(!profile.clanId && !profile.battleReports?.length, "Clan or report progression survived the reset.");

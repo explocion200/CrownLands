@@ -1,223 +1,110 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
-const gamePath = path.join(root, "game.js");
-const serverPath = path.join(root, "functions", "index.js");
-const gameSource = fs.readFileSync(gamePath, "utf8");
-const serverSource = fs.readFileSync(serverPath, "utf8");
-const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
+const config = require(path.join(root, "functions", "playerFlagConfig.js"));
+const game = read("game.js");
+const server = read("functions/index.js");
+const index = read("index.html");
+const styles = read("styles.css");
 
-assert.match(indexSource, /id="flagSaveBtn"[\s\S]*?id="flagBackBtn"/, "The flag editor must retain Save Flag and Back actions.");
-assert.doesNotMatch(indexSource, /id="flagExitBtn"|>\s*Exit\s*<\/button>/, "The flag editor still includes a redundant Exit action.");
-assert.doesNotMatch(gameSource, /flagExitBtn/, "The removed flag Exit action still has client bindings.");
-assert.match(stylesSource, /\.flag-editor-actions\s*\{[^}]*grid-template-columns:\s*1\.5fr\s+1fr/, "The flag editor action row must use its two-button layout.");
+const expectedColors = [
+  ["Crimson", "#A52A2A"], ["Oxblood", "#6E2025"], ["Burgundy", "#722F37"],
+  ["Royal Blue", "#315A8A"], ["Deep Navy", "#243447"], ["Faded Azure", "#547A9A"],
+  ["Forest Green", "#355E3B"], ["Moss Green", "#667A4A"], ["Dark Olive", "#4E5637"],
+  ["Heraldic Gold", "#C69A45"], ["Old Gold", "#B58A3B"], ["Ochre", "#B98232"],
+  ["Ivory", "#F2E2BF"], ["Bone", "#DDD0AE"], ["Silver / Light Stone", "#B9B4A8"],
+  ["Charcoal", "#303436"], ["Dark Brown", "#4A3428"], ["Blackened Iron", "#202426"],
+  ["Royal Purple", "#66536F"], ["Deep Plum", "#4E354F"],
+];
+const expectedPatterns = [
+  "split", "diagonal", "band", "cross", "saltire", "chevron", "quartered",
+  "pale", "chief", "bend", "fess", "pile", "canton", "invertedChevron",
+];
+const expectedSymbols = [
+  "crown", "lion", "eagle", "double-eagle", "wolf", "stag", "boar", "bear",
+  "horse", "dragon", "griffin", "raven", "falcon", "serpent", "crossed-swords",
+  "battle-axe", "war-hammer", "spearhead", "gauntlet", "tower", "castle-gate",
+  "fleur-de-lis", "oak-tree", "sunburst",
+];
 
-const colors = [
-  "#1f5f91",
-  "#b23a35",
-  "#2f7a4a",
-  "#6d4aa2",
-  "#d3a62e",
-  "#202a38",
-  "#d9e2e8",
-  "#8d5a2f",
-];
-const patterns = [
-  "split",
-  "diagonal",
-  "band",
-  "cross",
-  "saltire",
-  "chevron",
-  "quartered",
-  "pale",
-  "chief",
-  "bend",
-];
-const symbols = [
-  "crown",
-  "castle",
-  "star",
-  "swords",
-  "fleur",
-  "cross",
-  "sun",
-  "moon",
-  "knight",
-  "tower",
-  "diamond",
-  "spire",
-];
-const defaultFlag = {
-  primary: "#1f5f91",
-  secondary: "#d3a62e",
+assert.deepEqual(config.COLORS.map(({ label, value }) => [label, value]), expectedColors, "The curated heraldic palette changed.");
+assert.deepEqual(config.PATTERN_KEYS, expectedPatterns, "The supported heraldic patterns changed.");
+assert.deepEqual(config.SYMBOL_KEYS, expectedSymbols, "The medieval symbol catalog changed.");
+assert.equal(new Set(config.COLOR_VALUES).size, 20, "Flag colors must remain distinct.");
+assert.equal(new Set(config.SYMBOL_KEYS).size, 24, "Flag symbol IDs must remain distinct.");
+
+for (const pattern of expectedPatterns) {
+  assert.ok(styles.includes(`.kingdom-flag.pattern-${pattern}`), `Missing rendering for ${pattern}.`);
+}
+for (const symbol of config.SYMBOLS) {
+  assert.match(symbol.icon, /^flag-[a-z-]+$/, `${symbol.label} must use a dedicated heraldic icon.`);
+  assert.equal((index.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `${symbol.label} must have exactly one SVG sprite symbol.`);
+}
+
+assert.match(index, /functions\/playerFlagConfig\.js\?v=20260814-readability-r38[\s\S]*firebaseClient\.js[\s\S]*game\.js/, "The shared flag config must load before persistence and gameplay.");
+assert.match(game, /const PLAYER_FLAG_CONFIG = globalThis\.CrownlandsPlayerFlags/);
+assert.match(server, /require\("\.\/playerFlagConfig\.js"\)/);
+assert.match(game, /function createRandomFlag\(\)[\s\S]*PLAYER_FLAG_CONFIG\.createRandomFlag\(\)/);
+assert.match(server, /function createRandomPlayerFlag\(\)[\s\S]*PLAYER_FLAG_CONFIG\.createRandomFlag/);
+
+const variants = new Set();
+for (let trial = 0; trial < 250; trial += 1) {
+  const flag = config.createRandomFlag();
+  assert.ok(config.COLOR_VALUES.includes(flag.primary));
+  assert.ok(config.COLOR_VALUES.includes(flag.secondary));
+  assert.notEqual(flag.primary, flag.secondary);
+  assert.ok(config.COLOR_VALUES.includes(flag.symbolColor));
+  assert.ok(config.PATTERN_KEYS.includes(flag.pattern));
+  assert.ok(config.SYMBOL_KEYS.includes(flag.symbol));
+  variants.add(JSON.stringify(flag));
+}
+assert.ok(variants.size > 100, "Starter flags do not provide enough random variation.");
+
+const validOld = { primary: "#1f5f91", secondary: "#d3a62e", symbolColor: "#d9e2e8", pattern: "diagonal", symbol: "crown" };
+assert.deepEqual(config.normalizeFlag(validOld, "player-a"), {
+  primary: "#1F5F91",
+  secondary: "#D3A62E",
+  symbolColor: "#D9E2E8",
   pattern: "diagonal",
   symbol: "crown",
-};
+}, "Valid historical colors and supported choices must be preserved.");
 
-const flagSymbolCatalog = gameSource.slice(
-  gameSource.indexOf("const FLAG_SYMBOLS = ["),
-  gameSource.indexOf("const CLAN_SHIELD_COLORS"),
-);
-for (const [key, label, icon] of [
-  ["castle", "Castle", "flag-castle"],
-  ["star", "Star", "flag-star"],
-  ["fleur", "Fleur-de-lis", "flag-fleur"],
-  ["cross", "Pilgrim Cross", "flag-cross"],
-  ["sun", "Sun", "flag-sun"],
-  ["moon", "Crescent Moon", "flag-moon"],
-  ["knight", "Warhorse", "flag-horse"],
-  ["tower", "Watchtower", "flag-tower"],
-  ["diamond", "Heraldic Lozenge", "flag-lozenge"],
-  ["spire", "Spearhead", "flag-spearhead"],
-]) {
-  assert.ok(
-    flagSymbolCatalog.includes(`{ key: "${key}", label: "${label}", icon: "${icon}" }`),
-    `${label} does not use its medieval heraldry icon.`,
-  );
-  assert.ok(indexSource.includes(`id="cl-icon-${icon}"`), `${label} is missing its SVG symbol.`);
-}
-assert.doesNotMatch(flagSymbolCatalog, /icon:\s*"(?:scout|gold|achievements|check)"/, "Flag charges still borrow mismatched gameplay icons.");
-assert.match(
-  flagSymbolCatalog,
-  /\{ key: "knight", label: "Warhorse", icon: "flag-horse" \}/,
-  "The Warhorse flag charge must use its dedicated centered heraldry icon."
-);
-for (const [key, label, icon] of [
-  ["guardian", "Guardian Shield", "shield"],
-  ["banner", "War Banner", "rally"],
-  ["helm", "Knight's Helm", "troops"],
-  ["keep", "Royal Keep", "city"],
-]) {
-  assert.ok(
-    flagSymbolCatalog.includes(`{ key: "${key}", label: "${label}", icon: "${icon}" }`),
-    `${label} is missing from the optional player flag charges.`,
-  );
-}
-for (const pattern of ["fess", "pile", "canton", "invertedChevron"]) {
-  assert.ok(gameSource.includes(`{ key: "${pattern}",`), `Missing optional ${pattern} player flag pattern.`);
-  assert.ok(stylesSource.includes(`.kingdom-flag.pattern-${pattern}`), `Missing rendering for ${pattern} player flags.`);
-}
-for (const legacyPattern of patterns) {
-  assert.ok(gameSource.includes(`{ key: "${legacyPattern}",`), `Legacy ${legacyPattern} player flags are no longer supported.`);
+for (const [legacy, migrated] of Object.entries({
+  castle: "tower", star: "sunburst", swords: "crossed-swords", fleur: "fleur-de-lis",
+  sun: "sunburst", knight: "horse", tower: "tower", spire: "spearhead", keep: "castle-gate",
+})) {
+  assert.equal(config.normalizeFlag({ ...validOld, symbol: legacy }, "player-a").symbol, migrated, `${legacy} did not migrate to ${migrated}.`);
 }
 
-function extractFunction(source, name) {
-  const start = source.indexOf(`function ${name}(`);
-  assert.ok(start >= 0, `Missing ${name}.`);
-  const parametersStart = source.indexOf("(", start);
-  let parameterDepth = 0;
-  let bodyStart = -1;
-  for (let index = parametersStart; index < source.length; index += 1) {
-    if (source[index] === "(") parameterDepth += 1;
-    if (source[index] === ")") {
-      parameterDepth -= 1;
-      if (parameterDepth === 0) {
-        bodyStart = source.indexOf("{", index);
-        break;
-      }
-    }
-  }
-  assert.ok(bodyStart >= 0, `Missing ${name} body.`);
-  let depth = 0;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    if (source[index] === "{") depth += 1;
-    if (source[index] === "}") depth -= 1;
-    if (depth === 0) return source.slice(start, index + 1);
-  }
-  throw new Error(`Could not parse ${name}.`);
-}
+const corrupted = { primary: "parchment", secondary: null, iconColor: "#4a3428", patternId: "broken-pattern", symbolId: "deleted-symbol" };
+const repairedA = config.normalizeFlag(corrupted, "stable-player");
+const repairedB = config.normalizeFlag(corrupted, "stable-player");
+assert.deepEqual(repairedA, repairedB, "Corrupt flag fallback must be deterministic per player.");
+assert.match(repairedA.primary, /^#[0-9A-F]{6}$/);
+assert.match(repairedA.secondary, /^#[0-9A-F]{6}$/);
+assert.equal(repairedA.symbolColor, "#4A3428", "Icon-color aliases must migrate independently.");
+assert.ok(config.PATTERN_KEYS.includes(repairedA.pattern));
+assert.ok(config.SYMBOL_KEYS.includes(repairedA.symbol));
+assert.notDeepEqual(config.normalizeFlag(corrupted, "another-player"), repairedA, "Stable IDs should distribute corrupt flags across the catalog.");
 
-function assertStarterFlag(flag, label) {
-  assert.ok(colors.includes(flag?.primary), `${label} has an invalid primary color.`);
-  assert.ok(colors.includes(flag?.secondary), `${label} has an invalid secondary color.`);
-  assert.notEqual(flag.primary, flag.secondary, `${label} uses one color for both flag fields.`);
-  assert.ok(patterns.includes(flag?.pattern), `${label} has an invalid pattern.`);
-  assert.ok(symbols.includes(flag?.symbol), `${label} has an invalid symbol.`);
-  assert.notEqual(
-    JSON.stringify(flag),
-    JSON.stringify(defaultFlag),
-    `${label} fell back to the shared default flag.`
-  );
-}
+const aliases = config.normalizeFlag({
+  primaryColor: "#A52A2A", accentColor: "#315A8A", chargeColor: "#F2E2BF",
+  patternId: "saltire", icon: "flag-fleur",
+}, "aliases");
+assert.deepEqual(aliases, { primary: "#A52A2A", secondary: "#315A8A", symbolColor: "#F2E2BF", pattern: "saltire", symbol: "fleur-de-lis" });
 
-const serverFunction = extractFunction(serverSource, "createRandomPlayerFlag");
-const serverContext = {
-  Object,
-  PLAYER_FLAG_COLORS: colors,
-  PLAYER_FLAG_PATTERNS: patterns,
-  PLAYER_FLAG_SYMBOLS: symbols,
-  DEFAULT_PLAYER_FLAG: defaultFlag,
-  crypto: require("node:crypto"),
-};
-vm.createContext(serverContext);
-vm.runInContext(serverFunction, serverContext, { filename: serverPath });
+const oldestStoredShape = config.normalizeFlag({
+  background: "#17324d", patternColor: "#d8bd78", emblemColor: "#ffffff",
+  pattern: "split", emblem: "crown",
+}, "oldest-shape");
+assert.deepEqual(oldestStoredShape, { primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" }, "The earliest persisted background/patternColor/emblem fields must migrate without losing valid choices.");
 
-const serverVariants = new Set();
-for (let trial = 0; trial < 250; trial += 1) {
-  const flag = serverContext.createRandomPlayerFlag();
-  assertStarterFlag(flag, `Server flag ${trial + 1}`);
-  serverVariants.add(JSON.stringify(flag));
-}
-assert.ok(serverVariants.size > 1, "Server starter flag generation produced no variation.");
+assert.match(server, /previous\.flag && typeof previous\.flag === "object"[\s\S]*normalizeServerFlag\(previous\.flag, uid\)[\s\S]*createRandomPlayerFlag\(\)/, "Fresh profiles must preserve and normalize existing flags before randomizing missing flags.");
+assert.doesNotMatch(server, /requestData\.flag[\s\S]{0,300}createFreshResetPlayerProfile/, "Clients must not choose the authoritative starter flag.");
+assert.match(index, /id="flagSaveBtn"[\s\S]*?id="flagBackBtn"/, "The flag editor must retain Save Flag and Back actions.");
+assert.doesNotMatch(index, /id="flagExitBtn"/, "The redundant flag Exit action returned.");
 
-const forcedServerChoices = [0, 3, 1, 0];
-const forcedServerContext = {
-  Object,
-  PLAYER_FLAG_COLORS: colors,
-  PLAYER_FLAG_PATTERNS: patterns,
-  PLAYER_FLAG_SYMBOLS: symbols,
-  DEFAULT_PLAYER_FLAG: defaultFlag,
-  crypto: {
-    randomInt: () => forcedServerChoices.shift(),
-  },
-};
-vm.createContext(forcedServerContext);
-vm.runInContext(serverFunction, forcedServerContext, { filename: serverPath });
-assertStarterFlag(
-  forcedServerContext.createRandomPlayerFlag(),
-  "Server exact-default collision fallback"
-);
-
-const clientFunction = extractFunction(gameSource, "createRandomFlag");
-const randomFromFunction = extractFunction(gameSource, "randomFrom");
-const forcedClientChoices = [0, 0.5, 0.1, 0];
-const clientMath = Object.create(Math);
-clientMath.random = () => forcedClientChoices.shift();
-const clientContext = {
-  Math: clientMath,
-  Object,
-  FLAG_COLORS: colors,
-  FLAG_PATTERNS: patterns.map(key => ({ key })),
-  FLAG_SYMBOLS: symbols.map(key => ({ key })),
-  createDefaultFlag: () => ({ ...defaultFlag }),
-};
-vm.createContext(clientContext);
-vm.runInContext(`${randomFromFunction}\n${clientFunction}`, clientContext, { filename: gamePath });
-assertStarterFlag(
-  clientContext.createRandomFlag(),
-  "Client exact-default collision fallback"
-);
-
-const freshProfileFunction = extractFunction(serverSource, "createFreshResetPlayerProfile");
-assert.match(
-  freshProfileFunction,
-  /previous\.flag\s*\|\|\s*createRandomPlayerFlag\(\)/,
-  "Fresh profile creation does not preserve stored flags before generating a new one."
-);
-assert.doesNotMatch(
-  freshProfileFunction,
-  /requestData\.flag/,
-  "A first-time client can still choose or submit the authoritative starter flag."
-);
-assert.match(
-  extractFunction(gameSource, "setupOnlineWorld"),
-  /flag:\s*profile\.flag\s*&&\s*typeof profile\.flag === "object"[\s\S]*?if \(archivedProfileIdentity\.flag\) state\.flag = archivedProfileIdentity\.flag;/,
-  "An empty sign-in profile can still replace the browser's random starter flag with the shared default."
-);
-
-console.log("Validated server-authoritative random starter flags and shared-default avoidance.");
+console.log("Validated shared heraldic catalogs, random starter flags, and deterministic legacy migration.");

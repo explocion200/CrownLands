@@ -9,6 +9,7 @@ const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
+const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -116,48 +117,6 @@ const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GEN
 const TEST_STARTING_GOLD = 100;
 const PLAYER_STARTING_TROOPS = 200;
 const PLAYER_NAME_MAX_LENGTH = 18;
-const PLAYER_FLAG_COLORS = [
-  "#1f5f91",
-  "#b23a35",
-  "#2f7a4a",
-  "#6d4aa2",
-  "#d3a62e",
-  "#202a38",
-  "#d9e2e8",
-  "#8d5a2f",
-];
-const PLAYER_FLAG_PATTERNS = [
-  "split",
-  "diagonal",
-  "band",
-  "cross",
-  "saltire",
-  "chevron",
-  "quartered",
-  "pale",
-  "chief",
-  "bend",
-];
-const PLAYER_FLAG_SYMBOLS = [
-  "crown",
-  "castle",
-  "star",
-  "swords",
-  "fleur",
-  "cross",
-  "sun",
-  "moon",
-  "knight",
-  "tower",
-  "diamond",
-  "spire",
-];
-const DEFAULT_PLAYER_FLAG = Object.freeze({
-  primary: "#1f5f91",
-  secondary: "#d3a62e",
-  pattern: "diagonal",
-  symbol: "crown",
-});
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 20);
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.115);
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = economyNumber("cityEconomy.goldPerProductionVp", 15);
@@ -2227,7 +2186,7 @@ async function replaceInactivePlayerProfile(uid = "", nowMs = Date.now()) {
     email: safeString(profile.email, 240),
     photoURL: safeString(profile.photoURL, 500),
     playerName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
-    flag: profile.flag || null,
+    flag: normalizeServerFlag(profile.flag, playerUid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(playerUid),
     inactivityNotice: {
       policyVersion: INACTIVITY_POLICY_VERSION,
       type: "world-slot-reset",
@@ -6492,13 +6451,9 @@ function getOwnerName(city = {}, fallback = "Unknown") {
   return normalizePlayerName(city.ownerName, "") || safeString(city.name || fallback, 40);
 }
 
-function normalizeServerFlag(flag = null) {
+function normalizeServerFlag(flag = null, stableKey = "") {
   if (!flag || typeof flag !== "object") return null;
-  try {
-    return JSON.parse(JSON.stringify(flag));
-  } catch (_error) {
-    return null;
-  }
+  return PLAYER_FLAG_CONFIG.normalizeFlag(flag, stableKey);
 }
 
 function isCurrentWorldIslandId(islandId = "") {
@@ -6514,7 +6469,7 @@ function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken
   const rawFlag = hasFlagPayload
     ? (data.ownerFlag !== undefined ? data.ownerFlag : data.flag)
     : profile.flag;
-  const ownerFlag = normalizeServerFlag(rawFlag);
+  const ownerFlag = normalizeServerFlag(rawFlag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid);
   const ownerKingPower = Math.max(
     0,
     Math.floor(safeNumber(profile.kingPower, 0))
@@ -7196,7 +7151,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     .map(row => ({
       ownerUid: safeString(row?.ownerUid, 128),
       ownerName: normalizePlayerName(row?.ownerName, "Ruler"),
-      ownerFlag: normalizeServerFlag(row?.ownerFlag),
+      ownerFlag: normalizeServerFlag(row?.ownerFlag, row?.ownerUid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(row?.ownerUid),
       troops: Math.max(0, Math.floor(safeNumber(row?.troops, 0))),
       defenseCombatVersion: Math.max(0, Math.floor(safeNumber(row?.defenseCombatVersion, 0))),
       baseDefensePowerPerTroop: Math.max(1, safeNumber(row?.baseDefensePowerPerTroop, 1)),
@@ -7262,7 +7217,8 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     owner: getOwnerUid(target) ? "enemy" : "neutral",
     ownerUid: safeString(getOwnerUid(target), 128),
     ownerName: getOwnerName(target),
-    ownerFlag: normalizeServerFlag(defenderProfile?.flag || target.ownerFlag),
+    ownerFlag: normalizeServerFlag(defenderProfile?.flag || target.ownerFlag, getOwnerUid(target))
+      || (getOwnerUid(target) ? PLAYER_FLAG_CONFIG.createDeterministicFlag(getOwnerUid(target)) : null),
     cityLevel: targetType === "camp" ? 0 : stats.level,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
@@ -7298,7 +7254,7 @@ function createDefenderScoutDisclosure(scoutReport = null) {
       .map(row => ({
         ownerUid: safeString(row?.ownerUid, 128),
         ownerName: normalizePlayerName(row?.ownerName, "Ruler"),
-        ownerFlag: normalizeServerFlag(row?.ownerFlag),
+        ownerFlag: normalizeServerFlag(row?.ownerFlag, row?.ownerUid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(row?.ownerUid),
         troops: Math.max(0, Math.floor(safeNumber(row?.troops, 0))),
       }))
       .filter(row => row.ownerUid && row.troops > 0)
@@ -7580,7 +7536,8 @@ function makeReport({
     totalDefenseBonus: Math.max(0, normalizedTotalDefense - normalizedBaseDefense),
     opponentUid: safeString(opponentUid, 128),
     opponentName: normalizePlayerName(opponentName, "Unknown ruler"),
-    opponentFlag: normalizeServerFlag(opponentFlag),
+    opponentFlag: normalizeServerFlag(opponentFlag, opponentUid)
+      || (opponentUid ? PLAYER_FLAG_CONFIG.createDeterministicFlag(opponentUid) : null),
     ownerName: normalizePlayerName(city?.ownerName, ""),
     summary: safeString(summary, 220),
     occurredAtMs: nowMs,
@@ -11740,7 +11697,7 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     resetGeneration: RESET_GENERATION,
     displayName: normalizePlayerName(profile.playerName || profile.displayName),
     playerName: normalizePlayerName(profile.playerName || profile.displayName),
-    flag: profile.flag || null,
+    flag: normalizeServerFlag(profile.flag, economy.uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(economy.uid),
     kingPower: stats.kingPower,
     kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
     kingPowerUpdatedAtMs: stats.updatedAtMs,
@@ -14202,7 +14159,7 @@ exports.getCombatPlayerIdentity = onCall({
     uid: targetUid,
     displayName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
     playerName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
-    flag: leaderboard.flag || null,
+    flag: normalizeServerFlag(leaderboard.flag, targetUid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(targetUid),
     kingPower: Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))),
     kingPowerVersion: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))),
     mainCityId: safeString(leaderboard.mainCityId, 96),
@@ -14509,22 +14466,7 @@ function shuffleStartingCityIds(regionId = "") {
 }
 
 function createRandomPlayerFlag() {
-  const primaryOptions = PLAYER_FLAG_COLORS.filter(color => color !== "#d9e2e8");
-  const primary = primaryOptions[crypto.randomInt(0, primaryOptions.length)];
-  const secondaryOptions = PLAYER_FLAG_COLORS.filter(color => color !== primary);
-  const flag = {
-    primary,
-    secondary: secondaryOptions[crypto.randomInt(0, secondaryOptions.length)],
-    pattern: PLAYER_FLAG_PATTERNS[crypto.randomInt(0, PLAYER_FLAG_PATTERNS.length)],
-    symbol: PLAYER_FLAG_SYMBOLS[crypto.randomInt(0, PLAYER_FLAG_SYMBOLS.length)],
-  };
-  const matchesDefault = Object.keys(DEFAULT_PLAYER_FLAG)
-    .every(key => flag[key] === DEFAULT_PLAYER_FLAG[key]);
-  if (matchesDefault) {
-    flag.symbol = PLAYER_FLAG_SYMBOLS.find(symbol => symbol !== DEFAULT_PLAYER_FLAG.symbol)
-      || DEFAULT_PLAYER_FLAG.symbol;
-  }
-  return flag;
+  return PLAYER_FLAG_CONFIG.createRandomFlag(max => crypto.randomInt(0, max));
 }
 
 function createFreshResetPlayerProfile({
@@ -14539,7 +14481,9 @@ function createFreshResetPlayerProfile({
 } = {}) {
   const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
   const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
-  const flag = sanitizeJsonValue(previous.flag || createRandomPlayerFlag());
+  const flag = previous.flag && typeof previous.flag === "object"
+    ? normalizeServerFlag(previous.flag, uid)
+    : createRandomPlayerFlag();
   const profile = {
     uid,
     displayName,
@@ -14634,7 +14578,7 @@ async function claimFreshStartingCity(request) {
           alreadyClaimed: true,
           currentUser: {
             playerName: normalizePlayerName(previous.playerName || previous.displayName),
-            flag: previous.flag || null,
+            flag: normalizeServerFlag(previous.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
             gold: Math.max(0, Math.floor(safeNumber(previous.gold, TEST_STARTING_GOLD))),
             character: normalizeCharacterProgress(previous.character),
             upgrades: normalizeSkillUpgrades(previous.upgrades),
@@ -15838,7 +15782,7 @@ function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Dat
     resetGeneration: RESET_GENERATION,
     role,
     displayName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
-    flag: profile.flag || null,
+    flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
     kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower || profile.globalStats?.kingPower, 0))),
     joinedAtMs: nowMs,
     roleChangedAtMs: nowMs,
@@ -16383,7 +16327,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
       displayName: normalizePlayerName(profile.playerName || profile.displayName),
-      flag: profile.flag || null,
+      flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
       kingPower: Math.max(0, Math.floor(safeNumber(statsSnap.data()?.kingPower || profile.kingPower, 0))),
       message: safeString(request.data?.message, 160).trim(),
       status: "pending",
@@ -21424,9 +21368,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
-    const attackerFlag = normalizeServerFlag(attackerProfile.flag || army.ownerFlag);
+    const attackerFlag = normalizeServerFlag(attackerProfile.flag || army.ownerFlag, attackerUid)
+      || PLAYER_FLAG_CONFIG.createDeterministicFlag(attackerUid);
     const defenderFlag = defenderUid
-      ? normalizeServerFlag(defenderProfile.flag || target.ownerFlag)
+      ? normalizeServerFlag(defenderProfile.flag || target.ownerFlag, defenderUid)
+        || PLAYER_FLAG_CONFIG.createDeterministicFlag(defenderUid)
       : null;
     if (antiFarmContext.policy.blocked) {
       const message = getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs);

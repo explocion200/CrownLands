@@ -28,15 +28,17 @@ for (const token of [
 for (const family of [
   ".setup-card", ".commander-panel", ".profile-screen", ".modal .modal-card",
   ".kingdom-stat", ".shop-item", ".inventory-slot", ".city-list-row",
-  ".leaderboard-row", ".battle-report-card", ".incoming-attack-card",
+  ".battle-report-card", ".incoming-attack-card",
   ".scout-report-city", ".camp-info-tab-panel", ".clan-panel",
   ".public-profile-section", ".daily-reward-card", ".daily-mission-row",
   ".seasonal-achievement-row", ".offline-reward-grid > div",
   ".realm-activity-card", ".bottom-nav .report-nav-btn",
 ]) assert.ok(css.includes(family), `The Profile theme does not cover ${family}.`);
 
-assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal \.modal-card\)[\s\S]*?:is\(h1, h2, h3, h4,[\s\S]*?color:\s*var\(--cl-profile-gold\) !important;/, "Interface headings do not use the Profile gold treatment.");
-assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal \.modal-card\)[\s\S]*?:is\(p, li, dd, dt, label, span, small, em\)[\s\S]*?color:\s*var\(--cl-profile-muted\) !important;/, "Supporting interface copy does not use the Profile muted treatment.");
+assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card\)[\s\S]*?:is\(h1, h2, h3, h4,[\s\S]*?color:\s*var\(--cl-profile-gold\) !important;/, "Interface headings do not use the Profile gold treatment.");
+assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card\)[\s\S]*?:is\(p, li, dd, dt, label, span:not\(\.flag-symbol\), small, em\)[\s\S]*?color:\s*var\(--cl-profile-muted\) !important;/, "Supporting interface copy does not use the Profile muted treatment without overriding player flags or dedicated leaderboard colors.");
+assert.doesNotMatch(css, /\.leaderboard-toolbar,\s*\.leaderboard-row,/, "The intermediate Profile theme still replaces the dedicated leaderboard surface.");
+assert.match(css, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, "The intermediate Profile theme still paints player or clan identity links as generic controls.");
 assert.match(css, /\.profile-screen-header\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #071b2a\) !important;/, "The Profile header itself is not using the unified navy shell.");
 assert.match(css, /\.modal \.modal-card > h2,[\s\S]*?background:\s*transparent !important;[\s\S]*?clip-path:\s*none !important;/, "Modal titles still use a legacy colored banner instead of the Profile heading treatment.");
 assert.match(css, /\.profile-screen \.kingdom-stat \.profile-production-bonus\s*\{[\s\S]*?color:\s*var\(--cl-profile-gold\) !important;/, "Profile production bonuses do not use the unified bright-gold text.");
@@ -46,10 +48,10 @@ assert.match(css, /\.battle-report-card\.scout \.battle-report-result\s*\{[\s\S]
 assert.match(css, /\.battle-report-card\.defeat \.battle-report-result[\s\S]*?var\(--cl-profile-danger\)/, "Defeat state meaning was lost during theme unification.");
 assert.match(css, /\.clan-member-row\.selected[\s\S]*?var\(--cl-profile-success\)/, "Ally or success state meaning was lost during theme unification.");
 
-const themeTag = "profile-theme.css?v=20260814-main-city-r36";
+const themeTag = "profile-theme.css?v=20260814-readability-r38";
 assert.ok(index.includes(themeTag), "The game does not load the unified Profile theme.");
 assert.ok(index.indexOf(themeTag) > index.indexOf("ui-contrast-correction.css"), "The unified Profile theme must load after every legacy color layer.");
-assert.ok(worker.includes(`/profile-theme.css?v=20260814-main-city-r36`), "The unified Profile theme is missing from the offline shell.");
+assert.ok(worker.includes(`/profile-theme.css?v=20260814-readability-r38`), "The unified Profile theme is missing from the offline shell.");
 for (const source of [builder, manifestBuilder, artifactValidator]) {
   assert.ok(source.includes("profile-theme.css"), "The unified Profile theme is missing from release packaging.");
 }

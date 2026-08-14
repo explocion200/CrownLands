@@ -10,7 +10,19 @@ const api = read("firebaseClient.js");
 const server = read("functions/index.js");
 const rules = read("firestore.rules");
 const markup = read("index.html");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
+const finalPalette = read("crownlands-palette.css");
+const visualQa = read("docs/visual-qa/report-leaderboard-readability/index.html");
+const styles = [
+  "styles.css",
+  "interface-theme.css",
+  "readability.css",
+  "manuscript-prototype.css",
+  "ui-contrast-correction.css",
+  "profile-theme.css",
+  "crownlands-palette.css",
+  "action-buttons.css",
+  "mobile-viewport.css",
+].map(read).join("\n");
 
 function functionBody(source, name) {
   const marker = `function ${name}`;
@@ -34,6 +46,9 @@ assert.match(functionBody(client, "showLogModal"), /modal\.className\s*=\s*"moda
 assert.match(functionBody(client, "showBattleReportDetail"), /modal\.className\s*=\s*"modal battle-report-modal";/, "Battle report details can retain a stale modal layout that prevents scrolling.");
 assert.match(functionBody(client, "showScoutReportModal"), /modal\.className\s*=\s*"modal scout-report-modal";/, "Scout report details can retain a stale modal layout that prevents scrolling.");
 assert.match(styles, /:is\(\.incoming-attack-modal,\.outgoing-attack-modal,\.battle-report-modal,\.scout-report-modal\) \.modal-card #modalBody\s*\{[\s\S]*?overflow-y:\s*auto !important;/, "Report lists and report details must remain vertically scrollable.");
+assert.match(finalPalette, /\.modal\.battle-report-modal \.battle-report-card \.battle-report-city > span,[\s\S]*?\.battle-report-result :is\(strong, small\)[\s\S]*?color:\s*var\(--cl-text-bright\) !important;[\s\S]*?opacity:\s*1;/, "The final palette does not keep report level badges and result timers readable.");
+assert.doesNotMatch(finalPalette, /\.battle-report-card :is\(\.battle-report-city, \.battle-report-troops, \.battle-report-opponent\)[\s\S]{0,120}:is\(span, small\)/, "The final palette still recolors the level badge as muted parchment text.");
+assert.match(visualQa, /data-qa-report="victory"[\s\S]*?data-qa-report="defeat"[\s\S]*?data-qa-report="scout"/, "The report readability QA page does not cover every report result surface.");
 
 ["getBattleReportAgeSeconds", "compareBattleReportsNewestFirst", "renderBattleReportCard", "renderDetailedBattleReport", "renderLegacyBattleReportDetail"]
   .forEach(name => assert.doesNotMatch(

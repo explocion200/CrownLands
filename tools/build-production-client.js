@@ -66,6 +66,7 @@ copyDirectoryFiles("assets/worlds/world_01/thumbnails/versioned", relativePath =
 copy("audio/manifest.json");
 copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath));
 copy("functions/clanQuestPeriod.js");
+copy("functions/playerFlagConfig.js");
 
 const stamp = spawnSync(process.execPath, [path.join(__dirname, "stamp-deploy-build.js"), "--root", "dist"], {
   cwd: root,
