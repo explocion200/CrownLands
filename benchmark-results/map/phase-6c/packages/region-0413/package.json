@@ -1,0 +1,505 @@
+{
+  "index": 412,
+  "key": "region-0413",
+  "packageDirectory": "packages/region-0413",
+  "regionId": "phase6c_region_0413",
+  "coordinate": {
+    "gridX": -10,
+    "gridY": -6,
+    "worldLayer": 8,
+    "clockwiseOrderIndex": 76
+  },
+  "layer": 8,
+  "clockwiseOrderIndex": 76,
+  "theme": "west",
+  "variant": "b",
+  "seed": {
+    "artworkStrategy": "sha256(world|season|region|coordinate|generator|library|direction|variant|retrySalt)",
+    "artworkMaterialHash": "2ce653700e469a6a5987c31a7de95948a7701d2a3a8dec06a5ea6690e8446291",
+    "artworkRetrySalt": "phase6c-world-sample|region-0413|west|b",
+    "cityStrategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|seedSalt)",
+    "citySeedHash": "67b471fd1ed562096b20b20374e8e91085f3f0fef859ed2c068e7adeb894d945",
+    "citySeedSalt": "phase6b|west|b|layout-21"
+  },
+  "foundation": {
+    "assetId": "foundation.west",
+    "transform": "flip_horizontal"
+  },
+  "barriers": [
+    {
+      "assetId": "barrier.west.east-north",
+      "x": 1252,
+      "y": 156,
+      "width": 196,
+      "height": 267,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.east-south",
+      "x": 1252,
+      "y": 663,
+      "width": 196,
+      "height": 267,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.north-east",
+      "x": 844,
+      "y": 0,
+      "width": 604,
+      "height": 196,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.north-west",
+      "x": 0,
+      "y": 0,
+      "width": 604,
+      "height": 196,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.south-east",
+      "x": 844,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.south-west",
+      "x": 0,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.west-north",
+      "x": 0,
+      "y": 156,
+      "width": 196,
+      "height": 267,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.west.west-south",
+      "x": 0,
+      "y": 663,
+      "width": 196,
+      "height": 267,
+      "flipHorizontal": false,
+      "flipVertical": false
+    }
+  ],
+  "roads": [
+    {
+      "assetId": "road-opening.west.north",
+      "x": 564,
+      "y": 0,
+      "width": 320,
+      "height": 440,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.west.east",
+      "x": 888,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.west.south",
+      "x": 564,
+      "y": 646,
+      "width": 320,
+      "height": 440,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.west.west",
+      "x": 0,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "flipHorizontal": false,
+      "flipVertical": false
+    }
+  ],
+  "roadGeometry": [
+    {
+      "id": "road-north",
+      "side": "north",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 724,
+          "y": 348
+        }
+      ]
+    },
+    {
+      "id": "road-east",
+      "side": "east",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 985,
+          "y": 543
+        }
+      ]
+    },
+    {
+      "id": "road-south",
+      "side": "south",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 724,
+          "y": 738
+        }
+      ]
+    },
+    {
+      "id": "road-west",
+      "side": "west",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 463,
+          "y": 543
+        }
+      ]
+    }
+  ],
+  "accents": [
+    {
+      "assetId": "accent.west.farmland-a",
+      "x": 799,
+      "y": 182,
+      "width": 252,
+      "height": 126,
+      "flipHorizontal": true,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.west.temperate-woodland-b",
+      "x": 416,
+      "y": 733,
+      "width": 208,
+      "height": 164,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.west.farmland-b",
+      "x": 378,
+      "y": 246,
+      "width": 254,
+      "height": 179,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.west.meadow-pond",
+      "x": 898,
+      "y": 516,
+      "width": 424,
+      "height": 329,
+      "flipHorizontal": true,
+      "flipVertical": false
+    }
+  ],
+  "hashes": {
+    "foundationSelectionHash": "661726bc3b5b51403c825524cce594977b3adc8f85badd5372739b87b39d7239",
+    "barrierSelectionHash": "c7825abd98c79d64d4da0dc67d0b7b7b1bcbbaffb9a04a1258e558dc124acb40",
+    "roadLayoutHash": "a841e54e2feaedc6d641b6d32fbef22375534fb22f337df69cc2af2c09a22a19",
+    "roadPresentationHash": "7cef54fa1654fa9de15f47587a30f8efdd027e098b8b501330d20c4a10376875",
+    "accentSetHash": "66042ab8f4db10cc0a025d47a2803b5f4d255d74d8b570e6359a6123b7eef577",
+    "accentPlanHash": "f341a8fcce558dd32f7f15688d6be68feeaab2943f9550a33a7fc3bc3cfd24b4",
+    "cityPlanHash": "aa60e2cbc794008c25ad7f837a547eefd70245a0546a7599fe842681437e05ec",
+    "compositionPlanHash": "3c7644ec30612aea01339dc9ae13ffca64e91780788fa24da2b7d506c8926102"
+  },
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "cityMetrics": {
+    "minimumSpacing": 112,
+    "maximumSpacing": 1277.758,
+    "localDensityRadius": 240,
+    "averageLocalDensity": 5.3
+  },
+  "generationAttempt": 21,
+  "retryCount": 20,
+  "failedAttempts": [
+    {
+      "attempt": 1,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 2,
+      "placedCities": 35,
+      "validationErrors": [
+        "Placed 35 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 3,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 4,
+      "placedCities": 38,
+      "validationErrors": [
+        "Placed 38 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 5,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 6,
+      "placedCities": 39,
+      "validationErrors": [
+        "Placed 39 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 7,
+      "placedCities": 34,
+      "validationErrors": [
+        "Placed 34 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 8,
+      "placedCities": 34,
+      "validationErrors": [
+        "Placed 34 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 9,
+      "placedCities": 35,
+      "validationErrors": [
+        "Placed 35 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 10,
+      "placedCities": 37,
+      "validationErrors": [
+        "Placed 37 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 11,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 12,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 13,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 14,
+      "placedCities": 37,
+      "validationErrors": [
+        "Placed 37 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 15,
+      "placedCities": 38,
+      "validationErrors": [
+        "Placed 38 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 16,
+      "placedCities": 34,
+      "validationErrors": [
+        "Placed 34 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 17,
+      "placedCities": 36,
+      "validationErrors": [
+        "Placed 36 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 18,
+      "placedCities": 35,
+      "validationErrors": [
+        "Placed 35 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 19,
+      "placedCities": 35,
+      "validationErrors": [
+        "Placed 35 city positions; exactly 40 are required."
+      ]
+    },
+    {
+      "attempt": 20,
+      "placedCities": 33,
+      "validationErrors": [
+        "Placed 33 city positions; exactly 40 are required."
+      ]
+    }
+  ],
+  "candidateMetrics": {
+    "candidatePositionsEvaluated": 186950,
+    "acceptedPositions": 40,
+    "rejectedPositions": 186910,
+    "rejectedByReason": {
+      "terrain_blocker": 36055,
+      "outside_land": 50040,
+      "city_spacing": 58860,
+      "road_corridor": 29432,
+      "edge_clearance": 12523
+    }
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0334"
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0412"
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "status": "standby",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "planAndCityGenerationMs": 19646.971,
+  "finalConnections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0414"
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0334"
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0412"
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "open",
+      "targetRegionId": "phase6c_region_0500"
+    }
+  },
+  "raster": {
+    "losslessPngHash": "4342ece30a08245a2f023546de51faaa7c7a8a977a912ef8c52b451fd486f395",
+    "rawPixelHash": "ec68101a42ff1ab20be224fc7bb68c64a5267e0585c6bd770dd3569cbc0a49d0",
+    "webpHash": "79ef2f8464e1d8fdd9b456dd167865e54ea06f9fc38bcf53225dfa3442143996",
+    "thumbnailHash": "ba904fac8f3df52126c8fc808bbcad396daec512f8706c96bd962cb345e9220c",
+    "webpBytes": 301926,
+    "thumbnailBytes": 18298,
+    "dimensions": {
+      "width": 1448,
+      "height": 1086
+    },
+    "thumbnailDimensions": {
+      "width": 320,
+      "height": 240
+    }
+  },
+  "perceptualFeatureRef": "render-index.json#region-0413",
+  "rasterGenerationMs": 2032.31,
+  "totalGenerationMs": 21679.281,
+  "packageHash": "74b6f02057d0f07f09a99efaa7388556b938f1f87f9a2035f2a964d6f3c33f24"
+}

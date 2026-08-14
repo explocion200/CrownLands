@@ -1,0 +1,409 @@
+{
+  "schemaVersion": 1,
+  "phase": "6C",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "nearDuplicates": {
+    "method": {
+      "version": "phase6c-multi-metric-v1",
+      "sameThemePairsEvaluated": 125377,
+      "nearDuplicateThreshold": 0.965,
+      "highSimilarityThreshold": 0.98,
+      "metrics": [
+        "64-bit difference hash",
+        "64-bit perceptual DCT hash",
+        "64-bit average hash",
+        "16x12 structural similarity",
+        "16x12 RGB root-mean-square similarity",
+        "normalized composition feature similarity"
+      ]
+    },
+    "flaggedPairCount": 35849,
+    "flaggedPairRate": 0.28593,
+    "highSimilarityPairCount": 5191,
+    "highSimilarityPairRate": 0.041403,
+    "mapsInFlaggedPairs": 1000,
+    "mapsInFlaggedPairsRate": 1.0,
+    "flaggedByTheme": {
+      "east": 4790,
+      "north": 20202,
+      "south": 9816,
+      "west": 1041
+    },
+    "maximumVisualSimilarity": 0.999471,
+    "p95VisualSimilarity": 0.979153,
+    "medianVisualSimilarity": 0.94955
+  },
+  "mostSimilarPairs": [
+    {
+      "left": "region-0743",
+      "right": "region-0744",
+      "theme": "east",
+      "visualSimilarity": 0.999471,
+      "compositionSimilarity": 0.918528,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.999671,
+      "lowResolutionRgbSimilarity": 0.997851
+    },
+    {
+      "left": "region-0152",
+      "right": "region-0201",
+      "theme": "north",
+      "visualSimilarity": 0.999089,
+      "compositionSimilarity": 0.86321,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.999057,
+      "lowResolutionRgbSimilarity": 0.996857
+    },
+    {
+      "left": "region-0438",
+      "right": "region-0733",
+      "theme": "north",
+      "visualSimilarity": 0.998957,
+      "compositionSimilarity": 0.84008,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.999173,
+      "lowResolutionRgbSimilarity": 0.996024
+    },
+    {
+      "left": "region-0659",
+      "right": "region-0892",
+      "theme": "south",
+      "visualSimilarity": 0.998953,
+      "compositionSimilarity": 0.952151,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.998517,
+      "lowResolutionRgbSimilarity": 0.996992
+    },
+    {
+      "left": "region-0282",
+      "right": "region-0429",
+      "theme": "north",
+      "visualSimilarity": 0.998597,
+      "compositionSimilarity": 0.865394,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.998345,
+      "lowResolutionRgbSimilarity": 0.995466
+    },
+    {
+      "left": "region-0436",
+      "right": "region-0526",
+      "theme": "north",
+      "visualSimilarity": 0.998328,
+      "compositionSimilarity": 0.762065,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.997879,
+      "lowResolutionRgbSimilarity": 0.994823
+    },
+    {
+      "left": "region-0062",
+      "right": "region-0437",
+      "theme": "north",
+      "visualSimilarity": 0.99811,
+      "compositionSimilarity": 0.791768,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.997532,
+      "lowResolutionRgbSimilarity": 0.994251
+    },
+    {
+      "left": "region-0651",
+      "right": "region-0970",
+      "theme": "east",
+      "visualSimilarity": 0.998025,
+      "compositionSimilarity": 0.909037,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.998258,
+      "lowResolutionRgbSimilarity": 0.992738
+    },
+    {
+      "left": "region-0445",
+      "right": "region-0541",
+      "theme": "east",
+      "visualSimilarity": 0.997941,
+      "compositionSimilarity": 0.871973,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.997787,
+      "lowResolutionRgbSimilarity": 0.993023
+    },
+    {
+      "left": "region-0463",
+      "right": "region-0569",
+      "theme": "south",
+      "visualSimilarity": 0.997789,
+      "compositionSimilarity": 0.918397,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.996577,
+      "lowResolutionRgbSimilarity": 0.994081
+    },
+    {
+      "left": "region-0084",
+      "right": "region-0778",
+      "theme": "south",
+      "visualSimilarity": 0.997768,
+      "compositionSimilarity": 0.852382,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.997066,
+      "lowResolutionRgbSimilarity": 0.993241
+    },
+    {
+      "left": "region-0061",
+      "right": "region-0338",
+      "theme": "north",
+      "visualSimilarity": 0.997761,
+      "compositionSimilarity": 0.691226,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.996665,
+      "lowResolutionRgbSimilarity": 0.993808
+    },
+    {
+      "left": "region-0240",
+      "right": "region-0888",
+      "theme": "south",
+      "visualSimilarity": 0.997607,
+      "compositionSimilarity": 0.731298,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.997074,
+      "lowResolutionRgbSimilarity": 0.992424
+    },
+    {
+      "left": "region-0855",
+      "right": "region-0859",
+      "theme": "east",
+      "visualSimilarity": 0.997335,
+      "compositionSimilarity": 0.859082,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.99702,
+      "lowResolutionRgbSimilarity": 0.991146
+    },
+    {
+      "left": "region-0038",
+      "right": "region-0445",
+      "theme": "east",
+      "visualSimilarity": 0.997325,
+      "compositionSimilarity": 0.755974,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.995498,
+      "lowResolutionRgbSimilarity": 0.993381
+    },
+    {
+      "left": "region-0013",
+      "right": "region-0245",
+      "theme": "south",
+      "visualSimilarity": 0.997104,
+      "compositionSimilarity": 0.794625,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.996252,
+      "lowResolutionRgbSimilarity": 0.991142
+    },
+    {
+      "left": "region-0038",
+      "right": "region-0541",
+      "theme": "east",
+      "visualSimilarity": 0.996938,
+      "compositionSimilarity": 0.833507,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.995386,
+      "lowResolutionRgbSimilarity": 0.991611
+    },
+    {
+      "left": "region-0298",
+      "right": "region-0443",
+      "theme": "east",
+      "visualSimilarity": 0.996906,
+      "compositionSimilarity": 0.796491,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.996264,
+      "lowResolutionRgbSimilarity": 0.990136
+    },
+    {
+      "left": "region-0336",
+      "right": "region-0696",
+      "theme": "west",
+      "visualSimilarity": 0.99652,
+      "compositionSimilarity": 0.780667,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 0.984375,
+      "structuralSimilarity": 0.997673,
+      "lowResolutionRgbSimilarity": 0.993901
+    },
+    {
+      "left": "region-0058",
+      "right": "region-0214",
+      "theme": "north",
+      "visualSimilarity": 0.996397,
+      "compositionSimilarity": 0.734374,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 0.984375,
+      "structuralSimilarity": 0.997151,
+      "lowResolutionRgbSimilarity": 0.994072
+    },
+    {
+      "left": "region-0513",
+      "right": "region-0716",
+      "theme": "north",
+      "visualSimilarity": 0.996378,
+      "compositionSimilarity": 0.947327,
+      "differenceHashSimilarity": 0.984375,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.99966,
+      "lowResolutionRgbSimilarity": 0.998026
+    },
+    {
+      "left": "region-0654",
+      "right": "region-0878",
+      "theme": "south",
+      "visualSimilarity": 0.996344,
+      "compositionSimilarity": 0.77598,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 0.984375,
+      "structuralSimilarity": 0.997196,
+      "lowResolutionRgbSimilarity": 0.993737
+    },
+    {
+      "left": "region-0158",
+      "right": "region-0344",
+      "theme": "north",
+      "visualSimilarity": 0.996164,
+      "compositionSimilarity": 0.864133,
+      "differenceHashSimilarity": 0.984375,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.999474,
+      "lowResolutionRgbSimilarity": 0.997237
+    },
+    {
+      "left": "region-0065",
+      "right": "region-0819",
+      "theme": "north",
+      "visualSimilarity": 0.996112,
+      "compositionSimilarity": 0.918413,
+      "differenceHashSimilarity": 0.984375,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 1.0,
+      "structuralSimilarity": 0.999423,
+      "lowResolutionRgbSimilarity": 0.99705
+    },
+    {
+      "left": "region-0307",
+      "right": "region-0479",
+      "theme": "south",
+      "visualSimilarity": 0.996064,
+      "compositionSimilarity": 0.806355,
+      "differenceHashSimilarity": 1.0,
+      "perceptualHashSimilarity": 1.0,
+      "averageHashSimilarity": 0.984375,
+      "structuralSimilarity": 0.996898,
+      "lowResolutionRgbSimilarity": 0.992785
+    }
+  ],
+  "neighborCohesion": {
+    "cardinalNeighborPairCount": 1925,
+    "crossThemeNeighborPairCount": 103,
+    "allRoadAnchorsAligned": true,
+    "allEdgePackagesCompatible": true,
+    "sequentialRun25Covered": true,
+    "sequentialRun100Covered": true,
+    "completeLayerOneCount": 24,
+    "completeLayerTwoCount": 32,
+    "themePairCounts": {
+      "east-north": 27,
+      "east-south": 26,
+      "north-west": 25,
+      "south-west": 25
+    }
+  },
+  "directionalTransitions": {
+    "classifierRulePreserved": "dominant axis; exact diagonal ties resolve North/South",
+    "sameThemeAverageMeanRgbDistance": 0.580407,
+    "crossThemeAverageMeanRgbDistance": 72.462827,
+    "crossToSameThemeDistanceRatio": 124.848298,
+    "transitionFamilies": {
+      "east-north": {
+        "count": 27,
+        "averageMeanRgbDistance": 108.831894,
+        "maximumMeanRgbDistance": 109.851337
+      },
+      "east-south": {
+        "count": 26,
+        "averageMeanRgbDistance": 51.642323,
+        "maximumMeanRgbDistance": 52.738887
+      },
+      "north-west": {
+        "count": 25,
+        "averageMeanRgbDistance": 91.651086,
+        "maximumMeanRgbDistance": 92.342472
+      },
+      "south-west": {
+        "count": 25,
+        "averageMeanRgbDistance": 35.649301,
+        "maximumMeanRgbDistance": 37.157347
+      }
+    },
+    "sameWorldPaletteRange": true,
+    "deterministicBlendProfileRecommended": true,
+    "recommendation": "Retain the four primary identities; introduce a deterministic edge-band profile only if full-size human review finds the measured transition distance abrupt."
+  },
+  "gallery": {
+    "path": "gallery/index.html",
+    "files": [
+      "random-25-maps.png",
+      "random-25-city-layouts.png",
+      "most-similar-25-pairs.png",
+      "representative-north.png",
+      "representative-east.png",
+      "representative-south.png",
+      "representative-west.png",
+      "sequential-25.png",
+      "sequential-100.png",
+      "complete-layer-1.png",
+      "complete-layer-2.png",
+      "directional-transitions.png",
+      "repeated-foundations.png",
+      "repeated-edges.png",
+      "repeated-road-layouts.png"
+    ],
+    "randomMapCount": 25,
+    "mostSimilarPairCount": 25,
+    "developmentOnly": true
+  }
+}
