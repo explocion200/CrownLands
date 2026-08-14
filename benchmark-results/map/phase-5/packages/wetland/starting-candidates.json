@@ -1,0 +1,101 @@
+[
+  {
+    "cityId": "npc_phase5_wetland_region_856e98c6fe1adb",
+    "eligible": true,
+    "score": 173.08,
+    "nearbyNpcCityCount": 10,
+    "nearbyNpcCityIds": [
+      "npc_phase5_wetland_region_10514076c25e2b",
+      "npc_phase5_wetland_region_29921b16655ec8",
+      "npc_phase5_wetland_region_522bb333e207d0",
+      "npc_phase5_wetland_region_5594719a34bd6e",
+      "npc_phase5_wetland_region_5d509e3dcc6d4e",
+      "npc_phase5_wetland_region_659493014c5913",
+      "npc_phase5_wetland_region_77b60542566e07",
+      "npc_phase5_wetland_region_85089effa17a51",
+      "npc_phase5_wetland_region_919c895e7cf70b",
+      "npc_phase5_wetland_region_bc096df5dc8373"
+    ],
+    "edgeDistance": 340,
+    "localUsableTerritoryRatio": 0.375,
+    "nearestRoadCorridorDistance": 147,
+    "gameplay": {
+      "x": 9948,
+      "y": 6199
+    }
+  },
+  {
+    "cityId": "npc_phase5_wetland_region_41dffeaef3b244",
+    "eligible": true,
+    "score": 168.518,
+    "nearbyNpcCityCount": 10,
+    "nearbyNpcCityIds": [
+      "npc_phase5_wetland_region_1652325605646c",
+      "npc_phase5_wetland_region_249a9857a4ac26",
+      "npc_phase5_wetland_region_3df1d71ec488e8",
+      "npc_phase5_wetland_region_522bb333e207d0",
+      "npc_phase5_wetland_region_5a9552b406ce30",
+      "npc_phase5_wetland_region_5d3f5c541569e7",
+      "npc_phase5_wetland_region_659493014c5913",
+      "npc_phase5_wetland_region_a17855f53f9536",
+      "npc_phase5_wetland_region_b5257910657032",
+      "npc_phase5_wetland_region_cb9d9a3b13a9b3"
+    ],
+    "edgeDistance": 335,
+    "localUsableTerritoryRatio": 0.333333,
+    "nearestRoadCorridorDistance": 75,
+    "gameplay": {
+      "x": 5710,
+      "y": 11756
+    }
+  },
+  {
+    "cityId": "npc_phase5_wetland_region_cf4e32e5156995",
+    "eligible": true,
+    "score": 165.36,
+    "nearbyNpcCityCount": 10,
+    "nearbyNpcCityIds": [
+      "npc_phase5_wetland_region_3df1d71ec488e8",
+      "npc_phase5_wetland_region_5594719a34bd6e",
+      "npc_phase5_wetland_region_5d3f5c541569e7",
+      "npc_phase5_wetland_region_62cf293cb6298f",
+      "npc_phase5_wetland_region_659493014c5913",
+      "npc_phase5_wetland_region_6db3ebff5daba5",
+      "npc_phase5_wetland_region_8f3e8f25778acb",
+      "npc_phase5_wetland_region_92f14ae35c3255",
+      "npc_phase5_wetland_region_9e0e618a2c05aa",
+      "npc_phase5_wetland_region_bc096df5dc8373"
+    ],
+    "edgeDistance": 329,
+    "localUsableTerritoryRatio": 0.25,
+    "nearestRoadCorridorDistance": 79,
+    "gameplay": {
+      "x": 5396,
+      "y": 5150
+    }
+  },
+  {
+    "cityId": "npc_phase5_wetland_region_8f3e8f25778acb",
+    "eligible": true,
+    "score": 159.095,
+    "nearbyNpcCityCount": 9,
+    "nearbyNpcCityIds": [
+      "npc_phase5_wetland_region_03fc705dee4d9c",
+      "npc_phase5_wetland_region_1796754e4e03fe",
+      "npc_phase5_wetland_region_5d3f5c541569e7",
+      "npc_phase5_wetland_region_62cf293cb6298f",
+      "npc_phase5_wetland_region_6db3ebff5daba5",
+      "npc_phase5_wetland_region_9e0e618a2c05aa",
+      "npc_phase5_wetland_region_a1090011cb9354",
+      "npc_phase5_wetland_region_b6c01a47e05138",
+      "npc_phase5_wetland_region_cf4e32e5156995"
+    ],
+    "edgeDistance": 223,
+    "localUsableTerritoryRatio": 0.4375,
+    "nearestRoadCorridorDistance": 172,
+    "gameplay": {
+      "x": 3869,
+      "y": 3491
+    }
+  }
+]

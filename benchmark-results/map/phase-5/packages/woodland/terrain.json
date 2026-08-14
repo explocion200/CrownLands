@@ -1,0 +1,50 @@
+{
+  "profile": "woodland",
+  "landPolygon": [
+    {
+      "x": 78,
+      "y": 92
+    },
+    {
+      "x": 270,
+      "y": 54
+    },
+    {
+      "x": 1160,
+      "y": 54
+    },
+    {
+      "x": 1372,
+      "y": 145
+    },
+    {
+      "x": 1402,
+      "y": 850
+    },
+    {
+      "x": 1300,
+      "y": 1022
+    },
+    {
+      "x": 160,
+      "y": 1022
+    },
+    {
+      "x": 44,
+      "y": 840
+    }
+  ],
+  "gameplayCoordinateSystem": {
+    "width": 13000,
+    "height": 17000,
+    "pixelToGameplay": {
+      "xScale": 8.977900552486,
+      "yScale": 15.653775322284
+    },
+    "gameplayToPixel": {
+      "xScale": 0.111384615385,
+      "yScale": 0.063882352941
+    }
+  },
+  "crossings": []
+}

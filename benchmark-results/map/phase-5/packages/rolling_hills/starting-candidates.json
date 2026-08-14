@@ -1,0 +1,99 @@
+[
+  {
+    "cityId": "npc_phase5_rolling_hills_region_aa0da9a852777e",
+    "eligible": true,
+    "score": 167.336,
+    "nearbyNpcCityCount": 10,
+    "nearbyNpcCityIds": [
+      "npc_phase5_rolling_hills_region_0c8b7a402eefcf",
+      "npc_phase5_rolling_hills_region_2b07b2eea33f66",
+      "npc_phase5_rolling_hills_region_34061e4f99c8cf",
+      "npc_phase5_rolling_hills_region_448e5437ab1dc0",
+      "npc_phase5_rolling_hills_region_7666882dff53e8",
+      "npc_phase5_rolling_hills_region_84e7dd6623a7d6",
+      "npc_phase5_rolling_hills_region_a456fd51375302",
+      "npc_phase5_rolling_hills_region_ab6d3e0edcf7dc",
+      "npc_phase5_rolling_hills_region_c5acdc0d39c33b",
+      "npc_phase5_rolling_hills_region_fe6a46b1f1716f"
+    ],
+    "edgeDistance": 335,
+    "localUsableTerritoryRatio": 0.291667,
+    "nearestRoadCorridorDistance": 87,
+    "gameplay": {
+      "x": 7703,
+      "y": 5244
+    }
+  },
+  {
+    "cityId": "npc_phase5_rolling_hills_region_ab6d3e0edcf7dc",
+    "eligible": true,
+    "score": 159.63,
+    "nearbyNpcCityCount": 9,
+    "nearbyNpcCityIds": [
+      "npc_phase5_rolling_hills_region_0c8b7a402eefcf",
+      "npc_phase5_rolling_hills_region_34061e4f99c8cf",
+      "npc_phase5_rolling_hills_region_4823c22e6138b7",
+      "npc_phase5_rolling_hills_region_7666882dff53e8",
+      "npc_phase5_rolling_hills_region_89f63b536b868f",
+      "npc_phase5_rolling_hills_region_9d7c1d299491a3",
+      "npc_phase5_rolling_hills_region_9ff8192ec4b2bb",
+      "npc_phase5_rolling_hills_region_aa0da9a852777e",
+      "npc_phase5_rolling_hills_region_b2e4cfbe7c6f63"
+    ],
+    "edgeDistance": 239,
+    "localUsableTerritoryRatio": 0.4375,
+    "nearestRoadCorridorDistance": 171,
+    "gameplay": {
+      "x": 4965,
+      "y": 3741
+    }
+  },
+  {
+    "cityId": "npc_phase5_rolling_hills_region_b2e4cfbe7c6f63",
+    "eligible": true,
+    "score": 154.013,
+    "nearbyNpcCityCount": 9,
+    "nearbyNpcCityIds": [
+      "npc_phase5_rolling_hills_region_0c8b7a402eefcf",
+      "npc_phase5_rolling_hills_region_18a1bac228e487",
+      "npc_phase5_rolling_hills_region_1a65f9bf99ee82",
+      "npc_phase5_rolling_hills_region_255fe87a5cabda",
+      "npc_phase5_rolling_hills_region_4823c22e6138b7",
+      "npc_phase5_rolling_hills_region_78bde35b263310",
+      "npc_phase5_rolling_hills_region_9ff8192ec4b2bb",
+      "npc_phase5_rolling_hills_region_ab6d3e0edcf7dc",
+      "npc_phase5_rolling_hills_region_b914bb9f12f5a9"
+    ],
+    "edgeDistance": 363,
+    "localUsableTerritoryRatio": 0.333333,
+    "nearestRoadCorridorDistance": 87,
+    "gameplay": {
+      "x": 3259,
+      "y": 7138
+    }
+  },
+  {
+    "cityId": "npc_phase5_rolling_hills_region_e3092a12f28420",
+    "eligible": true,
+    "score": 150.255,
+    "nearbyNpcCityCount": 9,
+    "nearbyNpcCityIds": [
+      "npc_phase5_rolling_hills_region_2b07b2eea33f66",
+      "npc_phase5_rolling_hills_region_3f66bae63dd357",
+      "npc_phase5_rolling_hills_region_448e5437ab1dc0",
+      "npc_phase5_rolling_hills_region_4eea4c551c6a86",
+      "npc_phase5_rolling_hills_region_74e96348f11313",
+      "npc_phase5_rolling_hills_region_8171c5beaec702",
+      "npc_phase5_rolling_hills_region_9b841b5339cd11",
+      "npc_phase5_rolling_hills_region_9c830bf94f8db6",
+      "npc_phase5_rolling_hills_region_faa63c44dc1fa7"
+    ],
+    "edgeDistance": 193,
+    "localUsableTerritoryRatio": 0.270833,
+    "nearestRoadCorridorDistance": 136,
+    "gameplay": {
+      "x": 11267,
+      "y": 10926
+    }
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "phase5-composer-v1",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1",
+  "terrainPlanVersion": "phase5-terrain-plan-v1",
+  "worldId": "phase5_development_world",
+  "seasonId": "phase5_development_season",
+  "regionId": "phase5_rolling_hills_region",
+  "coordinate": {
+    "gridX": -3,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 0
+  },
+  "layer": 1,
+  "clockwiseSlot": 0,
+  "seed": {
+    "strategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|assetLibraryVersion|retrySalt)",
+    "retrySalt": "profile-default",
+    "seedHash": "8b32d08660aaa7b008ba0f7f51d30a2372368c4c6db83926411d7544db3c2575",
+    "materialHash": "8b32d08660aaa7b008ba0f7f51d30a2372368c4c6db83926411d7544db3c2575"
+  },
+  "hashes": {
+    "terrainHash": "d004f5dbcdd946cd544b2bd293304a081d84916e1fc765caf39496d89943326f",
+    "blockerHash": "b40e769b60fb0d111bdc0d0d339f79a5ad7afea3617e5d44335bff6c6f47c3d8",
+    "roadHash": "2fab87f6e54471efaf27ef1ffa62430876ee2d01b83a02f17df455deb0c3fe4f",
+    "cityHash": "2a6b66e4f50a36b28f488e97deb95f52636a980070b25c572251bbd49fdab952",
+    "startingCandidateHash": "2dd4fd51d9271692e4fe43500cf322fd9880a87f389a622f9a773b589190c3bb",
+    "compositionHash": "ea5619d6910d5ad33d0045164ac0482f9a97324690e03c27251a5c7ffa043325",
+    "webpHash": "1a6799ec28ab62fd46630e6909279cd664b7fac847cacbbf42bd8c87da29625b",
+    "thumbnailHash": "3c83dd17bae5561833af8a402037d5ff2abd326dad6e3c24f79c946cb2e2989d"
+  }
+}

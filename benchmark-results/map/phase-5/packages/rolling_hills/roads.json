@@ -1,0 +1,150 @@
+{
+  "exits": {
+    "north": {
+      "x": 724,
+      "y": 0
+    },
+    "east": {
+      "x": 1448,
+      "y": 543
+    },
+    "south": {
+      "x": 724,
+      "y": 1086
+    },
+    "west": {
+      "x": 0,
+      "y": 543
+    }
+  },
+  "hub": {
+    "x": 678,
+    "y": 559
+  },
+  "edgeRoads": [
+    {
+      "id": "road-north",
+      "side": "north",
+      "edgeExit": {
+        "x": 724,
+        "y": 0
+      },
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 777,
+          "y": 304
+        },
+        {
+          "x": 678,
+          "y": 559
+        }
+      ]
+    },
+    {
+      "id": "road-east",
+      "side": "east",
+      "edgeExit": {
+        "x": 1448,
+        "y": 543
+      },
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 1043,
+          "y": 582
+        },
+        {
+          "x": 678,
+          "y": 559
+        }
+      ]
+    },
+    {
+      "id": "road-south",
+      "side": "south",
+      "edgeExit": {
+        "x": 724,
+        "y": 1086
+      },
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 690,
+          "y": 782
+        },
+        {
+          "x": 678,
+          "y": 559
+        }
+      ]
+    },
+    {
+      "id": "road-west",
+      "side": "west",
+      "edgeExit": {
+        "x": 0,
+        "y": 543
+      },
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 405,
+          "y": 553
+        },
+        {
+          "x": 678,
+          "y": 559
+        }
+      ]
+    }
+  ],
+  "branches": [
+    {
+      "id": "road-branch-a",
+      "side": "internal",
+      "halfWidth": 32,
+      "points": [
+        {
+          "x": 678,
+          "y": 559
+        },
+        {
+          "x": 521,
+          "y": 426
+        }
+      ]
+    },
+    {
+      "id": "road-branch-b",
+      "side": "internal",
+      "halfWidth": 30,
+      "points": [
+        {
+          "x": 678,
+          "y": 559
+        },
+        {
+          "x": 927,
+          "y": 718
+        }
+      ]
+    }
+  ]
+}

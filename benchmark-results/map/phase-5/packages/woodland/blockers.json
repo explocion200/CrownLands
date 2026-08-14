@@ -1,0 +1,57 @@
+[
+  {
+    "id": "woodland-nw",
+    "type": "dense_forest",
+    "x": 304,
+    "y": 266,
+    "rx": 108,
+    "ry": 72,
+    "rot": -0.22,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "woodland-ne",
+    "type": "dense_forest",
+    "x": 1089,
+    "y": 270,
+    "rx": 116,
+    "ry": 76,
+    "rot": 0.19,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "woodland-sw",
+    "type": "dense_forest",
+    "x": 339,
+    "y": 791,
+    "rx": 112,
+    "ry": 80,
+    "rot": 0.12,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "woodland-se",
+    "type": "dense_forest",
+    "x": 1094,
+    "y": 774,
+    "rx": 110,
+    "ry": 78,
+    "rot": -0.15,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "woodland-coppice",
+    "type": "dense_forest",
+    "x": 708,
+    "y": 521,
+    "rx": 72,
+    "ry": 52,
+    "rot": 0.08,
+    "blocksCities": true,
+    "blocksMovement": true
+  }
+]

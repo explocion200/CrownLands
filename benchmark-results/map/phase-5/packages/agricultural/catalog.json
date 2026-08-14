@@ -1,0 +1,50 @@
+{
+  "id": "phase5_agricultural_region",
+  "name": "Phase 5 agricultural",
+  "purpose": "player_region",
+  "permanentCore": false,
+  "generationReady": true,
+  "spawnEligible": false,
+  "spawnReady": false,
+  "lifecycle": "standby",
+  "visibility": "development_only",
+  "activationAllowed": false,
+  "gridX": -3,
+  "gridY": -3,
+  "worldLayer": 1,
+  "clockwiseOrderIndex": 0,
+  "cityCapacity": 40,
+  "initialNpcCityCount": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "connections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "generatorVersion": "phase5-composer-v1",
+  "seedHash": "b8382ec7aa7891b229fcf571b84e3ee058004ac4d13932b7de3f16b7d72c2892",
+  "mapAsset": "map.webp",
+  "thumbnailAsset": "thumbnail.webp",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+}

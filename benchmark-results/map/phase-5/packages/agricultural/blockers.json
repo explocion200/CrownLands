@@ -1,0 +1,35 @@
+[
+  {
+    "id": "farm-woodlot",
+    "type": "dense_forest",
+    "x": 1116,
+    "y": 271,
+    "rx": 86,
+    "ry": 60,
+    "rot": 0.16,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "farm-pond",
+    "type": "water",
+    "x": 1080,
+    "y": 793,
+    "rx": 88,
+    "ry": 62,
+    "rot": 0.2,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "farm-rocks",
+    "type": "mountain",
+    "x": 327,
+    "y": 751,
+    "rx": 78,
+    "ry": 56,
+    "rot": -0.18,
+    "blocksCities": true,
+    "blocksMovement": true
+  }
+]

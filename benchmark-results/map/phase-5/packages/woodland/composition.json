@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "watermarkRequired": true,
+  "regionId": "phase5_woodland_region",
+  "profile": "woodland",
+  "dimensions": {
+    "width": 1448,
+    "height": 1086,
+    "aspectRatio": "4:3",
+    "opaque": true
+  },
+  "palette": {
+    "ground": "#596d42",
+    "secondary": "#687b49",
+    "accent": "#817746",
+    "blocker": "#314831",
+    "water": "#4d696a"
+  },
+  "landPolygon": [
+    {
+      "x": 78,
+      "y": 92
+    },
+    {
+      "x": 270,
+      "y": 54
+    },
+    {
+      "x": 1160,
+      "y": 54
+    },
+    {
+      "x": 1372,
+      "y": 145
+    },
+    {
+      "x": 1402,
+      "y": 850
+    },
+    {
+      "x": 1300,
+      "y": 1022
+    },
+    {
+      "x": 160,
+      "y": 1022
+    },
+    {
+      "x": 44,
+      "y": 840
+    }
+  ],
+  "visualComposition": [
+    {
+      "id": "ground-base",
+      "assetId": "ground.meadow.base",
+      "category": "ground",
+      "geometryRef": "land-polygon",
+      "drawOrder": 0,
+      "color": "#596d42"
+    },
+    {
+      "id": "ground-patch-1",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 937,
+      "y": 692,
+      "rx": 132,
+      "ry": 40,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-10",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 940,
+      "y": 319,
+      "rx": 151,
+      "ry": 71,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-11",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 522,
+      "y": 577,
+      "rx": 124,
+      "ry": 96,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-12",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1334,
+      "y": 320,
+      "rx": 143,
+      "ry": 47,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-13",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1211,
+      "y": 218,
+      "rx": 151,
+      "ry": 50,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-14",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1153,
+      "y": 138,
+      "rx": 139,
+      "ry": 49,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-15",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 955,
+      "y": 883,
+      "rx": 108,
+      "ry": 104,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-16",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 760,
+      "y": 834,
+      "rx": 67,
+      "ry": 76,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-17",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 943,
+      "y": 73,
+      "rx": 82,
+      "ry": 79,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-18",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 937,
+      "y": 819,
+      "rx": 55,
+      "ry": 93,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-2",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 462,
+      "y": 993,
+      "rx": 105,
+      "ry": 62,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-3",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 653,
+      "y": 599,
+      "rx": 155,
+      "ry": 76,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-4",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1217,
+      "y": 452,
+      "rx": 108,
+      "ry": 57,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-5",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1237,
+      "y": 642,
+      "rx": 166,
+      "ry": 67,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-6",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 669,
+      "y": 562,
+      "rx": 141,
+      "ry": 69,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-7",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1075,
+      "y": 485,
+      "rx": 150,
+      "ry": 58,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-8",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1058,
+      "y": 596,
+      "rx": 82,
+      "ry": 69,
+      "color": "#687b49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-9",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1085,
+      "y": 148,
+      "rx": 63,
+      "ry": 59,
+      "color": "#817746",
+      "opacity": 0.16
+    },
+    {
+      "id": "visual-road-branch-a",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-a",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 657,
+          "y": 537
+        },
+        {
+          "x": 521,
+          "y": 399
+        }
+      ],
+      "halfWidth": 32,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-branch-b",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-b",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 657,
+          "y": 537
+        },
+        {
+          "x": 927,
+          "y": 725
+        }
+      ],
+      "halfWidth": 30,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-east",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-east",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 1043,
+          "y": 562
+        },
+        {
+          "x": 657,
+          "y": 537
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-north",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-north",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 704,
+          "y": 304
+        },
+        {
+          "x": 657,
+          "y": 537
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-south",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-south",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 750,
+          "y": 782
+        },
+        {
+          "x": 657,
+          "y": 537
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-west",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-west",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 405,
+          "y": 546
+        },
+        {
+          "x": 657,
+          "y": 537
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-woodland-coppice",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "woodland-coppice",
+      "drawOrder": 38,
+      "x": 708,
+      "y": 521,
+      "rx": 72,
+      "ry": 52,
+      "rot": 0.08,
+      "color": "#314831"
+    },
+    {
+      "id": "visual-woodland-ne",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "woodland-ne",
+      "drawOrder": 38,
+      "x": 1089,
+      "y": 270,
+      "rx": 116,
+      "ry": 76,
+      "rot": 0.19,
+      "color": "#314831"
+    },
+    {
+      "id": "visual-woodland-nw",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "woodland-nw",
+      "drawOrder": 38,
+      "x": 304,
+      "y": 266,
+      "rx": 108,
+      "ry": 72,
+      "rot": -0.22,
+      "color": "#314831"
+    },
+    {
+      "id": "visual-woodland-se",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "woodland-se",
+      "drawOrder": 38,
+      "x": 1094,
+      "y": 774,
+      "rx": 110,
+      "ry": 78,
+      "rot": -0.15,
+      "color": "#314831"
+    },
+    {
+      "id": "visual-woodland-sw",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "woodland-sw",
+      "drawOrder": 38,
+      "x": 339,
+      "y": 791,
+      "rx": 112,
+      "ry": 80,
+      "rot": 0.12,
+      "color": "#314831"
+    }
+  ]
+}

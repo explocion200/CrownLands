@@ -1,0 +1,46 @@
+[
+  {
+    "id": "ridge-nw",
+    "type": "mountain",
+    "x": 323,
+    "y": 247,
+    "rx": 124,
+    "ry": 72,
+    "rot": -0.3,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "ridge-ne",
+    "type": "mountain",
+    "x": 1074,
+    "y": 300,
+    "rx": 118,
+    "ry": 70,
+    "rot": 0.28,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "ridge-sw",
+    "type": "mountain",
+    "x": 383,
+    "y": 746,
+    "rx": 120,
+    "ry": 76,
+    "rot": 0.18,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "ridge-se",
+    "type": "mountain",
+    "x": 1066,
+    "y": 768,
+    "rx": 124,
+    "ry": 78,
+    "rot": -0.2,
+    "blocksCities": true,
+    "blocksMovement": true
+  }
+]

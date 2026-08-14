@@ -1,0 +1,2142 @@
+{
+  "schemaVersion": 1,
+  "phase": 5,
+  "developmentOnly": true,
+  "generatorVersion": "phase5-composer-v1",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1",
+  "worldId": "phase5_development_world",
+  "seasonId": "phase5_development_season",
+  "corePackage": {
+    "version": "permanent-core-template-v1",
+    "packageHash": "e67ead1a5010fc93c22bde7832bb51bcccbf8e959cc5a9a44cdb7a8c2e3e8cb0",
+    "cellCount": 25,
+    "activeCoreRegionCount": 10,
+    "reservedCoreCellCount": 15,
+    "holdingTowerReservationCount": 4,
+    "validation": {
+      "template25": {
+        "passed": true,
+        "cellCount": 25
+      },
+      "citadel": {
+        "passed": true,
+        "count": 1
+      },
+      "strongholdsAndCamps": {
+        "passed": true,
+        "strongholds": 4,
+        "camps": 4
+      },
+      "towerReservations": {
+        "passed": true,
+        "count": 4
+      },
+      "relocationRejected": true,
+      "overlapRejected": true,
+      "validation": {
+        "valid": true,
+        "errors": [],
+        "activeCoreRegionCount": 10,
+        "reservedCoreCellCount": 15,
+        "citadelCount": 1,
+        "strongholdCount": 4,
+        "campCount": 4,
+        "holdingTowerReservationCount": 4
+      }
+    }
+  },
+  "assetLibrary": {
+    "assetCount": 46,
+    "productionReady": false,
+    "validation": {
+      "valid": true,
+      "errors": [],
+      "assetCount": 46
+    }
+  },
+  "profiles": [
+    {
+      "kind": "agricultural",
+      "status": "standby",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "terrainPlanHash": "039a711b210a07d7ca59ea50e7ca8c38ca20d5d4f1d8b6aedf69d32cbf65cef8",
+      "cityHash": "f54ac80fbbcde3ca978b12a2c55233a0fef49cda61c691cbbcf7a3899888bdba",
+      "mapWebpHash": "5f9e169398ecaa88ecb59af3ee7a748bb42467bfc5a32875f92399202ab50900",
+      "thumbnailHash": "b445f3c17c5c1596df2d6ca7f576be2f02a619cfdf8564e249c5c96c55507895",
+      "packageHash": "f856da126b333e2ceb2ec14e2e47123c4a7863eac480aa4063c391f7c845b6ac",
+      "mapBytes": 21028,
+      "thumbnailBytes": 2926,
+      "deterministic": {
+        "terrainPlan": true,
+        "cities": true,
+        "startingCandidates": true,
+        "mapWebp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "validation": {
+        "valid": true,
+        "errors": []
+      },
+      "timings": {
+        "terrainPlanMs": 5.652,
+        "cityPlacementMs": 20.957,
+        "compositionAndWebpMs": 1567.458,
+        "totalMs": 1609.527,
+        "approximateHeapDeltaBytes": -640280
+      }
+    },
+    {
+      "kind": "woodland",
+      "status": "standby",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "terrainPlanHash": "4e7c2aa10ef27c2bf57f2c667c426eb686c3a62cc279339b2b0f4b4887f048e5",
+      "cityHash": "8378d04731fc0cdad192f5398ea9a097fb51d1db2b58f0591c2867674e46469e",
+      "mapWebpHash": "d26f0f53422221dac994ef41b12bfd17e1b20433a20aeed765547b2fd23a71ce",
+      "thumbnailHash": "c9be1188faefd9f9facdf6b57bf02249409db54dd19d1b1649cf299d4585f6a1",
+      "packageHash": "3cdbab4e195198a783e14cf363a974d00d8fa01f7553f3c87b77c2c473fa87bb",
+      "mapBytes": 18912,
+      "thumbnailBytes": 2422,
+      "deterministic": {
+        "terrainPlan": true,
+        "cities": true,
+        "startingCandidates": true,
+        "mapWebp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "validation": {
+        "valid": true,
+        "errors": []
+      },
+      "timings": {
+        "terrainPlanMs": 7.803,
+        "cityPlacementMs": 19.214,
+        "compositionAndWebpMs": 1550.332,
+        "totalMs": 1598.076,
+        "approximateHeapDeltaBytes": -637952
+      }
+    },
+    {
+      "kind": "rolling_hills",
+      "status": "standby",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "terrainPlanHash": "c6d39491bab49f11c7d9aff8565db354c31038f43481fd8101a6d1d7903fe4fa",
+      "cityHash": "2a6b66e4f50a36b28f488e97deb95f52636a980070b25c572251bbd49fdab952",
+      "mapWebpHash": "1a6799ec28ab62fd46630e6909279cd664b7fac847cacbbf42bd8c87da29625b",
+      "thumbnailHash": "3c83dd17bae5561833af8a402037d5ff2abd326dad6e3c24f79c946cb2e2989d",
+      "packageHash": "e021f369a73f89307294fa1ce4f5cf72c5151ded41515d51b9909c94bc1735ae",
+      "mapBytes": 23452,
+      "thumbnailBytes": 3014,
+      "deterministic": {
+        "terrainPlan": true,
+        "cities": true,
+        "startingCandidates": true,
+        "mapWebp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "validation": {
+        "valid": true,
+        "errors": []
+      },
+      "timings": {
+        "terrainPlanMs": 7.683,
+        "cityPlacementMs": 21.83,
+        "compositionAndWebpMs": 1554.853,
+        "totalMs": 1598.803,
+        "approximateHeapDeltaBytes": 823112
+      }
+    },
+    {
+      "kind": "wetland",
+      "status": "standby",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "terrainPlanHash": "cae97f0a7e4d33b1c99835adaa4c1ca485e4689c1d05c60cf9afac6a20492ac1",
+      "cityHash": "6a5b37ec94ea3a5adc5115c734796212873764dc381997f15c37d3a4add8645a",
+      "mapWebpHash": "903186f5e7d9f8a2cc32cc8df5979f739956f4c64d3c60ab0d6202f3846ee8b3",
+      "thumbnailHash": "9983f195c1b0286b128e4bbee90fe5c59c614bf593ace3150efb0b454d2cbbc1",
+      "packageHash": "7e661f6c201c6d6ff435123b67096c8a91699880d6768ec9f638dacc6825800c",
+      "mapBytes": 19144,
+      "thumbnailBytes": 2542,
+      "deterministic": {
+        "terrainPlan": true,
+        "cities": true,
+        "startingCandidates": true,
+        "mapWebp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "validation": {
+        "valid": true,
+        "errors": []
+      },
+      "timings": {
+        "terrainPlanMs": 8.237,
+        "cityPlacementMs": 21.315,
+        "compositionAndWebpMs": 2248.871,
+        "totalMs": 2295.063,
+        "approximateHeapDeltaBytes": 2357392
+      }
+    }
+  ],
+  "constrainedInvalid": {
+    "status": "rolled_back",
+    "cityCount": 0,
+    "outputFiles": [],
+    "validationErrors": [
+      "Placed 0 city positions; exactly 40 are required.",
+      "Only 0 valid starting-city candidates were found."
+    ],
+    "rollbackValidation": {
+      "valid": true,
+      "errors": []
+    },
+    "timings": {
+      "terrainPlanMs": 5.484,
+      "cityPlacementMs": 13.752,
+      "totalMs": 19.326
+    }
+  },
+  "topologyFixtures": {
+    "twoConnected": {
+      "kind": "two_connected",
+      "mapCount": 2,
+      "maps": [
+        {
+          "regionId": "phase5_two_connected_01",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 0
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "bc91eb759cd1b2a8867b1d579338da15e3e5282569958ed9d0f23cffcc2c2f3c",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_two_connected_02"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_two_connected_02",
+          "coordinate": {
+            "gridX": -2,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 1
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_two_connected_01"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "a73df2395cd30ec46611c381327d4f2450640dc754f3d543b0f032ebd91f571b",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_two_connected_01"
+            }
+          }
+        }
+      ],
+      "allExactly40": true,
+      "topologyHash": "5f6f7ab5840c0b37ef4ab8e0df86eb2835676a428458f16ee511c95a3f8680f8"
+    },
+    "threeClockwise": {
+      "kind": "three_clockwise",
+      "mapCount": 3,
+      "maps": [
+        {
+          "regionId": "phase5_three_clockwise_01",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 0
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "b8deaded57a671ccae9a53529187e01e6f5ba29f31aeaa4a150fa6d9f09f416c",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_02"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_three_clockwise_02",
+          "coordinate": {
+            "gridX": -2,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 1
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_01"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "c9f29d3cdaf417a99651196a071a97a2528ef718ae0e37fbf43572b53424d9a1",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_03"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_01"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_three_clockwise_03",
+          "coordinate": {
+            "gridX": -1,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 2
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_1_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_02"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "166ee32998249f74d22ecce7ee3a061bda1add1700a3326bc8ede34cddd56543",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_1_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_three_clockwise_02"
+            }
+          }
+        }
+      ],
+      "allExactly40": true,
+      "topologyHash": "24460449e59b6a70b9c607e96556c02fa3d78352d60475ec9ec40e3f5123392c"
+    },
+    "ringClosing": {
+      "kind": "ring_closing",
+      "mapCount": 24,
+      "maps": [
+        {
+          "regionId": "phase5_ring_closing_01",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 0
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "88abb0a78d1d79b7dcf7cba3a008bf64151f5761034ce9490f43ae802f9d441a",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_02"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_24"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_02",
+          "coordinate": {
+            "gridX": -2,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 1
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_01"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "2beeaa417b3f8feb4b32e5a6eb81dea4c37e3278920dfc948c8ec51cc8a9b3e1",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_03"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_01"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_03",
+          "coordinate": {
+            "gridX": -1,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 2
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_1_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_02"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "276d5a7ccb294f97a91032019f13418138ed2004b8cab81283e5d757121ce15e",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_04"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_1_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_02"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_04",
+          "coordinate": {
+            "gridX": 0,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 3
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_2_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_03"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "72f870e2c0b12ff01bd13b24fe0b683b7ecf4af4057da80683d3e58143cf9698",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_05"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_2_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_03"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_05",
+          "coordinate": {
+            "gridX": 1,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 4
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_3_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_04"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "6928d355069d9f0f13dcb2a67573c7f10046f2946fecb4efe8f7a18e9563cbd4",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_06"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_3_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_04"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_06",
+          "coordinate": {
+            "gridX": 2,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 5
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_05"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "688e7bf2ce50b48a1e410d2663030885ff810826004faee4c3be25fc9501cb08",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_07"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_0"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_05"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_07",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": -3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 6
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_06"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "bf5ea6866ab9f521d26fb165feffe41b75c378e69102158b4b894de38700f5fd",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_08"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_06"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_08",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": -2,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 7
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_07"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_0"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "9a39b1aa191a2f26eb85a76cfeb9c24afa952522346e72f216d5a38b7cbf737b",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_07"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_09"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_0"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_09",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": -1,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 8
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_08"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_1"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "d8b3301ff21ee7444f85ce99e0b690828cbfbb7264b2570c22206c8b724de879",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_08"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_10"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_1"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_10",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": 0,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 9
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_09"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_2"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "b6f9c4b2af14d9f00ae82f9eb07653c881234f9d505d1aaf57f90887bb6a8662",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_09"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_11"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_2"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_11",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": 1,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 10
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_10"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_3"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "508e77def797145a7da2a36ae7a12615a0e150be51dc344cd7d9de86cda73ac4",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_10"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_12"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_4_3"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_12",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": 2,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 11
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_11"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_10"
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "06caca7f37e5590e156b553e6b21327705f1aac181bbb8a9591f50fa116bd5f3",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_11"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_13"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_10"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_13",
+          "coordinate": {
+            "gridX": 3,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 12
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_12"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "1aed499347485166e4082608f82c7c2b937d0949012b4f77540b8065dcb2b892",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_12"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_14"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_14",
+          "coordinate": {
+            "gridX": 2,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 13
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_10"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_13"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "a1492981bfd8ca1a6257592c7936d7716ccba33aae456f9ec284207da08c1e03",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_10"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_13"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_15"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_15",
+          "coordinate": {
+            "gridX": 1,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 14
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_9"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_14"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "d430dcf02e7a2f7264d55d737a148cdc37666e7d1b8d4f89a21558aaae8e739a",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_9"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_14"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_16"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_16",
+          "coordinate": {
+            "gridX": 0,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 15
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_8"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_15"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "1cd41b52626a052f8ad7b937e2f5c5a7b0e3dc7da5cc40a3a36d1802f283320e",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_8"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_15"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_17"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_17",
+          "coordinate": {
+            "gridX": -1,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 16
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_7"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_16"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "f146fea2ffd43ed71e59d1ac3eeeca33900944da57fbf5778fa761370709a1a9",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_7"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_16"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_18"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_18",
+          "coordinate": {
+            "gridX": -2,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 17
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_6"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_17"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "8f8cd1257e43f0debe7d6ed3b399baa888d50566b93ab17a93072523abdf9ce3",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_6"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_17"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_19"
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_19",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": 3,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 18
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_18"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "04b5014ddf8fde52b5dc0749d87927c7065c828803435ec0d95ec5814586b8d5",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_20"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_18"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_20",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": 2,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 19
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_6"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_19"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "88a459a94711b8e72edc185c78284de0cb916836d679b9751c6ab2c83c20f183",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_21"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_6"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_19"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_21",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": 1,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 20
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_3"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_20"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "41e77708f13f61ec93154dd00b89af6fa1ce6a2853848e7cfc9ac6af10485fb6",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_22"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_3"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_20"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_22",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": 0,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 21
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_2"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_21"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "6e8d15095459d334ec6439be1de8e7047845a26ceaf83b7c6b4a174e5e2bd469",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_23"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_2"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_21"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_23",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": -1,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 22
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_1"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_22"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "bdff579da462430eec5efb5df26443b527b24c33bb800f545363f41b4718777f",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_24"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_1"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_22"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "regionId": "phase5_ring_closing_24",
+          "coordinate": {
+            "gridX": -3,
+            "gridY": -2,
+            "worldLayer": 1,
+            "clockwiseOrderIndex": 23
+          },
+          "allocationConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_01"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_23"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          },
+          "cityCount": 40,
+          "startingCandidateCount": 4,
+          "generationHash": "42b1d351b8b39d23d0aaa6e828b44d5c9cb4a6a8f63617e150fe6026787472aa",
+          "status": "standby",
+          "finalConnections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_01"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "phase5_core_reservation_0_0"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "phase5_ring_closing_23"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        }
+      ],
+      "allExactly40": true,
+      "topologyHash": "743a9a6279b240279803f5066d4572110d9e6e31a06e4593f57d25c470c3ca39"
+    }
+  },
+  "invalidMutations": {
+    "duplicateCityRejected": true,
+    "missingOutputRejected": true,
+    "assetBudgetRejected": true,
+    "geometryMismatchRejected": true,
+    "multipleEdgeExitRejected": true
+  },
+  "preview": {
+    "developmentOnly": true,
+    "files": [
+      "index.html",
+      "core-overview.svg",
+      "agricultural.svg",
+      "woodland.svg",
+      "rolling_hills.svg",
+      "wetland.svg"
+    ]
+  },
+  "performance": {
+    "totalProfileGenerationMs": 7101.469,
+    "averageProfileGenerationMs": 1775.36725,
+    "maximumProfileGenerationMs": 2295.063,
+    "totalMapBytes": 82536,
+    "totalThumbnailBytes": 10904,
+    "approximateHeapDeltaBytes": 1902272
+  }
+}

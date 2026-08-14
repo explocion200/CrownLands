@@ -1,0 +1,46 @@
+[
+  {
+    "id": "wetland-west",
+    "type": "marsh",
+    "x": 322,
+    "y": 368,
+    "rx": 118,
+    "ry": 82,
+    "rot": -0.18,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "wetland-east",
+    "type": "marsh",
+    "x": 1110,
+    "y": 697,
+    "rx": 120,
+    "ry": 86,
+    "rot": 0.14,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "wetland-pond",
+    "type": "water",
+    "x": 1004,
+    "y": 267,
+    "rx": 96,
+    "ry": 68,
+    "rot": 0.2,
+    "blocksCities": true,
+    "blocksMovement": true
+  },
+  {
+    "id": "wetland-reeds",
+    "type": "marsh",
+    "x": 425,
+    "y": 774,
+    "rx": 88,
+    "ry": 62,
+    "rot": -0.12,
+    "blocksCities": true,
+    "blocksMovement": true
+  }
+]

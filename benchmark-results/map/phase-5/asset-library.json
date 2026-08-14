@@ -1,0 +1,2039 @@
+{
+  "schemaVersion": 1,
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1",
+  "developmentOnly": true,
+  "renderer": "procedural_qa_placeholders",
+  "finalProductionArtComplete": false,
+  "assets": [
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "full_map",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 0,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "opaque",
+      "productionReady": false,
+      "assetId": "ground.meadow.base",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.8,
+        1.25
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.grassland.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "agricultural",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.farmland.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "wetland",
+        "woodland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.muddy.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "rolling_hills",
+        "woodland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.rocky.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 10,
+      "terrainCompatibility": [
+        "wetland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "ground.wet.patch",
+      "category": "ground",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "optional_dense_core",
+      "drawOrder": 35,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.cluster.small",
+      "category": "forest",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "optional_dense_core",
+      "drawOrder": 35,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.cluster.medium",
+      "category": "forest",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_dense_forest",
+      "drawOrder": 35,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.cluster.large",
+      "category": "forest",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 34,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.edge",
+      "category": "forest",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_dense_forest",
+      "drawOrder": 36,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.dense_blocker",
+      "category": "blocker",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 34,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "forest.coppice",
+      "category": "forest",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 12,
+      "terrainCompatibility": [
+        "agricultural",
+        "rolling_hills",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.strip_fields",
+      "category": "farmland",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 14,
+      "terrainCompatibility": [
+        "agricultural",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.fenced_field",
+      "category": "farmland",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 12,
+      "terrainCompatibility": [
+        "agricultural",
+        "rolling_hills"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.pasture",
+      "category": "farmland",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 18,
+      "terrainCompatibility": [
+        "agricultural",
+        "rolling_hills"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.orchard",
+      "category": "farmland",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 14,
+      "terrainCompatibility": [
+        "agricultural"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.hay_field",
+      "category": "farmland",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 28,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.75,
+        1.4
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "agriculture.hedgerow",
+      "category": "hedge",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_road_corridor",
+      "blockerContribution": "none",
+      "drawOrder": 24,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.straight",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_road_corridor",
+      "blockerContribution": "none",
+      "drawOrder": 24,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_road_corridor",
+      "blockerContribution": "none",
+      "drawOrder": 24,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.strong_curve",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_road_corridor",
+      "blockerContribution": "none",
+      "drawOrder": 24,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.junction",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_crossing",
+      "blockerContribution": "none",
+      "drawOrder": 25,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.bridge_approach",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_crossing",
+      "blockerContribution": "none",
+      "drawOrder": 25,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.ford_approach",
+      "category": "road",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "authoritative_transition_corridor",
+      "blockerContribution": "none",
+      "drawOrder": 24,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "road.cardinal_edge",
+      "category": "road_edge",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_water_except_crossings",
+      "drawOrder": 20,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.stream",
+      "category": "water",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_water_except_crossings",
+      "drawOrder": 20,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.river",
+      "category": "water",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_water_except_crossings",
+      "drawOrder": 20,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.river_bend",
+      "category": "water",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 21,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.river_bank",
+      "category": "water",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 33,
+      "terrainCompatibility": [
+        "wetland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.reeds",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_water",
+      "drawOrder": 20,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "water.pond_edge",
+      "category": "water",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 30,
+      "terrainCompatibility": [
+        "rolling_hills",
+        "woodland",
+        "agricultural"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "elevation.hill",
+      "category": "hill",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 31,
+      "terrainCompatibility": [
+        "rolling_hills",
+        "woodland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "elevation.hill_cluster",
+      "category": "hill",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_mountain",
+      "drawOrder": 38,
+      "terrainCompatibility": [
+        "rolling_hills",
+        "woodland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "elevation.rocky_ridge",
+      "category": "blocker",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 32,
+      "terrainCompatibility": [
+        "rolling_hills",
+        "woodland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "elevation.foothills",
+      "category": "hill",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_mountain",
+      "drawOrder": 40,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "blocker.mountain",
+      "category": "blocker",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_cliff",
+      "drawOrder": 40,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "blocker.cliff",
+      "category": "blocker",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "authoritative_marsh",
+      "drawOrder": 26,
+      "terrainCompatibility": [
+        "wetland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "blocker.marsh",
+      "category": "blocker",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 29,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.8,
+        1.3
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.fence",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 32,
+      "terrainCompatibility": [
+        "agricultural"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.hay",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 33,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        180
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.cart",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 33,
+      "terrainCompatibility": [
+        "woodland"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.timber",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 33,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.rocks",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "geometry_reference",
+      "blockerContribution": "none",
+      "drawOrder": 37,
+      "terrainCompatibility": [
+        "agricultural",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0
+      ],
+      "safeMirroring": [
+        "horizontal"
+      ],
+      "safeScaleRange": [
+        0.9,
+        1.05
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "decoration.mill",
+      "category": "decoration",
+      "sourcePath": null,
+      "availability": "spec_only"
+    },
+    {
+      "sourceDimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "anchor": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "visualFootprint": "asset_defined",
+      "gameplayFootprint": "none_runtime_overlay",
+      "blockerContribution": "none",
+      "drawOrder": 100,
+      "terrainCompatibility": [
+        "agricultural",
+        "woodland",
+        "rolling_hills",
+        "wetland",
+        "trade_corridor"
+      ],
+      "overlapRules": "painterly_overlap_only; never obscure transitions or city interaction zones",
+      "safeRotations": [
+        0,
+        90,
+        180,
+        270
+      ],
+      "safeMirroring": [],
+      "safeScaleRange": [
+        0.9,
+        1.1
+      ],
+      "regionalStyleTags": [
+        "grounded",
+        "late-medieval",
+        "frontier-kingdom",
+        "earthy"
+      ],
+      "transparency": "rgba_required",
+      "productionReady": false,
+      "assetId": "overlay.gate.provisional",
+      "category": "gate",
+      "sourcePath": "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp",
+      "availability": "runtime_provisional"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "valid": true,
+  "errors": [],
+  "stateHistory": [
+    "ALLOCATED",
+    "GENERATING",
+    "VALIDATING",
+    "STANDBY"
+  ],
+  "publicationBlocked": true,
+  "activationBlocked": true,
+  "coordinateReusable": false,
+  "geometryArtParity": {
+    "valid": true,
+    "errors": [],
+    "tolerancePixels": 1,
+    "blockerPairs": 5,
+    "roadPairs": 6,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    }
+  },
+  "assetValidation": {
+    "valid": true,
+    "errors": []
+  }
+}

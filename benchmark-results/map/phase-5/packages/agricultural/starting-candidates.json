@@ -1,0 +1,105 @@
+[
+  {
+    "cityId": "npc_phase5_agricultural_region_22046765f16906",
+    "eligible": true,
+    "score": 192.882,
+    "nearbyNpcCityCount": 11,
+    "nearbyNpcCityIds": [
+      "npc_phase5_agricultural_region_0bca2a7b676aed",
+      "npc_phase5_agricultural_region_0f7a5127225dc6",
+      "npc_phase5_agricultural_region_55ff33a438a4d3",
+      "npc_phase5_agricultural_region_5fd6382886f23d",
+      "npc_phase5_agricultural_region_8d907cc97a4965",
+      "npc_phase5_agricultural_region_a16a2cb5a0d93a",
+      "npc_phase5_agricultural_region_b6ff7f293a0c1a",
+      "npc_phase5_agricultural_region_ba99ee37d0eb69",
+      "npc_phase5_agricultural_region_cbf993aeeefca3",
+      "npc_phase5_agricultural_region_d6e77abbefff39",
+      "npc_phase5_agricultural_region_e6330a7f4a0742"
+    ],
+    "edgeDistance": 349,
+    "localUsableTerritoryRatio": 0.541667,
+    "nearestRoadCorridorDistance": 100,
+    "gameplay": {
+      "x": 3133,
+      "y": 6575
+    }
+  },
+  {
+    "cityId": "npc_phase5_agricultural_region_e6330a7f4a0742",
+    "eligible": true,
+    "score": 182.073,
+    "nearbyNpcCityCount": 11,
+    "nearbyNpcCityIds": [
+      "npc_phase5_agricultural_region_0f7a5127225dc6",
+      "npc_phase5_agricultural_region_14f120678f0c69",
+      "npc_phase5_agricultural_region_22046765f16906",
+      "npc_phase5_agricultural_region_5fd6382886f23d",
+      "npc_phase5_agricultural_region_78fce0b7e2eb1c",
+      "npc_phase5_agricultural_region_8d907cc97a4965",
+      "npc_phase5_agricultural_region_b575dbf74ff489",
+      "npc_phase5_agricultural_region_b6ff7f293a0c1a",
+      "npc_phase5_agricultural_region_cbf993aeeefca3",
+      "npc_phase5_agricultural_region_d0eeb3faf0019a",
+      "npc_phase5_agricultural_region_fd87a5f828ca99"
+    ],
+    "edgeDistance": 425,
+    "localUsableTerritoryRatio": 0.270833,
+    "nearestRoadCorridorDistance": 101,
+    "gameplay": {
+      "x": 3816,
+      "y": 10081
+    }
+  },
+  {
+    "cityId": "npc_phase5_agricultural_region_a16a2cb5a0d93a",
+    "eligible": true,
+    "score": 181.897,
+    "nearbyNpcCityCount": 10,
+    "nearbyNpcCityIds": [
+      "npc_phase5_agricultural_region_0f7a5127225dc6",
+      "npc_phase5_agricultural_region_22046765f16906",
+      "npc_phase5_agricultural_region_55ff33a438a4d3",
+      "npc_phase5_agricultural_region_5ea2b8bd2bdeba",
+      "npc_phase5_agricultural_region_8d907cc97a4965",
+      "npc_phase5_agricultural_region_959cfcd8f4a0af",
+      "npc_phase5_agricultural_region_ae37b5c2a78148",
+      "npc_phase5_agricultural_region_ba99ee37d0eb69",
+      "npc_phase5_agricultural_region_beed1902d20dc8",
+      "npc_phase5_agricultural_region_d6e77abbefff39"
+    ],
+    "edgeDistance": 279,
+    "localUsableTerritoryRatio": 0.604167,
+    "nearestRoadCorridorDistance": 154,
+    "gameplay": {
+      "x": 5117,
+      "y": 4367
+    }
+  },
+  {
+    "cityId": "npc_phase5_agricultural_region_b022494f205150",
+    "eligible": true,
+    "score": 180.778,
+    "nearbyNpcCityCount": 11,
+    "nearbyNpcCityIds": [
+      "npc_phase5_agricultural_region_31d83d3cf20932",
+      "npc_phase5_agricultural_region_3ca78f49fda766",
+      "npc_phase5_agricultural_region_48e8e640053a97",
+      "npc_phase5_agricultural_region_6ef200b62600a7",
+      "npc_phase5_agricultural_region_72f10f1917df4a",
+      "npc_phase5_agricultural_region_888faf45513546",
+      "npc_phase5_agricultural_region_9a62f2e625bd5e",
+      "npc_phase5_agricultural_region_ac03ec2a290f13",
+      "npc_phase5_agricultural_region_b8448df46d5868",
+      "npc_phase5_agricultural_region_c24d6656dace03",
+      "npc_phase5_agricultural_region_ebae8d69b00074"
+    ],
+    "edgeDistance": 271,
+    "localUsableTerritoryRatio": 0.25,
+    "nearestRoadCorridorDistance": 111,
+    "gameplay": {
+      "x": 10567,
+      "y": 10410
+    }
+  }
+]

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="996" height="996" viewBox="0 0 996 996">
+  <rect width="996" height="996" fill="#252722"/>
+  <text x="498" y="30" text-anchor="middle" fill="#fff4d3" font-size="22">Permanent Crownlands Core Template • 5×5 • development QA</text>
+  <g><rect x="48" y="48" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="128" y="74" text-anchor="middle" fill="#fff4d3" font-size="15">-2,-2</text>
+      <text x="128" y="110" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="128" y="136" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="128" y="164" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="128" y="188" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="228" y="48" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="308" y="74" text-anchor="middle" fill="#fff4d3" font-size="15">-1,-2</text>
+      <text x="308" y="110" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="308" y="136" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="308" y="164" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="308" y="188" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="408" y="48" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="488" y="74" text-anchor="middle" fill="#fff4d3" font-size="15">0,-2</text>
+      <text x="488" y="110" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="488" y="136" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="488" y="164" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="488" y="188" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="588" y="48" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="668" y="74" text-anchor="middle" fill="#fff4d3" font-size="15">1,-2</text>
+      <text x="668" y="110" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="668" y="136" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="668" y="164" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="668" y="188" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="768" y="48" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="848" y="74" text-anchor="middle" fill="#fff4d3" font-size="15">2,-2</text>
+      <text x="848" y="110" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="848" y="136" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="848" y="164" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="848" y="188" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="48" y="228" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="128" y="254" text-anchor="middle" fill="#fff4d3" font-size="15">-2,-1</text>
+      <text x="128" y="290" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="128" y="316" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="128" y="344" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="128" y="368" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="228" y="228" width="160" height="160" rx="12" fill="#6b4d73" stroke="#d9c894" stroke-width="3"/>
+      <text x="308" y="254" text-anchor="middle" fill="#fff4d3" font-size="15">-1,-1</text>
+      <text x="308" y="290" text-anchor="middle" fill="#ffffff" font-size="16">Holding Tower</text>
+      <text x="308" y="316" text-anchor="middle" fill="#e0dbc9" font-size="12">future_holding_tower</text>
+      <text x="308" y="344" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="308" y="368" text-anchor="middle" fill="#d8ecd0" font-size="11">holding_tower_northwest</text></g><g><rect x="408" y="228" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="488" y="254" text-anchor="middle" fill="#fff4d3" font-size="15">0,-1</text>
+      <text x="488" y="290" text-anchor="middle" fill="#ffffff" font-size="16">North Frontier</text>
+      <text x="488" y="316" text-anchor="middle" fill="#e0dbc9" font-size="12">core_stronghold</text>
+      <text x="488" y="344" text-anchor="middle" fill="#f1ddb0" font-size="12">70 cities • 1 objectives</text>
+      <text x="488" y="368" text-anchor="middle" fill="#d8ecd0" font-size="11">north</text></g><g><rect x="588" y="228" width="160" height="160" rx="12" fill="#6b4d73" stroke="#d9c894" stroke-width="3"/>
+      <text x="668" y="254" text-anchor="middle" fill="#fff4d3" font-size="15">1,-1</text>
+      <text x="668" y="290" text-anchor="middle" fill="#ffffff" font-size="16">Holding Tower</text>
+      <text x="668" y="316" text-anchor="middle" fill="#e0dbc9" font-size="12">future_holding_tower</text>
+      <text x="668" y="344" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="668" y="368" text-anchor="middle" fill="#d8ecd0" font-size="11">holding_tower_northeast</text></g><g><rect x="768" y="228" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="848" y="254" text-anchor="middle" fill="#fff4d3" font-size="15">2,-1</text>
+      <text x="848" y="290" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="848" y="316" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="848" y="344" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="848" y="368" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="48" y="408" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="128" y="434" text-anchor="middle" fill="#fff4d3" font-size="15">-2,0</text>
+      <text x="128" y="470" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="128" y="496" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="128" y="524" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="128" y="548" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="228" y="408" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="308" y="434" text-anchor="middle" fill="#fff4d3" font-size="15">-1,0</text>
+      <text x="308" y="470" text-anchor="middle" fill="#ffffff" font-size="16">West Marches</text>
+      <text x="308" y="496" text-anchor="middle" fill="#e0dbc9" font-size="12">core_stronghold</text>
+      <text x="308" y="524" text-anchor="middle" fill="#f1ddb0" font-size="12">61 cities • 1 objectives</text>
+      <text x="308" y="548" text-anchor="middle" fill="#d8ecd0" font-size="11">west</text></g><g><rect x="408" y="408" width="160" height="160" rx="12" fill="#8b6a2d" stroke="#d9c894" stroke-width="3"/>
+      <text x="488" y="434" text-anchor="middle" fill="#fff4d3" font-size="15">0,0</text>
+      <text x="488" y="470" text-anchor="middle" fill="#ffffff" font-size="16">Crownlands Heart</text>
+      <text x="488" y="496" text-anchor="middle" fill="#e0dbc9" font-size="12">core_citadel</text>
+      <text x="488" y="524" text-anchor="middle" fill="#f1ddb0" font-size="12">102 cities • 1 objectives</text>
+      <text x="488" y="548" text-anchor="middle" fill="#d8ecd0" font-size="11">center</text></g><g><rect x="588" y="408" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="668" y="434" text-anchor="middle" fill="#fff4d3" font-size="15">1,0</text>
+      <text x="668" y="470" text-anchor="middle" fill="#ffffff" font-size="16">East Reach</text>
+      <text x="668" y="496" text-anchor="middle" fill="#e0dbc9" font-size="12">core_stronghold</text>
+      <text x="668" y="524" text-anchor="middle" fill="#f1ddb0" font-size="12">65 cities • 1 objectives</text>
+      <text x="668" y="548" text-anchor="middle" fill="#d8ecd0" font-size="11">east</text></g><g><rect x="768" y="408" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="848" y="434" text-anchor="middle" fill="#fff4d3" font-size="15">2,0</text>
+      <text x="848" y="470" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="848" y="496" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="848" y="524" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="848" y="548" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="48" y="588" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="128" y="614" text-anchor="middle" fill="#fff4d3" font-size="15">-2,1</text>
+      <text x="128" y="650" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="128" y="676" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="128" y="704" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="128" y="728" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="228" y="588" width="160" height="160" rx="12" fill="#6b4d73" stroke="#d9c894" stroke-width="3"/>
+      <text x="308" y="614" text-anchor="middle" fill="#fff4d3" font-size="15">-1,1</text>
+      <text x="308" y="650" text-anchor="middle" fill="#ffffff" font-size="16">Holding Tower</text>
+      <text x="308" y="676" text-anchor="middle" fill="#e0dbc9" font-size="12">future_holding_tower</text>
+      <text x="308" y="704" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="308" y="728" text-anchor="middle" fill="#d8ecd0" font-size="11">holding_tower_southwest</text></g><g><rect x="408" y="588" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="488" y="614" text-anchor="middle" fill="#fff4d3" font-size="15">0,1</text>
+      <text x="488" y="650" text-anchor="middle" fill="#ffffff" font-size="16">Southfields</text>
+      <text x="488" y="676" text-anchor="middle" fill="#e0dbc9" font-size="12">core_stronghold</text>
+      <text x="488" y="704" text-anchor="middle" fill="#f1ddb0" font-size="12">57 cities • 1 objectives</text>
+      <text x="488" y="728" text-anchor="middle" fill="#d8ecd0" font-size="11">south</text></g><g><rect x="588" y="588" width="160" height="160" rx="12" fill="#6b4d73" stroke="#d9c894" stroke-width="3"/>
+      <text x="668" y="614" text-anchor="middle" fill="#fff4d3" font-size="15">1,1</text>
+      <text x="668" y="650" text-anchor="middle" fill="#ffffff" font-size="16">Holding Tower</text>
+      <text x="668" y="676" text-anchor="middle" fill="#e0dbc9" font-size="12">future_holding_tower</text>
+      <text x="668" y="704" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="668" y="728" text-anchor="middle" fill="#d8ecd0" font-size="11">holding_tower_southeast</text></g><g><rect x="768" y="588" width="160" height="160" rx="12" fill="#4a4d50" stroke="#d9c894" stroke-width="3"/>
+      <text x="848" y="614" text-anchor="middle" fill="#fff4d3" font-size="15">2,1</text>
+      <text x="848" y="650" text-anchor="middle" fill="#ffffff" font-size="16">Reserved</text>
+      <text x="848" y="676" text-anchor="middle" fill="#e0dbc9" font-size="12">core_holding_or_support</text>
+      <text x="848" y="704" text-anchor="middle" fill="#f1ddb0" font-size="12">no cities • non-spawnable</text>
+      <text x="848" y="728" text-anchor="middle" fill="#d8ecd0" font-size="11">future support</text></g><g><rect x="48" y="768" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="128" y="794" text-anchor="middle" fill="#fff4d3" font-size="15">-2,2</text>
+      <text x="128" y="830" text-anchor="middle" fill="#ffffff" font-size="16">Graywood Hollow</text>
+      <text x="128" y="856" text-anchor="middle" fill="#e0dbc9" font-size="12">core_camp</text>
+      <text x="128" y="884" text-anchor="middle" fill="#f1ddb0" font-size="12">49 cities • 1 objectives</text>
+      <text x="128" y="908" text-anchor="middle" fill="#d8ecd0" font-size="11">region_6</text></g><g><rect x="228" y="768" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="308" y="794" text-anchor="middle" fill="#fff4d3" font-size="15">-1,2</text>
+      <text x="308" y="830" text-anchor="middle" fill="#ffffff" font-size="16">Greenrook Vale</text>
+      <text x="308" y="856" text-anchor="middle" fill="#e0dbc9" font-size="12">core_camp</text>
+      <text x="308" y="884" text-anchor="middle" fill="#f1ddb0" font-size="12">71 cities • 1 objectives</text>
+      <text x="308" y="908" text-anchor="middle" fill="#d8ecd0" font-size="11">region_7</text></g><g><rect x="408" y="768" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="488" y="794" text-anchor="middle" fill="#fff4d3" font-size="15">0,2</text>
+      <text x="488" y="830" text-anchor="middle" fill="#ffffff" font-size="16">Lowroad Vale</text>
+      <text x="488" y="856" text-anchor="middle" fill="#e0dbc9" font-size="12">core_support</text>
+      <text x="488" y="884" text-anchor="middle" fill="#f1ddb0" font-size="12">93 cities • 0 objectives</text>
+      <text x="488" y="908" text-anchor="middle" fill="#d8ecd0" font-size="11">region_8</text></g><g><rect x="588" y="768" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="668" y="794" text-anchor="middle" fill="#fff4d3" font-size="15">1,2</text>
+      <text x="668" y="830" text-anchor="middle" fill="#ffffff" font-size="16">Stonebrook Farms</text>
+      <text x="668" y="856" text-anchor="middle" fill="#e0dbc9" font-size="12">core_camp</text>
+      <text x="668" y="884" text-anchor="middle" fill="#f1ddb0" font-size="12">80 cities • 1 objectives</text>
+      <text x="668" y="908" text-anchor="middle" fill="#d8ecd0" font-size="11">region_9</text></g><g><rect x="768" y="768" width="160" height="160" rx="12" fill="#506b45" stroke="#d9c894" stroke-width="3"/>
+      <text x="848" y="794" text-anchor="middle" fill="#fff4d3" font-size="15">2,2</text>
+      <text x="848" y="830" text-anchor="middle" fill="#ffffff" font-size="16">Goldmere Plains</text>
+      <text x="848" y="856" text-anchor="middle" fill="#e0dbc9" font-size="12">core_camp</text>
+      <text x="848" y="884" text-anchor="middle" fill="#f1ddb0" font-size="12">39 cities • 1 objectives</text>
+      <text x="848" y="908" text-anchor="middle" fill="#d8ecd0" font-size="11">region_10</text></g>
+</svg>

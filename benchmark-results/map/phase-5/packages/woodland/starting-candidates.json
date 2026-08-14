@@ -1,0 +1,108 @@
+[
+  {
+    "cityId": "npc_phase5_woodland_region_5e0d30708355e1",
+    "eligible": true,
+    "score": 210.936,
+    "nearbyNpcCityCount": 13,
+    "nearbyNpcCityIds": [
+      "npc_phase5_woodland_region_023635881435eb",
+      "npc_phase5_woodland_region_0b148cecd74be3",
+      "npc_phase5_woodland_region_14b1114f171006",
+      "npc_phase5_woodland_region_159be62780c06d",
+      "npc_phase5_woodland_region_16584584abd516",
+      "npc_phase5_woodland_region_1e8560feaf7f2b",
+      "npc_phase5_woodland_region_2f030888d79ac3",
+      "npc_phase5_woodland_region_3aa7c67b8fe2fe",
+      "npc_phase5_woodland_region_77eb8129395448",
+      "npc_phase5_woodland_region_9b4503b5255e5b",
+      "npc_phase5_woodland_region_9bbb5c4405ba5a",
+      "npc_phase5_woodland_region_c40f16509b88a6",
+      "npc_phase5_woodland_region_fddf6f86b150dc"
+    ],
+    "edgeDistance": 349,
+    "localUsableTerritoryRatio": 0.25,
+    "nearestRoadCorridorDistance": 93,
+    "gameplay": {
+      "x": 3133,
+      "y": 10003
+    }
+  },
+  {
+    "cityId": "npc_phase5_woodland_region_023635881435eb",
+    "eligible": true,
+    "score": 198.001,
+    "nearbyNpcCityCount": 12,
+    "nearbyNpcCityIds": [
+      "npc_phase5_woodland_region_105dc1cc0e4313",
+      "npc_phase5_woodland_region_159be62780c06d",
+      "npc_phase5_woodland_region_16584584abd516",
+      "npc_phase5_woodland_region_3243ee9b478ffc",
+      "npc_phase5_woodland_region_4eaea0f57afa4c",
+      "npc_phase5_woodland_region_5e0d30708355e1",
+      "npc_phase5_woodland_region_77eb8129395448",
+      "npc_phase5_woodland_region_9b4503b5255e5b",
+      "npc_phase5_woodland_region_9bbb5c4405ba5a",
+      "npc_phase5_woodland_region_a1c2f898efd65c",
+      "npc_phase5_woodland_region_b10d72762a6310",
+      "npc_phase5_woodland_region_c40f16509b88a6"
+    ],
+    "edgeDistance": 443,
+    "localUsableTerritoryRatio": 0.291667,
+    "nearestRoadCorridorDistance": 103,
+    "gameplay": {
+      "x": 5252,
+      "y": 10065
+    }
+  },
+  {
+    "cityId": "npc_phase5_woodland_region_9bbb5c4405ba5a",
+    "eligible": true,
+    "score": 197.894,
+    "nearbyNpcCityCount": 12,
+    "nearbyNpcCityIds": [
+      "npc_phase5_woodland_region_023635881435eb",
+      "npc_phase5_woodland_region_0b148cecd74be3",
+      "npc_phase5_woodland_region_16584584abd516",
+      "npc_phase5_woodland_region_1e8560feaf7f2b",
+      "npc_phase5_woodland_region_3aa7c67b8fe2fe",
+      "npc_phase5_woodland_region_5e0d30708355e1",
+      "npc_phase5_woodland_region_6ea21f86bbc450",
+      "npc_phase5_woodland_region_7a9e88ef17f8f6",
+      "npc_phase5_woodland_region_a1292fe4326061",
+      "npc_phase5_woodland_region_a1c2f898efd65c",
+      "npc_phase5_woodland_region_c40f16509b88a6",
+      "npc_phase5_woodland_region_c59c4750bedb7f"
+    ],
+    "edgeDistance": 424,
+    "localUsableTerritoryRatio": 0.291667,
+    "nearestRoadCorridorDistance": 101,
+    "gameplay": {
+      "x": 3807,
+      "y": 6669
+    }
+  },
+  {
+    "cityId": "npc_phase5_woodland_region_159be62780c06d",
+    "eligible": true,
+    "score": 157.593,
+    "nearbyNpcCityCount": 9,
+    "nearbyNpcCityIds": [
+      "npc_phase5_woodland_region_023635881435eb",
+      "npc_phase5_woodland_region_105dc1cc0e4313",
+      "npc_phase5_woodland_region_16584584abd516",
+      "npc_phase5_woodland_region_2f030888d79ac3",
+      "npc_phase5_woodland_region_3243ee9b478ffc",
+      "npc_phase5_woodland_region_4eaea0f57afa4c",
+      "npc_phase5_woodland_region_5e0d30708355e1",
+      "npc_phase5_woodland_region_77eb8129395448",
+      "npc_phase5_woodland_region_9b4503b5255e5b"
+    ],
+    "edgeDistance": 232,
+    "localUsableTerritoryRatio": 0.395833,
+    "nearestRoadCorridorDistance": 175,
+    "gameplay": {
+      "x": 4929,
+      "y": 13368
+    }
+  }
+]

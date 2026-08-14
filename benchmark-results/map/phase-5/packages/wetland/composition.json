@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "watermarkRequired": true,
+  "regionId": "phase5_wetland_region",
+  "profile": "wetland",
+  "dimensions": {
+    "width": 1448,
+    "height": 1086,
+    "aspectRatio": "4:3",
+    "opaque": true
+  },
+  "palette": {
+    "ground": "#637452",
+    "secondary": "#7c8058",
+    "accent": "#766c49",
+    "blocker": "#475343",
+    "water": "#4b6d70"
+  },
+  "landPolygon": [
+    {
+      "x": 78,
+      "y": 92
+    },
+    {
+      "x": 270,
+      "y": 54
+    },
+    {
+      "x": 1160,
+      "y": 54
+    },
+    {
+      "x": 1372,
+      "y": 145
+    },
+    {
+      "x": 1402,
+      "y": 850
+    },
+    {
+      "x": 1300,
+      "y": 1022
+    },
+    {
+      "x": 160,
+      "y": 1022
+    },
+    {
+      "x": 44,
+      "y": 840
+    }
+  ],
+  "visualComposition": [
+    {
+      "id": "ground-base",
+      "assetId": "ground.meadow.base",
+      "category": "ground",
+      "geometryRef": "land-polygon",
+      "drawOrder": 0,
+      "color": "#637452"
+    },
+    {
+      "id": "ground-patch-1",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 828,
+      "y": 107,
+      "rx": 123,
+      "ry": 71,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-10",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 935,
+      "y": 499,
+      "rx": 65,
+      "ry": 59,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-11",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 623,
+      "y": 869,
+      "rx": 141,
+      "ry": 86,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-12",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1061,
+      "y": 936,
+      "rx": 132,
+      "ry": 35,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-13",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1110,
+      "y": 892,
+      "rx": 126,
+      "ry": 38,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-14",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 523,
+      "y": 429,
+      "rx": 70,
+      "ry": 62,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-15",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 334,
+      "y": 436,
+      "rx": 65,
+      "ry": 75,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-16",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 436,
+      "y": 642,
+      "rx": 93,
+      "ry": 90,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-17",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 518,
+      "y": 983,
+      "rx": 78,
+      "ry": 52,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-18",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 926,
+      "y": 318,
+      "rx": 100,
+      "ry": 56,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-2",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 766,
+      "y": 864,
+      "rx": 112,
+      "ry": 76,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-3",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 376,
+      "y": 429,
+      "rx": 149,
+      "ry": 45,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-4",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 463,
+      "y": 616,
+      "rx": 83,
+      "ry": 38,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-5",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 198,
+      "y": 218,
+      "rx": 79,
+      "ry": 69,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-6",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 235,
+      "y": 497,
+      "rx": 163,
+      "ry": 44,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-7",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 248,
+      "y": 220,
+      "rx": 134,
+      "ry": 59,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-8",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 226,
+      "y": 744,
+      "rx": 134,
+      "ry": 72,
+      "color": "#7c8058",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-9",
+      "assetId": "ground.wet.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 454,
+      "y": 454,
+      "rx": 165,
+      "ry": 87,
+      "color": "#766c49",
+      "opacity": 0.16
+    },
+    {
+      "id": "visual-wetland-east",
+      "assetId": "blocker.marsh",
+      "category": "marsh",
+      "geometryRef": "wetland-east",
+      "drawOrder": 20,
+      "x": 1110,
+      "y": 697,
+      "rx": 120,
+      "ry": 86,
+      "rot": 0.14,
+      "color": "#475343"
+    },
+    {
+      "id": "visual-wetland-pond",
+      "assetId": "water.pond_edge",
+      "category": "water",
+      "geometryRef": "wetland-pond",
+      "drawOrder": 20,
+      "x": 1004,
+      "y": 267,
+      "rx": 96,
+      "ry": 68,
+      "rot": 0.2,
+      "color": "#4b6d70"
+    },
+    {
+      "id": "visual-wetland-reeds",
+      "assetId": "blocker.marsh",
+      "category": "marsh",
+      "geometryRef": "wetland-reeds",
+      "drawOrder": 20,
+      "x": 425,
+      "y": 774,
+      "rx": 88,
+      "ry": 62,
+      "rot": -0.12,
+      "color": "#475343"
+    },
+    {
+      "id": "visual-wetland-west",
+      "assetId": "blocker.marsh",
+      "category": "marsh",
+      "geometryRef": "wetland-west",
+      "drawOrder": 20,
+      "x": 322,
+      "y": 368,
+      "rx": 118,
+      "ry": 82,
+      "rot": -0.18,
+      "color": "#475343"
+    },
+    {
+      "id": "visual-road-branch-a",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-a",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 715,
+          "y": 540
+        },
+        {
+          "x": 521,
+          "y": 370
+        }
+      ],
+      "halfWidth": 32,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-branch-b",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-b",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 715,
+          "y": 540
+        },
+        {
+          "x": 927,
+          "y": 734
+        }
+      ],
+      "halfWidth": 30,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-east",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-east",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 1043,
+          "y": 567
+        },
+        {
+          "x": 715,
+          "y": 540
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-north",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-north",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 677,
+          "y": 304
+        },
+        {
+          "x": 715,
+          "y": 540
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-south",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-south",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 710,
+          "y": 782
+        },
+        {
+          "x": 715,
+          "y": 540
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-west",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-west",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 405,
+          "y": 508
+        },
+        {
+          "x": 715,
+          "y": 540
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "phase5_wetland_region",
+  "name": "Phase 5 wetland",
+  "purpose": "player_region",
+  "permanentCore": false,
+  "generationReady": true,
+  "spawnEligible": false,
+  "spawnReady": false,
+  "lifecycle": "standby",
+  "visibility": "development_only",
+  "activationAllowed": false,
+  "gridX": -3,
+  "gridY": -3,
+  "worldLayer": 1,
+  "clockwiseOrderIndex": 0,
+  "cityCapacity": 40,
+  "initialNpcCityCount": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "connections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "generatorVersion": "phase5-composer-v1",
+  "seedHash": "53461d128c055dc3a37cf6602cd988b0db70da07018f2fa9a01d1125a875b8d7",
+  "mapAsset": "map.webp",
+  "thumbnailAsset": "thumbnail.webp",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+}

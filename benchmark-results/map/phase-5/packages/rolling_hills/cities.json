@@ -1,0 +1,802 @@
+[
+  {
+    "id": "npc_phase5_rolling_hills_region_0c8b7a402eefcf",
+    "name": "Frontier 7946E0",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 597,
+    "y": 353,
+    "xNorm": 0.412292817679558,
+    "yNorm": 0.3250460405156538,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 5360,
+      "y": 5526
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_18a1bac228e487",
+    "name": "Frontier C4BC1B",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 228,
+    "y": 635,
+    "xNorm": 0.1574585635359116,
+    "yNorm": 0.5847145488029466,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 2047,
+      "y": 9940
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_1a65f9bf99ee82",
+    "name": "Frontier 6F8D56",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 121,
+    "y": 287,
+    "xNorm": 0.0835635359116022,
+    "yNorm": 0.26427255985267034,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 1086,
+      "y": 4493
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_2049291bdf27ac",
+    "name": "Frontier 41A4F1",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1002,
+    "y": 966,
+    "xNorm": 0.6919889502762431,
+    "yNorm": 0.8895027624309392,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 8996,
+      "y": 15122
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_255fe87a5cabda",
+    "name": "Frontier 02B2AA",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 183,
+    "y": 389,
+    "xNorm": 0.12638121546961326,
+    "yNorm": 0.358195211786372,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 1643,
+      "y": 6089
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_2984902be4bc58",
+    "name": "Frontier 48C1E3",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 598,
+    "y": 949,
+    "xNorm": 0.4129834254143646,
+    "yNorm": 0.8738489871086557,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 5369,
+      "y": 14855
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_2b07b2eea33f66",
+    "name": "Frontier D41137",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1150,
+    "y": 447,
+    "xNorm": 0.7941988950276243,
+    "yNorm": 0.4116022099447514,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 10325,
+      "y": 6997
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_34061e4f99c8cf",
+    "name": "Frontier C6D43A",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 609,
+    "y": 113,
+    "xNorm": 0.4205801104972376,
+    "yNorm": 0.10405156537753223,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 5468,
+      "y": 1769
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_3f66bae63dd357",
+    "name": "Frontier 210BBE",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1345,
+    "y": 630,
+    "xNorm": 0.9288674033149171,
+    "yNorm": 0.580110497237569,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 12075,
+      "y": 9862
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_448e5437ab1dc0",
+    "name": "Frontier 04D30B",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 942,
+    "y": 653,
+    "xNorm": 0.6505524861878453,
+    "yNorm": 0.6012891344383057,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 8457,
+      "y": 10222
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_4823c22e6138b7",
+    "name": "Frontier C2E6B2",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 488,
+    "y": 145,
+    "xNorm": 0.3370165745856354,
+    "yNorm": 0.13351749539594843,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 4381,
+      "y": 2270
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_49e1076934532b",
+    "name": "Frontier EB5C60",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 835,
+    "y": 756,
+    "xNorm": 0.5766574585635359,
+    "yNorm": 0.6961325966850829,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 7497,
+      "y": 11834
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_4eea4c551c6a86",
+    "name": "Frontier B9AE21",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1192,
+    "y": 875,
+    "xNorm": 0.8232044198895028,
+    "yNorm": 0.8057090239410681,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 10702,
+      "y": 13697
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_53c5dd85aafe97",
+    "name": "Frontier D8A92F",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 224,
+    "y": 973,
+    "xNorm": 0.15469613259668508,
+    "yNorm": 0.8959484346224678,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 2011,
+      "y": 15231
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_74e96348f11313",
+    "name": "Frontier 6F9E3C",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1300,
+    "y": 804,
+    "xNorm": 0.8977900552486188,
+    "yNorm": 0.7403314917127072,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 11671,
+      "y": 12586
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_7666882dff53e8",
+    "name": "Frontier F95795",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 884,
+    "y": 148,
+    "xNorm": 0.6104972375690608,
+    "yNorm": 0.13627992633517497,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 7936,
+      "y": 2317
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_78bde35b263310",
+    "name": "Frontier D7DE4B",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 113,
+    "y": 639,
+    "xNorm": 0.07803867403314917,
+    "yNorm": 0.5883977900552486,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 1015,
+      "y": 10003
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_8171c5beaec702",
+    "name": "Frontier 68CF90",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1249,
+    "y": 380,
+    "xNorm": 0.8625690607734806,
+    "yNorm": 0.34990791896869244,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 11213,
+      "y": 5948
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_84e7dd6623a7d6",
+    "name": "Frontier EA4388",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1000,
+    "y": 98,
+    "xNorm": 0.6906077348066298,
+    "yNorm": 0.09023941068139964,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 8978,
+      "y": 1534
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_87b8e6a9ad2bcb",
+    "name": "Frontier 8BB4C1",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1253,
+    "y": 224,
+    "xNorm": 0.8653314917127072,
+    "yNorm": 0.20626151012891344,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 11249,
+      "y": 3506
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_89f63b536b868f",
+    "name": "Frontier C86BDE",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 241,
+    "y": 102,
+    "xNorm": 0.1664364640883978,
+    "yNorm": 0.09392265193370165,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 2164,
+      "y": 1597
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_942158eb8cc93a",
+    "name": "Frontier 2DCB74",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 115,
+    "y": 167,
+    "xNorm": 0.07941988950276244,
+    "yNorm": 0.15377532228360957,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 1032,
+      "y": 2614
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_9b841b5339cd11",
+    "name": "Frontier 277C84",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1114,
+    "y": 971,
+    "xNorm": 0.7693370165745856,
+    "yNorm": 0.8941068139963168,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 10001,
+      "y": 15200
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_9c830bf94f8db6",
+    "name": "Frontier CE5564",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1341,
+    "y": 447,
+    "xNorm": 0.9261049723756906,
+    "yNorm": 0.4116022099447514,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 12039,
+      "y": 6997
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_9d7c1d299491a3",
+    "name": "Frontier 9ABA2D",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 356,
+    "y": 98,
+    "xNorm": 0.24585635359116023,
+    "yNorm": 0.09023941068139964,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 3196,
+      "y": 1534
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_9ff8192ec4b2bb",
+    "name": "Frontier C1F390",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 478,
+    "y": 362,
+    "xNorm": 0.3301104972375691,
+    "yNorm": 0.3333333333333333,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 4291,
+      "y": 5667
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_a456fd51375302",
+    "name": "Frontier 208042",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 838,
+    "y": 490,
+    "xNorm": 0.5787292817679558,
+    "yNorm": 0.45119705340699817,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 7523,
+      "y": 7670
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_aa0da9a852777e",
+    "name": "Frontier E56604",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 858,
+    "y": 335,
+    "xNorm": 0.5925414364640884,
+    "yNorm": 0.30847145488029465,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 7703,
+      "y": 5244
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_ab6d3e0edcf7dc",
+    "name": "Frontier 5AE792",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 553,
+    "y": 239,
+    "xNorm": 0.3819060773480663,
+    "yNorm": 0.22007366482504603,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 4965,
+      "y": 3741
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_b2e4cfbe7c6f63",
+    "name": "Frontier EA53EC",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 363,
+    "y": 456,
+    "xNorm": 0.2506906077348066,
+    "yNorm": 0.4198895027624309,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 3259,
+      "y": 7138
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_b51702bd98369d",
+    "name": "Frontier DF96DA",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 488,
+    "y": 903,
+    "xNorm": 0.3370165745856354,
+    "yNorm": 0.8314917127071824,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 4381,
+      "y": 14135
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_b914bb9f12f5a9",
+    "name": "Frontier BC63B1",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 550,
+    "y": 662,
+    "xNorm": 0.3798342541436464,
+    "yNorm": 0.6095764272559853,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 4938,
+      "y": 10363
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_bef97e4699a0e1",
+    "name": "Frontier DFB13F",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 837,
+    "y": 937,
+    "xNorm": 0.5780386740331491,
+    "yNorm": 0.8627992633517495,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 7515,
+      "y": 14668
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_c5acdc0d39c33b",
+    "name": "Frontier 801510",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 964,
+    "y": 428,
+    "xNorm": 0.6657458563535912,
+    "yNorm": 0.39410681399631675,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 8655,
+      "y": 6700
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_c95a639245146e",
+    "name": "Frontier 9EFA71",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 580,
+    "y": 816,
+    "xNorm": 0.4005524861878453,
+    "yNorm": 0.7513812154696132,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 5207,
+      "y": 12773
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_cc0e073855acf1",
+    "name": "Frontier F5B7A4",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 145,
+    "y": 795,
+    "xNorm": 0.10013812154696132,
+    "yNorm": 0.7320441988950276,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 1302,
+      "y": 12445
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_e3092a12f28420",
+    "name": "Frontier 690424",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1255,
+    "y": 698,
+    "xNorm": 0.8667127071823204,
+    "yNorm": 0.6427255985267035,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 11267,
+      "y": 10926
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_f33e7bd836b377",
+    "name": "Frontier 8BDAEB",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 331,
+    "y": 936,
+    "xNorm": 0.2285911602209945,
+    "yNorm": 0.861878453038674,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 2972,
+      "y": 14652
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_faa63c44dc1fa7",
+    "name": "Frontier FA5EB7",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1297,
+    "y": 946,
+    "xNorm": 0.8957182320441989,
+    "yNorm": 0.8710865561694291,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 11644,
+      "y": 14808
+    }
+  },
+  {
+    "id": "npc_phase5_rolling_hills_region_fe6a46b1f1716f",
+    "name": "Frontier 5B8A6B",
+    "regionId": "phase5_rolling_hills_region",
+    "x": 1119,
+    "y": 124,
+    "xNorm": 0.7727900552486188,
+    "yNorm": 0.1141804788213628,
+    "owner": "neutral",
+    "ownerKind": "neutral",
+    "startType": "neutral",
+    "level": 1,
+    "troops": 10,
+    "defense": 1,
+    "generated": true,
+    "gameplay": {
+      "x": 10046,
+      "y": 1941
+    }
+  }
+]

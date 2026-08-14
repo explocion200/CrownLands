@@ -1,0 +1,1189 @@
+{
+  "id": "phase5_agricultural_region",
+  "name": "Phase 5 agricultural",
+  "purpose": "player_region",
+  "permanentCore": false,
+  "width": 1448,
+  "height": 1086,
+  "mapAsset": "map.webp",
+  "thumbnailAsset": "thumbnail.webp",
+  "terrain": {
+    "source": "phase5-terrain-plan-v1:039a711b210a07d7ca59ea50e7ca8c38ca20d5d4f1d8b6aedf69d32cbf65cef8",
+    "authoritativeData": true,
+    "derivedFromImagePixels": false,
+    "landPolygon": [
+      {
+        "x": 78,
+        "y": 92
+      },
+      {
+        "x": 270,
+        "y": 54
+      },
+      {
+        "x": 1160,
+        "y": 54
+      },
+      {
+        "x": 1372,
+        "y": 145
+      },
+      {
+        "x": 1402,
+        "y": 850
+      },
+      {
+        "x": 1300,
+        "y": 1022
+      },
+      {
+        "x": 160,
+        "y": 1022
+      },
+      {
+        "x": 44,
+        "y": 840
+      }
+    ],
+    "blockers": [
+      {
+        "id": "farm-woodlot",
+        "type": "dense_forest",
+        "x": 1116,
+        "y": 271,
+        "rx": 86,
+        "ry": 60,
+        "rot": 0.16,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "farm-pond",
+        "type": "water",
+        "x": 1080,
+        "y": 793,
+        "rx": 88,
+        "ry": 62,
+        "rot": 0.2,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "farm-rocks",
+        "type": "mountain",
+        "x": 327,
+        "y": 751,
+        "rx": 78,
+        "ry": 56,
+        "rot": -0.18,
+        "blocksCities": true,
+        "blocksMovement": true
+      }
+    ],
+    "prohibitedTerrain": []
+  },
+  "roadCorridors": [
+    {
+      "id": "road-north-segment-1",
+      "side": "north",
+      "start": {
+        "x": 724,
+        "y": 0
+      },
+      "end": {
+        "x": 729,
+        "y": 304
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-north-segment-2",
+      "side": "north",
+      "start": {
+        "x": 729,
+        "y": 304
+      },
+      "end": {
+        "x": 684,
+        "y": 579
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-1",
+      "side": "east",
+      "start": {
+        "x": 1448,
+        "y": 543
+      },
+      "end": {
+        "x": 1043,
+        "y": 559
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-2",
+      "side": "east",
+      "start": {
+        "x": 1043,
+        "y": 559
+      },
+      "end": {
+        "x": 684,
+        "y": 579
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-1",
+      "side": "south",
+      "start": {
+        "x": 724,
+        "y": 1086
+      },
+      "end": {
+        "x": 710,
+        "y": 782
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-2",
+      "side": "south",
+      "start": {
+        "x": 710,
+        "y": 782
+      },
+      "end": {
+        "x": 684,
+        "y": 579
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-1",
+      "side": "west",
+      "start": {
+        "x": 0,
+        "y": 543
+      },
+      "end": {
+        "x": 405,
+        "y": 517
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-2",
+      "side": "west",
+      "start": {
+        "x": 405,
+        "y": 517
+      },
+      "end": {
+        "x": 684,
+        "y": 579
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-branch-a-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 684,
+        "y": 579
+      },
+      "end": {
+        "x": 521,
+        "y": 425
+      },
+      "halfWidth": 32
+    },
+    {
+      "id": "road-branch-b-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 684,
+        "y": 579
+      },
+      "end": {
+        "x": 927,
+        "y": 721
+      },
+      "halfWidth": 30
+    }
+  ],
+  "noCityZones": [],
+  "camps": [],
+  "strongholds": [],
+  "citadels": [],
+  "gridX": -3,
+  "gridY": -3,
+  "worldLayer": 1,
+  "clockwiseOrderIndex": 0,
+  "connections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "cities": [
+    {
+      "id": "npc_phase5_agricultural_region_0bca2a7b676aed",
+      "name": "Frontier 076C86",
+      "regionId": "phase5_agricultural_region",
+      "x": 143,
+      "y": 355,
+      "xNorm": 0.09875690607734806,
+      "yNorm": 0.3268876611418048,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1284,
+        "y": 5557
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_0f7a5127225dc6",
+      "name": "Frontier A78ED1",
+      "regionId": "phase5_agricultural_region",
+      "x": 436,
+      "y": 324,
+      "xNorm": 0.3011049723756906,
+      "yNorm": 0.2983425414364641,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3914,
+        "y": 5072
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_1019f0c0fff069",
+      "name": "Frontier 871C23",
+      "regionId": "phase5_agricultural_region",
+      "x": 1275,
+      "y": 248,
+      "xNorm": 0.880524861878453,
+      "yNorm": 0.2283609576427256,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11447,
+        "y": 3882
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_14f120678f0c69",
+      "name": "Frontier 5D8F80",
+      "regionId": "phase5_agricultural_region",
+      "x": 607,
+      "y": 806,
+      "xNorm": 0.4191988950276243,
+      "yNorm": 0.7421731123388582,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5450,
+        "y": 12617
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_22046765f16906",
+      "name": "Frontier D9F243",
+      "regionId": "phase5_agricultural_region",
+      "x": 349,
+      "y": 420,
+      "xNorm": 0.24102209944751382,
+      "yNorm": 0.3867403314917127,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3133,
+        "y": 6575
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_31d83d3cf20932",
+      "name": "Frontier 57AAC3",
+      "regionId": "phase5_agricultural_region",
+      "x": 1276,
+      "y": 425,
+      "xNorm": 0.8812154696132597,
+      "yNorm": 0.39134438305709024,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11456,
+        "y": 6653
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_3ca78f49fda766",
+      "name": "Frontier 39ECEC",
+      "regionId": "phase5_agricultural_region",
+      "x": 1172,
+      "y": 919,
+      "xNorm": 0.8093922651933702,
+      "yNorm": 0.8462246777163904,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10522,
+        "y": 14386
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_48e8e640053a97",
+      "name": "Frontier 375547",
+      "regionId": "phase5_agricultural_region",
+      "x": 856,
+      "y": 770,
+      "xNorm": 0.5911602209944752,
+      "yNorm": 0.7090239410681399,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7685,
+        "y": 12053
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_55ff33a438a4d3",
+      "name": "Frontier ED49FA",
+      "regionId": "phase5_agricultural_region",
+      "x": 245,
+      "y": 251,
+      "xNorm": 0.1691988950276243,
+      "yNorm": 0.2311233885819521,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2200,
+        "y": 3929
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_5ea2b8bd2bdeba",
+      "name": "Frontier 00F8D0",
+      "regionId": "phase5_agricultural_region",
+      "x": 633,
+      "y": 147,
+      "xNorm": 0.43715469613259667,
+      "yNorm": 0.13535911602209943,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5683,
+        "y": 2301
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_5fd6382886f23d",
+      "name": "Frontier 09696B",
+      "regionId": "phase5_agricultural_region",
+      "x": 234,
+      "y": 427,
+      "xNorm": 0.16160220994475138,
+      "yNorm": 0.39318600368324125,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2101,
+        "y": 6684
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_6ef200b62600a7",
+      "name": "Frontier 030045",
+      "regionId": "phase5_agricultural_region",
+      "x": 1301,
+      "y": 893,
+      "xNorm": 0.8984806629834254,
+      "yNorm": 0.8222836095764272,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11680,
+        "y": 13979
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_72f10f1917df4a",
+      "name": "Frontier E52813",
+      "regionId": "phase5_agricultural_region",
+      "x": 1312,
+      "y": 636,
+      "xNorm": 0.9060773480662984,
+      "yNorm": 0.585635359116022,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11779,
+        "y": 9956
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_78fce0b7e2eb1c",
+      "name": "Frontier BB739F",
+      "regionId": "phase5_agricultural_region",
+      "x": 444,
+      "y": 829,
+      "xNorm": 0.30662983425414364,
+      "yNorm": 0.7633517495395948,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3986,
+        "y": 12977
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_7ec064d6d48afb",
+      "name": "Frontier 479C6C",
+      "regionId": "phase5_agricultural_region",
+      "x": 600,
+      "y": 978,
+      "xNorm": 0.4143646408839779,
+      "yNorm": 0.9005524861878453,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5387,
+        "y": 15309
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_84b4abce6ec510",
+      "name": "Frontier E7CC5B",
+      "regionId": "phase5_agricultural_region",
+      "x": 828,
+      "y": 978,
+      "xNorm": 0.5718232044198895,
+      "yNorm": 0.9005524861878453,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7434,
+        "y": 15309
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_8843f002f28ff6",
+      "name": "Frontier 9A59FA",
+      "regionId": "phase5_agricultural_region",
+      "x": 1052,
+      "y": 102,
+      "xNorm": 0.7265193370165746,
+      "yNorm": 0.09392265193370165,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9445,
+        "y": 1597
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_888faf45513546",
+      "name": "Frontier 6D34E4",
+      "regionId": "phase5_agricultural_region",
+      "x": 1144,
+      "y": 456,
+      "xNorm": 0.7900552486187845,
+      "yNorm": 0.4198895027624309,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10271,
+        "y": 7138
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_89d997d95b1dbe",
+      "name": "Frontier C6FDDE",
+      "regionId": "phase5_agricultural_region",
+      "x": 259,
+      "y": 978,
+      "xNorm": 0.17886740331491713,
+      "yNorm": 0.9005524861878453,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2325,
+        "y": 15309
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_8d907cc97a4965",
+      "name": "Frontier ECAB80",
+      "regionId": "phase5_agricultural_region",
+      "x": 642,
+      "y": 380,
+      "xNorm": 0.44337016574585636,
+      "yNorm": 0.34990791896869244,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5764,
+        "y": 5948
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_8fb79f0d5c84bb",
+      "name": "Frontier 42B559",
+      "regionId": "phase5_agricultural_region",
+      "x": 1244,
+      "y": 137,
+      "xNorm": 0.8591160220994475,
+      "yNorm": 0.1261510128913444,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11169,
+        "y": 2145
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_959cfcd8f4a0af",
+      "name": "Frontier 9EBC30",
+      "regionId": "phase5_agricultural_region",
+      "x": 794,
+      "y": 420,
+      "xNorm": 0.5483425414364641,
+      "yNorm": 0.3867403314917127,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7128,
+        "y": 6575
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_9a62f2e625bd5e",
+      "name": "Frontier 5A464B",
+      "regionId": "phase5_agricultural_region",
+      "x": 1017,
+      "y": 405,
+      "xNorm": 0.7023480662983426,
+      "yNorm": 0.3729281767955801,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9131,
+        "y": 6340
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_a16a2cb5a0d93a",
+      "name": "Frontier 0F66A4",
+      "regionId": "phase5_agricultural_region",
+      "x": 570,
+      "y": 279,
+      "xNorm": 0.393646408839779,
+      "yNorm": 0.2569060773480663,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5117,
+        "y": 4367
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_ac03ec2a290f13",
+      "name": "Frontier B8B8AE",
+      "regionId": "phase5_agricultural_region",
+      "x": 950,
+      "y": 646,
+      "xNorm": 0.6560773480662984,
+      "yNorm": 0.5948434622467772,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8529,
+        "y": 10112
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_ae37b5c2a78148",
+      "name": "Frontier 98AD74",
+      "regionId": "phase5_agricultural_region",
+      "x": 876,
+      "y": 168,
+      "xNorm": 0.6049723756906077,
+      "yNorm": 0.15469613259668508,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7865,
+        "y": 2630
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_b022494f205150",
+      "name": "Frontier F9845B",
+      "regionId": "phase5_agricultural_region",
+      "x": 1177,
+      "y": 665,
+      "xNorm": 0.8128453038674033,
+      "yNorm": 0.6123388581952118,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10567,
+        "y": 10410
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_b575dbf74ff489",
+      "name": "Frontier 634900",
+      "regionId": "phase5_agricultural_region",
+      "x": 190,
+      "y": 837,
+      "xNorm": 0.13121546961325967,
+      "yNorm": 0.7707182320441989,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1706,
+        "y": 13102
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_b6ff7f293a0c1a",
+      "name": "Frontier 1A1993",
+      "regionId": "phase5_agricultural_region",
+      "x": 186,
+      "y": 679,
+      "xNorm": 0.12845303867403315,
+      "yNorm": 0.6252302025782689,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1670,
+        "y": 10629
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_b8448df46d5868",
+      "name": "Frontier 058144",
+      "regionId": "phase5_agricultural_region",
+      "x": 911,
+      "y": 874,
+      "xNorm": 0.6291436464088398,
+      "yNorm": 0.8047882136279927,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8179,
+        "y": 13681
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_ba99ee37d0eb69",
+      "name": "Frontier 04F3B1",
+      "regionId": "phase5_agricultural_region",
+      "x": 324,
+      "y": 161,
+      "xNorm": 0.22375690607734808,
+      "yNorm": 0.14825046040515655,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2909,
+        "y": 2520
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_beed1902d20dc8",
+      "name": "Frontier 3B8270",
+      "regionId": "phase5_agricultural_region",
+      "x": 906,
+      "y": 322,
+      "xNorm": 0.6256906077348067,
+      "yNorm": 0.2965009208103131,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8134,
+        "y": 5041
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_c24d6656dace03",
+      "name": "Frontier 52155B",
+      "regionId": "phase5_agricultural_region",
+      "x": 1053,
+      "y": 940,
+      "xNorm": 0.7272099447513812,
+      "yNorm": 0.8655616942909761,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9454,
+        "y": 14715
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_cbf993aeeefca3",
+      "name": "Frontier 35CF4F",
+      "regionId": "phase5_agricultural_region",
+      "x": 566,
+      "y": 686,
+      "xNorm": 0.39088397790055246,
+      "yNorm": 0.6316758747697975,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5081,
+        "y": 10738
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_d0eeb3faf0019a",
+      "name": "Frontier C08D95",
+      "regionId": "phase5_agricultural_region",
+      "x": 488,
+      "y": 949,
+      "xNorm": 0.3370165745856354,
+      "yNorm": 0.8738489871086557,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4381,
+        "y": 14855
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_d6e77abbefff39",
+      "name": "Frontier 4D8D85",
+      "regionId": "phase5_agricultural_region",
+      "x": 451,
+      "y": 188,
+      "xNorm": 0.31146408839779005,
+      "yNorm": 0.1731123388581952,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4049,
+        "y": 2943
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_e6330a7f4a0742",
+      "name": "Frontier A28A2A",
+      "regionId": "phase5_agricultural_region",
+      "x": 425,
+      "y": 644,
+      "xNorm": 0.2935082872928177,
+      "yNorm": 0.5930018416206262,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3816,
+        "y": 10081
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_ebae8d69b00074",
+      "name": "Frontier C4DCD2",
+      "regionId": "phase5_agricultural_region",
+      "x": 1343,
+      "y": 773,
+      "xNorm": 0.9274861878453039,
+      "yNorm": 0.7117863720073665,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 12057,
+        "y": 12100
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_f64c8c2aef60d1",
+      "name": "Frontier 0D87D3",
+      "regionId": "phase5_agricultural_region",
+      "x": 140,
+      "y": 133,
+      "xNorm": 0.09668508287292818,
+      "yNorm": 0.12246777163904236,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1257,
+        "y": 2082
+      }
+    },
+    {
+      "id": "npc_phase5_agricultural_region_fd87a5f828ca99",
+      "name": "Frontier D2AF59",
+      "regionId": "phase5_agricultural_region",
+      "x": 355,
+      "y": 903,
+      "xNorm": 0.2451657458563536,
+      "yNorm": 0.8314917127071824,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3187,
+        "y": 14135
+      }
+    }
+  ],
+  "startingCityCandidates": [
+    {
+      "cityId": "npc_phase5_agricultural_region_22046765f16906",
+      "eligible": true,
+      "score": 192.882,
+      "nearbyNpcCityCount": 11,
+      "nearbyNpcCityIds": [
+        "npc_phase5_agricultural_region_0bca2a7b676aed",
+        "npc_phase5_agricultural_region_0f7a5127225dc6",
+        "npc_phase5_agricultural_region_55ff33a438a4d3",
+        "npc_phase5_agricultural_region_5fd6382886f23d",
+        "npc_phase5_agricultural_region_8d907cc97a4965",
+        "npc_phase5_agricultural_region_a16a2cb5a0d93a",
+        "npc_phase5_agricultural_region_b6ff7f293a0c1a",
+        "npc_phase5_agricultural_region_ba99ee37d0eb69",
+        "npc_phase5_agricultural_region_cbf993aeeefca3",
+        "npc_phase5_agricultural_region_d6e77abbefff39",
+        "npc_phase5_agricultural_region_e6330a7f4a0742"
+      ],
+      "edgeDistance": 349,
+      "localUsableTerritoryRatio": 0.541667,
+      "nearestRoadCorridorDistance": 100,
+      "gameplay": {
+        "x": 3133,
+        "y": 6575
+      }
+    },
+    {
+      "cityId": "npc_phase5_agricultural_region_e6330a7f4a0742",
+      "eligible": true,
+      "score": 182.073,
+      "nearbyNpcCityCount": 11,
+      "nearbyNpcCityIds": [
+        "npc_phase5_agricultural_region_0f7a5127225dc6",
+        "npc_phase5_agricultural_region_14f120678f0c69",
+        "npc_phase5_agricultural_region_22046765f16906",
+        "npc_phase5_agricultural_region_5fd6382886f23d",
+        "npc_phase5_agricultural_region_78fce0b7e2eb1c",
+        "npc_phase5_agricultural_region_8d907cc97a4965",
+        "npc_phase5_agricultural_region_b575dbf74ff489",
+        "npc_phase5_agricultural_region_b6ff7f293a0c1a",
+        "npc_phase5_agricultural_region_cbf993aeeefca3",
+        "npc_phase5_agricultural_region_d0eeb3faf0019a",
+        "npc_phase5_agricultural_region_fd87a5f828ca99"
+      ],
+      "edgeDistance": 425,
+      "localUsableTerritoryRatio": 0.270833,
+      "nearestRoadCorridorDistance": 101,
+      "gameplay": {
+        "x": 3816,
+        "y": 10081
+      }
+    },
+    {
+      "cityId": "npc_phase5_agricultural_region_a16a2cb5a0d93a",
+      "eligible": true,
+      "score": 181.897,
+      "nearbyNpcCityCount": 10,
+      "nearbyNpcCityIds": [
+        "npc_phase5_agricultural_region_0f7a5127225dc6",
+        "npc_phase5_agricultural_region_22046765f16906",
+        "npc_phase5_agricultural_region_55ff33a438a4d3",
+        "npc_phase5_agricultural_region_5ea2b8bd2bdeba",
+        "npc_phase5_agricultural_region_8d907cc97a4965",
+        "npc_phase5_agricultural_region_959cfcd8f4a0af",
+        "npc_phase5_agricultural_region_ae37b5c2a78148",
+        "npc_phase5_agricultural_region_ba99ee37d0eb69",
+        "npc_phase5_agricultural_region_beed1902d20dc8",
+        "npc_phase5_agricultural_region_d6e77abbefff39"
+      ],
+      "edgeDistance": 279,
+      "localUsableTerritoryRatio": 0.604167,
+      "nearestRoadCorridorDistance": 154,
+      "gameplay": {
+        "x": 5117,
+        "y": 4367
+      }
+    },
+    {
+      "cityId": "npc_phase5_agricultural_region_b022494f205150",
+      "eligible": true,
+      "score": 180.778,
+      "nearbyNpcCityCount": 11,
+      "nearbyNpcCityIds": [
+        "npc_phase5_agricultural_region_31d83d3cf20932",
+        "npc_phase5_agricultural_region_3ca78f49fda766",
+        "npc_phase5_agricultural_region_48e8e640053a97",
+        "npc_phase5_agricultural_region_6ef200b62600a7",
+        "npc_phase5_agricultural_region_72f10f1917df4a",
+        "npc_phase5_agricultural_region_888faf45513546",
+        "npc_phase5_agricultural_region_9a62f2e625bd5e",
+        "npc_phase5_agricultural_region_ac03ec2a290f13",
+        "npc_phase5_agricultural_region_b8448df46d5868",
+        "npc_phase5_agricultural_region_c24d6656dace03",
+        "npc_phase5_agricultural_region_ebae8d69b00074"
+      ],
+      "edgeDistance": 271,
+      "localUsableTerritoryRatio": 0.25,
+      "nearestRoadCorridorDistance": 111,
+      "gameplay": {
+        "x": 10567,
+        "y": 10410
+      }
+    }
+  ],
+  "generatorVersion": "phase5-composer-v1",
+  "seed": {
+    "strategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|seedSalt)",
+    "generatorVersion": "phase5-composer-v1",
+    "seedSalt": "phase5-dev-placeholder-library-v1|profile-default",
+    "seedHash": "b8382ec7aa7891b229fcf571b84e3ee058004ac4d13932b7de3f16b7d72c2892"
+  },
+  "generationConfig": {
+    "totalCityCapacity": 40,
+    "minimumNpcCitiesForSpawn": 15,
+    "minCitySeparation": 112,
+    "cityRadius": 28,
+    "edgeClearance": 96,
+    "blockerClearance": 42,
+    "structureClearance": 42,
+    "roadCorridorHalfWidth": 58,
+    "edgeTransitionRadius": 104,
+    "maximumCandidateEvaluations": 120000,
+    "attractionProbability": 0.64,
+    "attractionRadius": 380,
+    "startingCandidateRadius": 350,
+    "startingCandidateMinimumNeighbors": 3,
+    "startingCandidateMinimumTerritoryRatio": 0.2,
+    "startingCandidateEdgeClearance": 160,
+    "startingCandidateRoadAccess": 300,
+    "startingCandidateSeparation": 200,
+    "minimumStartingCandidates": 2,
+    "maximumStartingCandidates": 4
+  },
+  "terrainPlanHash": "039a711b210a07d7ca59ea50e7ca8c38ca20d5d4f1d8b6aedf69d32cbf65cef8",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+}

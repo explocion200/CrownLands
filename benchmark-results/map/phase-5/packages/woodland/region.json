@@ -1,0 +1,1214 @@
+{
+  "id": "phase5_woodland_region",
+  "name": "Phase 5 woodland",
+  "purpose": "player_region",
+  "permanentCore": false,
+  "width": 1448,
+  "height": 1086,
+  "mapAsset": "map.webp",
+  "thumbnailAsset": "thumbnail.webp",
+  "terrain": {
+    "source": "phase5-terrain-plan-v1:4e7c2aa10ef27c2bf57f2c667c426eb686c3a62cc279339b2b0f4b4887f048e5",
+    "authoritativeData": true,
+    "derivedFromImagePixels": false,
+    "landPolygon": [
+      {
+        "x": 78,
+        "y": 92
+      },
+      {
+        "x": 270,
+        "y": 54
+      },
+      {
+        "x": 1160,
+        "y": 54
+      },
+      {
+        "x": 1372,
+        "y": 145
+      },
+      {
+        "x": 1402,
+        "y": 850
+      },
+      {
+        "x": 1300,
+        "y": 1022
+      },
+      {
+        "x": 160,
+        "y": 1022
+      },
+      {
+        "x": 44,
+        "y": 840
+      }
+    ],
+    "blockers": [
+      {
+        "id": "woodland-nw",
+        "type": "dense_forest",
+        "x": 304,
+        "y": 266,
+        "rx": 108,
+        "ry": 72,
+        "rot": -0.22,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "woodland-ne",
+        "type": "dense_forest",
+        "x": 1089,
+        "y": 270,
+        "rx": 116,
+        "ry": 76,
+        "rot": 0.19,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "woodland-sw",
+        "type": "dense_forest",
+        "x": 339,
+        "y": 791,
+        "rx": 112,
+        "ry": 80,
+        "rot": 0.12,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "woodland-se",
+        "type": "dense_forest",
+        "x": 1094,
+        "y": 774,
+        "rx": 110,
+        "ry": 78,
+        "rot": -0.15,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "woodland-coppice",
+        "type": "dense_forest",
+        "x": 708,
+        "y": 521,
+        "rx": 72,
+        "ry": 52,
+        "rot": 0.08,
+        "blocksCities": true,
+        "blocksMovement": true
+      }
+    ],
+    "prohibitedTerrain": []
+  },
+  "roadCorridors": [
+    {
+      "id": "road-north-segment-1",
+      "side": "north",
+      "start": {
+        "x": 724,
+        "y": 0
+      },
+      "end": {
+        "x": 704,
+        "y": 304
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-north-segment-2",
+      "side": "north",
+      "start": {
+        "x": 704,
+        "y": 304
+      },
+      "end": {
+        "x": 657,
+        "y": 537
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-1",
+      "side": "east",
+      "start": {
+        "x": 1448,
+        "y": 543
+      },
+      "end": {
+        "x": 1043,
+        "y": 562
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-2",
+      "side": "east",
+      "start": {
+        "x": 1043,
+        "y": 562
+      },
+      "end": {
+        "x": 657,
+        "y": 537
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-1",
+      "side": "south",
+      "start": {
+        "x": 724,
+        "y": 1086
+      },
+      "end": {
+        "x": 750,
+        "y": 782
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-2",
+      "side": "south",
+      "start": {
+        "x": 750,
+        "y": 782
+      },
+      "end": {
+        "x": 657,
+        "y": 537
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-1",
+      "side": "west",
+      "start": {
+        "x": 0,
+        "y": 543
+      },
+      "end": {
+        "x": 405,
+        "y": 546
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-2",
+      "side": "west",
+      "start": {
+        "x": 405,
+        "y": 546
+      },
+      "end": {
+        "x": 657,
+        "y": 537
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-branch-a-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 657,
+        "y": 537
+      },
+      "end": {
+        "x": 521,
+        "y": 399
+      },
+      "halfWidth": 32
+    },
+    {
+      "id": "road-branch-b-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 657,
+        "y": 537
+      },
+      "end": {
+        "x": 927,
+        "y": 725
+      },
+      "halfWidth": 30
+    }
+  ],
+  "noCityZones": [],
+  "camps": [],
+  "strongholds": [],
+  "citadels": [],
+  "gridX": -3,
+  "gridY": -3,
+  "worldLayer": 1,
+  "clockwiseOrderIndex": 0,
+  "connections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "cities": [
+    {
+      "id": "npc_phase5_woodland_region_023635881435eb",
+      "name": "Frontier F9D383",
+      "regionId": "phase5_woodland_region",
+      "x": 585,
+      "y": 643,
+      "xNorm": 0.40400552486187846,
+      "yNorm": 0.5920810313075506,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5252,
+        "y": 10065
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_0b148cecd74be3",
+      "name": "Frontier F73BF5",
+      "regionId": "phase5_woodland_region",
+      "x": 120,
+      "y": 450,
+      "xNorm": 0.08287292817679558,
+      "yNorm": 0.4143646408839779,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1077,
+        "y": 7044
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_105dc1cc0e4313",
+      "name": "Frontier 553AAF",
+      "regionId": "phase5_woodland_region",
+      "x": 817,
+      "y": 885,
+      "xNorm": 0.5642265193370166,
+      "yNorm": 0.8149171270718232,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7335,
+        "y": 13854
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_13678119a83ff8",
+      "name": "Frontier 1B1F01",
+      "regionId": "phase5_woodland_region",
+      "x": 1307,
+      "y": 642,
+      "xNorm": 0.9026243093922652,
+      "yNorm": 0.5911602209944752,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11734,
+        "y": 10050
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_14b1114f171006",
+      "name": "Frontier 6120A0",
+      "regionId": "phase5_woodland_region",
+      "x": 123,
+      "y": 781,
+      "xNorm": 0.08494475138121547,
+      "yNorm": 0.7191528545119705,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1104,
+        "y": 12226
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_159be62780c06d",
+      "name": "Frontier 8C4D3D",
+      "regionId": "phase5_woodland_region",
+      "x": 549,
+      "y": 854,
+      "xNorm": 0.3791436464088398,
+      "yNorm": 0.7863720073664825,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4929,
+        "y": 13368
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_16584584abd516",
+      "name": "Frontier 09250F",
+      "regionId": "phase5_woodland_region",
+      "x": 507,
+      "y": 736,
+      "xNorm": 0.35013812154696133,
+      "yNorm": 0.6777163904235728,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4552,
+        "y": 11521
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_18b9be7146f449",
+      "name": "Frontier 99DDE4",
+      "regionId": "phase5_woodland_region",
+      "x": 1116,
+      "y": 100,
+      "xNorm": 0.7707182320441989,
+      "yNorm": 0.09208103130755065,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10019,
+        "y": 1565
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_1e0e2ca16cc887",
+      "name": "Frontier D2563C",
+      "regionId": "phase5_woodland_region",
+      "x": 1321,
+      "y": 456,
+      "xNorm": 0.912292817679558,
+      "yNorm": 0.4198895027624309,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11860,
+        "y": 7138
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_1e8560feaf7f2b",
+      "name": "Frontier 33A682",
+      "regionId": "phase5_woodland_region",
+      "x": 218,
+      "y": 642,
+      "xNorm": 0.1505524861878453,
+      "yNorm": 0.5911602209944752,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1957,
+        "y": 10050
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_210e1efce81f03",
+      "name": "Frontier 36E73F",
+      "regionId": "phase5_woodland_region",
+      "x": 990,
+      "y": 97,
+      "xNorm": 0.6837016574585635,
+      "yNorm": 0.08931860036832412,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8888,
+        "y": 1518
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_2f030888d79ac3",
+      "name": "Frontier E69218",
+      "regionId": "phase5_woodland_region",
+      "x": 351,
+      "y": 944,
+      "xNorm": 0.24240331491712708,
+      "yNorm": 0.8692449355432781,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3151,
+        "y": 14777
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_3243ee9b478ffc",
+      "name": "Frontier 47C4BB",
+      "regionId": "phase5_woodland_region",
+      "x": 860,
+      "y": 758,
+      "xNorm": 0.5939226519337016,
+      "yNorm": 0.6979742173112339,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7721,
+        "y": 11866
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_3aa7c67b8fe2fe",
+      "name": "Frontier 7C39C2",
+      "regionId": "phase5_woodland_region",
+      "x": 277,
+      "y": 432,
+      "xNorm": 0.19129834254143646,
+      "yNorm": 0.39779005524861877,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2487,
+        "y": 6762
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_42a6baa5cf3245",
+      "name": "Frontier 03A771",
+      "regionId": "phase5_woodland_region",
+      "x": 1152,
+      "y": 449,
+      "xNorm": 0.7955801104972375,
+      "yNorm": 0.4134438305709024,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10343,
+        "y": 7029
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_4eaea0f57afa4c",
+      "name": "Frontier 5FFA6A",
+      "regionId": "phase5_woodland_region",
+      "x": 637,
+      "y": 930,
+      "xNorm": 0.4399171270718232,
+      "yNorm": 0.856353591160221,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5719,
+        "y": 14558
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_5e0d30708355e1",
+      "name": "Frontier F7A759",
+      "regionId": "phase5_woodland_region",
+      "x": 349,
+      "y": 639,
+      "xNorm": 0.24102209944751382,
+      "yNorm": 0.5883977900552486,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3133,
+        "y": 10003
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_6ea21f86bbc450",
+      "name": "Frontier 932331",
+      "regionId": "phase5_woodland_region",
+      "x": 295,
+      "y": 105,
+      "xNorm": 0.2037292817679558,
+      "yNorm": 0.09668508287292818,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2648,
+        "y": 1644
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_76d77f9b8ddfbb",
+      "name": "Frontier A64933",
+      "regionId": "phase5_woodland_region",
+      "x": 970,
+      "y": 633,
+      "xNorm": 0.669889502762431,
+      "yNorm": 0.5828729281767956,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8709,
+        "y": 9909
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_77eb8129395448",
+      "name": "Frontier BE3DC3",
+      "regionId": "phase5_woodland_region",
+      "x": 634,
+      "y": 750,
+      "xNorm": 0.43784530386740333,
+      "yNorm": 0.6906077348066298,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5692,
+        "y": 11740
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_7a9e88ef17f8f6",
+      "name": "Frontier E0B66E",
+      "regionId": "phase5_woodland_region",
+      "x": 517,
+      "y": 192,
+      "xNorm": 0.35704419889502764,
+      "yNorm": 0.17679558011049723,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4642,
+        "y": 3006
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_7fbbb678305cb4",
+      "name": "Frontier B2893F",
+      "regionId": "phase5_woodland_region",
+      "x": 612,
+      "y": 124,
+      "xNorm": 0.42265193370165743,
+      "yNorm": 0.1141804788213628,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5494,
+        "y": 1941
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_814a792c5b72ba",
+      "name": "Frontier E5CD32",
+      "regionId": "phase5_woodland_region",
+      "x": 1288,
+      "y": 774,
+      "xNorm": 0.8895027624309392,
+      "yNorm": 0.712707182320442,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11564,
+        "y": 12116
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_9035890903158c",
+      "name": "Frontier 08354F",
+      "regionId": "phase5_woodland_region",
+      "x": 1258,
+      "y": 147,
+      "xNorm": 0.8687845303867403,
+      "yNorm": 0.13535911602209943,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11294,
+        "y": 2301
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_9a31882bb2ad85",
+      "name": "Frontier F1BCD8",
+      "regionId": "phase5_woodland_region",
+      "x": 834,
+      "y": 308,
+      "xNorm": 0.5759668508287292,
+      "yNorm": 0.283609576427256,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7488,
+        "y": 4821
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_9b4503b5255e5b",
+      "name": "Frontier 1BDB49",
+      "regionId": "phase5_woodland_region",
+      "x": 474,
+      "y": 965,
+      "xNorm": 0.32734806629834257,
+      "yNorm": 0.8885819521178637,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4256,
+        "y": 15106
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_9bbb5c4405ba5a",
+      "name": "Frontier 797D09",
+      "regionId": "phase5_woodland_region",
+      "x": 424,
+      "y": 426,
+      "xNorm": 0.292817679558011,
+      "yNorm": 0.39226519337016574,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3807,
+        "y": 6669
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_a1292fe4326061",
+      "name": "Frontier 4070FD",
+      "regionId": "phase5_woodland_region",
+      "x": 130,
+      "y": 314,
+      "xNorm": 0.08977900552486189,
+      "yNorm": 0.289134438305709,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1167,
+        "y": 4915
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_a1c2f898efd65c",
+      "name": "Frontier D2CC96",
+      "regionId": "phase5_woodland_region",
+      "x": 618,
+      "y": 326,
+      "xNorm": 0.42679558011049723,
+      "yNorm": 0.3001841620626151,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5548,
+        "y": 5103
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_a7ee450780026e",
+      "name": "Frontier 412F7C",
+      "regionId": "phase5_woodland_region",
+      "x": 972,
+      "y": 981,
+      "xNorm": 0.6712707182320442,
+      "yNorm": 0.9033149171270718,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8727,
+        "y": 15356
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_a9bc5a7587e467",
+      "name": "Frontier EB24CC",
+      "regionId": "phase5_woodland_region",
+      "x": 159,
+      "y": 167,
+      "xNorm": 0.10980662983425414,
+      "yNorm": 0.15377532228360957,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1427,
+        "y": 2614
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_b10d72762a6310",
+      "name": "Frontier CE7A34",
+      "regionId": "phase5_woodland_region",
+      "x": 871,
+      "y": 475,
+      "xNorm": 0.6015193370165746,
+      "yNorm": 0.43738489871086556,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7820,
+        "y": 7436
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_c0d617c53f9e31",
+      "name": "Frontier B95B8A",
+      "regionId": "phase5_woodland_region",
+      "x": 903,
+      "y": 187,
+      "xNorm": 0.6236187845303868,
+      "yNorm": 0.1721915285451197,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8107,
+        "y": 2927
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_c40f16509b88a6",
+      "name": "Frontier 94283F",
+      "regionId": "phase5_woodland_region",
+      "x": 469,
+      "y": 322,
+      "xNorm": 0.3238950276243094,
+      "yNorm": 0.2965009208103131,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4211,
+        "y": 5041
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_c59c4750bedb7f",
+      "name": "Frontier ACDE71",
+      "regionId": "phase5_woodland_region",
+      "x": 419,
+      "y": 132,
+      "xNorm": 0.2893646408839779,
+      "yNorm": 0.12154696132596685,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3762,
+        "y": 2066
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_d37a6d5e839b8d",
+      "name": "Frontier 7983B8",
+      "regionId": "phase5_woodland_region",
+      "x": 990,
+      "y": 406,
+      "xNorm": 0.6837016574585635,
+      "yNorm": 0.3738489871086556,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8888,
+        "y": 6355
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_dd7d6a7ddc20cc",
+      "name": "Frontier 33F88E",
+      "regionId": "phase5_woodland_region",
+      "x": 1319,
+      "y": 332,
+      "xNorm": 0.9109116022099447,
+      "yNorm": 0.30570902394106814,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11842,
+        "y": 5197
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_e5909b85a1b173",
+      "name": "Frontier 2C4CC4",
+      "regionId": "phase5_woodland_region",
+      "x": 1151,
+      "y": 969,
+      "xNorm": 0.794889502762431,
+      "yNorm": 0.8922651933701657,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10334,
+        "y": 15169
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_f08e5eb0bb5b49",
+      "name": "Frontier A72F70",
+      "regionId": "phase5_woodland_region",
+      "x": 1294,
+      "y": 931,
+      "xNorm": 0.893646408839779,
+      "yNorm": 0.8572744014732965,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11617,
+        "y": 14574
+      }
+    },
+    {
+      "id": "npc_phase5_woodland_region_fddf6f86b150dc",
+      "name": "Frontier 3F4A8F",
+      "regionId": "phase5_woodland_region",
+      "x": 186,
+      "y": 932,
+      "xNorm": 0.12845303867403315,
+      "yNorm": 0.858195211786372,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1670,
+        "y": 14589
+      }
+    }
+  ],
+  "startingCityCandidates": [
+    {
+      "cityId": "npc_phase5_woodland_region_5e0d30708355e1",
+      "eligible": true,
+      "score": 210.936,
+      "nearbyNpcCityCount": 13,
+      "nearbyNpcCityIds": [
+        "npc_phase5_woodland_region_023635881435eb",
+        "npc_phase5_woodland_region_0b148cecd74be3",
+        "npc_phase5_woodland_region_14b1114f171006",
+        "npc_phase5_woodland_region_159be62780c06d",
+        "npc_phase5_woodland_region_16584584abd516",
+        "npc_phase5_woodland_region_1e8560feaf7f2b",
+        "npc_phase5_woodland_region_2f030888d79ac3",
+        "npc_phase5_woodland_region_3aa7c67b8fe2fe",
+        "npc_phase5_woodland_region_77eb8129395448",
+        "npc_phase5_woodland_region_9b4503b5255e5b",
+        "npc_phase5_woodland_region_9bbb5c4405ba5a",
+        "npc_phase5_woodland_region_c40f16509b88a6",
+        "npc_phase5_woodland_region_fddf6f86b150dc"
+      ],
+      "edgeDistance": 349,
+      "localUsableTerritoryRatio": 0.25,
+      "nearestRoadCorridorDistance": 93,
+      "gameplay": {
+        "x": 3133,
+        "y": 10003
+      }
+    },
+    {
+      "cityId": "npc_phase5_woodland_region_023635881435eb",
+      "eligible": true,
+      "score": 198.001,
+      "nearbyNpcCityCount": 12,
+      "nearbyNpcCityIds": [
+        "npc_phase5_woodland_region_105dc1cc0e4313",
+        "npc_phase5_woodland_region_159be62780c06d",
+        "npc_phase5_woodland_region_16584584abd516",
+        "npc_phase5_woodland_region_3243ee9b478ffc",
+        "npc_phase5_woodland_region_4eaea0f57afa4c",
+        "npc_phase5_woodland_region_5e0d30708355e1",
+        "npc_phase5_woodland_region_77eb8129395448",
+        "npc_phase5_woodland_region_9b4503b5255e5b",
+        "npc_phase5_woodland_region_9bbb5c4405ba5a",
+        "npc_phase5_woodland_region_a1c2f898efd65c",
+        "npc_phase5_woodland_region_b10d72762a6310",
+        "npc_phase5_woodland_region_c40f16509b88a6"
+      ],
+      "edgeDistance": 443,
+      "localUsableTerritoryRatio": 0.291667,
+      "nearestRoadCorridorDistance": 103,
+      "gameplay": {
+        "x": 5252,
+        "y": 10065
+      }
+    },
+    {
+      "cityId": "npc_phase5_woodland_region_9bbb5c4405ba5a",
+      "eligible": true,
+      "score": 197.894,
+      "nearbyNpcCityCount": 12,
+      "nearbyNpcCityIds": [
+        "npc_phase5_woodland_region_023635881435eb",
+        "npc_phase5_woodland_region_0b148cecd74be3",
+        "npc_phase5_woodland_region_16584584abd516",
+        "npc_phase5_woodland_region_1e8560feaf7f2b",
+        "npc_phase5_woodland_region_3aa7c67b8fe2fe",
+        "npc_phase5_woodland_region_5e0d30708355e1",
+        "npc_phase5_woodland_region_6ea21f86bbc450",
+        "npc_phase5_woodland_region_7a9e88ef17f8f6",
+        "npc_phase5_woodland_region_a1292fe4326061",
+        "npc_phase5_woodland_region_a1c2f898efd65c",
+        "npc_phase5_woodland_region_c40f16509b88a6",
+        "npc_phase5_woodland_region_c59c4750bedb7f"
+      ],
+      "edgeDistance": 424,
+      "localUsableTerritoryRatio": 0.291667,
+      "nearestRoadCorridorDistance": 101,
+      "gameplay": {
+        "x": 3807,
+        "y": 6669
+      }
+    },
+    {
+      "cityId": "npc_phase5_woodland_region_159be62780c06d",
+      "eligible": true,
+      "score": 157.593,
+      "nearbyNpcCityCount": 9,
+      "nearbyNpcCityIds": [
+        "npc_phase5_woodland_region_023635881435eb",
+        "npc_phase5_woodland_region_105dc1cc0e4313",
+        "npc_phase5_woodland_region_16584584abd516",
+        "npc_phase5_woodland_region_2f030888d79ac3",
+        "npc_phase5_woodland_region_3243ee9b478ffc",
+        "npc_phase5_woodland_region_4eaea0f57afa4c",
+        "npc_phase5_woodland_region_5e0d30708355e1",
+        "npc_phase5_woodland_region_77eb8129395448",
+        "npc_phase5_woodland_region_9b4503b5255e5b"
+      ],
+      "edgeDistance": 232,
+      "localUsableTerritoryRatio": 0.395833,
+      "nearestRoadCorridorDistance": 175,
+      "gameplay": {
+        "x": 4929,
+        "y": 13368
+      }
+    }
+  ],
+  "generatorVersion": "phase5-composer-v1",
+  "seed": {
+    "strategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|seedSalt)",
+    "generatorVersion": "phase5-composer-v1",
+    "seedSalt": "phase5-dev-placeholder-library-v1|profile-default",
+    "seedHash": "7db194551202049a11ba0b8a08a22aafd3916c3b0525cf028539e031d3e4571b"
+  },
+  "generationConfig": {
+    "totalCityCapacity": 40,
+    "minimumNpcCitiesForSpawn": 15,
+    "minCitySeparation": 112,
+    "cityRadius": 28,
+    "edgeClearance": 96,
+    "blockerClearance": 42,
+    "structureClearance": 42,
+    "roadCorridorHalfWidth": 58,
+    "edgeTransitionRadius": 104,
+    "maximumCandidateEvaluations": 120000,
+    "attractionProbability": 0.64,
+    "attractionRadius": 380,
+    "startingCandidateRadius": 350,
+    "startingCandidateMinimumNeighbors": 3,
+    "startingCandidateMinimumTerritoryRatio": 0.2,
+    "startingCandidateEdgeClearance": 160,
+    "startingCandidateRoadAccess": 300,
+    "startingCandidateSeparation": 200,
+    "minimumStartingCandidates": 2,
+    "maximumStartingCandidates": 4
+  },
+  "terrainPlanHash": "4e7c2aa10ef27c2bf57f2c667c426eb686c3a62cc279339b2b0f4b4887f048e5",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+}

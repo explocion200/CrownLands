@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "phase5-composer-v1",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1",
+  "terrainPlanVersion": "phase5-terrain-plan-v1",
+  "worldId": "phase5_development_world",
+  "seasonId": "phase5_development_season",
+  "regionId": "phase5_agricultural_region",
+  "coordinate": {
+    "gridX": -3,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 0
+  },
+  "seed": {
+    "strategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|assetLibraryVersion|retrySalt)",
+    "retrySalt": "profile-default",
+    "seedHash": "b8382ec7aa7891b229fcf571b84e3ee058004ac4d13932b7de3f16b7d72c2892",
+    "materialHash": "b8382ec7aa7891b229fcf571b84e3ee058004ac4d13932b7de3f16b7d72c2892"
+  },
+  "lifecycle": "STANDBY",
+  "catalogEntry": {
+    "id": "phase5_agricultural_region",
+    "name": "Phase 5 agricultural",
+    "purpose": "player_region",
+    "permanentCore": false,
+    "generationReady": true,
+    "spawnEligible": false,
+    "spawnReady": false,
+    "lifecycle": "standby",
+    "visibility": "development_only",
+    "activationAllowed": false,
+    "gridX": -3,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 0,
+    "cityCapacity": 40,
+    "initialNpcCityCount": 40,
+    "minimumNpcCitiesForSpawn": 15,
+    "connections": {
+      "north": {
+        "side": "north",
+        "oppositeSide": "south",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "east": {
+        "side": "east",
+        "oppositeSide": "west",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "south": {
+        "side": "south",
+        "oppositeSide": "north",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "west": {
+        "side": "west",
+        "oppositeSide": "east",
+        "state": "gated",
+        "targetRegionId": ""
+      }
+    },
+    "generatorVersion": "phase5-composer-v1",
+    "seedHash": "b8382ec7aa7891b229fcf571b84e3ee058004ac4d13932b7de3f16b7d72c2892",
+    "mapAsset": "map.webp",
+    "thumbnailAsset": "thumbnail.webp",
+    "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "hashes": {
+    "terrainHash": "63634f59998b6e6f49358f0d419d0bbc5e88f18e774dbb30d5a152ed6b64200b",
+    "blockerHash": "8b5408ba1422ea10acf651da9e4fcbb449b2e8fe3775c0866f78fcb7f46955dd",
+    "roadHash": "5357253ce510fd876e6129969fdef17e723595543f44dbc725738326f3ce7c88",
+    "cityHash": "f54ac80fbbcde3ca978b12a2c55233a0fef49cda61c691cbbcf7a3899888bdba",
+    "startingCandidateHash": "87090d7f7ea2b2a3e2ff35017f510934ff1c5f2e3bb28c39bfb2739d846aef17",
+    "compositionHash": "f9fbe5a7ccd3af9a72c932aa1ee61eddd5e651559780fa5d2c026bcf01d55ec9",
+    "webpHash": "5f9e169398ecaa88ecb59af3ee7a748bb42467bfc5a32875f92399202ab50900",
+    "thumbnailHash": "b445f3c17c5c1596df2d6ca7f576be2f02a619cfdf8564e249c5c96c55507895"
+  },
+  "mapWebp": {
+    "path": "map.webp",
+    "width": 1448,
+    "height": 1086,
+    "mode": "RGB",
+    "opaque": true,
+    "bytes": 21028,
+    "sha256": "5f9e169398ecaa88ecb59af3ee7a748bb42467bfc5a32875f92399202ab50900"
+  },
+  "thumbnailWebp": {
+    "path": "thumbnail.webp",
+    "width": 320,
+    "height": 240,
+    "mode": "RGB",
+    "opaque": true,
+    "bytes": 2926,
+    "sha256": "b445f3c17c5c1596df2d6ca7f576be2f02a619cfdf8564e249c5c96c55507895"
+  },
+  "fileManifest": [
+    {
+      "path": "catalog.json",
+      "bytes": 1238,
+      "sha256": "64873cabc11d28502471b64963a12485fbbc9c2a79e5a0501d5ef3e0446c1880"
+    },
+    {
+      "path": "region.json",
+      "bytes": 29370,
+      "sha256": "9264e090a5d87624cf191adbd39eb95ffe6929e9f5e1374284aee7eb999936a3"
+    },
+    {
+      "path": "terrain.json",
+      "bytes": 695,
+      "sha256": "290735ee483bfbde9fbc1306fa633088841f012488b45ac142f23127ddec68b2"
+    },
+    {
+      "path": "blockers.json",
+      "bytes": 556,
+      "sha256": "f7004cb2f7626194b80f332995b24cd1fef57c266acafcedb663c1580809c0c3"
+    },
+    {
+      "path": "blocker-mask.rle.json",
+      "bytes": 3183,
+      "sha256": "0ee9ab2d1de7a7db98291bb38255ab4490d67253cf0f3e984eea14d20a6169aa"
+    },
+    {
+      "path": "roads.json",
+      "bytes": 2193,
+      "sha256": "eca48632fff64fa06ee0ad845aa2c358a168d113bc0d6ceb4b5faa5ee70ed261"
+    },
+    {
+      "path": "cities.json",
+      "bytes": 18101,
+      "sha256": "a7ab0e453c456e48a5ecfc598866a9b8e1c0525b02a1556b486dff9a2b195fb1"
+    },
+    {
+      "path": "starting-candidates.json",
+      "bytes": 3739,
+      "sha256": "7e8e98ac32270b2f4228987bb395a7eee633a1d5eccd9a66a784cf7c08f3b6ab"
+    },
+    {
+      "path": "composition.json",
+      "bytes": 9595,
+      "sha256": "f0bb9f08c4d8f56e3ac56942c86feb389bb96f7c0a5d2ca0cdac902d191ccd8b"
+    },
+    {
+      "path": "generation-manifest.json",
+      "bytes": 1509,
+      "sha256": "1849e13b24dc919dd5ced11d6a1a98a614be66cabe58eed9c0f137ffdb718e84"
+    },
+    {
+      "path": "validation-receipt.json",
+      "bytes": 539,
+      "sha256": "d676e405eb5c9bdc8dae0361f87aaa0461c0a449dbeae47fdf5b9bbf699bd62c"
+    },
+    {
+      "path": "map.webp",
+      "bytes": 21028,
+      "sha256": "5f9e169398ecaa88ecb59af3ee7a748bb42467bfc5a32875f92399202ab50900"
+    },
+    {
+      "path": "thumbnail.webp",
+      "bytes": 2926,
+      "sha256": "b445f3c17c5c1596df2d6ca7f576be2f02a619cfdf8564e249c5c96c55507895"
+    }
+  ],
+  "packageHash": "f856da126b333e2ceb2ec14e2e47123c4a7863eac480aa4063c391f7c845b6ac"
+}

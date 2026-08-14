@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "watermarkRequired": true,
+  "regionId": "phase5_agricultural_region",
+  "profile": "agricultural",
+  "dimensions": {
+    "width": 1448,
+    "height": 1086,
+    "aspectRatio": "4:3",
+    "opaque": true
+  },
+  "palette": {
+    "ground": "#71844b",
+    "secondary": "#87945a",
+    "accent": "#a89a58",
+    "blocker": "#465c37",
+    "water": "#526f72"
+  },
+  "landPolygon": [
+    {
+      "x": 78,
+      "y": 92
+    },
+    {
+      "x": 270,
+      "y": 54
+    },
+    {
+      "x": 1160,
+      "y": 54
+    },
+    {
+      "x": 1372,
+      "y": 145
+    },
+    {
+      "x": 1402,
+      "y": 850
+    },
+    {
+      "x": 1300,
+      "y": 1022
+    },
+    {
+      "x": 160,
+      "y": 1022
+    },
+    {
+      "x": 44,
+      "y": 840
+    }
+  ],
+  "visualComposition": [
+    {
+      "id": "ground-base",
+      "assetId": "ground.meadow.base",
+      "category": "ground",
+      "geometryRef": "land-polygon",
+      "drawOrder": 0,
+      "color": "#71844b"
+    },
+    {
+      "id": "ground-patch-1",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 514,
+      "y": 144,
+      "rx": 63,
+      "ry": 72,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-10",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1366,
+      "y": 549,
+      "rx": 91,
+      "ry": 78,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-11",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 304,
+      "y": 237,
+      "rx": 84,
+      "ry": 56,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-12",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1145,
+      "y": 945,
+      "rx": 134,
+      "ry": 60,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-13",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1274,
+      "y": 898,
+      "rx": 103,
+      "ry": 39,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-14",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 441,
+      "y": 325,
+      "rx": 112,
+      "ry": 108,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-15",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1300,
+      "y": 332,
+      "rx": 111,
+      "ry": 72,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-16",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 726,
+      "y": 662,
+      "rx": 116,
+      "ry": 35,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-17",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1202,
+      "y": 149,
+      "rx": 104,
+      "ry": 36,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-18",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 471,
+      "y": 962,
+      "rx": 120,
+      "ry": 70,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-2",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1196,
+      "y": 84,
+      "rx": 96,
+      "ry": 64,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-3",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 958,
+      "y": 105,
+      "rx": 90,
+      "ry": 99,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-4",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1198,
+      "y": 541,
+      "rx": 143,
+      "ry": 72,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-5",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 390,
+      "y": 534,
+      "rx": 161,
+      "ry": 58,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-6",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 806,
+      "y": 342,
+      "rx": 147,
+      "ry": 91,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-7",
+      "assetId": "ground.worn_dirt.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 752,
+      "y": 182,
+      "rx": 160,
+      "ry": 103,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-8",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 554,
+      "y": 505,
+      "rx": 84,
+      "ry": 84,
+      "color": "#87945a",
+      "opacity": 0.16
+    },
+    {
+      "id": "ground-patch-9",
+      "assetId": "ground.grassland.patch",
+      "category": "ground_patch",
+      "geometryRef": "decorative-only",
+      "drawOrder": 5,
+      "x": 1099,
+      "y": 804,
+      "rx": 80,
+      "ry": 63,
+      "color": "#a89a58",
+      "opacity": 0.16
+    },
+    {
+      "id": "visual-farm-pond",
+      "assetId": "water.pond_edge",
+      "category": "water",
+      "geometryRef": "farm-pond",
+      "drawOrder": 20,
+      "x": 1080,
+      "y": 793,
+      "rx": 88,
+      "ry": 62,
+      "rot": 0.2,
+      "color": "#526f72"
+    },
+    {
+      "id": "visual-road-branch-a",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-a",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 684,
+          "y": 579
+        },
+        {
+          "x": 521,
+          "y": 425
+        }
+      ],
+      "halfWidth": 32,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-branch-b",
+      "assetId": "road.shallow_curve",
+      "category": "road",
+      "geometryRef": "road-branch-b",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 684,
+          "y": 579
+        },
+        {
+          "x": 927,
+          "y": 721
+        }
+      ],
+      "halfWidth": 30,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-east",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-east",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 1043,
+          "y": 559
+        },
+        {
+          "x": 684,
+          "y": 579
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-north",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-north",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 729,
+          "y": 304
+        },
+        {
+          "x": 684,
+          "y": 579
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-south",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-south",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 710,
+          "y": 782
+        },
+        {
+          "x": 684,
+          "y": 579
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-road-west",
+      "assetId": "road.cardinal_edge",
+      "category": "road",
+      "geometryRef": "road-west",
+      "drawOrder": 24,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 405,
+          "y": 517
+        },
+        {
+          "x": 684,
+          "y": 579
+        }
+      ],
+      "halfWidth": 44,
+      "color": "#786347"
+    },
+    {
+      "id": "visual-farm-rocks",
+      "assetId": "blocker.mountain",
+      "category": "mountain",
+      "geometryRef": "farm-rocks",
+      "drawOrder": 38,
+      "x": 327,
+      "y": 751,
+      "rx": 78,
+      "ry": 56,
+      "rot": -0.18,
+      "color": "#465c37"
+    },
+    {
+      "id": "visual-farm-woodlot",
+      "assetId": "forest.dense_blocker",
+      "category": "dense_forest",
+      "geometryRef": "farm-woodlot",
+      "drawOrder": 38,
+      "x": 1116,
+      "y": 271,
+      "rx": 86,
+      "ry": 60,
+      "rot": 0.16,
+      "color": "#465c37"
+    }
+  ]
+}

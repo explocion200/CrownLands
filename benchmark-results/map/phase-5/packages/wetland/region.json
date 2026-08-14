@@ -1,0 +1,1196 @@
+{
+  "id": "phase5_wetland_region",
+  "name": "Phase 5 wetland",
+  "purpose": "player_region",
+  "permanentCore": false,
+  "width": 1448,
+  "height": 1086,
+  "mapAsset": "map.webp",
+  "thumbnailAsset": "thumbnail.webp",
+  "terrain": {
+    "source": "phase5-terrain-plan-v1:cae97f0a7e4d33b1c99835adaa4c1ca485e4689c1d05c60cf9afac6a20492ac1",
+    "authoritativeData": true,
+    "derivedFromImagePixels": false,
+    "landPolygon": [
+      {
+        "x": 78,
+        "y": 92
+      },
+      {
+        "x": 270,
+        "y": 54
+      },
+      {
+        "x": 1160,
+        "y": 54
+      },
+      {
+        "x": 1372,
+        "y": 145
+      },
+      {
+        "x": 1402,
+        "y": 850
+      },
+      {
+        "x": 1300,
+        "y": 1022
+      },
+      {
+        "x": 160,
+        "y": 1022
+      },
+      {
+        "x": 44,
+        "y": 840
+      }
+    ],
+    "blockers": [
+      {
+        "id": "wetland-west",
+        "type": "marsh",
+        "x": 322,
+        "y": 368,
+        "rx": 118,
+        "ry": 82,
+        "rot": -0.18,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "wetland-east",
+        "type": "marsh",
+        "x": 1110,
+        "y": 697,
+        "rx": 120,
+        "ry": 86,
+        "rot": 0.14,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "wetland-pond",
+        "type": "water",
+        "x": 1004,
+        "y": 267,
+        "rx": 96,
+        "ry": 68,
+        "rot": 0.2,
+        "blocksCities": true,
+        "blocksMovement": true
+      },
+      {
+        "id": "wetland-reeds",
+        "type": "marsh",
+        "x": 425,
+        "y": 774,
+        "rx": 88,
+        "ry": 62,
+        "rot": -0.12,
+        "blocksCities": true,
+        "blocksMovement": true
+      }
+    ],
+    "prohibitedTerrain": []
+  },
+  "roadCorridors": [
+    {
+      "id": "road-north-segment-1",
+      "side": "north",
+      "start": {
+        "x": 724,
+        "y": 0
+      },
+      "end": {
+        "x": 677,
+        "y": 304
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-north-segment-2",
+      "side": "north",
+      "start": {
+        "x": 677,
+        "y": 304
+      },
+      "end": {
+        "x": 715,
+        "y": 540
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-1",
+      "side": "east",
+      "start": {
+        "x": 1448,
+        "y": 543
+      },
+      "end": {
+        "x": 1043,
+        "y": 567
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-segment-2",
+      "side": "east",
+      "start": {
+        "x": 1043,
+        "y": 567
+      },
+      "end": {
+        "x": 715,
+        "y": 540
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-1",
+      "side": "south",
+      "start": {
+        "x": 724,
+        "y": 1086
+      },
+      "end": {
+        "x": 710,
+        "y": 782
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-segment-2",
+      "side": "south",
+      "start": {
+        "x": 710,
+        "y": 782
+      },
+      "end": {
+        "x": 715,
+        "y": 540
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-1",
+      "side": "west",
+      "start": {
+        "x": 0,
+        "y": 543
+      },
+      "end": {
+        "x": 405,
+        "y": 508
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-segment-2",
+      "side": "west",
+      "start": {
+        "x": 405,
+        "y": 508
+      },
+      "end": {
+        "x": 715,
+        "y": 540
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-branch-a-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 715,
+        "y": 540
+      },
+      "end": {
+        "x": 521,
+        "y": 370
+      },
+      "halfWidth": 32
+    },
+    {
+      "id": "road-branch-b-segment-1",
+      "side": "internal",
+      "start": {
+        "x": 715,
+        "y": 540
+      },
+      "end": {
+        "x": 927,
+        "y": 734
+      },
+      "halfWidth": 30
+    }
+  ],
+  "noCityZones": [],
+  "camps": [],
+  "strongholds": [],
+  "citadels": [],
+  "gridX": -3,
+  "gridY": -3,
+  "worldLayer": 1,
+  "clockwiseOrderIndex": 0,
+  "connections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "cities": [
+    {
+      "id": "npc_phase5_wetland_region_03fc705dee4d9c",
+      "name": "Frontier D47A9B",
+      "regionId": "phase5_wetland_region",
+      "x": 128,
+      "y": 209,
+      "xNorm": 0.08839779005524862,
+      "yNorm": 0.19244935543278086,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1149,
+        "y": 3272
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_0a4af9a5f1b0cf",
+      "name": "Frontier EC7543",
+      "regionId": "phase5_wetland_region",
+      "x": 140,
+      "y": 680,
+      "xNorm": 0.09668508287292818,
+      "yNorm": 0.6261510128913443,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1257,
+        "y": 10645
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_10514076c25e2b",
+      "name": "Frontier 7DF94D",
+      "regionId": "phase5_wetland_region",
+      "x": 1093,
+      "y": 143,
+      "xNorm": 0.7548342541436464,
+      "yNorm": 0.13167587476979742,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9813,
+        "y": 2238
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_15aea07fe44ab1",
+      "name": "Frontier A179D4",
+      "regionId": "phase5_wetland_region",
+      "x": 253,
+      "y": 648,
+      "xNorm": 0.17472375690607736,
+      "yNorm": 0.5966850828729282,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2271,
+        "y": 10144
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_1652325605646c",
+      "name": "Frontier 66481C",
+      "regionId": "phase5_wetland_region",
+      "x": 390,
+      "y": 934,
+      "xNorm": 0.26933701657458564,
+      "yNorm": 0.860036832412523,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3501,
+        "y": 14621
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_1796754e4e03fe",
+      "name": "Frontier 958145",
+      "regionId": "phase5_wetland_region",
+      "x": 254,
+      "y": 226,
+      "xNorm": 0.17541436464088397,
+      "yNorm": 0.20810313075506445,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2280,
+        "y": 3538
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_249a9857a4ac26",
+      "name": "Frontier D572B1",
+      "regionId": "phase5_wetland_region",
+      "x": 414,
+      "y": 633,
+      "xNorm": 0.28591160220994477,
+      "yNorm": 0.5828729281767956,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3717,
+        "y": 9909
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_29921b16655ec8",
+      "name": "Frontier A5FAE3",
+      "regionId": "phase5_wetland_region",
+      "x": 1236,
+      "y": 440,
+      "xNorm": 0.8535911602209945,
+      "yNorm": 0.40515653775322286,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11097,
+        "y": 6888
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_35cc8324779f03",
+      "name": "Frontier 643D9D",
+      "regionId": "phase5_wetland_region",
+      "x": 279,
+      "y": 970,
+      "xNorm": 0.19267955801104972,
+      "yNorm": 0.8931860036832413,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2505,
+        "y": 15184
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_3df1d71ec488e8",
+      "name": "Frontier B030E9",
+      "regionId": "phase5_wetland_region",
+      "x": 545,
+      "y": 656,
+      "xNorm": 0.3763812154696133,
+      "yNorm": 0.6040515653775322,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4893,
+        "y": 10269
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_41dffeaef3b244",
+      "name": "Frontier FAC700",
+      "regionId": "phase5_wetland_region",
+      "x": 636,
+      "y": 751,
+      "xNorm": 0.43922651933701656,
+      "yNorm": 0.6915285451197053,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5710,
+        "y": 11756
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_522bb333e207d0",
+      "name": "Frontier 9F1647",
+      "regionId": "phase5_wetland_region",
+      "x": 924,
+      "y": 636,
+      "xNorm": 0.638121546961326,
+      "yNorm": 0.585635359116022,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8296,
+        "y": 9956
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_5594719a34bd6e",
+      "name": "Frontier 14DA11",
+      "regionId": "phase5_wetland_region",
+      "x": 843,
+      "y": 333,
+      "xNorm": 0.5821823204419889,
+      "yNorm": 0.30662983425414364,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7568,
+        "y": 5213
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_5a9552b406ce30",
+      "name": "Frontier 0684EE",
+      "regionId": "phase5_wetland_region",
+      "x": 506,
+      "y": 925,
+      "xNorm": 0.3494475138121547,
+      "yNorm": 0.8517495395948435,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4543,
+        "y": 14480
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_5d3f5c541569e7",
+      "name": "Frontier 46A761",
+      "regionId": "phase5_wetland_region",
+      "x": 495,
+      "y": 435,
+      "xNorm": 0.34185082872928174,
+      "yNorm": 0.4005524861878453,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4444,
+        "y": 6809
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_5d509e3dcc6d4e",
+      "name": "Frontier 4EA79A",
+      "regionId": "phase5_wetland_region",
+      "x": 1203,
+      "y": 307,
+      "xNorm": 0.8308011049723757,
+      "yNorm": 0.2826887661141805,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10800,
+        "y": 4806
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_62cf293cb6298f",
+      "name": "Frontier 8A45F4",
+      "regionId": "phase5_wetland_region",
+      "x": 329,
+      "y": 141,
+      "xNorm": 0.2272099447513812,
+      "yNorm": 0.1298342541436464,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 2954,
+        "y": 2207
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_63d2918d7bf2ad",
+      "name": "Frontier C4985D",
+      "regionId": "phase5_wetland_region",
+      "x": 937,
+      "y": 935,
+      "xNorm": 0.6470994475138122,
+      "yNorm": 0.8609576427255985,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8412,
+        "y": 14636
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_6438d056fadb14",
+      "name": "Frontier 9E223A",
+      "regionId": "phase5_wetland_region",
+      "x": 1250,
+      "y": 815,
+      "xNorm": 0.8632596685082873,
+      "yNorm": 0.7504604051565378,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11222,
+        "y": 12758
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_659493014c5913",
+      "name": "Frontier 7FA809",
+      "regionId": "phase5_wetland_region",
+      "x": 787,
+      "y": 471,
+      "xNorm": 0.5435082872928176,
+      "yNorm": 0.43370165745856354,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7066,
+        "y": 7373
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_6db3ebff5daba5",
+      "name": "Frontier 5ECCDB",
+      "regionId": "phase5_wetland_region",
+      "x": 461,
+      "y": 99,
+      "xNorm": 0.31837016574585636,
+      "yNorm": 0.09116022099447514,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 4139,
+        "y": 1550
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_767dc668115686",
+      "name": "Frontier 505EBB",
+      "regionId": "phase5_wetland_region",
+      "x": 211,
+      "y": 791,
+      "xNorm": 0.1457182320441989,
+      "yNorm": 0.7283609576427256,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1894,
+        "y": 12382
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_77b60542566e07",
+      "name": "Frontier 59E677",
+      "regionId": "phase5_wetland_region",
+      "x": 1237,
+      "y": 132,
+      "xNorm": 0.8542817679558011,
+      "yNorm": 0.12154696132596685,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11106,
+        "y": 2066
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_85089effa17a51",
+      "name": "Frontier 60E72B",
+      "regionId": "phase5_wetland_region",
+      "x": 1329,
+      "y": 295,
+      "xNorm": 0.9178176795580111,
+      "yNorm": 0.2716390423572744,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11932,
+        "y": 4618
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_856e98c6fe1adb",
+      "name": "Frontier CE6E00",
+      "regionId": "phase5_wetland_region",
+      "x": 1108,
+      "y": 396,
+      "xNorm": 0.7651933701657458,
+      "yNorm": 0.36464088397790057,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9948,
+        "y": 6199
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_8f3e8f25778acb",
+      "name": "Frontier 17EE6C",
+      "regionId": "phase5_wetland_region",
+      "x": 431,
+      "y": 223,
+      "xNorm": 0.29765193370165743,
+      "yNorm": 0.20534069981583794,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 3869,
+        "y": 3491
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_919c895e7cf70b",
+      "name": "Frontier 231BBF",
+      "regionId": "phase5_wetland_region",
+      "x": 1344,
+      "y": 639,
+      "xNorm": 0.9281767955801105,
+      "yNorm": 0.5883977900552486,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 12066,
+        "y": 10003
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_92f14ae35c3255",
+      "name": "Frontier 3C84BD",
+      "regionId": "phase5_wetland_region",
+      "x": 874,
+      "y": 122,
+      "xNorm": 0.6035911602209945,
+      "yNorm": 0.11233885819521179,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7847,
+        "y": 1910
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_9849ce897baf2c",
+      "name": "Frontier 4414E4",
+      "regionId": "phase5_wetland_region",
+      "x": 1124,
+      "y": 904,
+      "xNorm": 0.7762430939226519,
+      "yNorm": 0.8324125230202578,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 10091,
+        "y": 14151
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_9e0e618a2c05aa",
+      "name": "Frontier 87C0B3",
+      "regionId": "phase5_wetland_region",
+      "x": 567,
+      "y": 187,
+      "xNorm": 0.39157458563535913,
+      "yNorm": 0.1721915285451197,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5090,
+        "y": 2927
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_a1090011cb9354",
+      "name": "Frontier ACECC5",
+      "regionId": "phase5_wetland_region",
+      "x": 216,
+      "y": 117,
+      "xNorm": 0.14917127071823205,
+      "yNorm": 0.10773480662983426,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1939,
+        "y": 1831
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_a17855f53f9536",
+      "name": "Frontier 443FF3",
+      "regionId": "phase5_wetland_region",
+      "x": 826,
+      "y": 728,
+      "xNorm": 0.5704419889502762,
+      "yNorm": 0.6703499079189686,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7416,
+        "y": 11396
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_b5257910657032",
+      "name": "Frontier 141C1A",
+      "regionId": "phase5_wetland_region",
+      "x": 840,
+      "y": 845,
+      "xNorm": 0.580110497237569,
+      "yNorm": 0.7780847145488029,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 7541,
+        "y": 13227
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_b6c01a47e05138",
+      "name": "Frontier 2940D0",
+      "regionId": "phase5_wetland_region",
+      "x": 127,
+      "y": 371,
+      "xNorm": 0.08770718232044199,
+      "yNorm": 0.3416206261510129,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1140,
+        "y": 5808
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_bc096df5dc8373",
+      "name": "Frontier 86F856",
+      "regionId": "phase5_wetland_region",
+      "x": 940,
+      "y": 405,
+      "xNorm": 0.649171270718232,
+      "yNorm": 0.3729281767955801,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 8439,
+        "y": 6340
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_cb9d9a3b13a9b3",
+      "name": "Frontier 8A2696",
+      "regionId": "phase5_wetland_region",
+      "x": 638,
+      "y": 940,
+      "xNorm": 0.44060773480662985,
+      "yNorm": 0.8655616942909761,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5728,
+        "y": 14715
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_cc44ae8239c344",
+      "name": "Frontier F85E0F",
+      "regionId": "phase5_wetland_region",
+      "x": 1013,
+      "y": 848,
+      "xNorm": 0.699585635359116,
+      "yNorm": 0.7808471454880295,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 9095,
+        "y": 13274
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_cf4e32e5156995",
+      "name": "Frontier 5484CD",
+      "regionId": "phase5_wetland_region",
+      "x": 601,
+      "y": 329,
+      "xNorm": 0.4150552486187845,
+      "yNorm": 0.3029465930018416,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 5396,
+        "y": 5150
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_e28d5768d7660a",
+      "name": "Frontier 37E270",
+      "regionId": "phase5_wetland_region",
+      "x": 129,
+      "y": 872,
+      "xNorm": 0.08908839779005524,
+      "yNorm": 0.8029465930018416,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 1158,
+        "y": 13650
+      }
+    },
+    {
+      "id": "npc_phase5_wetland_region_eaef3e0f024e25",
+      "name": "Frontier 3FE71F",
+      "regionId": "phase5_wetland_region",
+      "x": 1251,
+      "y": 974,
+      "xNorm": 0.863950276243094,
+      "yNorm": 0.8968692449355433,
+      "owner": "neutral",
+      "ownerKind": "neutral",
+      "startType": "neutral",
+      "level": 1,
+      "troops": 10,
+      "defense": 1,
+      "generated": true,
+      "gameplay": {
+        "x": 11231,
+        "y": 15247
+      }
+    }
+  ],
+  "startingCityCandidates": [
+    {
+      "cityId": "npc_phase5_wetland_region_856e98c6fe1adb",
+      "eligible": true,
+      "score": 173.08,
+      "nearbyNpcCityCount": 10,
+      "nearbyNpcCityIds": [
+        "npc_phase5_wetland_region_10514076c25e2b",
+        "npc_phase5_wetland_region_29921b16655ec8",
+        "npc_phase5_wetland_region_522bb333e207d0",
+        "npc_phase5_wetland_region_5594719a34bd6e",
+        "npc_phase5_wetland_region_5d509e3dcc6d4e",
+        "npc_phase5_wetland_region_659493014c5913",
+        "npc_phase5_wetland_region_77b60542566e07",
+        "npc_phase5_wetland_region_85089effa17a51",
+        "npc_phase5_wetland_region_919c895e7cf70b",
+        "npc_phase5_wetland_region_bc096df5dc8373"
+      ],
+      "edgeDistance": 340,
+      "localUsableTerritoryRatio": 0.375,
+      "nearestRoadCorridorDistance": 147,
+      "gameplay": {
+        "x": 9948,
+        "y": 6199
+      }
+    },
+    {
+      "cityId": "npc_phase5_wetland_region_41dffeaef3b244",
+      "eligible": true,
+      "score": 168.518,
+      "nearbyNpcCityCount": 10,
+      "nearbyNpcCityIds": [
+        "npc_phase5_wetland_region_1652325605646c",
+        "npc_phase5_wetland_region_249a9857a4ac26",
+        "npc_phase5_wetland_region_3df1d71ec488e8",
+        "npc_phase5_wetland_region_522bb333e207d0",
+        "npc_phase5_wetland_region_5a9552b406ce30",
+        "npc_phase5_wetland_region_5d3f5c541569e7",
+        "npc_phase5_wetland_region_659493014c5913",
+        "npc_phase5_wetland_region_a17855f53f9536",
+        "npc_phase5_wetland_region_b5257910657032",
+        "npc_phase5_wetland_region_cb9d9a3b13a9b3"
+      ],
+      "edgeDistance": 335,
+      "localUsableTerritoryRatio": 0.333333,
+      "nearestRoadCorridorDistance": 75,
+      "gameplay": {
+        "x": 5710,
+        "y": 11756
+      }
+    },
+    {
+      "cityId": "npc_phase5_wetland_region_cf4e32e5156995",
+      "eligible": true,
+      "score": 165.36,
+      "nearbyNpcCityCount": 10,
+      "nearbyNpcCityIds": [
+        "npc_phase5_wetland_region_3df1d71ec488e8",
+        "npc_phase5_wetland_region_5594719a34bd6e",
+        "npc_phase5_wetland_region_5d3f5c541569e7",
+        "npc_phase5_wetland_region_62cf293cb6298f",
+        "npc_phase5_wetland_region_659493014c5913",
+        "npc_phase5_wetland_region_6db3ebff5daba5",
+        "npc_phase5_wetland_region_8f3e8f25778acb",
+        "npc_phase5_wetland_region_92f14ae35c3255",
+        "npc_phase5_wetland_region_9e0e618a2c05aa",
+        "npc_phase5_wetland_region_bc096df5dc8373"
+      ],
+      "edgeDistance": 329,
+      "localUsableTerritoryRatio": 0.25,
+      "nearestRoadCorridorDistance": 79,
+      "gameplay": {
+        "x": 5396,
+        "y": 5150
+      }
+    },
+    {
+      "cityId": "npc_phase5_wetland_region_8f3e8f25778acb",
+      "eligible": true,
+      "score": 159.095,
+      "nearbyNpcCityCount": 9,
+      "nearbyNpcCityIds": [
+        "npc_phase5_wetland_region_03fc705dee4d9c",
+        "npc_phase5_wetland_region_1796754e4e03fe",
+        "npc_phase5_wetland_region_5d3f5c541569e7",
+        "npc_phase5_wetland_region_62cf293cb6298f",
+        "npc_phase5_wetland_region_6db3ebff5daba5",
+        "npc_phase5_wetland_region_9e0e618a2c05aa",
+        "npc_phase5_wetland_region_a1090011cb9354",
+        "npc_phase5_wetland_region_b6c01a47e05138",
+        "npc_phase5_wetland_region_cf4e32e5156995"
+      ],
+      "edgeDistance": 223,
+      "localUsableTerritoryRatio": 0.4375,
+      "nearestRoadCorridorDistance": 172,
+      "gameplay": {
+        "x": 3869,
+        "y": 3491
+      }
+    }
+  ],
+  "generatorVersion": "phase5-composer-v1",
+  "seed": {
+    "strategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|seedSalt)",
+    "generatorVersion": "phase5-composer-v1",
+    "seedSalt": "phase5-dev-placeholder-library-v1|profile-default",
+    "seedHash": "53461d128c055dc3a37cf6602cd988b0db70da07018f2fa9a01d1125a875b8d7"
+  },
+  "generationConfig": {
+    "totalCityCapacity": 40,
+    "minimumNpcCitiesForSpawn": 15,
+    "minCitySeparation": 112,
+    "cityRadius": 28,
+    "edgeClearance": 96,
+    "blockerClearance": 42,
+    "structureClearance": 42,
+    "roadCorridorHalfWidth": 58,
+    "edgeTransitionRadius": 104,
+    "maximumCandidateEvaluations": 120000,
+    "attractionProbability": 0.64,
+    "attractionRadius": 380,
+    "startingCandidateRadius": 350,
+    "startingCandidateMinimumNeighbors": 3,
+    "startingCandidateMinimumTerritoryRatio": 0.2,
+    "startingCandidateEdgeClearance": 160,
+    "startingCandidateRoadAccess": 300,
+    "startingCandidateSeparation": 200,
+    "minimumStartingCandidates": 2,
+    "maximumStartingCandidates": 4
+  },
+  "terrainPlanHash": "cae97f0a7e4d33b1c99835adaa4c1ca485e4689c1d05c60cf9afac6a20492ac1",
+  "assetLibraryVersion": "phase5-dev-placeholder-library-v1"
+}

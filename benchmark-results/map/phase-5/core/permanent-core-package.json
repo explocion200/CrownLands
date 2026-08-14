@@ -1,0 +1,1159 @@
+{
+  "schemaVersion": 1,
+  "corePackageVersion": "permanent-core-template-v1",
+  "developmentOnly": true,
+  "authoritativeTemplateCandidate": true,
+  "activationImplemented": false,
+  "resetMigrationImplemented": false,
+  "coordinateBounds": {
+    "minimum": -2,
+    "maximum": 2,
+    "cellCount": 25
+  },
+  "sourceWorldVersion": 202608131539,
+  "sourceCatalogVersion": 202608131539,
+  "cells": [
+    {
+      "schemaVersion": 1,
+      "gridX": -2,
+      "gridY": -2,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -1,
+      "gridY": -2,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 0,
+      "gridY": -2,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 1,
+      "gridY": -2,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 2,
+      "gridY": -2,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -2,
+      "gridY": -1,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -1,
+      "gridY": -1,
+      "worldLayer": 0,
+      "cellState": "reserved_holding_tower",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "future_holding_tower",
+      "towerSlotId": "holding_tower_northwest",
+      "reservationLocked": true,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 0,
+      "gridY": -1,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "north",
+      "regionName": "North Frontier",
+      "purpose": "core_stronghold",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/north-north-1-1783019201680-0b6b6b19ea6e.webp",
+      "mapAssetHash": "0b6b6b19ea6e549cef4c3721bc93a96a04978813d33bbd7e33a7bdfec56f94d0",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp",
+      "thumbnailAssetHash": "900c9fea1c355219e26461cf2b16feac7e0f39322320f1c00f8f11fedb01af53",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/north.json",
+      "regionDefinitionHash": "989cd91d3c50b7ea493e7c31437c9c79fbd792bc09657deacb9806346c3673d5",
+      "cityCount": 70,
+      "cityCoordinateHash": "86499ce6acf40a1f6397d84a7dabf59e228f818ffaaec5ac9202bc80724ca533",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "center"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "gated",
+          "targetRegionId": ""
+        }
+      },
+      "objectives": [
+        {
+          "id": "north_training_stronghold",
+          "name": "Greybanner Hold",
+          "x": 770,
+          "y": 512,
+          "xNorm": 0.532,
+          "yNorm": 0.471,
+          "type": "training",
+          "strongholdType": "training",
+          "sourceStrongholdType": "troop_stronghold",
+          "bonus": "troopproduction",
+          "bonusPercent": 8,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/optimized/stronghold-training-384x384-649892a49e02.webp",
+          "size": 215,
+          "flipX": false
+        }
+      ],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 1,
+      "gridY": -1,
+      "worldLayer": 0,
+      "cellState": "reserved_holding_tower",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "future_holding_tower",
+      "towerSlotId": "holding_tower_northeast",
+      "reservationLocked": true,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 2,
+      "gridY": -1,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -2,
+      "gridY": 0,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -1,
+      "gridY": 0,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "west",
+      "regionName": "West Marches",
+      "purpose": "core_stronghold",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/west-west-2-1783019399438-92a533147c7f.webp",
+      "mapAssetHash": "92a533147c7fb9f2a22d21dea9334833b0c056f89a22edfd51675314a5ecd442",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp",
+      "thumbnailAssetHash": "f65a83930d4ee4e2f093fb470de374a7d8a380e26cbfafa46b81b4b3bf92987d",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/west.json",
+      "regionDefinitionHash": "3a179b315f40eea1617a0a33952f704a1c991835d6dd5bc8369cf3e8e9804879",
+      "cityCount": 61,
+      "cityCoordinateHash": "ee7d9f5d58f5c0cb7880beab2ba90eb075c136f5c3edd8cffc65d0ec829b14d9",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "center"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "gated",
+          "targetRegionId": ""
+        }
+      },
+      "objectives": [
+        {
+          "id": "west_gold_stronghold",
+          "name": "Aurum Keep",
+          "x": 618,
+          "y": 478,
+          "xNorm": 0.427,
+          "yNorm": 0.44,
+          "type": "gold",
+          "strongholdType": "gold",
+          "sourceStrongholdType": "gold_stronghold",
+          "bonus": "goldproduction",
+          "bonusPercent": 8,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp",
+          "size": 215,
+          "flipX": true
+        }
+      ],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 0,
+      "gridY": 0,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "center",
+      "regionName": "Crownlands Heart",
+      "purpose": "core_citadel",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp",
+      "mapAssetHash": "8ac9453f446beac73896477081689b2d12f1ef633d01dd3b3945f53dc19a1965",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp",
+      "thumbnailAssetHash": "9928165450166fc6e6b24d9e9cf2fe5739545ab27d5e59476452dd2e0cc3c8c7",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/center.json",
+      "regionDefinitionHash": "2164cfd353b178808d2d34ac2a61074b9f96cc6c7f702315fea9424e14ad68a6",
+      "cityCount": 102,
+      "cityCoordinateHash": "5c552cf880f49b3249f04d362bb5bfb51a5189f748bbd863858e9edce4fa9e4d",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "open",
+          "targetRegionId": "north"
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "east"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "south"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "west"
+        }
+      },
+      "objectives": [
+        {
+          "id": "center_crown_citadel",
+          "name": "Crown Citadel",
+          "x": 710,
+          "y": 498,
+          "xNorm": 0.49,
+          "yNorm": 0.459,
+          "type": "crown",
+          "strongholdType": "crown",
+          "sourceStrongholdType": "crown_citadel",
+          "bonus": "crowndominion",
+          "bonusPercent": 10,
+          "level": 100,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
+          "size": 215,
+          "flipX": false
+        }
+      ],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 1,
+      "gridY": 0,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "east",
+      "regionName": "East Reach",
+      "purpose": "core_stronghold",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/east-east-4-1783020191215-19805a740a73.webp",
+      "mapAssetHash": "19805a740a73324df9aa983868c12943448fa775659d1315badccd328ece27be",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp",
+      "thumbnailAssetHash": "cffef8c803d4188a57e00f11ca091ac9355fa586c058216fe104fd32e112bc86",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/east.json",
+      "regionDefinitionHash": "5a3ab755750c4d1f649ebdeae10de454fa470b0817f258348fe427032a011b0f",
+      "cityCount": 65,
+      "cityCoordinateHash": "aa5fa751379d0f7a82d21ef0f909c1dee4ffba0825bedadb805d14ceedd76206",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "center"
+        }
+      },
+      "objectives": [
+        {
+          "id": "east_speed_stronghold",
+          "name": "Swiftgate",
+          "x": 754,
+          "y": 467,
+          "xNorm": 0.521,
+          "yNorm": 0.43,
+          "type": "speed",
+          "strongholdType": "speed",
+          "sourceStrongholdType": "march_speed_stronghold",
+          "bonus": "marchspeed",
+          "bonusPercent": 8,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp",
+          "size": 215,
+          "flipX": false
+        }
+      ],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 2,
+      "gridY": 0,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -2,
+      "gridY": 1,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -1,
+      "gridY": 1,
+      "worldLayer": 0,
+      "cellState": "reserved_holding_tower",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "future_holding_tower",
+      "towerSlotId": "holding_tower_southwest",
+      "reservationLocked": true,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 0,
+      "gridY": 1,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "south",
+      "regionName": "Southfields",
+      "purpose": "core_stronghold",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/south-south-5-1783020401484-675929711e1c.webp",
+      "mapAssetHash": "675929711e1caf1e39e52de3d1efd43b8c5d845e4474a1f24262a96bf75b658c",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp",
+      "thumbnailAssetHash": "bc848808fb75704a88fac0ffacad0c72a149976d37c9bc9f465c17c495644519",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/south.json",
+      "regionDefinitionHash": "a468217086aa429142892357325f6e70d2f5a04d51bb77c8a107a1d3bd2f1847",
+      "cityCount": 57,
+      "cityCoordinateHash": "747ab983eaf0766202224fd23cde379daba9d6799995d3eb9ca86039bde53d92",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "open",
+          "targetRegionId": "center"
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_8"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "gated",
+          "targetRegionId": ""
+        }
+      },
+      "objectives": [
+        {
+          "id": "south_defense_stronghold",
+          "name": "Ironwatch",
+          "x": 565,
+          "y": 449,
+          "xNorm": 0.39,
+          "yNorm": 0.413,
+          "type": "defense",
+          "strongholdType": "defense",
+          "sourceStrongholdType": "defense_stronghold",
+          "bonus": "citydefense",
+          "bonusPercent": 8,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp",
+          "size": 215,
+          "flipX": false
+        }
+      ],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 1,
+      "gridY": 1,
+      "worldLayer": 0,
+      "cellState": "reserved_holding_tower",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "future_holding_tower",
+      "towerSlotId": "holding_tower_southeast",
+      "reservationLocked": true,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 2,
+      "gridY": 1,
+      "worldLayer": 0,
+      "cellState": "reserved_core_support",
+      "regionId": null,
+      "reserved": true,
+      "reservedPurpose": "core_holding_or_support",
+      "towerSlotId": null,
+      "reservationLocked": false,
+      "normalPlayerRegionUseAllowed": false,
+      "handcraftedMapRequired": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "normalCityCapacity": 0,
+      "playerRegionGenerationAllowed": false,
+      "cityCoordinateHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -2,
+      "gridY": 2,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "region_6",
+      "regionName": "Graywood Hollow",
+      "purpose": "core_camp",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/region_6-6-1783021585258-632d8967e0db.webp",
+      "mapAssetHash": "632d8967e0db2eb94128151a045cb9d457d2497bb57b8695888eebcbb73ad2dc",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_6-thumb-57d0504e3a17.webp",
+      "thumbnailAssetHash": "57d0504e3a17b5ae4f2f3de97162a66e57a3859d257e2bd1061d5467d0650703",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/region_6.json",
+      "regionDefinitionHash": "8876edf5f74879f731333547c6d0cd8a0d4ba0f43258389c6e3a864a27a6c421",
+      "cityCount": 49,
+      "cityCoordinateHash": "c4c651d7020368fb09e6a0bea745c626a805edf0202d4204bb1bcf9fd7beda1c",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "region_7"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_11"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "gated",
+          "targetRegionId": ""
+        }
+      },
+      "objectives": [],
+      "camps": [
+        {
+          "id": "region_6_gold_camp",
+          "name": "Gold Camp",
+          "x": 746,
+          "y": 572,
+          "xNorm": 0.515,
+          "yNorm": 0.527,
+          "type": "gold",
+          "campType": "gold",
+          "artSrc": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+          "size": 135,
+          "flipX": false,
+          "notes": "",
+          "rewardSchedule": [
+            {
+              "minimumReward": 20000,
+              "productionHours": 0.5
+            },
+            {
+              "minimumReward": 40000,
+              "productionHours": 1
+            },
+            {
+              "minimumReward": 60000,
+              "productionHours": 1.5
+            },
+            {
+              "minimumReward": 80000,
+              "productionHours": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": -1,
+      "gridY": 2,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "region_7",
+      "regionName": "Greenrook Vale",
+      "purpose": "core_camp",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/region_7-7-1783022207943-5b92203f34be.webp",
+      "mapAssetHash": "5b92203f34be9134f3ffed25ae860a025efd9078f84f5ceff3f12b5529d92be6",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_7-thumb-d609f5032e3b.webp",
+      "thumbnailAssetHash": "d609f5032e3b8dbb2587a0f73c75bf09c0b23a3e076b1b1403e6733648d7aa1f",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/region_7.json",
+      "regionDefinitionHash": "75897958ace04388a8ef00e4e0212a69cd78f6d716ea7993016d9bed98cb4af3",
+      "cityCount": 71,
+      "cityCoordinateHash": "96aba9d9b45b08df8c11fc0c9759d54ab34e695a27059d488c7f4b2398650243",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "region_8"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_12"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "region_6"
+        }
+      },
+      "objectives": [],
+      "camps": [
+        {
+          "id": "region_7_items_camp",
+          "name": "Relic Camp",
+          "x": 744,
+          "y": 523,
+          "xNorm": 0.514,
+          "yNorm": 0.482,
+          "type": "items",
+          "campType": "items",
+          "artSrc": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+          "size": 135,
+          "flipX": false,
+          "notes": "",
+          "maxDailyRewards": 2
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 0,
+      "gridY": 2,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "region_8",
+      "regionName": "Lowroad Vale",
+      "purpose": "core_support",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/region_8-8-1783022783978-38c33aabc85b.webp",
+      "mapAssetHash": "38c33aabc85b75e0c8aabc0a8563965f70a667bb4aad4d369631ad783a141493",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_8-thumb-f2862b9c6883.webp",
+      "thumbnailAssetHash": "f2862b9c68835f2850170788f31406d79b4206c56aad25bbcc0f5d5920baec14",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/region_8.json",
+      "regionDefinitionHash": "0c0ea85fe0b39e3abf5fb08057ffe69de4d668e7dcfee27c7bd17de2e570af28",
+      "cityCount": 93,
+      "cityCoordinateHash": "e0eb1e74bacf1042c4767a1528787f0f8c76b4c0cf23b3ce2f5dc2b449b20cb1",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "open",
+          "targetRegionId": "south"
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "region_9"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_13"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "region_7"
+        }
+      },
+      "objectives": [],
+      "camps": []
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 1,
+      "gridY": 2,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "region_9",
+      "regionName": "Stonebrook Farms",
+      "purpose": "core_camp",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/region_9-9-1783023202200-b4dc635cf9d5.webp",
+      "mapAssetHash": "b4dc635cf9d5db600f7f9b3c5ae9b1a581ae92d774e4f3c58a60c8ebe96bdcd7",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_9-thumb-99c5af2bc6ef.webp",
+      "thumbnailAssetHash": "99c5af2bc6ef095ad58978165cadb6024ed2ff5c6ed695571838da64ecad4484",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/region_9.json",
+      "regionDefinitionHash": "c4de7130d7c62453c37a0a49c1121395c4b64f628b9c1d08d9eb76330779ad16",
+      "cityCount": 80,
+      "cityCoordinateHash": "208b02b93833d14da5bfec98149a73653aa2e2406c53d370158500e5de55a5af",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "open",
+          "targetRegionId": "region_10"
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_14"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "region_8"
+        }
+      },
+      "objectives": [],
+      "camps": [
+        {
+          "id": "region_9_deed_camp",
+          "name": "City Deed Camp",
+          "x": 724,
+          "y": 500,
+          "xNorm": 0.5,
+          "yNorm": 0.46,
+          "type": "deed",
+          "campType": "deed",
+          "artSrc": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+          "size": 135,
+          "flipX": false,
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "gridX": 2,
+      "gridY": 2,
+      "worldLayer": 0,
+      "cellState": "handcrafted_active",
+      "regionId": "region_10",
+      "regionName": "Goldmere Plains",
+      "purpose": "core_camp",
+      "permanentCore": true,
+      "reserved": true,
+      "spawnEligible": false,
+      "spawnReady": false,
+      "playerRegionGenerationAllowed": false,
+      "lifecycle": "active",
+      "mapAsset": "assets/worlds/world_01/maps/versioned/region_10-10-1783023599661-9b69758f632f.webp",
+      "mapAssetHash": "9b69758f632f74dc95cbed08cadbca703cd5bdb78233035a13470afec784b04f",
+      "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_10-thumb-997a419e8640.webp",
+      "thumbnailAssetHash": "997a419e864060a838f7392fe76c9839c6bedc83b8b8d598eb328aeb901e262d",
+      "regionDefinitionPath": "assets/worlds/world_01/regions/region_10.json",
+      "regionDefinitionHash": "fee1285879976474b12ccc49a90843befab57f7aa0fee37883a1f7f306efb30b",
+      "cityCount": 39,
+      "cityCoordinateHash": "45e6fa439cabe98bfd7517dd3f39261770c01190ac96ca031492583d63eb7dc6",
+      "publishedCityCoordinatesImmutable": true,
+      "connections": {
+        "north": {
+          "side": "north",
+          "oppositeSide": "south",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "east": {
+          "side": "east",
+          "oppositeSide": "west",
+          "state": "gated",
+          "targetRegionId": ""
+        },
+        "south": {
+          "side": "south",
+          "oppositeSide": "north",
+          "state": "open",
+          "targetRegionId": "region_15"
+        },
+        "west": {
+          "side": "west",
+          "oppositeSide": "east",
+          "state": "open",
+          "targetRegionId": "region_9"
+        }
+      },
+      "objectives": [],
+      "camps": [
+        {
+          "id": "region_10_troops_camp",
+          "name": "Warband Camp",
+          "x": 701,
+          "y": 478,
+          "xNorm": 0.484,
+          "yNorm": 0.44,
+          "type": "troops",
+          "campType": "troops",
+          "artSrc": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+          "size": 135,
+          "flipX": false,
+          "notes": "",
+          "rewardSchedule": [
+            {
+              "minimumReward": 10000,
+              "productionHours": 0.5
+            },
+            {
+              "minimumReward": 20000,
+              "productionHours": 1
+            },
+            {
+              "minimumReward": 30000,
+              "productionHours": 1.5
+            },
+            {
+              "minimumReward": 40000,
+              "productionHours": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "objectiveConfiguration": {
+    "citadel": [
+      {
+        "id": "center_crown_citadel",
+        "regionId": "center",
+        "type": "crown",
+        "x": 710,
+        "y": 498
+      }
+    ],
+    "strongholds": [
+      {
+        "id": "north_training_stronghold",
+        "regionId": "north",
+        "type": "training"
+      },
+      {
+        "id": "east_speed_stronghold",
+        "regionId": "east",
+        "type": "speed"
+      },
+      {
+        "id": "south_defense_stronghold",
+        "regionId": "south",
+        "type": "defense"
+      },
+      {
+        "id": "west_gold_stronghold",
+        "regionId": "west",
+        "type": "gold"
+      }
+    ],
+    "camps": [
+      {
+        "id": "region_6_gold_camp",
+        "regionId": "region_6",
+        "type": "gold"
+      },
+      {
+        "id": "region_7_items_camp",
+        "regionId": "region_7",
+        "type": "items"
+      },
+      {
+        "id": "region_9_deed_camp",
+        "regionId": "region_9",
+        "type": "deed"
+      },
+      {
+        "id": "region_10_troops_camp",
+        "regionId": "region_10",
+        "type": "troops"
+      }
+    ]
+  },
+  "futureHoldingTowerCoordinates": [
+    {
+      "gridX": -1,
+      "gridY": -1,
+      "towerSlotId": "holding_tower_northwest"
+    },
+    {
+      "gridX": 1,
+      "gridY": -1,
+      "towerSlotId": "holding_tower_northeast"
+    },
+    {
+      "gridX": -1,
+      "gridY": 1,
+      "towerSlotId": "holding_tower_southwest"
+    },
+    {
+      "gridX": 1,
+      "gridY": 1,
+      "towerSlotId": "holding_tower_southeast"
+    }
+  ],
+  "futureHoldingTowerReservationPolicy": {
+    "status": "locked",
+    "lockVersion": "phase5-approved-v1",
+    "normalPlayerRegionUseAllowed": false,
+    "normalCityPopulationAllowed": false,
+    "cityRelocationAllowed": false,
+    "coordinateReuseAllowed": false
+  },
+  "resetContract": {
+    "reconstructionMode": "restore_immutable_core_package",
+    "initializeSeasonalObjectiveOwnership": true,
+    "preservePublishedCityCoordinates": true,
+    "spawnEligible": false,
+    "genericPlayerRegionGeneratorAllowed": false,
+    "completeResetFlowImplemented": false
+  },
+  "hashes": {
+    "cellsHash": "d6cef9121a988f11ff9b3d83c8a9d7993f354209ce9f92dad3fb0e8931c79263",
+    "objectiveConfigurationHash": "194c057dc4dee8273a08420583a9aba44656f8bfcbed64626f17a8e1a26efa74",
+    "towerReservationHash": "1d952ab563e8f8fef9aadd3f35a660604810c9ff48e318fa9d7621b40c3d047a",
+    "towerReservationPolicyHash": "ded5558b6701516ffaa0f7f75f16f9e812ae9df2892038f4f45a8237bf4e59ed"
+  },
+  "packageHash": "e67ead1a5010fc93c22bde7832bb51bcccbf8e959cc5a9a44cdb7a8c2e3e8cb0"
+}
