@@ -14,6 +14,6 @@ Each candidate is rejected if it violates any of these checks:
 - any current or future road corridor;
 - 112-pixel minimum center-to-center separation from another city.
 
-Generation stops at the configurable target or at the candidate-evaluation budget. Reaching the target is preferred; reaching at least 15 valid NPC cities can still pass with a capacity warning. Placing fewer than 15 fails the region.
+Generation stops only after exactly 40 valid city positions have been placed or the candidate-evaluation budget is exhausted. Forty is the player-region capacity, not a configurable target. A draft with 39 or fewer valid positions fails validation and rolls back; the 15-NPC threshold is a later runtime placement rule and cannot make an incomplete definition pass.
 
 Generated neutral cities use existing initialization: Level 1, 10 troops, neutral ownership, and defense value 1. Phase 4 does not change combat, economy, defender, production, or upgrade formulas.

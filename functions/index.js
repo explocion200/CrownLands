@@ -10,6 +10,11 @@ const SERVER_REGION_CATALOG = require("./region-catalog.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
+const {
+  MINIMUM_NPC_CITIES_FOR_SPAWN,
+  isStructurallyEligiblePlayerRegion,
+  derivePlayerRegionSpawnEligibility,
+} = require("./player-region-spawn.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -2416,19 +2421,21 @@ const SERVER_WORLD_OBJECTIVE_TARGET_KEYS = new Set(
   ))
 );
 const MINIMUM_SPAWN_NPC_CITIES = Math.max(
-  15,
-  Math.floor(safeNumber(SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn, 15)),
+  MINIMUM_NPC_CITIES_FOR_SPAWN,
+  Math.floor(safeNumber(
+    SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn,
+    MINIMUM_NPC_CITIES_FOR_SPAWN,
+  )),
+);
+const SERVER_CATALOG_REGIONS = Array.isArray(SERVER_REGION_CATALOG?.regions)
+  ? SERVER_REGION_CATALOG.regions
+  : [];
+const SERVER_CATALOG_REGION_BY_ID = new Map(
+  SERVER_CATALOG_REGIONS.map(region => [safeString(region?.id, 80), region]),
 );
 const STARTER_REGION_IDS = Object.freeze(
-  (Array.isArray(SERVER_REGION_CATALOG?.regions) ? SERVER_REGION_CATALOG.regions : SERVER_WORLD_MAPS)
-    .filter(region => (
-      safeString(region?.purpose, 32).toLowerCase() === "player_region"
-      && region?.spawnEligible === true
-      && region?.spawnReady === true
-      && region?.permanentCore !== true
-      && safeString(region?.lifecycle, 32).toLowerCase() === "active"
-      && Math.floor(safeNumber(region?.npcCityCount, 0)) >= MINIMUM_SPAWN_NPC_CITIES
-    ))
+  (SERVER_CATALOG_REGIONS.length ? SERVER_CATALOG_REGIONS : SERVER_WORLD_MAPS)
+    .filter(region => isStructurallyEligiblePlayerRegion(region, SERVER_CATALOG_REGIONS))
     .sort((left, right) => (
       safeNumber(left?.worldLayer, 0) - safeNumber(right?.worldLayer, 0)
       || safeNumber(left?.clockwiseOrderIndex, 0) - safeNumber(right?.clockwiseOrderIndex, 0)
@@ -14602,20 +14609,44 @@ async function claimFreshStartingCity(request) {
       throw contentionError;
     }
     const candidateIds = shuffledCityIdsByRegion.get(chosenIsland.regionId) || [];
-
-    let chosenCityRef = null;
-    let chosenCity = null;
+    const cityOwnershipState = [];
+    const cityRefsById = new Map();
     for (const cityId of candidateIds) {
       const cityRef = db.doc(`islands/${chosenIsland.islandId}/cities/${cityId}`);
       const citySnap = await transaction.get(cityRef);
       if (!citySnap.exists) continue;
       const city = { id: citySnap.id, ...citySnap.data() };
-      if (safeString(city.resetGeneration, 120) !== RESET_GENERATION) continue;
-      if (getOwnerUid(city) || isStronghold(city)) continue;
-      chosenCityRef = cityRef;
-      chosenCity = city;
-      break;
+      cityOwnershipState.push(city);
+      cityRefsById.set(city.id, cityRef);
     }
+    const region = SERVER_CATALOG_REGION_BY_ID.get(chosenIsland.regionId) || null;
+    const spawnEligibility = derivePlayerRegionSpawnEligibility({
+      region,
+      regions: SERVER_CATALOG_REGIONS,
+      cityOwnershipState,
+      regularCityIds: candidateIds,
+      resetGeneration: RESET_GENERATION,
+      ownershipStateAuthoritative: true,
+      minimumNpcCitiesForSpawn: MINIMUM_SPAWN_NPC_CITIES,
+    });
+    if (!spawnEligibility.spawnEligible) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "This player region no longer has enough unowned cities for another placement.",
+        {
+          reason: "region-spawn-ineligible",
+          regionId: chosenIsland.regionId,
+          currentNpcCityCount: spawnEligibility.currentNpcCityCount,
+          minimumNpcCitiesForSpawn: spawnEligibility.minimumNpcCitiesForSpawn,
+        },
+      );
+    }
+    const chosenCity = cityOwnershipState.find(city => (
+      safeString(city.resetGeneration, 120) === RESET_GENERATION
+      && !getOwnerUid(city)
+      && !isStronghold(city)
+    ));
+    const chosenCityRef = chosenCity ? cityRefsById.get(chosenCity.id) : null;
     if (!chosenCityRef || !chosenCity) {
       throw new HttpsError("resource-exhausted", "No unclaimed starting city is available.");
     }
@@ -14799,16 +14830,24 @@ async function claimFreshStartingCity(request) {
     }, { maxAttempts: 3 });
   };
 
+  const ineligibleSpawnRegionIds = new Set();
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
-    const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
+    const availableRegionIds = STARTER_REGION_IDS.filter(regionId => !ineligibleSpawnRegionIds.has(regionId));
+    if (!availableRegionIds.length) {
+      throw new HttpsError(
+        "resource-exhausted",
+        `No active player region has at least ${MINIMUM_SPAWN_NPC_CITIES} unowned cities remaining.`,
+      );
+    }
+    const islandRefs = availableRegionIds.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
     const islandSnapshots = await db.getAll(...islandRefs);
     const islandEntries = islandSnapshots.flatMap((snap, index) => {
       const island = snap.exists ? snap.data() || {} : {};
       if (!snap.exists || safeString(island.resetGeneration, 120) !== RESET_GENERATION) return [];
       return [{
         ref: snap.ref,
-        regionId: STARTER_REGION_IDS[index],
+        regionId: availableRegionIds[index],
         islandId: snap.id,
         playerCount: Math.max(0, Math.floor(safeNumber(island.playerCount, 0))),
       }];
@@ -14844,6 +14883,12 @@ async function claimFreshStartingCity(request) {
       return result;
     } catch (error) {
       await releasePlacementReservation(placement);
+      const spawnIneligible = safeString(error?.details?.reason || error?.details, 120)
+        === "region-spawn-ineligible";
+      if (spawnIneligible) {
+        ineligibleSpawnRegionIds.add(chosenIsland.regionId);
+        continue;
+      }
       const errorCode = Number(error?.code);
       const retryableContention = errorCode === 10
         || safeString(error?.details, 200).toLowerCase().includes("transaction lock timeout")

@@ -14,6 +14,7 @@ const {
 } = require("../region-catalog");
 const {
   DEFAULT_GENERATOR_CONFIG,
+  PLAYER_REGION_CITY_CAPACITY,
   allocateNextPlayerRegion,
   createGeneratedCityId,
   evaluateCityPlacement,
@@ -114,9 +115,17 @@ assert.deepEqual(
 const allGeneratedCityIds = new Set();
 for (const entry of fullLayer.generated) {
   const result = entry.result;
-  assert(result.previewDefinition.cities.length >= 15, `${result.allocation.regionId} is below 15 NPC cities.`);
+  assert.equal(
+    result.previewDefinition.cities.length,
+    PLAYER_REGION_CITY_CAPACITY,
+    `${result.allocation.regionId} does not contain exactly 40 city positions.`,
+  );
   assert(result.previewDefinition.startingCityCandidates.length >= 2, `${result.allocation.regionId} lacks starting candidates.`);
-  assert(result.catalogEntry.spawnReady);
+  assert(result.catalogEntry.generationReady);
+  assert.equal(result.catalogEntry.cityCapacity, PLAYER_REGION_CITY_CAPACITY);
+  assert.equal(result.catalogEntry.initialNpcCityCount, PLAYER_REGION_CITY_CAPACITY);
+  assert.equal(result.catalogEntry.spawnReady, false);
+  assert.equal(result.catalogEntry.spawnEligible, false);
   assert.equal(result.catalogEntry.lifecycle, "standby");
   assert.equal(result.catalogEntry.visibility, "development_only");
   assert.equal(result.catalogEntry.activationAllowed, false);
@@ -175,7 +184,7 @@ for (const fixture of suite.fixtures) {
   assert.equal(fixture.deterministic, true);
   if (fixture.expectedSpawnReady) {
     assert.equal(fixture.result.status, "standby", `${fixture.kind} should be valid.`);
-    assert(fixture.result.previewDefinition.cities.length >= 15);
+    assert.equal(fixture.result.previewDefinition.cities.length, PLAYER_REGION_CITY_CAPACITY);
     assert(fixture.result.previewDefinition.startingCityCandidates.length >= 2);
     assert.deepEqual(fixture.result.validation.errors, []);
   }
@@ -183,13 +192,13 @@ for (const fixture of suite.fixtures) {
 
 const invalid = suite.fixtures.find(fixture => fixture.kind === "constrained-invalid").result;
 assert.equal(invalid.status, "rolled_back");
-assert(invalid.previewDefinition.cities.length < 15);
+assert(invalid.previewDefinition.cities.length < PLAYER_REGION_CITY_CAPACITY);
 assert.equal(invalid.catalogEntry, null);
 assert.equal(invalid.definition, null);
 assert.equal(invalid.publicationPackage, null);
 assert.equal(invalid.receipt.coordinateReusable, true);
 assert.deepEqual(invalid.receipt.stateHistory, ["ALLOCATED", "GENERATING", "VALIDATING", "FAILED", "ROLLED_BACK"]);
-assert(invalid.validation.errors.some(error => error.includes("15 are required")));
+assert(invalid.validation.errors.some(error => error.includes("exactly 40 are required")));
 assert.deepEqual(suite.retryPlan.coordinate, invalid.allocation.coordinate);
 assert.equal(suite.retryPlan.regionId, invalid.allocation.regionId);
 assert.equal(suite.retryPlan.nextState, "ALLOCATED");

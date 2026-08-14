@@ -84,7 +84,7 @@ function createOpenFixture(allocation) {
   return {
     kind: "open",
     expectedSpawnReady: true,
-    config: { targetNpcCities: 32 },
+    config: {},
     definition,
   };
 }
@@ -92,16 +92,16 @@ function createOpenFixture(allocation) {
 function createForestHeavyFixture(allocation) {
   const definition = commonDefinition(allocation, "forest-heavy region");
   definition.terrain.prohibitedTerrain.push(
-    { id: "forest-nw", type: "forest", x: 330, y: 260, rx: 170, ry: 120, rot: -0.25 },
-    { id: "forest-ne", type: "forest", x: 1080, y: 245, rx: 190, ry: 125, rot: 0.18 },
-    { id: "forest-west", type: "forest", x: 330, y: 720, rx: 180, ry: 145, rot: 0.12 },
-    { id: "forest-east", type: "forest", x: 1100, y: 735, rx: 175, ry: 140, rot: -0.16 },
-    { id: "forest-center", type: "forest", x: 710, y: 535, rx: 130, ry: 92, rot: 0.08 },
+    { id: "forest-nw", type: "forest", x: 330, y: 260, rx: 104, ry: 68, rot: -0.25 },
+    { id: "forest-ne", type: "forest", x: 1080, y: 245, rx: 112, ry: 72, rot: 0.18 },
+    { id: "forest-west", type: "forest", x: 330, y: 720, rx: 112, ry: 84, rot: 0.12 },
+    { id: "forest-east", type: "forest", x: 1100, y: 735, rx: 108, ry: 81, rot: -0.16 },
+    { id: "forest-center", type: "forest", x: 710, y: 535, rx: 81, ry: 56, rot: 0.08 },
   );
   return {
     kind: "forest-heavy",
     expectedSpawnReady: true,
-    config: { targetNpcCities: 26 },
+    config: { maximumCandidateEvaluations: 120000 },
     definition,
   };
 }
@@ -109,16 +109,16 @@ function createForestHeavyFixture(allocation) {
 function createMountainHeavyFixture(allocation) {
   const definition = commonDefinition(allocation, "mountain-heavy region");
   definition.terrain.blockers.push(
-    { id: "mountain-nw", type: "mountain", x: 330, y: 245, rx: 185, ry: 105, rot: -0.32 },
-    { id: "mountain-n", type: "mountain", x: 720, y: 230, rx: 190, ry: 95, rot: 0.08 },
-    { id: "mountain-ne", type: "mountain", x: 1085, y: 285, rx: 165, ry: 110, rot: 0.3 },
-    { id: "mountain-sw", type: "mountain", x: 390, y: 775, rx: 185, ry: 120, rot: 0.22 },
-    { id: "mountain-se", type: "mountain", x: 1040, y: 760, rx: 190, ry: 120, rot: -0.2 },
+    { id: "mountain-nw", type: "mountain", x: 330, y: 245, rx: 130, ry: 74, rot: -0.32 },
+    { id: "mountain-n", type: "mountain", x: 720, y: 230, rx: 135, ry: 66, rot: 0.08 },
+    { id: "mountain-ne", type: "mountain", x: 1085, y: 285, rx: 116, ry: 77, rot: 0.3 },
+    { id: "mountain-sw", type: "mountain", x: 390, y: 775, rx: 130, ry: 84, rot: 0.22 },
+    { id: "mountain-se", type: "mountain", x: 1040, y: 760, rx: 135, ry: 84, rot: -0.2 },
   );
   return {
     kind: "mountain-heavy",
     expectedSpawnReady: true,
-    config: { targetNpcCities: 24 },
+    config: { maximumCandidateEvaluations: 120000 },
     definition,
   };
 }
@@ -148,7 +148,7 @@ function createRoadHeavyFixture(allocation) {
   return {
     kind: "road-heavy",
     expectedSpawnReady: true,
-    config: { targetNpcCities: 22 },
+    config: { maximumCandidateEvaluations: 48000 },
     definition,
   };
 }
@@ -170,7 +170,7 @@ function createConstrainedInvalidFixture(allocation) {
   return {
     kind: "constrained-invalid",
     expectedSpawnReady: false,
-    config: { targetNpcCities: 30, maximumCandidateEvaluations: 12000 },
+    config: { maximumCandidateEvaluations: 12000 },
     definition,
   };
 }

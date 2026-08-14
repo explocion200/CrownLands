@@ -8,6 +8,7 @@ const requireMatch = (source, pattern, message) => {
 };
 
 const server = read("functions/index.js");
+const playerRegionSpawn = read("functions/player-region-spawn.js");
 const client = read("firebaseClient.js");
 const game = read("game.js");
 const rules = read("firestore.rules");
@@ -34,11 +35,17 @@ if (/\.update\(serverSourceHash\)[\s\S]*JSON\.stringify\(callableNames\)/.test(m
 }
 
 requireMatch(server, /SERVER_REGION_CATALOG\s*=\s*require\("\.\/region-catalog\.json"\)/, "Server spawn selection is missing the authoritative region catalog.");
-requireMatch(server, /MINIMUM_SPAWN_NPC_CITIES\s*=\s*Math\.max\(\s*15,[\s\S]*minimumNpcCitiesForSpawn/, "Server spawn selection does not enforce the 15-NPC minimum.");
+requireMatch(playerRegionSpawn, /PLAYER_REGION_CITY_CAPACITY\s*=\s*40/, "Generated player-region capacity is not fixed at 40 cities.");
+requireMatch(playerRegionSpawn, /MINIMUM_NPC_CITIES_FOR_SPAWN\s*=\s*15/, "Server spawn selection does not enforce the 15-NPC minimum.");
 requireMatch(
   server,
-  /STARTER_REGION_IDS[\s\S]*SERVER_REGION_CATALOG\?\.regions[\s\S]*purpose[\s\S]*player_region[\s\S]*spawnEligible\s*===\s*true[\s\S]*spawnReady\s*===\s*true[\s\S]*permanentCore\s*!==\s*true[\s\S]*lifecycle[\s\S]*active[\s\S]*npcCityCount[\s\S]*MINIMUM_SPAWN_NPC_CITIES/,
-  "Starter islands are not derived from active, ready, non-core player-region catalog metadata.",
+  /STARTER_REGION_IDS[\s\S]*isStructurallyEligiblePlayerRegion\(region,\s*SERVER_CATALOG_REGIONS\)/,
+  "Starter islands are not derived from active, non-core player regions with valid topology.",
+);
+requireMatch(
+  server,
+  /for \(const cityId of candidateIds\)[\s\S]*transaction\.get\(cityRef\)[\s\S]*derivePlayerRegionSpawnEligibility\(\{[\s\S]*ownershipStateAuthoritative:\s*true/,
+  "Starting-city claims do not derive eligibility from authoritative transactional ownership state.",
 );
 requireMatch(server, /claimFreshStartingCity[\s\S]*leastPopulated[\s\S]*crypto\.randomInt/, "Starting islands are not balanced with random tie breaking.");
 requireMatch(server, /transaction\.set\(playerRef,[\s\S]*freshProfile[\s\S]*\}\);/, "Reset profiles must replace old gameplay state.");

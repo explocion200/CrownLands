@@ -12,12 +12,13 @@ const {
   getWorldLayer,
   isRingComplete,
 } = require("../../region-catalog");
+const { PLAYER_REGION_CITY_CAPACITY } = require("../../functions/player-region-spawn");
 
-const GENERATOR_VERSION = "phase4-prototype-v1";
+const GENERATOR_VERSION = "phase4-prototype-v2";
 const SIDES = Object.freeze(["north", "east", "south", "west"]);
 const DEFAULT_GENERATOR_CONFIG = Object.freeze({
-  minimumNpcCities: Math.max(15, MINIMUM_SPAWN_NPC_CITIES),
-  targetNpcCities: 28,
+  totalCityCapacity: PLAYER_REGION_CITY_CAPACITY,
+  minimumNpcCitiesForSpawn: Math.max(15, MINIMUM_SPAWN_NPC_CITIES),
   minCitySeparation: 112,
   cityRadius: 28,
   edgeClearance: 96,
@@ -230,9 +231,22 @@ function refreshRegionConnections(regions = []) {
 }
 
 function normalizeConfig(config = {}) {
+  if (config.totalCityCapacity != null
+    && Math.floor(Number(config.totalCityCapacity)) !== PLAYER_REGION_CITY_CAPACITY) {
+    throw new Error(`Generated player regions require exactly ${PLAYER_REGION_CITY_CAPACITY} city positions.`);
+  }
+  if (config.targetNpcCities != null
+    && Math.floor(Number(config.targetNpcCities)) !== PLAYER_REGION_CITY_CAPACITY) {
+    throw new Error(`targetNpcCities is no longer configurable; total city capacity is ${PLAYER_REGION_CITY_CAPACITY}.`);
+  }
   const merged = { ...DEFAULT_GENERATOR_CONFIG, ...(config || {}) };
-  merged.minimumNpcCities = Math.max(15, Math.floor(Number(merged.minimumNpcCities) || 15));
-  merged.targetNpcCities = Math.max(merged.minimumNpcCities, Math.floor(Number(merged.targetNpcCities) || merged.minimumNpcCities));
+  merged.totalCityCapacity = PLAYER_REGION_CITY_CAPACITY;
+  merged.minimumNpcCitiesForSpawn = Math.max(
+    15,
+    Math.floor(Number(merged.minimumNpcCitiesForSpawn) || MINIMUM_SPAWN_NPC_CITIES),
+  );
+  delete merged.targetNpcCities;
+  delete merged.minimumNpcCities;
   merged.minCitySeparation = Math.max(64, Number(merged.minCitySeparation) || DEFAULT_GENERATOR_CONFIG.minCitySeparation);
   merged.cityRadius = Math.max(12, Number(merged.cityRadius) || DEFAULT_GENERATOR_CONFIG.cityRadius);
   merged.edgeClearance = Math.max(merged.cityRadius, Number(merged.edgeClearance) || DEFAULT_GENERATOR_CONFIG.edgeClearance);
@@ -563,7 +577,7 @@ function generateNpcCities({ allocation, definition, config: configInput = {}, s
   const cities = [];
   const rejectedByReason = {};
   let candidatePositionsEvaluated = 0;
-  while (cities.length < config.targetNpcCities && candidatePositionsEvaluated < config.maximumCandidateEvaluations) {
+  while (cities.length < config.totalCityCapacity && candidatePositionsEvaluated < config.maximumCandidateEvaluations) {
     candidatePositionsEvaluated += 1;
     const point = createCandidate(random, terrainModel, config, cities);
     const rejection = evaluateCityPlacement(point, terrainModel, config, cities);
@@ -633,12 +647,8 @@ function validateGeneratedDefinition({ allocation, definition, generation, exist
   if (definition.id !== allocation.regionId) errors.push("Region definition ID does not match its allocation.");
   if (definition.purpose !== "player_region") errors.push("Generated region purpose is not player_region.");
   if (definition.permanentCore) errors.push("Generated player region cannot be permanent Core.");
-  if (generation.cities.length < generation.config.minimumNpcCities) {
-    errors.push(`Placed ${generation.cities.length} NPC cities; ${generation.config.minimumNpcCities} are required.`);
-  }
-  if (generation.cities.length < generation.config.targetNpcCities
-    && generation.cities.length >= generation.config.minimumNpcCities) {
-    warnings.push(`Target ${generation.config.targetNpcCities} was not reached; ${generation.cities.length} valid NPC cities remain spawn-capable.`);
+  if (generation.cities.length !== generation.config.totalCityCapacity) {
+    errors.push(`Placed ${generation.cities.length} city positions; exactly ${generation.config.totalCityCapacity} are required.`);
   }
   const ids = new Set();
   const validatedCities = [];
@@ -663,7 +673,7 @@ function validateGeneratedDefinition({ allocation, definition, generation, exist
       playerRegionOutsideCore: allocation.coordinate.worldLayer >= 1,
       topologyValid: !validateTopology(allocation, existingRegions).length,
       definitionValid: definition.id === allocation.regionId,
-      minimumNpcCitiesMet: generation.cities.length >= generation.config.minimumNpcCities,
+      exactCityCapacityMet: generation.cities.length === generation.config.totalCityCapacity,
       noPlacementConflicts: !errors.some(error => error.includes("violates") || error.includes("Duplicate generated city")),
       startingCandidatesExist: generation.startingCandidates.selected.length >= generation.config.minimumStartingCandidates,
       edgeTransitionClearance: !generation.cities.some(city => evaluateStaticPlacement(
@@ -747,8 +757,9 @@ function generateRegionPrototype({
     name: String(definition.name || allocation.regionId),
     purpose: "player_region",
     permanentCore: false,
-    spawnEligible: true,
-    spawnReady: true,
+    generationReady: true,
+    spawnEligible: false,
+    spawnReady: false,
     lifecycle: "standby",
     visibility: "development_only",
     activationAllowed: false,
@@ -756,7 +767,9 @@ function generateRegionPrototype({
     gridY: allocation.coordinate.gridY,
     worldLayer: allocation.coordinate.worldLayer,
     clockwiseOrderIndex: allocation.coordinate.clockwiseOrderIndex,
-    npcCityCount: generation.cities.length,
+    cityCapacity: PLAYER_REGION_CITY_CAPACITY,
+    initialNpcCityCount: generation.cities.length,
+    minimumNpcCitiesForSpawn: generation.config.minimumNpcCitiesForSpawn,
     connections: allocation.connections,
     generatorVersion,
     seedHash: generation.seed.seedHash,
@@ -817,6 +830,7 @@ function createRetryPlan(failedResult, { seedSalt, configRevision = "" } = {}) {
 
 module.exports = Object.freeze({
   GENERATOR_VERSION,
+  PLAYER_REGION_CITY_CAPACITY,
   DEFAULT_GENERATOR_CONFIG,
   SIDES,
   stableJson,
