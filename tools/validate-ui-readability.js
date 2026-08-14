@@ -7,7 +7,7 @@ const index = read("index.html");
 const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
-const buildId = "20260813-map-location-banner-r18";
+const buildId = "20260814-welcome-back-contrast-r29";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -44,7 +44,7 @@ const requiredCoverage = [
   "--cl-readable-paper", ".profile-screen", ".audio-channel-card", ".shop-item",
   ".inventory-slot", ".troop-route-city", ".battle-report-card", ".camp-info-tab-panel",
   ".clan-panel", ".daily-mission-row", ".seasonal-achievement-row", ".toast",
-  "[role=\"tooltip\"]", ".city-label", "max-height: 560px"
+  "[role=\"tooltip\"]", ".city-label", ".offline-reward-modal", "max-height: 560px"
 ];
 for (const token of requiredCoverage) {
   if (!css.includes(token)) throw new Error(`Readability coverage is missing ${token}.`);
@@ -62,7 +62,10 @@ const contrastPairs = [
   ["paper secondary", "#4f3f2d", "#c1ae7f", 4.5],
   ["dark body", "#f3ead5", "#2a1d14", 7],
   ["dark secondary", "#d2c3a3", "#2a1d14", 4.5],
-  ["primary action", "#fff8e7", "#502226", 7]
+  ["primary action", "#fff8e7", "#502226", 7],
+  ["Welcome Back body", "#f4ead4", "#0b2031", 7],
+  ["Welcome Back secondary", "#cad9df", "#0b2031", 4.5],
+  ["Welcome Back action", "#251603", "#e7b94d", 7]
 ];
 
 for (const [label, foreground, background, minimum] of contrastPairs) {

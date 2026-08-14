@@ -28,7 +28,7 @@ requireMatch(game, /async function flushOnlineSave[\s\S]*Promise\.allSettled[\s\
 requireMatch(game, /if \(onlineSaveInFlight\) return onlineSavePromise \|\| false/, "Forced cloud flushes do not share the active save request.");
 
 const firebaseClientBuildId = "20260812-local-session-login-fix-v2";
-const gameBuildId = "20260813-map-location-banner-r18";
+const gameBuildId = "20260814-welcome-back-contrast-r29";
 for (const [label, source] of [["index", index], ["service worker", worker]]) {
   requireMatch(source, new RegExp(firebaseClientBuildId), `The ${label} does not carry the login-resilience cache version.`);
   requireMatch(source, /firebaseClient\.js\?v=20260812-local-session-login-fix-v2/, `The ${label} does not refresh the Firebase client.`);

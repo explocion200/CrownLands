@@ -119,13 +119,36 @@ async function main() {
     totalDefense: 0,
     summary: "Scouts were turned away.",
   };
+  const defenderNotice = {
+    id: "defender-scouted-notice",
+    uid: user.uid,
+    type: "scout",
+    outcome: "scout",
+    scoutPerspective: "defender",
+    cityId: "owned-target",
+    cityName: "Owned Target",
+    sourceCityId: "enemy-source",
+    sourceCityName: "Enemy Source",
+    sourceRegionId: "west",
+    createdAtMs: nowMs - 5_000,
+    troopCount: 400,
+    totalDefense: 900,
+    summary: "You were scouted by Rival Ruler from Enemy Source.",
+    scoutDisclosure: {
+      troops: 400,
+      ownerTroops: 300,
+      reinforcementTroops: 100,
+      reinforcements: [{ ownerUid: "ally", ownerName: "Ally", troops: 100 }],
+      totalDefense: 900,
+    },
+  };
 
   await profileRef.set({
     scoutReports: {
       "target-a": newest.scoutReport,
       "target-expired": expired.scoutReport,
     },
-    battleReports: [old, newest, other, expired, blockedNotice],
+    battleReports: [old, newest, other, expired, blockedNotice, defenderNotice],
     economyUpdatedAtMs: nowMs,
   }, { merge: true });
 
@@ -138,9 +161,13 @@ async function main() {
   assert(targetAIntel.length === 1 && targetAIntel[0].id === "current-a", "The newest successful target report did not replace the older snapshot.");
   assert(reports.some(report => report.id === "current-b"), "An independent target report was incorrectly pruned.");
   assert(reports.some(report => report.id === "blocked-notice"), "A blocked non-intelligence notice was incorrectly removed.");
+  const retainedDefenderNotice = reports.find(report => report.id === defenderNotice.id);
+  assert(retainedDefenderNotice?.scoutPerspective === "defender", "The defender's scouted activity notice was incorrectly removed.");
+  assert(retainedDefenderNotice?.scoutDisclosure?.reinforcements?.[0]?.troops === 100, "The defender's exposed reinforcement snapshot was changed.");
+  assert(!retainedDefenderNotice?.scoutReport, "A defender activity notice became expiring attacker intelligence.");
   assert(!reports.some(report => report.id === "expired"), "Expired scout history remained in the player's Reports list.");
 
-  console.log("Emulator scout lifecycle passed: exact expiry, history removal, replacement, independent targets, and notice preservation.");
+  console.log("Emulator scout lifecycle passed: expiry, replacement, independent targets, and defender notice preservation.");
 }
 
 main()

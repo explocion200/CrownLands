@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Scout report contrast QA</title>
+  <link rel="stylesheet" href="../../../styles.css">
+  <link rel="stylesheet" href="../../../interface-theme.css">
+  <link rel="stylesheet" href="../../../daily-rewards.css">
+  <link rel="stylesheet" href="../../../readability.css">
+  <link rel="stylesheet" href="../../../manuscript-prototype.css">
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css">
+  <style>
+    html,body{min-height:100%;margin:0;background:#17130f}.qa-stage{box-sizing:border-box;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;min-height:100vh;padding:16px}.qa-case{min-width:0}.qa-case>.modal{position:static;inset:auto;display:block;width:100%;height:auto;padding:0;opacity:1!important;visibility:visible!important;background:transparent}.qa-case .modal-card{box-sizing:border-box;width:100%;max-width:none;max-height:none;opacity:1!important;transform:none!important}.qa-case .detailed-scout-report,.qa-case .battle-report-detail.scout{box-sizing:border-box;padding:12px}@media(max-width:720px){.qa-stage{grid-template-columns:1fr;padding:8px}.qa-case .modal-card{padding:.65rem}.scout-report-identities{grid-template-columns:1fr}.scout-report-mark{order:-1}}
+  </style>
+</head>
+<body>
+  <main class="qa-stage">
+    <section class="qa-case">
+      <div class="modal scout-report-modal"><article class="modal-card"><h2>Detailed scout report</h2><div class="detailed-scout-report">
+        <div class="scout-report-identities"><div class="scout-report-ruler player"><div><a class="player-name-link">Queen Rowan</a><small>Hero Lv 68</small></div></div><div class="scout-report-mark"><strong>Scout</strong><small>1 troop</small></div><div class="scout-report-ruler enemy"><div><a class="player-name-link">Lord Varrek</a><small>City Lv 20</small></div></div></div>
+        <div class="scout-report-city"><span>Target city</span><strong>Blackstone Hold</strong><b>Level 20</b><button class="battle-report-locate-btn scout-report-locate">Locate</button></div>
+        <div class="scout-report-overview"><div><span>Scouted troops</span><strong>1,248,600</strong></div><div><span>Total defense</span><strong>1,822,410</strong></div></div>
+        <section class="scout-report-section"><h3>Enemy defense</h3><div class="scout-defense-breakdown"><div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">♟</span><span><strong>Lord Varrek</strong><small>City owner · 1,048,600 troops</small></span><b>1,363,180 power</b></div><div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">♜</span><span><a class="player-name-link">Lady Aster</a><small>Clan reinforcement · 200,000 troops</small></span><b>260,000 power</b></div><div class="scout-breakdown-total"><span>Total</span><strong>1,822,410</strong></div></div></section>
+        <section class="scout-report-section"><h3>Enemy defense stats</h3><div class="scout-skill-list"><div class="scout-skill-row"><span>Shieldwall Discipline</span><small>Lv 16</small><strong>+32%</strong></div><div class="scout-skill-row"><span>Stoneworks</span><small>Lv 14</small><strong>+28%</strong></div></div></section>
+        <div class="scout-report-timing"><span>Report age: <b>2m 14s</b></span><span>Expires in: <b>7m 46s</b></span></div>
+      </div></article></div>
+    </section>
+    <section class="qa-case">
+      <div class="modal battle-report-modal"><article class="modal-card"><h2>Battle Report</h2><div class="battle-report-detail scout scouted-report-detail">
+        <button class="battle-report-back">Back to reports</button><div class="battle-report-detail-head"><span>Scout</span><strong>Highwatch Keep</strong><small>Level 20 city · 3 minutes ago</small><button class="battle-report-locate-btn">Locate</button></div>
+        <section class="scouted-report-alert"><span class="kingdom-flag scouted-report-attacker-flag" aria-hidden="true"><span class="flag-symbol">♞</span></span><div><h3>You were scouted</h3><p><a class="player-name-link scouted-report-attacker-link">Lord Varrek</a> scouted <strong>Highwatch Keep</strong>.</p></div></section>
+        <section class="scouted-report-route"><div><small>Scouted from</small><strong>Blackstone Hold</strong><span>Ironfall Hills</span></div><span class="scouted-report-route-arrow">→</span><div><small>Your holding</small><strong>Highwatch Keep</strong></div></section>
+        <div class="scouted-report-time"><strong>When you were scouted</strong><span>August 14, 2026 at 7:42 PM</span><small>3 minutes ago</small></div>
+        <section class="scouted-report-section"><div class="scouted-report-section-head"><h3>What they saw</h3></div><div class="scouted-report-metrics"><div class="scouted-report-metric"><div><small>Total troops seen</small><strong>842,610</strong></div></div><div class="scouted-report-metric"><div><small>Total defense</small><strong>1,192,480</strong></div></div></div></section>
+        <section class="scouted-report-section"><div class="scouted-report-section-head"><h3>Reinforcements they saw</h3></div><div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">♜</span><span><a class="player-name-link">Sir Alden</a><small>Reinforcing your holding</small></span><b>120,000</b></div></section>
+      </div></article></div>
+    </section>
+  </main>
+</body>
+</html>

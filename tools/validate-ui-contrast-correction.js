@@ -5,10 +5,11 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const css = read("ui-contrast-correction.css");
+const baseCss = read("styles.css");
 const index = read("index.html");
 const game = read("game.js");
 const serviceWorker = read("service-worker.js");
-const uiLayoutConfig = read("ui-layout-config.js");
+const uiLayoutRuntime = read("ui-layout-runtime.js");
 const productionBuilder = read("tools/build-production-client.js");
 const releaseManifest = read("tools/generate-release-manifest.js");
 const productionValidator = read("tools/validate-production-artifact.js");
@@ -50,8 +51,8 @@ for (const token of [
   "--cl-tab-unselected-bg",
   "--cl-tab-unselected-text",
   "--cl-danger-bg",
-  "--cl-state-outgoing: #355e7a",
-  "--cl-state-incoming: #8a3333",
+  "--cl-state-outgoing: #153f5d",
+  "--cl-state-incoming: #681e25",
   "--cl-state-victory: #355e7a",
   "--cl-state-scout: #b88a32",
   "--cl-state-defeat: #8a3333",
@@ -128,15 +129,27 @@ assert.match(css, /\.gold-camp-info-panel \.deed-history-locate\s*\{[\s\S]*?colo
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description\s*\{[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?linear-gradient\(180deg, #f7edda, #e2cda4\) !important;/, "Camp help cards still combine brown text with a brown surface.");
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description > strong\s*\{[\s\S]*?color:\s*#52232a !important;[\s\S]*?text-shadow:\s*none !important;/, "Camp help headings are not clearly readable.");
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description p\s*\{[\s\S]*?color:\s*#352b21 !important;[\s\S]*?opacity:\s*1;[\s\S]*?text-shadow:\s*none !important;/, "Camp help paragraphs can still blend into their background.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\)\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "Stronghold and Citadel stat cards still combine brown text with brown surfaces.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > span\s*\{[\s\S]*?color:\s*#b9d8e8 !important;/, "Stronghold and Citadel stat labels are not readable on the new objective surface.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > strong\s*\{[\s\S]*?color:\s*#fff8e8 !important;/, "Stronghold and Citadel values are not explicitly readable.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-info-tabs \.camp-info-tab:not\(\.active\):not\(\[aria-selected="true"\]\)[\s\S]*?color:\s*#eef8fd !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "Stronghold and Citadel inactive tabs still use low-contrast brown styling.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-reign-heading\s*\{[\s\S]*?color:\s*#c6ddea !important;[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "The Citadel and Stronghold ledger header is not readable on its surrounding paper surface.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-reign-row\.current[\s\S]*?background:\s*linear-gradient\(180deg, #285c79, #153a53\) !important;/, "The current Citadel or Stronghold ledger entry still uses a brown surface.");
+assert.match(baseCss, /@media \(max-width: 540px\)[\s\S]*?:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats \.stat-wide[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\);/, "Wide Stronghold and Citadel stats do not stack on narrow mobile screens.");
 assert.match(css, /\.realm-activity-card,[\s\S]*?\.realm-activity-card\.citadel[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?linear-gradient\(180deg, #f5e8ca, #dcc391\) !important;/, "Realm Activity still uses a dark surface behind brown text.");
 assert.match(css, /\.realm-activity-card \.realm-activity-proclamation p,[\s\S]*?\.realm-activity-card\.citadel \.realm-activity-proclamation p[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?text-shadow:\s*none !important;/, "Realm Activity proclamation copy is not readable on its parchment surface.");
 assert.match(css, /\.realm-activity-card \.realm-activity-proclamation \.player-name-link,[\s\S]*?color:\s*#175776 !important;/, "Realm Activity player links are not visibly distinguished.");
 assert.match(css, /\.realm-activity-card \.realm-activity-location-btn,[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "Realm Activity's location action is not high contrast.");
+assert.match(css, /:is\(\.modal\.scout-report-modal \.detailed-scout-report,[\s\S]*?\.battle-report-modal \.battle-report-detail\.scout\)\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #123b56, #071b2a\) !important;/, "Scout report detail surfaces are not consistently high contrast.");
+assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-report-overview > div, \.scout-defense-breakdown, \.scout-skill-list\),[\s\S]*?background:\s*#0a2b40 !important;/, "Scout intelligence cards can still inherit paper text on a dark background.");
+assert.match(css, /\.battle-report-modal \.scouted-report-alert\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(135deg, #65292e, #0b2d42\) !important;/, "The You Were Scouted alert is not readable.");
+assert.match(css, /\.scouted-report-section-head h3,[\s\S]*?\.scouted-report-attacker-link,[\s\S]*?color:\s*#ffe29a !important;/, "Scout report headings and attacker links lack a readable accent.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Detailed battle outcomes still paint the full center column red.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome > span\s*\{[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?border-radius:\s*999px;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Victory does not use a compact readable outcome badge.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome\.defeat > span\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Defeat still uses the harsh red outcome block.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome > strong,[\s\S]*?color:\s*#3e3328 !important;[\s\S]*?text-shadow:\s*none !important;/, "The detailed outcome explanation is unreadable after removing the center background.");
 assert.match(css, /\.leaderboard-modal \.leaderboard-toolbar strong\s*\{[\s\S]*?color:\s*#1c4055 !important;[\s\S]*?text-shadow:\s*none !important;/, "Leaderboard section headings still use gold shadowed text.");
+assert.match(css, /\.leaderboard-modal \.modal-card #modalBody\s*\{[\s\S]*?overflow-y:\s*auto !important;/, "Leaderboard rows can still be clipped by a leaked modal overflow rule.");
 assert.match(css, /\.leaderboard-modal \.leaderboard-row,[\s\S]*?border-left:\s*4px solid #8eb9cf !important;[\s\S]*?background:\s*linear-gradient\(180deg, #31566d, #1b394c\) !important;/, "Leaderboard rows do not use the high-contrast slate treatment.");
 assert.match(css, /\.leaderboard-modal \.leaderboard-row :is\(\.player-name-link, \.clan-leaderboard-name\)[\s\S]*?color:\s*#fff8e8 !important;/, "Player and clan leaderboard names are not explicitly readable.");
 assert.match(css, /\.leaderboard-modal \.leaderboard-row :is\([\s\S]*?\.player-name-link,[\s\S]*?\.clan-leaderboard-name,[\s\S]*?\.leaderboard-clan-link,[\s\S]*?\.clan-leaderboard-tag[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Leaderboard name links still inherit a light button face behind their ivory text.");
@@ -161,24 +174,28 @@ assert.match(game, /data-flag-color[\s\S]{0,400}aria-pressed="\$\{selected\}"/, 
 assert.doesNotMatch(index, /M8 27h18v3H6v-5c1-5 3-9 7-12/, "The ambiguous legacy horse charge remains in the production sprite.");
 assert.match(index, /id="cl-icon-flag-horse"[\s\S]{0,260}M6 29h21v-4/, "The corrected heraldic horse charge is missing.");
 assert.match(index, /hud-report-192x192-21644b7390fb\.webp/, "The approved Report artwork changed.");
-assert.match(index, /id="logBtn"[\s\S]{0,420}class="nav-btn-label">Reports<\/small>/, "Reports is missing the shared bottom-nav label treatment.");
-assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,220}class="nav-btn-icon"[\s\S]{0,260}class="nav-btn-label">Marches<\/small>/, "Troop Movements is missing the shared icon and label treatment.");
-assert.match(index, /id="incomingAttackBtn"[\s\S]{0,220}class="nav-btn-icon"[\s\S]{0,260}class="nav-btn-label">Incoming<\/small>/, "Incoming Attacks is missing the shared icon and label treatment.");
+assert.match(index, /id="logBtn"[\s\S]{0,520}class="nav-btn-heading">Reports<\/strong>[\s\S]{0,160}nav-btn-timer-placeholder/, "Reports is missing the aligned heading and reserved timer row.");
+assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="outgoingAttackCount"[\s\S]{0,100}Outgoing<\/strong>[\s\S]{0,160}id="outgoingAttackTime"/, "Troop Movements is missing its aligned count, label, and timer treatment.");
+assert.match(index, /id="incomingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="incomingAttackCount"[\s\S]{0,100}Incoming<\/strong>[\s\S]{0,160}id="incomingAttackTime"/, "Incoming Attacks is missing its aligned count, label, and timer treatment.");
 assert.match(css, /--cl-operation-button-width:\s*clamp\(78px,[\s\S]{0,120}98px\)/, "The shared bottom-nav button width is not responsive.");
-assert.match(css, /\.bottom-nav \{[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "The bottom-nav wrapper still paints a dark panel behind the operation controls.");
+assert.match(css, /\.bottom-nav \{[\s\S]*?display:\s*flex !important;[\s\S]*?gap:\s*6px !important;[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "The operation controls are not a compact, transparent flex group.");
+assert.match(css, /\.bottom-nav \.report-nav-btn\s*\{\s*order:\s*1;[\s\S]*?\.bottom-nav \.outgoing-attack-btn\s*\{\s*order:\s*2;[\s\S]*?\.bottom-nav \.incoming-attack-btn\s*\{\s*order:\s*3;/, "The operation controls no longer enforce Reports, Outgoing, Incoming order.");
 assert.match(css, /\.bottom-nav \.report-nav-btn,\s*\.outgoing-attack-btn,\s*\.incoming-attack-btn \{[\s\S]*?width:\s*var\(--cl-operation-button-width\);[\s\S]*?height:\s*46px;[\s\S]*?padding:\s*3px 5px;[\s\S]*?border-width:\s*3px !important;/, "The three operation controls do not share one frame and sizing contract after runtime repositioning.");
+assert.match(css, /grid-template-rows:\s*22px 10px 9px;[\s\S]*?\.bottom-nav \.nav-btn-heading[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/, "The operation labels and timers do not share aligned grid rows.");
 assert.match(css, /\.bottom-nav \.report-nav-btn\[hidden\],\s*\.outgoing-attack-btn\[hidden\],\s*\.incoming-attack-btn\[hidden\] \{\s*display:\s*none !important;/, "Shared operation-control styles can override dynamic hidden states.");
 assert.match(css, /\.bottom-nav \.report-nav-btn \{[\s\S]*?border-color:\s*#4a2c1a !important;[\s\S]*?var\(--cl-contrast-paper-light\), var\(--cl-contrast-paper\)/, "Reports is missing its dark-brown frame or beige inner surface.");
-assert.match(css, /\.bottom-nav \.report-nav-btn \.nav-btn-label \{[\s\S]*?color:\s*#15100b !important;/, "The Reports label is not explicitly rendered in black ink.");
-assert.match(css, /\.outgoing-attack-btn,[\s\S]{0,240}border-color:\s*#214a68 !important;[\s\S]{0,120}background:\s*var\(--cl-state-outgoing\) !important;/, "Troop Movements is missing its blue frame or inner surface after runtime repositioning.");
-assert.match(css, /\.incoming-attack-btn,[\s\S]{0,240}border-color:\s*#642025 !important;[\s\S]{0,120}background:\s*var\(--cl-state-incoming\) !important;/, "Incoming Attacks is missing its red frame or inner surface after runtime repositioning.");
-assert.equal((uiLayoutConfig.match(/"outgoingMarch":\s*\{[\s\S]{0,180}?"offsetX":\s*118,[\s\S]{0,100}?"offsetY":\s*12,[\s\S]{0,100}?"width":\s*98,[\s\S]{0,100}?"height":\s*46/g) || []).length, 2, "Troop Movements does not preserve the 8px Reports gap and shared button size in both HUD presets.");
-assert.equal((uiLayoutConfig.match(/"incomingMarch":\s*\{[\s\S]{0,180}?"offsetX":\s*224,[\s\S]{0,100}?"offsetY":\s*12,[\s\S]{0,100}?"width":\s*98,[\s\S]{0,100}?"height":\s*46/g) || []).length, 2, "Incoming Threats does not preserve the 8px operation-button gap and shared size in both HUD presets.");
+assert.match(css, /\.bottom-nav \.report-nav-btn :is\(\.nav-btn-heading, \.nav-btn-label\) \{[\s\S]*?color:\s*#15100b !important;/, "The Reports label is not explicitly rendered in black ink.");
+assert.match(css, /--cl-state-outgoing:\s*#153f5d;[\s\S]{0,100}--cl-state-incoming:\s*#681e25;/, "Operation alert surfaces are not using the high-contrast blue and red palette.");
+assert.match(css, /\.outgoing-attack-btn,[\s\S]{0,240}border-color:\s*#8ed8ff !important;[\s\S]{0,120}background:\s*var\(--cl-state-outgoing\) !important;/, "Troop Movements is missing its bright blue frame or dark blue surface.");
+assert.match(css, /\.incoming-attack-btn,[\s\S]{0,240}border-color:\s*#ffb49d !important;[\s\S]{0,120}background:\s*var\(--cl-state-incoming\) !important;/, "Incoming Attacks is missing its bright red frame or dark red surface.");
+assert.match(css, /\.bottom-nav :is\(\.outgoing-attack-btn, \.incoming-attack-btn\) :is\(\.cl-icon, span, strong, small\)[\s\S]{0,180}color:\s*#fffdf2 !important;[\s\S]{0,180}text-shadow:\s*0 1px 2px #000/, "Operation alert text is not forced above the global muted-text rule with the high-contrast ivory treatment.");
+assert.match(uiLayoutRuntime, /function restoreOperationAlertGroup\(\)[\s\S]*?nav\.appendChild\(outgoing\);[\s\S]*?nav\.appendChild\(incoming\);/, "The layout runtime does not restore Outgoing and Incoming beside Reports in deterministic order.");
+assert.match(uiLayoutRuntime, /restoreOperationAlertGroup\(\);[\s\S]{0,400}?id === "outgoingMarch" \|\| id === "incomingMarch"\) return;/, "The layout runtime can still detach operation alerts into independent HUD positions.");
 assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "Incoming Attacks no longer preserves dynamic visibility.");
 assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260813-map-location-banner-r11");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-welcome-back-contrast-r29");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");
@@ -203,8 +220,8 @@ for (const [label, foreground, background] of [
   ["selected tab", "#f4e8ce", "#6e2f35"],
   ["unselected tab", "#2b2118", "#ead8b3"],
   ["danger action", "#fff8ea", "#742a2e"],
-  ["outgoing / victory", "#fff8ea", "#355e7a"],
-  ["incoming / defeat", "#fff8ea", "#8a3333"],
+  ["outgoing alert", "#fffdf2", "#153f5d"],
+  ["incoming alert", "#fffdf2", "#681e25"],
   ["scout", "#261b0d", "#b88a32"],
   ["camp status supporting text", "#594936", "#dec79a"],
   ["camp defense value", "#41262a", "#dfc99e"],
@@ -217,6 +234,13 @@ for (const [label, foreground, background] of [
   ["camp rules paragraph", "#352b21", "#e2cda4"],
   ["camp map label", "#ffe29a", "#071b30"],
   ["camp active timer", "#fff4c7", "#691f1b"],
+  ["Stronghold and Citadel label", "#b9d8e8", "#0b263d"],
+  ["Stronghold and Citadel value", "#fff8e8", "#0b263d"],
+  ["Stronghold and Citadel inactive tab", "#eef8fd", "#183b50"],
+  ["Stronghold and Citadel active tab", "#261a0d", "#d9a83e"],
+  ["scout report primary text", "#fff8e8", "#071b2a"],
+  ["scout report supporting text", "#c5dfeb", "#0a2b40"],
+  ["scout report label", "#a9d4e8", "#0a2b40"],
 ]) {
   const ratio = contrast(foreground, background);
   assert.ok(ratio >= 4.5, `${label} contrast ${ratio.toFixed(2)}:1 is below 4.5:1.`);

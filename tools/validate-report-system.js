@@ -30,6 +30,10 @@ assert.doesNotMatch(
 );
 assert.match(markup, /id="reportUnreadBadge"[\s\S]*?report-unread-badge/, "The Reports button unread badge is missing.");
 assert.match(styles, /\.report-unread-badge[\s\S]*?position:\s*absolute/, "The unread badge is not positioned on the Reports button.");
+assert.match(functionBody(client, "showLogModal"), /modal\.className\s*=\s*"modal battle-report-modal";/, "The report list can retain a stale modal layout that prevents scrolling.");
+assert.match(functionBody(client, "showBattleReportDetail"), /modal\.className\s*=\s*"modal battle-report-modal";/, "Battle report details can retain a stale modal layout that prevents scrolling.");
+assert.match(functionBody(client, "showScoutReportModal"), /modal\.className\s*=\s*"modal scout-report-modal";/, "Scout report details can retain a stale modal layout that prevents scrolling.");
+assert.match(styles, /:is\(\.incoming-attack-modal,\.outgoing-attack-modal,\.battle-report-modal,\.scout-report-modal\) \.modal-card #modalBody\s*\{[\s\S]*?overflow-y:\s*auto !important;/, "Report lists and report details must remain vertically scrollable.");
 
 ["getBattleReportAgeSeconds", "compareBattleReportsNewestFirst", "renderBattleReportCard", "renderDetailedBattleReport", "renderLegacyBattleReportDetail"]
   .forEach(name => assert.doesNotMatch(

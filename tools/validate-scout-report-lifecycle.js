@@ -10,6 +10,7 @@ const server = read("functions/index.js");
 const guide = read("how-to-play.html");
 const rules = read("game-rules.html");
 const indexes = read("firestore.indexes.json");
+const styles = read("styles.css");
 
 function functionBody(source, name) {
   const marker = `function ${name}`;
@@ -49,6 +50,66 @@ assert.match(client, /function getPendingScoutMission[\s\S]*?!isArrivedScoutMiss
 assert.match(client, /async function resolveServerArmyMission[\s\S]*?api\.resolveArmyOrder[\s\S]*?applyServerArmyResult\(result,\s*\{\s*movement:\s*mission\s*\}\)[\s\S]*?loadServerReportsOnce/, "Hidden arrived scouts do not continue through authoritative report settlement.");
 assert.match(server, /function createIslandReportProjection[\s\S]*?troopCount:\s*0[\s\S]*?scoutReport:\s*null/, "Public island projections expose exact scout intelligence.");
 
+assert.match(server, /function createDefenderScoutDisclosure[\s\S]*?ownerTroops[\s\S]*?reinforcements[\s\S]*?wallIntegrityBps[\s\S]*?skills/, "Defenders do not receive a complete record of the intelligence exposed.");
+assert.match(server, /function createDefenderScoutActivityReport[\s\S]*?scoutPerspective:\s*"defender"[\s\S]*?sourceCityId[\s\S]*?sourceCityName[\s\S]*?sourceRegionId[\s\S]*?scoutDisclosure/, "Defender scout reports do not identify their perspective and source holding.");
+assert.equal((server.match(/const defenderReport = createDefenderScoutActivityReport\(/g) || []).length, 2, "Successful city and camp scouts do not both notify their defender.");
+assert.equal((server.match(/writeReport\(transaction, defenderUid, defenderReport, defenderProfileSnap\);/g) || []).length >= 2, true, "Defender scout reports are not persisted privately.");
+assert.match(client, /function normalizeDefenderScoutDisclosure[\s\S]*?reinforcements[\s\S]*?skills/, "The browser does not normalize the exposed scout snapshot.");
+assert.match(client, /function isDefenderScoutReport[\s\S]*?scoutPerspective === "defender"/, "The browser cannot distinguish a defender notice from attacker intelligence.");
+const defenderScoutRenderer = functionBody(client, "renderDefenderScoutReportDetail");
+["You were scouted", "Scouted from", "When you were scouted", "What they saw", "Reinforcements they saw", "Skill levels and bonuses they saw"].forEach(label => {
+  assert.match(defenderScoutRenderer, new RegExp(label), `Defender report details are missing: ${label}.`);
+});
+assert.match(client, /function getBattleReportBadge[\s\S]*?YOU WERE SCOUTED/, "The defender scout report badge is ambiguous.");
+assert.match(styles, /\.scouted-report-alert[\s\S]*?\.scouted-report-route[\s\S]*?\.scouted-report-metrics[\s\S]*?@media \(max-width: 620px\)/, "Defender scout reports lack readable responsive styling.");
+
+const crypto = require("node:crypto");
+const defenderReportSandbox = {
+  SKILL_ORDER: ["shieldwallDiscipline", "stoneworks"],
+  safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
+  safeString: (value, max = 80) => String(value || "").slice(0, max),
+  normalizePlayerName: (value, fallback = "Ruler") => String(value || fallback),
+  normalizeServerFlag: value => value || { symbol: "crown" },
+  clampInt: (value, min, max) => Math.max(min, Math.min(max, Math.floor(Number(value) || 0))),
+  clampCityLevel: value => Math.max(1, Math.floor(Number(value) || 1)),
+  normalizeRegionId: value => String(value || "island_1"),
+  crypto,
+  makeReport: value => ({ ...value, scoutReport: null, expiresAtMs: 123 }),
+};
+vm.createContext(defenderReportSandbox);
+[
+  "createDefenderScoutDisclosure",
+  "createDefenderScoutActivityReport",
+].forEach(name => vm.runInContext(`${functionBody(server, name)}; this.${name} = ${name};`, defenderReportSandbox));
+const defenderNotice = defenderReportSandbox.createDefenderScoutActivityReport({
+  army: { id: "army_1", fromId: "city_a", fromName: "Red Keep", sourceRegionId: "island_2" },
+  source: { id: "city_a", name: "Red Keep", regionId: "island_2" },
+  target: { id: "city_b", name: "Blue Keep", regionId: "island_1" },
+  attackerUid: "attacker",
+  attackerName: "Red Ruler",
+  defenderUid: "defender",
+  scoutReport: {
+    targetType: "city",
+    troops: 1500,
+    ownerTroops: 1000,
+    reinforcementTroops: 500,
+    reinforcements: [{ ownerUid: "ally", ownerName: "Ally", troops: 500 }],
+    totalDefense: 3200,
+    cityLevel: 20,
+    fortification: { integrityBps: 7500 },
+    shieldwallDisciplineLevel: 4,
+    shieldwallDisciplinePercent: 8,
+    stoneworksLevel: 3,
+    stoneworksPercent: 9,
+  },
+  nowMs: 2_000_000_000_000,
+});
+assert.equal(defenderNotice.scoutPerspective, "defender", "The notice lacks the defender perspective.");
+assert.equal(defenderNotice.sourceCityName, "Red Keep", "The notice lost the scout's source city.");
+assert.equal(defenderNotice.scoutDisclosure.reinforcements[0].troops, 500, "The defender cannot see which reinforcement amount was exposed.");
+assert.equal(defenderNotice.scoutDisclosure.wallIntegrityBps, 7500, "The exposed wall snapshot was lost.");
+assert.equal(Object.hasOwn(defenderNotice, "scoutReport"), false, "A defender notice was incorrectly made into expiring attacker intelligence.");
+
 const nowMs = 2_000_000_000_000;
 const retentionMs = 24 * 60 * 60 * 1000;
 const lifecycleSandbox = {
@@ -83,4 +144,4 @@ assert.equal(arrivalSandbox.isArrivedScoutMission({ kind: "attack", arrivesAtMs:
 assert.match(guide, /Successful intelligence lasts for ten minutes from arrival[\s\S]*?entry is removed from Reports[\s\S]*?Attack and defense reports remain available for 24 hours/i);
 assert.match(rules, /Successful scout intelligence expires ten minutes after the scout arrives[\s\S]*?Reports entry disappears[\s\S]*?Attack and defense reports expire 24 hours/i);
 
-console.log("Validated immediate scout arrival cleanup, report settlement, ten-minute intelligence, 24-hour battle history, and private projections.");
+console.log("Validated scout arrival cleanup, ten-minute intelligence, 24-hour history, defender exposure notices, and private projections.");

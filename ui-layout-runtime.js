@@ -27,6 +27,7 @@
     bottomCenter: ["center", "bottom"],
     bottomRight: ["right", "bottom"],
   };
+  const positionProperties = ["left", "right", "top", "bottom", "transform", "z-index"];
 
   function choosePreset() {
     const width = window.innerWidth;
@@ -50,22 +51,55 @@
     };
   }
 
+  function clearManagedPosition(element) {
+    if (!element) return;
+    element.classList.remove("hud-layout-managed", "hud-layout-hidden");
+    positionProperties.forEach(property => element.style.removeProperty(property));
+  }
+
+  function restoreOperationAlertGroup() {
+    const nav = document.querySelector(".bottom-nav");
+    const outgoing = document.querySelector("#outgoingAttackBtn");
+    const incoming = document.querySelector("#incomingAttackBtn");
+    if (!nav || !outgoing || !incoming) return;
+    [outgoing, incoming].forEach(element => {
+      clearManagedPosition(element);
+      element.style.removeProperty("width");
+      element.style.removeProperty("height");
+    });
+    nav.appendChild(outgoing);
+    nav.appendChild(incoming);
+  }
+
   function applyLayout() {
     const preset = choosePreset();
+    restoreOperationAlertGroup();
     Object.entries(preset?.components || {}).forEach(([id, component]) => {
       const element = document.querySelector(selectors[id]);
       if (!element || !component || typeof component !== "object") return;
       if (id === "returnHome" && element.classList.contains("hud-home-return")) return;
-      if ((id === "outgoingMarch" || id === "incomingMarch") && element.parentElement?.classList.contains("bottom-nav")) {
-        document.querySelector(".game-view")?.appendChild(element);
+      if (id === "outgoingMarch" || id === "incomingMarch") return;
+      let layoutElement = element;
+      if (id === "fullscreen") {
+        const resourceBar = element.closest(".resource-bar");
+        if (resourceBar?.classList.contains("has-home-return")) {
+          clearManagedPosition(element);
+          layoutElement = resourceBar;
+          resourceBar.style.setProperty("--hud-corner-control-width", `${Number(component.width) || 38}px`);
+          resourceBar.style.setProperty("--hud-corner-control-height", `${Number(component.height) || 38}px`);
+        } else if (resourceBar) {
+          clearManagedPosition(resourceBar);
+          resourceBar.style.removeProperty("--hud-corner-control-width");
+          resourceBar.style.removeProperty("--hud-corner-control-height");
+        }
       }
       const position = positionFor(component);
-      element.classList.add("hud-layout-managed");
-      Object.entries(position).forEach(([property, value]) => { element.style[property] = value; });
+      layoutElement.classList.add("hud-layout-managed");
+      Object.entries(position).forEach(([property, value]) => { layoutElement.style[property] = value; });
       if (Number.isFinite(Number(component.width))) element.style.width = `${component.width}px`;
       if (Number.isFinite(Number(component.height))) element.style.height = `${component.height}px`;
-      if (Number.isFinite(Number(component.zIndex))) element.style.zIndex = String(component.zIndex);
-      element.classList.toggle("hud-layout-hidden", component.visible === false);
+      if (Number.isFinite(Number(component.zIndex))) layoutElement.style.zIndex = String(component.zIndex);
+      layoutElement.classList.toggle("hud-layout-hidden", component.visible === false);
     });
   }
 
@@ -75,4 +109,5 @@
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(applyLayout, 100);
   });
+  window.addEventListener("crownlands:ui-layout-refresh", applyLayout);
 })();

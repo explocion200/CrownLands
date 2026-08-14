@@ -70,7 +70,7 @@ for (const [key, label, icon] of [
   ["cross", "Pilgrim Cross", "flag-cross"],
   ["sun", "Sun", "flag-sun"],
   ["moon", "Crescent Moon", "flag-moon"],
-  ["knight", "Warhorse", "transfer"],
+  ["knight", "Warhorse", "flag-horse"],
   ["tower", "Watchtower", "flag-tower"],
   ["diamond", "Heraldic Lozenge", "flag-lozenge"],
   ["spire", "Spearhead", "flag-spearhead"],
@@ -84,8 +84,8 @@ for (const [key, label, icon] of [
 assert.doesNotMatch(flagSymbolCatalog, /icon:\s*"(?:scout|gold|achievements|check)"/, "Flag charges still borrow mismatched gameplay icons.");
 assert.match(
   flagSymbolCatalog,
-  /\{ key: "knight", label: "Warhorse", icon: "transfer" \}/,
-  "The Warhorse flag charge must reuse the troop-movement horse icon."
+  /\{ key: "knight", label: "Warhorse", icon: "flag-horse" \}/,
+  "The Warhorse flag charge must use its dedicated centered heraldry icon."
 );
 for (const [key, label, icon] of [
   ["guardian", "Guardian Shield", "shield"],

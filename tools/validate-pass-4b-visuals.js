@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const game = read("game.js");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
 const publicStyles = read("site-info.css");
 const editorStyles = read("tools/map-editor/styles.css");
 const editorHud = read("tools/map-editor/hud-editor.js");
@@ -29,6 +29,11 @@ assert.match(game, /element\.style\.setProperty\("--flag-primary", primaryDye\.d
 assert.match(game, /data-flag-color="\$\{color\}"/);
 assert.match(game, /FLAG_COLORS\.includes\(flag\?\.primary\)/);
 assert.match(game, /FLAG_COLORS\.includes\(flag\?\.secondary\)/);
+assert.match(game, /FLAG_COLORS\.includes\(flag\?\.symbolColor\)/);
+assert.match(game, /setProperty\("--flag-symbol-color"/);
+assert.match(indexHtml, /id="flagSymbolColors"/);
+assert.match(styles, /\.flag-symbol-control[\s\S]*grid-column:\s*1\s*\/\s*-1/);
+assert.match(styles, /\.kingdom-flag \.flag-symbol\s*\{[^}]*color:\s*var\(--flag-symbol-color,[^)]*\) !important/);
 assert.match(game, /clan-shield-planks/);
 assert.match(game, /async function saveFlagEditor\(\)/);
 assert.match(game, /syncPlayerIdentityToAllOwnedCities/);

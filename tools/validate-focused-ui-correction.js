@@ -5,7 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const index = read("index.html");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
 const game = read("game.js");
 const layoutRuntime = read("ui-layout-runtime.js");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
@@ -14,6 +14,11 @@ assert.match(
   index,
   /id="mainCityReturnBtn"[\s\S]*?main-city-return-arrow[^>]*>[\s\S]*?&#9658;[\s\S]*?main-city-return-house[^>]*>[\s\S]*?&#8962;/,
   "The Main City return control must use the restored arrow and home symbols.",
+);
+assert.match(
+  index,
+  /<div class="resource-bar">[\s\S]{0,500}?id="mainCityReturnBtn"[\s\S]{0,500}?id="fullscreenBtn"/,
+  "Home must start immediately before fullscreen in the top-right control group.",
 );
 assert.doesNotMatch(
   index,
@@ -36,14 +41,34 @@ assert.match(
   "HUD mode must place Home immediately before the fullscreen control.",
 );
 assert.match(
+  game,
+  /modeChanged[\s\S]{0,900}?window\.dispatchEvent\(new Event\("crownlands:ui-layout-refresh"\)\)/,
+  "Changing Home modes must immediately reposition the combined top-right control group.",
+);
+assert.match(
   styles,
-  /\.resource-bar\.has-home-return\s*\{\s*padding-right:\s*calc\(38px \+ \.35rem\);\s*\}[\s\S]*?\.main-city-return\.hud-home-return\s*\{[\s\S]{0,520}?position:\s*static !important[\s\S]{0,420}?width:\s*38px !important[\s\S]{0,160}?height:\s*38px !important[\s\S]{0,220}?transform:\s*none !important/,
-  "The Home control must reserve space beside fullscreen and resist absolute editor positioning.",
+  /\.resource-bar\.has-home-return \.fullscreen-btn\s*\{[\s\S]{0,520}?position:\s*static !important[\s\S]{0,520}?width:\s*var\(--hud-corner-control-width, 38px\) !important[\s\S]{0,180}?height:\s*var\(--hud-corner-control-height, 38px\) !important[\s\S]{0,220}?transform:\s*none !important[\s\S]*?\.main-city-return\.hud-home-return\s*\{[\s\S]{0,520}?position:\s*static !important[\s\S]{0,520}?width:\s*var\(--hud-corner-control-width, 38px\) !important[\s\S]{0,180}?height:\s*var\(--hud-corner-control-height, 38px\) !important[\s\S]{0,220}?transform:\s*none !important/,
+  "Home and fullscreen must both participate in the same top-right flex row while off the home map.",
+);
+assert.match(
+  game,
+  /function getMainCityRegionId\(\)\s*\{[\s\S]{0,260}?state\?\.online\?\.mainRegionId[\s\S]{0,180}?getCityRegionId\(state\.mainCityId\)/,
+  "The server-confirmed home region must take priority when deciding whether Home belongs beside fullscreen.",
 );
 assert.match(
   layoutRuntime,
   /id === "returnHome" && element\.classList\.contains\("hud-home-return"\)/,
   "The layout runtime must not reposition the off-map Home control.",
+);
+assert.match(
+  layoutRuntime,
+  /id === "fullscreen"[\s\S]{0,420}?resourceBar\?\.classList\.contains\("has-home-return"\)[\s\S]{0,420}?layoutElement = resourceBar/,
+  "The HUD runtime must position the combined Home/fullscreen group from the fullscreen editor slot.",
+);
+assert.match(
+  layoutRuntime,
+  /window\.addEventListener\("crownlands:ui-layout-refresh", applyLayout\)/,
+  "The HUD runtime must reapply layout immediately when Home enters or leaves the corner group.",
 );
 assert.match(
   index,
@@ -59,6 +84,26 @@ assert.doesNotMatch(
   index,
   /id="(?:outgoing|incoming)AttackBtn"[\s\S]{0,260}?<use href="#cl-icon-(?:outgoing|incoming)">/,
   "The operation buttons still use the replacement diagonal-arrow SVGs.",
+);
+assert.match(
+  layoutRuntime,
+  /function restoreOperationAlertGroup\(\)[\s\S]*?nav\.appendChild\(outgoing\);[\s\S]*?nav\.appendChild\(incoming\);/,
+  "The HUD runtime must keep Outgoing and Incoming in the Reports group and in that order.",
+);
+assert.match(
+  layoutRuntime,
+  /id === "outgoingMarch" \|\| id === "incomingMarch"\) return;/,
+  "Outgoing and Incoming alerts must not be repositioned independently from Reports.",
+);
+assert.match(
+  styles,
+  /\.bottom-nav \.report-nav-btn\s*\{\s*order:\s*1;[\s\S]*?\.bottom-nav \.outgoing-attack-btn\s*\{\s*order:\s*2;[\s\S]*?\.bottom-nav \.incoming-attack-btn\s*\{\s*order:\s*3;/,
+  "The operation control order must be Reports, Outgoing, Incoming.",
+);
+assert.match(
+  styles,
+  /grid-template-rows:\s*22px 10px 9px;[\s\S]*?font-variant-numeric:\s*tabular-nums;/,
+  "Outgoing and Incoming labels and timers must share aligned rows and stable timer widths.",
 );
 assert.match(
   styles,

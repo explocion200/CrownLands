@@ -1118,7 +1118,7 @@ const FLAG_SYMBOLS = [
   { key: "cross", label: "Pilgrim Cross", icon: "flag-cross" },
   { key: "sun", label: "Sun", icon: "flag-sun" },
   { key: "moon", label: "Crescent Moon", icon: "flag-moon" },
-  { key: "knight", label: "Warhorse", icon: "transfer" },
+  { key: "knight", label: "Warhorse", icon: "flag-horse" },
   { key: "tower", label: "Watchtower", icon: "flag-tower" },
   { key: "diamond", label: "Heraldic Lozenge", icon: "flag-lozenge" },
   { key: "spire", label: "Spearhead", icon: "flag-spearhead" },
@@ -2201,6 +2201,7 @@ const animationModeStatus = document.getElementById("animationModeStatus");
 const flagEditorPreview = document.getElementById("flagEditorPreview");
 const flagPrimaryColors = document.getElementById("flagPrimaryColors");
 const flagSecondaryColors = document.getElementById("flagSecondaryColors");
+const flagSymbolColors = document.getElementById("flagSymbolColors");
 const flagPatternOptions = document.getElementById("flagPatternOptions");
 const flagSymbolOptions = document.getElementById("flagSymbolOptions");
 const flagSaveBtn = document.getElementById("flagSaveBtn");
@@ -5706,6 +5707,7 @@ function normalizeFlag(flag) {
   return {
     primary: FLAG_COLORS.includes(flag?.primary) ? flag.primary : defaults.primary,
     secondary: FLAG_COLORS.includes(flag?.secondary) ? flag.secondary : defaults.secondary,
+    symbolColor: FLAG_COLORS.includes(flag?.symbolColor) ? flag.symbolColor : "#d9e2e8",
     pattern: FLAG_PATTERNS.some(option => option.key === flag?.pattern) ? flag.pattern : defaults.pattern,
     symbol: FLAG_SYMBOLS.some(option => option.key === flag?.symbol) ? flag.symbol : defaults.symbol,
   };
@@ -6273,13 +6275,19 @@ function getMainCityReference() {
   const loaded = cityById(state.mainCityId);
   if (loaded?.owner === "player" && !isStronghold(loaded)) return loaded;
   if (loaded && getCityRegionId(loaded) === getActiveMapRegionId()) return null;
+  const cached = getOwnedCitySnapshotById(state.mainCityId);
+  if (cached && !isStronghold(cached)) return { ...cached, owner: "player", isMainCity: true };
   const base = getPlayableBaseCityById(state.mainCityId);
   if (isStronghold(base)) return null;
   return base ? { ...base, owner: "player", isMainCity: true } : null;
 }
 
 function getMainCityRegionId() {
-  return normalizeRegionId(state?.mainCityId ? getCityRegionId(state.mainCityId) : state?.online?.mainRegionId || getActiveOnlineRegionId());
+  return normalizeRegionId(
+    state?.online?.mainRegionId
+    || (state?.mainCityId ? getCityRegionId(state.mainCityId) : "")
+    || getActiveOnlineRegionId()
+  );
 }
 
 function getKnownOwnedRegularCities() {
@@ -8511,6 +8519,31 @@ function normalizeScoutReportReinforcements(rows) {
     .slice(0, 50);
 }
 
+function normalizeDefenderScoutDisclosure(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const count = value => Math.max(0, Math.floor(Number(value) || 0));
+  const skills = {};
+  for (const skill of SKILL_ORDER) {
+    const value = raw.skills?.[skill];
+    skills[skill] = { level: count(value?.level), percent: Math.max(0, Number(value?.percent) || 0) };
+  }
+  return {
+    targetType: raw.targetType === "camp" ? "camp" : "city",
+    troops: count(raw.troops),
+    ownerTroops: count(raw.ownerTroops),
+    reinforcementTroops: count(raw.reinforcementTroops),
+    reinforcements: normalizeScoutReportReinforcements(raw.reinforcements),
+    totalDefense: count(raw.totalDefense),
+    cityLevel: raw.targetType === "camp" ? 0 : clampCityLevel(raw.cityLevel || 1),
+    wallIntegrityBps: Math.min(10_000, count(raw.wallIntegrityBps)),
+    skills,
+  };
+}
+
+function isDefenderScoutReport(report = null) {
+  return Boolean(report?.type === "scout" && report.scoutPerspective === "defender");
+}
+
 function isSuccessfulScoutIntelBattleReport(report = null) {
   if (report?.type !== "scout") return false;
   if (report.scoutReport && typeof report.scoutReport === "object") return true;
@@ -8818,6 +8851,11 @@ function normalizeBattleReports(reports) {
         opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
           ? normalizeFlag(report.opponentFlag)
           : null,
+        scoutPerspective: report.scoutPerspective === "defender" ? "defender" : "",
+        sourceCityId: String(report.sourceCityId || "").slice(0, 96),
+        sourceCityName: String(report.sourceCityName || "").slice(0, 80),
+        sourceRegionId: report.sourceRegionId ? normalizeRegionId(report.sourceRegionId) : "",
+        scoutDisclosure: normalizeDefenderScoutDisclosure(report.scoutDisclosure),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
@@ -13432,7 +13470,7 @@ function normalizeGameServerMembership(raw = null) {
 
 function showGameServerInactivityNotice(notice = null) {
   if (!notice || !modal || !modalBody || !modalTitle) return false;
-  modal.classList.add("offline-reward-modal");
+  modal.className = "modal offline-reward-modal";
   modalTitle.textContent = notice.type === "world-slot-reset"
     ? "Realm slot reset"
     : "Inactive holdings surrendered";
@@ -19798,7 +19836,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
   const lostSummary = totalLostCities > 0
     ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(totalLostCities)}</strong><ul>${visibleLostCities.map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${totalLostCities > visibleLostCities.length ? `<small>+${formatNumber(totalLostCities - visibleLostCities.length)} more</small>` : ""}</section>`
     : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
-  modal.classList.add("offline-reward-modal");
+  modal.className = "modal offline-reward-modal";
   modalTitle.textContent = "Welcome back";
   modalBody.innerHTML = `
     <div class="offline-reward-panel">
@@ -21142,6 +21180,7 @@ function applyFlagToElement(element, flag) {
   const secondaryDye = FLAG_DYE_TREATMENTS[normalized.secondary] || { display: normalized.secondary, label: normalized.secondary };
   element.style.setProperty("--flag-primary", primaryDye.display);
   element.style.setProperty("--flag-secondary", secondaryDye.display);
+  element.style.setProperty("--flag-symbol-color", (FLAG_DYE_TREATMENTS[normalized.symbolColor] || {}).display || normalized.symbolColor);
   element.dataset.flagPrimaryDye = primaryDye.label;
   element.dataset.flagSecondaryDye = secondaryDye.label;
   for (const option of FLAG_PATTERNS) element.classList.remove(`pattern-${option.key}`);
@@ -23960,6 +23999,7 @@ function renderFlagEditor() {
   applyFlagToElement(flagEditorPreview, flagDraft);
   renderFlagSwatches(flagPrimaryColors, "primary");
   renderFlagSwatches(flagSecondaryColors, "secondary");
+  renderFlagSwatches(flagSymbolColors, "symbolColor");
 
   flagPatternOptions.innerHTML = FLAG_PATTERNS.map(option => `<button type="button" data-flag-pattern="${option.key}" class="${flagDraft.pattern === option.key ? "active" : ""}">${option.label}</button>`).join("");
   flagPatternOptions.querySelectorAll("button[data-flag-pattern]").forEach(buttonElement => {
@@ -24325,7 +24365,7 @@ function getRewardCampStatusText(camp) {
 function getFlagSignature(flag) {
   if (!flag) return "";
   const normalized = normalizeFlag(flag);
-  return `${normalized.primary}:${normalized.secondary}:${normalized.pattern}:${normalized.symbol}`;
+  return `${normalized.primary}:${normalized.secondary}:${normalized.symbolColor}:${normalized.pattern}:${normalized.symbol}`;
 }
 
 function getCityRenderSignature(visibleCities, visibleCamps = []) {
@@ -25640,8 +25680,7 @@ function showScoutReportModal(cityId) {
   const siegeRepair = siege?.repairAtMs > Date.now()
     ? `<small data-fortification-repair-at-ms="${siege.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}</small>`
     : `<small>Fully repaired now</small>`;
-  modal.classList.add("scout-report-modal");
-  modal.classList.remove("battle-report-modal");
+  modal.className = "modal scout-report-modal";
   modal.dataset.scoutReportCityId = cityId;
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = `
@@ -32775,7 +32814,7 @@ function updateIncomingAttackUi() {
     if (lastAudioIncomingAttackIds.size > 0) syncWorldMusicState();
     lastAudioIncomingAttackIds = incomingIds;
     if (incomingAttackCount) incomingAttackCount.textContent = "0";
-    if (incomingAttackTime) incomingAttackTime.textContent = "Incoming";
+    if (incomingAttackTime) incomingAttackTime.textContent = "Threats";
     if (modal.open && modal.classList.contains("incoming-attack-modal")) modal.close();
     return;
   }
@@ -32982,8 +33021,7 @@ function showIncomingAttacksModal() {
     updateIncomingAttackUi();
     return;
   }
-  modal.classList.remove("outgoing-attack-modal");
-  modal.classList.add("incoming-attack-modal");
+  modal.className = "modal incoming-attack-modal";
   renderIncomingAttacksModalContent(incoming);
   if (!modal.open) modal.showModal();
 }
@@ -33093,8 +33131,7 @@ function showOutgoingAttacksModal() {
         ? "camps"
         : "strongholds";
   }
-  modal.classList.remove("incoming-attack-modal");
-  modal.classList.add("outgoing-attack-modal");
+  modal.className = "modal outgoing-attack-modal";
   renderOutgoingAttacksModalContent(operations);
   if (!modal.open) modal.showModal();
 }
@@ -33760,8 +33797,7 @@ async function refreshClanLeaderboardRows() {
 
 function showLeaderboardModal() {
   if (!state) return;
-  modal.classList.remove("battle-report-modal");
-  modal.classList.add("leaderboard-modal");
+  modal.className = "modal leaderboard-modal";
   modalTitle.textContent = "Leaderboards";
   leaderboardActiveTab = "players";
   modalBody.innerHTML = `
@@ -33820,7 +33856,7 @@ function showLogModal(options = {}) {
   state.battleReports = normalizeBattleReports(state.battleReports);
   delete modal.dataset.scoutReportCityId;
   delete modal.dataset.battleReportDetailId;
-  modal.classList.add("battle-report-modal");
+  modal.className = "modal battle-report-modal";
   modalTitle.textContent = "Battle Reports";
   const realmActivityAvailable = supportsRealmActivity();
   if (battleReportFilter === "realm_activity" && !realmActivityAvailable) battleReportFilter = "all";
@@ -33881,6 +33917,7 @@ function showLogModal(options = {}) {
 
 function renderBattleReportCard(report, index = 0) {
   const badge = getBattleReportBadge(report);
+  const defenderScout = isDefenderScoutReport(report);
   const troopValue = report.type === "scout"
     ? report.troopCount
     : (report.sentTroops || report.troopCount || report.defendersLeft);
@@ -33888,14 +33925,14 @@ function renderBattleReportCard(report, index = 0) {
   const opponentFlag = report.opponentFlag
     ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
     : "";
-  const troopLabel = report.type === "scout" ? "reported" : "sent";
+  const troopLabel = defenderScout ? "troops seen" : report.type === "scout" ? "reported" : "sent";
   const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
   const timingLabel = scoutExpiresAtMs
     ? `<small>${renderBattleReportAge(report)}<span aria-hidden="true"> · </span><span data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</span></small>`
     : `<small>${renderBattleReportAge(report)}</small>`;
   const locateButton = renderBattleReportLocateButton(report);
   return `
-    <article class="battle-report-card ${badge.tone}" data-report-card-id="${escapeHtml(report.id)}">
+    <article class="battle-report-card ${badge.tone}${defenderScout ? " scout-defender" : ""}" data-report-card-id="${escapeHtml(report.id)}">
       <div class="battle-report-result">
         <strong>${badge.label}</strong>
         ${timingLabel}
@@ -34897,7 +34934,29 @@ function applyLegacyBattleFlags(report = null) {
   });
 }
 
+function renderDefenderScoutReportDetail(report, badge) {
+  const d = report.scoutDisclosure;
+  const attacker = report.opponentName || "Unknown ruler";
+  const fromCity = report.sourceCityName || "Unknown city";
+  const reinforcements = d?.reinforcements || [];
+  const reinforcementRows = reinforcements.length ? reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Reinforcing your holding", row.troops)).join("") : `<p class="scouted-report-empty">The scout saw no stationed reinforcements.</p>`;
+  const metrics = d ? [
+    ["Total troops seen", d.troops], [d.targetType === "camp" ? "Camp holder troops" : "City-owner garrison", d.ownerTroops],
+    ["Reinforcement troops", d.reinforcementTroops], ["Total defense", d.totalDefense],
+    ...(d.targetType === "camp" ? [] : [[`Wall integrity · Lv ${formatNumber(d.cityLevel)}`, formatWallIntegrity(d.wallIntegrityBps)]]),
+  ].map(([label, value]) => `<div class="scouted-report-metric"><div><small>${label}</small><strong>${typeof value === "number" ? formatNumber(value) : value}</strong></div></div>`).join("") : "";
+  const skills = d?.targetType === "city" ? SKILL_ORDER.map(skill => scoutSkillRow(SKILL_CONFIG[skill]?.label || skill, d.skills?.[skill]?.level, d.skills?.[skill]?.percent)).join("") : "";
+  const exposed = d ? `<section class="scouted-report-section"><div class="scouted-report-section-head"><h3>What they saw</h3><span>${renderCrownlandsIcon("scout")}</span></div><div class="scouted-report-metrics">${metrics}</div></section><section class="scouted-report-section"><div class="scouted-report-section-head"><h3>Reinforcements they saw</h3></div><div class="scouted-report-reinforcement-list">${reinforcementRows}</div></section>${skills ? `<section class="scouted-report-section"><div class="scouted-report-section-head"><h3>Skill levels and bonuses they saw</h3></div><div class="scout-skill-list scouted-report-skills">${skills}</div></section>` : ""}` : `<section class="scouted-report-section"><h3>What they saw</h3><p class="scouted-report-empty">Details unavailable.</p></section>`;
+  return `<div class="battle-report-detail scout scouted-report-detail">
+    <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">${renderCrownlandsIcon("back")} Back to reports</button>
+    <div class="battle-report-detail-head"><span>${badge.label}</span><strong>${escapeHtml(report.cityName)}</strong><small>${report.targetType === "camp" ? "Reward camp" : `Level ${formatNumber(report.cityLevel)} city`} · ${renderBattleReportAge(report)}</small>${renderBattleReportLocateButton(report, "battle-report-locate-detail")}</div>
+    <section class="scouted-report-alert"><span id="scoutedReportAttackerFlag" class="kingdom-flag scouted-report-attacker-flag"><span class="flag-symbol"></span></span><div><h3>You were scouted</h3><p>${renderPlayerNameLink(report.opponentUid, attacker, "scouted-report-attacker-link")} scouted <strong>${escapeHtml(report.cityName)}</strong>.</p></div></section>
+    <section class="scouted-report-route"><div><small>Scouted from</small><strong>${escapeHtml(fromCity)}</strong><span>${escapeHtml(report.sourceRegionId ? getRegionLabel(report.sourceRegionId) : "Unknown map")}</span></div><span class="scouted-report-route-arrow">${renderCrownlandsIcon("forward")}</span><div><small>Your holding</small><strong>${escapeHtml(report.cityName)}</strong></div></section>
+    <div class="scouted-report-time"><strong>When you were scouted</strong><span>${escapeHtml(getBattleReportExactTime(report))}</span><small>${renderBattleReportAge(report)}</small></div>${exposed}</div>`;
+}
+
 function renderScoutAttemptReportDetail(report, badge) {
+  if (isDefenderScoutReport(report)) return renderDefenderScoutReportDetail(report, badge);
   const explanation = report.summary || "The scout did not return usable intelligence.";
   return `
     <div class="battle-report-detail scout">
@@ -34930,7 +34989,7 @@ async function showBattleReportDetail(reportId) {
   }
   playGameSound("parchment_open", { cooldownMs: 120, allowCrossMap: true });
   modal.dataset.battleReportDetailId = report.id;
-  modal.classList.add("battle-report-modal");
+  modal.className = "modal battle-report-modal";
   modalTitle.textContent = "Report Details";
   modalBody.innerHTML = report.type === "scout"
     ? renderScoutAttemptReportDetail(report, badge)
@@ -34945,7 +35004,15 @@ async function showBattleReportDetail(reportId) {
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
-  if (report.type === "scout") return;
+  if (report.type === "scout") {
+    if (isDefenderScoutReport(report)) {
+      applyFlagToElement(
+        modalBody.querySelector("#scoutedReportAttackerFlag"),
+        report.opponentFlag || createDefaultFlag()
+      );
+    }
+    return;
+  }
   if (!report.battleId) {
     applyLegacyBattleFlags(report);
     return;
@@ -34972,6 +35039,7 @@ async function showBattleReportDetail(reportId) {
 }
 
 function getBattleReportBadge(report) {
+  if (isDefenderScoutReport(report)) return { label: "YOU WERE SCOUTED", tone: "scout" };
   if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
   if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") return { label: "DAMAGED", tone: "defeat" };
   if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") return { label: "CITY LOST", tone: "defeat" };
@@ -35504,6 +35572,7 @@ function getMainCityReturnButtonSize() {
 function setMainCityReturnHudMode(enabled) {
   if (!mainCityReturnBtn) return;
   const resourceBar = document.querySelector(".resource-bar");
+  const modeChanged = mainCityReturnBtn.classList.contains("hud-home-return") !== Boolean(enabled);
   resourceBar?.classList.toggle("has-home-return", Boolean(enabled));
   mainCityReturnBtn.classList.toggle("hud-home-return", Boolean(enabled));
   mainCityReturnBtn.classList.remove("hud-layout-managed", "hud-layout-hidden");
@@ -35511,15 +35580,17 @@ function setMainCityReturnHudMode(enabled) {
     mainCityReturnBtn.style.removeProperty(property);
   });
   if (enabled) {
-    if (resourceBar && mainCityReturnBtn.parentElement !== resourceBar) {
+    if (resourceBar) {
       const fullscreenControl = resourceBar.querySelector("#fullscreenBtn");
       resourceBar.insertBefore(mainCityReturnBtn, fullscreenControl || resourceBar.firstChild);
     }
+    if (modeChanged) window.dispatchEvent(new Event("crownlands:ui-layout-refresh"));
     return;
   }
   if (gameView && mainCityReturnBtn.parentElement !== gameView) {
     gameView.insertBefore(mainCityReturnBtn, mapFrame);
   }
+  if (modeChanged) window.dispatchEvent(new Event("crownlands:ui-layout-refresh"));
 }
 
 function getMainCityReturnRectAt(x, y, size, padding = 4) {

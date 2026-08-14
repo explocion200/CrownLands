@@ -10,6 +10,7 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const indexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
+const readabilitySource = fs.readFileSync(path.join(root, "readability.css"), "utf8");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -27,6 +28,11 @@ function extractFunction(source, name) {
 function requireMatch(source, pattern, message) {
   assert.match(source, pattern, message);
 }
+
+requireMatch(extractFunction(clientSource, "showOfflineRewardsModal"), /modal\.className\s*=\s*"modal offline-reward-modal";/, "Welcome Back can retain stale modal colors or scrolling behavior.");
+requireMatch(extractFunction(clientSource, "showGameServerInactivityNotice"), /modal\.className\s*=\s*"modal offline-reward-modal";/, "The inactivity Welcome Back notice can retain stale modal styling.");
+requireMatch(readabilitySource, /\.offline-reward-modal \.modal-card\s*\{[\s\S]*?color:\s*#f4ead4;[\s\S]*?background:\s*linear-gradient\(180deg, #123b56, #0b2031 70%, #071722\);/, "Welcome Back lacks a readable dark modal surface.");
+requireMatch(readabilitySource, /\.offline-reward-modal \.offline-reward-grid > div\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #153d55, #0b2639\);/, "Welcome Back production cards lack readable contrast.");
 
 const sandbox = {
   WELCOME_BACK_SUMMARY_VERSION: 1,

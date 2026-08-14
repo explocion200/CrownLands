@@ -74,6 +74,152 @@
   --motion-ease-settle: cubic-bezier(.22, 1.18, .36, 1);
 }
 
+/* Stronghold and Crown Citadel information --------------------------- */
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) {
+  color: #f7efe0 !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-info-tabs {
+  border-color: #557d94;
+  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .14), 0 4px 9px rgba(0, 0, 0, .24);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-info-tabs .camp-info-tab:not(.active):not([aria-selected="true"]) {
+  color: #eef8fd !important;
+  border-color: #6c95aa;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .72);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-info-tabs .camp-info-tab:is(.active, [aria-selected="true"]) {
+  color: #261a0d !important;
+  border-color: #9a6714;
+  background: linear-gradient(180deg, #ffe39a, #d9a83e) !important;
+  text-shadow: 0 1px rgba(255, 249, 222, .64);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) {
+  color: #fff8e8 !important;
+  border-color: #557d94 !important;
+  border-left: 4px solid #315f78;
+  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .12), 0 4px 9px rgba(0, 0, 0, .2);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > span {
+  color: #b9d8e8 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > strong {
+  color: #fff8e8 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > small {
+  color: #d4e7f0 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats .stronghold-status {
+  border-color: #b88a32 !important;
+  border-left-color: #e3b853 !important;
+  background: linear-gradient(180deg, #244f6b, #112f46) !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats .stronghold-status > strong {
+  color: #ffe39a !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.player-name-link, .clan-name-link, .city-clan-profile-link) {
+  color: #ffe39a !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  text-decoration: underline;
+  text-underline-offset: .12em;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .objective-clan-link {
+  color: #fff8e8 !important;
+  border-color: #527e68 !important;
+  background: linear-gradient(180deg, #295f54, #153c35) !important;
+  box-shadow: inset 0 1px 0 rgba(238, 255, 244, .14);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .objective-clan-link :is(strong, span) {
+  color: #fff8e8 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .objective-clan-link small {
+  color: #d5e9dd !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-heading {
+  min-height: 30px;
+  padding: 6px 10px;
+  color: #c6ddea !important;
+  border: 1px solid #557d94;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .1);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-row {
+  color: #fff8e8 !important;
+  border-color: #557d94;
+  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
+  box-shadow: inset 0 1px 0 rgba(223, 242, 252, .1);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-row.current {
+  border-color: #d9a83e;
+  background: linear-gradient(180deg, #285c79, #153a53) !important;
+  box-shadow: inset 4px 0 0 #d9a83e, inset 0 1px 0 rgba(255, 242, 202, .16), 0 0 12px rgba(61, 137, 179, .18);
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-rank {
+  color: #ffe39a !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-ruler strong,
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-time {
+  color: #fff8e8 !important;
+  text-shadow: none !important;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-ruler small {
+  color: #c6ddea !important;
+  opacity: 1;
+}
+
+:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) :is(.citadel-reign-note, .citadel-reign-empty) {
+  color: #d4e7f0 !important;
+  border-color: #557d94;
+  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
+  text-shadow: none !important;
+}
+
+@media (max-width: 540px) {
+  :is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats .stat-wide {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    justify-items: start;
+    gap: .16rem;
+  }
+}
+
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; margin: 0; overscroll-behavior: none; }
 html:fullscreen,
@@ -640,7 +786,19 @@ input {
 .profile-chip strong { font-size: .86rem; }
 .profile-chip small { color: var(--muted); font-size: .68rem; }
 .resource-bar { display: flex; align-items: center; gap: .35rem; }
-.resource-bar.has-home-return { padding-right: calc(38px + .35rem); }
+.resource-bar.has-home-return .fullscreen-btn {
+  position: static !important;
+  z-index: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  width: var(--hud-corner-control-width, 38px) !important;
+  height: var(--hud-corner-control-height, 38px) !important;
+  margin: 0 !important;
+  transform: none !important;
+  flex: 0 0 auto;
+}
 .shop-btn {
   width: 64px;
   height: 64px;
@@ -894,8 +1052,8 @@ input {
   right: auto !important;
   top: auto !important;
   bottom: auto !important;
-  width: 38px !important;
-  height: 38px !important;
+  width: var(--hud-corner-control-width, 38px) !important;
+  height: var(--hud-corner-control-height, 38px) !important;
   margin: 0 !important;
   border-radius: 8px;
   transform: none !important;
@@ -4758,6 +4916,22 @@ button.inventory-slot {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.battle-report-city-copy,
+.battle-report-opponent-copy {
+  display: grid;
+  min-width: 0;
+  gap: .08rem;
+}
+.battle-report-city-copy small,
+.battle-report-opponent-copy small {
+  overflow: hidden;
+  color: #b7d9ec;
+  font-size: .62rem;
+  font-weight: 850;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .battle-report-opponent {
   display: flex;
   align-items: center;
@@ -4766,6 +4940,11 @@ button.inventory-slot {
 }
 .battle-report-opponent strong {
   min-width: 0;
+}
+.battle-report-card.scout-defender .battle-report-result strong {
+  max-width: 126px;
+  font-size: .68rem;
+  line-height: 1.12;
 }
 .battle-report-target-flag {
   flex: 0 0 auto;
@@ -5253,6 +5432,280 @@ button.inventory-slot {
 .scout-attempt-explanation > small {
   color: rgba(246, 239, 228, .76);
   font-size: .75rem;
+}
+
+.scouted-report-detail {
+  gap: .65rem;
+}
+.scouted-report-alert {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: .7rem;
+  padding: .72rem .78rem;
+  border: 1px solid rgba(255, 132, 115, .56);
+  border-left: 4px solid #eb654e;
+  border-radius: 12px;
+  background: linear-gradient(100deg, rgba(119, 29, 27, .9), rgba(8, 33, 53, .96) 72%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 20px rgba(0,0,0,.22);
+}
+.scouted-report-attacker-flag {
+  width: 56px;
+  height: 48px;
+}
+.scouted-report-alert > div {
+  min-width: 0;
+}
+.scouted-report-alert small {
+  color: #ffc6bb;
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+.scouted-report-alert h3,
+.scouted-report-alert p {
+  margin: 0;
+}
+.scouted-report-alert h3 {
+  color: #fff4d3;
+  font-size: 1.05rem;
+  text-shadow: 0 2px 0 rgba(0,0,0,.45);
+}
+.scouted-report-alert p {
+  margin-top: .18rem;
+  color: #e5f2f9;
+  font-size: .77rem;
+}
+.scouted-report-alert p strong {
+  color: #fff;
+}
+.scouted-report-attacker-link,
+.scouted-report-reinforcement-link {
+  color: #ffe29a !important;
+}
+.scouted-report-route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  align-items: stretch;
+  gap: .45rem;
+}
+.scouted-report-route > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-content: center;
+  gap: .08rem .38rem;
+  min-width: 0;
+  min-height: 64px;
+  padding: .52rem .62rem;
+  border: 1px solid rgba(157, 204, 228, .3);
+  border-radius: 10px;
+  background: rgba(5, 24, 40, .86);
+}
+.scouted-report-route > div > small,
+.scouted-report-route > div > strong,
+.scouted-report-route > div > span {
+  grid-column: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scouted-report-route > div > small {
+  color: #9dcce4;
+  font-size: .61rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.scouted-report-route > div > strong {
+  color: #fff4d3;
+  font-size: .84rem;
+}
+.scouted-report-route > div > span {
+  color: rgba(229,242,249,.72);
+  font-size: .66rem;
+}
+.scouted-report-source-locate {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: stretch;
+  width: 40px;
+  min-width: 40px;
+}
+.scouted-report-route-arrow {
+  display: grid;
+  place-items: center;
+  color: #e7b94f;
+  font-size: 1.05rem;
+}
+.scouted-report-time {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .38rem .65rem;
+  padding: .48rem .62rem;
+  border: 1px solid rgba(157, 204, 228, .22);
+  border-radius: 10px;
+  background: rgba(11, 46, 70, .58);
+}
+.scouted-report-time strong {
+  color: #9dcce4;
+  font-size: .67rem;
+}
+.scouted-report-time span {
+  color: #fff;
+  font-size: .72rem;
+}
+.scouted-report-time small {
+  color: #ffe29a;
+  font-size: .64rem;
+}
+.scouted-report-section {
+  display: grid;
+  gap: .42rem;
+  padding: .62rem;
+  border: 1px solid rgba(157, 204, 228, .24);
+  border-radius: 12px;
+  background: rgba(4, 19, 32, .78);
+}
+.scouted-report-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+}
+.scouted-report-section-head.compact {
+  justify-content: flex-start;
+}
+.scouted-report-section-head small {
+  color: #e7b94f;
+  font-size: .58rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+}
+.scouted-report-section-head h3 {
+  margin: 0;
+  color: #fff4d3;
+  font-size: .92rem;
+}
+.scouted-report-section-head > span {
+  color: #9dcce4;
+  font-size: 1.25rem;
+}
+.scouted-report-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: .4rem;
+}
+.scouted-report-metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: .42rem;
+  min-width: 0;
+  padding: .48rem .52rem;
+  border: 1px solid rgba(157, 204, 228, .17);
+  border-radius: 8px;
+  background: rgba(13, 44, 69, .72);
+}
+.scouted-report-metric > span {
+  color: #9dcce4;
+  font-size: 1.1rem;
+  text-align: center;
+}
+.scouted-report-metric > div,
+.scouted-report-metric small,
+.scouted-report-metric strong,
+.scouted-report-metric em {
+  display: block;
+  min-width: 0;
+}
+.scouted-report-metric small {
+  color: #b7d9ec;
+  font-size: .6rem;
+  font-weight: 850;
+}
+.scouted-report-metric strong {
+  overflow: hidden;
+  color: #fff4d3;
+  font-size: .88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scouted-report-metric em {
+  color: rgba(229,242,249,.62);
+  font-size: .56rem;
+  font-style: normal;
+}
+.scouted-report-reinforcement-list {
+  display: grid;
+  gap: .3rem;
+}
+.scouted-report-reinforcement-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+  min-height: 42px;
+  padding: .38rem .48rem;
+  border: 1px solid rgba(92, 189, 115, .24);
+  border-radius: 8px;
+  background: rgba(18, 61, 51, .58);
+}
+.scouted-report-reinforcement-row > span {
+  color: #9ee4ae;
+  text-align: center;
+}
+.scouted-report-reinforcement-row > div {
+  display: grid;
+  min-width: 0;
+}
+.scouted-report-reinforcement-row small {
+  color: #a9c9d9;
+  font-size: .58rem;
+}
+.scouted-report-reinforcement-row > strong {
+  color: #dff7c9;
+  font-size: .73rem;
+  white-space: nowrap;
+}
+.scouted-report-skills {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 .7rem;
+}
+.scouted-report-empty,
+.scouted-report-camp-note,
+.scouted-report-snapshot-note {
+  margin: 0;
+  color: #cde7f4;
+  font-size: .7rem;
+  line-height: 1.45;
+}
+.scouted-report-empty {
+  padding: .52rem;
+  border-radius: 8px;
+  background: rgba(13, 44, 69, .58);
+}
+.scouted-report-snapshot-note {
+  padding: .5rem .62rem;
+  border-left: 3px solid #e7b94f;
+  background: rgba(211, 161, 63, .08);
+}
+
+@media (max-width: 620px) {
+  .scouted-report-alert {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: .52rem;
+    padding: .58rem;
+  }
+  .scouted-report-attacker-flag { width: 44px; height: 40px; }
+  .scouted-report-route { grid-template-columns: minmax(0, 1fr); }
+  .scouted-report-route-arrow { min-height: 20px; transform: rotate(90deg); }
+  .scouted-report-time { grid-template-columns: minmax(0, 1fr) auto; }
+  .scouted-report-time strong { grid-column: 1 / -1; }
+  .scouted-report-metrics,
+  .scouted-report-skills { grid-template-columns: minmax(0, 1fr); }
+  .scouted-report-reinforcement-row { grid-template-columns: 24px minmax(0, 1fr); }
+  .scouted-report-reinforcement-row > strong { grid-column: 2; }
 }
 
 .objective-clan-link {
