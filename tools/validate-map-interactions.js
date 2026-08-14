@@ -460,7 +460,8 @@ assert.match(
 );
 
 const strongholdWheelSource = extractFunction("renderSelectedStrongholdWheel");
-assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective-action-wheel/, "Strongholds should use the camp-style action plaque.");
+assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective-action-wheel/, "Strongholds should preserve their objective-relative action-wheel placement.");
+assert.match(strongholdWheelSource, /gold-camp-wheel-action cl-action-button/, "Strongholds must use the shared city/objective action-button construction.");
 assert.match(strongholdWheelSource, /Scout[\s\S]*?Info[\s\S]*?Attack/, "Foreign strongholds should expose Scout, Info, and Attack actions.");
 assert.match(strongholdWheelSource, /Send[\s\S]*?Reinforce/, "Owned strongholds should preserve send and reinforcement actions.");
 assert.doesNotMatch(strongholdWheelSource, /Level|upgradeCity/, "Stronghold action plaques must not expose leveling.");

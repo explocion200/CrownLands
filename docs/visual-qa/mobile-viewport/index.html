@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Mobile Viewport QA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px; color: #2f2113; background: #d7c49d; font-family: Georgia, serif; }
+    h1 { margin: 0 0 5px; font-size: 22px; }
+    p { margin: 0 0 16px; color: #5a4632; }
+    main { display: grid; grid-template-columns: repeat(4, 390px); gap: 14px; align-items: start; }
+    figure { margin: 0; }
+    figcaption { margin-bottom: 6px; color: #72363a; font-weight: 700; }
+    iframe { width: 390px; height: 620px; display: block; border: 2px solid #997643; background: #d7c49d; box-shadow: 0 10px 28px #2f211355; }
+    @media (max-width: 1680px) { main { grid-template-columns: repeat(2, 390px); } }
+  </style>
+</head>
+<body>
+  <h1>Crownlands Mobile Scroll Safety</h1>
+  <p>Each frame is a real 390 × 620 CSS viewport. Bottom controls remain inside a reachable vertical scroll region.</p>
+  <main>
+    <figure><figcaption>Battle Reports</figcaption><iframe title="Battle Reports mobile viewport" src="frame.html#reports"></iframe></figure>
+    <figure><figcaption>Daily Rewards</figcaption><iframe title="Daily Rewards mobile viewport" src="frame.html#daily"></iframe></figure>
+    <figure><figcaption>Profile Settings</figcaption><iframe title="Profile Settings mobile viewport" src="frame.html#profile"></iframe></figure>
+    <figure><figcaption>Inner Castle / Gear</figcaption><iframe title="Gear mobile viewport" src="frame.html#gear"></iframe></figure>
+  </main>
+</body>
+</html>

@@ -1,0 +1,187 @@
+/* Crownlands mobile viewport and scroll safety --------------------------- */
+
+:root {
+  --cl-mobile-ui-gap: .35rem;
+  --cl-mobile-ui-top: max(var(--cl-mobile-ui-gap), env(safe-area-inset-top, 0px));
+  --cl-mobile-ui-right: max(var(--cl-mobile-ui-gap), env(safe-area-inset-right, 0px));
+  --cl-mobile-ui-bottom: max(var(--cl-mobile-ui-gap), env(safe-area-inset-bottom, 0px));
+  --cl-mobile-ui-left: max(var(--cl-mobile-ui-gap), env(safe-area-inset-left, 0px));
+  --cl-mobile-ui-height: calc(100dvh - var(--cl-mobile-ui-top) - var(--cl-mobile-ui-bottom));
+  --cl-mobile-ui-width: calc(100vw - var(--cl-mobile-ui-left) - var(--cl-mobile-ui-right));
+}
+
+@media (max-width: 900px), (max-height: 700px), (pointer: coarse) {
+  /* Login/setup content must remain reachable when browser chrome, a notch,
+     or the on-screen keyboard reduces the visual viewport. */
+  .setup-screen {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-block: var(--cl-mobile-ui-top) var(--cl-mobile-ui-bottom);
+  }
+
+  .setup-card {
+    max-height: var(--cl-mobile-ui-height);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Every reusable game dialog receives the same dynamic-viewport boundary.
+     The title stays in the card header and all remaining content can scroll. */
+  .modal {
+    box-sizing: border-box;
+    max-width: var(--cl-mobile-ui-width) !important;
+    max-height: 100dvh;
+    margin: auto;
+  }
+
+  .modal[open] {
+    overflow: visible;
+  }
+
+  .modal:not(.level-up-reward-modal) > .modal-card {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 0;
+    max-height: var(--cl-mobile-ui-height) !important;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .modal:not(.level-up-reward-modal) > .modal-card #modalBody {
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: auto;
+    scroll-padding-block: .65rem calc(.85rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .modal:not(.level-up-reward-modal) > .modal-card #modalBody > :last-child {
+    scroll-margin-bottom: max(.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* These screens previously replaced the shared scroll region with hidden
+     overflow. Keep their internal layouts, but always provide a parent escape. */
+  :is(
+    .daily-login-reward-modal,
+    .common-gear-box-modal,
+    .common-gear-building-modal
+  ) > .modal-card {
+    height: var(--cl-mobile-ui-height) !important;
+  }
+
+  :is(
+    .daily-login-reward-modal,
+    .inner-castle-modal,
+    .common-gear-box-modal,
+    .common-gear-building-modal
+  ) > .modal-card #modalBody {
+    overflow-y: auto !important;
+  }
+
+  :is(
+    .seasonal-achievement-list,
+    .common-gear-building-shell,
+    .common-gear-reveal-shell,
+    .clan-roster,
+    .deed-camp-history-list
+  ) {
+    overscroll-behavior-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* The Profile family is a full-screen layer rather than a dialog. Bound the
+     shell to the dynamic viewport and preserve scrolling for every active tab. */
+  .profile-screen,
+  .profile-screen.skills-active,
+  .profile-screen.settings-active,
+  .profile-screen.clan-active,
+  .profile-screen.flag-editor-active {
+    width: min(860px, var(--cl-mobile-ui-width));
+    max-width: var(--cl-mobile-ui-width);
+    height: var(--cl-mobile-ui-height) !important;
+    max-height: var(--cl-mobile-ui-height);
+    min-height: 0;
+  }
+
+  .profile-screen > :is(
+    .profile-view,
+    .profile-skills-view,
+    .profile-settings-view,
+    .clan-view,
+    .flag-editor-view
+  ) {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: auto;
+    scroll-padding-block: .65rem calc(.85rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .profile-screen > :is(
+    .profile-view,
+    .profile-skills-view,
+    .profile-settings-view,
+    .clan-view,
+    .flag-editor-view
+  ) > :last-child {
+    scroll-margin-bottom: max(.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Selected-objective controls can grow taller than a short phone viewport. */
+  .commander-panel.visible {
+    max-height: calc(100dvh - 70px - var(--cl-mobile-ui-top) - var(--cl-mobile-ui-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: max(.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .rotate-warning {
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: var(--cl-mobile-ui-top) var(--cl-mobile-ui-right) var(--cl-mobile-ui-bottom) var(--cl-mobile-ui-left);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rotate-warning > div {
+    max-height: var(--cl-mobile-ui-height);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* Level-up uses its own card/body instead of #modalBody. */
+  .level-up-reward-modal .level-up-reward-card {
+    max-height: var(--cl-mobile-ui-height);
+  }
+
+  .level-up-reward-modal .level-up-reward-body {
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-padding-bottom: max(.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  :is(.modal-actions, .troop-slider-actions, .daily-mission-confirmation footer) {
+    scroll-margin-bottom: max(.75rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Older embedded browsers use this fallback until dynamic viewport units are
+   available. Keep it after the primary rules so only unsupported clients use it. */
+@supports not (height: 100dvh) {
+  :root {
+    --cl-mobile-ui-height: calc(100vh - var(--cl-mobile-ui-top) - var(--cl-mobile-ui-bottom));
+  }
+}

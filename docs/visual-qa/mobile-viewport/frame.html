@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mobile Viewport Frame</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #d7c49d; }
+    button { font: inherit; }
+    .qa-screen { position: fixed; inset: 0; width: calc(100% - .5rem) !important; margin: auto; display: none; transform: none !important; }
+    .qa-screen:target { display: grid; place-items: center; }
+    .qa-screen > .modal-card { width: 100%; }
+    .qa-row { min-height: 68px; display: grid; align-content: center; gap: 4px; margin-bottom: 8px; padding: 10px; border: 1px solid #997643; background: #e7d6b4; }
+    .qa-row strong { color: #2f2113; }
+    .qa-row span, .qa-row small { color: #5a4632; }
+    .qa-bottom { min-height: 52px; display: grid; place-items: center; margin-top: 8px; border: 2px solid #997643; color: #fff8e8; background: #542728; }
+    .qa-profile.profile-screen { display: none; }
+    .qa-profile.profile-screen:target { display: grid; visibility: visible; opacity: 1; pointer-events: auto; }
+    .qa-profile .profile-settings-view { width: 100%; }
+    .qa-gear-shell { min-height: 840px; display: grid; align-content: start; gap: 10px; padding: 8px; }
+    .qa-gear-card { min-height: 150px; display: grid; place-items: center; border: 1px solid #997643; background: #e7d6b4; color: #2f2113; }
+    .daily-login-reward-modal .modal-card #modalBody { align-content: start; }
+    .daily-reward-panel { min-height: 900px; }
+  </style>
+</head>
+<body>
+  <section id="reports" class="qa-screen modal battle-report-modal" open>
+    <article class="modal-card">
+      <h2>Battle Reports</h2>
+      <div id="modalBody">
+        <div class="battle-report-panel">
+          <div class="qa-row"><strong>Victory at Redwater</strong><span>Attack report</span></div>
+          <div class="qa-row"><strong>Scout reached Stonewatch</strong><span>Scout intelligence</span></div>
+          <div class="qa-row"><strong>Defense of Highfield</strong><span>Defense report</span></div>
+          <div class="qa-row"><strong>Reinforcements arrived</strong><span>Clan report</span></div>
+          <div class="qa-row"><strong>March returned home</strong><span>Movement report</span></div>
+          <div class="qa-row"><strong>Citadel assault</strong><span>Objective report</span></div>
+          <div class="qa-row"><strong>Stronghold captured</strong><span>Battle report</span></div>
+          <div class="qa-row"><strong>Camp reward earned</strong><span>Reward report</span></div>
+          <footer class="modal-actions qa-bottom"><button type="button">View oldest report</button></footer>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section id="daily" class="qa-screen modal daily-login-reward-modal" open>
+    <article class="modal-card">
+      <h2>Daily Rewards</h2>
+      <div id="modalBody">
+        <div class="daily-reward-panel">
+          <div class="qa-row"><strong>Day 1</strong><span>Gold claimed</span></div>
+          <div class="qa-row"><strong>Day 2</strong><span>Troops claimed</span></div>
+          <div class="qa-row"><strong>Day 3</strong><span>March Order claimed</span></div>
+          <div class="qa-row"><strong>Day 4</strong><span>Gold claimed</span></div>
+          <div class="qa-row"><strong>Day 5</strong><span>Troops ready</span></div>
+          <div class="qa-row"><strong>Day 6</strong><span>Royal Tax Decree</span></div>
+          <div class="qa-row"><strong>Day 7</strong><span>Weekly chest</span></div>
+          <div class="qa-bottom">Last reward remains reachable</div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section id="profile" class="qa-screen qa-profile profile-screen settings-active open">
+    <header class="profile-screen-header"><div class="profile-screen-heading"><span>Kingdom</span><h2>Settings</h2></div></header>
+    <div class="profile-settings-view">
+      <section class="profile-settings-section qa-row"><strong>Music</strong><span>Volume and mute controls</span></section>
+      <section class="profile-settings-section qa-row"><strong>Effects</strong><span>Volume and mute controls</span></section>
+      <section class="profile-settings-section qa-row"><strong>Notifications</strong><span>Incoming attacks and scouts</span></section>
+      <section class="profile-settings-section qa-row"><strong>Privacy</strong><span>Account and public profile</span></section>
+      <section class="profile-settings-section qa-row"><strong>Accessibility</strong><span>Animation and interface options</span></section>
+      <section class="profile-settings-section qa-row"><strong>Account</strong><span>Authentication and data controls</span></section>
+      <button class="privacy-settings-link qa-bottom" type="button">Open Privacy Policy</button>
+    </div>
+  </section>
+
+  <section id="gear" class="qa-screen modal common-gear-building-modal" open>
+    <article class="modal-card">
+      <h2>Inner Castle Gear</h2>
+      <div id="modalBody">
+        <div class="common-gear-building-shell qa-gear-shell">
+          <div class="qa-gear-card">Commander equipment</div>
+          <div class="qa-gear-card">Selected item details</div>
+          <div class="qa-gear-card">Inventory strip</div>
+          <div class="qa-gear-card">Equipment bonuses</div>
+          <button class="qa-bottom" type="button">Back to Inner Castle</button>
+        </div>
+      </div>
+    </article>
+  </section>
+</body>
+</html>

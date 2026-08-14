@@ -1843,50 +1843,15 @@ input {
 .gold-camp-wheel-action {
   position: absolute;
   top: calc(100% - 3px);
-  width: 48px;
-  height: 48px;
   transform: translate(-50%, -50%);
-  display: grid;
-  place-items: center;
-  gap: 2px;
-  padding: 5px 3px 4px;
-  border: 2px solid #d4a443;
-  border-radius: 4px;
-  color: #fff8d4;
-  background: linear-gradient(180deg, #245c88, #0b2946);
-  box-shadow: inset 0 0 0 1px rgba(255, 236, 167, .2), 0 5px 9px rgba(0, 0, 0, .62);
-  font-family: "Cinzel", Georgia, serif;
   pointer-events: auto;
-}
-.gold-camp-wheel-action:hover:not(:disabled),
-.gold-camp-wheel-action:focus-visible {
-  filter: brightness(1.16);
-  border-color: #ffe39a;
-}
-.gold-camp-wheel-action > span {
-  font-size: 1.05rem;
-  line-height: 1;
-}
-.gold-camp-wheel-action strong {
-  max-width: 100%;
-  font-size: .52rem;
-  line-height: 1;
-  overflow-wrap: anywhere;
-}
-.gold-camp-wheel-action:disabled {
-  filter: grayscale(.75);
-  opacity: .72;
 }
 .camp-scout-action,
 .camp-recall-action {
   left: calc(50% - var(--camp-action-offset, 92px));
 }
-.camp-recall-action {
-  background: linear-gradient(180deg, #7a3d28, #351615);
-}
 .camp-order-action {
   left: calc(50% + var(--camp-action-offset, 92px));
-  background: linear-gradient(180deg, #9c671e, #4a2b0b);
 }
 .camp-info-action {
   left: 50%;
@@ -1895,14 +1860,10 @@ input {
 .camp-report-action {
   left: calc(50% + var(--camp-action-offset, 92px));
   top: calc(100% + 48px);
-  background: linear-gradient(180deg, #4b5579, #171e39);
 }
 .camp-rally-action {
   left: calc(50% - var(--camp-action-offset, 92px));
   top: calc(100% + 48px);
-  border-color: #e8c064;
-  color: #fff6d1;
-  background: linear-gradient(180deg, #7b4f9c, #34204e);
 }
 .gold-camp-info-panel {
   display: grid;
@@ -2935,7 +2896,7 @@ input {
   align-content: start;
   gap: .13rem;
   color: white;
-  background: #176cb7;
+  background: #b68a43;
   clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
 }
 .city-owner-flag {
@@ -2955,7 +2916,7 @@ input {
   min-width: 82px;
   padding: .28rem .48rem;
   color: white;
-  background: #247dce;
+  background: #b68a43;
   font-size: .76rem;
   line-height: 1;
   font-weight: 1000;
@@ -2996,37 +2957,37 @@ input {
   clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
 }
 .city-node.enemy {
-  --enemy-city-ui: #e12635;
-  --enemy-city-ui-dark: #7b1520;
-  --enemy-city-ui-border: #ff727c;
-  --enemy-city-name-bg: rgba(120, 16, 25, .88);
-  --enemy-city-name-border: rgba(255, 114, 124, .66);
+  --enemy-city-ui: #b3261e;
+  --enemy-city-ui-dark: #6d1713;
+  --enemy-city-ui-border: #d66b64;
+  --enemy-city-name-bg: rgba(109, 23, 19, .9);
+  --enemy-city-name-border: rgba(214, 107, 100, .72);
 }
 .city-node.enemy.enemy-power-protected {
-  --enemy-city-ui: #ed8b8b;
-  --enemy-city-ui-dark: #a64e50;
-  --enemy-city-ui-border: #ffd0d0;
-  --enemy-city-name-bg: rgba(151, 65, 67, .9);
-  --enemy-city-name-border: rgba(255, 208, 208, .8);
+  --enemy-city-ui: #c9786f;
+  --enemy-city-ui-dark: #8f4c46;
+  --enemy-city-ui-border: #e3aaa4;
+  --enemy-city-name-bg: rgba(143, 76, 70, .92);
+  --enemy-city-name-border: rgba(227, 170, 164, .8);
 }
 .city-node.enemy.enemy-power-in-range {
-  --enemy-city-ui: #e12635;
-  --enemy-city-ui-dark: #7b1520;
-  --enemy-city-ui-border: #ff727c;
-  --enemy-city-name-bg: rgba(120, 16, 25, .88);
-  --enemy-city-name-border: rgba(255, 114, 124, .66);
+  --enemy-city-ui: #b3261e;
+  --enemy-city-ui-dark: #6d1713;
+  --enemy-city-ui-border: #d66b64;
+  --enemy-city-name-bg: rgba(109, 23, 19, .9);
+  --enemy-city-name-border: rgba(214, 107, 100, .72);
 }
 .city-node.enemy.enemy-power-overpowering {
-  --enemy-city-ui: #59121a;
-  --enemy-city-ui-dark: #2b070b;
-  --enemy-city-ui-border: #9c3540;
-  --enemy-city-name-bg: rgba(38, 5, 9, .94);
-  --enemy-city-name-border: rgba(156, 53, 64, .74);
+  --enemy-city-ui: #4b1418;
+  --enemy-city-ui-dark: #2d0b0e;
+  --enemy-city-ui-border: #91443d;
+  --enemy-city-name-bg: rgba(45, 11, 14, .95);
+  --enemy-city-name-border: rgba(145, 68, 61, .76);
 }
 .city-node.enemy .foreign-city-shield { background: var(--enemy-city-ui); }
 .city-node.player2 .foreign-city-shield { background: #6946a9; }
 .city-node.player3 .foreign-city-shield { background: #287e4c; }
-.city-node.neutral .foreign-city-shield { background: #6b655b; }
+.city-node.neutral .foreign-city-shield { background: #77736a; }
 .foreign-city-shield .city-owner-flag { width: 38px; height: 30px; border-color: rgba(255,255,255,.78); }
 .selected-foreign-label { gap: .18rem; }
 .foreign-ruler-name {
@@ -3106,8 +3067,8 @@ input {
 .city-node.player3 .foreign-selected-data { background: #256f45; }
 .city-node.player3 .foreign-selected-crest { background: #123d27; border-color: #4ca873; }
 .city-node.neutral .foreign-selected-level,
-.city-node.neutral .foreign-selected-data { background: #625c52; }
-.city-node.neutral .foreign-selected-crest { background: #37332e; border-color: #8c8476; }
+.city-node.neutral .foreign-selected-data { background: #77736a; }
+.city-node.neutral .foreign-selected-crest { background: #4f4c46; border-color: #9b978e; }
 .city-node.player2 .owner-flag { color: #160b36; background: #9d75ff; }
 .city-node.player3 .owner-flag { color: #052813; background: #56d486; }
 .city-node.enemy .owner-flag { color: white; background: var(--red); }
@@ -3116,7 +3077,7 @@ input {
 
 .city-node.player.main-city-node .city-owner-column,
 .city-node.player.main-city-node .city-army-count {
-  background: #123a60;
+  background: #b68a43;
 }
 .city-node.enemy.main-city-node .foreign-city-shield,
 .city-node.enemy.main-city-node .foreign-selected-level,
@@ -3161,48 +3122,18 @@ input {
 }
 .city-wheel-action {
   position: absolute;
-  width: 62px;
-  min-height: 62px;
-  padding: .35rem .3rem .45rem;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: .05rem;
-  clip-path: polygon(50% 0, 94% 23%, 94% 76%, 50% 100%, 6% 76%, 6% 23%);
-  color: white;
-  border: 0;
-  background: #205d91;
-  filter: drop-shadow(0 5px 3px rgba(0,0,0,.52));
   pointer-events: auto;
 }
-.city-wheel-action:disabled { filter: grayscale(.75) drop-shadow(0 4px 3px rgba(0,0,0,.4)); }
-.city-wheel-action .wheel-icon { font-size: 1.2rem; line-height: 1; }
-.wheel-action-name { font-size: .58rem; font-weight: 950; }
-.wheel-cost { min-width: 44px; padding: .12rem .24rem; border-radius: 5px; color: #fff7cc; background: #0b3b61; font-size: .58rem; font-weight: 1000; }
-.wheel-level { left: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); background: #38a94e; }
-.wheel-send { right: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); color: #251600; background: #f2b52f; }
-.wheel-scout { left: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); background: #2d83c8; }
-.wheel-attack { right: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); color: #251600; background: #f2b52f; }
-.wheel-report { right: var(--wheel-extra-right, -50px); top: var(--wheel-extra-top, 10px); width: 56px; min-height: 56px; background: #24547d; }
-.wheel-report .wheel-icon { font-size: 1.15rem; }
-.wheel-scout-nearby { right: var(--wheel-extra-right, -50px); top: var(--wheel-extra-top, 10px); width: 58px; min-height: 58px; background: #2d83c8; }
-.wheel-scout-nearby.armed { background: #38a94e; animation: scoutReadyPulse .75s infinite alternate; }
-.wheel-scout-nearby .wheel-icon { font-size: 1.35rem; }
-.wheel-regroup { left: var(--wheel-extra-left, -50px); top: var(--wheel-extra-top, 10px); width: 58px; min-height: 58px; background: #bd3f48; }
-.wheel-regroup.armed { background: #d25050; animation: regroupReadyPulse .75s infinite alternate; }
-.wheel-regroup .wheel-icon { font-size: 1.35rem; }
-.city-wheel-action.busy {
-  cursor: progress;
-  animation: none;
-  filter: drop-shadow(0 0 9px rgba(159, 221, 255, .9)) drop-shadow(0 5px 3px rgba(0,0,0,.52));
-}
-.city-wheel-action.busy .wheel-icon { animation: bulkOrderBusySpin .85s linear infinite; }
-@keyframes scoutReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(111,255,169,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
-@keyframes regroupReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(255,132,132,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
 @keyframes bulkOrderBusySpin { to { transform: rotate(1turn); } }
 .foreign-city-action-wheel .city-wheel-ring { border-color: rgba(22, 83, 123, .95); border-top-color: transparent; }
-.wheel-info { left: var(--wheel-info-left, 76px); bottom: var(--wheel-info-bottom, 0); width: 58px; min-height: 58px; background: #24547d; }
-.wheel-info .wheel-icon { font-family: Georgia, serif; font-size: 1.45rem; font-weight: 1000; }
+.wheel-level { left: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); }
+.wheel-send { right: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); }
+.wheel-scout { left: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); }
+.wheel-attack { right: var(--wheel-side-offset, 2px); top: var(--wheel-side-top, 68px); }
+.wheel-report { right: var(--wheel-extra-right, -50px); top: var(--wheel-extra-top, 10px); }
+.wheel-scout-nearby { right: var(--wheel-extra-right, -50px); top: var(--wheel-extra-top, 10px); }
+.wheel-regroup { left: var(--wheel-extra-left, -50px); top: var(--wheel-extra-top, 10px); }
+.wheel-info { left: var(--wheel-info-left, 76px); bottom: var(--wheel-info-bottom, 0); }
 
 .army-token {
   position: absolute;
@@ -7699,15 +7630,15 @@ button.inventory-slot {
   background: radial-gradient(circle at 50% 0, rgba(47,122,74,.18), transparent 44%), #101b22;
 }
 .city-node.clan-ally .city-ring {
-  border-color: #5fd27c;
-  background: rgba(43, 139, 70, .28);
-  box-shadow: 0 0 0 4px rgba(70,181,99,.2), 0 0 22px rgba(69,218,108,.7);
+  border-color: #667a4a;
+  background: rgba(102, 122, 74, .28);
+  box-shadow: 0 0 0 4px rgba(102, 122, 74, .2), 0 0 22px rgba(102, 122, 74, .7);
 }
 .city-node.clan-ally .foreign-city-shield {
-  background: #267a43;
+  background: #667a4a;
 }
 .city-node.clan-ally .foreign-selected-banner {
-  box-shadow: 0 0 18px rgba(67,205,103,.7);
+  box-shadow: 0 0 18px rgba(102, 122, 74, .7);
 }
 .city-node.clan-ally.targeted:not(.stronghold-node)::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%2379d895' stroke-width='3.5' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -7715,46 +7646,37 @@ button.inventory-slot {
 }
 .city-node.clan-ally .foreign-selected-level,
 .city-node.clan-ally .foreign-selected-data {
-  background: #267a43;
+  background: #667a4a;
 }
 .city-node.clan-ally .foreign-selected-crest {
-  background: #123d27;
-  border-color: #8fe2a5;
+  background: #445032;
+  border-color: #92a174;
 }
 .city-node.clan-ally .foreign-ruler-name-inline {
-  color: #eaffef;
-  background: rgba(22, 92, 46, .94);
-  border-color: rgba(134, 217, 156, .86);
+  color: #fff8e8;
+  background: rgba(68, 80, 50, .94);
+  border-color: rgba(146, 161, 116, .86);
 }
 .city-node.clan-ally .foreign-garrison.unknown {
-  color: #d8ffe2;
+  color: #f2e2bf;
 }
 .city-node.clan-ally.stronghold-node.targeted .stronghold-glow {
   display: block;
-  border-color: rgba(121, 216, 149, .98);
-  background: radial-gradient(ellipse at center, rgba(72, 203, 109, .3), rgba(15, 75, 38, .18) 62%, transparent 72%);
-  box-shadow: 0 0 0 5px rgba(70,181,99,.22), 0 0 30px rgba(69,218,108,.72);
+  border-color: rgba(146, 161, 116, .98);
+  background: radial-gradient(ellipse at center, rgba(102, 122, 74, .3), rgba(68, 80, 50, .18) 62%, transparent 72%);
+  box-shadow: 0 0 0 5px rgba(102, 122, 74, .22), 0 0 30px rgba(102, 122, 74, .72);
 }
 .clan-ally-action-wheel .city-wheel-ring {
-  border-color: rgba(121, 216, 149, .94) !important;
+  border-color: rgba(146, 161, 116, .94) !important;
   border-top-color: transparent !important;
-  box-shadow: 0 0 18px rgba(67, 205, 103, .48);
-}
-.gold-camp-action-wheel.clan-ally-action-wheel .gold-camp-wheel-action {
-  border-color: rgba(131, 225, 154, .72);
+  box-shadow: 0 0 18px rgba(102, 122, 74, .48);
 }
 .camp-node.clan-ally .camp-art {
-  filter: drop-shadow(0 0 8px rgba(76, 231, 117, .95)) drop-shadow(0 0 18px rgba(42, 155, 76, .82));
+  filter: drop-shadow(0 0 8px rgba(146, 161, 116, .95)) drop-shadow(0 0 18px rgba(102, 122, 74, .82));
 }
 .camp-node.clan-ally .gold-camp-label {
   border-color: #79d895;
   background: linear-gradient(180deg, rgba(37, 111, 60, .96), rgba(12, 54, 30, .96));
-}
-.wheel-reinforce,
-.clan-reinforce-action {
-  border-color: rgba(131, 225, 154, .72) !important;
-  color: #ecfff1 !important;
-  background: linear-gradient(180deg, rgba(58, 136, 76, .98), rgba(18, 71, 38, .98)) !important;
 }
 .holding-reinforcement-panel {
   grid-column: 1 / -1;
@@ -11615,35 +11537,6 @@ select:focus {
 .foreign-city-action-wheel .city-wheel-ring {
   border-color: rgba(211, 161, 63, .78);
   border-top-color: transparent;
-}
-
-.city-wheel-action {
-  color: #fff5d7;
-  background: linear-gradient(180deg, #1e628a, #082a46);
-  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .56)) drop-shadow(0 0 2px rgba(243, 212, 135, .52));
-}
-
-.wheel-send,
-.wheel-attack {
-  color: #271807;
-  background: linear-gradient(180deg, var(--ui-gold-bright), #a8691b);
-}
-
-.wheel-level,
-.wheel-scout-nearby.armed {
-  color: #f4f8e8;
-  background: linear-gradient(180deg, #4f8447, #173a27);
-}
-
-.wheel-regroup,
-.wheel-regroup.armed {
-  background: linear-gradient(180deg, #a6423c, #4b1618);
-}
-
-.wheel-cost {
-  color: var(--ui-gold-bright);
-  border: 1px solid rgba(211, 161, 63, .32);
-  background: rgba(3, 18, 31, .9);
 }
 
 .effect-status-badge,

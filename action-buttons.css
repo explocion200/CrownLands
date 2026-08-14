@@ -1,0 +1,248 @@
+/* Crownlands shared map action-button system ----------------------------- */
+
+:root {
+  --cl-action-size: 64px;
+  --cl-action-border-width: 2px;
+  --cl-action-shape: polygon(50% 0, 94% 23%, 94% 76%, 50% 100%, 6% 76%, 6% 23%);
+
+  --cl-action-info-bg: linear-gradient(180deg, #e7d6b4, #d0b98e);
+  --cl-action-info-border: #997643;
+  --cl-action-info-text: #2f2113;
+  --cl-action-info-edge: #542f24;
+
+  --cl-action-send-bg: linear-gradient(180deg, #5f7888, #3e5664);
+  --cl-action-send-border: #8ea0a8;
+  --cl-action-send-text: #f2e2bf;
+  --cl-action-send-edge: #263a45;
+
+  --cl-action-attack-bg: linear-gradient(180deg, #9b4a42, #6d2927);
+  --cl-action-attack-border: #b96b65;
+  --cl-action-attack-text: #f2e2bf;
+  --cl-action-attack-edge: #431718;
+
+  --cl-action-reinforce-bg: linear-gradient(180deg, #74875a, #52633c);
+  --cl-action-reinforce-border: #92a174;
+  --cl-action-reinforce-text: #f2e2bf;
+  --cl-action-reinforce-edge: #344326;
+
+  --cl-action-rally-bg: linear-gradient(180deg, #786581, #55445e);
+  --cl-action-rally-border: #96839c;
+  --cl-action-rally-text: #f2e2bf;
+  --cl-action-rally-edge: #33283a;
+
+  --cl-action-scout-bg: linear-gradient(180deg, #a63b30, #4f1515);
+  --cl-action-scout-border: #d66b64;
+  --cl-action-scout-text: #fff8e8;
+  --cl-action-scout-edge: #300b0d;
+
+  --cl-action-royal-bg: linear-gradient(180deg, #72363a, #542728);
+  --cl-action-royal-border: #997643;
+  --cl-action-royal-text: #f2e2bf;
+  --cl-action-royal-edge: #331617;
+
+  --cl-action-disabled-bg: #c7b99b;
+  --cl-action-disabled-border: #a59070;
+  --cl-action-disabled-text: #8c8373;
+  --cl-action-disabled-edge: #766951;
+}
+
+:is(.city-wheel-action, .gold-camp-wheel-action).cl-action-button {
+  --cl-action-bg: var(--cl-action-info-bg);
+  --cl-action-border: var(--cl-action-info-border);
+  --cl-action-text: var(--cl-action-info-text);
+  --cl-action-edge: var(--cl-action-info-edge);
+
+  width: var(--cl-action-size) !important;
+  min-width: var(--cl-action-size) !important;
+  height: var(--cl-action-size) !important;
+  min-height: var(--cl-action-size) !important;
+  box-sizing: border-box;
+  display: grid !important;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 5px 7px !important;
+  border: var(--cl-action-border-width) solid var(--cl-action-border) !important;
+  border-radius: 0 !important;
+  clip-path: var(--cl-action-shape);
+  color: var(--cl-action-text) !important;
+  background: var(--cl-action-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, .28),
+    inset 0 -4px 0 var(--cl-action-edge) !important;
+  filter: drop-shadow(0 5px 4px rgba(0, 0, 0, .56));
+  font-family: "Cinzel", Georgia, serif !important;
+  font-size: .56rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow: none !important;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  pointer-events: auto;
+  transition: filter 130ms ease, box-shadow 130ms ease;
+}
+
+.cl-action-button :is(span, strong, .cl-icon) {
+  color: inherit !important;
+  fill: currentColor;
+  text-shadow: none !important;
+}
+
+.cl-action-button > :is(.wheel-icon, span:first-child) {
+  display: grid;
+  place-items: center;
+  min-height: 1.12rem;
+  font-size: 1.12rem !important;
+  line-height: 1;
+}
+
+.cl-action-button > :is(.wheel-action-name, strong) {
+  display: block;
+  max-width: 100%;
+  font-size: .53rem !important;
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.cl-action-button .wheel-cost {
+  min-width: 0;
+  max-width: 100%;
+  padding: .1rem .2rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: inherit !important;
+  background: rgba(20, 13, 9, .24) !important;
+  font-size: .48rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.cl-action-button.cl-action-info {
+  --cl-action-bg: var(--cl-action-info-bg);
+  --cl-action-border: var(--cl-action-info-border);
+  --cl-action-text: var(--cl-action-info-text);
+  --cl-action-edge: var(--cl-action-info-edge);
+}
+
+.cl-action-button.cl-action-send {
+  --cl-action-bg: var(--cl-action-send-bg);
+  --cl-action-border: var(--cl-action-send-border);
+  --cl-action-text: var(--cl-action-send-text);
+  --cl-action-edge: var(--cl-action-send-edge);
+}
+
+.cl-action-button.cl-action-attack {
+  --cl-action-bg: var(--cl-action-attack-bg);
+  --cl-action-border: var(--cl-action-attack-border);
+  --cl-action-text: var(--cl-action-attack-text);
+  --cl-action-edge: var(--cl-action-attack-edge);
+}
+
+.cl-action-button.cl-action-reinforce {
+  --cl-action-bg: var(--cl-action-reinforce-bg);
+  --cl-action-border: var(--cl-action-reinforce-border);
+  --cl-action-text: var(--cl-action-reinforce-text);
+  --cl-action-edge: var(--cl-action-reinforce-edge);
+}
+
+.cl-action-button.cl-action-rally {
+  --cl-action-bg: var(--cl-action-rally-bg);
+  --cl-action-border: var(--cl-action-rally-border);
+  --cl-action-text: var(--cl-action-rally-text);
+  --cl-action-edge: var(--cl-action-rally-edge);
+}
+
+.cl-action-button.cl-action-scout {
+  --cl-action-bg: var(--cl-action-scout-bg);
+  --cl-action-border: var(--cl-action-scout-border);
+  --cl-action-text: var(--cl-action-scout-text);
+  --cl-action-edge: var(--cl-action-scout-edge);
+}
+
+.cl-action-button.cl-action-royal {
+  --cl-action-bg: var(--cl-action-royal-bg);
+  --cl-action-border: var(--cl-action-royal-border);
+  --cl-action-text: var(--cl-action-royal-text);
+  --cl-action-edge: var(--cl-action-royal-edge);
+}
+
+.cl-action-button:hover:not(:disabled) {
+  filter: brightness(1.1) drop-shadow(0 6px 5px rgba(0, 0, 0, .58));
+}
+
+.cl-action-button:active:not(:disabled) {
+  filter: brightness(.91) drop-shadow(0 3px 3px rgba(0, 0, 0, .5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, .14),
+    inset 0 -2px 0 var(--cl-action-edge) !important;
+}
+
+.cl-action-button:focus-visible {
+  outline: 3px solid #ffe29a;
+  outline-offset: 3px;
+  filter:
+    drop-shadow(0 0 6px rgba(255, 226, 154, .95))
+    drop-shadow(0 5px 4px rgba(0, 0, 0, .56));
+}
+
+.cl-action-button:disabled:not(.is-pending):not(.busy):not([aria-busy="true"]) {
+  --cl-action-bg: var(--cl-action-disabled-bg);
+  --cl-action-border: var(--cl-action-disabled-border);
+  --cl-action-text: var(--cl-action-disabled-text);
+  --cl-action-edge: var(--cl-action-disabled-edge);
+  color: var(--cl-action-disabled-text) !important;
+  border-color: var(--cl-action-disabled-border) !important;
+  background: var(--cl-action-disabled-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, .16),
+    inset 0 -4px 0 var(--cl-action-disabled-edge) !important;
+  cursor: not-allowed;
+  opacity: 1;
+  filter: grayscale(.18) drop-shadow(0 3px 3px rgba(0, 0, 0, .36));
+}
+
+.cl-action-button:is(.busy, [aria-busy="true"]) {
+  cursor: progress;
+  animation: clActionBusyPulse .85s ease-in-out infinite alternate;
+}
+
+.cl-action-button:is(.busy, [aria-busy="true"]) > :is(.wheel-icon, span:first-child) {
+  animation: bulkOrderBusySpin .85s linear infinite;
+}
+
+.cl-action-button.cl-action-scout:is(.armed, .active, .is-pending, .busy, [aria-busy="true"]) {
+  --cl-action-bg: var(--cl-action-scout-bg);
+  --cl-action-border: var(--cl-action-scout-border);
+  --cl-action-text: var(--cl-action-scout-text);
+  --cl-action-edge: var(--cl-action-scout-edge);
+  color: var(--cl-action-scout-text) !important;
+  border-color: var(--cl-action-scout-border) !important;
+  background: var(--cl-action-scout-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 232, .24),
+    inset 0 -4px 0 var(--cl-action-scout-edge) !important;
+  animation: clScoutActionPulse .85s ease-in-out infinite alternate;
+}
+
+/* Preserve objective-relative positions while matching the city button size. */
+.gold-camp-action-wheel :is(.camp-info-action, .camp-rally-action, .camp-report-action) {
+  top: calc(100% + var(--cl-action-size)) !important;
+}
+
+@keyframes clActionBusyPulse {
+  from { filter: brightness(.94) drop-shadow(0 4px 3px rgba(0, 0, 0, .52)); }
+  to { filter: brightness(1.08) drop-shadow(0 0 8px rgba(255, 226, 154, .7)) drop-shadow(0 5px 4px rgba(0, 0, 0, .56)); }
+}
+
+@keyframes clScoutActionPulse {
+  from { filter: brightness(.92) drop-shadow(0 4px 3px rgba(0, 0, 0, .52)); }
+  to { filter: brightness(1.1) drop-shadow(0 0 9px rgba(214, 107, 100, .82)) drop-shadow(0 5px 4px rgba(0, 0, 0, .56)); }
+}
+
+@media (max-width: 780px) and (orientation: landscape), (pointer: coarse) {
+  :root { --cl-action-size: 64px; }
+  .cl-action-button > :is(.wheel-action-name, strong) { font-size: .52rem !important; }
+}

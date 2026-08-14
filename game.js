@@ -24801,25 +24801,25 @@ function renderSelectedCityWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" ${levelDisabled ? "disabled" : ""}>
+    <button class="city-wheel-action cl-action-button cl-action-royal wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" ${levelDisabled ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("upgrade")}</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${levelCostLabel}</span>
     </button>
-    <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
+    <button class="city-wheel-action cl-action-button cl-action-send wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("forward")}</span>
       <span class="wheel-action-name">Send</span>
     </button>
-    <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
+    <button class="city-wheel-action cl-action-button cl-action-info wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("information")}</span>
     </button>
     ${bulkOrdersSupported ? `
-      <button class="city-wheel-action wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || (bulkOrderBusy && !scoutNearbyBusy) ? "disabled" : ""}>
+      <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || (bulkOrderBusy && !scoutNearbyBusy) ? "disabled" : ""}>
         <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
         <span class="wheel-action-name">${scoutNearbyBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : scoutNearbyActive ? "Send All" : "Nearby"}</span>
         <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
       </button>
-      <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""} ${regroupBusy ? "busy" : ""}" type="button" aria-label="${regroupBusy ? "Preparing regroup" : regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}" aria-busy="${regroupBusy}" ${bulkOrderBusy && !regroupBusy ? "disabled" : ""}>
+      <button class="city-wheel-action cl-action-button cl-action-send wheel-regroup ${regroupActive ? "armed" : ""} ${regroupBusy ? "busy" : ""}" type="button" aria-label="${regroupBusy ? "Preparing regroup" : regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}" aria-busy="${regroupBusy}" ${bulkOrderBusy && !regroupBusy ? "disabled" : ""}>
         <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("reinforcement")}</span>
         <span class="wheel-action-name">${regroupBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : regroupActive ? "Confirm" : "Regroup"}</span>
         <span class="wheel-cost">${formatNumber(REGROUP_COST)}</span>
@@ -24870,19 +24870,19 @@ function renderSelectedForeignWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action wheel-scout" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" ${canScout ? "" : "disabled"}>
+    <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout${pendingScout ? " is-pending" : ""}" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" aria-busy="${Boolean(pendingScout)}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action wheel-attack${clanAlly ? " wheel-reinforce" : ""}" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
+    <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
-    <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
+    <button class="city-wheel-action cl-action-button cl-action-info wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("information")}</span>
     </button>
     ${report ? `
-      <button class="city-wheel-action wheel-report" type="button" aria-label="Open scout report for ${escapeHtml(city.name)}" data-audio-effect="none">
+      <button class="city-wheel-action cl-action-button cl-action-info wheel-report" type="button" aria-label="Open scout report for ${escapeHtml(city.name)}" data-audio-effect="none">
         <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <span class="wheel-action-name">Report</span>
       </button>
@@ -24932,26 +24932,26 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action camp-scout-action" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(owned ? "outgoing" : "scout")}</span>
       <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
+    <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
       <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
       <strong>Info</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${owned || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${owned || clanAlly ? "cl-action-reinforce" : "cl-action-attack"} camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${owned || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(owned || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${owned || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${canRally ? `
-      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(stronghold.name)}">
+      <button class="gold-camp-wheel-action cl-action-button cl-action-rally camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(stronghold.name)}">
         <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
         <strong>Rally</strong>
       </button>
     ` : ""}
     ${report ? `
-      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}" data-audio-effect="none">
+      <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}" data-audio-effect="none">
         <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <strong>Report</strong>
       </button>
@@ -25021,26 +25021,26 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${Math.max(82, Math.min(116, wheelSize * .7))}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action ${isHeldByPlayer ? "camp-recall-action" : "camp-scout-action"}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : clanAlly ? "Clan allies cannot be scouted" : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${isHeldByPlayer ? "cl-action-send camp-recall-action" : `cl-action-scout camp-scout-action${pendingScout ? " is-pending" : ""}`}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : clanAlly ? "Clan allies cannot be scouted" : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" aria-busy="${Boolean(!isHeldByPlayer && pendingScout)}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer ? "back" : "scout")}</span>
       <strong>${isHeldByPlayer ? rewardCampRecallRequests.has(camp.id) ? "Recalling" : "Recall" : clanAlly ? "Clan Ally" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(camp.name)} information">
+    <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-info-action" type="button" aria-label="Open ${escapeHtml(camp.name)} information">
       <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
       <strong>Info</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${isHeldByPlayer || clanAlly ? "cl-action-reinforce" : "cl-action-attack"} camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${canRally ? `
-      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
+      <button class="gold-camp-wheel-action cl-action-button cl-action-rally camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
         <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
         <strong>Rally</strong>
       </button>
     ` : ""}
     ${report ? `
-      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
+      <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
         <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
         <strong>Report</strong>
       </button>
