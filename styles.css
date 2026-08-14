@@ -1464,6 +1464,22 @@ input {
 .teleport-node::after {
   content: none;
 }
+.region-gate {
+  cursor: default;
+  pointer-events: none;
+  opacity: .84;
+  filter: drop-shadow(0 8px 6px rgba(9, 6, 4, .82)) grayscale(.2) saturate(.72);
+}
+.region-gate::before {
+  background: radial-gradient(circle, rgba(195, 164, 112, .2), rgba(52, 38, 24, .12) 52%, transparent 72%);
+}
+.region-gate-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
 .teleport-node:active {
   transform: translate(-50%, calc(-50% + 3px)) scale(.96);
   filter:

@@ -1,24 +1,25 @@
 # Crownlands Map Phase 2 Machine Results
 
-Generated: 2026-08-13T19:34:58.392Z
+Generated: 2026-08-14T04:03:15.563Z
 
 Mode: Phase 2 after optimization. Seed: `crownlands-map-phase-0-v1`. This is a loopback, authenticated-equivalent, deterministic fixture; it contains no production player data and makes no production Firebase requests.
 
 | Scenario | Profile | DOM | Map DOM | Initial cities | Initial marches | Heap MiB | Idle FPS | Idle p95 ms | Pan FPS | Zoom FPS | Initial load ms | Switch out/back ms | Active listeners |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| A | desktop | 1707 | 1100 | 50 | 25 | 6.1 | 124.5 | 13.8 | 142.7 | 128.7 | 1031.4 | 1207.9 / 1197.2 | 17 |
-| A | mobile-landscape | 1707 | 1100 | 50 | 18 | 8.2 | 124.4 | 13.9 | 140.3 | 126.6 | 1409.6 | 1198.4 / 1198.8 | 17 |
-| A | mobile-landscape-4x | 1707 | 1100 | 50 | 18 | 5.7 | 12.5 | 166.7 | 17.8 | 13.4 | 4569.8 | 4721.7 / 4499.8 | 17 |
-| B | desktop | 2774 | 2167 | 100 | 50 | 7.2 | 115.9 | 27.7 | 142.3 | 117.6 | 1699.3 | 1196.8 / 1320.5 | 17 |
-| B | mobile-landscape | 2774 | 2167 | 100 | 42 | 7.8 | 113.8 | 20.8 | 137.1 | 119.6 | 1911.2 | 1196.3 / 1338.5 | 17 |
-| C | desktop | 4276 | 3669 | 150 | 100 | 8.5 | 82.4 | 48.6 | 125.5 | 111.2 | 2597.3 | 1500.8 / 1847.1 | 17 |
-| C | mobile-landscape | 4276 | 3669 | 150 | 85 | 10 | 83.9 | 34.7 | 131 | 106.9 | 2659.5 | 1464.3 / 1775.3 | 17 |
-| D | desktop | 1908 | 1301 | 100 | 0 | 6.3 | 131.6 | 7.7 | 140.1 | 129.8 | 1813.5 | 1215.2 / 1288.7 | 17 |
-| D | mobile-landscape | 1908 | 1301 | 100 | 0 | 4.6 | 131.5 | 7.8 | 140.4 | 135.5 | 1232.2 | 1225.1 / 1270.7 | 17 |
-| D | mobile-landscape-4x | 1908 | 1301 | 100 | 0 | 4.9 | 41.3 | 62.5 | 31.2 | 30.5 | 6358.4 | 4327.7 / 6217.4 | 17 |
-| E | desktop | 3008 | 2401 | 50 | 100 | 5.5 | 122.5 | 20.7 | 141.7 | 124.4 | 1070.5 | 1204.7 / 1199.6 | 17 |
-| E | mobile-landscape | 3008 | 2401 | 50 | 84 | 6.2 | 120 | 14.5 | 141 | 129.7 | 1274.4 | 1212.3 / 1207.2 | 17 |
-| E | mobile-landscape-4x | 3008 | 2401 | 50 | 84 | 5.9 | 9.3 | 194.4 | 50.5 | 31.7 | 2520.7 | 2751.1 / 3026.2 | 17 |
+| A | desktop | 1694 | 1087 | 50 | 25 | 7.6 | 124.8 | 7.2 | 140.6 | 124.6 | 905.7 | 1198.8 / 1209.4 | 17 |
+| A | mobile-landscape | 1694 | 1087 | 50 | 25 | 6.4 | 126.2 | 7.3 | 140.3 | 127.6 | 1162.8 | 1205.2 / 1216.2 | 17 |
+| A | mobile-landscape-4x | 1694 | 1087 | 50 | 18 | 6.5 | 23.6 | 138.9 | 48 | 47.3 | 2324 | 2302.5 / 2251.2 | 17 |
+| B | desktop | 2761 | 2154 | 100 | 50 | 7.7 | 124.4 | 13.8 | 138.3 | 119.4 | 1270.7 | 1205.4 / 1224.3 | 17 |
+| B | mobile-landscape | 2761 | 2154 | 100 | 42 | 5.1 | 107.7 | 20.8 | 138.1 | 123.7 | 1458.3 | 1213.8 / 1268.7 | 17 |
+| B | mobile-landscape-4x | 2761 | 2154 | 100 | 42 | 9.2 | 10.5 | 159.7 | 27.6 | 2.2 | 3626 | 3007.2 / 4651.7 | 17 |
+| C | desktop | 4263 | 3656 | 150 | 100 | 5.7 | 91.3 | 27.9 | 96.3 | 93.9 | 2588.7 | 1205.5 / 1700.4 | 17 |
+| C | mobile-landscape | 4263 | 3656 | 150 | 85 | 5.4 | 76.8 | 34.7 | 132.4 | 101.9 | 1979 | 1209.1 / 1617.8 | 17 |
+| D | desktop | 1895 | 1288 | 100 | 0 | 7.1 | 137.4 | 7.6 | 141.9 | 134 | 1450.9 | 1197.7 / 1195.5 | 17 |
+| D | mobile-landscape | 1895 | 1288 | 100 | 0 | 4.7 | 134.7 | 7.6 | 139.5 | 135.9 | 1460.2 | 1203.3 / 1208.9 | 17 |
+| D | mobile-landscape-4x | 1895 | 1288 | 100 | 0 | 4.4 | 114.9 | 20.8 | 46.4 | 58.1 | 3431.2 | 3331.7 / 4839.1 | 17 |
+| E | desktop | 2995 | 2388 | 50 | 100 | 4.6 | 103.4 | 20.7 | 137.7 | 117.4 | 1284.1 | 1201.7 / 1214.3 | 17 |
+| E | mobile-landscape | 2995 | 2388 | 50 | 84 | 5.2 | 97.5 | 20.9 | 137.4 | 118.9 | 1270.8 | 1196.5 / 1208.9 | 17 |
+| E | mobile-landscape-4x | 2995 | 2388 | 50 | 84 | 8 | 3.4 | 402.9 | 44.1 | 11.6 | 1968.4 | 2795.2 / 2973.3 | 17 |
 
 ## Unavailable profiles
 
@@ -26,7 +27,6 @@ These profiles exceeded the isolated watchdog or failed setup. They count as per
 
 | Scenario | Profile | Reason |
 |---|---|---|
-| B | mobile-landscape-4x | Profile exceeded the 180-second isolated run watchdog. |
 | C | mobile-landscape-4x | Profile exceeded the 180-second isolated run watchdog. |
 
 ## Method and limitations

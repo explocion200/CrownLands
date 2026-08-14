@@ -130,19 +130,23 @@ async function evaluate(client, expression) {
   return result.result?.value;
 }
 
-async function waitUntilReady(client, timeoutMs = 30000) {
+async function waitUntilReady(client, timeoutMs = 30000, diagnostics = null) {
   const startedAt = Date.now();
+  let lastState = null;
   while (Date.now() - startedAt < timeoutMs) {
     const state = await evaluate(client, `({
       ready: document.documentElement?.dataset.crownlandsBenchmarkReady === "true",
       failed: document.documentElement?.dataset.crownlandsBenchmarkError === "true",
-      detail: window.__CROWNLANDS_BENCHMARK__?.getStatus?.() || null
+      detail: window.__CROWNLANDS_BENCHMARK__?.getStatus?.() || null,
+      loading: document.readyState,
+      regionLoading: window.CROWNLANDS_REGION_LOADING_DEBUG || null
     })`);
+    lastState = state;
     if (state.failed) throw new Error(state.detail?.error || "Benchmark fixture failed to start.");
     if (state.ready) return state.detail;
     await delay(100);
   }
-  throw new Error(`Benchmark page did not become ready within ${timeoutMs} ms.`);
+  throw new Error(`Benchmark page did not become ready within ${timeoutMs} ms: ${JSON.stringify({ lastState, diagnostics })}.`);
 }
 
 function performanceMetricMap(result) {
@@ -297,6 +301,7 @@ function summarizeZoomTrace(trace) {
 
 function summarizeNetwork(requests, origin) {
   const completed = [...requests.values()].filter(request => request.finished);
+  const regionStatic = completed.filter(request => /(?:region-catalog(?:\.js)?|\/regions\/[^/]+\.json)(?:\?|$)/i.test(request.url));
   const external = [...requests.values()].filter(request => !request.url.startsWith(origin));
   const externalHosts = [...new Set(external.map(request => {
     try { return new URL(request.url).host || new URL(request.url).protocol; } catch (_error) { return "non-url"; }
@@ -310,7 +315,13 @@ function summarizeNetwork(requests, origin) {
     externalRequestCount: external.length,
     externalHosts,
     productionBackendRequestCount: productionBackendRequests.length,
-    mapAssetRequests: [...requests.values()].filter(request => request.url.includes("/assets/worlds/")).length,
+    mapAssetRequests: [...requests.values()].filter(request => /\/assets\/worlds\/[^/]+\/(?:maps|thumbnails)\//i.test(request.url)).length,
+    regionDefinitionRequests: [...requests.values()].filter(request => /\/regions\/[^/]+\.json(?:\?|$)/i.test(request.url)).length,
+    regionStaticDataBytes: Math.round(regionStatic.reduce((sum, request) => sum + (request.encodedDataLength || 0), 0)),
+    regionStaticFiles: regionStatic.map(request => ({
+      path: new URL(request.url).pathname,
+      encodedBytes: Math.round(request.encodedDataLength || 0),
+    })),
     byType: [...requests.values()].reduce((result, request) => {
       result[request.type || "Other"] = (result[request.type || "Other"] || 0) + 1;
       return result;
@@ -351,10 +362,11 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
   await client.send("Emulation.setCPUThrottlingRate", { rate: profile.cpuRate });
   const profileQuery = PROFILE_MARCHES ? "&profile=marches" : PROFILE_ZOOM ? "&profile=zoom" : "";
   await client.send("Page.navigate", { url: `${serverAddress.url}/__benchmark__/?scenario=${scenario.id}${profileQuery}` });
-  const status = await waitUntilReady(client, profile.cpuRate > 1 ? 180000 : 60000);
+  const status = await waitUntilReady(client, profile.cpuRate > 1 ? 180000 : 60000, { consoleErrors, requests: [...requests.values()] });
   const progressPrefix = `${scenario.id}/${profile.id}`;
   console.log(`  ${progressPrefix}: authenticated fixture ready`);
   const initialRuntime = await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMetrics()");
+  const initialNetwork = summarizeNetwork(requests, serverAddress.url);
   if (initialRuntime.dataCityCount !== scenario.cityCount || initialRuntime.dataMarchCount !== scenario.marchCount) {
     throw new Error(`Fixture count mismatch: expected ${scenario.cityCount}/${scenario.marchCount}, received ${initialRuntime.dataCityCount}/${initialRuntime.dataMarchCount}.`);
   }
@@ -371,6 +383,7 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
       profile,
       initialRegionLoadLatencyMs: status.regionLoadLatencyMs,
       initialRuntime,
+      initialNetwork,
       runtime,
       idle,
       marchProfile,
@@ -395,6 +408,7 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
       profile,
       initialRegionLoadLatencyMs: status.regionLoadLatencyMs,
       initialRuntime,
+      initialNetwork,
       runtime,
       zoom,
       zoomProfile,
@@ -425,6 +439,7 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
     profile,
     initialRegionLoadLatencyMs: status.regionLoadLatencyMs,
     initialRuntime,
+    initialNetwork,
     runtime,
     heap: {
       usedSize: heap.usedSize,

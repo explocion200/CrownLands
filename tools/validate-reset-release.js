@@ -33,7 +33,13 @@ if (/\.update\(serverSourceHash\)[\s\S]*JSON\.stringify\(callableNames\)/.test(m
   throw new Error("Build implementation files must not silently redefine the public API contract.");
 }
 
-requireMatch(server, /STARTER_REGION_IDS[\s\S]*type[\s\S]*starter/, "Starter islands are not derived from authoritative map metadata.");
+requireMatch(server, /SERVER_REGION_CATALOG\s*=\s*require\("\.\/region-catalog\.json"\)/, "Server spawn selection is missing the authoritative region catalog.");
+requireMatch(server, /MINIMUM_SPAWN_NPC_CITIES\s*=\s*Math\.max\(\s*15,[\s\S]*minimumNpcCitiesForSpawn/, "Server spawn selection does not enforce the 15-NPC minimum.");
+requireMatch(
+  server,
+  /STARTER_REGION_IDS[\s\S]*SERVER_REGION_CATALOG\?\.regions[\s\S]*purpose[\s\S]*player_region[\s\S]*spawnEligible\s*===\s*true[\s\S]*spawnReady\s*===\s*true[\s\S]*permanentCore\s*!==\s*true[\s\S]*lifecycle[\s\S]*active[\s\S]*npcCityCount[\s\S]*MINIMUM_SPAWN_NPC_CITIES/,
+  "Starter islands are not derived from active, ready, non-core player-region catalog metadata.",
+);
 requireMatch(server, /claimFreshStartingCity[\s\S]*leastPopulated[\s\S]*crypto\.randomInt/, "Starting islands are not balanced with random tie breaking.");
 requireMatch(server, /transaction\.set\(playerRef,[\s\S]*freshProfile[\s\S]*\}\);/, "Reset profiles must replace old gameplay state.");
 requireMatch(server, /writeOwnershipChangeEvent[\s\S]*processOwnershipChangeEvent/, "Ownership changes are not using the durable event pipeline.");

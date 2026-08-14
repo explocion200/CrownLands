@@ -6,6 +6,7 @@ const vm = require("node:vm");
 
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 const MAP_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
+const REGION_CATALOG_PATH = path.join(ROOT_DIR, "functions", "region-catalog.json");
 const RELEASE_CONFIG_PATH = path.join(ROOT_DIR, "functions", "release-config.json");
 
 const BENCHMARK_SEED = "crownlands-map-phase-0-v1";
@@ -44,6 +45,10 @@ function loadMapEditorData() {
 
 function loadReleaseConfig() {
   return JSON.parse(fs.readFileSync(RELEASE_CONFIG_PATH, "utf8"));
+}
+
+function loadRegionCatalog() {
+  return JSON.parse(fs.readFileSync(REGION_CATALOG_PATH, "utf8"));
 }
 
 function createBenchmarkCityDefinitions(count) {
@@ -152,7 +157,12 @@ function createCampSnapshots(camps) {
 function createFixture(scenarioId = "A") {
   const scenario = SCENARIOS[String(scenarioId || "A").toUpperCase()] || SCENARIOS.A;
   const mapData = loadMapEditorData();
+  const regionCatalog = loadRegionCatalog();
   const releaseConfig = loadReleaseConfig();
+  for (const region of regionCatalog.regions || []) {
+    if (!region?.regionDefinitionPath) continue;
+    region.regionDefinitionPath = `${region.regionDefinitionPath}?scenario=${encodeURIComponent(scenario.id)}`;
+  }
   const cityDefinitions = createBenchmarkCityDefinitions(scenario.cityCount);
   const campDefinitions = createCampDefinitions();
   const primaryMap = mapData.maps.find(map => map.id === PRIMARY_REGION_ID);
@@ -164,6 +174,12 @@ function createFixture(scenarioId = "A") {
   primaryMap.cities = cityDefinitions;
   primaryMap.camps = campDefinitions;
   primaryMap.objectives = [];
+  const primaryCatalogRegion = regionCatalog.regions.find(region => region.id === PRIMARY_REGION_ID);
+  if (primaryCatalogRegion) {
+    primaryCatalogRegion.name = primaryMap.label;
+    primaryCatalogRegion.npcCityCount = scenario.cityCount;
+    primaryCatalogRegion.cityCapacity = scenario.cityCount;
+  }
 
   const neighborSnapshots = (neighborMap.cities || []).map((city, index) => ({
     id: city.id,
@@ -191,6 +207,7 @@ function createFixture(scenarioId = "A") {
     },
     releaseConfig,
     mapData,
+    regionCatalog,
     citiesByRegion: {
       [PRIMARY_REGION_ID]: createCitySnapshots(cityDefinitions),
       [NEIGHBOR_REGION_ID]: neighborSnapshots,

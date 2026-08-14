@@ -70,7 +70,7 @@ function createManifest() {
     "index.html", "styles.css", "interface-theme.css", "manuscript-prototype.css", "ui-contrast-correction.css", "game.js", "base-cities.js", "common-gear.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
-    "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js",
+    "ui-layout-runtime.js", "ads-config.js", "region-catalog.js", "assets/worlds/world_01/region-catalog.js",
   ].map(relativePath => path.join(root, relativePath));
 
   const indexSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");

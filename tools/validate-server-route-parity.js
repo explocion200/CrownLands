@@ -88,8 +88,9 @@ function validatePlannerModels(planner, clientModels) {
     assertJsonEqual(serverCities, clientCities, `${regionId} authoritative city coordinates drifted.`);
     cityCount += serverCities.length;
   }
-  assert.equal(clientModels.size, 15, "Route parity must cover all 15 maps.");
-  assert.equal(cityCount, 1050, "Route parity must cover all 1,050 cities.");
+  assert.equal(clientModels.size, layout.maps.length, "Route parity must cover every active catalog map.");
+  const expectedCityCount = layout.maps.reduce((total, map) => total + map.cities.length, 0);
+  assert.equal(cityCount, expectedCityCount, "Route parity must cover every active catalog city.");
   return cityCount;
 }
 

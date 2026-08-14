@@ -23,6 +23,7 @@ const uiContrastCorrectionSource = read("ui-contrast-correction.css");
 const siteInfoSource = read("site-info.css");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const layout = JSON.parse(read("functions/world-layout.json"));
+const regionCatalog = JSON.parse(read("functions/region-catalog.json"));
 const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-manifest.json"));
 
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
@@ -62,7 +63,8 @@ const entrypointBudgets = {
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
-  "assets/map-editor-data.js": 400 * 1024,
+  "region-catalog.js": 24 * 1024,
+  "assets/worlds/world_01/region-catalog.js": 48 * 1024,
   "firebaseClient.js": 150 * 1024,
   "animation-manager.js": 80 * 1024,
   "audio-manager.js": 80 * 1024,
@@ -213,7 +215,8 @@ for (const requiredShellFile of [
   "animation-manager.js",
   "firebaseClient.js",
   "route-worker.js",
-  "assets/map-editor-data.js",
+  "region-catalog.js",
+  "assets/worlds/world_01/region-catalog.js",
 ]) {
   assert(
     staticCacheUrls.some(url => localPathFromUrl(url) === requiredShellFile),
@@ -264,7 +267,7 @@ assert(optimizedBytes <= sourceBytes * 0.1, "Optimized derivatives must remain a
 let fullMapBytes = 0;
 let thumbnailBytes = 0;
 const thumbnailEntries = new Map(thumbnailManifest.thumbnails.map(entry => [entry.output, entry]));
-assert.equal(thumbnailEntries.size, 15, "The fingerprinted thumbnail manifest must cover all 15 maps.");
+assert.equal(thumbnailEntries.size, regionCatalog.regions.length, "The fingerprinted thumbnail manifest must cover every active catalog map.");
 for (const map of layout.maps || []) {
   const fullMapPath = String(map.imageSrc || "");
   const thumbnailPath = String(map.thumbnailSrc || "");

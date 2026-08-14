@@ -19,6 +19,7 @@ const rootFiles = [
   "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js", "base-cities.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
   "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
+  "region-catalog.js",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
   "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
@@ -41,15 +42,47 @@ function copyDirectoryFiles(relativeDirectory, predicate = () => true) {
   }
 }
 
+function writeProductionRegionDefinitions() {
+  const world = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
+  for (const map of world.maps || []) {
+    const definition = {
+      id: map.id,
+      name: map.label,
+      type: map.type,
+      gridX: map.gridX,
+      gridY: map.gridY,
+      width: map.imageWidth,
+      height: map.imageHeight,
+      imagePath: map.imageSrc,
+      thumbnailPath: map.thumbnailSrc,
+      cityCapacity: map.cityCapacity,
+      regionPath: map.regionDefinitionPath,
+      cities: map.cities || [],
+      strongholds: (map.objectives || []).map(objective => ({
+        ...objective,
+        strongholdType: objective.sourceStrongholdType || objective.strongholdType || objective.type,
+        bonusType: objective.bonus,
+        bonusAmount: objective.bonusPercent,
+      })),
+      camps: map.camps || [],
+      edgeConnections: map.edgeConnections || {},
+    };
+    const destination = path.join(output, map.regionDefinitionPath);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, `${JSON.stringify(definition, null, 2)}\n`, "utf8");
+  }
+}
+
 fingerprintWorldMaps();
 fs.rmSync(output, { recursive: true, force: true });
 fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
-copy("assets/map-editor-data.js");
 copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
 copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
 copy("assets/worlds/world_01/map-manifest.json");
+copy("assets/worlds/world_01/region-catalog.js");
+writeProductionRegionDefinitions();
 const productionMapManifestPath = path.join(output, "assets", "worlds", "world_01", "map-manifest.json");
 const productionMapManifest = JSON.parse(fs.readFileSync(productionMapManifestPath, "utf8"));
 productionMapManifest.description = "Immutable regional gameplay maps included in this production artifact.";

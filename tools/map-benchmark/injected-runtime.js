@@ -608,6 +608,9 @@
         measurementRafLoopsExcluded: 1,
       },
       timers: instrumentation.getTimerSnapshot(),
+      regionDefinitions: window.CROWNLANDS_REGION_LOADING_DEBUG
+        ? JSON.parse(JSON.stringify(window.CROWNLANDS_REGION_LOADING_DEBUG))
+        : null,
       realtime: listenerTelemetry,
       images: getImageMemoryEstimate(),
       performanceMemory: performance.memory

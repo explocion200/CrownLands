@@ -1,5 +1,11 @@
 const CACHE_VERSION = "20260813-map-location-banner-r18";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
+const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
+const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
+const WORLD_IMAGE_CACHE_NAME = `crownlands-world-images-${CACHE_VERSION}`;
+const MAX_RUNTIME_CACHE_ENTRIES = 72;
+const MAX_REGION_CACHE_ENTRIES = 8;
+const MAX_WORLD_IMAGE_CACHE_ENTRIES = 12;
 const APP_BASE_URL = new URL("./", self.location.href);
 
 function resolveAppUrl(path = "") {
@@ -18,6 +24,8 @@ const STATIC_CACHE_URLS = [
   "/ui-contrast-correction.css?v=20260813-map-location-banner-r11",
   "/release-config.js",
   "/world-config.js",
+  "/region-catalog.js?v=20260813-map-scaling-phase3-r1",
+  "/assets/worlds/world_01/region-catalog.js?v=20260813-map-scaling-phase3-r1",
   "/economy-config.js?v=20260805-linear-walls-v1",
   "/common-gear.js?v=20260812-visual-correction-pass-4a-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
@@ -29,7 +37,6 @@ const STATIC_CACHE_URLS = [
   "/game.js?v=20260813-map-location-banner-r18",
   "/ui-layout-runtime.js?v=20260813-editor-layout-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
-  "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
   "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
   "/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
   "/assets/optimized/loading-crown-256x256-2038de353a91.webp"
@@ -147,8 +154,21 @@ function getNavigationFallbackUrl(url) {
 async function putInCache(request, response) {
   if (!isCacheableResponse(response)) return false;
   try {
-    const cache = await caches.open(CACHE_NAME);
+    const url = new URL(request.url);
+    const isRegionDefinition = /\/assets\/worlds\/[^/]+\/regions\/[^/]+\.json$/i.test(url.pathname);
+    const isWorldImage = url.pathname.includes("/assets/worlds/") && /\.(?:png|jpe?g|webp)$/i.test(url.pathname);
+    const cacheName = isRegionDefinition ? REGION_CACHE_NAME : isWorldImage ? WORLD_IMAGE_CACHE_NAME : RUNTIME_CACHE_NAME;
+    const maximumEntries = isRegionDefinition
+      ? MAX_REGION_CACHE_ENTRIES
+      : isWorldImage
+        ? MAX_WORLD_IMAGE_CACHE_ENTRIES
+        : MAX_RUNTIME_CACHE_ENTRIES;
+    const cache = await caches.open(cacheName);
     await cache.put(request, response.clone());
+    if (typeof cache.keys === "function" && typeof cache.delete === "function") {
+      const keys = await cache.keys();
+      await Promise.all(keys.slice(0, Math.max(0, keys.length - maximumEntries)).map(key => cache.delete(key)));
+    }
     return true;
   } catch (error) {
     console.warn("[Crownlands] Static cache write skipped.", error);
@@ -157,8 +177,7 @@ async function putInCache(request, response) {
 }
 
 async function cacheFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
+  const cached = await caches.match(request);
   if (cached) return cached;
   const response = await fetch(request);
   await putInCache(request, response);
@@ -172,7 +191,7 @@ async function networkFirst(request, fallbackUrl = "/index.html") {
     return response;
   } catch (error) {
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request);
+    const cached = await caches.match(request);
     if (cached) return cached;
     const fallback = fallbackUrl ? await cache.match(fallbackUrl) : null;
     if (fallback) return fallback;
@@ -196,7 +215,8 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter(name => name.startsWith("crownlands-cache-") && name !== CACHE_NAME).map(name => caches.delete(name)));
+    const activeCacheNames = new Set([CACHE_NAME, RUNTIME_CACHE_NAME, REGION_CACHE_NAME, WORLD_IMAGE_CACHE_NAME]);
+    await Promise.all(names.filter(name => name.startsWith("crownlands-") && !activeCacheNames.has(name)).map(name => caches.delete(name)));
     await self.clients.claim();
     const windowClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     windowClients.forEach(client => client.postMessage({

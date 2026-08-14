@@ -6,6 +6,7 @@ const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-adm
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
+const SERVER_REGION_CATALOG = require("./region-catalog.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
@@ -2414,10 +2415,26 @@ const SERVER_WORLD_OBJECTIVE_TARGET_KEYS = new Set(
     `${normalizeRegionId(objective.regionId)}:${objective.id}`
   ))
 );
+const MINIMUM_SPAWN_NPC_CITIES = Math.max(
+  15,
+  Math.floor(safeNumber(SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn, 15)),
+);
 const STARTER_REGION_IDS = Object.freeze(
-  SERVER_WORLD_MAPS
-    .filter(map => safeString(map?.type, 32).toLowerCase() === "starter")
-    .map(map => normalizeRegionId(map.id))
+  (Array.isArray(SERVER_REGION_CATALOG?.regions) ? SERVER_REGION_CATALOG.regions : SERVER_WORLD_MAPS)
+    .filter(region => (
+      safeString(region?.purpose, 32).toLowerCase() === "player_region"
+      && region?.spawnEligible === true
+      && region?.spawnReady === true
+      && region?.permanentCore !== true
+      && safeString(region?.lifecycle, 32).toLowerCase() === "active"
+      && Math.floor(safeNumber(region?.npcCityCount, 0)) >= MINIMUM_SPAWN_NPC_CITIES
+    ))
+    .sort((left, right) => (
+      safeNumber(left?.worldLayer, 0) - safeNumber(right?.worldLayer, 0)
+      || safeNumber(left?.clockwiseOrderIndex, 0) - safeNumber(right?.clockwiseOrderIndex, 0)
+      || safeString(left?.id, 80).localeCompare(safeString(right?.id, 80))
+    ))
+    .map(region => normalizeRegionId(region.id))
 );
 
 function requireKnownWorldRegionId(regionId = "") {
@@ -14513,7 +14530,7 @@ async function claimFreshStartingCity(request) {
   const data = request.data || {};
   const authToken = request.auth?.token || {};
   if (!STARTER_REGION_IDS.length) {
-    throw new HttpsError("failed-precondition", "No starter islands are configured.");
+    throw new HttpsError("failed-precondition", "No spawn-eligible player regions are configured.");
   }
 
   await Promise.all(STARTER_REGION_IDS.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
@@ -14797,7 +14814,7 @@ async function claimFreshStartingCity(request) {
       }];
     });
     if (!islandEntries.length) {
-      throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
+      throw new HttpsError("failed-precondition", "Player-spawn regions are still being prepared.");
     }
     const minimumPopulation = Math.min(...islandEntries.map(entry => entry.playerCount));
     const leastPopulated = islandEntries.filter(entry => entry.playerCount === minimumPopulation);

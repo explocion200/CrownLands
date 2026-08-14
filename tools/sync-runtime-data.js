@@ -3,6 +3,7 @@ const fsp = require("node:fs/promises");
 const path = require("node:path");
 const { buildCompatibilityMapData, readWorldData } = require("./editor-server");
 const { fingerprintWorldMaps } = require("./fingerprint-world-maps");
+const { buildRegionCatalog } = require("../region-catalog");
 
 const root = path.resolve(__dirname, "..");
 const checkOnly = process.argv.includes("--check");
@@ -13,6 +14,9 @@ const paths = {
   browserRealm: path.join(root, "release-config.js"),
   serverRealm: path.join(root, "functions", "release-config.json"),
   browserWorld: path.join(root, "assets", "map-editor-data.js"),
+  browserRegionCatalog: path.join(root, "assets", "worlds", "world_01", "region-catalog.js"),
+  regionCatalogJson: path.join(root, "assets", "worlds", "world_01", "region-catalog.json"),
+  serverRegionCatalog: path.join(root, "functions", "region-catalog.json"),
   serverWorld: path.join(root, "functions", "world-layout.json"),
   browserCommonGear: path.join(root, "common-gear.js"),
   serverCommonGear: path.join(root, "functions", "common-gear.js"),
@@ -44,6 +48,7 @@ async function main() {
   const realm = JSON.parse(await fsp.readFile(paths.serverRealm, "utf8"));
   const { layout, regions } = await readWorldData();
   const world = buildCompatibilityMapData(layout, regions);
+  const regionCatalog = buildRegionCatalog(layout, regions);
 
   await validateOrWrite(
     paths.browserEconomy,
@@ -60,6 +65,13 @@ async function main() {
     `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(world, null, 2)};\n`,
     "Browser world layout",
   );
+  await validateOrWrite(
+    paths.browserRegionCatalog,
+    browserAssignment("CROWNLANDS_REGION_CATALOG", regionCatalog),
+    "Browser region catalog",
+  );
+  await validateOrWrite(paths.regionCatalogJson, stableJson(regionCatalog), "Canonical region catalog");
+  await validateOrWrite(paths.serverRegionCatalog, stableJson(regionCatalog), "Server region catalog");
   await validateOrWrite(paths.serverWorld, stableJson(world), "Server world layout");
   await validateOrWrite(
     paths.serverCommonGear,

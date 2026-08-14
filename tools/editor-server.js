@@ -4,6 +4,7 @@ const http = require("http");
 const path = require("path");
 const vm = require("vm");
 const { getCanonicalLayoutCityName } = require("./city-name-utils");
+const { buildRegionCatalog } = require("../region-catalog");
 const OPTIMIZED_ASSET_PATHS = new Map(
   require("../assets/optimized/manifest.json").assets.map(asset => [asset.source, asset.output]),
 );
@@ -984,6 +985,8 @@ function buildCompatibilityMapData(layout, regions) {
     const parsed = Date.parse(String(layout.updatedAt || ""));
     return Number.isFinite(parsed) ? new Date(parsed).toISOString() : "1970-01-01T00:00:00.000Z";
   })();
+  const catalog = buildRegionCatalog(layout, regions);
+  const catalogById = new Map(catalog.regions.map(region => [region.id, region]));
   return {
     version: Number(updatedAt.replace(/\D/g, "").slice(0, 12)),
     updatedAt,
@@ -991,6 +994,7 @@ function buildCompatibilityMapData(layout, regions) {
     worldName: layout.worldName,
     globalSettings: layout.globalSettings || {},
     maps: regions.map(region => ({
+      ...catalogById.get(region.id),
       id: region.id,
       label: region.name,
       gridX: region.gridX,

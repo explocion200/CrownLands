@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-13T20:43:05.772Z",
+  "generatedAt": "2026-08-14T08:58:16.134Z",
   "passed": true,
-  "checks": 142,
+  "checks": 146,
   "failures": [],
   "results": [
     {
@@ -135,7 +135,7 @@
       "scope": "primary-gate",
       "label": "full C/desktop zoom FPS",
       "passed": true,
-      "actual": 111.21752897719915,
+      "actual": 93.85937002869069,
       "expected": ">= 15"
     },
     {
@@ -184,7 +184,7 @@
       "scope": "primary-gate",
       "label": "full C/mobile-landscape zoom FPS",
       "passed": true,
-      "actual": 106.93726217191922,
+      "actual": 101.93335585281373,
       "expected": ">= 10"
     },
     {
@@ -240,7 +240,7 @@
       "scope": "controls",
       "label": "full matrix has all nominal A-E profiles",
       "passed": true,
-      "actual": 13,
+      "actual": 14,
       "expected": ">= 10 nominal runs"
     },
     {
@@ -249,16 +249,9 @@
       "passed": true,
       "actual": [
         {
-          "scenarioId": "B",
-          "profileId": "mobile-landscape-4x",
-          "at": "2026-08-13T19:24:45.434Z",
-          "reason": "Profile exceeded the 180-second isolated run watchdog.",
-          "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
-        },
-        {
           "scenarioId": "C",
           "profileId": "mobile-landscape-4x",
-          "at": "2026-08-13T19:30:10.531Z",
+          "at": "2026-08-14T03:58:57.658Z",
           "reason": "Profile exceeded the 180-second isolated run watchdog.",
           "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
         }
@@ -290,7 +283,7 @@
       "scope": "invariants",
       "label": "A/desktop heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 6384624,
+      "actual": 7984780,
       "expected": "within profile budget"
     },
     {
@@ -318,7 +311,7 @@
       "scope": "invariants",
       "label": "A/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 8549872,
+      "actual": 6745504,
       "expected": "within profile budget"
     },
     {
@@ -346,7 +339,7 @@
       "scope": "invariants",
       "label": "A/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 5994220,
+      "actual": 6830772,
       "expected": "within profile budget"
     },
     {
@@ -374,7 +367,7 @@
       "scope": "invariants",
       "label": "B/desktop heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 7518392,
+      "actual": 8036456,
       "expected": "within profile budget"
     },
     {
@@ -402,7 +395,35 @@
       "scope": "invariants",
       "label": "B/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 8160656,
+      "actual": 5306044,
+      "expected": "within profile budget"
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape-4x listeners",
+      "passed": true,
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape-4x duplicate listeners",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape-4x production backend requests",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "scope": "invariants",
+      "label": "B/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
+      "passed": true,
+      "actual": 9641620,
       "expected": "within profile budget"
     },
     {
@@ -430,7 +451,7 @@
       "scope": "invariants",
       "label": "C/desktop heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 8877388,
+      "actual": 6006572,
       "expected": "within profile budget"
     },
     {
@@ -458,7 +479,7 @@
       "scope": "invariants",
       "label": "C/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 10494664,
+      "actual": 5672240,
       "expected": "within profile budget"
     },
     {
@@ -486,7 +507,7 @@
       "scope": "invariants",
       "label": "D/desktop heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 6653680,
+      "actual": 7404352,
       "expected": "within profile budget"
     },
     {
@@ -514,7 +535,7 @@
       "scope": "invariants",
       "label": "D/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 4817832,
+      "actual": 4889368,
       "expected": "within profile budget"
     },
     {
@@ -542,7 +563,7 @@
       "scope": "invariants",
       "label": "D/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 5184364,
+      "actual": 4647376,
       "expected": "within profile budget"
     },
     {
@@ -570,7 +591,7 @@
       "scope": "invariants",
       "label": "E/desktop heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 5745612,
+      "actual": 4795720,
       "expected": "within profile budget"
     },
     {
@@ -598,7 +619,7 @@
       "scope": "invariants",
       "label": "E/mobile-landscape heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 6473256,
+      "actual": 5409976,
       "expected": "within profile budget"
     },
     {
@@ -626,7 +647,7 @@
       "scope": "invariants",
       "label": "E/mobile-landscape-4x heap <= 16 MiB nominal / 24 MiB 4x",
       "passed": true,
-      "actual": 6193924,
+      "actual": 8411552,
       "expected": "within profile budget"
     },
     {
@@ -1082,21 +1103,14 @@
   "sources": {
     "beforeZoomProfile": "2026-08-13T19:10:45.807Z",
     "afterZoomProfile": "2026-08-13T19:16:30.115Z",
-    "fullAfter": "2026-08-13T19:34:58.392Z",
+    "fullAfter": "2026-08-14T04:03:15.563Z",
     "visualQa": "2026-08-13T20:04:26.401Z"
   },
   "unavailableProfiles": [
     {
-      "scenarioId": "B",
-      "profileId": "mobile-landscape-4x",
-      "at": "2026-08-13T19:24:45.434Z",
-      "reason": "Profile exceeded the 180-second isolated run watchdog.",
-      "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
-    },
-    {
       "scenarioId": "C",
       "profileId": "mobile-landscape-4x",
-      "at": "2026-08-13T19:30:10.531Z",
+      "at": "2026-08-14T03:58:57.658Z",
       "reason": "Profile exceeded the 180-second isolated run watchdog.",
       "outcome": "unavailable; treated as a failed performance budget, not assigned a synthetic metric"
     }

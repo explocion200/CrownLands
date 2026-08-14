@@ -6,6 +6,7 @@ const projectRoot = path.resolve(__dirname, "..");
 const thumbnailRoot = path.join(projectRoot, "assets", "worlds", "world_01", "thumbnails");
 const versionedRoot = path.join(thumbnailRoot, "versioned");
 const manifestPath = path.join(projectRoot, "assets", "worlds", "world_01", "thumbnail-manifest.json");
+const layoutPath = path.join(projectRoot, "assets", "worlds", "world_01", "world-layout.json");
 
 const referenceFiles = [
   "game.js",
@@ -98,7 +99,8 @@ function removeStaleVersionedThumbnails(entries, { write }) {
 function fingerprintWorldThumbnails({ checkOnly = false } = {}) {
   const options = { write: !checkOnly };
   const entries = createThumbnailEntries(options);
-  if (entries.length !== 15) throw new Error(`Expected 15 source thumbnails, found ${entries.length}.`);
+  const activeRegionCount = JSON.parse(fs.readFileSync(layoutPath, "utf8")).regions?.length || 0;
+  if (entries.length !== activeRegionCount) throw new Error(`Expected ${activeRegionCount} catalog thumbnails, found ${entries.length}.`);
   updateReferences(entries, options);
   writeManifest(entries, options);
   removeStaleVersionedThumbnails(entries, options);

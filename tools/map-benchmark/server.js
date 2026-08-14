@@ -80,8 +80,32 @@ function applyVisualQaOverrides(fixture, requestUrl) {
 }
 
 function browserFixture(fixture) {
-  const { mapData: _mapData, ...safeFixture } = fixture;
+  const { mapData: _mapData, regionCatalog: _regionCatalog, ...safeFixture } = fixture;
   return safeFixture;
+}
+
+function compatibilityMapToRegionDefinition(map = {}) {
+  return {
+    id: map.id,
+    name: map.label,
+    type: map.type,
+    gridX: map.gridX,
+    gridY: map.gridY,
+    width: map.imageWidth,
+    height: map.imageHeight,
+    imagePath: map.imageSrc,
+    thumbnailPath: map.thumbnailSrc,
+    cityCapacity: map.cityCapacity,
+    cities: map.cities || [],
+    strongholds: (map.objectives || []).map(objective => ({
+      ...objective,
+      strongholdType: objective.sourceStrongholdType || objective.strongholdType || objective.type,
+      bonusType: objective.bonus,
+      bonusAmount: objective.bonusPercent,
+    })),
+    camps: map.camps || [],
+    edgeConnections: map.edgeConnections || {},
+  };
 }
 
 function createBenchmarkIndex(scenarioId, fixture) {
@@ -91,8 +115,12 @@ function createBenchmarkIndex(scenarioId, fixture) {
   if (fixture.scenario.visualKinds) queryParams.set("visualKinds", "true");
   const query = queryParams.toString();
   source = source.replace(
-    /<script src="assets\/map-editor-data\.js[^>]*><\/script>/,
-    `<script src="/__benchmark__/early-instrumentation.js?${query}"></script>\n  <script src="/__benchmark__/map-editor-data.js?${query}"></script>`
+    /<script src="region-catalog\.js[^>]*><\/script>/,
+    `<script src="/__benchmark__/early-instrumentation.js?${query}"></script>\n  <script src="region-catalog.js?v=phase-3-benchmark"></script>`
+  );
+  source = source.replace(
+    /<script src="assets\/worlds\/world_01\/region-catalog\.js[^>]*><\/script>/,
+    `<script src="/__benchmark__/region-catalog.js?${query}"></script>`
   );
   source = source.replace(/<script src="release-manifest\.js"><\/script>/, `<script src="/__benchmark__/release-manifest.js?${query}"></script>`);
   source = source.replace(/<script src="firebaseClient\.js[^>]*><\/script>/, `<script src="/__benchmark__/mock-firebase.js?${query}"></script>`);
@@ -169,8 +197,18 @@ function createMapBenchmarkServer() {
       send(response, 200, source, "text/javascript; charset=utf-8");
       return;
     }
-    if (requestUrl.pathname === "/__benchmark__/map-editor-data.js") {
-      send(response, 200, `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(fixture.mapData)};\n`, "text/javascript; charset=utf-8");
+    if (requestUrl.pathname === "/__benchmark__/region-catalog.js") {
+      send(response, 200, `window.CROWNLANDS_REGION_CATALOG = Object.freeze(${JSON.stringify(fixture.regionCatalog)});\n`, "text/javascript; charset=utf-8");
+      return;
+    }
+    const regionDefinitionMatch = requestUrl.pathname.match(/^\/assets\/worlds\/world_01\/regions\/([^/]+)\.json$/);
+    if (regionDefinitionMatch) {
+      const map = fixture.mapData.maps.find(candidate => candidate.id === regionDefinitionMatch[1]);
+      if (!map) {
+        send(response, 404, "Region definition not found", "text/plain; charset=utf-8");
+        return;
+      }
+      send(response, 200, `${JSON.stringify(compatibilityMapToRegionDefinition(map))}\n`, "application/json; charset=utf-8");
       return;
     }
     if (requestUrl.pathname === "/__benchmark__/release-manifest.js") {

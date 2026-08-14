@@ -115,7 +115,8 @@ function removeStaleVersionedMaps(entries, { write }) {
 function fingerprintWorldMaps({ checkOnly = false } = {}) {
   const options = { write: !checkOnly };
   const entries = createMapEntries(options);
-  if (entries.length !== 15) throw new Error(`Expected 15 regional maps, found ${entries.length}.`);
+  const activeRegionCount = readJson(layoutPath).regions?.length || 0;
+  if (entries.length !== activeRegionCount) throw new Error(`Expected ${activeRegionCount} catalog maps, found ${entries.length}.`);
   updateReferences(entries, options);
   writeManifest(entries, options);
   removeStaleVersionedMaps(entries, options);

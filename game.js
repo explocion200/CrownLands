@@ -1,17 +1,38 @@
 ﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const MAP_EDITOR_DATA = window.CROWNLANDS_MAP_EDITOR_DATA || {};
+const REGION_CATALOG = window.CROWNLANDS_REGION_CATALOG || {};
+const REGION_CATALOG_RUNTIME = window.CROWNLANDS_REGION_CATALOG_RUNTIME || {};
 const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
-const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(MAP_EDITOR_DATA.version) || 0);
+const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(REGION_CATALOG.version) || Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
-const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
+const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
+const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = Math.max(15, Math.floor(Number(REGION_CATALOG.capacityPolicy?.minimumNpcCitiesForSpawn) || 15));
+const REGION_DEFINITION_CACHE_LIMIT = Math.max(1, Math.floor(Number(REGION_CATALOG.definitionCache?.maxRegions) || 4));
+const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLoader({
+  catalog: REGION_CATALOG,
+  cacheLimit: REGION_DEFINITION_CACHE_LIMIT,
+  getActiveRegionId: () => getActiveMapRegionId(),
+  fetchJson: async (definitionPath, summary) => {
+    const response = await fetch(definitionPath, { cache: "no-cache", credentials: "same-origin" });
+    if (!response.ok) throw new Error(`${summary.name || summary.id} definition returned HTTP ${response.status}.`);
+    return response.json();
+  },
+  onLoad: regionId => playableBaseCitiesByRegionCache?.delete(regionId),
+  onEvict: regionId => {
+    playableBaseCitiesByRegionCache?.delete(regionId);
+    for (const [cityId, city] of playableBaseCitiesByIdCache || []) {
+      if (city?.regionId === regionId) playableBaseCitiesByIdCache.delete(cityId);
+    }
+  },
+});
+const regionDefinitionCache = REGION_DEFINITION_LOADER.cache;
+const regionDefinitionLoadStats = REGION_DEFINITION_LOADER.stats;
+window.CROWNLANDS_REGION_LOADING_DEBUG = regionDefinitionLoadStats;
+const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, REGION_CATALOG.regions?.length ? REGION_CATALOG : MAP_EDITOR_DATA);
 const WORLD_REGIONS_BY_ID = new Map(WORLD_REGIONS.map(region => [region.id, region]));
 const WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
-const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
-const STARTER_REGION_TYPE = "starter";
-const NEW_PLAYER_SPAWN_REGION_TYPE_ORDER = [STARTER_REGION_TYPE, "midgame", "endgame"];
-const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = 10;
 const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
@@ -318,7 +339,14 @@ function cleanRegionType(value) {
 }
 
 function isStarterRegion(region = null) {
-  return cleanRegionType(region?.type) === STARTER_REGION_TYPE;
+  return Boolean(
+    region?.purpose === "player_region"
+    && region?.spawnEligible
+    && region?.spawnReady
+    && !region?.permanentCore
+    && region?.lifecycle === "active"
+    && Math.floor(Number(region?.npcCityCount) || 0) >= MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES
+  );
 }
 
 function labelFromEditorRegionId(regionId) {
@@ -329,7 +357,17 @@ function labelFromEditorRegionId(regionId) {
     .join(" ") || "Island";
 }
 
-function getEditorMapEntries(data = MAP_EDITOR_DATA) {
+function buildCatalogEditorMap(region, definition = null) {
+  return REGION_CATALOG_RUNTIME.buildClientEditorMap(region, definition);
+}
+
+function getEditorMapEntries(data = REGION_CATALOG.regions?.length ? REGION_CATALOG : MAP_EDITOR_DATA) {
+  if (Array.isArray(data?.regions)) {
+    return data.regions.map(region => buildCatalogEditorMap(
+      region,
+      regionDefinitionCache.get(cleanEditorRegionId(region.id))?.definition,
+    ));
+  }
   return Array.isArray(data?.maps)
     ? data.maps
         .map(map => {
@@ -338,6 +376,10 @@ function getEditorMapEntries(data = MAP_EDITOR_DATA) {
         })
         .filter(Boolean)
     : [];
+}
+
+async function ensureRegionDefinitionLoaded(regionId, { protectedRegionIds = [] } = {}) {
+  return REGION_DEFINITION_LOADER.ensure(cleanEditorRegionId(regionId), { protectedRegionIds });
 }
 
 function getEditorMap(regionId) {
@@ -388,8 +430,8 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
     const label = map.label || map.name || regionPatch.label || existing?.label || fallback.label;
     const type = cleanRegionType(map.type || regionPatch.type || existing?.type || fallback.type);
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, type, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label, type };
+      ? { ...existing, ...map, ...regionPatch, ...gridPatch, id: map.id, label, type, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...map, ...regionPatch, ...gridPatch, id: map.id, label, type };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
@@ -406,8 +448,8 @@ const CITY_RELINQUISH_DAILY_LIMIT = 1;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
-const WORLD_WIDTH = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth || WORLD_CONFIG.width) || 10000));
-const WORLD_HEIGHT = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight || WORLD_CONFIG.height) || 7600));
+const WORLD_WIDTH = Math.max(1, Math.floor(Number(REGION_CATALOG?.globalSettings?.worldWidth || MAP_EDITOR_DATA?.globalSettings?.worldWidth || WORLD_CONFIG.width) || 10000));
+const WORLD_HEIGHT = Math.max(1, Math.floor(Number(REGION_CATALOG?.globalSettings?.worldHeight || MAP_EDITOR_DATA?.globalSettings?.worldHeight || WORLD_CONFIG.height) || 7600));
 const GRID_SIZE = Math.max(40, Math.floor(Number(WORLD_CONFIG.gridSize) || 50));
 const GRID_COLS = Math.ceil(WORLD_WIDTH / GRID_SIZE);
 const GRID_ROWS = Math.ceil(WORLD_HEIGHT / GRID_SIZE);
@@ -433,6 +475,7 @@ const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp";
 const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-a1de679b797d.webp";
 const MAP_SWITCH_ARROW_ICON_SRC = "assets/optimized/hud-map-switch-arrow-192x212-a1e29fa42628.webp";
+const MAP_GATE_ART_SRC = "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp";
 const DEFAULT_PORTAL_VISUAL_SIZE = 92;
 const MIN_PORTAL_VISUAL_SIZE = 60;
 const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
@@ -875,7 +918,9 @@ const PLAYER_START_TROOPS = 200;
 const PLAYER_SLOT_START_TROOPS = 200;
 const NEUTRAL_START_TROOPS = 10;
 const TEST_STARTING_GOLD = 100;
-const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
+const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => (
+  total + Math.max(0, Number(region.npcCityCount) || 0) + Math.max(0, Number(region.objectiveCount) || 0)
+), 0);
 const SCOUT_REPORT_SECONDS = 600;
 const LEGACY_SCOUT_REPORT_SECONDS = 120;
 const BATTLE_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
@@ -2631,13 +2676,21 @@ function getCityRegionId(cityOrId) {
   }
   const cityId = String(cityOrId || "");
   const base = getPlayableBaseCityById(cityId);
-  return normalizeRegionId(base?.regionId || base?.startPool);
+  const prefixedRegionId = [...WORLD_REGION_IDS]
+    .sort((left, right) => right.length - left.length)
+    .find(regionId => cityId.startsWith(`${regionId}_`));
+  return normalizeRegionId(base?.regionId || base?.startPool || prefixedRegionId);
 }
 
 function getKnownCityId(cityId) {
   const value = String(cityId || "");
   if (!value) return "";
-  return getPlayableBaseCityById(value) ? value : "";
+  if (getPlayableBaseCityById(value)) return value;
+  if (state?.cities?.some(city => city?.id === value)) return value;
+  const regionId = [...WORLD_REGION_IDS]
+    .sort((left, right) => right.length - left.length)
+    .find(candidate => value.startsWith(`${candidate}_`));
+  return regionId ? value : "";
 }
 
 function getOnlineIslandId(regionId = DEFAULT_ONLINE_REGION_ID) {
@@ -3089,27 +3142,25 @@ function getRegionIdsByType(regionType) {
 }
 
 function getOrderedNewPlayerSpawnRegionIds() {
-  const seen = new Set();
-  const ordered = [];
-  NEW_PLAYER_SPAWN_REGION_TYPE_ORDER.forEach(regionType => {
-    getRegionIdsByType(regionType).forEach(regionId => {
-      if (seen.has(regionId)) return;
-      seen.add(regionId);
-      ordered.push(regionId);
-    });
-  });
-  return ordered;
+  return WORLD_REGIONS
+    .filter(isStarterRegion)
+    .sort((left, right) => (
+      Number(left.worldLayer) - Number(right.worldLayer)
+      || Number(left.clockwiseOrderIndex) - Number(right.clockwiseOrderIndex)
+      || String(left.id).localeCompare(String(right.id))
+    ))
+    .map(region => region.id);
 }
 
 function getNewPlayerSpawnRegionIds() {
-  const orderedRegionIds = getOrderedNewPlayerSpawnRegionIds();
-  return orderedRegionIds.length ? orderedRegionIds : getOuterRegionIds();
+  return getOrderedNewPlayerSpawnRegionIds();
 }
 
 function getNeutralCityCountFromSummary(regionId, summary = null) {
   const regularCityCount = Math.max(
     0,
     getRegularCityCapacity(regionId),
+    Math.floor(Number(getRegionById(regionId)?.npcCityCount) || 0),
     Math.floor(Number(summary?.regularCityCount) || 0),
     Math.floor(Number(summary?.cityCount) || 0)
   );
@@ -3195,7 +3246,7 @@ async function resolveHomeRegionIdForSetup(profile = null, { trustLocalState = t
   if (storedHomeRegionId) return storedHomeRegionId;
   const availableRegionId = await pickAvailableStartingRegionId();
   if (availableRegionId) return availableRegionId;
-  throw new Error(`No starter, midgame, or endgame map has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
+  throw new Error(`No spawn-eligible player region has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
 }
 
 function createWorldTerrainBlockers() {
@@ -4095,6 +4146,7 @@ function preloadNearbyIslandMaps(regionId) {
       return;
     }
     preloadIslandMap(connectedRegionIds[index], { fetchPriority: "low" })
+      .then(() => ensureRegionDefinitionLoaded(connectedRegionIds[index], { protectedRegionIds: [normalizedRegionId] }))
       .catch(() => false)
       .finally(() => scheduleIdle(() => preloadNext(index + 1)));
   };
@@ -4303,6 +4355,32 @@ function renderIslandTeleporters() {
     });
     portalLayer.appendChild(buttonElement);
   });
+  const activeRegion = getRegionById(getActiveMapRegionId());
+  const bounds = getActiveMapBounds();
+  Object.values(activeRegion?.connections || {})
+    .filter(connection => connection?.state === "gated")
+    .forEach(connection => {
+      const side = String(connection.side || "");
+      const gatePoint = {
+        x: side === "west" ? 96 : side === "east" ? bounds.width - 96 : bounds.width / 2,
+        y: side === "north" ? 88 : side === "south" ? bounds.height - 88 : bounds.height / 2,
+      };
+      const gateElement = document.createElement("div");
+      gateElement.className = `teleport-node region-gate edge-transition-${side}`;
+      gateElement.dataset.edgeState = "gated";
+      gateElement.dataset.transitionSide = side;
+      gateElement.style.left = `${gatePoint.x}px`;
+      gateElement.style.top = `${gatePoint.y}px`;
+      gateElement.style.setProperty("--teleport-size", "104px");
+      gateElement.setAttribute("role", "img");
+      gateElement.setAttribute("aria-label", `${side} expansion gate; the neighboring region is not active`);
+      gateElement.title = "Expansion gate — neighboring region not active";
+      gateElement.innerHTML = `
+        <img class="region-gate-icon" src="${MAP_GATE_ART_SRC}" alt="" draggable="false" decoding="async" aria-hidden="true" />
+        <span class="teleport-label">Gate</span>
+      `;
+      portalLayer.appendChild(gateElement);
+    });
 }
 
 function renderHarvestBonuses() {
@@ -4731,17 +4809,13 @@ function cloneBaseCities(playerName) {
 }
 
 function getPlayableBaseCities() {
-  if (playableBaseCitiesCache) return playableBaseCitiesCache;
-  playableBaseCitiesCache = generateWorldCitySlots();
-  return playableBaseCitiesCache;
+  return getPlayableBaseCitiesByRegion(getActiveMapRegionId());
 }
 
 function getPlayableBaseCityById(cityId) {
   const id = String(cityId || "");
   if (!id) return null;
-  if (!playableBaseCitiesByIdCache) {
-    playableBaseCitiesByIdCache = new Map(getPlayableBaseCities().map(city => [city.id, city]));
-  }
+  if (!playableBaseCitiesByIdCache) playableBaseCitiesByIdCache = new Map();
   return playableBaseCitiesByIdCache.get(id) || null;
 }
 
@@ -4749,16 +4823,22 @@ function getPlayableBaseCitiesByRegion(regionId = getActiveOnlineRegionId()) {
   const normalizedRegionId = normalizeRegionId(regionId);
   if (!playableBaseCitiesByRegionCache) playableBaseCitiesByRegionCache = new Map();
   if (!playableBaseCitiesByRegionCache.has(normalizedRegionId)) {
-    playableBaseCitiesByRegionCache.set(
-      normalizedRegionId,
-      getPlayableBaseCities().filter(city => getCityRegionId(city) === normalizedRegionId)
-    );
+    const region = getRegionById(normalizedRegionId);
+    const cities = region && hasEditorCityDefinitions(normalizedRegionId)
+      ? [
+          ...generateRegionCitySlots(region, getRegionCityCount(region)),
+          ...generateStrongholdSlots().filter(city => city.regionId === normalizedRegionId),
+        ]
+      : [];
+    playableBaseCitiesByRegionCache.set(normalizedRegionId, cities);
+    if (!playableBaseCitiesByIdCache) playableBaseCitiesByIdCache = new Map();
+    cities.forEach(city => playableBaseCitiesByIdCache.set(city.id, city));
   }
   return playableBaseCitiesByRegionCache.get(normalizedRegionId) || [];
 }
 
 function createIslandStartLayout(_playerName) {
-  const cities = getPlayableBaseCities().map(createNeutralCityFromBase);
+  const cities = getPlayableBaseCitiesByRegion(getActiveMapRegionId()).map(createNeutralCityFromBase);
 
   const startIds = pickStartCities(cities);
   const assignments = [
@@ -4980,7 +5060,7 @@ function newGame(playerName) {
     islandSlots: island.startIds,
     cities: island.cities,
     attacks: [],
-    log: [`Five-island conquest started with ${ISLAND_CITY_COUNT} city slots across individual island maps.`],
+    log: [`Crownlands started with ${ISLAND_CITY_COUNT} active city slots across ${WORLD_REGION_IDS.length} regional maps.`],
     gameOver: null,
   };
 }
@@ -12439,16 +12519,16 @@ function getIslandMapGridCoordinate(region) {
   const explicitWorldX = [map?.region?.x, region?.x].find(value => Number.isFinite(Number(value)));
   const explicitWorldY = [map?.region?.y, region?.y].find(value => Number.isFinite(Number(value)));
   if (explicitWorldX !== undefined && explicitWorldY !== undefined) {
-    const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
-    const worldWidth = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth) || WORLD_WIDTH);
-    const worldHeight = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight) || WORLD_HEIGHT);
+    const cellSize = Math.max(500, Number(REGION_CATALOG?.globalSettings?.gridCellWorldSize || MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+    const worldWidth = Math.max(1000, Number(REGION_CATALOG?.globalSettings?.worldWidth || MAP_EDITOR_DATA?.globalSettings?.worldWidth) || WORLD_WIDTH);
+    const worldHeight = Math.max(1000, Number(REGION_CATALOG?.globalSettings?.worldHeight || MAP_EDITOR_DATA?.globalSettings?.worldHeight) || WORLD_HEIGHT);
     return {
       gridX: Math.round((Number(explicitWorldX) - worldWidth / 2) / cellSize),
       gridY: Math.round((Number(explicitWorldY) - worldHeight / 2) / cellSize),
     };
   }
 
-  const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+  const cellSize = Math.max(500, Number(REGION_CATALOG?.globalSettings?.gridCellWorldSize || MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
   return {
     gridX: Math.round(((Number(region?.x) || WORLD_WIDTH / 2) - WORLD_WIDTH / 2) / cellSize),
     gridY: Math.round(((Number(region?.y) || WORLD_HEIGHT / 2) - WORLD_HEIGHT / 2) / cellSize),
@@ -12509,6 +12589,18 @@ function getIslandMapPickerStyle() {
 function getIslandMapConnectionEdges() {
   const regionIds = new Set(getRegionIds());
   const edges = new Map();
+  if (REGION_CATALOG.regions?.length) {
+    for (const region of REGION_CATALOG.regions) {
+      const source = normalizeRegionId(region.id);
+      for (const connection of Object.values(region.connections || {})) {
+        const target = normalizeRegionId(connection?.targetRegionId);
+        if (connection?.state !== "open" || !target || target === source || !regionIds.has(target)) continue;
+        const key = [source, target].sort().join("::");
+        if (!edges.has(key)) edges.set(key, { source, target });
+      }
+    }
+    return Array.from(edges.values());
+  }
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     if (!regionIds.has(source)) continue;
@@ -13216,6 +13308,13 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionS
     return false;
   }
   const sourceRegionId = normalizeRegionId(getActiveMapRegionId());
+  try {
+    await ensureRegionDefinitionLoaded(targetRegionId, { protectedRegionIds: [sourceRegionId] });
+  } catch (error) {
+    console.warn(`Could not load ${getRegionLabel(targetRegionId)} definition`, error);
+    showToast(`Could not load ${getRegionLabel(targetRegionId)}. Your current map is unchanged.`);
+    return false;
+  }
   if (!state) {
     const transition = sourceRegionId === targetRegionId
       ? null
@@ -14458,6 +14557,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
   let homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
   let activeRegionId = homeRegionId;
+  await ensureRegionDefinitionLoaded(homeRegionId);
   const mainIslandId = getOnlineIslandId(homeRegionId);
   const storedMainCityId = String(profile?.mainCityId
     || (hasCurrentProfile ? state.online?.mainCityId : "")
@@ -14578,6 +14678,7 @@ async function connectOnlineIsland(regionId, {
   onlineLastError = "";
   updateOnlineUi();
   const targetRegionId = normalizeRegionId(regionId);
+  await ensureRegionDefinitionLoaded(targetRegionId, { protectedRegionIds: [getActiveMapRegionId()] });
   const islandId = getOnlineIslandId(targetRegionId);
   const homeRegion = normalizeRegionId(homeRegionId || state.online?.mainRegionId || targetRegionId);
   const mainIslandId = getOnlineIslandId(homeRegion);
@@ -17616,6 +17717,7 @@ async function startFromInput(forceFresh = false) {
       return;
     }
     clearEnemyPowerBandCache();
+    await ensureRegionDefinitionLoaded(DEFAULT_ONLINE_REGION_ID);
     state = createOnlineEntryState(playerName);
     state.online = null;
     onlineWorldConnected = false;
@@ -35020,7 +35122,7 @@ function showHelpModal() {
       <li>Normal cities have no level cap. Upgrade cost rises 20% per level, with an extra doubling for each ten-level band above Level 100.</li>
       <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
-      <li>New online players claim starting cities on starter maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities, then midgame maps, then endgame maps.</li>
+      <li>New online players claim starting cities only in server-approved player regions with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities.</li>
       <li>Your main city starts with 200 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>
