@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Action and Report Responsive QA</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #17110d; color: #f2e2bf; font-family: Georgia, serif; }
+    body { padding: 18px; }
+    h1 { margin: 0 0 6px; font-size: 1.25rem; }
+    p { margin: 0 0 16px; color: #c8b894; }
+    main { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+    section { padding: 10px; border: 1px solid #997643; background: #231a14; }
+    h2 { margin: 0 0 8px; color: #e7d6b4; font-size: .8rem; }
+    iframe { display: block; border: 1px solid #997643; background: #17110d; }
+    #portraitFrame { width: 390px; height: 844px; }
+    .landscape-shell { width: 633px; height: 293px; overflow: hidden; }
+    #landscapeFrame { width: 844px; height: 390px; transform: scale(.75); transform-origin: 0 0; }
+  </style>
+</head>
+<body>
+  <h1>Crownlands Responsive Action and Report QA</h1>
+  <p>Exact 390×844 portrait and 844×390 landscape document viewports.</p>
+  <main>
+    <section><h2>Portrait · 390×844</h2><iframe id="portraitFrame" title="Portrait Crownlands QA" src="index.html"></iframe></section>
+    <section><h2>Landscape · 844×390</h2><div class="landscape-shell"><iframe id="landscapeFrame" title="Landscape Crownlands QA" src="index.html"></iframe></div></section>
+  </main>
+</body>
+</html>

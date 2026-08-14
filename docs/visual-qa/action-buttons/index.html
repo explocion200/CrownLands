@@ -3,10 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crownlands Action Button Matrix</title>
+  <title>Crownlands Action and Report Visual QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
   <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
   <style>
     * { box-sizing: border-box; }
+    html { background: #17110d; }
     body {
       margin: 0;
       padding: 24px;
@@ -14,85 +24,202 @@
       background: #17110d;
       font-family: "Cinzel", Georgia, serif;
     }
-    h1 { margin: 0 0 8px; color: #e7d6b4; font-size: 1.4rem; }
-    p { margin: 0 0 20px; color: #c8b894; }
-    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-    section { padding: 14px; border: 1px solid #72563a; background: #231a14; }
-    h2 { margin: 0 0 12px; color: #d0b98e; font-size: .85rem; }
-    .action-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .qa-header { max-width: 1180px; margin: 0 auto 18px; }
+    .qa-header h1 { margin: 0 0 8px; color: #e7d6b4; font-size: 1.45rem; }
+    .qa-header p { margin: 0; color: #c8b894; }
+    .qa-page { width: min(1180px, 100%); margin: 0 auto; display: grid; gap: 18px; }
+    .qa-panel { padding: 16px; border: 1px solid #72563a; background: #231a14; }
+    .qa-panel > h2 { margin: 0 0 6px; color: #e7d6b4; font-size: 1rem; }
+    .qa-note { margin: 0 0 14px; color: #c8b894; font-size: .75rem; }
+    .objective-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .objective-card { min-width: 0; padding: 13px; border: 1px solid #72563a; background: #17110d; }
+    .objective-card h3 { margin: 0 0 11px; color: #d0b98e; font-size: .82rem; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 13px; align-items: flex-start; }
     .action-row .cl-action-button {
       position: relative !important;
       inset: auto !important;
       transform: none !important;
       flex: 0 0 var(--cl-action-size);
     }
+    .state-sample { display: grid; justify-items: center; gap: 6px; color: #c8b894; font-size: .62rem; }
+    .report-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+    .qa-modal.modal {
+      position: relative !important;
+      inset: auto !important;
+      width: auto !important;
+      max-width: none !important;
+      height: auto !important;
+      display: block !important;
+      padding: 0 !important;
+      overflow: visible !important;
+      background: transparent !important;
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+    .qa-modal .modal-card {
+      width: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+      margin: 0 !important;
+      padding: 10px !important;
+      overflow: visible !important;
+      opacity: 1 !important;
+      transform: none !important;
+      animation: none !important;
+    }
+    .qa-modal .modal-card > h2 { position: relative; padding-right: 42px !important; }
+    .qa-modal .modal-close { position: absolute; top: 14px; right: 14px; z-index: 2; }
+    .qa-modal #qaNormalBody,
+    .qa-modal #qaScoutBody { overflow: visible !important; }
+    .qa-battle-hero { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; padding: 10px; border: 1px solid #997643; border-radius: 12px; background: #e7d6b4; }
+    .qa-battle-hero > div { min-width: 0; text-align: center; }
+    .qa-battle-hero small,
+    .qa-battle-hero strong { display: block; }
+    .qa-result-seal { padding: 5px 8px; border-radius: 999px; color: #f2e2bf; background: #64754a; font-size: .64rem; }
+    .troop-comparison { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
+    .qa-map-label { min-height: 126px; display: grid; place-items: center; overflow: visible; background: radial-gradient(circle, #775f37, #3d3020); }
+    .qa-city-node.city-node { position: relative; inset: auto; width: 170px; height: 100px; transform: none; filter: none; overflow: visible; }
+    .qa-city-node .city-label { bottom: 12px; }
+    .qa-city-node .player-city-label,
+    .qa-city-node .foreign-city-label { filter: none; }
+    .qa-city-node .foreign-city-shield { position: relative; }
+    .qa-label-name { margin-top: 8px; color: #d0b98e; font-size: .65rem; text-align: center; }
+    @media (max-width: 760px) {
+      body { padding: 12px; }
+      .objective-grid,
+      .report-comparison { grid-template-columns: 1fr; }
+      .troop-comparison { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+    }
+    @media (max-width: 420px) {
+      .troop-comparison { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>Crownlands Shared Action Buttons</h1>
-  <p>One physical component and semantic palette across every map objective.</p>
-  <main>
-    <section aria-labelledby="owned-city-title">
-      <h2 id="owned-city-title">Owned City</h2>
-      <div class="action-row">
-        <button class="city-wheel-action cl-action-button cl-action-royal"><span>♛</span><strong>Level</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-send"><span>➜</span><strong>Send</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-info"><span>i</span><strong>Info</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-scout armed"><span>◉</span><strong>Nearby</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-send busy" aria-busy="true"><span>↶</span><strong>Regroup</strong></button>
+  <header class="qa-header">
+    <h1>Crownlands Action, Report, and Troop-Label QA</h1>
+    <p>The production stylesheet order is loaded here so legacy cascade conflicts remain visible. <a href="responsive.html">Open portrait and landscape frames</a>.</p>
+  </header>
+
+  <main class="qa-page">
+    <section class="qa-panel" aria-labelledby="objective-title">
+      <h2 id="objective-title">64×64 Hex Action System</h2>
+      <p class="qa-note">Every objective uses the same physical component; the action type alone supplies color.</p>
+      <div class="objective-grid">
+        <article class="objective-card">
+          <h3>Regular City</h3>
+          <div class="action-row">
+            <button class="city-wheel-action cl-action-button cl-action-info"><span aria-hidden="true">i</span><strong>Info</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-send"><span aria-hidden="true">&#10140;</span><strong>Send</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-attack"><span aria-hidden="true">&#9876;</span><strong>Attack</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-reinforce"><span aria-hidden="true">&#9814;</span><strong>Reinforce</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-scout"><span aria-hidden="true">&#9673;</span><strong>Scout</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-info" disabled><span aria-hidden="true">i</span><strong>Disabled</strong></button>
+            <button class="city-wheel-action cl-action-button cl-action-send busy" aria-busy="true"><span aria-hidden="true">&#8634;</span><strong>Busy</strong></button>
+          </div>
+        </article>
+
+        <article class="objective-card">
+          <h3>Camp</h3>
+          <div class="action-row">
+            <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span aria-hidden="true">i</span><strong>Rewards</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span aria-hidden="true">&#9776;</span><strong>History</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span aria-hidden="true">&#9876;</span><strong>Capture</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span aria-hidden="true">&#9673;</span><strong>Rescout</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-send"><span aria-hidden="true">&#8634;</span><strong>Return</strong></button>
+          </div>
+        </article>
+
+        <article class="objective-card">
+          <h3>Stronghold</h3>
+          <div class="action-row">
+            <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span aria-hidden="true">i</span><strong>Info</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span aria-hidden="true">&#9876;</span><strong>Assault</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-reinforce"><span aria-hidden="true">&#9814;</span><strong>Reinforce</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span aria-hidden="true">&#9873;</span><strong>Rally</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span aria-hidden="true">&#9673;</span><strong>Scout</strong></button>
+          </div>
+        </article>
+
+        <article class="objective-card">
+          <h3>Crown Citadel</h3>
+          <div class="action-row">
+            <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span aria-hidden="true">i</span><strong>Ledger</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span aria-hidden="true">&#9876;</span><strong>Attack</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-reinforce"><span aria-hidden="true">&#9814;</span><strong>Reinforce</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span aria-hidden="true">&#9873;</span><strong>Rally</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span aria-hidden="true">&#9673;</span><strong>Scout</strong></button>
+            <button class="gold-camp-wheel-action cl-action-button cl-action-royal"><span aria-hidden="true">&#9819;</span><strong>Royal</strong></button>
+          </div>
+        </article>
       </div>
     </section>
 
-    <section aria-labelledby="foreign-city-title">
-      <h2 id="foreign-city-title">Foreign and Clan Cities</h2>
+    <section class="qa-panel" aria-labelledby="state-title">
+      <h2 id="state-title">Interaction States</h2>
+      <p class="qa-note">Deterministic QA attributes expose the same visual rules used by hover, press, and keyboard focus.</p>
       <div class="action-row">
-        <button class="city-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Scout</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-scout is-pending" aria-busy="true" disabled><span>◉</span><strong>Scouting</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Attack</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-reinforce"><span>♜</span><strong>Reinforce</strong></button>
-        <button class="city-wheel-action cl-action-button cl-action-info"><span>▤</span><strong>Report</strong></button>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-send"><span>&#10140;</span><strong>Normal</strong></button><span>normal</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-send" data-qa-state="hover"><span>&#10140;</span><strong>Send</strong></button><span>hover</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-attack" data-qa-state="pressed"><span>&#9876;</span><strong>Attack</strong></button><span>pressed</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-reinforce" data-qa-state="focus"><span>&#9814;</span><strong>Reinforce</strong></button><span>focus</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-info" disabled><span>i</span><strong>Info</strong></button><span>disabled</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-rally busy" aria-busy="true"><span>&#9873;</span><strong>Rally</strong></button><span>busy</span></div>
+        <div class="state-sample"><button class="city-wheel-action cl-action-button cl-action-scout is-pending" aria-busy="true" disabled><span>&#9673;</span><strong>Scouting</strong></button><span>pending Scout</span></div>
       </div>
     </section>
 
-    <section aria-labelledby="camp-title">
-      <h2 id="camp-title">Camp</h2>
-      <div class="action-row">
-        <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Rescout</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Attack</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-send"><span>↶</span><strong>Recall</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>i</span><strong>Rewards</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span>⚑</span><strong>Rally</strong></button>
+    <section class="qa-panel" aria-labelledby="report-title">
+      <h2 id="report-title">Normal Report and Scout Report</h2>
+      <p class="qa-note">Both samples share the production modal frame, burgundy header, parchment cards, brass trim, controls, spacing, and scroll contract.</p>
+      <div class="report-comparison">
+        <div class="qa-modal modal battle-report-modal">
+          <article class="modal-card">
+            <button class="modal-close" type="button" aria-label="Close normal report">×</button>
+            <h2>Report Details</h2>
+            <div id="qaNormalBody">
+              <div class="battle-report-detail battle-visual-report detailed-battle-report victory">
+                <button class="battle-report-back" type="button">&#8592; Back to reports</button>
+                <div class="battle-report-detail-head"><span>Victory</span><strong>Redhollow March</strong><small>Level 20 city · 2m ago</small></div>
+                <div class="qa-battle-hero"><div><small>Attacker</small><strong>Benchmark Ruler</strong></div><span class="qa-result-seal">Victory</span><div><small>Defender</small><strong>Rival Kingdom</strong></div></div>
+                <section class="battle-visual-section"><h3>Troop outcome</h3><div class="battle-report-detail-grid"><div><span>Sent</span><strong>125K</strong></div><div><span>Survived</span><strong>94K</strong></div></div></section>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="qa-modal modal scout-report-modal">
+          <article class="modal-card">
+            <button class="modal-close" type="button" aria-label="Close Scout Report">×</button>
+            <h2>Detailed Scout Report</h2>
+            <div id="qaScoutBody">
+              <div class="detailed-scout-report">
+                <div class="scout-report-identities">
+                  <div class="scout-report-ruler player"><div><strong>Benchmark Ruler</strong><small>Hero Lv 68</small></div></div>
+                  <div class="scout-report-mark"><span aria-hidden="true">&#9673;</span><strong>Scout</strong><small>1 troop</small></div>
+                  <div class="scout-report-ruler enemy"><div><strong>Rival Kingdom</strong><small>City Lv 20</small></div></div>
+                </div>
+                <div class="scout-report-city"><span>Target city</span><strong>Redhollow March</strong><b>Level 20</b><button class="scout-report-locate" type="button" aria-label="Locate city">&#10140;</button></div>
+                <div class="scout-report-overview"><div><span>Scouted troops</span><strong>125K</strong></div><div><span>Total defense</span><strong>178K</strong></div></div>
+                <section class="scout-report-section"><h3>Enemy defense</h3><div class="scout-defense-breakdown"><div class="scout-breakdown-row"><span class="scout-stat-icon">&#9814;</span><span><strong>City owner</strong><small>125K troops</small></span><b>162K</b></div><div class="scout-breakdown-row"><span class="scout-stat-icon">&#9638;</span><span><strong>City walls</strong><small>Level 20</small></span><b>16K</b></div><div class="scout-breakdown-total"><span>Total</span><strong>178K</strong></div></div></section>
+                <div class="scout-report-timing"><span>Report age: <b>2m</b></span><span>Expires in: <b>8m</b></span></div>
+              </div>
+            </div>
+          </article>
+        </div>
       </div>
     </section>
 
-    <section aria-labelledby="stronghold-title">
-      <h2 id="stronghold-title">Stronghold</h2>
-      <div class="action-row">
-        <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Scout</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Assault</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-send"><span>➜</span><strong>Send</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-reinforce"><span>♜</span><strong>Reinforce</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>▤</span><strong>History</strong></button>
-      </div>
-    </section>
-
-    <section aria-labelledby="citadel-title">
-      <h2 id="citadel-title">Crown Citadel</h2>
-      <div class="action-row">
-        <button class="gold-camp-wheel-action cl-action-button cl-action-scout busy" aria-busy="true"><span>◉</span><strong>Scouting</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Capture</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span>⚑</span><strong>Rally</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>♛</span><strong>Ledger</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-royal"><span>♛</span><strong>Royal</strong></button>
-      </div>
-    </section>
-
-    <section aria-labelledby="disabled-title">
-      <h2 id="disabled-title">Shared Disabled State</h2>
-      <div class="action-row">
-        <button class="city-wheel-action cl-action-button cl-action-send" disabled><span>➜</span><strong>Send</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-attack" disabled><span>⚔</span><strong>Attack</strong></button>
-        <button class="gold-camp-wheel-action cl-action-button cl-action-info" disabled><span>i</span><strong>Info</strong></button>
+    <section class="qa-panel" aria-labelledby="troop-title">
+      <h2 id="troop-title">Map Troop Counters</h2>
+      <p class="qa-note">Owned-city troop counts contain one text node and explicitly neutralize the generic map-label outline shadow. The protected main city uses the same dark-gray identity as every protected main city.</p>
+      <div class="troop-comparison">
+        <div><div class="qa-map-label"><button class="qa-city-node city-node player"><span class="city-label player-city-label"><span class="player-city-banner"><span class="city-owner-column"><span class="city-owner-flag">CL</span><span class="city-label-level">20</span></span><span class="player-city-data"><strong class="city-ruler-name">Your Kingdom</strong><strong class="city-name">Redhollow</strong><span class="city-army-count">125K troops</span></span></span></span></button></div><div class="qa-label-name">Owned city</div></div>
+        <div><div class="qa-map-label"><button class="qa-city-node city-node player main-city-node"><span class="city-label player-city-label"><span class="player-city-banner"><span class="city-owner-column"><span class="city-owner-flag">CL</span><span class="city-label-level">20</span></span><span class="player-city-data"><strong class="city-ruler-name">Your Kingdom</strong><strong class="city-name">Crownstead</strong><span class="city-army-count">250K troops</span></span></span></span></button></div><div class="qa-label-name">Your main city</div></div>
+        <div><div class="qa-map-label"><button class="qa-city-node city-node neutral"><span class="city-label foreign-city-label"><strong class="city-name">Graywatch</strong><span class="foreign-city-shield"><span class="city-label-level">20</span></span></span></button></div><div class="qa-label-name">Neutral city</div></div>
+        <div><div class="qa-map-label"><button class="qa-city-node city-node enemy enemy-power-in-range"><span class="city-label foreign-city-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Rival Kingdom</strong></span><strong class="city-name">Bloodgate</strong><span class="foreign-city-shield"><span class="city-label-level">20</span></span></span></button></div><div class="qa-label-name">Enemy city</div></div>
+        <div><div class="qa-map-label"><button class="qa-city-node city-node clan-ally"><span class="city-label foreign-city-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Clan Member</strong></span><strong class="city-name">Mosskeep</strong><span class="foreign-garrison clan-visible">84K troops</span><span class="foreign-city-shield"><span class="city-label-level">20</span></span></span></button></div><div class="qa-label-name">Clan city</div></div>
       </div>
     </section>
   </main>

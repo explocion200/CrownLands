@@ -14,7 +14,7 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260814-crownlands-palette-r34";
+const releaseId = "20260814-main-city-r36";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css) <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -95,8 +95,16 @@ for (const [selector, color] of [
   assert.match(styles, new RegExp(`\\.city-node\\.enemy\\.${selector}\\s*\\{[\\s\\S]*?--enemy-city-ui:\\s*${color};`), `${selector} does not use ${color}.`);
 }
 assert.match(styles, /\.city-owner-column\s*\{[\s\S]*?background:\s*#b68a43;/, "Owned-city labels do not use player gold.");
+assert.match(styles, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background:\s*#454b54;/, "The player's protected main-city label does not use the shared dark gray identity.");
+assert.match(css, /--cl-main-city:\s*#454b54;/, "The final palette is missing the protected main-city gray token.");
+assert.match(css, /\.city-node\.player\.main-city-node :is\(\.city-owner-column, \.city-army-count\)[\s\S]*?background:\s*var\(--cl-main-city\) !important;/, "The final palette does not keep the player's main city dark gray.");
+assert.match(styles, /\.city-army-count\s*\{[\s\S]*?text-shadow:\s*none;/, "Owned-city troop counts can inherit the multi-layer map-label shadow.");
+assert.match(css, /\.city-node\.player \.city-army-count\s*\{[\s\S]*?filter:\s*none !important;[\s\S]*?text-shadow:\s*none !important;/, "The final palette does not guarantee one crisp owned-city troop text layer.");
 assert.match(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[\s\S]*?background:\s*#667a4a;/, "Clan-city labels do not use moss green.");
 assert.match(styles, /\.city-node\.neutral \.foreign-city-shield\s*\{\s*background:\s*#77736a;/, "Neutral city labels do not use stone gray.");
+
+assert.match(css, /Scout intelligence uses the shared parchment report family[\s\S]*?\.modal\.scout-report-modal \.scout-report-identities[\s\S]*?border:\s*1px solid var\(--cl-brass\) !important;[\s\S]*?background:\s*var\(--cl-card-bg\) !important;/, "Scout intelligence is not using the standard parchment report card construction.");
+assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-breakdown-row, \.scout-skill-row\)[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Scout list rows retain a conflicting legacy surface.");
 
 for (const exactAction of [
   "--cl-action-size: 64px",

@@ -495,11 +495,6 @@ input[type="range"] {
   color: var(--cl-profile-ivory) !important;
 }
 
-:is(.modal.scout-report-modal .detailed-scout-report, .battle-report-modal .battle-report-detail.scout, .detailed-battle-report) {
-  color: var(--cl-profile-ivory) !important;
-  background: linear-gradient(180deg, #123b56, #071b2a) !important;
-}
-
 /* Relationship and urgency colors remain meaningful. */
 :is(.incoming-attack-card:not(.incoming-scout-card), .incoming-attack-btn, .scouted-report-alert, .toast.error, .toast.warning) {
   color: var(--cl-profile-ivory) !important;
@@ -524,7 +519,7 @@ input[type="range"] {
   background: linear-gradient(180deg, #285b47, #14382c) !important;
 }
 
-:is(.daily-reward-card.locked, .skill-preset-tabs button.locked, button:disabled) {
+:is(.daily-reward-card.locked, .skill-preset-tabs button.locked, button:disabled:not(.cl-action-button)) {
   color: #d7e1e6 !important;
   border-color: #687f8b !important;
   background: linear-gradient(180deg, #405766, #263b48) !important;

@@ -28,6 +28,7 @@
   --cl-border-faded: #a59070;
 
   --cl-player-owned: #b68a43;
+  --cl-main-city: #454b54;
   --cl-clan: #667a4a;
   --cl-enemy-weaker: #c9786f;
   --cl-enemy-equal: #b3261e;
@@ -706,6 +707,46 @@ input[type="range"] {
   background: var(--cl-panel-bg) !important;
 }
 
+/* Scout intelligence uses the shared parchment report family. */
+.modal.scout-report-modal .scout-report-identities,
+.battle-report-modal .battle-report-detail.scout .battle-report-detail-head {
+  color: var(--cl-text) !important;
+  border: 1px solid var(--cl-brass) !important;
+  border-radius: 12px;
+  background: var(--cl-card-bg) !important;
+  box-shadow: var(--cl-card-shadow) !important;
+}
+
+.modal.scout-report-modal .scout-report-identities {
+  padding: .72rem;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.scout-report-mark > span, .scout-report-mark .cl-icon, .scout-report-mark strong, .scout-report-section h3, .scouted-report-section-head h3) {
+  color: var(--cl-burgundy) !important;
+  text-shadow: none !important;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.scout-report-timing, .scout-report-timing span, .scouted-report-time small) {
+  color: var(--cl-text-muted) !important;
+  text-shadow: none !important;
+}
+
+.modal.scout-report-modal :is(.scout-breakdown-row, .scout-skill-row),
+.battle-report-modal .battle-report-detail.scout :is(.scout-breakdown-row, .scout-skill-row) {
+  border-color: rgba(84, 47, 36, .2) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.battle-report-back, .battle-report-locate-btn, .scout-report-locate) {
+  color: var(--cl-text) !important;
+  border-color: var(--cl-brass) !important;
+  background: linear-gradient(180deg, var(--cl-panel-secondary), var(--cl-panel-inset)) !important;
+}
+
 .scouted-report-alert,
 .incoming-attack-card:not(.incoming-scout-card) {
   color: var(--cl-text-light) !important;
@@ -759,15 +800,28 @@ input[type="range"] {
 }
 
 /* Map label relationship system. Artwork and map geometry are untouched. */
-.city-node.player :is(.city-owner-column, .city-army-count),
-.city-node.player.main-city-node :is(.city-owner-column, .city-army-count) {
+.city-node.player :is(.city-owner-column, .city-army-count) {
   color: var(--cl-text) !important;
   background: var(--cl-player-owned) !important;
+}
+
+.city-node.player.main-city-node :is(.city-owner-column, .city-army-count) {
+  color: var(--cl-text-bright) !important;
+  background: var(--cl-main-city) !important;
+}
+
+.city-node.player .city-army-count {
+  filter: none !important;
+  text-shadow: none !important;
 }
 
 .city-node.player :is(.city-owner-column, .city-army-count) :is(span, strong, .city-label-level, .cl-icon) {
   color: var(--cl-text) !important;
   text-shadow: none !important;
+}
+
+.city-node.player.main-city-node :is(.city-owner-column, .city-army-count) :is(span, strong, .city-label-level, .cl-icon) {
+  color: var(--cl-text-bright) !important;
 }
 
 .city-node.clan-ally .city-ring {

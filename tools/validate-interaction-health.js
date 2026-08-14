@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const worker = fs.readFileSync(path.join(root, "route-worker.js"), "utf8");
 const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
+const actionButtons = fs.readFileSync(path.join(root, "action-buttons.css"), "utf8");
 
 function extractFunction(name) {
   const plainStart = game.indexOf(`function ${name}(`);
@@ -145,7 +146,7 @@ assert.ok(
 );
 assert.match(game, /scheduleMainMapPinchUpdate\(\)/, "Main-map pinch work must be animation-frame coalesced.");
 assert.match(styles, /--map-hit-size/, "Map interactions must retain a zoom-aware 44px target.");
-assert.match(styles, /\.city-wheel-action::before[\s\S]*\.gold-camp-wheel-action::before[\s\S]*--map-hit-size/, "City and camp action-wheel buttons must retain zoom-aware 44px targets.");
+assert.match(actionButtons, /--cl-action-size:\s*64px;[\s\S]*?:is\(\.city-wheel-action, \.gold-camp-wheel-action\)\.cl-action-button[\s\S]*?pointer-events:\s*auto;/, "City and camp action-wheel buttons must retain their shared 64px interactive target.");
 assert.match(styles, /\.army-sync-status/, "Realtime march recovery must be visible to players.");
 
 const dialogOpenScrollReset = extractFunction("installDialogOpenScrollReset");

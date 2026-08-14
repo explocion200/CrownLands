@@ -6,6 +6,8 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const css = read("ui-contrast-correction.css");
 const baseCss = read("styles.css");
+const paletteCss = read("crownlands-palette.css");
+const profileCss = read("profile-theme.css");
 const index = read("index.html");
 const game = read("game.js");
 const serviceWorker = read("service-worker.js");
@@ -144,10 +146,10 @@ assert.match(css, /\.battle-report-card \.battle-report-city>span\{color:#fff8ea
 assert.match(baseCss, /\.battle-report-card\.scout\s*\{[\s\S]*?border-left-color:\s*#355e7a !important;[\s\S]*?linear-gradient\(180deg, #f5e7c8, #d8c18f\) !important;/, "Scout report cards do not share the attack-report parchment and blue accent theme.");
 assert.match(baseCss, /\.battle-report-card\.scout \.battle-report-city > span\s*\{[\s\S]*?background:\s*linear-gradient\(#2376c8, #145391\) !important;/, "Scout report city-level badges do not use the standard attack blue.");
 assert.match(css, /\.battle-report-card\.scout \.battle-report-result\s*\{[\s\S]*?color:\s*var\(--cl-contrast-ivory-bright\);[\s\S]*?background:\s*var\(--cl-state-victory\) !important;/, "Scout report result badges do not use the readable attack-report blue theme.");
-assert.match(css, /:is\(\.modal\.scout-report-modal \.detailed-scout-report,[\s\S]*?\.battle-report-modal \.battle-report-detail\.scout\)\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #123b56, #071b2a\) !important;/, "Scout report detail surfaces are not consistently high contrast.");
-assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-report-overview > div, \.scout-defense-breakdown, \.scout-skill-list\),[\s\S]*?background:\s*#0a2b40 !important;/, "Scout intelligence cards can still inherit paper text on a dark background.");
-assert.match(css, /\.battle-report-modal \.scouted-report-alert\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(135deg, #65292e, #0b2d42\) !important;/, "The You Were Scouted alert is not readable.");
-assert.match(css, /\.scouted-report-section-head h3,[\s\S]*?\.scouted-report-attacker-link,[\s\S]*?color:\s*#ffe29a !important;/, "Scout report headings and attacker links lack a readable accent.");
+assert.doesNotMatch(css, /\.modal\.scout-report-modal[\s\S]{0,500}#(?:123b56|071b2a|0a2b40|0b3147)/i, "The contrast layer still forces Scout reports into the retired navy theme.");
+assert.doesNotMatch(profileCss, /\.modal\.scout-report-modal \.detailed-scout-report[\s\S]{0,250}#(?:123b56|071b2a)/i, "The Profile theme still overrides Scout reports with a navy surface.");
+assert.match(paletteCss, /Scout intelligence uses the shared parchment report family[\s\S]*?var\(--cl-card-bg\) !important;/, "Scout reports are not owned by the shared parchment report palette.");
+assert.match(paletteCss, /\.scout-report-mark strong,[\s\S]*?\.scout-report-section h3,[\s\S]*?color:\s*var\(--cl-burgundy\) !important;/, "Scout headings do not use the report family's burgundy hierarchy.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Detailed battle outcomes still paint the full center column red.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome > span\s*\{[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?border-radius:\s*999px;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Victory does not use a compact readable outcome badge.");
 assert.match(css, /\.battle-report-modal \.battle-visual-outcome\.defeat > span\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Defeat still uses the harsh red outcome block.");
@@ -199,7 +201,7 @@ assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "I
 assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-crownlands-palette-r34");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260814-main-city-r36");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");
