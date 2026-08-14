@@ -80,11 +80,11 @@
         "errors": []
       },
       "timings": {
-        "terrainPlanMs": 5.652,
-        "cityPlacementMs": 20.957,
-        "compositionAndWebpMs": 1567.458,
-        "totalMs": 1609.527,
-        "approximateHeapDeltaBytes": -640280
+        "terrainPlanMs": 4.818,
+        "cityPlacementMs": 13.274,
+        "compositionAndWebpMs": 1282.288,
+        "totalMs": 1315.22,
+        "approximateHeapDeltaBytes": 1408448
       }
     },
     {
@@ -112,11 +112,11 @@
         "errors": []
       },
       "timings": {
-        "terrainPlanMs": 7.803,
-        "cityPlacementMs": 19.214,
-        "compositionAndWebpMs": 1550.332,
-        "totalMs": 1598.076,
-        "approximateHeapDeltaBytes": -637952
+        "terrainPlanMs": 7.229,
+        "cityPlacementMs": 19.154,
+        "compositionAndWebpMs": 1365.558,
+        "totalMs": 1404.236,
+        "approximateHeapDeltaBytes": 3443688
       }
     },
     {
@@ -144,11 +144,11 @@
         "errors": []
       },
       "timings": {
-        "terrainPlanMs": 7.683,
-        "cityPlacementMs": 21.83,
-        "compositionAndWebpMs": 1554.853,
-        "totalMs": 1598.803,
-        "approximateHeapDeltaBytes": 823112
+        "terrainPlanMs": 3.659,
+        "cityPlacementMs": 24.847,
+        "compositionAndWebpMs": 1493.091,
+        "totalMs": 1538.623,
+        "approximateHeapDeltaBytes": 734096
       }
     },
     {
@@ -176,11 +176,11 @@
         "errors": []
       },
       "timings": {
-        "terrainPlanMs": 8.237,
-        "cityPlacementMs": 21.315,
-        "compositionAndWebpMs": 2248.871,
-        "totalMs": 2295.063,
-        "approximateHeapDeltaBytes": 2357392
+        "terrainPlanMs": 7.201,
+        "cityPlacementMs": 26.117,
+        "compositionAndWebpMs": 1988.84,
+        "totalMs": 2038.38,
+        "approximateHeapDeltaBytes": 2258408
       }
     }
   ],
@@ -197,9 +197,9 @@
       "errors": []
     },
     "timings": {
-      "terrainPlanMs": 5.484,
-      "cityPlacementMs": 13.752,
-      "totalMs": 19.326
+      "terrainPlanMs": 3.33,
+      "cityPlacementMs": 12.233,
+      "totalMs": 15.661
     }
   },
   "topologyFixtures": {
@@ -2132,11 +2132,11 @@
     ]
   },
   "performance": {
-    "totalProfileGenerationMs": 7101.469,
-    "averageProfileGenerationMs": 1775.36725,
-    "maximumProfileGenerationMs": 2295.063,
+    "totalProfileGenerationMs": 6296.459,
+    "averageProfileGenerationMs": 1574.11475,
+    "maximumProfileGenerationMs": 2038.38,
     "totalMapBytes": 82536,
     "totalThumbnailBytes": 10904,
-    "approximateHeapDeltaBytes": 1902272
+    "approximateHeapDeltaBytes": 7844640
   }
 }

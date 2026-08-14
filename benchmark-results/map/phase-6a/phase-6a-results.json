@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "phase": "6A",
+  "developmentOnly": true,
+  "status": "rejected_by_user",
+  "supersededBy": "benchmark-results/map/phase-6a-v2",
+  "rejectionReasons": [
+    "Forest and barrier treatment extended too deeply into the playable interior.",
+    "The interior was too crowded and too close to the older map style.",
+    "Some QA city positions visually overlapped forest or barrier artwork.",
+    "The terrain did not match the current approved Crownlands structure-art family closely enough."
+  ],
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "map": {
+    "path": "benchmark-results/map/phase-6a/source/crownlands-phase-6a-source.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "sha256": "1079251a54e7072d742ecb52e3d351f67c5b6146c76ec74996cda021ebedb2c0",
+    "bytes": 3328273
+  },
+  "styleReferences": [
+    {
+      "path": "assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp",
+      "sha256": "8ac9453f446beac73896477081689b2d12f1ef633d01dd3b3945f53dc19a1965"
+    },
+    {
+      "path": "assets/worlds/world_01/maps/versioned/region_6-6-1783021585258-632d8967e0db.webp",
+      "sha256": "632d8967e0db2eb94128151a045cb9d457d2497bb57b8695888eebcbb73ad2dc"
+    },
+    {
+      "path": "assets/worlds/world_01/maps/versioned/north-north-1-1783019201680-0b6b6b19ea6e.webp",
+      "sha256": "0b6b6b19ea6e549cef4c3721bc93a96a04978813d33bbd7e33a7bdfec56f94d0"
+    },
+    {
+      "path": "assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
+      "sha256": "bbd7514a62316ccd8a2bc593223c6d4a712592438959a98e01e0a22b5430caa2"
+    },
+    {
+      "path": "assets/optimized/castle-city-256x256-96961dc8d50b.webp",
+      "sha256": "96961dc8d50b75d9128300ad5607ebce9ad6e343f7834a59988d8661b739edf5"
+    },
+    {
+      "path": "assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
+      "sha256": "a6a5d9365b5158ceae41b5e0061cf92669dbf0653d2892d6aec11bc9ae7a5ac7"
+    },
+    {
+      "path": "assets/optimized/castle-keep-256x256-ce263706d73e.webp",
+      "sha256": "ce263706d73e8e35e348a597afae1e430ec6c99c68e3a11fb9fc7151ab5b97a8"
+    },
+    {
+      "path": "assets/optimized/castle-castle-256x256-5e8edd306418.webp",
+      "sha256": "5e8edd306418acd4bb4c42ff521c3ebe77f0197c6366d4c64a5a7d34b4737654"
+    },
+    {
+      "path": "assets/optimized/stronghold-training-384x384-649892a49e02.webp",
+      "sha256": "649892a49e0218ba288bc6ae89a7f25c3973b2e4b96b284dda0914bff3686719"
+    },
+    {
+      "path": "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp",
+      "sha256": "6d38eb1925816d210b138adaa674afac88b696b10cf066dfe65e36407cc424db"
+    },
+    {
+      "path": "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp",
+      "sha256": "6bee2f3ace80d7e59761308fefc3d645005381d46fbee17a6c00c9274992a4d9"
+    },
+    {
+      "path": "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp",
+      "sha256": "27daf74041f866c5263842726f1bc6571439c09756055d588c41999b9804d530"
+    },
+    {
+      "path": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
+      "sha256": "a23c30392f3ca42c8d44a0f714d586105e8a8d55319ac7f588e7a7912e4ed55a"
+    },
+    {
+      "path": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+      "sha256": "1d2f43c018aecd3b3edc1bf408fbfd74e6bf64f7c82b1db95aaf5f9c897227d2"
+    },
+    {
+      "path": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+      "sha256": "2f712333e89176d49df6d90d29dbe65d8c65fcf2115e8782ecbe25c0a9b4be60"
+    },
+    {
+      "path": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+      "sha256": "1d7cc179b5fecf0dd8ea54b41cc5e9b9f69cea5d4e40c8d0070baa8f830c1f7b"
+    },
+    {
+      "path": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+      "sha256": "a10b2afd6ec4ef93980985ae61bd6d594edb71073181c73bff2407e7dcfcc384"
+    }
+  ],
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "exactCardinalRoadCorridors": 4,
+  "edgeStatesBakedIntoMap": false,
+  "objectivesBakedIntoMap": false,
+  "geometryHash": "c4e2c7e851f06f198b1a4a0336e25d31f51efb2d7cd98ea9efd833ef099c83d0",
+  "cityHash": "06525569dfae699c0d0efb93e17e638defd06d4d64017a314912600652f4acda",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A source-of-truth audit",
+    "userApprovalPending": true,
+    "notes": [
+      "The palette, camera, material rendering, and edge closure read as the existing Crownlands world.",
+      "The slice uses broad gameplay areas with restrained forest, water, field, and rocky-hill ideas.",
+      "Each cardinal edge has one intentional road passage; forest, rock, and haze close the remaining perimeter."
+    ]
+  },
+  "requiredApprovalQuestions": {
+      "sameCrownlandsWorld": false,
+      "distinctiveWithoutOvercrowding": false,
+      "allEdgesClosedExceptSingleRoadPassage": false
+  }
+}

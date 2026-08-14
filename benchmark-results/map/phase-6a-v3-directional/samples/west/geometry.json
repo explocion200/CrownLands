@@ -1,0 +1,207 @@
+{
+  "developmentOnly": true,
+  "definition": {
+    "id": "phase6a_directional_west_region",
+    "name": "Phase 6A west directional approval",
+    "purpose": "player_region",
+    "permanentCore": false,
+    "width": 1448,
+    "height": 1086,
+    "mapAsset": null,
+    "thumbnailAsset": null,
+    "directionalTheme": {
+      "id": "west_grassy",
+      "label": "West / grassy",
+      "climate": "temperate_grassland"
+    },
+    "terrain": {
+      "source": "phase6a-directional-west-qa-geometry-v1",
+      "authoritativeData": true,
+      "derivedFromImagePixels": false,
+      "landPolygon": [
+        {
+          "x": 145,
+          "y": 145
+        },
+        {
+          "x": 1303,
+          "y": 145
+        },
+        {
+          "x": 1303,
+          "y": 941
+        },
+        {
+          "x": 145,
+          "y": 941
+        }
+      ],
+      "blockers": [
+        {
+          "id": "west-northwest-rocks",
+          "type": "low_rocks",
+          "x": 322,
+          "y": 188,
+          "rx": 60,
+          "ry": 34,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "west-small-woodland",
+          "type": "light_forest",
+          "x": 445,
+          "y": 282,
+          "rx": 70,
+          "ry": 52,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "west-south-woodland",
+          "type": "light_forest",
+          "x": 976,
+          "y": 720,
+          "rx": 70,
+          "ry": 52,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        }
+      ],
+      "prohibitedTerrain": []
+    },
+    "roadCorridors": [],
+    "noCityZones": [],
+    "camps": [],
+    "strongholds": [],
+    "citadels": []
+  },
+  "allocation": {
+    "schemaVersion": 1,
+    "generatorVersion": "phase6a-directional-approval-v1",
+    "worldId": "phase6a_directional_development_world",
+    "seasonId": "phase6a_directional_development_season",
+    "regionId": "phase6a_directional_west_region",
+    "coordinate": {
+      "gridX": -3,
+      "gridY": 0,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 21
+    },
+    "previousClockwiseRegionId": "phase6a_directional_stub_21",
+    "cardinalNeighbors": [
+      {
+        "side": "east",
+        "regionId": "phase5_core_reservation_0_2"
+      },
+      {
+        "side": "south",
+        "regionId": "phase6a_directional_stub_21"
+      }
+    ],
+    "otherCardinalNeighborIds": [
+      "phase5_core_reservation_0_2"
+    ],
+    "connections": {
+      "north": {
+        "side": "north",
+        "oppositeSide": "south",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "east": {
+        "side": "east",
+        "oppositeSide": "west",
+        "state": "open",
+        "targetRegionId": "phase5_core_reservation_0_2"
+      },
+      "south": {
+        "side": "south",
+        "oppositeSide": "north",
+        "state": "open",
+        "targetRegionId": "phase6a_directional_stub_21"
+      },
+      "west": {
+        "side": "west",
+        "oppositeSide": "east",
+        "state": "gated",
+        "targetRegionId": ""
+      }
+    },
+    "topologyPatch": {
+      "region": {
+        "regionId": "phase6a_directional_west_region",
+        "connections": {
+          "north": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "east": {
+            "side": "east",
+            "oppositeSide": "west",
+            "state": "open",
+            "targetRegionId": "phase5_core_reservation_0_2"
+          },
+          "south": {
+            "side": "south",
+            "oppositeSide": "north",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_stub_21"
+          },
+          "west": {
+            "side": "west",
+            "oppositeSide": "east",
+            "state": "gated",
+            "targetRegionId": ""
+          }
+        }
+      },
+      "neighbors": [
+        {
+          "regionId": "phase5_core_reservation_0_2",
+          "side": "west",
+          "connection": {
+            "side": "west",
+            "oppositeSide": "east",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_west_region"
+          }
+        },
+        {
+          "regionId": "phase6a_directional_stub_21",
+          "side": "north",
+          "connection": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_west_region"
+          }
+        }
+      ]
+    },
+    "beginsNewLayer": false,
+    "ringWillClose": false,
+    "ringSize": 24,
+    "occupiedRingCountBefore": 21,
+    "state": "ALLOCATED"
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "checks": {
+      "playerRegionOutsideCore": true,
+      "topologyValid": true,
+      "definitionValid": true,
+      "exactCityCapacityMet": true,
+      "noPlacementConflicts": true,
+      "startingCandidatesExist": true,
+      "edgeTransitionClearance": true
+    }
+  }
+}

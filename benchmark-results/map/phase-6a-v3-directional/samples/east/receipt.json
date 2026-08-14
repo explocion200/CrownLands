@@ -1,0 +1,52 @@
+{
+  "key": "east",
+  "theme": {
+    "id": "east_tropical",
+    "label": "East / tropical",
+    "climate": "lush_tropical_frontier"
+  },
+  "coordinate": {
+    "gridX": 3,
+    "gridY": 0,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 9
+  },
+  "priorStubCount": 9,
+  "developmentOnly": true,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "edgeBarrierTouchesImageBoundary": true,
+  "exactRoadPassages": 4,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "map": {
+    "path": "benchmark-results/map/phase-6a-v3-directional/source/east-tropical-1448x1086.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "bytes": 3098049,
+    "sha256": "aacfdaf8cd2f5c068a86a451d659f6fc8f93ff44c7441be89ddf7c7c0140b480"
+  },
+  "generatorVersion": "phase6a-directional-approval-v1",
+  "deterministicAttempt": 7,
+  "seedSalt": "directional-east-visual-safe-v7",
+  "generationHash": "ffef12e372981f442804347ebf223ed279c27400e8871306ab4b632515f58655",
+  "cityHash": "b613396a7889f4084a79162177a88ab2995eea4bc2ddd8f4dea7d9ca182067f1",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A directional visual audit",
+    "userApprovalPending": true,
+    "barrierDirectlyOnImageEdge": true,
+    "simpleAndReadable": true,
+    "densityMatchesPhase6aV2": true,
+    "directionalThemeReadsCorrectly": true,
+    "sameCrownlandsWorld": true,
+    "allCitiesOnOpenTerrain": true,
+    "structureArtCompatible": true,
+    "notes": [
+      "Significant vegetation, ridge, and perimeter features are authoritative blockers; small decorative ground texture remains playable.",
+      "Earlier deterministic layouts with visible feature conflicts were discarded before this receipt was recorded.",
+      "The edge-contact proof samples source pixel 0 and source pixel 1085 directly from the normalized map."
+    ]
+  }
+}

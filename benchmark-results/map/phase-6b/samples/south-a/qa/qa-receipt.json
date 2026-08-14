@@ -1,0 +1,120 @@
+{
+  "key": "south-a",
+  "theme": "south",
+  "variant": "a",
+  "cleanMap": "../map-clean.png",
+  "cityOverlay": "map-with-40-cities.png",
+  "styleCompatibility": "style-compatibility.png",
+  "edgeCloseups": {
+    "north": "edge-north.png",
+    "east": "edge-east.png",
+    "south": "edge-south.png",
+    "west": "edge-west.png"
+  },
+  "roadOpeningCloseups": {
+    "north": "road-opening-north.png",
+    "east": "road-opening-east.png",
+    "south": "road-opening-south.png",
+    "west": "road-opening-west.png"
+  },
+  "boundaryContactProof": "boundary-contact-proof.png",
+  "boundaryMetrics": {
+    "north": {
+      "outermostBandMeanDifferenceFromFoundation": 13.793,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          564,
+          12
+        ],
+        [
+          884,
+          0,
+          1448,
+          12
+        ]
+      ]
+    },
+    "east": {
+      "outermostBandMeanDifferenceFromFoundation": 20.305,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          1436,
+          0,
+          1448,
+          383
+        ],
+        [
+          1436,
+          703,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "south": {
+      "outermostBandMeanDifferenceFromFoundation": 22.874,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          1074,
+          564,
+          1086
+        ],
+        [
+          884,
+          1074,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "west": {
+      "outermostBandMeanDifferenceFromFoundation": 15.55,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          12,
+          383
+        ],
+        [
+          0,
+          703,
+          12,
+          1086
+        ]
+      ]
+    }
+  },
+  "allBarrierSidesTouchLiteralEdge": true,
+  "cityCount": 40,
+  "allCitiesOnAuthoritativelyValidTerrain": true,
+  "simpleReadableDensity": true,
+  "noBakedRuntimeObjects": true,
+  "exactlyOneRoadOpeningPerSide": true,
+  "geometryArtParity": true,
+  "styleConsistency": {
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/south-dry-frontier-1448x1086.png",
+    "approvedMasterSha256": "86a880a712ccfcca2a26912171009fea2198e27a490e94a71affc17859d9546b",
+    "themeAssetsOnly": true,
+    "outputInteriorMeanRgb": [
+      163.187,
+      124.934,
+      52.158
+    ],
+    "approvedInteriorMeanRgb": [
+      163.856,
+      126.127,
+      59.256
+    ],
+    "paletteDistance": 7.229,
+    "paletteWithinLockedFamily": true,
+    "structureComparisonRendered": true
+  }
+}

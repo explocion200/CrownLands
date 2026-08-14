@@ -1,0 +1,52 @@
+{
+  "key": "south",
+  "theme": {
+    "id": "south_dry_frontier",
+    "label": "South / dry frontier",
+    "climate": "dry_temperate"
+  },
+  "coordinate": {
+    "gridX": 0,
+    "gridY": 3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 15
+  },
+  "priorStubCount": 15,
+  "developmentOnly": true,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "edgeBarrierTouchesImageBoundary": true,
+  "exactRoadPassages": 4,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "map": {
+    "path": "benchmark-results/map/phase-6a-v3-directional/source/south-dry-frontier-1448x1086.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "bytes": 2853841,
+    "sha256": "86a880a712ccfcca2a26912171009fea2198e27a490e94a71affc17859d9546b"
+  },
+  "generatorVersion": "phase6a-directional-approval-v1",
+  "deterministicAttempt": 103,
+  "seedSalt": "directional-south-visual-safe-v103",
+  "generationHash": "aa40945884fa448766e8fe597ef5161f6c95fe2d2b13f7283f628400014cb51d",
+  "cityHash": "fa3822c41d7700cb76d90470bc86482f85af12401d10adb521c151881d93708b",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A directional visual audit",
+    "userApprovalPending": true,
+    "barrierDirectlyOnImageEdge": true,
+    "simpleAndReadable": true,
+    "densityMatchesPhase6aV2": true,
+    "directionalThemeReadsCorrectly": true,
+    "sameCrownlandsWorld": true,
+    "allCitiesOnOpenTerrain": true,
+    "structureArtCompatible": true,
+    "notes": [
+      "Significant vegetation, ridge, and perimeter features are authoritative blockers; small decorative ground texture remains playable.",
+      "Earlier deterministic layouts with visible feature conflicts were discarded before this receipt was recorded.",
+      "The edge-contact proof samples source pixel 0 and source pixel 1085 directly from the normalized map."
+    ]
+  }
+}

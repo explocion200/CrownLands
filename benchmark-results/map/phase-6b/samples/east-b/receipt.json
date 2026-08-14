@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "phase": "6B",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "lifecycle": "STANDBY",
+  "generatorVersion": "phase6b-modular-composer-v1",
+  "assetLibraryVersion": "phase6b-modular-crownlands-v1",
+  "regionId": "phase6b_east_b_region",
+  "coordinate": {
+    "gridX": 3,
+    "gridY": 1,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 10
+  },
+  "theme": {
+    "key": "east",
+    "id": "east_tropical",
+    "label": "East / tropical lush",
+    "edgeFamily": "tropical_mixed_rock_vegetation",
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/east-tropical-1448x1086.png",
+    "approvedMasterSha256": "aacfdaf8cd2f5c068a86a451d659f6fc8f93ff44c7441be89ddf7c7c0140b480",
+    "foundationSource": "tools/map-scaling-phase-6b/source/foundations/east-tropical.png",
+    "foundationSourceSha256": "933174f38a86fb91c33609b2f2b805fed5e539b2a09651e389ca1794ae7dac7c"
+  },
+  "variantKey": "b",
+  "cityCapacity": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "deterministicAttempt": 9,
+  "citySeedSalt": "phase6b|east|b|layout-9",
+  "planHash": "cd450b3bbd239f71013f9fcd9cfecc59514d0a641e3b390515ef884744d5db2c",
+  "cityHash": "1059df4bf137c59c67eb422c201f7b028c868a0026075d023e510a6fd147593e",
+  "startingCandidateHash": "c36d4f95d7693d4d9ce0ec00dc08e15c956c60e3f22cc13ac22e5bb691c1eb29",
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "assetUse": {
+    "foundation": "foundation.east",
+    "barriers": [
+      "barrier.east.east-north",
+      "barrier.east.east-south",
+      "barrier.east.north-east",
+      "barrier.east.north-west",
+      "barrier.east.south-east",
+      "barrier.east.south-west",
+      "barrier.east.west-north",
+      "barrier.east.west-south"
+    ],
+    "roads": [
+      "road-opening.east.north",
+      "road-opening.east.east",
+      "road-opening.east.south",
+      "road-opening.east.west"
+    ],
+    "accents": [
+      "accent.east.lush-rocks-b",
+      "accent.east.lush-rocks-a",
+      "accent.east.tropical-palms-b",
+      "accent.east.tropical-pond"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "outputs": {
+    "renderer": "phase6b-pillow-modular-v1",
+    "pillowVersion": "12.3.0",
+    "quality": 84,
+    "method": 6,
+    "cleanPng": {
+      "path": "map-clean.png",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 2963047,
+      "sha256": "2966bd51c5dd79322e67e5a8b35c0ce92ce91af5f6e66a2f1926173d34caaf90"
+    },
+    "map": {
+      "path": "map.webp",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 359662,
+      "sha256": "efdb214476de0e1014a32d167506eceabdd70b52e26057b5ee7f7589ed80daa2"
+    },
+    "thumbnail": {
+      "path": "thumbnail.webp",
+      "width": 320,
+      "height": 240,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 22178,
+      "sha256": "10d3bf621de8822e035da0be613dac9cdd2d7d25f4c1d3b6f19d7ea5e97749d0"
+    }
+  },
+  "timings": {
+    "cityPlacementMs": 3821.312,
+    "repeatedCompositionMs": 3393.396,
+    "totalMs": 7219.1
+  },
+  "valid": true
+}

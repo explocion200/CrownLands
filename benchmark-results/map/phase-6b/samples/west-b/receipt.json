@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "phase": "6B",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "lifecycle": "STANDBY",
+  "generatorVersion": "phase6b-modular-composer-v1",
+  "assetLibraryVersion": "phase6b-modular-crownlands-v1",
+  "regionId": "phase6b_west_b_region",
+  "coordinate": {
+    "gridX": -3,
+    "gridY": -1,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 22
+  },
+  "theme": {
+    "key": "west",
+    "id": "west_grassy",
+    "label": "West / grassy temperate",
+    "edgeFamily": "grassy_mixed_rock_tree",
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/west-grassy-1448x1086.png",
+    "approvedMasterSha256": "e68b9917e94bc12ed9b014993eee5354190cf2af67d137bc83f15d2c37ce767b",
+    "foundationSource": "tools/map-scaling-phase-6b/source/foundations/west-grassy.png",
+    "foundationSourceSha256": "6de27120b2d141495ff9b6f06815bd9cf11f8d8a95daeebd7c0003c941fd868e"
+  },
+  "variantKey": "b",
+  "cityCapacity": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "deterministicAttempt": 1,
+  "citySeedSalt": "phase6b|west|b|layout-1",
+  "planHash": "f7da7a5e83c067fadbad92f6ce7ee7bb5d2461d872e668c9e9a5811bbda3095f",
+  "cityHash": "4057eecd64b06c97adda3921687b57fd377c54e74aef4ebdb03841f6f279f048",
+  "startingCandidateHash": "f455c5224ca965331904de24ff3db0ce359d0975c9925cdc9f508af8b5662fcc",
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "assetUse": {
+    "foundation": "foundation.west",
+    "barriers": [
+      "barrier.west.east-north",
+      "barrier.west.east-south",
+      "barrier.west.north-east",
+      "barrier.west.north-west",
+      "barrier.west.south-east",
+      "barrier.west.south-west",
+      "barrier.west.west-north",
+      "barrier.west.west-south"
+    ],
+    "roads": [
+      "road-opening.west.north",
+      "road-opening.west.east",
+      "road-opening.west.south",
+      "road-opening.west.west"
+    ],
+    "accents": [
+      "accent.west.temperate-rocks-a",
+      "accent.west.farmland-b",
+      "accent.west.temperate-rocks-b",
+      "accent.west.meadow-pond"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "outputs": {
+    "renderer": "phase6b-pillow-modular-v1",
+    "pillowVersion": "12.3.0",
+    "quality": 84,
+    "method": 6,
+    "cleanPng": {
+      "path": "map-clean.png",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 2824321,
+      "sha256": "2aaafe302e17ac03f7e2e098b99a4dbda530ab5a3da5d9d4878e1501540d8a6a"
+    },
+    "map": {
+      "path": "map.webp",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 301636,
+      "sha256": "ea299e99969810f5d8aa5e8d32423b0981b0f9571b11702754d09de118d0f88a"
+    },
+    "thumbnail": {
+      "path": "thumbnail.webp",
+      "width": 320,
+      "height": 240,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 17586,
+      "sha256": "49e300a2c58af381b65f64a824044216e4d7ec873f6d25c743e1802217ff2e6f"
+    }
+  },
+  "timings": {
+    "cityPlacementMs": 293.51,
+    "repeatedCompositionMs": 3266.549,
+    "totalMs": 3564.6
+  },
+  "valid": true
+}

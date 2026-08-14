@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "phase": "6B",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "lifecycle": "STANDBY",
+  "generatorVersion": "phase6b-modular-composer-v1",
+  "assetLibraryVersion": "phase6b-modular-crownlands-v1",
+  "regionId": "phase6b_north_b_region",
+  "coordinate": {
+    "gridX": 1,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 4
+  },
+  "theme": {
+    "key": "north",
+    "id": "north_light_winter",
+    "label": "North / light winter",
+    "edgeFamily": "winter_rock_sparse_tree",
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/north-light-winter-1448x1086.png",
+    "approvedMasterSha256": "8f183b9fcd46ff8fbf3ce2b0f06357c5f00f9df428f49fb9afa4b88bd005388a",
+    "foundationSource": "tools/map-scaling-phase-6b/source/foundations/north-light-winter.png",
+    "foundationSourceSha256": "3c299fd55b0fae53f451e10d63f45e9c66b07700b094c876f523f14ece3d9f5d"
+  },
+  "variantKey": "b",
+  "cityCapacity": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "deterministicAttempt": 2,
+  "citySeedSalt": "phase6b|north|b|layout-2",
+  "planHash": "ac392af5b37012bce4f5a209210900474fa88552f7c9db691e9c8bac7b0a531e",
+  "cityHash": "6ac62c0c6b6a7cb8f6a3bc197dd6167f5d4f2f9779560af4413c5c5e3e3b9529",
+  "startingCandidateHash": "1e72e7fd4b74bcd0fbb9006bf882ba4ae4942eac827fe71861ef79150581bf84",
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "assetUse": {
+    "foundation": "foundation.north",
+    "barriers": [
+      "barrier.north.east-north",
+      "barrier.north.east-south",
+      "barrier.north.north-east",
+      "barrier.north.north-west",
+      "barrier.north.south-east",
+      "barrier.north.south-west",
+      "barrier.north.west-north",
+      "barrier.north.west-south"
+    ],
+    "roads": [
+      "road-opening.north.north",
+      "road-opening.north.east",
+      "road-opening.north.south",
+      "road-opening.north.west"
+    ],
+    "accents": [
+      "accent.north.winter-trees-a",
+      "accent.north.winter-coppice",
+      "accent.north.winter-rocks-a",
+      "accent.north.winter-trees-b"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "outputs": {
+    "renderer": "phase6b-pillow-modular-v1",
+    "pillowVersion": "12.3.0",
+    "quality": 84,
+    "method": 6,
+    "cleanPng": {
+      "path": "map-clean.png",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 3183994,
+      "sha256": "462c7209352e5f84c65ff111d11cd1da4f88d32c9ccbbc29f1b1be6509c5d9b9"
+    },
+    "map": {
+      "path": "map.webp",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 405412,
+      "sha256": "b87ed574301f56f4a318c56d73783a18760cab1a91e766ee6e397337a2e2ecd1"
+    },
+    "thumbnail": {
+      "path": "thumbnail.webp",
+      "width": 320,
+      "height": 240,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 24036,
+      "sha256": "addf1774288b67c98a7b08cfc4239887d8168ed2407c8837a39daf1d7e265723"
+    }
+  },
+  "timings": {
+    "cityPlacementMs": 496.579,
+    "repeatedCompositionMs": 3471.82,
+    "totalMs": 3972.568
+  },
+  "valid": true
+}

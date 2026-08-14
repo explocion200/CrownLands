@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "bakedIntoBackground": false,
+  "runtimeOverlayAsset": "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp",
+  "openingCenter": {
+    "north": [
+      724,
+      0
+    ],
+    "east": [
+      1448,
+      543
+    ],
+    "south": [
+      724,
+      1086
+    ],
+    "west": [
+      0,
+      543
+    ]
+  },
+  "reservedRadius": 104,
+  "rule": "OPEN shows runtime arrow; GATED shows runtime Gate; background stays immutable"
+}

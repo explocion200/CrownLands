@@ -1,0 +1,100 @@
+{
+  "key": "north-b",
+  "theme": "north",
+  "variant": "b",
+  "coordinate": {
+    "gridX": 1,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 4
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "open",
+      "targetRegionId": "phase5_core_reservation_3_0"
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "open",
+      "targetRegionId": "phase6b_north-b_stub_04"
+    }
+  },
+  "priorStubCount": 4,
+  "status": "STANDBY",
+  "valid": true,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "planHash": "ac392af5b37012bce4f5a209210900474fa88552f7c9db691e9c8bac7b0a531e",
+  "cityHash": "6ac62c0c6b6a7cb8f6a3bc197dd6167f5d4f2f9779560af4413c5c5e3e3b9529",
+  "mapHash": "b87ed574301f56f4a318c56d73783a18760cab1a91e766ee6e397337a2e2ecd1",
+  "thumbnailHash": "addf1774288b67c98a7b08cfc4239887d8168ed2407c8837a39daf1d7e265723",
+  "cleanPngHash": "462c7209352e5f84c65ff111d11cd1da4f88d32c9ccbbc29f1b1be6509c5d9b9",
+  "mapBytes": 405412,
+  "thumbnailBytes": 24036,
+  "assetUse": {
+    "foundation": "foundation.north",
+    "barriers": [
+      "barrier.north.east-north",
+      "barrier.north.east-south",
+      "barrier.north.north-east",
+      "barrier.north.north-west",
+      "barrier.north.south-east",
+      "barrier.north.south-west",
+      "barrier.north.west-north",
+      "barrier.north.west-south"
+    ],
+    "roads": [
+      "road-opening.north.north",
+      "road-opening.north.east",
+      "road-opening.north.south",
+      "road-opening.north.west"
+    ],
+    "accents": [
+      "accent.north.winter-trees-a",
+      "accent.north.winter-coppice",
+      "accent.north.winter-rocks-a",
+      "accent.north.winter-trees-b"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "timings": {
+    "cityPlacementMs": 496.579,
+    "repeatedCompositionMs": 3471.82,
+    "totalMs": 3972.568
+  },
+  "developmentOnly": true,
+  "productionActivated": false
+}

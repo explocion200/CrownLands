@@ -1,0 +1,120 @@
+{
+  "key": "north-b",
+  "theme": "north",
+  "variant": "b",
+  "cleanMap": "../map-clean.png",
+  "cityOverlay": "map-with-40-cities.png",
+  "styleCompatibility": "style-compatibility.png",
+  "edgeCloseups": {
+    "north": "edge-north.png",
+    "east": "edge-east.png",
+    "south": "edge-south.png",
+    "west": "edge-west.png"
+  },
+  "roadOpeningCloseups": {
+    "north": "road-opening-north.png",
+    "east": "road-opening-east.png",
+    "south": "road-opening-south.png",
+    "west": "road-opening-west.png"
+  },
+  "boundaryContactProof": "boundary-contact-proof.png",
+  "boundaryMetrics": {
+    "north": {
+      "outermostBandMeanDifferenceFromFoundation": 26.924,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          564,
+          12
+        ],
+        [
+          884,
+          0,
+          1448,
+          12
+        ]
+      ]
+    },
+    "east": {
+      "outermostBandMeanDifferenceFromFoundation": 26.039,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          1436,
+          0,
+          1448,
+          383
+        ],
+        [
+          1436,
+          703,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "south": {
+      "outermostBandMeanDifferenceFromFoundation": 30.336,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          1074,
+          564,
+          1086
+        ],
+        [
+          884,
+          1074,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "west": {
+      "outermostBandMeanDifferenceFromFoundation": 26.639,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          12,
+          383
+        ],
+        [
+          0,
+          703,
+          12,
+          1086
+        ]
+      ]
+    }
+  },
+  "allBarrierSidesTouchLiteralEdge": true,
+  "cityCount": 40,
+  "allCitiesOnAuthoritativelyValidTerrain": true,
+  "simpleReadableDensity": true,
+  "noBakedRuntimeObjects": true,
+  "exactlyOneRoadOpeningPerSide": true,
+  "geometryArtParity": true,
+  "styleConsistency": {
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/north-light-winter-1448x1086.png",
+    "approvedMasterSha256": "8f183b9fcd46ff8fbf3ce2b0f06357c5f00f9df428f49fb9afa4b88bd005388a",
+    "themeAssetsOnly": true,
+    "outputInteriorMeanRgb": [
+      167.355,
+      152.171,
+      123.542
+    ],
+    "approvedInteriorMeanRgb": [
+      164.434,
+      150.177,
+      124.711
+    ],
+    "paletteDistance": 3.725,
+    "paletteWithinLockedFamily": true,
+    "structureComparisonRendered": true
+  }
+}

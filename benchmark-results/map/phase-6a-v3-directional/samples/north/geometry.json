@@ -1,0 +1,240 @@
+{
+  "developmentOnly": true,
+  "definition": {
+    "id": "phase6a_directional_north_region",
+    "name": "Phase 6A north directional approval",
+    "purpose": "player_region",
+    "permanentCore": false,
+    "width": 1448,
+    "height": 1086,
+    "mapAsset": null,
+    "thumbnailAsset": null,
+    "directionalTheme": {
+      "id": "north_light_winter",
+      "label": "North / light winter",
+      "climate": "cold_temperate"
+    },
+    "terrain": {
+      "source": "phase6a-directional-north-qa-geometry-v1",
+      "authoritativeData": true,
+      "derivedFromImagePixels": false,
+      "landPolygon": [
+        {
+          "x": 145,
+          "y": 145
+        },
+        {
+          "x": 1303,
+          "y": 145
+        },
+        {
+          "x": 1303,
+          "y": 941
+        },
+        {
+          "x": 145,
+          "y": 941
+        }
+      ],
+      "blockers": [
+        {
+          "id": "north-west-winter-trees",
+          "type": "winter_trees",
+          "x": 468,
+          "y": 270,
+          "rx": 62,
+          "ry": 48,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-west-interior-rocks",
+          "type": "winter_rocks",
+          "x": 367,
+          "y": 450,
+          "rx": 55,
+          "ry": 34,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-upper-east-rocks",
+          "type": "winter_rocks",
+          "x": 870,
+          "y": 214,
+          "rx": 52,
+          "ry": 36,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-east-rock-ridge",
+          "type": "winter_rocks",
+          "x": 1080,
+          "y": 410,
+          "rx": 100,
+          "ry": 42,
+          "rot": 0.2,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-east-winter-trees",
+          "type": "winter_trees",
+          "x": 958,
+          "y": 620,
+          "rx": 68,
+          "ry": 50,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-southeast-winter-trees",
+          "type": "winter_trees",
+          "x": 922,
+          "y": 725,
+          "rx": 62,
+          "ry": 48,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        }
+      ],
+      "prohibitedTerrain": []
+    },
+    "roadCorridors": [],
+    "noCityZones": [],
+    "camps": [],
+    "strongholds": [],
+    "citadels": []
+  },
+  "allocation": {
+    "schemaVersion": 1,
+    "generatorVersion": "phase6a-directional-approval-v1",
+    "worldId": "phase6a_directional_development_world",
+    "seasonId": "phase6a_directional_development_season",
+    "regionId": "phase6a_directional_north_region",
+    "coordinate": {
+      "gridX": 0,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 3
+    },
+    "previousClockwiseRegionId": "phase6a_directional_stub_03",
+    "cardinalNeighbors": [
+      {
+        "side": "south",
+        "regionId": "phase5_core_reservation_2_0"
+      },
+      {
+        "side": "west",
+        "regionId": "phase6a_directional_stub_03"
+      }
+    ],
+    "otherCardinalNeighborIds": [
+      "phase5_core_reservation_2_0"
+    ],
+    "connections": {
+      "north": {
+        "side": "north",
+        "oppositeSide": "south",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "east": {
+        "side": "east",
+        "oppositeSide": "west",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "south": {
+        "side": "south",
+        "oppositeSide": "north",
+        "state": "open",
+        "targetRegionId": "phase5_core_reservation_2_0"
+      },
+      "west": {
+        "side": "west",
+        "oppositeSide": "east",
+        "state": "open",
+        "targetRegionId": "phase6a_directional_stub_03"
+      }
+    },
+    "topologyPatch": {
+      "region": {
+        "regionId": "phase6a_directional_north_region",
+        "connections": {
+          "north": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "east": {
+            "side": "east",
+            "oppositeSide": "west",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "south": {
+            "side": "south",
+            "oppositeSide": "north",
+            "state": "open",
+            "targetRegionId": "phase5_core_reservation_2_0"
+          },
+          "west": {
+            "side": "west",
+            "oppositeSide": "east",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_stub_03"
+          }
+        }
+      },
+      "neighbors": [
+        {
+          "regionId": "phase5_core_reservation_2_0",
+          "side": "north",
+          "connection": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_north_region"
+          }
+        },
+        {
+          "regionId": "phase6a_directional_stub_03",
+          "side": "east",
+          "connection": {
+            "side": "east",
+            "oppositeSide": "west",
+            "state": "open",
+            "targetRegionId": "phase6a_directional_north_region"
+          }
+        }
+      ]
+    },
+    "beginsNewLayer": false,
+    "ringWillClose": false,
+    "ringSize": 24,
+    "occupiedRingCountBefore": 3,
+    "state": "ALLOCATED"
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "checks": {
+      "playerRegionOutsideCore": true,
+      "topologyValid": true,
+      "definitionValid": true,
+      "exactCityCapacityMet": true,
+      "noPlacementConflicts": true,
+      "startingCandidatesExist": true,
+      "edgeTransitionClearance": true
+    }
+  }
+}

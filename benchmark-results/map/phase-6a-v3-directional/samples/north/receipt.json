@@ -1,0 +1,52 @@
+{
+  "key": "north",
+  "theme": {
+    "id": "north_light_winter",
+    "label": "North / light winter",
+    "climate": "cold_temperate"
+  },
+  "coordinate": {
+    "gridX": 0,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 3
+  },
+  "priorStubCount": 3,
+  "developmentOnly": true,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "edgeBarrierTouchesImageBoundary": true,
+  "exactRoadPassages": 4,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "map": {
+    "path": "benchmark-results/map/phase-6a-v3-directional/source/north-light-winter-1448x1086.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "bytes": 4113382,
+    "sha256": "8f183b9fcd46ff8fbf3ce2b0f06357c5f00f9df428f49fb9afa4b88bd005388a"
+  },
+  "generatorVersion": "phase6a-directional-approval-v1",
+  "deterministicAttempt": 47,
+  "seedSalt": "directional-north-visual-safe-v47",
+  "generationHash": "18f1bab47dad56e245cc0b0845d0430dcac808a7223b833888db5e0217b8d9b2",
+  "cityHash": "586578ce120bc69c9515b46967008aa6cce6255ab08e5d29f2872dfc467fdeb4",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A directional visual audit",
+    "userApprovalPending": true,
+    "barrierDirectlyOnImageEdge": true,
+    "simpleAndReadable": true,
+    "densityMatchesPhase6aV2": true,
+    "directionalThemeReadsCorrectly": true,
+    "sameCrownlandsWorld": true,
+    "allCitiesOnOpenTerrain": true,
+    "structureArtCompatible": true,
+    "notes": [
+      "Significant vegetation, ridge, and perimeter features are authoritative blockers; small decorative ground texture remains playable.",
+      "Earlier deterministic layouts with visible feature conflicts were discarded before this receipt was recorded.",
+      "The edge-contact proof samples source pixel 0 and source pixel 1085 directly from the normalized map."
+    ]
+  }
+}

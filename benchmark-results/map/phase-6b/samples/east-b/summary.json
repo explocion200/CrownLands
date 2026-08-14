@@ -1,0 +1,100 @@
+{
+  "key": "east-b",
+  "theme": "east",
+  "variant": "b",
+  "coordinate": {
+    "gridX": 3,
+    "gridY": 1,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 10
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "open",
+      "targetRegionId": "phase6b_east-b_stub_10"
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "open",
+      "targetRegionId": "phase5_core_reservation_4_3"
+    }
+  },
+  "priorStubCount": 10,
+  "status": "STANDBY",
+  "valid": true,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "planHash": "cd450b3bbd239f71013f9fcd9cfecc59514d0a641e3b390515ef884744d5db2c",
+  "cityHash": "1059df4bf137c59c67eb422c201f7b028c868a0026075d023e510a6fd147593e",
+  "mapHash": "efdb214476de0e1014a32d167506eceabdd70b52e26057b5ee7f7589ed80daa2",
+  "thumbnailHash": "10d3bf621de8822e035da0be613dac9cdd2d7d25f4c1d3b6f19d7ea5e97749d0",
+  "cleanPngHash": "2966bd51c5dd79322e67e5a8b35c0ce92ce91af5f6e66a2f1926173d34caaf90",
+  "mapBytes": 359662,
+  "thumbnailBytes": 22178,
+  "assetUse": {
+    "foundation": "foundation.east",
+    "barriers": [
+      "barrier.east.east-north",
+      "barrier.east.east-south",
+      "barrier.east.north-east",
+      "barrier.east.north-west",
+      "barrier.east.south-east",
+      "barrier.east.south-west",
+      "barrier.east.west-north",
+      "barrier.east.west-south"
+    ],
+    "roads": [
+      "road-opening.east.north",
+      "road-opening.east.east",
+      "road-opening.east.south",
+      "road-opening.east.west"
+    ],
+    "accents": [
+      "accent.east.lush-rocks-b",
+      "accent.east.lush-rocks-a",
+      "accent.east.tropical-palms-b",
+      "accent.east.tropical-pond"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "timings": {
+    "cityPlacementMs": 3821.312,
+    "repeatedCompositionMs": 3393.396,
+    "totalMs": 7219.1
+  },
+  "developmentOnly": true,
+  "productionActivated": false
+}

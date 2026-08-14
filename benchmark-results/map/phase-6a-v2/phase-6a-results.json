@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "phase": "6A-v2",
+  "supersedesRejectedSlice": "benchmark-results/map/phase-6a",
+  "developmentOnly": true,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "map": {
+    "path": "benchmark-results/map/phase-6a-v2/source/crownlands-phase-6a-corrected-v2-1448x1086.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "sha256": "ce04f005701324525235caf5b57498411c5b3e5c7c513d0ff2b1e0002d3f9f72",
+    "bytes": 4068366
+  },
+  "styleReferences": [
+    {
+      "path": "assets/optimized/castle-city-256x256-96961dc8d50b.webp",
+      "sha256": "96961dc8d50b75d9128300ad5607ebce9ad6e343f7834a59988d8661b739edf5"
+    },
+    {
+      "path": "assets/optimized/castle-castle-256x256-5e8edd306418.webp",
+      "sha256": "5e8edd306418acd4bb4c42ff521c3ebe77f0197c6366d4c64a5a7d34b4737654"
+    },
+    {
+      "path": "assets/optimized/stronghold-training-384x384-649892a49e02.webp",
+      "sha256": "649892a49e0218ba288bc6ae89a7f25c3973b2e4b96b284dda0914bff3686719"
+    },
+    {
+      "path": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
+      "sha256": "a23c30392f3ca42c8d44a0f714d586105e8a8d55319ac7f588e7a7912e4ed55a"
+    },
+    {
+      "path": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+      "sha256": "1d2f43c018aecd3b3edc1bf408fbfd74e6bf64f7c82b1db95aaf5f9c897227d2"
+    }
+  ],
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "exactCardinalRoadCorridors": 4,
+  "edgeStatesBakedIntoMap": false,
+  "objectivesBakedIntoMap": false,
+  "geometryHash": "b3ff84da493afea086dcfb60024193540f840469b38e8b39c815b6e57056bf47",
+  "cityHash": "43f8a6900e941b54ab5e45264e0d0bc48a94d48a1de5a2732231661ed4931580",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A corrected visual audit",
+    "userApprovalPending": true,
+    "notes": [
+      "The corrected terrain uses the current city, Camp, Stronghold, and Citadel family as its only generation references.",
+      "The interior is predominantly calm open ground; forest is limited to a thin perimeter and two small interior clumps.",
+      "Each cardinal road passes through one controlled opening in the same narrow natural barrier.",
+      "All 40 QA coordinates were visually reviewed on the corrected terrain after adding a northeast ridge exclusion and rejecting earlier unsafe layouts."
+    ]
+  },
+  "cityVisualAudit": {
+    "markerMap": "benchmark-results/map/phase-6a-v2/qa/02-all-40-city-markers.png",
+    "minimumCenterX": 204,
+    "maximumCenterX": 1246,
+    "minimumCenterY": 195,
+    "maximumCenterY": 886,
+    "barrierOverlapFound": false,
+    "roadOrTransitionOverlapFound": false
+  },
+  "requiredApprovalQuestions": {
+    "matchesApprovedStructureArtFamily": true,
+    "interiorOpenAndReadable": true,
+    "forestsRestrained": true,
+    "edgesClosedWithoutInvadingInterior": true,
+    "allCitiesOnOpenTerrain": true,
+    "distinctiveWithoutOvercrowding": true
+  }
+}

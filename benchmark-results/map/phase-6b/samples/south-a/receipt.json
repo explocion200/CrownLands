@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "phase": "6B",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "lifecycle": "STANDBY",
+  "generatorVersion": "phase6b-modular-composer-v1",
+  "assetLibraryVersion": "phase6b-modular-crownlands-v1",
+  "regionId": "phase6b_south_a_region",
+  "coordinate": {
+    "gridX": 1,
+    "gridY": 3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 14
+  },
+  "theme": {
+    "key": "south",
+    "id": "south_dry_frontier",
+    "label": "South / dry frontier",
+    "edgeFamily": "dry_rock_scrub",
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/south-dry-frontier-1448x1086.png",
+    "approvedMasterSha256": "86a880a712ccfcca2a26912171009fea2198e27a490e94a71affc17859d9546b",
+    "foundationSource": "tools/map-scaling-phase-6b/source/foundations/south-dry-frontier.png",
+    "foundationSourceSha256": "3907a2664c181bf37794f7a67c4b03fcf3c2938414ea85c1eca9bb07f53deb86"
+  },
+  "variantKey": "a",
+  "cityCapacity": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "deterministicAttempt": 6,
+  "citySeedSalt": "phase6b|south|a|layout-6",
+  "planHash": "b9473aab70f3568884b4b0104e49118f6058173b85b12a2289561792d70177f4",
+  "cityHash": "4950e5b598cf5dde382535656931a2afd30ba506fc4ee8a90ab8f31138b8ce14",
+  "startingCandidateHash": "b0c4c9c9d7c47cdd50623e61fbe36caa046c5d6e9aa48bba0787770e08398fe7",
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "assetUse": {
+    "foundation": "foundation.south",
+    "barriers": [
+      "barrier.south.east-north",
+      "barrier.south.east-south",
+      "barrier.south.north-east",
+      "barrier.south.north-west",
+      "barrier.south.south-east",
+      "barrier.south.south-west",
+      "barrier.south.west-north",
+      "barrier.south.west-south"
+    ],
+    "roads": [
+      "road-opening.south.north",
+      "road-opening.south.east",
+      "road-opening.south.south",
+      "road-opening.south.west"
+    ],
+    "accents": [
+      "accent.south.dry-ridge",
+      "accent.south.dry-rocks-a",
+      "accent.south.dry-fields-a",
+      "accent.south.dry-fields-b"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "outputs": {
+    "renderer": "phase6b-pillow-modular-v1",
+    "pillowVersion": "12.3.0",
+    "quality": 84,
+    "method": 6,
+    "cleanPng": {
+      "path": "map-clean.png",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 2814242,
+      "sha256": "4cf2f81636267826819a69f7c65428b54dae2736b674d18ae9af97b0c5d91f30"
+    },
+    "map": {
+      "path": "map.webp",
+      "width": 1448,
+      "height": 1086,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 291322,
+      "sha256": "8afaccea01f260d9d19c859873bf5b8c4fd75adc70034a818a72a75f8912cbbe"
+    },
+    "thumbnail": {
+      "path": "thumbnail.webp",
+      "width": 320,
+      "height": 240,
+      "mode": "RGB",
+      "opaque": true,
+      "bytes": 19252,
+      "sha256": "7956370bf77d22bb5e029e98911abb95c36187a91cdc18761fced5956acd0230"
+    }
+  },
+  "timings": {
+    "cityPlacementMs": 2552.619,
+    "repeatedCompositionMs": 3236.661,
+    "totalMs": 5794.27
+  },
+  "valid": true
+}

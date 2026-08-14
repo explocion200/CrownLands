@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "authoritativeForPhase6aQaOnly": true,
+  "derivedFromImagePixels": false,
+  "definition": {
+    "id": "phase6a_approval_region",
+    "name": "Phase 6A Crownlands Art Approval",
+    "purpose": "player_region",
+    "permanentCore": false,
+    "width": 1448,
+    "height": 1086,
+    "mapAsset": null,
+    "thumbnailAsset": null,
+    "terrain": {
+      "source": "phase6a-manually-authored-geometry-v1",
+      "authoritativeData": true,
+      "derivedFromImagePixels": false,
+      "landPolygon": [
+        {
+          "x": 76,
+          "y": 82
+        },
+        {
+          "x": 1372,
+          "y": 82
+        },
+        {
+          "x": 1372,
+          "y": 1004
+        },
+        {
+          "x": 76,
+          "y": 1004
+        }
+      ],
+      "blockers": [
+        {
+          "id": "northwest-deep-forest",
+          "type": "dense_forest",
+          "x": 235,
+          "y": 235,
+          "rx": 165,
+          "ry": 170,
+          "rot": -0.18,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "west-river-woodland",
+          "type": "dense_forest",
+          "x": 205,
+          "y": 440,
+          "rx": 105,
+          "ry": 115,
+          "rot": 0.18,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "northeast-rocky-rise",
+          "type": "mountain",
+          "x": 1135,
+          "y": 250,
+          "rx": 95,
+          "ry": 90,
+          "rot": 0.16,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "east-ridge",
+          "type": "mountain",
+          "x": 1190,
+          "y": 480,
+          "rx": 105,
+          "ry": 125,
+          "rot": 0.14,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "southeast-ridge",
+          "type": "mountain",
+          "x": 1115,
+          "y": 790,
+          "rx": 125,
+          "ry": 95,
+          "rot": -0.28,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "south-rock-cluster",
+          "type": "mountain",
+          "x": 870,
+          "y": 900,
+          "rx": 75,
+          "ry": 55,
+          "rot": 0.08,
+          "blocksCities": true,
+          "blocksMovement": true
+        }
+      ],
+      "prohibitedTerrain": []
+    },
+    "roadCorridors": [],
+    "noCityZones": [],
+    "camps": [],
+    "strongholds": [],
+    "citadels": []
+  },
+  "allocation": {
+    "schemaVersion": 1,
+    "generatorVersion": "phase6a-art-approval-v1",
+    "worldId": "phase6a_development_world",
+    "seasonId": "phase6a_development_season",
+    "regionId": "phase6a_approval_region",
+    "coordinate": {
+      "gridX": -3,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 0
+    },
+    "previousClockwiseRegionId": "",
+    "cardinalNeighbors": [],
+    "otherCardinalNeighborIds": [],
+    "connections": {
+      "north": {
+        "side": "north",
+        "oppositeSide": "south",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "east": {
+        "side": "east",
+        "oppositeSide": "west",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "south": {
+        "side": "south",
+        "oppositeSide": "north",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "west": {
+        "side": "west",
+        "oppositeSide": "east",
+        "state": "gated",
+        "targetRegionId": ""
+      }
+    },
+    "topologyPatch": {
+      "region": {
+        "regionId": "phase6a_approval_region",
+        "connections": {
+          "north": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "east": {
+            "side": "east",
+            "oppositeSide": "west",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "south": {
+            "side": "south",
+            "oppositeSide": "north",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "west": {
+            "side": "west",
+            "oppositeSide": "east",
+            "state": "gated",
+            "targetRegionId": ""
+          }
+        }
+      },
+      "neighbors": []
+    },
+    "beginsNewLayer": false,
+    "ringWillClose": false,
+    "ringSize": 24,
+    "occupiedRingCountBefore": 0,
+    "state": "ALLOCATED"
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "checks": {
+      "playerRegionOutsideCore": true,
+      "topologyValid": true,
+      "definitionValid": true,
+      "exactCityCapacityMet": true,
+      "noPlacementConflicts": true,
+      "startingCandidatesExist": true,
+      "edgeTransitionClearance": true
+    }
+  },
+  "generationHash": "6aa856e033ed22a089cc8ade28d45fd5b32b563fc3093d98a089f9d76bbecf9a"
+}

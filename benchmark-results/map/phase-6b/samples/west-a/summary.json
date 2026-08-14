@@ -1,0 +1,100 @@
+{
+  "key": "west-a",
+  "theme": "west",
+  "variant": "a",
+  "coordinate": {
+    "gridX": -3,
+    "gridY": 1,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 20
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "open",
+      "targetRegionId": "phase5_core_reservation_0_3"
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "open",
+      "targetRegionId": "phase6b_west-a_stub_20"
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "priorStubCount": 20,
+  "status": "STANDBY",
+  "valid": true,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "planHash": "c41d2aba1f28ef82b826a94e3d7ed16d99659613b2845e91b5517ac4e9181be2",
+  "cityHash": "a5a96ab42d9d35fe4e6a5f44338b8fe212dbb60316095b4af32a83e419642d93",
+  "mapHash": "fed252560872c0fc212aaa9cbc2b63ef19d43c7a7d84a9e484e5140391d2b2e9",
+  "thumbnailHash": "8c9e2ece1d6ee759a513989dee0725468585c02358976c39e68fe8b2330fc59d",
+  "cleanPngHash": "78ca164bbe97678e93fe9314361f724ad53eda7145207617b42412268eba590f",
+  "mapBytes": 303396,
+  "thumbnailBytes": 18200,
+  "assetUse": {
+    "foundation": "foundation.west",
+    "barriers": [
+      "barrier.west.east-north",
+      "barrier.west.east-south",
+      "barrier.west.north-east",
+      "barrier.west.north-west",
+      "barrier.west.south-east",
+      "barrier.west.south-west",
+      "barrier.west.west-north",
+      "barrier.west.west-south"
+    ],
+    "roads": [
+      "road-opening.west.north",
+      "road-opening.west.east",
+      "road-opening.west.south",
+      "road-opening.west.west"
+    ],
+    "accents": [
+      "accent.west.temperate-woodland-a",
+      "accent.west.temperate-woodland-b",
+      "accent.west.temperate-rocks-b",
+      "accent.west.farmland-a"
+    ],
+    "uniqueAssetCount": 17
+  },
+  "deterministic": {
+    "repeatedMapMatch": true,
+    "repeatedThumbnailMatch": true,
+    "repeatedCleanPngMatch": true
+  },
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 8
+  },
+  "timings": {
+    "cityPlacementMs": 1123.356,
+    "repeatedCompositionMs": 3250.815,
+    "totalMs": 4381.286
+  },
+  "developmentOnly": true,
+  "productionActivated": false
+}

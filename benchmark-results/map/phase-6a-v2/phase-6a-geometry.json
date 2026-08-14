@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "authoritativeForPhase6aQaOnly": true,
+  "derivedFromImagePixels": false,
+  "definition": {
+    "id": "phase6a_corrected_v2_approval_region",
+    "name": "Phase 6A Crownlands Corrected Art Approval",
+    "purpose": "player_region",
+    "permanentCore": false,
+    "width": 1448,
+    "height": 1086,
+    "mapAsset": null,
+    "thumbnailAsset": null,
+    "terrain": {
+      "source": "phase6a-corrected-v2-manually-authored-geometry",
+      "authoritativeData": true,
+      "derivedFromImagePixels": false,
+      "landPolygon": [
+        {
+          "x": 150,
+          "y": 155
+        },
+        {
+          "x": 1298,
+          "y": 155
+        },
+        {
+          "x": 1298,
+          "y": 930
+        },
+        {
+          "x": 150,
+          "y": 930
+        }
+      ],
+      "blockers": [
+        {
+          "id": "northwest-small-woodland",
+          "type": "light_forest",
+          "x": 430,
+          "y": 248,
+          "rx": 78,
+          "ry": 55,
+          "rot": -0.12,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "north-east-farmland",
+          "type": "farmland",
+          "x": 930,
+          "y": 214,
+          "rx": 118,
+          "ry": 58,
+          "rot": -0.08,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "north-east-low-rocks",
+          "type": "low_rocks",
+          "x": 1018,
+          "y": 318,
+          "rx": 62,
+          "ry": 38,
+          "rot": 0.12,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "west-central-rocks",
+          "type": "low_rocks",
+          "x": 350,
+          "y": 435,
+          "rx": 58,
+          "ry": 38,
+          "rot": 0.18,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "southwest-farmland",
+          "type": "farmland",
+          "x": 330,
+          "y": 736,
+          "rx": 120,
+          "ry": 72,
+          "rot": 0.2,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "southeast-small-woodland",
+          "type": "light_forest",
+          "x": 976,
+          "y": 722,
+          "rx": 76,
+          "ry": 57,
+          "rot": -0.15,
+          "blocksCities": true,
+          "blocksMovement": true
+        },
+        {
+          "id": "south-central-farmland",
+          "type": "farmland",
+          "x": 875,
+          "y": 858,
+          "rx": 60,
+          "ry": 36,
+          "rot": 0.04,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "east-low-rocks",
+          "type": "low_rocks",
+          "x": 1178,
+          "y": 665,
+          "rx": 58,
+          "ry": 38,
+          "rot": -0.16,
+          "blocksCities": false,
+          "blocksMovement": false
+        },
+        {
+          "id": "northeast-perimeter-ridge",
+          "type": "perimeter_ridge",
+          "x": 1225,
+          "y": 245,
+          "rx": 60,
+          "ry": 40,
+          "rot": 0,
+          "blocksCities": true,
+          "blocksMovement": true
+        }
+      ],
+      "prohibitedTerrain": []
+    },
+    "roadCorridors": [],
+    "noCityZones": [],
+    "camps": [],
+    "strongholds": [],
+    "citadels": []
+  },
+  "allocation": {
+    "schemaVersion": 1,
+    "generatorVersion": "phase6a-art-correction-v2",
+    "worldId": "phase6a_v2_development_world",
+    "seasonId": "phase6a_v2_development_season",
+    "regionId": "phase6a_corrected_v2_approval_region",
+    "coordinate": {
+      "gridX": -3,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 0
+    },
+    "previousClockwiseRegionId": "",
+    "cardinalNeighbors": [],
+    "otherCardinalNeighborIds": [],
+    "connections": {
+      "north": {
+        "side": "north",
+        "oppositeSide": "south",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "east": {
+        "side": "east",
+        "oppositeSide": "west",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "south": {
+        "side": "south",
+        "oppositeSide": "north",
+        "state": "gated",
+        "targetRegionId": ""
+      },
+      "west": {
+        "side": "west",
+        "oppositeSide": "east",
+        "state": "gated",
+        "targetRegionId": ""
+      }
+    },
+    "topologyPatch": {
+      "region": {
+        "regionId": "phase6a_corrected_v2_approval_region",
+        "connections": {
+          "north": {
+            "side": "north",
+            "oppositeSide": "south",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "east": {
+            "side": "east",
+            "oppositeSide": "west",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "south": {
+            "side": "south",
+            "oppositeSide": "north",
+            "state": "gated",
+            "targetRegionId": ""
+          },
+          "west": {
+            "side": "west",
+            "oppositeSide": "east",
+            "state": "gated",
+            "targetRegionId": ""
+          }
+        }
+      },
+      "neighbors": []
+    },
+    "beginsNewLayer": false,
+    "ringWillClose": false,
+    "ringSize": 24,
+    "occupiedRingCountBefore": 0,
+    "state": "ALLOCATED"
+  },
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "checks": {
+      "playerRegionOutsideCore": true,
+      "topologyValid": true,
+      "definitionValid": true,
+      "exactCityCapacityMet": true,
+      "noPlacementConflicts": true,
+      "startingCandidatesExist": true,
+      "edgeTransitionClearance": true
+    }
+  },
+  "generationHash": "38a409a870cb98afe11883f8e707538068ba9da941c682c4c7e624b6e6c16e9c"
+}

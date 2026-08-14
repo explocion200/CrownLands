@@ -1,0 +1,120 @@
+{
+  "key": "west-b",
+  "theme": "west",
+  "variant": "b",
+  "cleanMap": "../map-clean.png",
+  "cityOverlay": "map-with-40-cities.png",
+  "styleCompatibility": "style-compatibility.png",
+  "edgeCloseups": {
+    "north": "edge-north.png",
+    "east": "edge-east.png",
+    "south": "edge-south.png",
+    "west": "edge-west.png"
+  },
+  "roadOpeningCloseups": {
+    "north": "road-opening-north.png",
+    "east": "road-opening-east.png",
+    "south": "road-opening-south.png",
+    "west": "road-opening-west.png"
+  },
+  "boundaryContactProof": "boundary-contact-proof.png",
+  "boundaryMetrics": {
+    "north": {
+      "outermostBandMeanDifferenceFromFoundation": 16.547,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          564,
+          12
+        ],
+        [
+          884,
+          0,
+          1448,
+          12
+        ]
+      ]
+    },
+    "east": {
+      "outermostBandMeanDifferenceFromFoundation": 30.05,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          1436,
+          0,
+          1448,
+          383
+        ],
+        [
+          1436,
+          703,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "south": {
+      "outermostBandMeanDifferenceFromFoundation": 19.933,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          1074,
+          564,
+          1086
+        ],
+        [
+          884,
+          1074,
+          1448,
+          1086
+        ]
+      ]
+    },
+    "west": {
+      "outermostBandMeanDifferenceFromFoundation": 19.237,
+      "barrierTouchesLiteralImageEdge": true,
+      "sampleBands": [
+        [
+          0,
+          0,
+          12,
+          383
+        ],
+        [
+          0,
+          703,
+          12,
+          1086
+        ]
+      ]
+    }
+  },
+  "allBarrierSidesTouchLiteralEdge": true,
+  "cityCount": 40,
+  "allCitiesOnAuthoritativelyValidTerrain": true,
+  "simpleReadableDensity": true,
+  "noBakedRuntimeObjects": true,
+  "exactlyOneRoadOpeningPerSide": true,
+  "geometryArtParity": true,
+  "styleConsistency": {
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/west-grassy-1448x1086.png",
+    "approvedMasterSha256": "e68b9917e94bc12ed9b014993eee5354190cf2af67d137bc83f15d2c37ce767b",
+    "themeAssetsOnly": true,
+    "outputInteriorMeanRgb": [
+      128.473,
+      116.965,
+      36.748
+    ],
+    "approvedInteriorMeanRgb": [
+      129.947,
+      117.835,
+      42.543
+    ],
+    "paletteDistance": 6.042,
+    "paletteWithinLockedFamily": true,
+    "structureComparisonRendered": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "key": "west",
+  "theme": {
+    "id": "west_grassy",
+    "label": "West / grassy",
+    "climate": "temperate_grassland"
+  },
+  "coordinate": {
+    "gridX": -3,
+    "gridY": 0,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 21
+  },
+  "priorStubCount": 21,
+  "developmentOnly": true,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "productionArtApproved": false,
+  "edgeBarrierTouchesImageBoundary": true,
+  "exactRoadPassages": 4,
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "map": {
+    "path": "benchmark-results/map/phase-6a-v3-directional/source/west-grassy-1448x1086.png",
+    "width": 1448,
+    "height": 1086,
+    "opaque": true,
+    "bytes": 2903026,
+    "sha256": "e68b9917e94bc12ed9b014993eee5354190cf2af67d137bc83f15d2c37ce767b"
+  },
+  "generatorVersion": "phase6a-directional-approval-v1",
+  "deterministicAttempt": 3,
+  "seedSalt": "directional-west-visual-safe-v3",
+  "generationHash": "90cd1140c48d4a62e92fae74a0dcf41fd628e6c0f85a872f5373b80b04b60f01",
+  "cityHash": "b96dfd3bef346da69701ee6deff0833db3cd951a65d00b195737b5b9eb499731",
+  "visualReview": {
+    "reviewer": "Codex Phase 6A directional visual audit",
+    "userApprovalPending": true,
+    "barrierDirectlyOnImageEdge": true,
+    "simpleAndReadable": true,
+    "densityMatchesPhase6aV2": true,
+    "directionalThemeReadsCorrectly": true,
+    "sameCrownlandsWorld": true,
+    "allCitiesOnOpenTerrain": true,
+    "structureArtCompatible": true,
+    "notes": [
+      "Significant vegetation, ridge, and perimeter features are authoritative blockers; small decorative ground texture remains playable.",
+      "Earlier deterministic layouts with visible feature conflicts were discarded before this receipt was recorded.",
+      "The edge-contact proof samples source pixel 0 and source pixel 1085 directly from the normalized map."
+    ]
+  }
+}
