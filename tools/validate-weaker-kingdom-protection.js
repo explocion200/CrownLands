@@ -457,9 +457,9 @@ if (identitySignatureSandbox.getPlayerIdentitySignature(unverifiedIdentity)
   === identitySignatureSandbox.getPlayerIdentitySignature(authoritativeIdentity)) {
   throw new Error("An authoritative King Power lookup does not trigger a fresh city-color render.");
 }
-if (!/\.city-node\.enemy\.enemy-power-protected\s*\{[\s\S]*?--enemy-city-ui:\s*#ed8b8b;/.test(stylesSource)
-  || !/\.city-node\.enemy\.enemy-power-in-range\s*\{[\s\S]*?--enemy-city-ui:\s*#e12635;/.test(stylesSource)
-  || !/\.city-node\.enemy\.enemy-power-overpowering\s*\{[\s\S]*?--enemy-city-ui:\s*#59121a;/.test(stylesSource)) {
+if (!/\.city-node\.enemy\.enemy-power-protected\s*\{[\s\S]*?--enemy-city-ui:\s*#c9786f;/.test(stylesSource)
+  || !/\.city-node\.enemy\.enemy-power-in-range\s*\{[\s\S]*?--enemy-city-ui:\s*#b3261e;/.test(stylesSource)
+  || !/\.city-node\.enemy\.enemy-power-overpowering\s*\{[\s\S]*?--enemy-city-ui:\s*#4b1418;/.test(stylesSource)) {
   throw new Error("Enemy power bands are not using the fixed light, bright, and dark red palette.");
 }
 

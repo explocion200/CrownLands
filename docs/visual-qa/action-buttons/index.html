@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Action Button Matrix</title>
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      color: #f2e2bf;
+      background: #17110d;
+      font-family: "Cinzel", Georgia, serif;
+    }
+    h1 { margin: 0 0 8px; color: #e7d6b4; font-size: 1.4rem; }
+    p { margin: 0 0 20px; color: #c8b894; }
+    main { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    section { padding: 14px; border: 1px solid #72563a; background: #231a14; }
+    h2 { margin: 0 0 12px; color: #d0b98e; font-size: .85rem; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .action-row .cl-action-button {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+      flex: 0 0 var(--cl-action-size);
+    }
+  </style>
+</head>
+<body>
+  <h1>Crownlands Shared Action Buttons</h1>
+  <p>One physical component and semantic palette across every map objective.</p>
+  <main>
+    <section aria-labelledby="owned-city-title">
+      <h2 id="owned-city-title">Owned City</h2>
+      <div class="action-row">
+        <button class="city-wheel-action cl-action-button cl-action-royal"><span>♛</span><strong>Level</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-send"><span>➜</span><strong>Send</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-info"><span>i</span><strong>Info</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-scout armed"><span>◉</span><strong>Nearby</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-send busy" aria-busy="true"><span>↶</span><strong>Regroup</strong></button>
+      </div>
+    </section>
+
+    <section aria-labelledby="foreign-city-title">
+      <h2 id="foreign-city-title">Foreign and Clan Cities</h2>
+      <div class="action-row">
+        <button class="city-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Scout</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-scout is-pending" aria-busy="true" disabled><span>◉</span><strong>Scouting</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Attack</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-reinforce"><span>♜</span><strong>Reinforce</strong></button>
+        <button class="city-wheel-action cl-action-button cl-action-info"><span>▤</span><strong>Report</strong></button>
+      </div>
+    </section>
+
+    <section aria-labelledby="camp-title">
+      <h2 id="camp-title">Camp</h2>
+      <div class="action-row">
+        <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Rescout</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Attack</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-send"><span>↶</span><strong>Recall</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>i</span><strong>Rewards</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span>⚑</span><strong>Rally</strong></button>
+      </div>
+    </section>
+
+    <section aria-labelledby="stronghold-title">
+      <h2 id="stronghold-title">Stronghold</h2>
+      <div class="action-row">
+        <button class="gold-camp-wheel-action cl-action-button cl-action-scout"><span>◉</span><strong>Scout</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Assault</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-send"><span>➜</span><strong>Send</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-reinforce"><span>♜</span><strong>Reinforce</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>▤</span><strong>History</strong></button>
+      </div>
+    </section>
+
+    <section aria-labelledby="citadel-title">
+      <h2 id="citadel-title">Crown Citadel</h2>
+      <div class="action-row">
+        <button class="gold-camp-wheel-action cl-action-button cl-action-scout busy" aria-busy="true"><span>◉</span><strong>Scouting</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-attack"><span>⚔</span><strong>Capture</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-rally"><span>⚑</span><strong>Rally</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-info"><span>♛</span><strong>Ledger</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-royal"><span>♛</span><strong>Royal</strong></button>
+      </div>
+    </section>
+
+    <section aria-labelledby="disabled-title">
+      <h2 id="disabled-title">Shared Disabled State</h2>
+      <div class="action-row">
+        <button class="city-wheel-action cl-action-button cl-action-send" disabled><span>➜</span><strong>Send</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-attack" disabled><span>⚔</span><strong>Attack</strong></button>
+        <button class="gold-camp-wheel-action cl-action-button cl-action-info" disabled><span>i</span><strong>Info</strong></button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

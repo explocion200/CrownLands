@@ -5,7 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const index = read("index.html");
-const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}`;
+const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}\n${read("action-buttons.css")}`;
 const game = read("game.js");
 const layoutRuntime = read("ui-layout-runtime.js");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
@@ -128,23 +128,23 @@ assert.match(
 );
 assert.match(
   game,
-  /class="city-wheel-action wheel-send"[\s\S]{0,320}?renderCrownlandsIcon\("forward"\)/,
+  /class="city-wheel-action cl-action-button cl-action-send wheel-send"[\s\S]{0,320}?renderCrownlandsIcon\("forward"\)/,
   "The player-city Send action must use the restored forward arrow.",
 );
 assert.doesNotMatch(
   game,
-  /class="city-wheel-action wheel-send"[\s\S]{0,320}?renderCrownlandsIcon\("outgoing"\)/,
+  /class="city-wheel-action cl-action-button cl-action-send wheel-send"[\s\S]{0,320}?renderCrownlandsIcon\("outgoing"\)/,
   "The player-city Send action still uses the diagonal outgoing arrow.",
 );
 assert.match(
   styles,
-  /\.city-wheel-action\s*\{[\s\S]{0,300}?background:\s*linear-gradient\(180deg,\s*#1e628a,\s*#082a46\);/,
-  "The city action wheel must retain its former blue base palette.",
+  /--cl-action-size:\s*64px;[\s\S]*?:is\(\.city-wheel-action, \.gold-camp-wheel-action\)\.cl-action-button\s*\{[\s\S]*?width:\s*var\(--cl-action-size\) !important;/,
+  "City and objective actions must share one physical button construction.",
 );
 assert.match(
   styles,
-  /\.wheel-send,\s*\n\.wheel-attack\s*\{[\s\S]{0,220}?background:\s*linear-gradient\(180deg,\s*var\(--ui-gold-bright\),\s*#a8691b\);/,
-  "The city Send and Attack buttons must retain their former gold palette.",
+  /--cl-action-send-bg:\s*linear-gradient\(180deg, #5f7888, #3e5664\);[\s\S]*?--cl-action-attack-bg:\s*linear-gradient\(180deg, #9b4a42, #6d2927\);/,
+  "City Send and Attack actions must use the approved faded-blue and attack-red variants.",
 );
 
 const loginAsset = manifest.assets.find(asset => asset.id === "login-background");
