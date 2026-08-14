@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Player Flag Mobile QA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px; color: #f2e2bf; background: #17110d; font-family: Georgia, serif; }
+    h1 { margin: 0 0 6px; }
+    #mobileQaStatus { margin: 0 0 16px; padding: 9px 12px; border: 1px solid #997643; background: #542728; font-weight: 800; }
+    #mobileQaStatus.pass { color: #e5f0cf; border-color: #92a174; }
+    #mobileQaStatus.fail { color: #ffe0d8; border-color: #d66b64; }
+    .frames { display: flex; align-items: start; gap: 18px; overflow: auto; }
+    figure { margin: 0; display: grid; gap: 7px; }
+    figcaption { font-weight: 800; }
+    iframe { display: block; border: 3px solid #997643; background: #eedeBE; }
+  </style>
+</head>
+<body>
+  <h1>Player flags · mobile viewport QA</h1>
+  <div id="mobileQaStatus" role="status">Waiting for portrait and landscape frames…</div>
+  <div class="frames">
+    <figure><figcaption>Mobile portrait · 390 × 844</figcaption><iframe id="portraitFrame" title="Player flag QA in mobile portrait" src="index.html?embedded=portrait" width="390" height="844"></iframe></figure>
+    <figure><figcaption>Mobile landscape · 844 × 390</figcaption><iframe id="landscapeFrame" title="Player flag QA in mobile landscape" src="index.html?embedded=landscape" width="844" height="390"></iframe></figure>
+  </div>
+  <script>
+    (function monitorFrames() {
+      const status = document.getElementById("mobileQaStatus");
+      function inspect(frame) {
+        const doc = frame.contentDocument;
+        const qa = frame.contentWindow.__flagQa;
+        if (!doc || !qa) return null;
+        return {
+          status: doc.querySelector("#qaStatus")?.textContent || "",
+          clientWidth: doc.documentElement.clientWidth,
+          scrollWidth: doc.documentElement.scrollWidth,
+          editorColumns: getComputedStyle(doc.querySelector(".qa-editor-grid")).gridTemplateColumns,
+          swatchColumns: getComputedStyle(doc.querySelector("#primaryColors")).gridTemplateColumns,
+          failures: qa.failures?.length || 0,
+        };
+      }
+      const timer = setInterval(() => {
+        const portrait = inspect(document.getElementById("portraitFrame"));
+        const landscape = inspect(document.getElementById("landscapeFrame"));
+        if (!portrait || !landscape) return;
+        clearInterval(timer);
+        const failures = [portrait, landscape].filter(result => result.failures || result.scrollWidth > result.clientWidth + 1 || !result.status.startsWith("PASS"));
+        status.className = failures.length ? "fail" : "pass";
+        status.dataset.portraitMetrics = JSON.stringify(portrait);
+        status.dataset.landscapeMetrics = JSON.stringify(landscape);
+        status.textContent = failures.length
+          ? "FAIL · mobile clipping or computed QA failure"
+          : `PASS · portrait ${portrait.clientWidth}/${portrait.scrollWidth}px · landscape ${landscape.clientWidth}/${landscape.scrollWidth}px · no horizontal clipping`;
+        window.__mobileFlagQa = { portrait, landscape, failures };
+      }, 100);
+      setTimeout(() => {
+        if (!window.__mobileFlagQa) {
+          clearInterval(timer);
+          status.className = "fail";
+          status.textContent = "FAIL · mobile QA timed out";
+        }
+      }, 10000);
+    })();
+  </script>
+</body>
+</html>

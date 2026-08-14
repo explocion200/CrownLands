@@ -14,7 +14,7 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260814-main-city-r36";
+const releaseId = "20260814-readability-r38";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css) <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -70,7 +70,7 @@ for (const [name, value] of Object.entries(exactTokens)) {
 }
 
 for (const family of [
-  ".resource-pill", ".profile-screen", ".clan-panel", ".leaderboard-row",
+  ".resource-pill", ".profile-screen", ".clan-panel",
   ".city-list-row", ".shop-item", ".inventory-slot", ".battle-report-card",
   ".profile-achievement-summary", ".daily-reward-card", ".daily-mission-row",
   ".seasonal-achievement-row", ".camp-info-tab-panel", ".stronghold-info",
@@ -105,6 +105,10 @@ assert.match(styles, /\.city-node\.neutral \.foreign-city-shield\s*\{\s*backgrou
 
 assert.match(css, /Scout intelligence uses the shared parchment report family[\s\S]*?\.modal\.scout-report-modal \.scout-report-identities[\s\S]*?border:\s*1px solid var\(--cl-brass\) !important;[\s\S]*?background:\s*var\(--cl-card-bg\) !important;/, "Scout intelligence is not using the standard parchment report card construction.");
 assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-breakdown-row, \.scout-skill-row\)[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Scout list rows retain a conflicting legacy surface.");
+assert.match(css, /\.modal\.battle-report-modal \.battle-report-card \.battle-report-city > span,[\s\S]*?\.battle-report-result :is\(strong, small\)[\s\S]*?color:\s*var\(--cl-text-bright\) !important;/, "Battle report result and level text can still disappear into semantic badges.");
+assert.doesNotMatch(css, /\.leaderboard-toolbar,\s*\.leaderboard-row,/, "The generic parchment card palette still overrides the dedicated slate leaderboard surface.");
+assert.match(css, /\.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card/, "Generic parchment typography still overrides dedicated leaderboard text colors or gained excess specificity.");
+assert.match(css, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, "Generic controls still give leaderboard identity links an opaque button surface.");
 
 for (const exactAction of [
   "--cl-action-size: 64px",
@@ -145,6 +149,11 @@ for (const [foreground, background, label] of [
   ["f2e2bf", "66536f", "rally controls"],
   ["fff8e8", "a63b30", "scouting controls"],
   ["fff8e8", "64754a", "success feedback"],
+  ["fff8e8", "526a78", "scout report result"],
+  ["fff8e8", "8a3934", "defeat report result"],
+  ["fff8e8", "31566d", "leaderboard names"],
+  ["d3e3eb", "31566d", "leaderboard metadata"],
+  ["fff0bc", "31566d", "leaderboard power"],
 ]) assert.ok(contrast(foreground, background) >= 4.5, `${label} does not meet 4.5:1 contrast.`);
 
 console.log("Validated the centralized Crownlands palette, game-wide UI coverage, exact map semantics, persistent hex actions, release delivery, and readable contrast.");

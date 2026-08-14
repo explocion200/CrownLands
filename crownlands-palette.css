@@ -232,7 +232,6 @@ body {
   .city-list-empty,
   .island-switch-row,
   .leaderboard-toolbar,
-  .leaderboard-row,
   .leaderboard-empty,
   .battle-report-card,
   .battle-report-empty,
@@ -365,20 +364,20 @@ body {
 }
 
 /* Text hierarchy on parchment. */
-:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal .modal-card)
+:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
   :is(h1, h2, h3, h4, legend, .profile-section-heading h3) {
   color: var(--cl-burgundy) !important;
   text-shadow: none !important;
 }
 
-:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal .modal-card)
+:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
   :is(strong, b, output, .player-name-link, .clan-name-link) {
   color: var(--cl-text) !important;
   text-shadow: none !important;
 }
 
-:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal .modal-card)
-  :is(p, li, dd, dt, label, span, small, em) {
+:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
+  :is(p, li, dd, dt, label, span:not(.flag-symbol), small, em) {
   color: var(--cl-text-secondary) !important;
   opacity: 1;
   text-shadow: none !important;
@@ -566,7 +565,7 @@ input[type="range"] {
   .profile-screen,
   .modal .modal-card,
   .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
   color: var(--cl-text) !important;
   border-color: var(--cl-brass) !important;
   background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
@@ -660,8 +659,7 @@ input[type="range"] {
 .toast.critical { background: var(--cl-critical) !important; }
 .toast.reward { background: var(--cl-gold) !important; color: var(--cl-text) !important; }
 
-/* Reports and scouting intelligence use parchment pages with clear semantic
-   result seals. Scout report cards intentionally match combat report cards. */
+/* Shared parchment reports and semantic result seals. */
 .battle-report-card,
 .battle-report-card.scout,
 .battle-report-card.victory,
@@ -676,10 +674,16 @@ input[type="range"] {
   color: var(--cl-text) !important;
 }
 
-.battle-report-card :is(.battle-report-city, .battle-report-troops, .battle-report-opponent)
-  :is(span, small),
-.battle-report-card .battle-report-city > span {
+.battle-report-card :is(.battle-report-troops, .battle-report-opponent) :is(span, small),
+.battle-report-card .battle-report-city small {
   color: var(--cl-text-secondary) !important;
+}
+
+.modal.battle-report-modal .battle-report-card .battle-report-city > span,
+.modal.battle-report-modal .battle-report-card .battle-report-result :is(strong, small) {
+  color: var(--cl-text-bright) !important;
+  opacity: 1;
+  text-shadow: 0 1px 1px rgba(47, 33, 19, .72) !important;
 }
 
 .battle-report-card.victory .battle-report-result {
@@ -695,10 +699,6 @@ input[type="range"] {
 .battle-report-card.scout .battle-report-result {
   color: var(--cl-text-light) !important;
   background: var(--cl-info) !important;
-}
-
-.battle-report-card .battle-report-result :is(strong, small) {
-  color: inherit !important;
 }
 
 :is(.modal.scout-report-modal .detailed-scout-report, .battle-report-modal .battle-report-detail.scout, .detailed-battle-report) {
@@ -815,12 +815,14 @@ input[type="range"] {
   text-shadow: none !important;
 }
 
-.city-node.player :is(.city-owner-column, .city-army-count) :is(span, strong, .city-label-level, .cl-icon) {
+.city-node.player .city-owner-column > .city-label-level,
+.city-node.player .city-army-count {
   color: var(--cl-text) !important;
   text-shadow: none !important;
 }
 
-.city-node.player.main-city-node :is(.city-owner-column, .city-army-count) :is(span, strong, .city-label-level, .cl-icon) {
+.city-node.player.main-city-node .city-owner-column > .city-label-level,
+.city-node.player.main-city-node .city-army-count {
   color: var(--cl-text-bright) !important;
 }
 

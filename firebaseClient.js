@@ -14,6 +14,7 @@
   const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
   const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
   const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
+  const PLAYER_FLAG_CONFIG = window.CrownlandsPlayerFlags || null;
 
   const client = {
     configured: false,
@@ -85,6 +86,12 @@
       .trim()
       .slice(0, PLAYER_NAME_MAX_LENGTH);
     return cleaned || fallback;
+  }
+
+  function cleanPlayerFlag(flag, stableKey = "", { allowNull = false } = {}) {
+    if ((!flag || typeof flag !== "object") && allowNull) return null;
+    if (!PLAYER_FLAG_CONFIG?.normalizeFlag) return flag && typeof flag === "object" ? flag : null;
+    return PLAYER_FLAG_CONFIG.normalizeFlag(flag, stableKey || client.user?.uid || "local-player");
   }
 
   function createSessionId() {
@@ -1351,6 +1358,9 @@
     const { doc, setDoc, serverTimestamp, deleteField } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
     const cleanProfile = sanitizeForFirestore(profile);
+    if (Object.prototype.hasOwnProperty.call(cleanProfile, "flag")) {
+      cleanProfile.flag = cleanPlayerFlag(cleanProfile.flag, uid);
+    }
     delete cleanProfile.mainCityId;
     delete cleanProfile.mainIslandId;
     delete cleanProfile.mainRegionId;
@@ -1744,7 +1754,7 @@
       ownerKind: hasPlayerOwner ? "player" : "neutral",
       ownerUid: hasPlayerOwner ? ownerUid : null,
       ownerName: hasPlayerOwner ? city.ownerName || "" : "",
-      ownerFlag: hasPlayerOwner ? city.ownerFlag || null : null,
+      ownerFlag: hasPlayerOwner ? cleanPlayerFlag(city.ownerFlag, ownerUid) : null,
       ownerKingPower: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerKingPower) || 0)) : 0,
       ownerShieldExpiresAtMs: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerShieldExpiresAtMs) || 0)) : 0,
     };
@@ -1793,7 +1803,7 @@
       cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
       kingPower: Math.max(0, Math.floor(Number(presence.kingPower) || 0)),
       kingPowerVersion: Math.max(0, Math.floor(Number(presence.kingPowerVersion) || 0)),
-      flag: presence.flag || null,
+      flag: cleanPlayerFlag(presence.flag, client.user?.uid || "local-player"),
       updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
     };
   }
@@ -1814,7 +1824,7 @@
         ownerKind: "player",
         ownerUid: uid,
         ownerName: city.ownerName || client.user.displayName || "Ruler",
-        ownerFlag: city.ownerFlag || null,
+        ownerFlag: cleanPlayerFlag(city.ownerFlag, uid),
         updatedAt: serverTimestamp(),
       }, { merge: true });
     }
@@ -1848,7 +1858,7 @@
       .map(islandId => String(islandId || "").trim())
       .filter(Boolean))];
     const ownerName = cleanPlayerName(identity.ownerName || identity.playerName || client.user?.displayName);
-    const ownerFlag = identity.ownerFlag || identity.flag || null;
+    const ownerFlag = cleanPlayerFlag(identity.ownerFlag || identity.flag, uid);
     let batch = writeBatch(client.db);
     let pendingWrites = 0;
     let updatedCount = 0;
@@ -1976,7 +1986,7 @@
       resetGeneration: RESET_GENERATION,
       displayName: cleanPlayerName(entry.displayName || entry.playerName || client.user?.displayName),
       playerName: cleanPlayerName(entry.playerName || entry.displayName || client.user?.displayName),
-      flag: entry.flag || null,
+      flag: cleanPlayerFlag(entry.flag, client.user?.uid || "local-player"),
       clanId: String(entry.clanId || "").slice(0, 128),
       clanName: String(entry.clanName || "").slice(0, 24),
       clanTag: String(entry.clanTag || "").slice(0, 5).toUpperCase(),

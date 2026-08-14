@@ -332,13 +332,13 @@ requires(
 );
 requires(
   client,
-  /function applyBattleReportTargetFlags[\s\S]*?applyFlagToElement\(flag,\s*report\.opponentFlag\)/,
-  "Compact report target flags are not hydrated from report snapshots."
+  /function applyBattleReportTargetFlags[\s\S]*?applyFlagToElement\(flag,\s*report\.opponentFlag,\s*report\.opponentUid\)/,
+  "Compact report target flags are not hydrated from report snapshots against the stable opponent identity."
 );
 requires(
   server,
-  /function makeReport[\s\S]*?opponentFlag:\s*normalizeServerFlag\(opponentFlag\)/,
-  "Authoritative battle reports do not preserve the opponent kingdom flag."
+  /function makeReport[\s\S]*?opponentFlag:\s*normalizeServerFlag\(opponentFlag, opponentUid\)/,
+  "Authoritative battle reports do not preserve and normalize the opponent kingdom flag against the stable opponent identity."
 );
 requires(
   styles,

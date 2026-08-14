@@ -38,6 +38,31 @@ service cloud.firestore {
         && value.matches('^[A-Za-z0-9 _.-]+$');
     }
 
+    function validPlayerFlagColor(value) {
+      return value is string && value.matches('^#[0-9A-Fa-f]{6}$');
+    }
+
+    function validPlayerFlagValue(flag) {
+      return flag is map
+        && flag.keys().hasOnly(['primary', 'secondary', 'symbolColor', 'pattern', 'symbol'])
+        && flag.keys().hasAll(['primary', 'secondary', 'pattern', 'symbol'])
+        && validPlayerFlagColor(flag.primary)
+        && validPlayerFlagColor(flag.secondary)
+        && (!flag.keys().hasAny(['symbolColor']) || validPlayerFlagColor(flag.symbolColor))
+        && flag.pattern in [
+          'split', 'diagonal', 'band', 'cross', 'saltire', 'chevron', 'quartered',
+          'pale', 'chief', 'bend', 'fess', 'pile', 'canton', 'invertedChevron'
+        ]
+        && flag.symbol in [
+          'crown', 'lion', 'eagle', 'double-eagle', 'wolf', 'stag', 'boar', 'bear',
+          'horse', 'dragon', 'griffin', 'raven', 'falcon', 'serpent', 'crossed-swords',
+          'battle-axe', 'war-hammer', 'spearhead', 'gauntlet', 'tower', 'castle-gate',
+          'fleur-de-lis', 'oak-tree', 'sunburst',
+          'castle', 'star', 'swords', 'fleur', 'cross', 'sun', 'moon', 'knight',
+          'diamond', 'spire', 'guardian', 'banner', 'helm', 'keep'
+        ];
+    }
+
     function validPlayerProfileNameCreate() {
       return !request.resource.data.keys().hasAny(['playerName'])
         || validPlayerNameValue(request.resource.data.playerName);
@@ -46,6 +71,7 @@ service cloud.firestore {
     function validPlayerProfileCreate() {
       return shieldCount(request.resource.data) == 0
         && validPlayerProfileNameCreate()
+        && (!request.resource.data.keys().hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag))
         && !request.resource.data.keys().hasAny([
           'gold',
           'goldFloat',
@@ -135,7 +161,8 @@ service cloud.firestore {
           'lastSeenAtMs'
         ])
         && (!affected.hasAny(['uid']) || request.resource.data.uid == request.auth.uid)
-        && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName));
+        && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName))
+        && (!affected.hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag));
     }
 
     function ownsCityOwnerIdentity() {
@@ -147,6 +174,7 @@ service cloud.firestore {
       return ownsCityOwnerIdentity()
         && profileFieldUnchanged('clanReinforcementSlotCount')
         && (profileFieldUnchanged('ownerName') || validPlayerNameValue(request.resource.data.ownerName))
+        && (profileFieldUnchanged('ownerFlag') || validPlayerFlagValue(request.resource.data.ownerFlag))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'ownerName',
           'ownerFlag',

@@ -7478,8 +7478,10 @@ button.inventory-slot {
 }
 
 .kingdom-flag {
-  --flag-primary: #1f5f91;
-  --flag-secondary: #e6b94f;
+  --flag-primary: #315a8a;
+  --flag-secondary: #c69a45;
+  --flag-symbol-color: #f2e2bf;
+  --flag-symbol-outline: rgba(32, 36, 38, .82);
   position: relative;
   display: grid;
   place-items: center;
@@ -7541,10 +7543,10 @@ button.inventory-slot {
 .flag-symbol {
   position: relative;
   z-index: 2;
-  color: #fff9e8;
+  color: var(--flag-symbol-color);
   font-weight: 1000;
   line-height: 1;
-  text-shadow: 0 2px 2px rgba(0,0,0,.65);
+  text-shadow: 0 1px 1px rgba(0,0,0,.5);
 }
 .kingdom-flag-small { width: 42px; height: 38px; }
 .kingdom-flag-small .flag-symbol { font-size: 1.15rem; }
@@ -9518,15 +9520,35 @@ button.inventory-slot {
 }
 .flag-control-group { display: grid; align-content: start; gap: .5rem; padding: .75rem; }
 .flag-control-group h4 { margin: 0; color: #d8ecfa; font-size: .82rem; }
-.flag-swatch-grid { display: grid; grid-template-columns: repeat(6, 38px); gap: .5rem; }
-.flag-swatch-grid button {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.2);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.25);
+.flag-swatch-grid { display: grid; grid-template-columns: repeat(6, 40px); gap: .5rem; }
+.flag-swatch-grid .flag-color-swatch {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  appearance: none;
+  border: 2px solid rgba(65, 45, 26, .76);
+  border-radius: 4px;
+  background-color: var(--flag-swatch);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, .2), transparent 28%, transparent 72%, rgba(0, 0, 0, .2)),
+    linear-gradient(90deg, rgba(255, 255, 255, .08), transparent 45%, rgba(0, 0, 0, .1));
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 216, .18), 0 3px 6px rgba(0, 0, 0, .24);
+  opacity: 1;
 }
-.flag-swatch-grid button.active { border-color: #fff; box-shadow: 0 0 0 2px #f2b84b, inset 0 0 0 2px rgba(0,0,0,.25); }
+.flag-swatch-grid .flag-color-swatch.active,
+.flag-swatch-grid .flag-color-swatch[aria-pressed="true"] {
+  border-color: #f2e2bf;
+  outline: 3px solid #72363a;
+  outline-offset: 2px;
+  box-shadow: inset 0 0 0 2px rgba(28, 17, 9, .48), 0 4px 8px rgba(0, 0, 0, .3);
+}
+.flag-swatch-grid .flag-color-swatch:not(:disabled):hover {
+  border-color: #f2e2bf;
+  filter: brightness(1.1) saturate(1.06);
+}
+.flag-swatch-grid .flag-color-swatch:active { transform: translateY(1px); }
+.flag-swatch-grid .flag-color-swatch:disabled { opacity: .62; filter: grayscale(.18); }
 .flag-option-grid,
 .flag-symbol-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; }
 .flag-option-grid button,
@@ -9546,6 +9568,15 @@ button.inventory-slot {
 .profile-secondary-btn { min-height: 46px; border-radius: 8px; font-weight: 950; }
 .profile-primary-btn { color: #211508; background: #f2b84b; }
 .profile-secondary-btn { color: #fff; background: #174b74; border: 1px solid rgba(158,213,255,.28); }
+
+@media (max-width: 640px) and (orientation: portrait) {
+  .flag-editor-view { grid-template-columns: minmax(0, 1fr); }
+  .flag-control-group,
+  .flag-editor-actions { grid-column: 1; }
+  .flag-swatch-grid { grid-template-columns: repeat(5, minmax(40px, 1fr)); }
+  .flag-swatch-grid .flag-color-swatch { width: 100%; max-width: 48px; justify-self: center; }
+  .flag-symbol-grid { grid-template-columns: repeat(4, minmax(44px, 1fr)); }
+}
 
 @media (max-width: 900px) and (orientation: landscape) {
   .profile-screen-header { min-height: 56px; padding-top: calc(.35rem + env(safe-area-inset-top)); padding-bottom: .35rem; }
