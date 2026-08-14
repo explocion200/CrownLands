@@ -198,7 +198,7 @@ assert.match(clientSource, /function isProtectedMainCity[\s\S]*?playerIdentityCa
 assert.match(clientSource, /foreignMainCityFlag = Object\.prototype\.hasOwnProperty\.call\(online, "isMainCity"\)[\s\S]*?\? Boolean\(online\.isMainCity\)[\s\S]*?: Boolean\(current\.isMainCity\)/, "An authoritative false main-city snapshot must clear a stale client flag.");
 assert.match(clientSource, /if \(cachedIdentity\?\.mainCityId\) return identityMarksCityAsMain\(city, cachedIdentity\);[\s\S]*?return Boolean\(city\.isMainCity\);/, "A canonical foreign-player home pointer must override a stale city flag.");
 assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
-assert.match(stylesSource, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background: #b68a43;/, "The current player's main-city UI must use the shared owned-city gold.");
+assert.match(stylesSource, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background: #454b54;/, "The current player's main-city UI must use the protected-home dark gray.");
 assert.match(stylesSource, /\.city-node\.enemy\.main-city-node \.foreign-city-shield,[\s\S]*?\.city-node\.enemy\.main-city-node \.foreign-selected-data[\s\S]*?background: #454b54;/, "Enemy main-city UI must render dark gray.");
 
 console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and semantic home-base UI colors.");

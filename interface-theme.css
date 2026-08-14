@@ -975,37 +975,6 @@ body {
   border-top-color: transparent;
 }
 
-.city-wheel-action {
-  border-radius: 50%;
-  color: #fff5d7;
-  background: linear-gradient(180deg, #1e628a, #082a46);
-  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .56)) drop-shadow(0 0 2px rgba(243, 212, 135, .52));
-}
-
-.gold-camp-wheel-action {
-  border-radius: 50%;
-  color: var(--cl-ivory);
-  background: linear-gradient(180deg, #555047, #2e2b26);
-  filter: drop-shadow(0 5px 3px rgba(0, 0, 0, .56));
-}
-
-.wheel-send,
-.wheel-attack {
-  color: #271807;
-  background: linear-gradient(180deg, var(--ui-gold-bright), #a8691b);
-}
-
-.wheel-level,
-.wheel-scout-nearby.armed {
-  color: #f4f8e8;
-  background: linear-gradient(180deg, #4f8447, #173a27);
-}
-
-.wheel-regroup,
-.wheel-regroup.armed {
-  background: linear-gradient(180deg, #a6423c, #4b1618);
-}
-
 .wheel-cost {
   color: var(--ui-gold-bright);
   border: 1px solid rgba(211, 161, 63, .32);
@@ -1143,7 +1112,7 @@ body {
 }
 
 @media (hover: hover) {
-  :where(button, .nav-btn, .resource-pill, .city-wheel-action, .gold-camp-wheel-action):not(:disabled):hover {
+  :where(button, .nav-btn, .resource-pill):not(.cl-action-button):not(:disabled):hover {
     filter: brightness(1.05) saturate(.98);
   }
 }
@@ -1712,58 +1681,10 @@ input[type="range"] {
   color: var(--cl-ivory);
 }
 
-.city-wheel-action {
-  border: 1px solid rgba(38, 34, 29, .86);
-  color: #fff5d7;
-  background: linear-gradient(180deg, #1e628a, #082a46);
-  box-shadow:
-    0 6px 5px rgba(0, 0, 0, .42),
-    inset 0 0 0 1px rgba(232, 216, 176, .12);
-}
-
-.gold-camp-wheel-action {
-  border: 1px solid rgba(38, 34, 29, .86);
-  color: var(--cl-ivory);
-  background: var(--cl-iron-panel);
-  box-shadow:
-    0 6px 5px rgba(0, 0, 0, .42),
-    inset 0 0 0 1px rgba(232, 216, 176, .12);
-}
-
 .wheel-icon .cl-icon,
 .gold-camp-wheel-action .cl-icon {
   width: 1.18rem;
   height: 1.18rem;
-}
-
-.wheel-send,
-.wheel-attack {
-  color: #271807;
-  background: linear-gradient(180deg, var(--ui-gold-bright), #a8691b);
-}
-
-.camp-order-action:not(.clan-reinforce-action) {
-  background: var(--cl-oxblood-panel);
-}
-
-.wheel-level,
-.wheel-scout-nearby.armed {
-  color: #f4f8e8;
-  background: linear-gradient(180deg, #4f8447, #173a27);
-}
-
-.wheel-regroup,
-.wheel-regroup.armed {
-  background: linear-gradient(180deg, #a6423c, #4b1618);
-}
-
-.camp-scout-action {
-  background: var(--cl-indigo-panel);
-}
-
-.wheel-reinforce,
-.clan-reinforce-action {
-  background: var(--cl-moss-panel) !important;
 }
 
 .troop-command-icon {

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260814-crownlands-palette-r34";
+const CACHE_VERSION = "20260814-main-city-r36";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,15 +11,15 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260814-crownlands-palette-r34",
+  "/styles.css?v=20260814-main-city-r36",
   "/interface-theme.css?v=20260813-interface-theme-split-r1",
-  "/readability.css?v=20260814-crownlands-palette-r34",
+  "/readability.css?v=20260814-main-city-r36",
   "/manuscript-prototype.css?v=20260813-manuscript-prototype-r4",
-  "/ui-contrast-correction.css?v=20260814-crownlands-palette-r34",
-  "/profile-theme.css?v=20260814-crownlands-palette-r34",
-  "/crownlands-palette.css?v=20260814-crownlands-palette-r34",
-  "/action-buttons.css?v=20260814-crownlands-palette-r34",
-  "/mobile-viewport.css?v=20260814-crownlands-palette-r34",
+  "/ui-contrast-correction.css?v=20260814-main-city-r36",
+  "/profile-theme.css?v=20260814-main-city-r36",
+  "/crownlands-palette.css?v=20260814-main-city-r36",
+  "/action-buttons.css?v=20260814-main-city-r36",
+  "/mobile-viewport.css?v=20260814-main-city-r36",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",
@@ -30,8 +30,8 @@ const STATIC_CACHE_URLS = [
   "/instant-economy-actions.js?v=20260810-instant-economy-actions-v1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260813-editor-layout-r1",
-  "/game.js?v=20260814-crownlands-palette-r34",
-  "/ui-layout-runtime.js?v=20260814-crownlands-palette-r34",
+  "/game.js?v=20260814-main-city-r36",
+  "/ui-layout-runtime.js?v=20260814-main-city-r36",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
   "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
