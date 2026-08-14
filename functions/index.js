@@ -7279,6 +7279,91 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
   };
 }
 
+function createDefenderScoutDisclosure(scoutReport = null) {
+  if (!scoutReport || typeof scoutReport !== "object") return null;
+  const skills = {};
+  for (const skill of SKILL_ORDER) {
+    skills[skill] = {
+      level: Math.max(0, Math.floor(safeNumber(scoutReport[`${skill}Level`], 0))),
+      percent: Math.max(0, safeNumber(scoutReport[`${skill}Percent`], 0)),
+    };
+  }
+  return {
+    version: 1,
+    targetType: scoutReport.targetType === "camp" ? "camp" : "city",
+    troops: Math.max(0, Math.floor(safeNumber(scoutReport.troops, 0))),
+    ownerTroops: Math.max(0, Math.floor(safeNumber(scoutReport.ownerTroops, scoutReport.troops))),
+    reinforcementTroops: Math.max(0, Math.floor(safeNumber(scoutReport.reinforcementTroops, 0))),
+    reinforcements: (Array.isArray(scoutReport.reinforcements) ? scoutReport.reinforcements : [])
+      .map(row => ({
+        ownerUid: safeString(row?.ownerUid, 128),
+        ownerName: normalizePlayerName(row?.ownerName, "Ruler"),
+        ownerFlag: normalizeServerFlag(row?.ownerFlag),
+        troops: Math.max(0, Math.floor(safeNumber(row?.troops, 0))),
+      }))
+      .filter(row => row.ownerUid && row.troops > 0)
+      .slice(0, 50),
+    totalDefense: Math.max(0, Math.floor(safeNumber(scoutReport.totalDefense, 0))),
+    cityLevel: scoutReport.targetType === "camp"
+      ? 0
+      : clampCityLevel(scoutReport.cityLevel || 1),
+    wallIntegrityBps: scoutReport.fortification
+      ? clampInt(scoutReport.fortification.integrityBps, 0, 10_000)
+      : 0,
+    skills,
+  };
+}
+
+function createDefenderScoutActivityReport({
+  army = {},
+  source = null,
+  target = null,
+  attackerUid = "",
+  attackerName = "Rival ruler",
+  attackerFlag = null,
+  defenderUid = "",
+  scoutReport = null,
+  nowMs = Date.now(),
+} = {}) {
+  const normalizedAttackerUid = safeString(attackerUid, 128);
+  const normalizedDefenderUid = safeString(defenderUid, 128);
+  if (!normalizedAttackerUid || !normalizedDefenderUid || normalizedAttackerUid === normalizedDefenderUid) return null;
+  const sourceCityId = safeString(source?.id || army.fromId, 96);
+  const sourceCityName = safeString(source?.name || army.fromName || sourceCityId || "Unknown city", 80);
+  const sourceRegionId = safeString(normalizeRegionId(source?.regionId || source?.startPool || army.sourceRegionId), 80);
+  const normalizedAttackerName = normalizePlayerName(attackerName, "Rival ruler");
+  const targetName = safeString(target?.name || target?.id || "your holding", 80);
+  const reportIdKey = `${safeString(army.id, 160)}:${normalizedDefenderUid}`;
+  const reportId = `scouted_${crypto.createHash("sha256").update(reportIdKey, "utf8").digest("hex").slice(0, 32)}`;
+  const report = makeReport({
+      id: reportId,
+      uid: normalizedDefenderUid,
+      type: "scout",
+      outcome: "scout",
+      city: target,
+      opponentUid: normalizedAttackerUid,
+      opponentName: normalizedAttackerName,
+      opponentFlag: attackerFlag,
+      sentTroops: 1,
+      troopCount: scoutReport?.troops,
+      totalDefense: scoutReport?.totalDefense,
+      defenseStats: scoutReport,
+      summary: `You were scouted by ${normalizedAttackerName} from ${sourceCityName}. They saw ${Math.max(0, Math.floor(safeNumber(scoutReport?.troops, 0))).toLocaleString()} troops at ${targetName}.`,
+      nowMs,
+    });
+  const activityReport = { ...report };
+  delete activityReport.scoutReport;
+  delete activityReport.expiresAtMs;
+  return {
+    ...activityReport,
+    scoutPerspective: "defender",
+    sourceCityId,
+    sourceCityName,
+    sourceRegionId,
+    scoutDisclosure: createDefenderScoutDisclosure(scoutReport),
+  };
+}
+
 function getCurrentScoutReportId(uid = "", cityId = "") {
   const key = `${safeString(uid, 128)}:${safeString(cityId, 96)}`;
   const digest = crypto.createHash("sha256").update(key, "utf8").digest("hex").slice(0, 32);
@@ -22507,9 +22592,24 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
+        const defenderReport = createDefenderScoutActivityReport({
+          army,
+          source,
+          target: campTarget,
+          attackerUid,
+          attackerName,
+          attackerFlag,
+          defenderUid,
+          scoutReport,
+          nowMs,
+        });
         writeParticipantEconomies();
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
         writeScoutReport(transaction, attackerUid, campTarget.id, scoutReport, attackerProfileSnap);
+        if (defenderReport) {
+          writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
+          reports.push(defenderReport);
+        }
         transaction.set(islandReportRef(targetRegionId, report.id), {
           ...createIslandReportProjection(report),
           createdAt: FieldValue.serverTimestamp(),
@@ -22888,8 +22988,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ...getArmyBulkAudioReportContext(army),
         nowMs,
       });
+      const defenderReport = createDefenderScoutActivityReport({
+        army,
+        source,
+        target,
+        attackerUid,
+        attackerName,
+        attackerFlag,
+        defenderUid,
+        scoutReport,
+        nowMs,
+      });
       writeReport(transaction, attackerUid, report, attackerProfileSnap);
       writeScoutReport(transaction, attackerUid, target.id, scoutReport, attackerProfileSnap);
+      if (defenderReport) {
+        writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
+        reports.push(defenderReport);
+      }
       transaction.set(islandReportRef(targetRegionId, report.id), {
         ...createIslandReportProjection(report),
         createdAt: FieldValue.serverTimestamp(),

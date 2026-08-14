@@ -1847,7 +1847,7 @@ input[type="range"] {
   z-index: 2;
   display: grid;
   place-items: center;
-  color: #f6efd8;
+  color: var(--flag-symbol-color, #f6efd8);
   filter: drop-shadow(0 1px 0 rgba(0,0,0,.58));
 }
 

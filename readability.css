@@ -1144,3 +1144,63 @@ body { color: var(--cl-readable-dark); }
     overflow-wrap: anywhere;
   }
 }
+
+/* Welcome Back uses one consistent dark surface with light, readable copy. */
+.offline-reward-modal .modal-card {
+  color: #f4ead4;
+  border-color: #d9ad55;
+  background: linear-gradient(180deg, #123b56, #0b2031 70%, #071722);
+}
+
+.offline-reward-modal .modal-card h2 {
+  color: #ffd77a;
+  border-color: rgba(255, 215, 122, .34);
+  text-shadow: 0 2px 0 #04101a;
+}
+
+.offline-reward-modal .modal-card #modalBody {
+  color: #f4ead4;
+  overflow-y: auto;
+}
+
+.offline-reward-modal .offline-reward-panel > p,
+.offline-reward-modal .offline-reward-grid :is(span, small),
+.offline-reward-modal .offline-lost-cities :is(span, small) {
+  color: #cad9df;
+}
+
+.offline-reward-modal .offline-reward-grid > div {
+  color: #f4ead4;
+  border-color: #426d83;
+  background: linear-gradient(180deg, #153d55, #0b2639);
+  box-shadow: inset 0 1px 0 rgba(232, 247, 255, .1);
+}
+
+.offline-reward-modal .offline-reward-grid strong,
+.offline-reward-modal .offline-lost-cities strong {
+  color: #ffd77a;
+  text-shadow: 0 1px 0 #04101a;
+}
+
+.offline-reward-modal .offline-lost-cities {
+  color: #fae7e2;
+  border-color: #a95858;
+  background: linear-gradient(180deg, #55282d, #3b2024);
+}
+
+.offline-reward-modal .offline-lost-cities.safe {
+  color: #eaf6ea;
+  border-color: #5f9774;
+  background: linear-gradient(180deg, #23503a, #163628);
+}
+
+.offline-reward-modal .offline-lost-cities :is(p, li),
+.offline-reward-modal .offline-lost-cities.safe :is(p, li) {
+  color: inherit;
+}
+
+.offline-reward-modal .offline-collect-btn {
+  color: #251603;
+  border-color: #ffe19a;
+  background: linear-gradient(180deg, #ffe197, #e7b94d 72%, #a86c18);
+}

@@ -16,8 +16,8 @@
   --cl-danger-bg: #742a2e;
   --cl-danger-border: #46181b;
   --cl-danger-text: var(--cl-contrast-ivory-bright);
-  --cl-state-outgoing: #355e7a;
-  --cl-state-incoming: #8a3333;
+  --cl-state-outgoing: #153f5d;
+  --cl-state-incoming: #681e25;
   --cl-state-victory: #355e7a;
   --cl-state-scout: #b88a32;
   --cl-state-defeat: #8a3333;
@@ -1272,6 +1272,10 @@
 
 .bottom-nav {
   --cl-operation-button-width: clamp(78px, calc((100vw - 42px) / 3), 98px);
+  display: flex !important;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 6px !important;
   width: max-content !important;
   min-width: 0 !important;
   height: auto !important;
@@ -1280,6 +1284,18 @@
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
+}
+
+.bottom-nav .report-nav-btn {
+  order: 1;
+}
+
+.bottom-nav .outgoing-attack-btn {
+  order: 2;
+}
+
+.bottom-nav .incoming-attack-btn {
+  order: 3;
 }
 
 .bottom-nav .report-nav-btn,
@@ -1291,7 +1307,7 @@
   min-height: 46px;
   padding: 3px 5px;
   display: grid;
-  grid-auto-flow: row;
+  grid-template-rows: 22px 10px 9px;
   place-content: center;
   place-items: center;
   gap: 0;
@@ -1322,13 +1338,41 @@
 .bottom-nav .report-nav-btn .nav-btn-label,
 :is(.outgoing-attack-btn, .incoming-attack-btn) .nav-btn-label {
   max-width: 100%;
-  font-size: .58rem;
+  min-height: 9px;
+  font-size: .62rem;
+  font-weight: 800;
   line-height: 1;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-:is(.outgoing-attack-btn, .incoming-attack-btn) strong {
-  font-size: .68rem;
+.bottom-nav .nav-btn-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .18rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 10px;
+  margin: 0;
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bottom-nav .nav-btn-heading .nav-btn-count {
+  display: inline;
+  width: auto;
+  height: auto;
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+
+.bottom-nav .nav-btn-timer-placeholder {
+  visibility: hidden;
 }
 
 .bottom-nav .report-nav-btn {
@@ -1338,7 +1382,7 @@
   text-shadow: 0 1px rgba(255, 250, 232, .5);
 }
 
-.bottom-nav .report-nav-btn .nav-btn-label {
+.bottom-nav .report-nav-btn :is(.nav-btn-heading, .nav-btn-label) {
   color: #15100b !important;
   opacity: 1;
   text-shadow: none;
@@ -1417,21 +1461,21 @@
 
 .outgoing-attack-btn,
 .outgoing-attack-btn.active {
-  color: var(--cl-contrast-ivory-bright) !important;
-  border-color: #214a68 !important;
+  color: #fffdf2 !important;
+  border-color: #8ed8ff !important;
   background: var(--cl-state-outgoing) !important;
 }
 
 .incoming-attack-btn,
 .incoming-attack-btn.active {
-  color: var(--cl-contrast-ivory-bright) !important;
-  border-color: #642025 !important;
+  color: #fffdf2 !important;
+  border-color: #ffb49d !important;
   background: var(--cl-state-incoming) !important;
 }
 
-:is(.outgoing-attack-btn, .incoming-attack-btn) :is(.cl-icon, span, strong, small) {
-  color: var(--cl-contrast-ivory-bright) !important;
-  text-shadow: 0 1px 1px rgba(20, 8, 8, .72);
+.bottom-nav :is(.outgoing-attack-btn, .incoming-attack-btn) :is(.cl-icon, span, strong, small) {
+  color: #fffdf2 !important;
+  text-shadow: 0 1px 2px #000, 0 0 3px rgba(0, 0, 0, .72);
   opacity: 1;
 }
 
@@ -1702,9 +1746,21 @@
 }
 
 .profile-screen .flag-symbol-grid button {
+  display: grid;
+  place-items: center;
+  padding: .35rem;
+  text-align: center;
   color: #f8e9c4 !important;
   border-color: #8b693b;
   background: linear-gradient(180deg, #315f78, #12344a);
+}
+
+.profile-screen .flag-symbol-control {
+  grid-column: 1 / -1;
+}
+
+.profile-screen .flag-symbol-control .flag-symbol-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
 .profile-screen .flag-symbol-grid button .cl-icon {
@@ -1716,6 +1772,10 @@
   color: #2b2118 !important;
   border-color: #6d2d35;
   background: linear-gradient(180deg, #f5e7c8, #d4b87d);
+}
+
+.kingdom-flag .flag-symbol {
+  color: var(--flag-symbol-color, #f6efd8) !important;
 }
 
 .clan-shield-editor .clan-shield-control,
@@ -1909,8 +1969,6 @@
   text-shadow: none !important;
 }
 
-/* Map arrival announcement ------------------------------------------ */
-
 .toast.map-location-announcement {
   z-index: 95;
   top: calc(env(safe-area-inset-top, 0px) + 64px);
@@ -2069,4 +2127,76 @@
     grid-template-columns: 36px minmax(0, 1fr) minmax(38px, auto) var(--audio-toggle-width);
     gap: .35rem;
   }
+}
+
+.leaderboard-modal .modal-card #modalBody {
+  overflow-y: auto !important;
+}
+
+:is(.incoming-attack-modal,.outgoing-attack-modal,.battle-report-modal,.scout-report-modal) .modal-card #modalBody {
+  overflow-y: auto !important;
+}
+
+:is(.modal.scout-report-modal .detailed-scout-report,
+    .battle-report-modal .battle-report-detail.scout) {
+  color: #fff8e8 !important;
+  background: linear-gradient(180deg, #123b56, #071b2a) !important;
+}
+
+:is(.modal.scout-report-modal .detailed-scout-report,
+    .battle-report-modal .battle-report-detail.scout)
+  :is(h3, h4, strong, b, .player-name-link) {
+  color: #fff8e8 !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+:is(.modal.scout-report-modal .detailed-scout-report,
+    .battle-report-modal .battle-report-detail.scout)
+  :is(p, span, small, label, em) {
+  color: #c5dfeb !important;
+  opacity: 1;
+  text-shadow: none !important;
+}
+
+.modal.scout-report-modal :is(.scout-report-overview > div, .scout-defense-breakdown, .scout-skill-list),
+.battle-report-modal .battle-report-detail.scout :is(.battle-report-detail-head, .scouted-report-route > div, .scouted-report-time, .scouted-report-section, .scouted-report-metric, .scout-skill-list, .scout-attempt-explanation) {
+  color: #fff8e8 !important;
+  border-color: #507b92 !important;
+  background: #0a2b40 !important;
+}
+
+.modal.scout-report-modal .scout-report-city {
+  color: #fff8e8 !important;
+  border-color: #c96c66 !important;
+  background: #64252a !important;
+}
+
+.battle-report-modal .scouted-report-alert {
+  color: #fff8e8 !important;
+  border-color: #bd6867 !important;
+  background: linear-gradient(135deg, #65292e, #0b2d42) !important;
+}
+
+.modal.scout-report-modal .scout-breakdown-row,
+.battle-report-modal .scouted-report-detail .scout-breakdown-row {
+  border-color: #507b92 !important;
+  background: #0b3147 !important;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.scout-report-mark strong, .scout-report-section h3, .scouted-report-section-head h3, .scouted-report-attacker-link, .scout-report-timing b) {
+  color: #ffe29a !important;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.scout-report-overview span, .scouted-report-metric small, .scouted-report-route small, .scout-breakdown-row small, .scout-skill-row small) {
+  color: #a9d4e8 !important;
+}
+
+:is(.modal.scout-report-modal, .battle-report-modal .battle-report-detail.scout)
+  :is(.battle-report-back, .battle-report-locate-btn, .scout-report-locate) {
+  color: #fff8e8 !important;
+  border-color: #7ca7ba !important;
+  background: linear-gradient(180deg, #315f78, #183b50) !important;
 }

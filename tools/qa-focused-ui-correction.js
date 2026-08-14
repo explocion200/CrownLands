@@ -70,6 +70,43 @@ async function main() {
         fullPage: false,
       });
 
+      const homeHudMetrics = await page.evaluate(() => {
+        const bar = document.querySelector(".resource-bar");
+        const button = document.querySelector("#mainCityReturnBtn");
+        const fullscreen = document.querySelector("#fullscreenBtn");
+        if (!bar || !button || !fullscreen) return null;
+        bar.classList.add("has-home-return");
+        button.classList.add("hud-home-return");
+        button.hidden = false;
+        bar.insertBefore(button, fullscreen);
+        window.dispatchEvent(new Event("crownlands:ui-layout-refresh"));
+        const buttonRect = button.getBoundingClientRect();
+        const fullscreenRect = fullscreen.getBoundingClientRect();
+        const barRect = bar.getBoundingClientRect();
+        return {
+          barPosition: getComputedStyle(bar).position,
+          gap: fullscreenRect.left - buttonRect.right,
+          homeHeight: buttonRect.height,
+          homeTop: buttonRect.top,
+          homeWidth: buttonRect.width,
+          fullscreenHeight: fullscreenRect.height,
+          fullscreenPosition: getComputedStyle(fullscreen).position,
+          fullscreenTop: fullscreenRect.top,
+          fullscreenWidth: fullscreenRect.width,
+          rightInset: innerWidth - barRect.right,
+        };
+      });
+      assert.ok(homeHudMetrics, `${viewport.name}: top-right Home/fullscreen controls are missing.`);
+      assert.equal(homeHudMetrics.barPosition, "absolute", `${viewport.name}: the combined controls are not anchored to the HUD editor slot.`);
+      assert.ok(homeHudMetrics.rightInset >= 0 && homeHudMetrics.rightInset <= 40, `${viewport.name}: the combined controls are not in the top-right corner.`);
+      assert.equal(homeHudMetrics.fullscreenPosition, "static", `${viewport.name}: fullscreen remains detached from the Home control row.`);
+      assert.ok(homeHudMetrics.gap >= 0 && homeHudMetrics.gap <= 8, `${viewport.name}: Home is not directly beside fullscreen.`);
+      assert.ok(Math.abs(homeHudMetrics.homeTop - homeHudMetrics.fullscreenTop) < 1, `${viewport.name}: Home and fullscreen are not vertically aligned.`);
+      assert.equal(homeHudMetrics.homeWidth, 38, `${viewport.name}: Home has the wrong HUD width.`);
+      assert.equal(homeHudMetrics.homeHeight, 38, `${viewport.name}: Home has the wrong HUD height.`);
+      assert.equal(homeHudMetrics.fullscreenWidth, 38, `${viewport.name}: fullscreen has the wrong grouped width.`);
+      assert.equal(homeHudMetrics.fullscreenHeight, 38, `${viewport.name}: fullscreen has the wrong grouped height.`);
+
       const homeIconMetrics = await page.evaluate(() => {
         const button = document.querySelector("#mainCityReturnBtn");
         const house = button?.querySelector(".main-city-return-house");
