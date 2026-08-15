@@ -1,0 +1,439 @@
+{
+  "index": 182,
+  "key": "region-0183",
+  "packageDirectory": "packages/region-0183",
+  "regionId": "phase6d_region_0183",
+  "coordinate": {
+    "gridX": -3,
+    "gridY": 7,
+    "worldLayer": 5,
+    "clockwiseOrderIndex": 38
+  },
+  "layer": 5,
+  "clockwiseOrderIndex": 38,
+  "theme": "south",
+  "variant": "b",
+  "seed": {
+    "artworkStrategy": "sha256(world|season|region|coordinate|generator|library|theme|retrySalt|macroCandidate)",
+    "artworkMaterialHash": "b9261b4e39fe2a09fbe5b5d605a147bfae0d4c2f3af5eccedd1b43e8cb2609e3",
+    "artworkRetrySalt": "phase6d-world-sample|region-0183|south|b",
+    "macroCandidateIndex": 4,
+    "cityStrategy": "sha256(worldId|seasonId|regionId|gridX|gridY|generatorVersion|seedSalt)",
+    "citySeedHash": "c09ec8c78a69760b3bbf09486dd30d91074dd450badd7c0501b6db1981e1826d",
+    "citySeedSalt": "phase6d|south|v2|macro-4|feasibility-layout"
+  },
+  "foundation": {
+    "assetId": "foundation.south.v3",
+    "transform": "flip_horizontal",
+    "toneProfile": {
+      "strategy": "broad-linear-terrain-tone-v1",
+      "angleDegrees": 135,
+      "strength": 0.053,
+      "phase": -0.319,
+      "warmth": -0.0104,
+      "lowFrequencyOnly": true,
+      "changesDecorationDensity": false
+    }
+  },
+  "barriers": [
+    {
+      "assetId": "barrier-alt.south.north",
+      "x": 0,
+      "y": 0,
+      "width": 1448,
+      "height": 196,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier-alt.south.east",
+      "x": 1252,
+      "y": 0,
+      "width": 196,
+      "height": 1086,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.south.south-east",
+      "x": 844,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier.south.south-west",
+      "x": 0,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "barrier-alt.south.west",
+      "x": 0,
+      "y": 0,
+      "width": 196,
+      "height": 1086,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    }
+  ],
+  "barrierDecisions": {
+    "north": "alternate",
+    "east": "alternate",
+    "south": "base-pair",
+    "west": "alternate"
+  },
+  "roads": [
+    {
+      "assetId": "road-opening.south.north",
+      "x": 564,
+      "y": 0,
+      "width": 320,
+      "height": 220,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 220
+      },
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.south.east",
+      "x": 1228,
+      "y": 383,
+      "width": 220,
+      "height": 320,
+      "crop": {
+        "x": 340,
+        "y": 0,
+        "width": 220,
+        "height": 320
+      },
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.south.south",
+      "x": 564,
+      "y": 866,
+      "width": 320,
+      "height": 220,
+      "crop": {
+        "x": 0,
+        "y": 220,
+        "width": 320,
+        "height": 220
+      },
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-opening.south.west",
+      "x": 0,
+      "y": 383,
+      "width": 220,
+      "height": 320,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 220,
+        "height": 320
+      },
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "road-plan.south.v2",
+      "x": 0,
+      "y": 0,
+      "width": 1448,
+      "height": 1086,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    }
+  ],
+  "roadFamily": "v2",
+  "roadGeometry": [
+    {
+      "id": "road-north",
+      "side": "north",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 0
+        },
+        {
+          "x": 724,
+          "y": 220
+        },
+        {
+          "x": 778,
+          "y": 312
+        },
+        {
+          "x": 686,
+          "y": 468
+        }
+      ]
+    },
+    {
+      "id": "road-east",
+      "side": "east",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 1448,
+          "y": 543
+        },
+        {
+          "x": 1228,
+          "y": 543
+        },
+        {
+          "x": 876,
+          "y": 550
+        },
+        {
+          "x": 686,
+          "y": 468
+        }
+      ]
+    },
+    {
+      "id": "road-south",
+      "side": "south",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 724,
+          "y": 1086
+        },
+        {
+          "x": 724,
+          "y": 866
+        },
+        {
+          "x": 600,
+          "y": 646
+        },
+        {
+          "x": 686,
+          "y": 468
+        }
+      ]
+    },
+    {
+      "id": "road-west",
+      "side": "west",
+      "halfWidth": 44,
+      "points": [
+        {
+          "x": 0,
+          "y": 543
+        },
+        {
+          "x": 220,
+          "y": 543
+        },
+        {
+          "x": 502,
+          "y": 390
+        },
+        {
+          "x": 686,
+          "y": 468
+        }
+      ]
+    }
+  ],
+  "accents": [
+    {
+      "assetId": "accent.south.dry-scrub-a",
+      "x": 208,
+      "y": 168,
+      "width": 215,
+      "height": 154,
+      "crop": null,
+      "flipHorizontal": true,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.south.dry-rocks-a",
+      "x": 1029,
+      "y": 283,
+      "width": 183,
+      "height": 134,
+      "crop": null,
+      "flipHorizontal": true,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.south.dry-fields-b",
+      "x": 789,
+      "y": 691,
+      "width": 273,
+      "height": 168,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    },
+    {
+      "assetId": "accent.south.dry-ridge",
+      "x": 405,
+      "y": 268,
+      "width": 201,
+      "height": 134,
+      "crop": null,
+      "flipHorizontal": false,
+      "flipVertical": false
+    }
+  ],
+  "transitionBands": [],
+  "feasibility": {
+    "usableRatio": 0.256944,
+    "estimatedUsableArea": 404052,
+    "maximumPracticalDensity": 55,
+    "cityCapacityPrecheckPass": true,
+    "blockerDensity": 0.02129452454558113,
+    "roadClearanceLength": 880,
+    "transitionBandCount": 0,
+    "transitionZonePrecheckPass": true,
+    "priorityHash": "7a98444ff804cb42a3f7b56d9801948ec1a6eef94967cfa0c15199b1969f0a77"
+  },
+  "hashes": {
+    "foundationSelectionHash": "ab39b6770b6b40b542af184a818768355821df382177186b467488dabadecfac",
+    "barrierSelectionHash": "3cd84c5980e69182ff7982bb818d025375ca2347edd2886f536fc8f265f8f3b8",
+    "roadLayoutHash": "95510a1e43d942e15a9772ecdcc7cc93676bb2229d9668ebc3708b16ec12b88e",
+    "roadPresentationHash": "2050ee468aff42fbf0ff1e322bce87a47e533ff9a6a29439f699bb1756e3792a",
+    "accentSetHash": "7365a936e36e25e8d23738d38ba497047bd4abc973e0a8d23de81ac4dd69524f",
+    "accentPlanHash": "cd36f9231606301bb9847783af54ba59f30943a7e7704ca47d1467f7021990b2",
+    "transitionBandHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "cityPlanHash": "4be0d213d878508865ecfdb7ebed7904a650e26ec979f8b5b21f286540cef0fe",
+    "compositionPlanHash": "5568a14609d104115a41d713822811a3ee92357b35ce4426c13d8d25e8653a2c"
+  },
+  "cityCount": 40,
+  "startingCandidateCount": 4,
+  "cityMetrics": {
+    "minimumSpacing": 112.361,
+    "maximumSpacing": 1267.308,
+    "localDensityRadius": 240,
+    "averageLocalDensity": 5.45
+  },
+  "generationAttempt": 1,
+  "layoutAttemptWithinMacro": 1,
+  "retryCount": 0,
+  "boundedRetryLimit": 30,
+  "rankedMacroPlanCount": 6,
+  "precheckRejectCount": 0,
+  "failedAttempts": [],
+  "candidateMetrics": {
+    "strategy": "deterministic-feasibility-grid-with-jitter-v1",
+    "candidatePositionsEvaluated": 829,
+    "acceptedPositions": 40,
+    "rejectedPositions": 789,
+    "rejectedByReason": {},
+    "selectionTrial": 1,
+    "selectionTrialLimit": 96,
+    "gridStep": 22,
+    "gridJitter": 9
+  },
+  "topology": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0130"
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0182"
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "gated",
+      "targetRegionId": ""
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "gated",
+      "targetRegionId": ""
+    }
+  },
+  "finalConnections": {
+    "north": {
+      "side": "north",
+      "oppositeSide": "south",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0130"
+    },
+    "east": {
+      "side": "east",
+      "oppositeSide": "west",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0182"
+    },
+    "south": {
+      "side": "south",
+      "oppositeSide": "north",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0244"
+    },
+    "west": {
+      "side": "west",
+      "oppositeSide": "east",
+      "state": "open",
+      "targetRegionId": "phase6d_region_0184"
+    }
+  },
+  "neighborThemes": {
+    "north": "south",
+    "east": "south",
+    "south": "south",
+    "west": "south"
+  },
+  "parity": {
+    "valid": true,
+    "errors": [],
+    "blockerPairs": 4,
+    "roadPairs": 4,
+    "edgeExitCounts": {
+      "north": 1,
+      "east": 1,
+      "south": 1,
+      "west": 1
+    },
+    "barrierSegmentsTouchingBoundary": 5,
+    "perimeterSideCoverage": {
+      "north": 1,
+      "east": 1,
+      "south": 2,
+      "west": 1
+    },
+    "roadSocketAligned": true,
+    "transitionBandCount": 0
+  },
+  "status": "standby",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "activationAllowed": false,
+  "planAndCityGenerationMs": 91.222
+}

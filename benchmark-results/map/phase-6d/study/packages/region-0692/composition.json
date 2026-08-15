@@ -1,0 +1,723 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": "phase6d-macro-variation-composer-v1",
+  "assetLibraryVersion": "phase6d-macro-variation-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "phase6d_region_0692",
+  "coordinate": {
+    "gridX": -13,
+    "gridY": 0,
+    "worldLayer": 11,
+    "clockwiseOrderIndex": 91
+  },
+  "theme": {
+    "key": "west",
+    "id": "west_grassy",
+    "label": "West / grassy temperate",
+    "edgeFamily": "grassy_mixed_rock_tree",
+    "approvedMaster": "benchmark-results/map/phase-6a-v3-directional/source/west-grassy-1448x1086.png",
+    "approvedMasterSha256": "e68b9917e94bc12ed9b014993eee5354190cf2af67d137bc83f15d2c37ce767b",
+    "foundationSource": "tools/map-scaling-phase-6b/source/foundations/west-grassy.png",
+    "foundationSourceSha256": "6de27120b2d141495ff9b6f06815bd9cf11f8d8a95daeebd7c0003c941fd868e"
+  },
+  "variantKey": "b",
+  "dimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "seed": {
+    "strategy": "sha256(world|season|region|coordinate|generator|library|theme|retrySalt|macroCandidate)",
+    "materialHash": "417d02b46e1bd7d504623465201cb7dd22ad4126b174a38d4b0ef551d5ca04a7",
+    "retrySalt": "phase6d-world-sample|region-0692|west|b",
+    "candidateIndex": 0
+  },
+  "foundation": {
+    "assetId": "foundation.west",
+    "path": "benchmark-results/map/phase-6b/asset-library/foundations/west.png",
+    "x": 0,
+    "y": 0,
+    "width": 1448,
+    "height": 1086,
+    "transform": "flip_horizontal"
+  },
+  "barriers": [
+    {
+      "assetId": "barrier.west.north-east",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/north-east.png",
+      "x": 844,
+      "y": 0,
+      "width": 604,
+      "height": 196
+    },
+    {
+      "assetId": "barrier.west.north-west",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/north-west.png",
+      "x": 0,
+      "y": 0,
+      "width": 604,
+      "height": 196
+    },
+    {
+      "assetId": "barrier-alt.west.east",
+      "path": "benchmark-results/map/phase-6d/asset-library/perimeter-alternates/west/east.png",
+      "x": 1252,
+      "y": 0,
+      "width": 196,
+      "height": 1086
+    },
+    {
+      "assetId": "barrier.west.south-east",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/south-east.png",
+      "x": 844,
+      "y": 890,
+      "width": 604,
+      "height": 196
+    },
+    {
+      "assetId": "barrier.west.south-west",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/south-west.png",
+      "x": 0,
+      "y": 890,
+      "width": 604,
+      "height": 196
+    },
+    {
+      "assetId": "barrier.west.west-north",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/west-north.png",
+      "x": 0,
+      "y": 156,
+      "width": 196,
+      "height": 267
+    },
+    {
+      "assetId": "barrier.west.west-south",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/west-south.png",
+      "x": 0,
+      "y": 663,
+      "width": 196,
+      "height": 267
+    }
+  ],
+  "roads": [
+    {
+      "assetId": "road-opening.west.north",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/north.png",
+      "x": 564,
+      "y": 0,
+      "width": 320,
+      "height": 440,
+      "geometryRef": "road-north",
+      "harmonizeToFoundation": true
+    },
+    {
+      "assetId": "road-opening.west.east",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/east.png",
+      "x": 888,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "geometryRef": "road-east",
+      "harmonizeToFoundation": true
+    },
+    {
+      "assetId": "road-opening.west.south",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/south.png",
+      "x": 564,
+      "y": 646,
+      "width": 320,
+      "height": 440,
+      "geometryRef": "road-south",
+      "harmonizeToFoundation": true
+    },
+    {
+      "assetId": "road-opening.west.west",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/west.png",
+      "x": 0,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "geometryRef": "road-west",
+      "harmonizeToFoundation": true
+    }
+  ],
+  "accents": [
+    {
+      "assetId": "accent.west.temperate-rocks-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/temperate-rocks-b.png",
+      "x": 1007,
+      "y": 607,
+      "width": 206,
+      "height": 147,
+      "id": "visual-accent-01",
+      "geometryRef": "accent-blocker-01",
+      "flipHorizontal": false,
+      "center": {
+        "x": 1110,
+        "y": 680
+      },
+      "blocker": {
+        "x": 1110,
+        "y": 680,
+        "rx": 64,
+        "ry": 40
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true
+    },
+    {
+      "assetId": "accent.west.temperate-woodland-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/temperate-woodland-b.png",
+      "x": 226,
+      "y": 638,
+      "width": 208,
+      "height": 164,
+      "id": "visual-accent-02",
+      "geometryRef": "accent-blocker-02",
+      "flipHorizontal": true,
+      "center": {
+        "x": 330,
+        "y": 720
+      },
+      "blocker": {
+        "x": 330,
+        "y": 720,
+        "rx": 66,
+        "ry": 48
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true
+    },
+    {
+      "assetId": "accent.west.farmland-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/farmland-b.png",
+      "x": 1012,
+      "y": 274,
+      "width": 217,
+      "height": 153,
+      "id": "visual-accent-03",
+      "geometryRef": "accent-blocker-03",
+      "flipHorizontal": true,
+      "center": {
+        "x": 1120,
+        "y": 350
+      },
+      "blocker": {
+        "x": 1120,
+        "y": 350,
+        "rx": 63,
+        "ry": 42
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true
+    },
+    {
+      "assetId": "accent.west.meadow-pond",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/meadow-pond.png",
+      "x": 306,
+      "y": 649,
+      "width": 428,
+      "height": 332,
+      "id": "visual-accent-04",
+      "geometryRef": "accent-blocker-04",
+      "flipHorizontal": true,
+      "center": {
+        "x": 520,
+        "y": 815
+      },
+      "blocker": {
+        "x": 520,
+        "y": 815,
+        "rx": 105,
+        "ry": 68
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true
+    }
+  ],
+  "landPolygon": [
+    {
+      "x": 145,
+      "y": 145
+    },
+    {
+      "x": 1303,
+      "y": 145
+    },
+    {
+      "x": 1303,
+      "y": 941
+    },
+    {
+      "x": 145,
+      "y": 941
+    }
+  ],
+  "blockers": [
+    {
+      "id": "accent-blocker-01",
+      "type": "temperate-rocks-b",
+      "x": 1110,
+      "y": 680,
+      "rx": 64,
+      "ry": 40,
+      "rot": 0,
+      "blocksCities": true,
+      "blocksMovement": true
+    },
+    {
+      "id": "accent-blocker-02",
+      "type": "temperate-woodland-b",
+      "x": 330,
+      "y": 720,
+      "rx": 66,
+      "ry": 48,
+      "rot": 0,
+      "blocksCities": true,
+      "blocksMovement": true
+    },
+    {
+      "id": "accent-blocker-03",
+      "type": "farmland-b",
+      "x": 1120,
+      "y": 350,
+      "rx": 63,
+      "ry": 42,
+      "rot": 0,
+      "blocksCities": true,
+      "blocksMovement": true
+    },
+    {
+      "id": "accent-blocker-04",
+      "type": "water",
+      "x": 520,
+      "y": 815,
+      "rx": 105,
+      "ry": 68,
+      "rot": 0,
+      "blocksCities": true,
+      "blocksMovement": true
+    }
+  ],
+  "roadSystem": {
+    "edgeRoads": [
+      {
+        "id": "road-north",
+        "side": "north",
+        "halfWidth": 44,
+        "points": [
+          {
+            "x": 724,
+            "y": 0
+          },
+          {
+            "x": 724,
+            "y": 348
+          }
+        ]
+      },
+      {
+        "id": "road-east",
+        "side": "east",
+        "halfWidth": 44,
+        "points": [
+          {
+            "x": 1448,
+            "y": 543
+          },
+          {
+            "x": 985,
+            "y": 543
+          }
+        ]
+      },
+      {
+        "id": "road-south",
+        "side": "south",
+        "halfWidth": 44,
+        "points": [
+          {
+            "x": 724,
+            "y": 1086
+          },
+          {
+            "x": 724,
+            "y": 738
+          }
+        ]
+      },
+      {
+        "id": "road-west",
+        "side": "west",
+        "halfWidth": 44,
+        "points": [
+          {
+            "x": 0,
+            "y": 543
+          },
+          {
+            "x": 463,
+            "y": 543
+          }
+        ]
+      }
+    ],
+    "branches": [],
+    "exits": {
+      "north": {
+        "x": 724,
+        "y": 0
+      },
+      "east": {
+        "x": 1448,
+        "y": 543
+      },
+      "south": {
+        "x": 724,
+        "y": 1086
+      },
+      "west": {
+        "x": 0,
+        "y": 543
+      }
+    }
+  },
+  "roadCorridors": [
+    {
+      "id": "road-north-critical-edge-corridor",
+      "side": "north",
+      "start": {
+        "x": 724,
+        "y": 0
+      },
+      "end": {
+        "x": 724,
+        "y": 348
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-east-critical-edge-corridor",
+      "side": "east",
+      "start": {
+        "x": 1448,
+        "y": 543
+      },
+      "end": {
+        "x": 985,
+        "y": 543
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-south-critical-edge-corridor",
+      "side": "south",
+      "start": {
+        "x": 724,
+        "y": 1086
+      },
+      "end": {
+        "x": 724,
+        "y": 738
+      },
+      "halfWidth": 44
+    },
+    {
+      "id": "road-west-critical-edge-corridor",
+      "side": "west",
+      "start": {
+        "x": 0,
+        "y": 543
+      },
+      "end": {
+        "x": 463,
+        "y": 543
+      },
+      "halfWidth": 44
+    }
+  ],
+  "visualComposition": [
+    {
+      "id": "foundation",
+      "assetId": "foundation.west",
+      "category": "foundation",
+      "geometryRef": "land-polygon",
+      "drawOrder": 0
+    },
+    {
+      "assetId": "barrier.west.north-east",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/north-east.png",
+      "x": 844,
+      "y": 0,
+      "width": 604,
+      "height": 196,
+      "id": "barrier-1",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier.west.north-west",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/north-west.png",
+      "x": 0,
+      "y": 0,
+      "width": 604,
+      "height": 196,
+      "id": "barrier-2",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier-alt.west.east",
+      "path": "benchmark-results/map/phase-6d/asset-library/perimeter-alternates/west/east.png",
+      "x": 1252,
+      "y": 0,
+      "width": 196,
+      "height": 1086,
+      "id": "barrier-3",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier.west.south-east",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/south-east.png",
+      "x": 844,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "id": "barrier-4",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier.west.south-west",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/south-west.png",
+      "x": 0,
+      "y": 890,
+      "width": 604,
+      "height": 196,
+      "id": "barrier-5",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier.west.west-north",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/west-north.png",
+      "x": 0,
+      "y": 156,
+      "width": 196,
+      "height": 267,
+      "id": "barrier-6",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "barrier.west.west-south",
+      "path": "benchmark-results/map/phase-6b/asset-library/barriers/west/west-south.png",
+      "x": 0,
+      "y": 663,
+      "width": 196,
+      "height": 267,
+      "id": "barrier-7",
+      "category": "perimeter_barrier",
+      "drawOrder": 10
+    },
+    {
+      "assetId": "road-opening.west.north",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/north.png",
+      "x": 564,
+      "y": 0,
+      "width": 320,
+      "height": 440,
+      "geometryRef": "road-north",
+      "harmonizeToFoundation": true,
+      "id": "road-1",
+      "category": "road_opening",
+      "drawOrder": 20
+    },
+    {
+      "assetId": "road-opening.west.east",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/east.png",
+      "x": 888,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "geometryRef": "road-east",
+      "harmonizeToFoundation": true,
+      "id": "road-2",
+      "category": "road_opening",
+      "drawOrder": 21
+    },
+    {
+      "assetId": "road-opening.west.south",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/south.png",
+      "x": 564,
+      "y": 646,
+      "width": 320,
+      "height": 440,
+      "geometryRef": "road-south",
+      "harmonizeToFoundation": true,
+      "id": "road-3",
+      "category": "road_opening",
+      "drawOrder": 22
+    },
+    {
+      "assetId": "road-opening.west.west",
+      "path": "benchmark-results/map/phase-6b/asset-library/road-openings/west/west.png",
+      "x": 0,
+      "y": 383,
+      "width": 560,
+      "height": 320,
+      "geometryRef": "road-west",
+      "harmonizeToFoundation": true,
+      "id": "road-4",
+      "category": "road_opening",
+      "drawOrder": 23
+    },
+    {
+      "assetId": "accent.west.temperate-rocks-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/temperate-rocks-b.png",
+      "x": 1007,
+      "y": 607,
+      "width": 206,
+      "height": 147,
+      "id": "visual-accent-01",
+      "geometryRef": "accent-blocker-01",
+      "flipHorizontal": false,
+      "center": {
+        "x": 1110,
+        "y": 680
+      },
+      "blocker": {
+        "x": 1110,
+        "y": 680,
+        "rx": 64,
+        "ry": 40
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true,
+      "category": "interior_accent",
+      "drawOrder": 40
+    },
+    {
+      "assetId": "accent.west.temperate-woodland-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/temperate-woodland-b.png",
+      "x": 226,
+      "y": 638,
+      "width": 208,
+      "height": 164,
+      "id": "visual-accent-02",
+      "geometryRef": "accent-blocker-02",
+      "flipHorizontal": true,
+      "center": {
+        "x": 330,
+        "y": 720
+      },
+      "blocker": {
+        "x": 330,
+        "y": 720,
+        "rx": 66,
+        "ry": 48
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true,
+      "category": "interior_accent",
+      "drawOrder": 41
+    },
+    {
+      "assetId": "accent.west.farmland-b",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/farmland-b.png",
+      "x": 1012,
+      "y": 274,
+      "width": 217,
+      "height": 153,
+      "id": "visual-accent-03",
+      "geometryRef": "accent-blocker-03",
+      "flipHorizontal": true,
+      "center": {
+        "x": 1120,
+        "y": 350
+      },
+      "blocker": {
+        "x": 1120,
+        "y": 350,
+        "rx": 63,
+        "ry": 42
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true,
+      "category": "interior_accent",
+      "drawOrder": 42
+    },
+    {
+      "assetId": "accent.west.meadow-pond",
+      "path": "benchmark-results/map/phase-6b/asset-library/accents/west/meadow-pond.png",
+      "x": 306,
+      "y": 649,
+      "width": 428,
+      "height": 332,
+      "id": "visual-accent-04",
+      "geometryRef": "accent-blocker-04",
+      "flipHorizontal": true,
+      "center": {
+        "x": 520,
+        "y": 815
+      },
+      "blocker": {
+        "x": 520,
+        "y": 815,
+        "rx": 105,
+        "ry": 68
+      },
+      "harmonizeToFoundation": true,
+      "isolateAccentDetails": true,
+      "category": "interior_accent",
+      "drawOrder": 43
+    }
+  ],
+  "gateSupport": {
+    "bakedState": false,
+    "runtimeOnly": true,
+    "source": "benchmark-results/map/phase-6b/asset-library/gate-support.json",
+    "sides": [
+      "north",
+      "east",
+      "south",
+      "west"
+    ],
+    "transitionBandsRuntimeStateIndependent": true
+  },
+  "planHash": "388d6aed2761ba2169151633f960bcb7a1ed7601ab1da3170c84c00b8cde31bc",
+  "phase": "6D",
+  "macroCandidateIndex": 0,
+  "foundationToneProfile": {
+    "strategy": "broad-linear-terrain-tone-v1",
+    "angleDegrees": 255,
+    "strength": 0.0396,
+    "phase": 0.424,
+    "warmth": -0.0024,
+    "lowFrequencyOnly": true,
+    "changesDecorationDensity": false
+  },
+  "barrierDecisions": {
+    "north": "base-pair",
+    "east": "alternate",
+    "south": "base-pair",
+    "west": "base-pair"
+  },
+  "roadFamily": "base",
+  "roadModule": null,
+  "internalRoadGuides": [],
+  "transitionBands": [],
+  "feasibility": {
+    "usableRatio": 0.252894,
+    "estimatedUsableArea": 397682,
+    "maximumPracticalDensity": 54,
+    "cityCapacityPrecheckPass": true,
+    "blockerDensity": 0.030993831860413334,
+    "roadClearanceLength": 1622,
+    "transitionBandCount": 0,
+    "transitionZonePrecheckPass": true,
+    "priorityHash": "07136508b5e841f31957cd8aeaa84da2ed0442fa6acc7e4506c40130a1c177e4"
+  }
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "cityId": "npc_phase6d_region_0013_b5238e32a75e93",
+    "eligible": true,
+    "score": 301.713,
+    "nearbyNpcCityCount": 18,
+    "nearbyNpcCityIds": [
+      "npc_phase6d_region_0013_051428eddb9787",
+      "npc_phase6d_region_0013_0ff508bf4caf61",
+      "npc_phase6d_region_0013_1a1eb557d746a1",
+      "npc_phase6d_region_0013_305ada00dece2c",
+      "npc_phase6d_region_0013_349a6c2499058f",
+      "npc_phase6d_region_0013_47449df19715b4",
+      "npc_phase6d_region_0013_4e4eeccc61e516",
+      "npc_phase6d_region_0013_5885f79a1a46b1",
+      "npc_phase6d_region_0013_58e64dce4a51ff",
+      "npc_phase6d_region_0013_5a5d424186e7f7",
+      "npc_phase6d_region_0013_64e4efbb2a280e",
+      "npc_phase6d_region_0013_65f02222ef204a",
+      "npc_phase6d_region_0013_7fff7441b6a253",
+      "npc_phase6d_region_0013_9be1b0aee680b0",
+      "npc_phase6d_region_0013_b2fd82731994e0",
+      "npc_phase6d_region_0013_bae76c89821648",
+      "npc_phase6d_region_0013_c195b1e1facb1d",
+      "npc_phase6d_region_0013_f2af7dfc173e12"
+    ],
+    "edgeDistance": 440,
+    "localUsableTerritoryRatio": 0.645833,
+    "nearestRoadCorridorDistance": 92
+  },
+  {
+    "cityId": "npc_phase6d_region_0013_bae76c89821648",
+    "eligible": true,
+    "score": 242.467,
+    "nearbyNpcCityCount": 14,
+    "nearbyNpcCityIds": [
+      "npc_phase6d_region_0013_0ff508bf4caf61",
+      "npc_phase6d_region_0013_1a1eb557d746a1",
+      "npc_phase6d_region_0013_2c5232e801b511",
+      "npc_phase6d_region_0013_4e4eeccc61e516",
+      "npc_phase6d_region_0013_5885f79a1a46b1",
+      "npc_phase6d_region_0013_58e64dce4a51ff",
+      "npc_phase6d_region_0013_5a5d424186e7f7",
+      "npc_phase6d_region_0013_64e4efbb2a280e",
+      "npc_phase6d_region_0013_65f02222ef204a",
+      "npc_phase6d_region_0013_7fff7441b6a253",
+      "npc_phase6d_region_0013_9be1b0aee680b0",
+      "npc_phase6d_region_0013_b5238e32a75e93",
+      "npc_phase6d_region_0013_b62b8b7fb5b459",
+      "npc_phase6d_region_0013_c8950381651bb8"
+    ],
+    "edgeDistance": 420,
+    "localUsableTerritoryRatio": 0.666667,
+    "nearestRoadCorridorDistance": 90
+  },
+  {
+    "cityId": "npc_phase6d_region_0013_1a1eb557d746a1",
+    "eligible": true,
+    "score": 215.157,
+    "nearbyNpcCityCount": 12,
+    "nearbyNpcCityIds": [
+      "npc_phase6d_region_0013_059a21c7e06be8",
+      "npc_phase6d_region_0013_305ada00dece2c",
+      "npc_phase6d_region_0013_5885f79a1a46b1",
+      "npc_phase6d_region_0013_5a5d424186e7f7",
+      "npc_phase6d_region_0013_65f02222ef204a",
+      "npc_phase6d_region_0013_9be1b0aee680b0",
+      "npc_phase6d_region_0013_b5238e32a75e93",
+      "npc_phase6d_region_0013_bae76c89821648",
+      "npc_phase6d_region_0013_ccb55099a5c675",
+      "npc_phase6d_region_0013_d582940584efc7",
+      "npc_phase6d_region_0013_f2af7dfc173e12",
+      "npc_phase6d_region_0013_fbec2f5080ce72"
+    ],
+    "edgeDistance": 423,
+    "localUsableTerritoryRatio": 0.666667,
+    "nearestRoadCorridorDistance": 157
+  },
+  {
+    "cityId": "npc_phase6d_region_0013_4e4eeccc61e516",
+    "eligible": true,
+    "score": 203.38,
+    "nearbyNpcCityCount": 12,
+    "nearbyNpcCityIds": [
+      "npc_phase6d_region_0013_051428eddb9787",
+      "npc_phase6d_region_0013_0ff508bf4caf61",
+      "npc_phase6d_region_0013_47449df19715b4",
+      "npc_phase6d_region_0013_58e64dce4a51ff",
+      "npc_phase6d_region_0013_64e4efbb2a280e",
+      "npc_phase6d_region_0013_7fff7441b6a253",
+      "npc_phase6d_region_0013_9be1b0aee680b0",
+      "npc_phase6d_region_0013_b2fd82731994e0",
+      "npc_phase6d_region_0013_b5238e32a75e93",
+      "npc_phase6d_region_0013_bae76c89821648",
+      "npc_phase6d_region_0013_c195b1e1facb1d",
+      "npc_phase6d_region_0013_f2af7dfc173e12"
+    ],
+    "edgeDistance": 200,
+    "localUsableTerritoryRatio": 0.5625,
+    "nearestRoadCorridorDistance": 298
+  }
+]
