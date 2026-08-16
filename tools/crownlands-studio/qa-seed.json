@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-16T00:00:00.000Z",
+  "issues": [
+    {
+      "id": "qa-city-troop-counter-doubled",
+      "title": "City troop counter appears doubled",
+      "categories": ["Visual"],
+      "affected": "Map / owned city troop counter",
+      "component": "Owned city troop counter",
+      "description": "The owned-city troop count appears to be rendered twice, reducing legibility.",
+      "expected": "One crisp troop-count render.",
+      "severity": "High",
+      "status": "Open",
+      "notes": "",
+      "relevantFiles": ["game.js", "styles.css", "interface-theme.css"]
+    },
+    {
+      "id": "qa-scout-report-theme",
+      "title": "Scout Report theme mismatch",
+      "categories": ["Visual", "Component"],
+      "affected": "Scout Report",
+      "component": "Scout report",
+      "description": "The detailed Scout Report does not consistently use the shared Crownlands report presentation.",
+      "expected": "Shared Crownlands report theme.",
+      "severity": "Medium",
+      "status": "Open",
+      "notes": "",
+      "relevantFiles": ["game.js", "styles.css", "interface-theme.css"]
+    },
+    {
+      "id": "qa-action-hex-fill",
+      "title": "Action hex fill / conflicting colors",
+      "categories": ["Component", "Visual"],
+      "affected": "Cities / Camps / Strongholds / Crown Citadel",
+      "component": "Map action wheel buttons",
+      "description": "Action hexes use conflicting fills and do not consistently present the shared action color system.",
+      "expected": "Shared 64×64 hex action-button system with full color fill.",
+      "severity": "High",
+      "status": "In Progress",
+      "notes": "",
+      "relevantFiles": ["game.js", "styles.css", "interface-theme.css"]
+    },
+    {
+      "id": "qa-flag-editor-swatches",
+      "title": "Flag editor color swatches",
+      "categories": ["Visual", "Gameplay / Functional Bug"],
+      "affected": "Profile → Flag Editor",
+      "component": "Flag color selector",
+      "description": "Heraldic color swatches are not reliably visible or selectable.",
+      "expected": "Heraldic colors visible and selectable.",
+      "severity": "High",
+      "status": "Open",
+      "notes": "",
+      "relevantFiles": ["game.js", "styles.css"]
+    },
+    {
+      "id": "qa-flag-heraldic-symbols",
+      "title": "Flag heraldic symbols",
+      "categories": ["Visual"],
+      "affected": "Profile → Flag Editor",
+      "component": "Flag symbol selector",
+      "description": "The available symbols need to align with the approved medieval heraldic family.",
+      "expected": "Approved medieval heraldic symbol family.",
+      "severity": "Medium",
+      "status": "Open",
+      "notes": "",
+      "relevantFiles": ["index.html", "game.js", "styles.css"]
+    },
+    {
+      "id": "qa-city-owner-flag-rendering",
+      "title": "City owner flag rendering",
+      "categories": ["Gameplay / Functional Bug", "Visual"],
+      "affected": "Map cities",
+      "component": "City owner flag",
+      "description": "Player-owned city flags must resolve and render the owning player's saved heraldry.",
+      "expected": "Correct owner's saved flag displayed above every player-owned city.",
+      "severity": "Critical",
+      "status": "Open",
+      "notes": "",
+      "relevantFiles": ["game.js", "firebaseClient.js", "styles.css"]
+    }
+  ]
+}

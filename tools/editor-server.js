@@ -3,8 +3,12 @@ const fsp = require("fs/promises");
 const http = require("http");
 const path = require("path");
 const vm = require("vm");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
 const { getCanonicalLayoutCityName } = require("./city-name-utils");
 const { buildRegionCatalog } = require("../region-catalog");
+const { createProjectFileService } = require("./crownlands-studio/project-file-service");
+const execFileAsync = promisify(execFile);
 const OPTIMIZED_ASSET_PATHS = new Map(
   require("../assets/optimized/manifest.json").assets.map(asset => [asset.source, asset.output]),
 );
@@ -23,6 +27,8 @@ const WORLD_THUMBNAILS_DIR = path.join(WORLD_DATA_ROOT, "thumbnails");
 const WORLD_MAPS_DIR = path.join(WORLD_DATA_ROOT, "maps");
 const MAP_EDITOR_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const SERVER_WORLD_LAYOUT_PATH = path.join(ROOT_DIR, "functions", "world-layout.json");
+const QA_SEED_PATH = path.join(ROOT_DIR, "tools", "crownlands-studio", "qa-seed.json");
+const QA_STORE_PATH = path.join(ROOT_DIR, ".crownlands-studio", "qa-issues.json");
 const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
@@ -36,6 +42,49 @@ const DEFAULT_MAP_HEIGHT = 1536;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const CROWN_CITADEL_VISUAL_SIZE = 260;
+const EDITOR_CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'none'",
+  "object-src 'none'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "frame-src 'self'",
+  "form-action 'self'",
+].join("; ");
+const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
+  readExact: [
+    "world-config.js",
+    "economy-config.js",
+    "functions/economy-config.json",
+    "functions/world-layout.json",
+    "ui-layout-config.js",
+    "assets/map-editor-data.js",
+    "assets/worlds/world_01/world-layout.json",
+    "tools/crownlands-studio/qa-seed.json",
+    ".crownlands-studio/qa-issues.json",
+  ],
+  writeExact: [
+    "world-config.js",
+    "economy-config.js",
+    "functions/economy-config.json",
+    "functions/world-layout.json",
+    "ui-layout-config.js",
+    "assets/map-editor-data.js",
+    "assets/worlds/world_01/world-layout.json",
+    ".crownlands-studio/qa-issues.json",
+  ],
+  readPrefixes: [
+    "assets/worlds/world_01/regions",
+    "assets/worlds/world_01/maps",
+  ],
+  writePrefixes: [
+    "assets/worlds/world_01/regions",
+    "assets/worlds/world_01/maps",
+  ],
+});
 const ROOT_STATIC_FILES = new Set([
   "/about.html",
   "/game-rules.html",
@@ -55,6 +104,7 @@ const ROOT_STATIC_FILES = new Set([
   "/game.js",
   "/instant-economy-actions.js",
   "/index.html",
+  "/interface-theme.css",
   "/styles.css",
   "/world-config.js",
   "/economy-config.js",
@@ -96,7 +146,8 @@ function safeJoin(root, requestPath) {
   const decoded = decodeURIComponent(requestPath.split("?")[0] || "");
   const normalized = path.normalize(decoded).replace(/^([/\\])+/, "");
   const resolved = path.resolve(root, normalized);
-  if (!resolved.startsWith(root)) return null;
+  const relative = path.relative(path.resolve(root), resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) return null;
   return resolved;
 }
 
@@ -105,10 +156,15 @@ async function serveFile(response, filePath) {
     const stats = await fsp.stat(filePath);
     const finalPath = stats.isDirectory() ? path.join(filePath, "index.html") : filePath;
     const data = await fsp.readFile(finalPath);
-    response.writeHead(200, {
+    const headers = {
       "content-type": MIME_TYPES.get(path.extname(finalPath).toLowerCase()) || "application/octet-stream",
       "cache-control": "no-store",
-    });
+    };
+    const editorRelative = path.relative(EDITOR_DIR, finalPath);
+    if (path.extname(finalPath).toLowerCase() === ".html" && !editorRelative.startsWith("..") && !path.isAbsolute(editorRelative)) {
+      headers["content-security-policy"] = EDITOR_CONTENT_SECURITY_POLICY;
+    }
+    response.writeHead(200, headers);
     response.end(data);
   } catch (error) {
     sendText(response, 404, "Not found");
@@ -134,7 +190,7 @@ function readBody(request) {
 }
 
 async function readWorldConfig() {
-  const source = await fsp.readFile(WORLD_CONFIG_PATH, "utf8");
+  const source = await PROJECT_FILES.readText("world-config.js");
   return parseWorldConfigSource(source, "world-config.js");
 }
 
@@ -232,9 +288,7 @@ function sanitizeWorldConfig(config) {
 async function writeWorldConfig(config) {
   const safe = sanitizeWorldConfig(config);
   const body = `window.CROWNLANDS_WORLD_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
-  const tempPath = `${WORLD_CONFIG_PATH}.tmp`;
-  await fsp.writeFile(tempPath, body, "utf8");
-  await fsp.rename(tempPath, WORLD_CONFIG_PATH);
+  await PROJECT_FILES.writeTextAtomic("world-config.js", body);
   return safe;
 }
 
@@ -342,10 +396,8 @@ async function readEconomyConfig() {
 async function writeEconomyConfig(config) {
   const safe = sanitizeEconomyConfig(config);
   const browserBody = `window.CROWNLANDS_ECONOMY_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
-  await fsp.writeFile(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, `${JSON.stringify(safe, null, 2)}\n`, "utf8");
-  await fsp.rename(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, SERVER_ECONOMY_CONFIG_PATH);
-  await fsp.writeFile(`${ECONOMY_CONFIG_PATH}.tmp`, browserBody, "utf8");
-  await fsp.rename(`${ECONOMY_CONFIG_PATH}.tmp`, ECONOMY_CONFIG_PATH);
+  await PROJECT_FILES.writeJsonAtomic("functions/economy-config.json", safe);
+  await PROJECT_FILES.writeTextAtomic("economy-config.js", browserBody);
   return safe;
 }
 
@@ -403,7 +455,7 @@ function sanitizeUiLayoutConfig(config = {}) {
 }
 
 async function readUiLayoutConfig() {
-  const source = await fsp.readFile(UI_LAYOUT_CONFIG_PATH, "utf8");
+  const source = await PROJECT_FILES.readText("ui-layout-config.js");
   const context = { window: {} };
   vm.createContext(context);
   vm.runInContext(source, context, { filename: "ui-layout-config.js", timeout: 1000 });
@@ -413,16 +465,15 @@ async function readUiLayoutConfig() {
 async function writeUiLayoutConfig(config) {
   const safe = sanitizeUiLayoutConfig(config);
   const body = `window.CROWNLANDS_UI_LAYOUT_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
-  await fsp.writeFile(`${UI_LAYOUT_CONFIG_PATH}.tmp`, body, "utf8");
-  await fsp.rename(`${UI_LAYOUT_CONFIG_PATH}.tmp`, UI_LAYOUT_CONFIG_PATH);
+  await PROJECT_FILES.writeTextAtomic("ui-layout-config.js", body);
   return safe;
 }
 
 async function readJsonFile(filePath, fallback = null) {
   try {
-    return JSON.parse(await fsp.readFile(filePath, "utf8"));
+    return JSON.parse(await PROJECT_FILES.readText(PROJECT_FILES.relativeFromAbsolute(filePath)));
   } catch (error) {
-    if (error.code === "ENOENT") return fallback;
+    if (error.code === "ENOENT" || error.cause?.code === "ENOENT") return fallback;
     throw error;
   }
 }
@@ -481,11 +532,7 @@ async function deletePreviousUploadedMapImage(previousImagePath, regionId, nextF
   const previous = uploadedMapImagePathForRegion(previousImagePath, regionId);
   if (!previous) return null;
   if (nextFilePath && path.resolve(previous.filePath) === path.resolve(nextFilePath)) return null;
-  try {
-    await fsp.unlink(previous.filePath);
-  } catch (error) {
-    if (error.code !== "ENOENT") throw error;
-  }
+  await PROJECT_FILES.removeFile(PROJECT_FILES.relativeFromAbsolute(previous.filePath));
   return previous;
 }
 
@@ -513,9 +560,8 @@ async function writeMapImageUpload(payload = {}) {
   const dimensions = cleanMapDimensions(payload.width, payload.height);
   const baseName = cleanId(path.basename(String(payload.filename || "map"), extension), "map").slice(0, 48);
   const fileName = `${regionId}-${baseName}-${Date.now()}${extension}`;
-  await fsp.mkdir(WORLD_MAPS_DIR, { recursive: true });
   const filePath = path.join(WORLD_MAPS_DIR, fileName);
-  await fsp.writeFile(filePath, buffer);
+  await PROJECT_FILES.writeAtomic(publicMapImagePath(fileName), buffer, { backup: false });
   const replacedImage = await deletePreviousUploadedMapImage(payload.previousImagePath, regionId, filePath);
   return {
     fileName,
@@ -1063,7 +1109,6 @@ function buildCompatibilityMapData(layout, regions) {
 
 async function writeWorldData(payload) {
   const bundle = normalizeWorldBundle(payload);
-  await fsp.mkdir(WORLD_REGIONS_DIR, { recursive: true });
   const normalizedRegions = bundle.regions.map(normalizeRegionDocument);
   const layout = {
     ...bundle.layout,
@@ -1071,13 +1116,12 @@ async function writeWorldData(payload) {
     updatedAt: new Date().toISOString(),
   };
   for (const region of normalizedRegions) {
-    await fsp.writeFile(regionFilePath(region.id), `${JSON.stringify(region, null, 2)}\n`, "utf8");
+    await PROJECT_FILES.writeJsonAtomic(publicRegionPath(region.id), region);
   }
-  await fsp.writeFile(WORLD_LAYOUT_PATH, `${JSON.stringify(layout, null, 2)}\n`, "utf8");
+  await PROJECT_FILES.writeJsonAtomic("assets/worlds/world_01/world-layout.json", layout);
   const compatibilityData = buildCompatibilityMapData(layout, normalizedRegions);
-  await fsp.writeFile(MAP_EDITOR_DATA_PATH, `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(compatibilityData, null, 2)};\n`, "utf8");
-  await fsp.mkdir(path.dirname(SERVER_WORLD_LAYOUT_PATH), { recursive: true });
-  await fsp.writeFile(SERVER_WORLD_LAYOUT_PATH, `${JSON.stringify(compatibilityData, null, 2)}\n`, "utf8");
+  await PROJECT_FILES.writeTextAtomic("assets/map-editor-data.js", `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(compatibilityData, null, 2)};\n`);
+  await PROJECT_FILES.writeJsonAtomic("functions/world-layout.json", compatibilityData);
   return { layout, regions: normalizedRegions, compatibilityData };
 }
 
@@ -1098,7 +1142,93 @@ async function downloadGithubWorldConfig() {
   return { config: saved, sourceUrl: GITHUB_WORLD_CONFIG_URL };
 }
 
+const QA_STATUSES = new Set(["Open", "In Progress", "Fixed", "Verified", "Ignored", "Won't Fix"]);
+const QA_SEVERITIES = new Set(["Low", "Medium", "High", "Critical"]);
+const QA_CATEGORIES = new Set(["Visual", "Layout", "Component", "Gameplay / Functional Bug", "Performance"]);
+
+function sanitizeQaStore(value = {}) {
+  if (Number(value.schemaVersion || 1) !== 1) throw new Error("QA store schemaVersion must be 1.");
+  const sourceIssues = Array.isArray(value.issues) ? value.issues : [];
+  const seenIds = new Set();
+  const issues = sourceIssues.slice(0, 1000).map((raw, index) => {
+    const fallbackId = `qa-issue-${index + 1}`;
+    let id = cleanId(raw?.id, fallbackId).slice(0, 100);
+    while (seenIds.has(id)) id = `${id}-${index + 1}`;
+    seenIds.add(id);
+    const categories = (Array.isArray(raw?.categories) ? raw.categories : [raw?.category])
+      .map(category => cleanString(category, ""))
+      .filter(category => QA_CATEGORIES.has(category));
+    return {
+      id,
+      title: cleanString(raw?.title, `QA issue ${index + 1}`).slice(0, 160),
+      categories: categories.length ? [...new Set(categories)] : ["Visual"],
+      affected: cleanString(raw?.affected, "Unspecified").slice(0, 180),
+      component: cleanString(raw?.component, "").slice(0, 160),
+      description: String(raw?.description || "").trim().slice(0, 5000),
+      expected: String(raw?.expected || "").trim().slice(0, 3000),
+      severity: QA_SEVERITIES.has(raw?.severity) ? raw.severity : "Medium",
+      status: QA_STATUSES.has(raw?.status) ? raw.status : "Open",
+      notes: String(raw?.notes || "").trim().slice(0, 10000),
+      relevantFiles: (Array.isArray(raw?.relevantFiles) ? raw.relevantFiles : [])
+        .map(file => normalizePathForJson(file).slice(0, 240))
+        .filter(Boolean)
+        .slice(0, 40),
+      createdAt: String(raw?.createdAt || new Date().toISOString()),
+      updatedAt: String(raw?.updatedAt || new Date().toISOString()),
+    };
+  });
+  return { schemaVersion: 1, updatedAt: new Date().toISOString(), issues };
+}
+
+async function readQaStore() {
+  const local = await readJsonFile(QA_STORE_PATH, null);
+  if (local) return sanitizeQaStore(local);
+  return sanitizeQaStore(await readJsonFile(QA_SEED_PATH, { schemaVersion: 1, issues: [] }));
+}
+
+async function writeQaStore(value) {
+  const safe = sanitizeQaStore(value);
+  await PROJECT_FILES.writeJsonAtomic(".crownlands-studio/qa-issues.json", safe);
+  return safe;
+}
+
+async function readStudioContext() {
+  let branch = "";
+  try {
+    const result = await execFileAsync("git", ["-C", ROOT_DIR, "branch", "--show-current"], {
+      windowsHide: true,
+      timeout: 3000,
+    });
+    branch = String(result.stdout || "").trim();
+  } catch {
+    branch = "";
+  }
+  return {
+    projectName: path.basename(ROOT_DIR),
+    projectRoot: ROOT_DIR,
+    branch,
+    desktop: process.env.CROWNLANDS_STUDIO_DESKTOP === "1",
+  };
+}
+
 async function handleApi(request, response, pathname) {
+  if (pathname === "/api/studio-context" && request.method === "GET") {
+    sendJson(response, 200, await readStudioContext());
+    return;
+  }
+
+  if (pathname === "/api/qa-issues" && request.method === "GET") {
+    sendJson(response, 200, await readQaStore());
+    return;
+  }
+
+  if (pathname === "/api/qa-issues" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const payload = JSON.parse(rawBody || "{}");
+    sendJson(response, 200, await writeQaStore(payload));
+    return;
+  }
+
   if (pathname === "/api/world-data" && request.method === "GET") {
     const data = await readWorldData();
     sendJson(response, 200, {
@@ -1307,5 +1437,9 @@ if (require.main === module) {
 
 module.exports = {
   buildCompatibilityMapData,
+  createServer,
+  handleApi,
   readWorldData,
+  readQaStore,
+  sanitizeQaStore,
 };

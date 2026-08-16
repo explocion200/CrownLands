@@ -1,0 +1,59 @@
+{
+  "name": "crownlands-studio-desktop",
+  "version": "0.2.0",
+  "private": true,
+  "author": "Crownlands",
+  "description": "Windows desktop shell for the Crownlands development workspace",
+  "main": "main.js",
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check project-file-service.js && node --check ai/ai-workspace-service.js && node --check ai/codex-runner.js && node --check ai/git-worktree-service.js && node --test project-file-service.test.js editor-server-api.test.js studio-structure.test.js ai-workspace.test.js",
+    "pack": "electron-builder --dir --win",
+    "dist:win": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "43.4.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.crownlands.studio",
+    "productName": "Crownlands Studio",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "project-file-service.js",
+      "ai/**/*",
+      "build/icon.png",
+      "package.json",
+      "!node_modules/@openai/codex-win32-x64/vendor/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/@openai/codex-win32-x64/vendor",
+        "to": "codex-runtime/vendor",
+        "filter": ["**/*"]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "0.147.0"
+  }
+}

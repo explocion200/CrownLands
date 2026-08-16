@@ -1,6 +1,8 @@
 .DS_Store
 Thumbs.db
 node_modules/
+node_modules-hoisted/
+.pnpm/
 .firebase/
 .env
 .env.*
@@ -12,6 +14,7 @@ functions/release-manifest.json
 .codex-remote-attachments/
 .codex_tmp_*
 /tmp/
+.crownlands-studio/
 
 # Local Netlify folder
 .netlify

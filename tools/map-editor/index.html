@@ -3,21 +3,46 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crownlands Game Editor</title>
-  <link rel="stylesheet" href="styles.css?v=20260813-map-image-flip-v1" />
+  <title>Crownlands Studio</title>
+  <link rel="stylesheet" href="styles.css?v=20260816-crownlands-studio-phase-2b" />
 </head>
 <body>
-  <main class="editor-shell">
-    <header class="editor-toolbar">
-      <div class="brand-block">
+  <main class="editor-shell studio-shell">
+    <header class="studio-header">
+      <div class="studio-brand">
         <span>Crownlands</span>
-        <strong>Developer Game Editor</strong>
+        <strong>Studio</strong>
       </div>
-      <div class="mode-tabs" role="group" aria-label="Editor mode">
+      <nav class="studio-primary-nav" aria-label="Crownlands Studio areas">
+        <button id="worldStudioBtn" class="studio-nav-btn active" type="button" data-studio-area="world">World</button>
+        <button id="economyModeBtn" class="studio-nav-btn" type="button" data-studio-area="balance">Balance</button>
+        <button id="uiStudioBtn" class="studio-nav-btn" type="button" data-studio-area="ui">UI Studio</button>
+        <button id="qaStudioBtn" class="studio-nav-btn" type="button" data-studio-area="qa">QA</button>
+        <button id="codexAiBtn" class="studio-nav-btn codex-nav-btn" type="button" data-studio-area="codex">Codex AI</button>
+      </nav>
+      <div class="studio-future-nav" aria-label="Future Studio areas">
+        <span title="Planned for a future phase">Assets</span>
+        <span title="Planned for a future phase">Players/Admin</span>
+        <span title="Planned for a future phase">Build</span>
+      </div>
+      <div class="studio-context" aria-label="Development context">
+        <span><small>Project</small><strong id="studioProjectName">Loading…</strong></span>
+        <span><small>Branch</small><strong id="studioBranchName">—</strong></span>
+        <span id="studioDirtyChip" class="studio-dirty-chip"><small>Unsaved</small><strong id="studioDirtyValue">No</strong></span>
+        <button id="openProjectBtn" class="tool-btn" type="button">Open Project</button>
+      </div>
+    </header>
+
+    <header class="editor-toolbar studio-toolbar">
+      <div id="worldSubnav" class="mode-tabs studio-subnav" role="group" aria-label="World tools">
         <button id="worldModeBtn" class="tool-btn active" type="button">World Layout</button>
         <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
-        <button id="economyModeBtn" class="tool-btn" type="button">Economy</button>
-        <button id="gameUiModeBtn" class="tool-btn" type="button">Game UI</button>
+      </div>
+      <div id="uiStudioSubnav" class="mode-tabs studio-subnav" role="group" aria-label="UI Studio tools" hidden>
+        <button id="themeModeBtn" class="tool-btn" type="button">Theme</button>
+        <button id="componentsModeBtn" class="tool-btn" type="button">Components</button>
+        <button id="screensModeBtn" class="tool-btn" type="button">Screens</button>
+        <button id="gameUiModeBtn" class="tool-btn" type="button">HUD Layout</button>
       </div>
       <div class="feature-finder">
         <label for="featureSearchInput">Find a feature</label>
@@ -123,6 +148,152 @@
           <div id="economySections" class="economy-sections"></div>
         </div>
 
+        <div id="themeView" class="studio-view theme-view hidden">
+          <div class="studio-view-heading">
+            <div><span>UI Studio · Foundation</span><strong>Theme</strong></div>
+            <div class="studio-heading-actions"><p>Read-only semantic tokens for Phase 1. The game remains authoritative; token migration is intentionally deferred.</p><button class="tool-btn ask-codex-btn" type="button" data-ask-codex="theme">Ask Codex</button></div>
+          </div>
+          <div class="theme-token-grid" aria-label="Crownlands theme token foundation">
+            <article data-token="parchment"><i style="--token-color:#dfcda8"></i><strong>Parchment</strong><code>#DFCDA8</code></article>
+            <article data-token="secondary-parchment"><i style="--token-color:#c8b17c"></i><strong>Secondary parchment</strong><code>#C8B17C</code></article>
+            <article data-token="inset-parchment"><i style="--token-color:#b49a68"></i><strong>Inset parchment</strong><code>#B49A68</code></article>
+            <article data-token="royal-burgundy"><i style="--token-color:#7a373b"></i><strong>Royal burgundy</strong><code>#7A373B</code></article>
+            <article data-token="deep-burgundy"><i style="--token-color:#4f2027"></i><strong>Deep burgundy</strong><code>#4F2027</code></article>
+            <article data-token="antique-brass"><i style="--token-color:#a8894f"></i><strong>Antique brass</strong><code>#A8894F</code></article>
+            <article data-token="old-gold"><i style="--token-color:#d1a74c"></i><strong>Old gold</strong><code>#D1A74C</code></article>
+            <article data-token="dark-walnut"><i style="--token-color:#34241b"></i><strong>Dark walnut text</strong><code>#34241B</code></article>
+            <article data-token="secondary-text"><i style="--token-color:#6f604d"></i><strong>Secondary text</strong><code>#6F604D</code></article>
+            <article data-token="moss-green"><i style="--token-color:#68764f"></i><strong>Moss green</strong><code>#68764F</code></article>
+            <article data-token="movement-blue"><i style="--token-color:#5b6d78"></i><strong>Movement blue</strong><code>#5B6D78</code></article>
+            <article data-token="attack-red"><i style="--token-color:#8b403e"></i><strong>Attack red</strong><code>#8B403E</code></article>
+            <article data-token="rally-purple"><i style="--token-color:#695278"></i><strong>Rally purple</strong><code>#695278</code></article>
+            <article data-token="disabled"><i style="--token-color:#827767"></i><strong>Disabled</strong><code>#827767</code></article>
+          </div>
+          <section class="studio-foundation-note">
+            <strong>Token-source contract</strong>
+            <p>Future editable tokens will be read and written through the project service, then consumed by both game and preview code. Phase 1 keeps this registry read-only to avoid an unsafe whole-game theme migration.</p>
+          </section>
+        </div>
+
+        <div id="componentsView" class="studio-view preview-studio-view hidden">
+          <div class="studio-view-heading">
+            <div><span>UI Studio · Shared styles</span><strong>Component Library</strong></div>
+            <div class="studio-heading-actions"><p>The isolated preview loads Crownlands’ existing game styles, keeping representative components tied to the current implementation.</p><button class="tool-btn ask-codex-btn" type="button" data-ask-codex="component">Ask Codex</button></div>
+          </div>
+          <div class="preview-toolbar" role="group" aria-label="Component preview viewport">
+            <button class="active" type="button" data-preview-target="component" data-preview-preset="desktop">Desktop <small>1440×900</small></button>
+            <button type="button" data-preview-target="component" data-preview-preset="phone">Phone landscape <small>844×390</small></button>
+            <button type="button" data-preview-target="component" data-preview-preset="smallPhone">Small phone <small>667×375</small></button>
+            <span id="componentViewportLabel">1440 × 900</span>
+          </div>
+          <div class="preview-stage" data-preview-stage="component">
+            <iframe id="componentPreviewFrame" title="Crownlands component library preview" src="component-preview.html" sandbox="allow-same-origin"></iframe>
+          </div>
+        </div>
+
+        <div id="screensView" class="studio-view preview-studio-view hidden">
+          <div class="studio-view-heading">
+            <div><span>UI Studio · Controlled shell</span><strong>Screens</strong></div>
+            <div class="studio-heading-actions"><p>The controlled route uses Crownlands styles and can be attached to an AI task with the current device preset.</p><button class="tool-btn ask-codex-btn" type="button" data-ask-codex="screen">Ask Codex</button></div>
+          </div>
+          <div class="screen-preview-controls">
+            <label><span>Preview</span>
+              <select id="screenPreviewSelect">
+                <option value="shell">Game shell foundation</option>
+                <option disabled>Profile (Phase 2)</option>
+                <option disabled>Scout Report (Phase 2)</option>
+                <option disabled>Inner Castle (Phase 2)</option>
+              </select>
+            </label>
+            <div class="preview-toolbar" role="group" aria-label="Screen preview viewport">
+              <button class="active" type="button" data-preview-target="screen" data-preview-preset="desktop">Desktop <small>1440×900</small></button>
+              <button type="button" data-preview-target="screen" data-preview-preset="phone">Phone landscape <small>844×390</small></button>
+              <button type="button" data-preview-target="screen" data-preview-preset="smallPhone">Small phone <small>667×375</small></button>
+              <span id="screenViewportLabel">1440 × 900</span>
+            </div>
+          </div>
+          <div class="preview-stage" data-preview-stage="screen">
+            <iframe id="screenPreviewFrame" title="Crownlands screen preview foundation" src="screen-preview.html" sandbox="allow-same-origin"></iframe>
+          </div>
+        </div>
+
+        <div id="qaView" class="studio-view qa-view hidden">
+          <div class="studio-view-heading qa-heading">
+            <div><span>Quality control</span><strong>QA Center</strong></div>
+            <div class="qa-summary" aria-label="QA issue summary">
+              <span><small>Open</small><strong id="qaOpenCount">0</strong></span>
+              <span><small>In progress</small><strong id="qaProgressCount">0</strong></span>
+              <span><small>Verified</small><strong id="qaVerifiedCount">0</strong></span>
+            </div>
+          </div>
+          <div class="qa-toolbar">
+            <label><span>Status</span><select id="qaStatusFilter"><option value="all">All statuses</option><option>Open</option><option>In Progress</option><option>Fixed</option><option>Verified</option><option>Ignored</option><option>Won't Fix</option></select></label>
+            <label><span>Category</span><select id="qaCategoryFilter"><option value="all">All categories</option><option>Visual</option><option>Layout</option><option>Component</option><option>Gameplay / Functional Bug</option><option>Performance</option></select></label>
+            <label class="qa-search"><span>Search</span><input id="qaSearchInput" type="search" placeholder="Issue, screen, component…" /></label>
+            <button id="qaAddIssueBtn" class="tool-btn primary" type="button">New Issue</button>
+          </div>
+          <div class="qa-layout">
+            <aside id="qaIssueList" class="qa-issue-list" aria-label="QA issues"></aside>
+            <form id="qaIssueForm" class="qa-issue-form">
+              <div class="qa-empty-state">Select an issue to view its structured context.</div>
+            </form>
+          </div>
+        </div>
+
+        <div id="codexAiView" class="studio-view codex-ai-view hidden">
+          <div class="codex-dashboard-strip">
+            <div><span>Codex AI</span><strong id="codexRuntimeStatus">Checking local runtime…</strong><small id="codexRuntimeDetail">Tasks run in isolated Git worktrees.</small></div>
+            <dl><div><dt>Active</dt><dd id="codexActiveCount">0</dd></div><div><dt>Needs review</dt><dd id="codexReviewCount">0</dd></div><div><dt>History</dt><dd id="codexHistoryCount">0</dd></div></dl>
+            <button id="codexNewTaskBtn" class="tool-btn primary" type="button">New Task</button>
+          </div>
+          <div class="codex-workspace-layout">
+            <aside class="codex-history-panel">
+              <div class="panel-heading"><span>Persistent</span><strong>Task History</strong></div>
+              <label class="codex-history-search">Find task<input id="codexHistorySearch" type="search" placeholder="Title, agent, status…" /></label>
+              <div id="codexTaskHistory" class="codex-task-history"><div class="codex-empty">No AI tasks yet.</div></div>
+            </aside>
+            <section class="codex-main-panel">
+              <form id="codexTaskForm" class="codex-task-form">
+                <div class="codex-form-heading"><div><span>Development task</span><strong>What do you want to change in Crownlands?</strong></div><small>Safe default: classify → plan → isolated worktree → validate → review.</small></div>
+                <label class="wide">Task<textarea id="codexTaskPrompt" maxlength="12000" placeholder="Fix the text alignment on the Player Profile Daily Missions section."></textarea></label>
+                <div class="codex-context-card"><div><span>Attached context</span><strong id="codexContextTitle">Current Studio selection</strong></div><p id="codexContextSummary">No specific component, screen, HUD item, theme token, or QA issue is selected.</p><button id="codexClearContextBtn" type="button">Clear</button></div>
+                <label>Agent<select id="codexAgentSelect"><option value="auto">AUTO — let Studio route</option><option value="feature-builder">Feature Builder</option><option value="ui-craftsman">UI Craftsman</option><option value="bug-hunter">Bug Hunter</option><option value="qa-inspector">QA Inspector</option><option value="performance-engineer">Performance Engineer</option><option value="map-engineer">Map Engineer</option><option value="economy-designer">Economy Designer</option></select></label>
+                <label>Permission<select id="codexPermissionSelect"><option value="safe-edit">Safe Edit</option><option value="review-only">Review Only</option><option value="full-development">Full Development</option></select></label>
+                <details class="wide codex-advanced"><summary>Advanced task options</summary><div><label>Model override<input id="codexModelOverride" maxlength="96" placeholder="Use role mapping" /></label><label class="check"><input id="codexIncludeScreenshot" type="checkbox" /> Include current screenshot</label><label class="check"><input id="codexIncludeDiff" type="checkbox" /> Include current Git diff summary</label></div></details>
+                <div class="wide codex-form-actions"><button id="codexPlanTaskBtn" class="tool-btn primary" type="submit">Plan Task</button><span id="codexFormMessage" role="status"></span></div>
+              </form>
+
+              <section id="codexTaskDetail" class="codex-task-detail hidden" aria-live="polite">
+                <div class="codex-detail-heading"><div><span id="codexTaskStatus">Planned</span><strong id="codexTaskTitle">Task</strong></div><button id="codexBackToNewBtn" type="button">New task</button></div>
+                <div id="codexClassification" class="codex-classification"></div>
+                <div class="codex-plan-grid"><article><span>AI Plan</span><div id="codexPlanSummary"></div></article><article><span>Likely files / areas</span><ul id="codexPlanFiles"></ul></article><article><span>Validation</span><ul id="codexPlanTests"></ul></article><article><span>Safety</span><div id="codexPlanSafety"></div></article></div>
+                <details id="codexSubtasksPanel" class="codex-subtasks" hidden><summary>Future-ready coordinated subtasks</summary><ol id="codexSubtaskList"></ol></details>
+                <div id="codexTaskActions" class="codex-task-actions"></div>
+                <p id="codexActionMessage" class="codex-action-message" role="alert" aria-live="assertive"></p>
+                <section id="codexResultPanel" class="codex-result-panel hidden"><div class="panel-heading"><span>Result</span><strong>Task evidence</strong></div><div id="codexResultSummary"></div><div id="codexValidationResults" class="codex-validation-results"></div></section>
+                <section id="codexDiffPanel" class="codex-diff-panel hidden"><div class="panel-heading"><span>Review</span><strong>Task Diff</strong></div><div id="codexDiffFiles" class="codex-diff-files"></div><pre id="codexDiffContent" tabindex="0"></pre></section>
+                <details class="codex-task-log"><summary>Task development log</summary><ol id="codexTaskLog"></ol></details>
+              </section>
+            </section>
+            <aside class="codex-routing-panel">
+              <div class="panel-heading"><span>Capability based</span><strong>AI Routing</strong></div>
+              <p>AUTO maps specialist roles to configurable models. Unavailable models fall back visibly.</p>
+              <form id="codexRoutingForm">
+                <label>Deep<input data-model-role="deep" maxlength="96" /></label>
+                <label>Fast<input data-model-role="fast" maxlength="96" /></label>
+                <label>Visual<input data-model-role="visual" maxlength="96" /></label>
+                <label>QA<input data-model-role="qa" maxlength="96" /></label>
+                <label>Performance<input data-model-role="performance" maxlength="96" /></label>
+                <label>Review<input data-model-role="review" maxlength="96" /></label>
+                <label>Fallback<input id="codexFallbackModel" maxlength="96" /></label>
+                <label class="check"><input id="codexAutoEscalation" type="checkbox" /> Offer Fast → Deep escalation</label>
+                <button class="tool-btn" type="submit">Save Routing</button><span id="codexRoutingMessage"></span>
+              </form>
+              <div class="codex-security-note"><strong>Production protected</strong><p>No automatic merge, push, deploy, Firebase production mutation, secret access, or networked task commands.</p></div>
+            </aside>
+          </div>
+        </div>
+
         <div id="gameUiView" class="game-ui-view hidden">
           <div class="hud-editor-toolbar">
             <label>Device
@@ -136,6 +307,7 @@
             <button id="hudPreviewBtn" class="tool-btn" type="button">Preview Only</button>
             <button id="hudUndoBtn" class="tool-btn" type="button">Undo</button>
             <button id="hudRedoBtn" class="tool-btn" type="button">Redo</button>
+            <button class="tool-btn ask-codex-btn" type="button" data-ask-codex="hud">Ask Codex</button>
           </div>
           <div class="hud-layout-shell">
             <aside class="hud-component-sidebar">
@@ -224,9 +396,16 @@
       </aside>
     </section>
 
+    <details id="studioLogPanel" class="studio-log-panel">
+      <summary><span>Development log</span><strong id="studioLogSummary">0 operations</strong></summary>
+      <div class="studio-log-toolbar"><button id="clearStudioLogBtn" type="button">Clear</button></div>
+      <ol id="studioLogList" class="studio-log-list"></ol>
+    </details>
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
+  <script src="studio.js?v=20260816-crownlands-studio-phase-2b"></script>
   <script src="hud-editor.js?v=20260726-hud-layout-editor"></script>
-  <script src="editor.js?v=20260813-map-image-flip-v1"></script>
+  <script src="codex-ai.js?v=20260816-crownlands-studio-phase-2b"></script>
+  <script src="editor.js?v=20260816-crownlands-studio-phase-2b"></script>
 </body>
 </html>

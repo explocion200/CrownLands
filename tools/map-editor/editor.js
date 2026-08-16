@@ -248,10 +248,19 @@
   }
 
   const elements = {
+    worldStudioBtn: document.getElementById("worldStudioBtn"),
+    uiStudioBtn: document.getElementById("uiStudioBtn"),
+    qaStudioBtn: document.getElementById("qaStudioBtn"),
+    codexAiBtn: document.getElementById("codexAiBtn"),
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
     economyModeBtn: document.getElementById("economyModeBtn"),
+    themeModeBtn: document.getElementById("themeModeBtn"),
+    componentsModeBtn: document.getElementById("componentsModeBtn"),
+    screensModeBtn: document.getElementById("screensModeBtn"),
     gameUiModeBtn: document.getElementById("gameUiModeBtn"),
+    worldSubnav: document.getElementById("worldSubnav"),
+    uiStudioSubnav: document.getElementById("uiStudioSubnav"),
     editorBody: document.getElementById("editorBody"),
     addRegionBtn: document.getElementById("addRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
@@ -285,6 +294,11 @@
     worldConnectionLayer: document.getElementById("worldConnectionLayer"),
     regionView: document.getElementById("regionView"),
     economyView: document.getElementById("economyView"),
+    themeView: document.getElementById("themeView"),
+    componentsView: document.getElementById("componentsView"),
+    screensView: document.getElementById("screensView"),
+    qaView: document.getElementById("qaView"),
+    codexAiView: document.getElementById("codexAiView"),
     gameUiView: document.getElementById("gameUiView"),
     economySections: document.getElementById("economySections"),
     contextTools: document.getElementById("contextTools"),
@@ -319,6 +333,7 @@
     selected: null,
     zoom: 0.5,
     dirty: false,
+    loadError: "",
     validation: [],
     toggles: {
       grid: true,
@@ -343,6 +358,13 @@
   function setStatus(message, kind = "") {
     elements.statusBar.textContent = message;
     elements.statusBar.dataset.kind = kind;
+    window.CrownlandsStudioUI?.log?.(message, kind);
+  }
+
+  function recordLoadError(message) {
+    const text = String(message || "Unknown load error");
+    state.loadError = state.loadError ? `${state.loadError} | ${text}` : text;
+    setStatus(`${state.loadError} Save is disabled to protect project files.`, "error");
   }
 
   function slugify(value, fallback = "item") {
@@ -687,15 +709,19 @@
       state.layout = fallback.layout;
       state.regions = fallback.regions;
       state.activeRegionId = state.regions[0]?.id || "";
-      setStatus(`Loaded fallback world data. ${error.message || error}`);
+      recordLoadError(`World data could not be loaded: ${error.message || error}`);
     }
   }
 
   async function loadEconomyData() {
-    const response = await fetch(ECONOMY_API, { cache: "no-store" });
-    if (!response.ok) throw new Error(`Economy data failed: ${response.status}`);
-    const payload = await response.json();
-    state.economy = payload.config;
+    try {
+      const response = await fetch(ECONOMY_API, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Economy data failed: ${response.status}`);
+      const payload = await response.json();
+      state.economy = payload.config;
+    } catch (error) {
+      recordLoadError(`Economy configuration could not be loaded: ${error.message || error}`);
+    }
   }
 
   function buildSavePayload() {
@@ -746,7 +772,6 @@
     state.layout = data.layout;
     state.regions = data.regions;
     applyEdgeArrowOverrides(state.regions);
-    state.dirty = false;
     setStatus("Saved JSON world files and game compatibility data.");
     if (options.renderAfter !== false) render();
   }
@@ -764,37 +789,40 @@
     }
     const payload = await response.json();
     state.economy = payload.config;
-    state.dirty = false;
     if (options.renderAfter !== false) render();
   }
 
   async function saveAllData() {
+    if (state.loadError) throw new Error(`${state.loadError} Reload or reopen the project before saving.`);
     elements.saveBtn.disabled = true;
-    setStatus("Saving map, economy, and HUD layout configuration...", "busy");
+    setStatus("Saving map, economy, HUD layout, and QA records...", "busy");
     try {
       const results = await Promise.allSettled([
         saveWorldData({ renderAfter: false }),
         saveEconomyData({ renderAfter: false }),
         window.CrownlandsHudEditor.save(),
+        window.CrownlandsStudioUI.save(),
       ]);
-      const labels = ["Map", "Economy", "HUD layout"];
+      const labels = ["Map", "Economy", "HUD layout", "QA"];
       const failures = results.map((result, index) => result.status === "rejected" ? `${labels[index]}: ${result.reason?.message || result.reason}` : "").filter(Boolean);
       if (failures.length) throw new Error(`Some data did not save. ${failures.join(" | ")}`);
       state.dirty = false;
-      setStatus("Saved map, browser/Firebase economy, and responsive HUD layouts.", "success");
+      window.CrownlandsStudioUI?.setGlobalDirty?.(false);
+      setStatus("Saved map, browser/Firebase economy, responsive HUD layouts, and QA records.", "success");
       render();
     } finally {
-      elements.saveBtn.disabled = false;
+      elements.saveBtn.disabled = Boolean(state.loadError);
     }
   }
 
   function markDirty(message = "", kind = "") {
     state.dirty = true;
+    window.CrownlandsStudioUI?.setGlobalDirty?.(true);
     if (message) setStatus(message, kind);
   }
 
   function setEditorMode(mode) {
-    state.editorMode = ["world", "region", "economy", "gameui"].includes(mode) ? mode : "world";
+    state.editorMode = ["world", "region", "economy", "theme", "components", "screens", "gameui", "qa", "codex"].includes(mode) ? mode : "world";
     state.tool = "select";
     window.CrownlandsHudEditor?.setActive(state.editorMode === "gameui");
     render();
@@ -893,15 +921,30 @@
   }
 
   function renderToolbar() {
+    const worldArea = ["world", "region"].includes(state.editorMode);
+    const uiArea = ["theme", "components", "screens", "gameui"].includes(state.editorMode);
+    const wideMode = ["theme", "components", "screens", "qa", "codex"].includes(state.editorMode);
+    elements.worldStudioBtn.classList.toggle("active", worldArea);
+    elements.uiStudioBtn.classList.toggle("active", uiArea);
+    elements.qaStudioBtn.classList.toggle("active", state.editorMode === "qa");
+    elements.codexAiBtn.classList.toggle("active", state.editorMode === "codex");
     elements.worldModeBtn.classList.toggle("active", state.editorMode === "world");
     elements.regionModeBtn.classList.toggle("active", state.editorMode === "region");
     elements.economyModeBtn.classList.toggle("active", state.editorMode === "economy");
+    elements.themeModeBtn.classList.toggle("active", state.editorMode === "theme");
+    elements.componentsModeBtn.classList.toggle("active", state.editorMode === "components");
+    elements.screensModeBtn.classList.toggle("active", state.editorMode === "screens");
     elements.gameUiModeBtn.classList.toggle("active", state.editorMode === "gameui");
+    elements.worldSubnav.hidden = !worldArea;
+    elements.uiStudioSubnav.hidden = !uiArea;
     elements.editorBody.classList.toggle("economy-mode", state.editorMode === "economy");
     elements.editorBody.classList.toggle("game-ui-mode", state.editorMode === "gameui");
+    elements.editorBody.classList.toggle("studio-wide-mode", wideMode);
     elements.contextTools.classList.toggle("economy-mode", state.editorMode === "economy");
     document.querySelector(".editor-toolbar")?.classList.toggle("economy-mode", state.editorMode === "economy");
-    document.querySelector(".editor-toolbar")?.classList.toggle("game-ui-mode", state.editorMode === "gameui");
+    const toolbar = document.querySelector(".editor-toolbar");
+    toolbar?.classList.toggle("game-ui-mode", state.editorMode === "gameui");
+    toolbar?.classList.toggle("studio-wide-mode", wideMode);
     elements.addCityBtn.classList.toggle("active", state.tool === "city");
     elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
     elements.addCampBtn.classList.toggle("active", state.tool === "camp");
@@ -916,6 +959,8 @@
     elements.deleteSelectedBtn.disabled = !state.selected || state.selected.kind === "gridCell";
     elements.uploadRegionImageBtn.disabled = state.editorMode !== "region" || !currentRegion();
     elements.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+    elements.saveBtn.disabled = Boolean(state.loadError);
+    window.CrownlandsStudioUI?.modeChanged?.(state.editorMode);
   }
 
   function renderWorldFields() {
@@ -938,19 +983,26 @@
   }
 
   function renderWorkspace() {
-    elements.workspaceKicker.textContent = state.editorMode === "world"
-      ? "World Layout"
-      : state.editorMode === "region"
-        ? "Region Edit"
-        : state.editorMode === "economy" ? "Balance Configuration" : "Responsive HUD Layout";
-    elements.workspaceTitle.textContent = state.editorMode === "world"
-      ? state.layout.worldName
-      : state.editorMode === "region"
-        ? currentRegion()?.name || "No region selected"
-        : state.editorMode === "economy" ? "Crownlands Economy" : "Main Game UI";
+    const workspaceLabels = {
+      world: ["World Layout", state.layout.worldName],
+      region: ["Region Edit", currentRegion()?.name || "No region selected"],
+      economy: ["Balance Configuration", "Crownlands Economy"],
+      gameui: ["UI Studio", "Responsive HUD Layout"],
+      theme: ["UI Studio", "Theme"],
+      components: ["UI Studio", "Component Library"],
+      screens: ["UI Studio", "Screen Previews"],
+      qa: ["Quality Control", "QA Center"],
+      codex: ["Codex AI", "AI Development Workspace"],
+    };
+    [elements.workspaceKicker.textContent, elements.workspaceTitle.textContent] = workspaceLabels[state.editorMode] || workspaceLabels.world;
     elements.worldView.classList.toggle("hidden", state.editorMode !== "world");
     elements.regionView.classList.toggle("hidden", state.editorMode !== "region");
     elements.economyView.classList.toggle("hidden", state.editorMode !== "economy");
+    elements.themeView.classList.toggle("hidden", state.editorMode !== "theme");
+    elements.componentsView.classList.toggle("hidden", state.editorMode !== "components");
+    elements.screensView.classList.toggle("hidden", state.editorMode !== "screens");
+    elements.qaView.classList.toggle("hidden", state.editorMode !== "qa");
+    elements.codexAiView.classList.toggle("hidden", state.editorMode !== "codex");
     elements.gameUiView.classList.toggle("hidden", state.editorMode !== "gameui");
     if (state.editorMode === "world") renderWorldGrid();
     else if (state.editorMode === "region") renderRegionEditor();
@@ -3389,9 +3441,16 @@
   }
 
   function bindEvents() {
+    elements.worldStudioBtn.addEventListener("click", () => setEditorMode("world"));
+    elements.uiStudioBtn.addEventListener("click", () => setEditorMode("theme"));
+    elements.qaStudioBtn.addEventListener("click", () => setEditorMode("qa"));
+    elements.codexAiBtn.addEventListener("click", () => setEditorMode("codex"));
     elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
     elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
     elements.economyModeBtn.addEventListener("click", () => setEditorMode("economy"));
+    elements.themeModeBtn.addEventListener("click", () => setEditorMode("theme"));
+    elements.componentsModeBtn.addEventListener("click", () => setEditorMode("components"));
+    elements.screensModeBtn.addEventListener("click", () => setEditorMode("screens"));
     elements.gameUiModeBtn.addEventListener("click", () => setEditorMode("gameui"));
     elements.addRegionBtn.addEventListener("click", addRegion);
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
@@ -3454,6 +3513,12 @@
     window.addEventListener("pointerup", stopRegionTileDrag);
     window.addEventListener("pointercancel", stopRegionTileDrag);
     window.addEventListener("keydown", handleKeydown);
+    window.addEventListener("beforeunload", event => {
+      if (state.dirty || window.CrownlandsHudEditor?.isDirty?.() || window.CrownlandsStudioUI?.isDirty?.()) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    });
   }
 
   function toggleView(key) {
@@ -3496,8 +3561,29 @@
         onStatus: setStatus,
         setMode: setEditorMode,
       }),
+      window.CrownlandsStudioUI.init({
+        onDirty: message => markDirty(message),
+        onStatus: setStatus,
+      }),
+      window.CrownlandsCodexAI.init(),
     ]);
+    if (window.CrownlandsHudEditor?.hasLoadError?.()) recordLoadError("HUD layout could not be loaded.");
+    if (window.CrownlandsStudioUI?.hasLoadError?.()) recordLoadError("QA issue store could not be loaded.");
     render();
+    window.CrownlandsEditor = {
+      save: saveAllData,
+      isDirty: () => Boolean(state.dirty || window.CrownlandsHudEditor?.isDirty?.() || window.CrownlandsStudioUI?.isDirty?.()),
+      setMode: setEditorMode,
+    };
+    window.crownlandsDesktop?.onSaveRequested?.(async () => {
+      try {
+        await saveAllData();
+        window.crownlandsDesktop.notifySaveResult({ ok: true });
+      } catch (error) {
+        setStatus(error.message || String(error), "error");
+        window.crownlandsDesktop.notifySaveResult({ ok: false, message: error.message || String(error) });
+      }
+    });
   }
 
   init().catch(error => {

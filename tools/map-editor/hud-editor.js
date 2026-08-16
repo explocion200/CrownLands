@@ -55,7 +55,7 @@
 
   const state = {
     config: defaultConfig(), presetId: "landscapeTablet", selected: [], locked: new Set(), snap: true,
-    grid: 8, preview: false, history: [], future: [], drag: null, dirty: false, active: false,
+    grid: 8, preview: false, history: [], future: [], drag: null, dirty: false, active: false, loadError: "",
   };
   let elements = {};
   let notifyDirty = () => {};
@@ -483,6 +483,7 @@
   }
 
   async function save() {
+    if (state.loadError) throw new Error(`${state.loadError} Reload or reopen the project before saving HUD data.`);
     const response = await fetch(API, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ config: state.config }),
     });
@@ -600,13 +601,25 @@
     window.addEventListener("beforeunload", event => { if (state.dirty) { event.preventDefault(); event.returnValue = ""; } });
     window.addEventListener("resize", () => { if (state.active) renderCanvas(); });
     render();
-    return load().catch(error => { notifyStatus(error.message || String(error), "error"); render(); });
+    return load().catch(error => {
+      state.loadError = `HUD layout could not be loaded: ${error.message || error}`;
+      notifyStatus(`${state.loadError} Save is disabled to protect the project file.`, "error");
+      render();
+    });
   }
 
   window.CrownlandsHudEditor = {
     init, save, validate,
+    isDirty: () => state.dirty,
+    hasLoadError: () => Boolean(state.loadError),
     setActive(active) { state.active = Boolean(active); if (state.active) window.setTimeout(render, 0); },
     getConfig: () => clone(state.config),
+    getSelectionContext: () => ({
+      screen: `HUD ${state.config?.presets?.[state.presetId]?.label || state.presetId}`,
+      previewPreset: state.presetId,
+      viewport: state.config?.presets?.[state.presetId] ? { width: state.config.presets[state.presetId].width, height: state.config.presets[state.presetId].height } : null,
+      hudSelection: state.selected.map(id => ({ id, label: COMPONENT_MAP[id]?.label || id, group: COMPONENT_MAP[id]?.group || "HUD", layout: clone(currentComponents()?.[id] || {}) })),
+    }),
     replaceConfig(config) { state.config = ensureDefaults(clone(config)); state.history = []; state.future = []; state.dirty = true; render(); },
   };
 })();
