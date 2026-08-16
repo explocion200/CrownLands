@@ -1,0 +1,32 @@
+{
+  "combinationsValidated": 36,
+  "recordsEvaluated": 512,
+  "byteIdentical": true,
+  "processLocalFull": {
+    "entries": 36,
+    "approximateMemoryMiB": 196.9834451675415,
+    "operationalRisk": "high memory pressure per worker instance"
+  },
+  "boundedLru": {
+    "limit": 12,
+    "entries": 12,
+    "hits": 252,
+    "misses": 260,
+    "evictions": 248,
+    "hitRate": 0.4921875,
+    "approximateMaximumMemoryMiB": 65.6611483891805,
+    "deterministicOnMiss": true,
+    "networkDependency": false
+  },
+  "sharedImmutable": {
+    "workerMemoryMiB": 0,
+    "addsNetworkDependency": true,
+    "addsCacheServiceFailureMode": true,
+    "recommended": false
+  },
+  "recommendation": {
+    "strategy": "process-local bounded LRU",
+    "entryLimit": 12,
+    "reason": "caps the ~197 MiB full-cache footprint while retaining deterministic byte-identical reconstruction"
+  }
+}

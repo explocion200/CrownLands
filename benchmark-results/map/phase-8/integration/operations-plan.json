@@ -1,0 +1,166 @@
+{
+  "orphanCleanup": {
+    "dryRunRequired": true,
+    "publicationMarkerCheckRequired": true,
+    "publishedPackageAutomaticDeletionAllowed": false
+  },
+  "backupRecovery": {
+    "backups": {
+      "firestore": {
+        "managedDailyBackup": true,
+        "pointInTimeRecoveryDays": 7,
+        "restoreRehearsalQuarterly": true
+      },
+      "storage": {
+        "objectVersioning": true,
+        "manifestInventoryDaily": true,
+        "hashAuditWeekly": true
+      },
+      "configuration": {
+        "coreTemplateVersioned": true,
+        "assetManifestVersioned": true,
+        "rolloutGateExported": true
+      }
+    },
+    "recoveryOrder": [
+      "engage expansion/publication/activation kill switches",
+      "restore world and season identity plus permanent Core configuration",
+      "restore publication markers, immutable package manifests, and edge contracts",
+      "restore and hash-verify immutable package assets",
+      "restore region lifecycle catalog and topology runtime state",
+      "restore city ownership for the current reset generation",
+      "reconcile ACTIVE markers without regenerating published packages",
+      "validate player placement and normal gameplay before releasing kill switches"
+    ],
+    "publishedAssetsRecoverableByHash": true,
+    "publishedPackageRegenerationAllowed": false,
+    "targetRpoHours": 1,
+    "targetRtoHours": 4
+  },
+  "monitoring": {
+    "generationFailureRate": {
+      "warning": ">2% for 15m or 3 consecutive",
+      "critical": ">5% for 15m"
+    },
+    "retryRate": {
+      "warning": ">1 retry/map over 15m",
+      "critical": "5 consecutive exhausted jobs"
+    },
+    "publicationFailure": {
+      "critical": "any non-idempotent failure"
+    },
+    "activationFailure": {
+      "critical": "any failure"
+    },
+    "packageHashMismatch": {
+      "critical": "any mismatch; engage activation kill switch"
+    },
+    "duplicateCoordinate": {
+      "critical": "any non-idempotent collision"
+    },
+    "edgeInheritanceFailure": {
+      "critical": "any failure"
+    },
+    "storageUploadFailure": {
+      "warning": ">1% over 5m",
+      "critical": ">5% over 5m"
+    },
+    "standbyBuffer": {
+      "warning": "below 2 for 5m",
+      "critical": "zero while placement capacity is low"
+    },
+    "workerQueue": {
+      "warning": "oldest job >10m or depth >4",
+      "critical": "oldest job >30m"
+    },
+    "controllerHeartbeat": {
+      "warning": "missing 2m",
+      "critical": "missing 5m"
+    },
+    "spawnPlacementFailure": {
+      "warning": ">5% over 10m excluding expected threshold rejections",
+      "critical": ">15% over 10m"
+    },
+    "sensitivePlayerDataInLogsAllowed": false
+  },
+  "cdn": {
+    "immutableAssets": {
+      "pathIncludesPackageHash": true,
+      "cacheControl": "public, max-age=31536000, immutable",
+      "etag": "sha256 package-file hash",
+      "overwriteAllowed": false
+    },
+    "mutableCatalog": {
+      "contentAddressedAssetReferencesOnly": true,
+      "cacheControl": "private, no-cache",
+      "generationVersionRequired": true
+    },
+    "staleMutableReferenceRisk": false,
+    "publishedHashReplacementAllowed": false
+  },
+  "persistence": {
+    "preservedAcrossFutureSeasonReset": [
+      "player flag and customization",
+      "persistent Clan identity and membership",
+      "Common Gear ownership",
+      "equipped Common Gear",
+      "Common Gear levels, upgrades, and progression"
+    ],
+    "seasonalReset": [
+      "cities and city ownership",
+      "objectives and objective control",
+      "marches and armies",
+      "generated-region activation state",
+      "normal consumable inventory"
+    ],
+    "livePersistenceBehaviorModified": false
+  },
+  "rollout": {
+    "stages": [
+      {
+        "stage": 0,
+        "action": "deploy code with generated-world feature flag OFF",
+        "rollback": "code rollback only; world unchanged"
+      },
+      {
+        "stage": 1,
+        "action": "verify 15 maps, 1,050 cities, 210 chains, zero generated ACTIVE",
+        "rollback": "stop; investigate baseline drift"
+      },
+      {
+        "stage": 2,
+        "action": "generate first package and retain STANDBY",
+        "rollback": "reject or retry unpublished package at same coordinate"
+      },
+      {
+        "stage": 3,
+        "action": "publish immutable package but keep inactive",
+        "rollback": "disable activation; retain published package and marker"
+      },
+      {
+        "stage": 4,
+        "action": "admin verify hashes, 40 city definitions, sockets, edges, catalog",
+        "rollback": "keep PUBLISHED/inactive; never regenerate"
+      },
+      {
+        "stage": 5,
+        "action": "enable scoped gate and atomically activate first region",
+        "rollback": "engage activation/expansion kill switches; preserve ownership"
+      },
+      {
+        "stage": 6,
+        "action": "monitor one complete health window",
+        "rollback": "stop expansion; existing ACTIVE gameplay continues"
+      },
+      {
+        "stage": 7,
+        "action": "prepare next clockwise region only after healthy review",
+        "rollback": "retain buffer; do not publish or activate"
+      }
+    ],
+    "codeRollbackNeverDeletesWorldData": true,
+    "worldDataRollbackRequiresReviewedMigration": true,
+    "activeOwnershipMustBePreserved": true,
+    "publishedPackageDeleteOrRegenerationAllowed": false
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "injectedFaults": [
+    {
+      "faultAt": "before_activation",
+      "failure": {
+        "rejected": true,
+        "code": "before-activation-failure",
+        "message": "Injected failure before activation."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "firestore_timeout",
+      "failure": {
+        "rejected": true,
+        "code": "firestore-timeout",
+        "message": "Injected Firestore transaction timeout."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "activation_transaction",
+      "failure": {
+        "rejected": true,
+        "code": "activation-transaction-failed",
+        "message": "Injected activation transaction failure."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "after_city_staging",
+      "failure": {
+        "rejected": true,
+        "code": "activation-staging-failure",
+        "message": "Injected failure after non-authoritative city staging."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "catalog_delay",
+      "failure": {
+        "rejected": true,
+        "code": "catalog-delay",
+        "message": "Injected catalog visibility delay."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "hash_mismatch",
+      "failure": {
+        "rejected": true,
+        "code": "package-hash-mismatch",
+        "message": "Injected package-hash mismatch."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "missing_map",
+      "failure": {
+        "rejected": true,
+        "code": "missing-map",
+        "message": "Immutable map asset is unreachable."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "missing_thumbnail",
+      "failure": {
+        "rejected": true,
+        "code": "missing-thumbnail",
+        "message": "Immutable thumbnail asset is unreachable."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "invalid_city_count",
+      "failure": {
+        "rejected": true,
+        "code": "invalid-city-count",
+        "message": "Activation requires exactly 40 ready city definitions."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "conflicting_edge_contract",
+      "failure": {
+        "rejected": true,
+        "code": "conflicting-edge-contract",
+        "message": "Published edge inheritance failed."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    },
+    {
+      "faultAt": "coordinate_conflict",
+      "failure": {
+        "rejected": true,
+        "code": "coordinate-conflict",
+        "message": "Activation coordinate is not uniquely reserved."
+      },
+      "lifecycleAfter": "PUBLISHED",
+      "cityOwnershipRecordsVisible": 0,
+      "activeMarkers": 0,
+      "partialActivationVisible": false
+    }
+  ],
+  "allFaultsAtomic": true,
+  "idempotentRetry": {
+    "idempotent": true,
+    "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "lifecycle": "ACTIVE"
+  },
+  "cityRecordsAfterSuccessfulRetry": 40
+}

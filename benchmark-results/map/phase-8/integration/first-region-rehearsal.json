@@ -1,0 +1,123 @@
+{
+  "coordinate": {
+    "gridX": -3,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 0
+  },
+  "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+  "lifecycleHistory": [
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "",
+      "to": "ALLOCATED",
+      "reason": "allocation"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "ALLOCATED",
+      "to": "GENERATING",
+      "reason": "worker accepted allocation"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "GENERATING",
+      "to": "VALIDATING",
+      "reason": "package generated"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "VALIDATING",
+      "to": "STANDBY",
+      "reason": "validation passed"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "STANDBY",
+      "to": "PUBLISHING",
+      "reason": "explicit admin publication approval"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "PUBLISHING",
+      "to": "PUBLISHED",
+      "reason": "atomic publication marker committed"
+    },
+    {
+      "regionId": "phase6d_region_0001",
+      "from": "PUBLISHED",
+      "to": "ACTIVE",
+      "reason": "atomic activation transaction committed"
+    }
+  ],
+  "publicationReview": {
+    "regionId": "phase6d_region_0001",
+    "stage": "publication",
+    "mapPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/map.webp",
+    "thumbnailPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/thumbnail.webp",
+    "cityCount": 40,
+    "startingCandidateCount": 4,
+    "roadSocketCount": 4,
+    "edgeContractHash": "fd4ca8c35a12358a1e5895ae47a976ee622166e8eb8d004e0d3e14e6f942d8ce",
+    "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "validatorPassed": true,
+    "validatorErrors": [],
+    "approved": true
+  },
+  "publication": {
+    "idempotent": false,
+    "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "lifecycle": "PUBLISHED"
+  },
+  "immutableStorageVerified": true,
+  "activationReview": {
+    "regionId": "phase6d_region_0001",
+    "stage": "activation",
+    "mapPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/map.webp",
+    "thumbnailPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/thumbnail.webp",
+    "cityCount": 40,
+    "startingCandidateCount": 4,
+    "roadSocketCount": 4,
+    "edgeContractHash": "fd4ca8c35a12358a1e5895ae47a976ee622166e8eb8d004e0d3e14e6f942d8ce",
+    "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "validatorPassed": true,
+    "validatorErrors": [],
+    "approved": true
+  },
+  "activationPreflight": {
+    "packageExists": true,
+    "packageHashVerified": true,
+    "immutableAssetsReachable": true,
+    "exactCityDefinitionsReady": 40,
+    "topologyValid": true,
+    "edgeContractsValid": true,
+    "publishedLifecycle": "PUBLISHED",
+    "catalogReady": true,
+    "coordinateUnique": true
+  },
+  "cityRecordsInitialized": 40,
+  "catalogDiscoverableAfterPublication": true,
+  "activeAfterActivation": true,
+  "firstRegionRemainsGatedUntilCardinalNeighborActivation": true,
+  "gateToOpenVerifiedInThreeRegionRehearsal": true,
+  "placementClaimsAccepted": 26,
+  "acceptedAtFifteen": {
+    "cityId": "npc_phase6d_region_0001_9edb7691fc8885",
+    "npcBefore": 15,
+    "npcAfter": 14,
+    "subsequentSpawnEligible": false
+  },
+  "rejectedAtFourteen": {
+    "rejected": true,
+    "code": "spawn-threshold",
+    "message": "Region phase6d_region_0001 is not eligible for a new placement."
+  },
+  "existingGameplayContinuesAtFourteen": true,
+  "standbyPrepared": [
+    "phase6d_region_0002",
+    "phase6d_region_0003"
+  ],
+  "standbyBufferCount": 2,
+  "packageUnchanged": true,
+  "productionTarget": false
+}

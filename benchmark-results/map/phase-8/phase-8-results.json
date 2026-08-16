@@ -1,0 +1,2876 @@
+{
+  "schemaVersion": 1,
+  "phase": "8",
+  "developmentOnly": true,
+  "productionEquivalentStagingOnly": true,
+  "productionFirestoreWrites": 0,
+  "productionActivated": false,
+  "realPlayersPlaced": 0,
+  "deploymentPerformed": false,
+  "mergePerformed": false,
+  "branchPushPerformed": false,
+  "phase9Started": false,
+  "approvedArtStyleLocked": true,
+  "assetLibrary": {
+    "count": 118,
+    "manifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+    "modified": false
+  },
+  "currentProductionWorld": {
+    "adapterVersion": "phase7-current-world-adapter-v1",
+    "catalog": {
+      "schemaVersion": 3,
+      "worldId": "world_01",
+      "worldName": "Crownlands World 01",
+      "updatedAt": "2026-08-13T15:39:28.240Z",
+      "version": 202608131539,
+      "globalSettings": {
+        "defaultMapWidth": 2048,
+        "defaultMapHeight": 1536,
+        "minimumCitySpacing": 0.045,
+        "worldWidth": 13000,
+        "worldHeight": 17000,
+        "gridCellWorldSize": 2300
+      },
+      "topology": {
+        "coreRadius": 2,
+        "coreWidth": 5,
+        "ringAnchor": "north-west",
+        "ringDirection": "clockwise",
+        "connections": "cardinal-only"
+      },
+      "coreReservations": [
+        {
+          "gridX": -2,
+          "gridY": -2,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -1,
+          "gridY": -2,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 0,
+          "gridY": -2,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 1,
+          "gridY": -2,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 2,
+          "gridY": -2,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -2,
+          "gridY": -1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -1,
+          "gridY": -1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 0,
+          "gridY": -1,
+          "reserved": true,
+          "activeRegionId": "north",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_stronghold"
+        },
+        {
+          "gridX": 1,
+          "gridY": -1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 2,
+          "gridY": -1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -2,
+          "gridY": 0,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -1,
+          "gridY": 0,
+          "reserved": true,
+          "activeRegionId": "west",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_stronghold"
+        },
+        {
+          "gridX": 0,
+          "gridY": 0,
+          "reserved": true,
+          "activeRegionId": "center",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_citadel"
+        },
+        {
+          "gridX": 1,
+          "gridY": 0,
+          "reserved": true,
+          "activeRegionId": "east",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_stronghold"
+        },
+        {
+          "gridX": 2,
+          "gridY": 0,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -2,
+          "gridY": 1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -1,
+          "gridY": 1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 0,
+          "gridY": 1,
+          "reserved": true,
+          "activeRegionId": "south",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_stronghold"
+        },
+        {
+          "gridX": 1,
+          "gridY": 1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": 2,
+          "gridY": 1,
+          "reserved": true,
+          "activeRegionId": "",
+          "lifecycle": "reserved",
+          "spawnEligible": false,
+          "reservedPurpose": "core_holding_or_support"
+        },
+        {
+          "gridX": -2,
+          "gridY": 2,
+          "reserved": true,
+          "activeRegionId": "region_6",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_camp"
+        },
+        {
+          "gridX": -1,
+          "gridY": 2,
+          "reserved": true,
+          "activeRegionId": "region_7",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_camp"
+        },
+        {
+          "gridX": 0,
+          "gridY": 2,
+          "reserved": true,
+          "activeRegionId": "region_8",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_support"
+        },
+        {
+          "gridX": 1,
+          "gridY": 2,
+          "reserved": true,
+          "activeRegionId": "region_9",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_camp"
+        },
+        {
+          "gridX": 2,
+          "gridY": 2,
+          "reserved": true,
+          "activeRegionId": "region_10",
+          "lifecycle": "active",
+          "spawnEligible": false,
+          "reservedPurpose": "core_camp"
+        }
+      ],
+      "capacityPolicy": {
+        "minimumNpcCitiesForSpawn": 15,
+        "serverAuthoritative": true
+      },
+      "definitionCache": {
+        "maxRegions": 4,
+        "loadPolicy": "active-first-nearby-on-demand"
+      },
+      "bounds": {
+        "minGridX": -2,
+        "maxGridX": 2,
+        "minGridY": -1,
+        "maxGridY": 3,
+        "width": 5,
+        "height": 5
+      },
+      "regions": [
+        {
+          "id": "center",
+          "name": "Crownlands Heart",
+          "type": "crownlands_main",
+          "purpose": "core_citadel",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 0,
+          "gridY": 0,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/center.json",
+          "cityCapacity": 100,
+          "npcCityCount": 102,
+          "objectiveCount": 1,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "center",
+            "label": "Crownlands Heart",
+            "x": 6500,
+            "y": 8500,
+            "rx": 1900,
+            "ry": 1450,
+            "cityRx": 1580,
+            "cityRy": 1160,
+            "rot": -0.03,
+            "palette": "heartland",
+            "gridX": 0,
+            "gridY": 0
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "north"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "east"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "south"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "west"
+            }
+          }
+        },
+        {
+          "id": "west",
+          "name": "West Marches",
+          "type": "endgame",
+          "purpose": "core_stronghold",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": -1,
+          "gridY": 0,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/west-west-2-1783019399438-92a533147c7f.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/west.json",
+          "cityCapacity": 50,
+          "npcCityCount": 61,
+          "objectiveCount": 1,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "west",
+            "label": "West Marches",
+            "x": 4200,
+            "y": 8500,
+            "rx": 1120,
+            "ry": 1330,
+            "cityRx": 900,
+            "cityRy": 1090,
+            "rot": 0.07,
+            "palette": "woodland",
+            "gridX": -1,
+            "gridY": 0
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "center"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "id": "east",
+          "name": "East Reach",
+          "type": "endgame",
+          "purpose": "core_stronghold",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 1,
+          "gridY": 0,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/east-east-4-1783020191215-19805a740a73.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/east.json",
+          "cityCapacity": 50,
+          "npcCityCount": 65,
+          "objectiveCount": 1,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "east",
+            "label": "East Reach",
+            "x": 8800,
+            "y": 8500,
+            "rx": 1120,
+            "ry": 1330,
+            "cityRx": 900,
+            "cityRy": 1090,
+            "rot": -0.07,
+            "palette": "golden",
+            "gridX": 1,
+            "gridY": 0
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "center"
+            }
+          }
+        },
+        {
+          "id": "north",
+          "name": "North Frontier",
+          "type": "endgame",
+          "purpose": "core_stronghold",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 0,
+          "gridY": -1,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/north-north-1-1783019201680-0b6b6b19ea6e.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/north.json",
+          "cityCapacity": 50,
+          "npcCityCount": 70,
+          "objectiveCount": 1,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "north",
+            "label": "North Frontier",
+            "x": 6500,
+            "y": 6200,
+            "rx": 1650,
+            "ry": 900,
+            "cityRx": 1370,
+            "cityRy": 700,
+            "rot": 0.04,
+            "palette": "pine",
+            "gridX": 0,
+            "gridY": -1
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "center"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "id": "south",
+          "name": "Southfields",
+          "type": "endgame",
+          "purpose": "core_stronghold",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 0,
+          "gridY": 1,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/south-south-5-1783020401484-675929711e1c.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/south.json",
+          "cityCapacity": 50,
+          "npcCityCount": 57,
+          "objectiveCount": 1,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "south",
+            "label": "Southfields",
+            "x": 6500,
+            "y": 10800,
+            "rx": 1650,
+            "ry": 900,
+            "cityRx": 1370,
+            "cityRy": 700,
+            "rot": -0.05,
+            "palette": "marsh",
+            "gridX": 0,
+            "gridY": 1
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "center"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_8"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "id": "region_6",
+          "name": "Graywood Hollow",
+          "type": "midgame",
+          "purpose": "core_camp",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": -2,
+          "gridY": 2,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_6-6-1783021585258-632d8967e0db.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_6-thumb-57d0504e3a17.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_6.json",
+          "cityCapacity": 100,
+          "npcCityCount": 49,
+          "objectiveCount": 0,
+          "campCount": 1,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_6",
+            "label": "Graywood Hollow",
+            "gridX": -2,
+            "gridY": 2,
+            "x": 1900,
+            "y": 13100,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_7"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_11"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "id": "region_7",
+          "name": "Greenrook Vale",
+          "type": "midgame",
+          "purpose": "core_camp",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": -1,
+          "gridY": 2,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_7-7-1783022207943-5b92203f34be.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_7-thumb-d609f5032e3b.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_7.json",
+          "cityCapacity": 50,
+          "npcCityCount": 71,
+          "objectiveCount": 0,
+          "campCount": 1,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_7",
+            "label": "Greenrook Vale",
+            "gridX": -1,
+            "gridY": 2,
+            "x": 4200,
+            "y": 13100,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_8"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_12"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_6"
+            }
+          }
+        },
+        {
+          "id": "region_8",
+          "name": "Lowroad Vale",
+          "type": "midgame",
+          "purpose": "core_support",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 0,
+          "gridY": 2,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_8-8-1783022783978-38c33aabc85b.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_8-thumb-f2862b9c6883.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_8.json",
+          "cityCapacity": 50,
+          "npcCityCount": 93,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_8",
+            "label": "Lowroad Vale",
+            "gridX": 0,
+            "gridY": 2,
+            "x": 6500,
+            "y": 13100,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "south"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_9"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_13"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_7"
+            }
+          }
+        },
+        {
+          "id": "region_9",
+          "name": "Stonebrook Farms",
+          "type": "midgame",
+          "purpose": "core_camp",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 1,
+          "gridY": 2,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_9-9-1783023202200-b4dc635cf9d5.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_9-thumb-99c5af2bc6ef.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_9.json",
+          "cityCapacity": 50,
+          "npcCityCount": 80,
+          "objectiveCount": 0,
+          "campCount": 1,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_9",
+            "label": "Stonebrook Farms",
+            "gridX": 1,
+            "gridY": 2,
+            "x": 8800,
+            "y": 13100,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_10"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_14"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_8"
+            }
+          }
+        },
+        {
+          "id": "region_10",
+          "name": "Goldmere Plains",
+          "type": "midgame",
+          "purpose": "core_camp",
+          "permanentCore": true,
+          "spawnEligible": false,
+          "spawnReady": false,
+          "worldLayer": 0,
+          "clockwiseOrderIndex": null,
+          "lifecycle": "active",
+          "gridX": 2,
+          "gridY": 2,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_10-10-1783023599661-9b69758f632f.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_10-thumb-997a419e8640.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_10.json",
+          "cityCapacity": 50,
+          "npcCityCount": 39,
+          "objectiveCount": 0,
+          "campCount": 1,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_10",
+            "label": "Goldmere Plains",
+            "gridX": 2,
+            "gridY": 2,
+            "x": 11100,
+            "y": 13100,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "open",
+              "targetRegionId": "region_15"
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_9"
+            }
+          }
+        },
+        {
+          "id": "region_11",
+          "name": "Bandit Wastes",
+          "type": "starter",
+          "purpose": "player_region",
+          "permanentCore": false,
+          "spawnEligible": true,
+          "spawnReady": true,
+          "worldLayer": 1,
+          "clockwiseOrderIndex": 17,
+          "lifecycle": "active",
+          "gridX": -2,
+          "gridY": 3,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_11-thumb-eefb297beab7.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_11.json",
+          "cityCapacity": 50,
+          "npcCityCount": 79,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_11",
+            "label": "Bandit Wastes",
+            "gridX": -2,
+            "gridY": 3,
+            "x": 1900,
+            "y": 15400,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_6"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_12"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "gated",
+              "targetRegionId": ""
+            }
+          }
+        },
+        {
+          "id": "region_12",
+          "name": "Ironfall Hills",
+          "type": "starter",
+          "purpose": "player_region",
+          "permanentCore": false,
+          "spawnEligible": true,
+          "spawnReady": true,
+          "worldLayer": 1,
+          "clockwiseOrderIndex": 16,
+          "lifecycle": "active",
+          "gridX": -1,
+          "gridY": 3,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_12-12-1783024478267-f8ec8f7220b9.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_12-thumb-1ab8f25b5b0e.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_12.json",
+          "cityCapacity": 50,
+          "npcCityCount": 74,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_12",
+            "label": "Ironfall Hills",
+            "gridX": -1,
+            "gridY": 3,
+            "x": 4200,
+            "y": 15400,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_7"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_13"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_11"
+            }
+          }
+        },
+        {
+          "id": "region_13",
+          "name": "Redbanner Fields",
+          "type": "starter",
+          "purpose": "player_region",
+          "permanentCore": false,
+          "spawnEligible": true,
+          "spawnReady": true,
+          "worldLayer": 1,
+          "clockwiseOrderIndex": 15,
+          "lifecycle": "active",
+          "gridX": 0,
+          "gridY": 3,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_13-13-1783024786859-2850b934a775.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_13-thumb-67d54b202eb2.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_13.json",
+          "cityCapacity": 50,
+          "npcCityCount": 76,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_13",
+            "label": "Redbanner Fields",
+            "gridX": 0,
+            "gridY": 3,
+            "x": 6500,
+            "y": 15400,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_8"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_14"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_12"
+            }
+          }
+        },
+        {
+          "id": "region_14",
+          "name": "Ashenfen March",
+          "type": "starter",
+          "purpose": "player_region",
+          "permanentCore": false,
+          "spawnEligible": true,
+          "spawnReady": true,
+          "worldLayer": 1,
+          "clockwiseOrderIndex": 14,
+          "lifecycle": "active",
+          "gridX": 1,
+          "gridY": 3,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_14-14-1783024960400-7c8c938749c6.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_14-thumb-d8d4feafc66c.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_14.json",
+          "cityCapacity": 50,
+          "npcCityCount": 61,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_14",
+            "label": "Ashenfen March",
+            "gridX": 1,
+            "gridY": 3,
+            "x": 8800,
+            "y": 15400,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_9"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "open",
+              "targetRegionId": "region_15"
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_13"
+            }
+          }
+        },
+        {
+          "id": "region_15",
+          "name": "Relic Vale",
+          "type": "starter",
+          "purpose": "player_region",
+          "permanentCore": false,
+          "spawnEligible": true,
+          "spawnReady": true,
+          "worldLayer": 1,
+          "clockwiseOrderIndex": 13,
+          "lifecycle": "active",
+          "gridX": 2,
+          "gridY": 3,
+          "width": 1448,
+          "height": 1086,
+          "mapAsset": "assets/worlds/world_01/maps/versioned/region_15-15-1783025218871-3743b6771813.webp",
+          "thumbnailAsset": "assets/worlds/world_01/thumbnails/versioned/region_15-thumb-8a2499737d59.webp",
+          "regionDefinitionPath": "assets/worlds/world_01/regions/region_15.json",
+          "cityCapacity": 50,
+          "npcCityCount": 73,
+          "objectiveCount": 0,
+          "campCount": 0,
+          "reservations": [],
+          "compatibilityRegion": {
+            "id": "region_15",
+            "label": "Relic Vale",
+            "gridX": 2,
+            "gridY": 3,
+            "x": 11100,
+            "y": 15400,
+            "rx": 1058,
+            "ry": 828,
+            "cityRx": 868,
+            "cityRy": 629,
+            "rot": 0,
+            "palette": "woodland"
+          },
+          "connections": {
+            "north": {
+              "side": "north",
+              "oppositeSide": "south",
+              "state": "open",
+              "targetRegionId": "region_10"
+            },
+            "east": {
+              "side": "east",
+              "oppositeSide": "west",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "south": {
+              "side": "south",
+              "oppositeSide": "north",
+              "state": "gated",
+              "targetRegionId": ""
+            },
+            "west": {
+              "side": "west",
+              "oppositeSide": "east",
+              "state": "open",
+              "targetRegionId": "region_14"
+            }
+          }
+        }
+      ]
+    },
+    "productionMapCount": 15,
+    "productionCityCount": 1050,
+    "directedMapChainCount": 210,
+    "generatedActiveRegionCount": 0,
+    "genericGeneratorUsedForCore": false,
+    "reservedCoreCoordinates": [
+      {
+        "gridX": -2,
+        "gridY": -2,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -1,
+        "gridY": -2,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 0,
+        "gridY": -2,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 1,
+        "gridY": -2,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 2,
+        "gridY": -2,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -2,
+        "gridY": -1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -1,
+        "gridY": -1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 0,
+        "gridY": -1,
+        "reserved": true,
+        "activeRegionId": "north",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_stronghold"
+      },
+      {
+        "gridX": 1,
+        "gridY": -1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 2,
+        "gridY": -1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -2,
+        "gridY": 0,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -1,
+        "gridY": 0,
+        "reserved": true,
+        "activeRegionId": "west",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_stronghold"
+      },
+      {
+        "gridX": 0,
+        "gridY": 0,
+        "reserved": true,
+        "activeRegionId": "center",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_citadel"
+      },
+      {
+        "gridX": 1,
+        "gridY": 0,
+        "reserved": true,
+        "activeRegionId": "east",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_stronghold"
+      },
+      {
+        "gridX": 2,
+        "gridY": 0,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -2,
+        "gridY": 1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -1,
+        "gridY": 1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 0,
+        "gridY": 1,
+        "reserved": true,
+        "activeRegionId": "south",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_stronghold"
+      },
+      {
+        "gridX": 1,
+        "gridY": 1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": 2,
+        "gridY": 1,
+        "reserved": true,
+        "activeRegionId": "",
+        "lifecycle": "reserved",
+        "spawnEligible": false,
+        "reservedPurpose": "core_holding_or_support"
+      },
+      {
+        "gridX": -2,
+        "gridY": 2,
+        "reserved": true,
+        "activeRegionId": "region_6",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_camp"
+      },
+      {
+        "gridX": -1,
+        "gridY": 2,
+        "reserved": true,
+        "activeRegionId": "region_7",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_camp"
+      },
+      {
+        "gridX": 0,
+        "gridY": 2,
+        "reserved": true,
+        "activeRegionId": "region_8",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_support"
+      },
+      {
+        "gridX": 1,
+        "gridY": 2,
+        "reserved": true,
+        "activeRegionId": "region_9",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_camp"
+      },
+      {
+        "gridX": 2,
+        "gridY": 2,
+        "reserved": true,
+        "activeRegionId": "region_10",
+        "lifecycle": "active",
+        "spawnEligible": false,
+        "reservedPurpose": "core_camp"
+      }
+    ]
+  },
+  "lockedRules": {
+    "mapDimensions": {
+      "width": 1448,
+      "height": 1086
+    },
+    "cityCapacity": 40,
+    "startingCandidates": 4,
+    "cardinalRoadCorridors": 4,
+    "cardinalTravelOnly": true,
+    "immutablePublishedPackages": true,
+    "authoritativeEdgeContracts": true,
+    "minimumNpcCitiesForSpawn": 15
+  },
+  "stagingArchitecture": {
+    "firestore": "isolated in-memory emulator semantics matching Phase 7 authoritative collections/transactions",
+    "storage": "isolated immutable content-addressed object store with hash verification",
+    "runtime": "controlled Node worker; never browser render path",
+    "auth": "authenticated crownlands_map_admin audience bound to staging",
+    "featureFlagDefault": false,
+    "productionTargetAllowed": false
+  },
+  "firstRegion": {
+    "coordinate": {
+      "gridX": -3,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 0
+    },
+    "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "lifecycleHistory": [
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "",
+        "to": "ALLOCATED",
+        "reason": "allocation"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "ALLOCATED",
+        "to": "GENERATING",
+        "reason": "worker accepted allocation"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "GENERATING",
+        "to": "VALIDATING",
+        "reason": "package generated"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "VALIDATING",
+        "to": "STANDBY",
+        "reason": "validation passed"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "STANDBY",
+        "to": "PUBLISHING",
+        "reason": "explicit admin publication approval"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "PUBLISHING",
+        "to": "PUBLISHED",
+        "reason": "atomic publication marker committed"
+      },
+      {
+        "regionId": "phase6d_region_0001",
+        "from": "PUBLISHED",
+        "to": "ACTIVE",
+        "reason": "atomic activation transaction committed"
+      }
+    ],
+    "publicationReview": {
+      "regionId": "phase6d_region_0001",
+      "stage": "publication",
+      "mapPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/map.webp",
+      "thumbnailPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/thumbnail.webp",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "roadSocketCount": 4,
+      "edgeContractHash": "fd4ca8c35a12358a1e5895ae47a976ee622166e8eb8d004e0d3e14e6f942d8ce",
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "approved": true
+    },
+    "publication": {
+      "idempotent": false,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    },
+    "immutableStorageVerified": true,
+    "activationReview": {
+      "regionId": "phase6d_region_0001",
+      "stage": "activation",
+      "mapPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/map.webp",
+      "thumbnailPreview": "generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/thumbnail.webp",
+      "cityCount": 40,
+      "startingCandidateCount": 4,
+      "roadSocketCount": 4,
+      "edgeContractHash": "fd4ca8c35a12358a1e5895ae47a976ee622166e8eb8d004e0d3e14e6f942d8ce",
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "validatorPassed": true,
+      "validatorErrors": [],
+      "approved": true
+    },
+    "activationPreflight": {
+      "packageExists": true,
+      "packageHashVerified": true,
+      "immutableAssetsReachable": true,
+      "exactCityDefinitionsReady": 40,
+      "topologyValid": true,
+      "edgeContractsValid": true,
+      "publishedLifecycle": "PUBLISHED",
+      "catalogReady": true,
+      "coordinateUnique": true
+    },
+    "cityRecordsInitialized": 40,
+    "catalogDiscoverableAfterPublication": true,
+    "activeAfterActivation": true,
+    "firstRegionRemainsGatedUntilCardinalNeighborActivation": true,
+    "gateToOpenVerifiedInThreeRegionRehearsal": true,
+    "placementClaimsAccepted": 26,
+    "acceptedAtFifteen": {
+      "cityId": "npc_phase6d_region_0001_9edb7691fc8885",
+      "npcBefore": 15,
+      "npcAfter": 14,
+      "subsequentSpawnEligible": false
+    },
+    "rejectedAtFourteen": {
+      "rejected": true,
+      "code": "spawn-threshold",
+      "message": "Region phase6d_region_0001 is not eligible for a new placement."
+    },
+    "existingGameplayContinuesAtFourteen": true,
+    "standbyPrepared": [
+      "phase6d_region_0002",
+      "phase6d_region_0003"
+    ],
+    "standbyBufferCount": 2,
+    "packageUnchanged": true,
+    "productionTarget": false
+  },
+  "threeRegion": {
+    "coordinates": [
+      {
+        "gridX": -3,
+        "gridY": -3,
+        "worldLayer": 1,
+        "clockwiseOrderIndex": 0
+      },
+      {
+        "gridX": -2,
+        "gridY": -3,
+        "worldLayer": 1,
+        "clockwiseOrderIndex": 1
+      },
+      {
+        "gridX": -1,
+        "gridY": -3,
+        "worldLayer": 1,
+        "clockwiseOrderIndex": 2
+      }
+    ],
+    "activationOrder": [
+      "phase6d_region_0001",
+      "phase6d_region_0002",
+      "phase6d_region_0003"
+    ],
+    "activationSlots": [
+      0,
+      1,
+      2
+    ],
+    "packageHashes": {
+      "phase6d_region_0001": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "phase6d_region_0002": "a6374eca5eaffd81b9eda3ae884cfd7014a7901c2394d837aa8fb158b6ac808c",
+      "phase6d_region_0003": "96e4503dad840dcca6d1ebba8bec4b58b9ea477d34efc20da286b138a8f52801"
+    },
+    "packagesUnchanged": true,
+    "inheritedPublishedEdges": [
+      {
+        "regionId": "phase6d_region_0001",
+        "side": "east",
+        "contractHash": "ac1e43d85a0668c846fc119998814e8894db159a2d468e386931ca2ce8b43ff6"
+      },
+      {
+        "regionId": "phase6d_region_0002",
+        "side": "east",
+        "contractHash": "6d1c735128e770e428bc31e00543f535a0bfc8c2a7b5ca1a508a0fb27976992b"
+      }
+    ],
+    "topology": {
+      "directedOpen": 4,
+      "reciprocalUndirected": 2
+    },
+    "gatedToOpenTransitions": 2,
+    "uniqueCityIds": 120,
+    "hiddenOpenTargets": 0,
+    "unpublishedRegionId": "phase6d_region_0004",
+    "unpublishedEntryRejected": {
+      "rejected": true,
+      "code": "",
+      "message": "Generated region phase6d_region_0004 is not PUBLISHED."
+    },
+    "playerCanEnterUnpublishedRegion": false,
+    "immutablePublishedPackages": true
+  },
+  "standbyBuffer": {
+    "profiles": [
+      {
+        "bufferSize": 1,
+        "runtimeStorageBytes": 365712,
+        "workerFailureScenario": {
+          "consumesOneRegion": true,
+          "nextGenerationAttemptFails": true,
+          "standbyRemaining": 0,
+          "immediateNextActivationCovered": false,
+          "modeledRecoverySeconds": 0.07018790000000001
+        },
+        "playerWaitRisk": "non-zero during one failed replenishment",
+        "controllerComplexity": "baseline"
+      },
+      {
+        "bufferSize": 2,
+        "runtimeStorageBytes": 731424,
+        "workerFailureScenario": {
+          "consumesOneRegion": true,
+          "nextGenerationAttemptFails": true,
+          "standbyRemaining": 1,
+          "immediateNextActivationCovered": true,
+          "modeledRecoverySeconds": 0.07018790000000001
+        },
+        "playerWaitRisk": "covered for one activation plus one failed replenishment",
+        "controllerComplexity": "one additional count target; no additional lifecycle states"
+      }
+    ],
+    "recommendedBufferSize": 2,
+    "evidence": "buffer 2 preserves one ready region after an activation and one worker failure",
+    "automaticPublicationAllowed": false,
+    "automaticActivationAllowed": false,
+    "injectedWorkerFailure": {
+      "rejected": true,
+      "code": "worker-crash-after-map-encode",
+      "message": "Injected worker crash after map encode."
+    },
+    "recoveredPackageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "measuredRecoverySeconds": 0.07018790000000001
+  },
+  "workerCapacity": {
+    "sourceBenchmark": {
+      "phase6dAverageMs": 2468.397,
+      "phase6dP95Ms": 3035.525,
+      "phase6dMaximumMs": 4381.578,
+      "phase8PackageAdapter": {
+        "count": 24,
+        "averageMs": 39.77797500000002,
+        "p50Ms": 38.792850000000044,
+        "p95Ms": 50.683625000000134,
+        "maximumMs": 53.01279999999997
+      }
+    },
+    "profiles": [
+      {
+        "workers": 1,
+        "modeledMapsPerSecond": 0.4051212183453472,
+        "modeledP95MapsPerSecond": 0.3294323057790662,
+        "tenMapQueueDrainSecondsAtP95": 30.355250000000005,
+        "approximatePeakMemoryMiB": 193.66114838918048,
+        "modeledCpuPressurePercent": 45,
+        "storageWriteMiBPerSecond": 0.12046199776819908,
+        "contentionRisk": "low",
+        "coordinateLockRequired": true
+      },
+      {
+        "workers": 2,
+        "modeledMapsPerSecond": 0.7454230417554389,
+        "modeledP95MapsPerSecond": 0.6061554426334819,
+        "tenMapQueueDrainSecondsAtP95": 16.49741847826087,
+        "approximatePeakMemoryMiB": 387.32229677836096,
+        "modeledCpuPressurePercent": 90,
+        "storageWriteMiBPerSecond": 0.22165007589348631,
+        "contentionRisk": "low",
+        "coordinateLockRequired": true
+      },
+      {
+        "workers": 4,
+        "modeledMapsPerSecond": 1.1667491088346,
+        "modeledP95MapsPerSecond": 0.9487650406437106,
+        "tenMapQueueDrainSecondsAtP95": 10.540017361111113,
+        "approximatePeakMemoryMiB": 774.6445935567219,
+        "modeledCpuPressurePercent": 100,
+        "storageWriteMiBPerSecond": 0.34693055357241337,
+        "contentionRisk": "moderate",
+        "coordinateLockRequired": true
+      },
+      {
+        "workers": 8,
+        "modeledMapsPerSecond": 1.45843638604325,
+        "modeledP95MapsPerSecond": 1.1859563008046383,
+        "tenMapQueueDrainSecondsAtP95": 8.43201388888889,
+        "approximatePeakMemoryMiB": 1549.2891871134439,
+        "modeledCpuPressurePercent": 100,
+        "storageWriteMiBPerSecond": 0.4336631919655167,
+        "contentionRisk": "high",
+        "coordinateLockRequired": true
+      }
+    ],
+    "recommendation": {
+      "defaultConcurrency": 2,
+      "maximumWithoutExplicitCapacityReview": 2,
+      "reason": "two workers fit ordinary frontier demand with low lock pressure; four or eight add memory/CPU contention without rollout value",
+      "scalingPolicy": "scale queue consumers horizontally only after oldest-job age exceeds 10 minutes"
+    },
+    "measuredAdapterRssDeltaBytes": 41340928,
+    "coordinateLock": {
+      "allocations": 24,
+      "uniqueCoordinates": 24,
+      "duplicateCoordinates": 0,
+      "serializedReservationRequired": true
+    }
+  },
+  "roadCache": {
+    "combinationsValidated": 36,
+    "recordsEvaluated": 512,
+    "byteIdentical": true,
+    "processLocalFull": {
+      "entries": 36,
+      "approximateMemoryMiB": 196.9834451675415,
+      "operationalRisk": "high memory pressure per worker instance"
+    },
+    "boundedLru": {
+      "limit": 12,
+      "entries": 12,
+      "hits": 252,
+      "misses": 260,
+      "evictions": 248,
+      "hitRate": 0.4921875,
+      "approximateMaximumMemoryMiB": 65.6611483891805,
+      "deterministicOnMiss": true,
+      "networkDependency": false
+    },
+    "sharedImmutable": {
+      "workerMemoryMiB": 0,
+      "addsNetworkDependency": true,
+      "addsCacheServiceFailureMode": true,
+      "recommended": false
+    },
+    "recommendation": {
+      "strategy": "process-local bounded LRU",
+      "entryLimit": 12,
+      "reason": "caps the ~197 MiB full-cache footprint while retaining deterministic byte-identical reconstruction"
+    }
+  },
+  "costModel": {
+    "pricing": {
+      "planningRegion": "us-central1",
+      "currency": "USD",
+      "firestoreStandardReadsPer100k": 0.03,
+      "firestoreStandardWritesPer100k": 0.09,
+      "firestoreStoragePerGiBHour": 0.0002,
+      "cloudStorageStandardPerGiBMonth": 0.02,
+      "cloudStorageClassAPer1000": 0.005,
+      "cloudStorageClassBPer1000": 0.0004,
+      "conservativeInternetEgressPerGiB": 0.12,
+      "freeCloudStorageEgressGiBPerMonth": 100,
+      "sourceUrls": [
+        "https://firebase.google.com/docs/firestore/pricing",
+        "https://firebase.google.com/docs/firestore/standard-edition",
+        "https://cloud.google.com/storage/pricing"
+      ],
+      "verifiedDate": "2026-08-16"
+    },
+    "assumptions": {
+      "firestoreDocumentsPerRegion": 47,
+      "firestoreIndexedStorageBytesPerRegion": 81920,
+      "oneTimeReadsPerRegion": 227,
+      "oneTimeWritesPerRegion": 135,
+      "packageObjectsUploadedPerRegion": 12,
+      "mapAndThumbnailDownloadsPerRegionPerMonth": 200,
+      "mapViewsPerRegionPerMonth": 100,
+      "cdnOriginMissRate": 0.1
+    },
+    "projections": {
+      "1000": {
+        "regionCount": 1000,
+        "firestore": {
+          "staticDocuments": 47000,
+          "oneTimeReads": 227000,
+          "oneTimeWrites": 135000,
+          "oneTimeOperationCostBeforeFreeTierUsd": 0.1896,
+          "indexedStorageGiB": 0.0762939453125,
+          "indexedStorageMonthlyCostUsd": 0.011138916015625
+        },
+        "cloudStorage": {
+          "runtimeMapAndThumbnailGiB": 0.2765494715422392,
+          "completePackageGiB": 0.3166037928313017,
+          "monthlyAtRestCostUsd": 0.0063320758566260335,
+          "oneTimeClassAUploads": 12000,
+          "oneTimeClassAUploadCostUsd": 0.06,
+          "monthlyClassBDownloads": 200000,
+          "monthlyClassBDownloadCostUsd": 0.08,
+          "noCdnOriginEgressGiB": 27.65494715422392,
+          "noCdnConservativeEgressCostUsd": 0,
+          "ninetyPercentCdnHitOriginEgressGiB": 2.765494715422392,
+          "ninetyPercentCdnHitConservativeEgressCostUsd": 0
+        }
+      },
+      "10000": {
+        "regionCount": 10000,
+        "firestore": {
+          "staticDocuments": 470000,
+          "oneTimeReads": 2270000,
+          "oneTimeWrites": 1350000,
+          "oneTimeOperationCostBeforeFreeTierUsd": 1.896,
+          "indexedStorageGiB": 0.762939453125,
+          "indexedStorageMonthlyCostUsd": 0.11138916015625
+        },
+        "cloudStorage": {
+          "runtimeMapAndThumbnailGiB": 2.765494715422392,
+          "completePackageGiB": 3.166037928313017,
+          "monthlyAtRestCostUsd": 0.06332075856626034,
+          "oneTimeClassAUploads": 120000,
+          "oneTimeClassAUploadCostUsd": 0.6,
+          "monthlyClassBDownloads": 2000000,
+          "monthlyClassBDownloadCostUsd": 0.8,
+          "noCdnOriginEgressGiB": 276.5494715422392,
+          "noCdnConservativeEgressCostUsd": 21.185936585068703,
+          "ninetyPercentCdnHitOriginEgressGiB": 27.65494715422392,
+          "ninetyPercentCdnHitConservativeEgressCostUsd": 0
+        }
+      },
+      "100000": {
+        "regionCount": 100000,
+        "firestore": {
+          "staticDocuments": 4700000,
+          "oneTimeReads": 22700000,
+          "oneTimeWrites": 13500000,
+          "oneTimeOperationCostBeforeFreeTierUsd": 18.96,
+          "indexedStorageGiB": 7.62939453125,
+          "indexedStorageMonthlyCostUsd": 1.1138916015625
+        },
+        "cloudStorage": {
+          "runtimeMapAndThumbnailGiB": 27.65494715422392,
+          "completePackageGiB": 31.66037928313017,
+          "monthlyAtRestCostUsd": 0.6332075856626034,
+          "oneTimeClassAUploads": 1200000,
+          "oneTimeClassAUploadCostUsd": 6,
+          "monthlyClassBDownloads": 20000000,
+          "monthlyClassBDownloadCostUsd": 8,
+          "noCdnOriginEgressGiB": 2765.494715422392,
+          "noCdnConservativeEgressCostUsd": 319.859365850687,
+          "ninetyPercentCdnHitOriginEgressGiB": 276.5494715422392,
+          "ninetyPercentCdnHitConservativeEgressCostUsd": 21.185936585068703
+        }
+      }
+    },
+    "caveat": "Pricing is a planning snapshot. Confirm deployed regions, bucket class, CDN contract, free-tier eligibility, backups, and log volume before rollout."
+  },
+  "orphanCleanup": {
+    "retentionRules": {
+      "generatingHours": 24,
+      "abandonedUploadHours": 168,
+      "failedHours": 720,
+      "rolledBackHours": 720,
+      "supersededUnpublishedHours": 720,
+      "publishedHours": "infinite"
+    },
+    "plan": [
+      {
+        "packageHash": "generating-old",
+        "status": "GENERATING",
+        "updatedAtMs": 1786708800000,
+        "ageHours": 48,
+        "requiredRetentionHours": 24,
+        "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+        "automaticDeleteAllowed": true,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "abandoned-old",
+        "status": "ABANDONED_UPLOAD",
+        "updatedAtMs": 1786190400000,
+        "ageHours": 192,
+        "requiredRetentionHours": 168,
+        "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+        "automaticDeleteAllowed": true,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "failed-young",
+        "status": "FAILED",
+        "updatedAtMs": 1786017600000,
+        "ageHours": 240,
+        "requiredRetentionHours": 720,
+        "action": "RETAIN_UNTIL_EXPIRY",
+        "automaticDeleteAllowed": false,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "rolled-back-old",
+        "status": "ROLLED_BACK",
+        "updatedAtMs": 1784203200000,
+        "ageHours": 744,
+        "requiredRetentionHours": 720,
+        "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+        "automaticDeleteAllowed": true,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "superseded-old",
+        "status": "SUPERSEDED_UNPUBLISHED",
+        "updatedAtMs": 1784203200000,
+        "ageHours": 744,
+        "requiredRetentionHours": 720,
+        "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+        "automaticDeleteAllowed": true,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "published-never-delete",
+        "status": "PUBLISHED",
+        "updatedAtMs": 1755345600000,
+        "ageHours": 8760,
+        "requiredRetentionHours": null,
+        "action": "RETAIN_IMMUTABLE",
+        "automaticDeleteAllowed": false,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      },
+      {
+        "packageHash": "published-marker-wins",
+        "status": "FAILED",
+        "updatedAtMs": 1755345600000,
+        "ageHours": 8760,
+        "requiredRetentionHours": 720,
+        "action": "RETAIN_IMMUTABLE",
+        "automaticDeleteAllowed": false,
+        "diagnosticReceiptRequired": true,
+        "publicationMarkerChecked": true
+      }
+    ],
+    "publishedAutomaticDeletes": 0,
+    "dryRunRequired": true
+  },
+  "backupRecovery": {
+    "backups": {
+      "firestore": {
+        "managedDailyBackup": true,
+        "pointInTimeRecoveryDays": 7,
+        "restoreRehearsalQuarterly": true
+      },
+      "storage": {
+        "objectVersioning": true,
+        "manifestInventoryDaily": true,
+        "hashAuditWeekly": true
+      },
+      "configuration": {
+        "coreTemplateVersioned": true,
+        "assetManifestVersioned": true,
+        "rolloutGateExported": true
+      }
+    },
+    "recoveryOrder": [
+      "engage expansion/publication/activation kill switches",
+      "restore world and season identity plus permanent Core configuration",
+      "restore publication markers, immutable package manifests, and edge contracts",
+      "restore and hash-verify immutable package assets",
+      "restore region lifecycle catalog and topology runtime state",
+      "restore city ownership for the current reset generation",
+      "reconcile ACTIVE markers without regenerating published packages",
+      "validate player placement and normal gameplay before releasing kill switches"
+    ],
+    "publishedAssetsRecoverableByHash": true,
+    "publishedPackageRegenerationAllowed": false,
+    "targetRpoHours": 1,
+    "targetRtoHours": 4
+  },
+  "securityAndStateMachine": {
+    "productionFeatureFlagDefault": false,
+    "playerEscalation": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "playerDeniedActions": {
+      "generate": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "review": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "publish": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "activate": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "reject": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "retry": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "regenerate": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "edge_contract_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "package_hash_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "lifecycle_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      }
+    },
+    "forgedAdmin": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "malformedRequest": {
+      "rejected": true,
+      "code": "malformed-request",
+      "message": "The Phase 8 admin request schema is required."
+    },
+    "productionTarget": {
+      "rejected": true,
+      "code": "production-target-forbidden",
+      "message": "Phase 8 cannot target production."
+    },
+    "staleAdmin": {
+      "rejected": true,
+      "code": "stale-admin-client",
+      "message": "The admin client control revision is stale."
+    },
+    "operationKillSwitches": {
+      "generation": {
+        "rejected": true,
+        "code": "generation-killed",
+        "message": "Automatic generation is stopped."
+      },
+      "publication": {
+        "rejected": true,
+        "code": "publication-killed",
+        "message": "Package publication is stopped."
+      },
+      "activation": {
+        "rejected": true,
+        "code": "activation-killed",
+        "message": "Generated-region activation is stopped."
+      },
+      "expansion": {
+        "rejected": true,
+        "code": "expansion-killed",
+        "message": "Generated-world expansion is stopped."
+      }
+    },
+    "privilegedWrites": {
+      "edge_contract_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "package_hash_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      },
+      "lifecycle_write": {
+        "rejected": true,
+        "code": "permission-denied",
+        "message": "Authenticated Crownlands map-admin authority is required."
+      }
+    },
+    "illegalTransitions": {
+      "allocatedToActive": {
+        "rejected": true,
+        "code": "illegal-lifecycle-transition",
+        "message": "ALLOCATED -> ACTIVE is forbidden for allocated-direct-active."
+      },
+      "failedToActive": {
+        "rejected": true,
+        "code": "illegal-lifecycle-transition",
+        "message": "FAILED -> ACTIVE is forbidden for failed-direct-active."
+      },
+      "publishedToGenerating": {
+        "rejected": true,
+        "code": "illegal-lifecycle-transition",
+        "message": "PUBLISHED -> GENERATING is forbidden for published-generating."
+      },
+      "activeToStandby": {
+        "rejected": true,
+        "code": "illegal-lifecycle-transition",
+        "message": "ACTIVE -> STANDBY is forbidden for published-generating."
+      }
+    },
+    "validTransitionPath": [
+      "ALLOCATED",
+      "GENERATING",
+      "VALIDATING",
+      "STANDBY",
+      "PUBLISHING",
+      "PUBLISHED",
+      "ACTIVE"
+    ],
+    "killSwitch": {
+      "expansionStopped": {
+        "rejected": true,
+        "code": "expansion-killed",
+        "message": "Generated-world expansion is stopped."
+      },
+      "existingGameplayContinues": true,
+      "gameplayClaim": {
+        "cityId": "npc_phase6d_region_0001_07cb109877ed9f",
+        "npcBefore": 40,
+        "npcAfter": 39,
+        "subsequentSpawnEligible": true
+      },
+      "snapshot": {
+        "schemaVersion": "phase8-expansion-control-v1",
+        "environment": "phase8-production-equivalent-staging",
+        "revision": 2,
+        "productionRolloutEnabled": false,
+        "featureFlagDefault": false,
+        "stagingRehearsalEnabled": true,
+        "generationWhileProductionGateOff": true,
+        "killSwitch": {
+          "expansion": true,
+          "generation": false,
+          "publication": false,
+          "activation": false
+        },
+        "approvalCount": 2,
+        "auditEntries": 8
+      }
+    },
+    "multipleAdminPublication": [
+      {
+        "idempotent": false,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      },
+      {
+        "idempotent": true,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      }
+    ],
+    "normalPlayersCanInvokeAdminOperations": false
+  },
+  "activationFaults": {
+    "injectedFaults": [
+      {
+        "faultAt": "before_activation",
+        "failure": {
+          "rejected": true,
+          "code": "before-activation-failure",
+          "message": "Injected failure before activation."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "firestore_timeout",
+        "failure": {
+          "rejected": true,
+          "code": "firestore-timeout",
+          "message": "Injected Firestore transaction timeout."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "activation_transaction",
+        "failure": {
+          "rejected": true,
+          "code": "activation-transaction-failed",
+          "message": "Injected activation transaction failure."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "after_city_staging",
+        "failure": {
+          "rejected": true,
+          "code": "activation-staging-failure",
+          "message": "Injected failure after non-authoritative city staging."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "catalog_delay",
+        "failure": {
+          "rejected": true,
+          "code": "catalog-delay",
+          "message": "Injected catalog visibility delay."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "hash_mismatch",
+        "failure": {
+          "rejected": true,
+          "code": "package-hash-mismatch",
+          "message": "Injected package-hash mismatch."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "missing_map",
+        "failure": {
+          "rejected": true,
+          "code": "missing-map",
+          "message": "Immutable map asset is unreachable."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "missing_thumbnail",
+        "failure": {
+          "rejected": true,
+          "code": "missing-thumbnail",
+          "message": "Immutable thumbnail asset is unreachable."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "invalid_city_count",
+        "failure": {
+          "rejected": true,
+          "code": "invalid-city-count",
+          "message": "Activation requires exactly 40 ready city definitions."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "conflicting_edge_contract",
+        "failure": {
+          "rejected": true,
+          "code": "conflicting-edge-contract",
+          "message": "Published edge inheritance failed."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      },
+      {
+        "faultAt": "coordinate_conflict",
+        "failure": {
+          "rejected": true,
+          "code": "coordinate-conflict",
+          "message": "Activation coordinate is not uniquely reserved."
+        },
+        "lifecycleAfter": "PUBLISHED",
+        "cityOwnershipRecordsVisible": 0,
+        "activeMarkers": 0,
+        "partialActivationVisible": false
+      }
+    ],
+    "allFaultsAtomic": true,
+    "idempotentRetry": {
+      "idempotent": true,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "ACTIVE"
+    },
+    "cityRecordsAfterSuccessfulRetry": 40
+  },
+  "runtimePerformance": {
+    "catalogRegions": 10000,
+    "startupCatalogBytes": 4156,
+    "firstLayerPageBytes": 4917,
+    "definitionsPreloaded": false,
+    "cityDefinitionsPreloaded": false,
+    "mapBytesPreloaded": false,
+    "cache": {
+      "cacheLimit": 4,
+      "cacheSize": 4,
+      "pageSize": 64,
+      "startup": {
+        "count": 1,
+        "averageMs": 3.079899999999725,
+        "p50Ms": 3.079899999999725,
+        "p95Ms": 3.079899999999725,
+        "maximumMs": 3.079899999999725
+      },
+      "page": {
+        "count": 1,
+        "averageMs": 0.21780000000035216,
+        "p50Ms": 0.21780000000035216,
+        "p95Ms": 0.21780000000035216,
+        "maximumMs": 0.21780000000035216
+      },
+      "fetch": {
+        "count": 6,
+        "averageMs": 0.012316666666644474,
+        "p50Ms": 0.003849999999829379,
+        "p95Ms": 0.03945000000010168,
+        "maximumMs": 0.047700000000077125
+      }
+    },
+    "mapSwitchFetchP95Ms": 0.03945000000010168,
+    "handcraftedMapCount": 15,
+    "generatedMapDimensions": {
+      "width": 1448,
+      "height": 1086
+    },
+    "mobilePlanningGate": true,
+    "limitation": "A physical-device network/render rehearsal remains required before production activation."
+  },
+  "cdn": {
+    "immutableAssets": {
+      "pathIncludesPackageHash": true,
+      "cacheControl": "public, max-age=31536000, immutable",
+      "etag": "sha256 package-file hash",
+      "overwriteAllowed": false
+    },
+    "mutableCatalog": {
+      "contentAddressedAssetReferencesOnly": true,
+      "cacheControl": "private, no-cache",
+      "generationVersionRequired": true
+    },
+    "staleMutableReferenceRisk": false,
+    "publishedHashReplacementAllowed": false
+  },
+  "studioAdmin": {
+    "workflow": [
+      "next coordinate",
+      "map preview",
+      "40 cities",
+      "road sockets",
+      "edge contracts",
+      "validator",
+      "approve/reject",
+      "publish",
+      "activate"
+    ],
+    "publicationApprovalRequired": true,
+    "activationApprovalRequired": true,
+    "automaticPublicationAllowed": false,
+    "reviewsExecuted": true
+  },
+  "seasonBootstrap": {
+    "seasonId": "phase8-future-season-rehearsal",
+    "coreRegionCount": 25,
+    "coreSpawnEligibleCount": 0,
+    "holdingTowerReservationsPresent": true,
+    "seasonalObjectiveStateInitialized": [
+      {
+        "regionId": "phase5_core_reservation_0_0",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_1_0",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_2_0",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_3_0",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_4_0",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_0_1",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_1_1",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "north",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_3_1",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_4_1",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_0_2",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "west",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "center",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "east",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_4_2",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_0_3",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_1_3",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "south",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_3_3",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "phase5_core_reservation_4_3",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "region_6",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "region_7",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "region_8",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "region_9",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      },
+      {
+        "regionId": "region_10",
+        "ownerUid": "",
+        "generation": "phase8-future-season"
+      }
+    ],
+    "destructiveResetPerformed": false,
+    "productionTarget": false,
+    "packageAdapterWorldId": "phase6d_development_world",
+    "packageAdapterSeasonId": "phase6d_development_season",
+    "futureSeasonPackagesMustBeFreshlyGenerated": true,
+    "approvedRasterRecordsRelabeledAcrossSeasons": false,
+    "firstExpansionCoordinate": {
+      "gridX": -3,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 0
+    },
+    "initialStandbyRegions": [
+      "phase6d_region_0001",
+      "phase6d_region_0002"
+    ],
+    "activatedInitialCapacityRegion": "phase6d_region_0001",
+    "replacementStandbyRegion": "phase6d_region_0003",
+    "finalStandbyBuffer": 2,
+    "simulatedPlacements": [
+      {
+        "cityId": "npc_phase6d_region_0001_07cb109877ed9f",
+        "npcBefore": 40,
+        "npcAfter": 39,
+        "subsequentSpawnEligible": true
+      },
+      {
+        "cityId": "npc_phase6d_region_0001_08a0f87f765cae",
+        "npcBefore": 39,
+        "npcAfter": 38,
+        "subsequentSpawnEligible": true
+      }
+    ],
+    "productionWorldModified": false
+  },
+  "persistenceAudit": {
+    "preservedAcrossFutureSeasonReset": [
+      "player flag and customization",
+      "persistent Clan identity and membership",
+      "Common Gear ownership",
+      "equipped Common Gear",
+      "Common Gear levels, upgrades, and progression"
+    ],
+    "seasonalReset": [
+      "cities and city ownership",
+      "objectives and objective control",
+      "marches and armies",
+      "generated-region activation state",
+      "normal consumable inventory"
+    ],
+    "livePersistenceBehaviorModified": false
+  },
+  "monitoring": {
+    "generationFailureRate": {
+      "warning": ">2% for 15m or 3 consecutive",
+      "critical": ">5% for 15m"
+    },
+    "retryRate": {
+      "warning": ">1 retry/map over 15m",
+      "critical": "5 consecutive exhausted jobs"
+    },
+    "publicationFailure": {
+      "critical": "any non-idempotent failure"
+    },
+    "activationFailure": {
+      "critical": "any failure"
+    },
+    "packageHashMismatch": {
+      "critical": "any mismatch; engage activation kill switch"
+    },
+    "duplicateCoordinate": {
+      "critical": "any non-idempotent collision"
+    },
+    "edgeInheritanceFailure": {
+      "critical": "any failure"
+    },
+    "storageUploadFailure": {
+      "warning": ">1% over 5m",
+      "critical": ">5% over 5m"
+    },
+    "standbyBuffer": {
+      "warning": "below 2 for 5m",
+      "critical": "zero while placement capacity is low"
+    },
+    "workerQueue": {
+      "warning": "oldest job >10m or depth >4",
+      "critical": "oldest job >30m"
+    },
+    "controllerHeartbeat": {
+      "warning": "missing 2m",
+      "critical": "missing 5m"
+    },
+    "spawnPlacementFailure": {
+      "warning": ">5% over 10m excluding expected threshold rejections",
+      "critical": ">15% over 10m"
+    },
+    "sensitivePlayerDataInLogsAllowed": false
+  },
+  "rolloutAndRollback": {
+    "stages": [
+      {
+        "stage": 0,
+        "action": "deploy code with generated-world feature flag OFF",
+        "rollback": "code rollback only; world unchanged"
+      },
+      {
+        "stage": 1,
+        "action": "verify 15 maps, 1,050 cities, 210 chains, zero generated ACTIVE",
+        "rollback": "stop; investigate baseline drift"
+      },
+      {
+        "stage": 2,
+        "action": "generate first package and retain STANDBY",
+        "rollback": "reject or retry unpublished package at same coordinate"
+      },
+      {
+        "stage": 3,
+        "action": "publish immutable package but keep inactive",
+        "rollback": "disable activation; retain published package and marker"
+      },
+      {
+        "stage": 4,
+        "action": "admin verify hashes, 40 city definitions, sockets, edges, catalog",
+        "rollback": "keep PUBLISHED/inactive; never regenerate"
+      },
+      {
+        "stage": 5,
+        "action": "enable scoped gate and atomically activate first region",
+        "rollback": "engage activation/expansion kill switches; preserve ownership"
+      },
+      {
+        "stage": 6,
+        "action": "monitor one complete health window",
+        "rollback": "stop expansion; existing ACTIVE gameplay continues"
+      },
+      {
+        "stage": 7,
+        "action": "prepare next clockwise region only after healthy review",
+        "rollback": "retain buffer; do not publish or activate"
+      }
+    ],
+    "codeRollbackNeverDeletesWorldData": true,
+    "worldDataRollbackRequiresReviewedMigration": true,
+    "activeOwnershipMustBePreserved": true,
+    "publishedPackageDeleteOrRegenerationAllowed": false
+  },
+  "loadAndFault": {
+    "workerCrash": {
+      "rejected": true,
+      "code": "worker-crash-after-map-encode",
+      "message": "Injected worker crash after map encode."
+    },
+    "firestoreTimeoutCoveredByActivationSuite": true,
+    "storageTimeout": {
+      "faultAt": "after_asset_upload",
+      "failure": {
+        "rejected": true,
+        "code": "crash-after-asset-upload",
+        "message": "Injected worker crash after asset upload."
+      },
+      "retry": {
+        "idempotent": false,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      },
+      "partialPublicationVisible": false
+    },
+    "duplicateRequestCoveredByPublicationAndActivationRaces": true,
+    "publicationFaults": [
+      {
+        "faultAt": "after_asset_upload",
+        "failure": {
+          "rejected": true,
+          "code": "crash-after-asset-upload",
+          "message": "Injected worker crash after asset upload."
+        },
+        "retry": {
+          "idempotent": false,
+          "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+          "lifecycle": "PUBLISHED"
+        },
+        "partialPublicationVisible": false
+      },
+      {
+        "faultAt": "publication_transaction",
+        "failure": {
+          "rejected": true,
+          "code": "publication-transaction-failed",
+          "message": "Injected publication transaction failure."
+        },
+        "retry": {
+          "idempotent": false,
+          "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+          "lifecycle": "PUBLISHED"
+        },
+        "partialPublicationVisible": false
+      },
+      {
+        "faultAt": "validator_failure",
+        "failure": {
+          "rejected": true,
+          "code": "package-validation-failed",
+          "message": "Injected package validator failure."
+        },
+        "retry": {
+          "idempotent": false,
+          "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+          "lifecycle": "PUBLISHED"
+        },
+        "partialPublicationVisible": false
+      }
+    ],
+    "publishRetriesSucceeded": true,
+    "activationRetryCoveredByActivationSuite": true,
+    "controllerRestart": [
+      {
+        "regionId": "phase6d_region_0001",
+        "action": "rollback_interrupted_publication"
+      }
+    ],
+    "malformedPackageRejected": {
+      "rejected": true,
+      "code": "",
+      "message": "not_exactly_40_cities duplicate_city_ids"
+    },
+    "hashMismatchCoveredByActivationSuite": true,
+    "missingThumbnailCoveredByActivationSuite": true,
+    "missingMapCoveredByActivationSuite": true,
+    "invalidCityCountCovered": true,
+    "conflictingEdgeCoveredByActivationSuite": true,
+    "catalogDelayCoveredByActivationSuite": true,
+    "staleAdminCoveredBySecuritySuite": true,
+    "multipleAdminActionsCoveredBySecuritySuite": true
+  },
+  "readiness": {
+    "firstRegionRehearsalPassed": true,
+    "threeRegionRehearsalPassed": true,
+    "standbyBufferValidated": true,
+    "workerRecommendationEstablished": true,
+    "roadCacheStrategyEstablished": true,
+    "operationalCostsDocumented": true,
+    "orphanCleanupSafe": true,
+    "backupRecoveryDefined": true,
+    "securityAndStateMachinePassed": true,
+    "activationAtomic": true,
+    "featureFlagOff": true,
+    "killSwitchPassed": true,
+    "monitoringThresholdsDefined": true,
+    "seasonBootstrapPassed": true,
+    "runtimeLazyLoadingPassed": true,
+    "rollbackPerStageDefined": true,
+    "productionUnchanged": true
+  },
+  "knownLimitations": [
+    "No real staging Firebase project or bucket was mutated; the rehearsal is local/emulator-only.",
+    "Cloud billing projections depend on deployment region, free-tier eligibility, CDN contract, backup retention, and actual traffic.",
+    "Physical mobile-device render/network testing is still required before first production activation.",
+    "Production security rules, IAM bindings, alert routes, backups, and feature flags remain rollout tasks, not Phase 8 writes."
+  ],
+  "blockersBeforeFirstProductionDeployment": [
+    "provision an isolated production-equivalent Firebase staging project and rerun the same receipts against it",
+    "implement and review production IAM/Security Rules for the Phase 8 admin contract",
+    "provision the authoritative feature flag and kill switches with default OFF",
+    "configure backups, PITR, Storage versioning, CDN headers, dashboards, budgets, and alert routing",
+    "complete physical-device and network QA against staged generated maps",
+    "approve a Stage 0 code-only deployment plan with explicit operator ownership and rollback window"
+  ],
+  "recommendedNextPhase": "Phase 9 should be a reviewed staging-project implementation and Stage 0 code-deployment preparation only; it must not activate regions automatically."
+}

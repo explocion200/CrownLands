@@ -1,0 +1,105 @@
+{
+  "pricing": {
+    "planningRegion": "us-central1",
+    "currency": "USD",
+    "firestoreStandardReadsPer100k": 0.03,
+    "firestoreStandardWritesPer100k": 0.09,
+    "firestoreStoragePerGiBHour": 0.0002,
+    "cloudStorageStandardPerGiBMonth": 0.02,
+    "cloudStorageClassAPer1000": 0.005,
+    "cloudStorageClassBPer1000": 0.0004,
+    "conservativeInternetEgressPerGiB": 0.12,
+    "freeCloudStorageEgressGiBPerMonth": 100,
+    "sourceUrls": [
+      "https://firebase.google.com/docs/firestore/pricing",
+      "https://firebase.google.com/docs/firestore/standard-edition",
+      "https://cloud.google.com/storage/pricing"
+    ],
+    "verifiedDate": "2026-08-16"
+  },
+  "assumptions": {
+    "firestoreDocumentsPerRegion": 47,
+    "firestoreIndexedStorageBytesPerRegion": 81920,
+    "oneTimeReadsPerRegion": 227,
+    "oneTimeWritesPerRegion": 135,
+    "packageObjectsUploadedPerRegion": 12,
+    "mapAndThumbnailDownloadsPerRegionPerMonth": 200,
+    "mapViewsPerRegionPerMonth": 100,
+    "cdnOriginMissRate": 0.1
+  },
+  "projections": {
+    "1000": {
+      "regionCount": 1000,
+      "firestore": {
+        "staticDocuments": 47000,
+        "oneTimeReads": 227000,
+        "oneTimeWrites": 135000,
+        "oneTimeOperationCostBeforeFreeTierUsd": 0.1896,
+        "indexedStorageGiB": 0.0762939453125,
+        "indexedStorageMonthlyCostUsd": 0.011138916015625
+      },
+      "cloudStorage": {
+        "runtimeMapAndThumbnailGiB": 0.2765494715422392,
+        "completePackageGiB": 0.3166037928313017,
+        "monthlyAtRestCostUsd": 0.0063320758566260335,
+        "oneTimeClassAUploads": 12000,
+        "oneTimeClassAUploadCostUsd": 0.06,
+        "monthlyClassBDownloads": 200000,
+        "monthlyClassBDownloadCostUsd": 0.08,
+        "noCdnOriginEgressGiB": 27.65494715422392,
+        "noCdnConservativeEgressCostUsd": 0,
+        "ninetyPercentCdnHitOriginEgressGiB": 2.765494715422392,
+        "ninetyPercentCdnHitConservativeEgressCostUsd": 0
+      }
+    },
+    "10000": {
+      "regionCount": 10000,
+      "firestore": {
+        "staticDocuments": 470000,
+        "oneTimeReads": 2270000,
+        "oneTimeWrites": 1350000,
+        "oneTimeOperationCostBeforeFreeTierUsd": 1.896,
+        "indexedStorageGiB": 0.762939453125,
+        "indexedStorageMonthlyCostUsd": 0.11138916015625
+      },
+      "cloudStorage": {
+        "runtimeMapAndThumbnailGiB": 2.765494715422392,
+        "completePackageGiB": 3.166037928313017,
+        "monthlyAtRestCostUsd": 0.06332075856626034,
+        "oneTimeClassAUploads": 120000,
+        "oneTimeClassAUploadCostUsd": 0.6,
+        "monthlyClassBDownloads": 2000000,
+        "monthlyClassBDownloadCostUsd": 0.8,
+        "noCdnOriginEgressGiB": 276.5494715422392,
+        "noCdnConservativeEgressCostUsd": 21.185936585068703,
+        "ninetyPercentCdnHitOriginEgressGiB": 27.65494715422392,
+        "ninetyPercentCdnHitConservativeEgressCostUsd": 0
+      }
+    },
+    "100000": {
+      "regionCount": 100000,
+      "firestore": {
+        "staticDocuments": 4700000,
+        "oneTimeReads": 22700000,
+        "oneTimeWrites": 13500000,
+        "oneTimeOperationCostBeforeFreeTierUsd": 18.96,
+        "indexedStorageGiB": 7.62939453125,
+        "indexedStorageMonthlyCostUsd": 1.1138916015625
+      },
+      "cloudStorage": {
+        "runtimeMapAndThumbnailGiB": 27.65494715422392,
+        "completePackageGiB": 31.66037928313017,
+        "monthlyAtRestCostUsd": 0.6332075856626034,
+        "oneTimeClassAUploads": 1200000,
+        "oneTimeClassAUploadCostUsd": 6,
+        "monthlyClassBDownloads": 20000000,
+        "monthlyClassBDownloadCostUsd": 8,
+        "noCdnOriginEgressGiB": 2765.494715422392,
+        "noCdnConservativeEgressCostUsd": 319.859365850687,
+        "ninetyPercentCdnHitOriginEgressGiB": 276.5494715422392,
+        "ninetyPercentCdnHitConservativeEgressCostUsd": 21.185936585068703
+      }
+    }
+  },
+  "caveat": "Pricing is a planning snapshot. Confirm deployed regions, bucket class, CDN contract, free-tier eligibility, backups, and log volume before rollout."
+}

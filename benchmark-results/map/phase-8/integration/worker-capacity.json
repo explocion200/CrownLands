@@ -1,0 +1,73 @@
+{
+  "sourceBenchmark": {
+    "phase6dAverageMs": 2468.397,
+    "phase6dP95Ms": 3035.525,
+    "phase6dMaximumMs": 4381.578,
+    "phase8PackageAdapter": {
+      "count": 24,
+      "averageMs": 39.77797500000002,
+      "p50Ms": 38.792850000000044,
+      "p95Ms": 50.683625000000134,
+      "maximumMs": 53.01279999999997
+    }
+  },
+  "profiles": [
+    {
+      "workers": 1,
+      "modeledMapsPerSecond": 0.4051212183453472,
+      "modeledP95MapsPerSecond": 0.3294323057790662,
+      "tenMapQueueDrainSecondsAtP95": 30.355250000000005,
+      "approximatePeakMemoryMiB": 193.66114838918048,
+      "modeledCpuPressurePercent": 45,
+      "storageWriteMiBPerSecond": 0.12046199776819908,
+      "contentionRisk": "low",
+      "coordinateLockRequired": true
+    },
+    {
+      "workers": 2,
+      "modeledMapsPerSecond": 0.7454230417554389,
+      "modeledP95MapsPerSecond": 0.6061554426334819,
+      "tenMapQueueDrainSecondsAtP95": 16.49741847826087,
+      "approximatePeakMemoryMiB": 387.32229677836096,
+      "modeledCpuPressurePercent": 90,
+      "storageWriteMiBPerSecond": 0.22165007589348631,
+      "contentionRisk": "low",
+      "coordinateLockRequired": true
+    },
+    {
+      "workers": 4,
+      "modeledMapsPerSecond": 1.1667491088346,
+      "modeledP95MapsPerSecond": 0.9487650406437106,
+      "tenMapQueueDrainSecondsAtP95": 10.540017361111113,
+      "approximatePeakMemoryMiB": 774.6445935567219,
+      "modeledCpuPressurePercent": 100,
+      "storageWriteMiBPerSecond": 0.34693055357241337,
+      "contentionRisk": "moderate",
+      "coordinateLockRequired": true
+    },
+    {
+      "workers": 8,
+      "modeledMapsPerSecond": 1.45843638604325,
+      "modeledP95MapsPerSecond": 1.1859563008046383,
+      "tenMapQueueDrainSecondsAtP95": 8.43201388888889,
+      "approximatePeakMemoryMiB": 1549.2891871134439,
+      "modeledCpuPressurePercent": 100,
+      "storageWriteMiBPerSecond": 0.4336631919655167,
+      "contentionRisk": "high",
+      "coordinateLockRequired": true
+    }
+  ],
+  "recommendation": {
+    "defaultConcurrency": 2,
+    "maximumWithoutExplicitCapacityReview": 2,
+    "reason": "two workers fit ordinary frontier demand with low lock pressure; four or eight add memory/CPU contention without rollout value",
+    "scalingPolicy": "scale queue consumers horizontally only after oldest-job age exceeds 10 minutes"
+  },
+  "measuredAdapterRssDeltaBytes": 41340928,
+  "coordinateLock": {
+    "allocations": 24,
+    "uniqueCoordinates": 24,
+    "duplicateCoordinates": 0,
+    "serializedReservationRequired": true
+  }
+}

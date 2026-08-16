@@ -1,0 +1,88 @@
+{
+  "workerCrash": {
+    "rejected": true,
+    "code": "worker-crash-after-map-encode",
+    "message": "Injected worker crash after map encode."
+  },
+  "firestoreTimeoutCoveredByActivationSuite": true,
+  "storageTimeout": {
+    "faultAt": "after_asset_upload",
+    "failure": {
+      "rejected": true,
+      "code": "crash-after-asset-upload",
+      "message": "Injected worker crash after asset upload."
+    },
+    "retry": {
+      "idempotent": false,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    },
+    "partialPublicationVisible": false
+  },
+  "duplicateRequestCoveredByPublicationAndActivationRaces": true,
+  "publicationFaults": [
+    {
+      "faultAt": "after_asset_upload",
+      "failure": {
+        "rejected": true,
+        "code": "crash-after-asset-upload",
+        "message": "Injected worker crash after asset upload."
+      },
+      "retry": {
+        "idempotent": false,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      },
+      "partialPublicationVisible": false
+    },
+    {
+      "faultAt": "publication_transaction",
+      "failure": {
+        "rejected": true,
+        "code": "publication-transaction-failed",
+        "message": "Injected publication transaction failure."
+      },
+      "retry": {
+        "idempotent": false,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      },
+      "partialPublicationVisible": false
+    },
+    {
+      "faultAt": "validator_failure",
+      "failure": {
+        "rejected": true,
+        "code": "package-validation-failed",
+        "message": "Injected package validator failure."
+      },
+      "retry": {
+        "idempotent": false,
+        "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+        "lifecycle": "PUBLISHED"
+      },
+      "partialPublicationVisible": false
+    }
+  ],
+  "publishRetriesSucceeded": true,
+  "activationRetryCoveredByActivationSuite": true,
+  "controllerRestart": [
+    {
+      "regionId": "phase6d_region_0001",
+      "action": "rollback_interrupted_publication"
+    }
+  ],
+  "malformedPackageRejected": {
+    "rejected": true,
+    "code": "",
+    "message": "not_exactly_40_cities duplicate_city_ids"
+  },
+  "hashMismatchCoveredByActivationSuite": true,
+  "missingThumbnailCoveredByActivationSuite": true,
+  "missingMapCoveredByActivationSuite": true,
+  "invalidCityCountCovered": true,
+  "conflictingEdgeCoveredByActivationSuite": true,
+  "catalogDelayCoveredByActivationSuite": true,
+  "staleAdminCoveredBySecuritySuite": true,
+  "multipleAdminActionsCoveredBySecuritySuite": true
+}

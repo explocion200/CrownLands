@@ -1,0 +1,167 @@
+{
+  "seasonId": "phase8-future-season-rehearsal",
+  "coreRegionCount": 25,
+  "coreSpawnEligibleCount": 0,
+  "holdingTowerReservationsPresent": true,
+  "seasonalObjectiveStateInitialized": [
+    {
+      "regionId": "phase5_core_reservation_0_0",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_1_0",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_2_0",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_3_0",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_4_0",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_0_1",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_1_1",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "north",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_3_1",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_4_1",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_0_2",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "west",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "center",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "east",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_4_2",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_0_3",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_1_3",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "south",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_3_3",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "phase5_core_reservation_4_3",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "region_6",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "region_7",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "region_8",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "region_9",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    },
+    {
+      "regionId": "region_10",
+      "ownerUid": "",
+      "generation": "phase8-future-season"
+    }
+  ],
+  "destructiveResetPerformed": false,
+  "productionTarget": false,
+  "packageAdapterWorldId": "phase6d_development_world",
+  "packageAdapterSeasonId": "phase6d_development_season",
+  "futureSeasonPackagesMustBeFreshlyGenerated": true,
+  "approvedRasterRecordsRelabeledAcrossSeasons": false,
+  "firstExpansionCoordinate": {
+    "gridX": -3,
+    "gridY": -3,
+    "worldLayer": 1,
+    "clockwiseOrderIndex": 0
+  },
+  "initialStandbyRegions": [
+    "phase6d_region_0001",
+    "phase6d_region_0002"
+  ],
+  "activatedInitialCapacityRegion": "phase6d_region_0001",
+  "replacementStandbyRegion": "phase6d_region_0003",
+  "finalStandbyBuffer": 2,
+  "simulatedPlacements": [
+    {
+      "cityId": "npc_phase6d_region_0001_07cb109877ed9f",
+      "npcBefore": 40,
+      "npcAfter": 39,
+      "subsequentSpawnEligible": true
+    },
+    {
+      "cityId": "npc_phase6d_region_0001_08a0f87f765cae",
+      "npcBefore": 39,
+      "npcAfter": 38,
+      "subsequentSpawnEligible": true
+    }
+  ],
+  "productionWorldModified": false
+}

@@ -1,0 +1,91 @@
+{
+  "retentionRules": {
+    "generatingHours": 24,
+    "abandonedUploadHours": 168,
+    "failedHours": 720,
+    "rolledBackHours": 720,
+    "supersededUnpublishedHours": 720,
+    "publishedHours": "infinite"
+  },
+  "plan": [
+    {
+      "packageHash": "generating-old",
+      "status": "GENERATING",
+      "updatedAtMs": 1786708800000,
+      "ageHours": 48,
+      "requiredRetentionHours": 24,
+      "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+      "automaticDeleteAllowed": true,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "abandoned-old",
+      "status": "ABANDONED_UPLOAD",
+      "updatedAtMs": 1786190400000,
+      "ageHours": 192,
+      "requiredRetentionHours": 168,
+      "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+      "automaticDeleteAllowed": true,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "failed-young",
+      "status": "FAILED",
+      "updatedAtMs": 1786017600000,
+      "ageHours": 240,
+      "requiredRetentionHours": 720,
+      "action": "RETAIN_UNTIL_EXPIRY",
+      "automaticDeleteAllowed": false,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "rolled-back-old",
+      "status": "ROLLED_BACK",
+      "updatedAtMs": 1784203200000,
+      "ageHours": 744,
+      "requiredRetentionHours": 720,
+      "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+      "automaticDeleteAllowed": true,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "superseded-old",
+      "status": "SUPERSEDED_UNPUBLISHED",
+      "updatedAtMs": 1784203200000,
+      "ageHours": 744,
+      "requiredRetentionHours": 720,
+      "action": "DELETE_ELIGIBLE_AFTER_DRY_RUN",
+      "automaticDeleteAllowed": true,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "published-never-delete",
+      "status": "PUBLISHED",
+      "updatedAtMs": 1755345600000,
+      "ageHours": 8760,
+      "requiredRetentionHours": null,
+      "action": "RETAIN_IMMUTABLE",
+      "automaticDeleteAllowed": false,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    },
+    {
+      "packageHash": "published-marker-wins",
+      "status": "FAILED",
+      "updatedAtMs": 1755345600000,
+      "ageHours": 8760,
+      "requiredRetentionHours": 720,
+      "action": "RETAIN_IMMUTABLE",
+      "automaticDeleteAllowed": false,
+      "diagnosticReceiptRequired": true,
+      "publicationMarkerChecked": true
+    }
+  ],
+  "publishedAutomaticDeletes": 0,
+  "dryRunRequired": true
+}

@@ -1,0 +1,41 @@
+{
+  "profiles": [
+    {
+      "bufferSize": 1,
+      "runtimeStorageBytes": 365712,
+      "workerFailureScenario": {
+        "consumesOneRegion": true,
+        "nextGenerationAttemptFails": true,
+        "standbyRemaining": 0,
+        "immediateNextActivationCovered": false,
+        "modeledRecoverySeconds": 0.07018790000000001
+      },
+      "playerWaitRisk": "non-zero during one failed replenishment",
+      "controllerComplexity": "baseline"
+    },
+    {
+      "bufferSize": 2,
+      "runtimeStorageBytes": 731424,
+      "workerFailureScenario": {
+        "consumesOneRegion": true,
+        "nextGenerationAttemptFails": true,
+        "standbyRemaining": 1,
+        "immediateNextActivationCovered": true,
+        "modeledRecoverySeconds": 0.07018790000000001
+      },
+      "playerWaitRisk": "covered for one activation plus one failed replenishment",
+      "controllerComplexity": "one additional count target; no additional lifecycle states"
+    }
+  ],
+  "recommendedBufferSize": 2,
+  "evidence": "buffer 2 preserves one ready region after an activation and one worker failure",
+  "automaticPublicationAllowed": false,
+  "automaticActivationAllowed": false,
+  "injectedWorkerFailure": {
+    "rejected": true,
+    "code": "worker-crash-after-map-encode",
+    "message": "Injected worker crash after map encode."
+  },
+  "recoveredPackageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+  "measuredRecoverySeconds": 0.07018790000000001
+}

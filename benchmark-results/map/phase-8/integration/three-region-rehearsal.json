@@ -1,0 +1,65 @@
+{
+  "coordinates": [
+    {
+      "gridX": -3,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 0
+    },
+    {
+      "gridX": -2,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 1
+    },
+    {
+      "gridX": -1,
+      "gridY": -3,
+      "worldLayer": 1,
+      "clockwiseOrderIndex": 2
+    }
+  ],
+  "activationOrder": [
+    "phase6d_region_0001",
+    "phase6d_region_0002",
+    "phase6d_region_0003"
+  ],
+  "activationSlots": [
+    0,
+    1,
+    2
+  ],
+  "packageHashes": {
+    "phase6d_region_0001": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "phase6d_region_0002": "a6374eca5eaffd81b9eda3ae884cfd7014a7901c2394d837aa8fb158b6ac808c",
+    "phase6d_region_0003": "96e4503dad840dcca6d1ebba8bec4b58b9ea477d34efc20da286b138a8f52801"
+  },
+  "packagesUnchanged": true,
+  "inheritedPublishedEdges": [
+    {
+      "regionId": "phase6d_region_0001",
+      "side": "east",
+      "contractHash": "ac1e43d85a0668c846fc119998814e8894db159a2d468e386931ca2ce8b43ff6"
+    },
+    {
+      "regionId": "phase6d_region_0002",
+      "side": "east",
+      "contractHash": "6d1c735128e770e428bc31e00543f535a0bfc8c2a7b5ca1a508a0fb27976992b"
+    }
+  ],
+  "topology": {
+    "directedOpen": 4,
+    "reciprocalUndirected": 2
+  },
+  "gatedToOpenTransitions": 2,
+  "uniqueCityIds": 120,
+  "hiddenOpenTargets": 0,
+  "unpublishedRegionId": "phase6d_region_0004",
+  "unpublishedEntryRejected": {
+    "rejected": true,
+    "code": "",
+    "message": "Generated region phase6d_region_0004 is not PUBLISHED."
+  },
+  "playerCanEnterUnpublishedRegion": false,
+  "immutablePublishedPackages": true
+}

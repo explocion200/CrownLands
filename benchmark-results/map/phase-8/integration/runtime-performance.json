@@ -1,0 +1,42 @@
+{
+  "catalogRegions": 10000,
+  "startupCatalogBytes": 4156,
+  "firstLayerPageBytes": 4917,
+  "definitionsPreloaded": false,
+  "cityDefinitionsPreloaded": false,
+  "mapBytesPreloaded": false,
+  "cache": {
+    "cacheLimit": 4,
+    "cacheSize": 4,
+    "pageSize": 64,
+    "startup": {
+      "count": 1,
+      "averageMs": 3.079899999999725,
+      "p50Ms": 3.079899999999725,
+      "p95Ms": 3.079899999999725,
+      "maximumMs": 3.079899999999725
+    },
+    "page": {
+      "count": 1,
+      "averageMs": 0.21780000000035216,
+      "p50Ms": 0.21780000000035216,
+      "p95Ms": 0.21780000000035216,
+      "maximumMs": 0.21780000000035216
+    },
+    "fetch": {
+      "count": 6,
+      "averageMs": 0.012316666666644474,
+      "p50Ms": 0.003849999999829379,
+      "p95Ms": 0.03945000000010168,
+      "maximumMs": 0.047700000000077125
+    }
+  },
+  "mapSwitchFetchP95Ms": 0.03945000000010168,
+  "handcraftedMapCount": 15,
+  "generatedMapDimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "mobilePlanningGate": true,
+  "limitation": "A physical-device network/render rehearsal remains required before production activation."
+}

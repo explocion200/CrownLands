@@ -1,0 +1,194 @@
+{
+  "productionFeatureFlagDefault": false,
+  "playerEscalation": {
+    "rejected": true,
+    "code": "permission-denied",
+    "message": "Authenticated Crownlands map-admin authority is required."
+  },
+  "playerDeniedActions": {
+    "generate": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "review": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "publish": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "activate": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "reject": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "retry": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "regenerate": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "edge_contract_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "package_hash_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "lifecycle_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    }
+  },
+  "forgedAdmin": {
+    "rejected": true,
+    "code": "permission-denied",
+    "message": "Authenticated Crownlands map-admin authority is required."
+  },
+  "malformedRequest": {
+    "rejected": true,
+    "code": "malformed-request",
+    "message": "The Phase 8 admin request schema is required."
+  },
+  "productionTarget": {
+    "rejected": true,
+    "code": "production-target-forbidden",
+    "message": "Phase 8 cannot target production."
+  },
+  "staleAdmin": {
+    "rejected": true,
+    "code": "stale-admin-client",
+    "message": "The admin client control revision is stale."
+  },
+  "operationKillSwitches": {
+    "generation": {
+      "rejected": true,
+      "code": "generation-killed",
+      "message": "Automatic generation is stopped."
+    },
+    "publication": {
+      "rejected": true,
+      "code": "publication-killed",
+      "message": "Package publication is stopped."
+    },
+    "activation": {
+      "rejected": true,
+      "code": "activation-killed",
+      "message": "Generated-region activation is stopped."
+    },
+    "expansion": {
+      "rejected": true,
+      "code": "expansion-killed",
+      "message": "Generated-world expansion is stopped."
+    }
+  },
+  "privilegedWrites": {
+    "edge_contract_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "package_hash_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    },
+    "lifecycle_write": {
+      "rejected": true,
+      "code": "permission-denied",
+      "message": "Authenticated Crownlands map-admin authority is required."
+    }
+  },
+  "illegalTransitions": {
+    "allocatedToActive": {
+      "rejected": true,
+      "code": "illegal-lifecycle-transition",
+      "message": "ALLOCATED -> ACTIVE is forbidden for allocated-direct-active."
+    },
+    "failedToActive": {
+      "rejected": true,
+      "code": "illegal-lifecycle-transition",
+      "message": "FAILED -> ACTIVE is forbidden for failed-direct-active."
+    },
+    "publishedToGenerating": {
+      "rejected": true,
+      "code": "illegal-lifecycle-transition",
+      "message": "PUBLISHED -> GENERATING is forbidden for published-generating."
+    },
+    "activeToStandby": {
+      "rejected": true,
+      "code": "illegal-lifecycle-transition",
+      "message": "ACTIVE -> STANDBY is forbidden for published-generating."
+    }
+  },
+  "validTransitionPath": [
+    "ALLOCATED",
+    "GENERATING",
+    "VALIDATING",
+    "STANDBY",
+    "PUBLISHING",
+    "PUBLISHED",
+    "ACTIVE"
+  ],
+  "killSwitch": {
+    "expansionStopped": {
+      "rejected": true,
+      "code": "expansion-killed",
+      "message": "Generated-world expansion is stopped."
+    },
+    "existingGameplayContinues": true,
+    "gameplayClaim": {
+      "cityId": "npc_phase6d_region_0001_07cb109877ed9f",
+      "npcBefore": 40,
+      "npcAfter": 39,
+      "subsequentSpawnEligible": true
+    },
+    "snapshot": {
+      "schemaVersion": "phase8-expansion-control-v1",
+      "environment": "phase8-production-equivalent-staging",
+      "revision": 2,
+      "productionRolloutEnabled": false,
+      "featureFlagDefault": false,
+      "stagingRehearsalEnabled": true,
+      "generationWhileProductionGateOff": true,
+      "killSwitch": {
+        "expansion": true,
+        "generation": false,
+        "publication": false,
+        "activation": false
+      },
+      "approvalCount": 2,
+      "auditEntries": 8
+    }
+  },
+  "multipleAdminPublication": [
+    {
+      "idempotent": false,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    },
+    {
+      "idempotent": true,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    }
+  ],
+  "normalPlayersCanInvokeAdminOperations": false
+}
