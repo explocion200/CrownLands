@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "phase": "6F",
+  "receiptKind": "published-package-world-horizon",
+  "developmentOnly": true,
+  "sampleCount": 12,
+  "allByteAndHashIdentical": true,
+  "comparisons": [
+    {
+      "key": "region-0001",
+      "sourceIndex": 0,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0002",
+      "sourceIndex": 1,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0003",
+      "sourceIndex": 2,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0025",
+      "sourceIndex": 24,
+      "layer": 2,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0050",
+      "sourceIndex": 49,
+      "layer": 2,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0100",
+      "sourceIndex": 99,
+      "layer": 4,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0250",
+      "sourceIndex": 249,
+      "layer": 6,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0500",
+      "sourceIndex": 499,
+      "layer": 9,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0817",
+      "sourceIndex": 816,
+      "layer": 13,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0937",
+      "sourceIndex": 936,
+      "layer": 14,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0969",
+      "sourceIndex": 968,
+      "layer": 14,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1000",
+      "sourceIndex": 999,
+      "layer": 14,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "roadGeometry": true,
+        "roadSkin": true,
+        "edgeContract": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    }
+  ],
+  "shortWorldMapCount": 1000,
+  "fullWorldMapCount": 10000,
+  "laterNeighborsNeverRegeneratePublishedPackages": true,
+  "existingPublishedEdgeContractWins": true
+}

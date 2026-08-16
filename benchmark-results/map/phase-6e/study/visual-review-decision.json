@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "phase": "6E",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "reviewStatus": "complete",
+  "current118AssetSystemSufficientFor10000Maps": false,
+  "approvedArtStylePreserved": true,
+  "approvedSimplicityPreserved": true,
+  "directionalThemesRemainCrownlands": true,
+  "visibleRepetitionAcceptableAtPlayerScale": false,
+  "evidence": {
+    "highestSimilarity": 0.999634,
+    "nearDuplicatePairsAtOrAbove0965": 65106,
+    "pairsStrictlyAbove098": 7046,
+    "pairsStrictlyAbove099": 733,
+    "mapsParticipatingInFlaggedPairs": 9844,
+    "mapsParticipatingRate": 0.9844,
+    "sameRoadGeometryShareOfFlaggedPairs": 0.99467,
+    "baselineRoadUseCount": 3293,
+    "baselineRoadUseShare": 0.3293,
+    "currentRoadGeometriesPerTheme": 3,
+    "distinctRoadGeometriesInLibrary": 9,
+    "topTenPairsShareFoundationPerimeterAndRoad": true,
+    "visualGalleryFinding": "The closest pairs are recognizably the same macro layout at gameplay-thumbnail scale; the shared road skeleton is the dominant repeated landmark.",
+    "randomGalleryFinding": "The locked simple/open Crownlands art direction remains readable and coherent across all four themes.",
+    "foundationFinding": "Three plates per theme remain acceptable when combined with transforms, tone profiles, roads, perimeter choices, and unique accent placement.",
+    "perimeterFinding": "Sixty-four full perimeter combinations with a 2.01 percent maximum use share remain acceptable; no additional perimeter art is presently justified.",
+    "accentFinding": "All 10000 accent placement plans are unique; additional accents remain unjustified."
+  },
+  "minimumEvidenceBasedNextStep": {
+    "additionalAssetsRequiredInitially": 0,
+    "composerChangeRequired": "Decouple road geometry selection from theme-specific road color so every theme can deterministically use the existing nine geometry masks with approved theme harmonization.",
+    "reason": "The benchmark demonstrates road-geometry under-utilization before it demonstrates a shortage of road artwork.",
+    "requiredRevalidation": "Repeat the 10000-map similarity and sampled visual gates after the development-only road-selection change.",
+    "productionIntegrationPlanningMayBegin": false
+  },
+  "conditionalFallbackOnly": {
+    "condition": "Use only if cross-theme geometry harmonization cannot preserve the locked regional art style.",
+    "minimumAdditionalAssets": {
+      "foundations": 0,
+      "perimeterSegments": 0,
+      "internalRoadModules": 4,
+      "interiorAccents": 0,
+      "total": 4
+    },
+    "distribution": "One additional theme-specific internal-road module for North, East, South, and West."
+  },
+  "noArtworkAddedDuringPhase6E": true,
+  "phase7MayBegin": false
+}

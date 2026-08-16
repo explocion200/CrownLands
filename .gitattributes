@@ -1,1 +1,7 @@
 .githooks/* text eol=lf
+benchmark-results/map/phase-6e/study/runtime/maps/*.webp filter=lfs diff=lfs merge=lfs -text
+benchmark-results/map/phase-6e/study/runtime/thumbnails/*.webp filter=lfs diff=lfs merge=lfs -text
+benchmark-results/map/phase-6e/study/compact-manifest.jsonl filter=lfs diff=lfs merge=lfs -text
+benchmark-results/map/phase-6f/study/runtime/maps/*.webp filter=lfs diff=lfs merge=lfs -text
+benchmark-results/map/phase-6f/study/runtime/thumbnails/*.webp filter=lfs diff=lfs merge=lfs -text
+benchmark-results/map/phase-6f/study/compact-manifest.jsonl filter=lfs diff=lfs merge=lfs -text

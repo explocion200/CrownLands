@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "phase": "6E",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "renderer": "phase6e-pillow-compact-v1",
+  "pillowVersion": "12.3.0",
+  "webpQuality": 84,
+  "webpMethod": 6,
+  "sampleCount": 10000,
+  "compactManifest": "compact-manifest.jsonl",
+  "visualFeatures": "visual-features.npz",
+  "renderWallClockMs": 2989692.364,
+  "approximatePeakProcessTreeRssBytes": null,
+  "approximatePeakWorkerWorkingSetBytes": null,
+  "approximatePeakWorkerAggregateBytes": null
+}

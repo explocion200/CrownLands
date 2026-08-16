@@ -1,0 +1,1009 @@
+{
+  "schemaVersion": 1,
+  "phase": "6E",
+  "developmentOnly": true,
+  "independentRegeneration": true,
+  "sampleCount": 62,
+  "coversEarlyMiddleLateLayers": true,
+  "directionCoverage": [
+    "east",
+    "north",
+    "south",
+    "west"
+  ],
+  "allByteAndHashIdentical": true,
+  "comparisons": [
+    {
+      "key": "region-0001",
+      "sourceIndex": 0,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0002",
+      "sourceIndex": 1,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0003",
+      "sourceIndex": 2,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0004",
+      "sourceIndex": 3,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0005",
+      "sourceIndex": 4,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0006",
+      "sourceIndex": 5,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0007",
+      "sourceIndex": 6,
+      "layer": 1,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0008",
+      "sourceIndex": 7,
+      "layer": 1,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0214",
+      "sourceIndex": 213,
+      "layer": 6,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0426",
+      "sourceIndex": 425,
+      "layer": 9,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0639",
+      "sourceIndex": 638,
+      "layer": 11,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-0852",
+      "sourceIndex": 851,
+      "layer": 13,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1065",
+      "sourceIndex": 1064,
+      "layer": 15,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1277",
+      "sourceIndex": 1276,
+      "layer": 16,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1490",
+      "sourceIndex": 1489,
+      "layer": 17,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1703",
+      "sourceIndex": 1702,
+      "layer": 19,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-1916",
+      "sourceIndex": 1915,
+      "layer": 20,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-2128",
+      "sourceIndex": 2127,
+      "layer": 21,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-2341",
+      "sourceIndex": 2340,
+      "layer": 22,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-2554",
+      "sourceIndex": 2553,
+      "layer": 23,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-2767",
+      "sourceIndex": 2766,
+      "layer": 24,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-2979",
+      "sourceIndex": 2978,
+      "layer": 25,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-3192",
+      "sourceIndex": 3191,
+      "layer": 26,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-3405",
+      "sourceIndex": 3404,
+      "layer": 27,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-3618",
+      "sourceIndex": 3617,
+      "layer": 28,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-3830",
+      "sourceIndex": 3829,
+      "layer": 29,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-4043",
+      "sourceIndex": 4042,
+      "layer": 30,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-4256",
+      "sourceIndex": 4255,
+      "layer": 31,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-4469",
+      "sourceIndex": 4468,
+      "layer": 32,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-4681",
+      "sourceIndex": 4680,
+      "layer": 32,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-4894",
+      "sourceIndex": 4893,
+      "layer": 33,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-5107",
+      "sourceIndex": 5106,
+      "layer": 34,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-5320",
+      "sourceIndex": 5319,
+      "layer": 35,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-5532",
+      "sourceIndex": 5531,
+      "layer": 35,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-5745",
+      "sourceIndex": 5744,
+      "layer": 36,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-5958",
+      "sourceIndex": 5957,
+      "layer": 37,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-6171",
+      "sourceIndex": 6170,
+      "layer": 37,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-6383",
+      "sourceIndex": 6382,
+      "layer": 38,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-6596",
+      "sourceIndex": 6595,
+      "layer": 39,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-6809",
+      "sourceIndex": 6808,
+      "layer": 39,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-7022",
+      "sourceIndex": 7021,
+      "layer": 40,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-7234",
+      "sourceIndex": 7233,
+      "layer": 41,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-7447",
+      "sourceIndex": 7446,
+      "layer": 41,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-7660",
+      "sourceIndex": 7659,
+      "layer": 42,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-7873",
+      "sourceIndex": 7872,
+      "layer": 42,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-8085",
+      "sourceIndex": 8084,
+      "layer": 43,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-8298",
+      "sourceIndex": 8297,
+      "layer": 44,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-8511",
+      "sourceIndex": 8510,
+      "layer": 44,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-8724",
+      "sourceIndex": 8723,
+      "layer": 45,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-8936",
+      "sourceIndex": 8935,
+      "layer": 45,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9149",
+      "sourceIndex": 9148,
+      "layer": 46,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9362",
+      "sourceIndex": 9361,
+      "layer": 46,
+      "theme": "west",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9575",
+      "sourceIndex": 9574,
+      "layer": 47,
+      "theme": "east",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9787",
+      "sourceIndex": 9786,
+      "layer": 48,
+      "theme": "north",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9993",
+      "sourceIndex": 9992,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9994",
+      "sourceIndex": 9993,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9995",
+      "sourceIndex": 9994,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9996",
+      "sourceIndex": 9995,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9997",
+      "sourceIndex": 9996,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9998",
+      "sourceIndex": 9997,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-9999",
+      "sourceIndex": 9998,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    },
+    {
+      "key": "region-10000",
+      "sourceIndex": 9999,
+      "layer": 48,
+      "theme": "south",
+      "fields": {
+        "compositionPlan": true,
+        "cityDefinitions": true,
+        "cityLayout": true,
+        "rawRaster": true,
+        "webp": true,
+        "thumbnail": true,
+        "package": true
+      },
+      "byteAndHashIdentical": true
+    }
+  ]
+}
