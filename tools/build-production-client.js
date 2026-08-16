@@ -10,7 +10,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
-  "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js",
+  "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js", "community.html",
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "battle-reports-guide.html", "clans-rallies-guide.html",
   "common-gear.js", "economy-config.js", "firebase-config.js",
@@ -22,7 +22,7 @@ const rootFiles = [
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
   "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
-  "terms.html", "updates.html", "public-site.js", "world-config.js",
+  "terms.html", "updates.html", "public-site.js", "world.html", "world-config.js",
 ];
 
 function copy(relativeSource, relativeDestination = relativeSource) {

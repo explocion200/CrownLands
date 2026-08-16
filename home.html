@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crownlands | Free Medieval Multiplayer Strategy Game</title>
-  <meta name="description" content="Build cities, scout rivals, command armies, and conquer a persistent connected medieval world in Crownlands. Explore original player guides or play free in your browser." />
+  <title>Crownlands — Medieval Browser Strategy Game</title>
+  <meta name="description" content="Build cities, command armies, join clans, and conquer objectives across 15 connected regions in Crownlands, a free medieval browser strategy game." />
   <meta name="author" content="Crownlands Development Team" />
   <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
   <meta property="og:title" content="Crownlands | Build a Kingdom Across 15 Connected Regions" />
@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/site-info.css?v=20260812-visual-correction-pass-4a-r1" />
+  <link rel="stylesheet" href="/site-info.css?v=20260816-public-restructure-r1" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -41,11 +41,14 @@
     <nav class="site-nav" aria-label="Primary">
       <a class="site-brand" href="/" aria-current="page"><img src="/assets/icons/crownlands-icon-192.png" width="38" height="38" alt="" />Crownlands</a>
       <div class="site-nav-links" id="siteMenu" data-site-menu>
-        <a href="/guides.html">Guides</a>
-        <a href="/updates.html">Updates</a>
-        <a href="/about.html">About</a>
+        <a href="/" aria-current="page">Home</a>
+        <a href="/play/">Play</a>
         <a href="/roadmap.html">Roadmap</a>
-        <a href="/game-rules.html">Rules</a>
+        <a href="/world.html">World</a>
+        <a href="/how-to-play.html">How to Play</a>
+        <a href="/guides.html">Guide</a>
+        <a href="/updates.html">Updates</a>
+        <a href="/community.html">Community</a>
         <a href="/support.html">Support</a>
       </div>
       <div class="site-nav-actions">
@@ -59,26 +62,73 @@
     <section class="site-hero home-hero">
       <div class="site-hero-copy">
         <span class="site-eyebrow">Free multiplayer browser strategy</span>
-        <h1>Every city is a decision. Every march changes the realm.</h1>
+        <h1>Crownlands</h1>
+        <p class="hero-declaration">Conquer cities. March armies. Rule the realm.</p>
         <p>Build a connected kingdom across 15 regions, gather intelligence on rival rulers, and coordinate with a clan in a persistent medieval campaign that keeps moving when you step away.</p>
         <div class="site-actions">
           <a class="site-button hero-play-button" href="/play/">
             <span>Play Crownlands now</span>
             <small>Free in your browser</small>
           </a>
-          <a class="site-button secondary" href="/guides.html">Explore player guides</a>
-          <a class="site-button ghost" href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer">Join Discord</a>
+          <a class="site-button secondary" href="/roadmap.html">View the roadmap</a>
+          <a class="site-button ghost" href="/how-to-play.html">Learn how to play</a>
         </div>
-        <ul class="hero-facts" aria-label="Game facts">
-          <li><strong>Persistent</strong><span>shared world</span></li>
-          <li><strong>Real-time</strong><span>economy and marches</span></li>
-          <li><strong>Free</strong><span>on mobile and desktop</span></li>
+        <ul class="hero-facts public-stat-chips" aria-label="Crownlands features">
+          <li><strong>15</strong><span>connected regions</span></li>
+          <li><strong>Persistent</strong><span>multiplayer world</span></li>
+          <li><strong>Real-time</strong><span>strategy</span></li>
+          <li><strong>City</strong><span>conquest</span></li>
+          <li><strong>Clan</strong><span>rallies</span></li>
+          <li><strong>Daily</strong><span>missions</span></li>
+          <li><strong>Achievements</strong><span>live and polishing</span></li>
+          <li><strong>Gear</strong><span>early-stage system</span></li>
         </ul>
       </div>
       <a class="hero-report-card" href="/battle-reports-guide.html" aria-label="Read the attack and defense report guide">
         <img src="/promo-screenshots/crownlands-attack-defense-report-2026-08-09.png" width="1280" height="720" alt="Crownlands attack report comparing attacker power, defender power, wall integrity, losses, and bonuses" />
         <span><strong>Know why the battle ended that way.</strong> Read the new report guide -&gt;</span>
       </a>
+    </section>
+
+    <section class="home-section" aria-labelledby="pillarsTitle" data-reveal>
+      <div class="section-heading-row"><div><span class="site-eyebrow">Core gameplay pillars</span><h2 id="pillarsTitle">A kingdom is built through connected decisions</h2></div><p>Crownlands rewards planning across economy, information, territory, and allies—not one isolated upgrade.</p></div>
+      <div class="home-pillar-grid">
+        <article class="content-card"><span class="pillar-mark">01</span><h3>Build cities</h3><p>Upgrade holdings to strengthen long-term production and kingdom value. Every city is also a place troops must be positioned and defended.</p></article>
+        <article class="content-card"><span class="pillar-mark">02</span><h3>Produce resources</h3><p>Gold funds development while troops accumulate in the city that trained them. Growth matters most when it supports a clear territorial plan.</p></article>
+        <article class="content-card"><span class="pillar-mark">03</span><h3>Scout rivals</h3><p>Fresh intelligence separates walls, garrisons, reinforcements, and bonuses. Reports expire, so timing a decision matters as much as reading it.</p></article>
+        <article class="content-card"><span class="pillar-mark">04</span><h3>March armies</h3><p>Choose a source, destination, and force while the server validates the route and arrival. Armies remain committed while the realm continues changing.</p></article>
+        <article class="content-card"><span class="pillar-mark">05</span><h3>Capture territory</h3><p>Break a wall, defeat the defending soldiers, and take cities that extend your reach. A damaged frontier can invite a counterattack from another ruler.</p></article>
+        <article class="content-card"><span class="pillar-mark">06</span><h3>Join clans</h3><p>Reinforce allied holdings, share map context, and combine forces through rallies. Officers and leaders can form rallies; members can contribute troops.</p></article>
+        <article class="content-card"><span class="pillar-mark">07</span><h3>Contest objectives</h3><p>Reward camps offer temporary opportunities, Strongholds grant specialized advantages, and the Crown Citadel anchors realm-wide prestige.</p></article>
+        <article class="content-card"><span class="pillar-mark">08</span><h3>Develop a ruler</h3><p>Earn levels, specialize skills, pursue achievements, and begin assembling gear. These systems support strategy without replacing cities and armies.</p></article>
+      </div>
+    </section>
+
+    <section class="home-section power-section" aria-labelledby="powerTitle" data-reveal>
+      <div class="section-heading-row"><div><span class="site-eyebrow">Path to power</span><h2 id="powerTitle">From first holding to a place in the realm's history</h2></div><a href="/how-to-play.html">Follow the beginner route -&gt;</a></div>
+      <ol class="power-path">
+        <li><span>1</span><strong>Found</strong><small>Claim a Main City</small></li>
+        <li><span>2</span><strong>Grow</strong><small>Build production</small></li>
+        <li><span>3</span><strong>Scout</strong><small>Read nearby defenses</small></li>
+        <li><span>4</span><strong>Expand</strong><small>Capture connected cities</small></li>
+        <li><span>5</span><strong>Unite</strong><small>Join a clan</small></li>
+        <li><span>6</span><strong>Contest</strong><small>Take realm objectives</small></li>
+      </ol>
+    </section>
+
+    <section class="home-world-preview" data-reveal>
+      <img src="/promo-screenshots/03-world-map-selector.png" width="1280" height="720" alt="Crownlands selector showing the connected regional world" loading="lazy" />
+      <div><span class="site-eyebrow">Explore the world</span><h2>Fifteen named regions, connected by routes and ambition</h2><p>Start at the edge of the realm, move between neighboring maps, and build toward the central Crownlands Heart. Each region has its own city layout and its own capacity; those values may differ and can change as the live world evolves.</p><ul class="region-name-sample"><li>Crownlands Heart</li><li>North Frontier</li><li>West Marches</li><li>East Reach</li><li>Southfields</li></ul><a class="site-button secondary" href="/world.html">Explore all 15 regions</a></div>
+    </section>
+
+    <section class="home-section" aria-labelledby="roadmapPreviewTitle" data-reveal>
+      <div class="section-heading-row"><div><span class="site-eyebrow">Development roadmap</span><h2 id="roadmapPreviewTitle">Live foundations, active polish, and visible next steps</h2></div><a href="/roadmap.html">Open the full roadmap -&gt;</a></div>
+      <div class="home-roadmap-preview">
+        <article class="content-card"><span class="roadmap-state live">Live</span><h3>Realm foundations</h3><p>Cities, marches, battles, scouting, clans, objectives, daily systems, and leaderboards form the playable core.</p></article>
+        <article class="content-card"><span class="roadmap-state polish">Polishing</span><h3>Clarity and achievement flow</h3><p>Battle feedback, responsive layouts, daily rewards, accessibility, and achievements continue receiving quality passes.</p></article>
+        <article class="content-card"><span class="roadmap-state early">Early stage</span><h3>Gear progression</h3><p>The first equipment foundation is live. Balance, presentation, item variety, and progression depth remain deliberately limited while tested.</p></article>
+        <article class="content-card"><span class="roadmap-state planned">In development</span><h3>Dynamic maps</h3><p>Future world work explores maps that can change without pretending the system is already available in the current build.</p></article>
+      </div>
     </section>
 
     <section class="trust-strip" aria-label="Why players can trust these guides">
@@ -140,9 +190,13 @@
       </div>
     </section>
 
-    <section class="latest-update" data-reveal>
-      <img src="/assets/optimized/castle-city-256x256-96961dc8d50b.webp" width="220" height="220" alt="Painterly Crownlands castle" loading="lazy" />
-      <div><span class="site-eyebrow">Development update / August 11, 2026</span><h2>Common Gear arrives in Crownlands</h2><p>The newest build adds illustrated equipment, improves the Character and Shop layouts, and continues the recent work on daily missions, instant economy actions, seasonal achievements, and battle clarity.</p><div class="site-actions"><a class="site-button secondary" href="/updates.html">Read development updates</a><a class="site-button ghost" href="https://crownlands.itch.io/crownlands" target="_blank" rel="noopener noreferrer">Visit itch.io</a></div></div>
+    <section class="home-section" aria-labelledby="devNotesTitle" data-reveal>
+      <div class="section-heading-row"><div><span class="site-eyebrow">Latest development notes</span><h2 id="devNotesTitle">What changed, and what is being built carefully</h2></div><a href="/updates.html">Read all updates -&gt;</a></div>
+      <div class="dev-note-grid">
+        <article class="content-card"><span class="card-kicker">Systems · August 11, 2026</span><h3>Common Gear and kingdom management</h3><p>The first equipment foundation, illustrated items, and tighter Character and Shop layouts establish a system that is still in its beginning stages.</p><a href="/updates.html#gear-dynamic-maps">Read the note -&gt;</a></article>
+        <article class="content-card"><span class="card-kicker">Progression · August 10, 2026</span><h3>Achievements and daily systems</h3><p>Seasonal achievements are live and being polished while Daily Rewards and Daily Missions keep their server-validated claim and progress rules.</p><a href="/updates.html#ui-polish">Read the note -&gt;</a></article>
+        <article class="content-card"><span class="card-kicker">Combat · August 9, 2026</span><h3>Reports explain every battle</h3><p>Side-by-side reports show walls, soldiers, skills, objective support, reinforcements, survivors, and losses instead of only announcing a winner.</p><a href="/updates.html#realm-overview">Read the note -&gt;</a></article>
+      </div>
     </section>
 
     <section class="final-cta" data-reveal>
@@ -157,8 +211,8 @@
     <div class="site-footer-inner footer-expanded">
       <div><a class="site-brand" href="/">Crownlands</a><p>A persistent medieval strategy game built for the open web.</p></div>
       <nav aria-label="Guides"><strong>Learn</strong><a href="/guides.html">All guides</a><a href="/how-to-play.html">How to play</a><a href="/battle-economy-guide.html">Battle calculator</a><a href="/updates.html">Updates</a></nav>
-      <nav aria-label="Information"><strong>Information</strong><a href="/about.html">About</a><a href="/roadmap.html">Roadmap</a><a href="/game-rules.html">Rules</a><a href="/support.html">Support</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav>
-      <nav aria-label="Community"><strong>Community</strong><a href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer">Discord</a><a href="https://crownlands.itch.io/crownlands" target="_blank" rel="noopener noreferrer">itch.io</a><a href="/play/">Play free</a></nav>
+      <nav aria-label="Information"><strong>Information</strong><a href="/world.html">World</a><a href="/about.html">About</a><a href="/roadmap.html">Roadmap</a><a href="/game-rules.html">Rules</a><a href="/support.html">Support</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav>
+      <nav aria-label="Community"><strong>Community</strong><a href="/community.html">Community hub</a><a href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer">Discord</a><a href="https://crownlands.itch.io/crownlands" target="_blank" rel="noopener noreferrer">itch.io</a><a href="/play/">Play free</a></nav>
     </div>
     <div class="footer-legal">&copy; 2026 Crownlands. Guides are written and maintained by the Crownlands Development Team.</div>
   </footer>

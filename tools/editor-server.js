@@ -37,6 +37,7 @@ const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const CROWN_CITADEL_VISUAL_SIZE = 260;
 const ROOT_STATIC_FILES = new Set([
   "/about.html",
+  "/community.html",
   "/game-rules.html",
   "/how-to-play.html",
   "/privacy.html",
@@ -48,6 +49,7 @@ const ROOT_STATIC_FILES = new Set([
   "/sitemap.xml",
   "/site-info.css",
   "/support.html",
+  "/world.html",
   "/animation-manager.js",
   "/audio-manager.js",
   "/firebaseClient.js",

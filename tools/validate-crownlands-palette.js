@@ -17,7 +17,7 @@ const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 const releaseId = "20260814-readability-r38";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
-assert.ok(Buffer.byteLength(css) <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
+assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, "The Crownlands palette has unbalanced braces.");
 assert.doesNotMatch(css, /font-family\s*:/i, "The palette pass must preserve the existing Crownlands typefaces.");
 assert.doesNotMatch(css, /url\s*\(/i, "The palette pass must not recolor or replace visual assets.");

@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const resolve = relativePath => path.join(root, ...relativePath.split("/"));
 const read = relativePath => fs.readFileSync(resolve(relativePath), "utf8");
 const readBytes = relativePath => fs.readFileSync(resolve(relativePath));
+const normalizedTextBytes = relativePath => Buffer.byteLength(read(relativePath).replace(/\r\n/g, "\n"), "utf8");
 const exists = relativePath => fs.existsSync(resolve(relativePath));
 const sha256 = relativePath => crypto.createHash("sha256").update(readBytes(relativePath)).digest("hex");
 const jpegDimensions = bytes => {
@@ -89,7 +90,9 @@ assert.ok(staticCacheSource, "Could not read the service-worker installation cac
 const staticCacheUrls = JSON.parse(staticCacheSource[1]);
 const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
   const relativePath = url.replace(/^\//, "").split("?")[0];
-  return total + fs.statSync(resolve(relativePath)).size;
+  return total + (/\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
+    ? normalizedTextBytes(relativePath)
+    : fs.statSync(resolve(relativePath)).size);
 }, 0);
 assert.ok(staticCacheBytes <= 3200 * 1024, "The service-worker installation cache exceeds 3.125 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");

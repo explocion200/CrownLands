@@ -12,21 +12,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/site-info.css?v=20260812-visual-correction-pass-4a-r1" />
+  <link rel="stylesheet" href="/site-info.css?v=20260816-public-restructure-r1" />
 </head>
 <body>
+  <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
   <header class="site-header">
     <nav class="site-nav" aria-label="Primary">
-      <a class="site-brand" href="/">Crownlands</a>
-      <div class="site-nav-links">
-        <a href="/guides.html">Guides</a>
-        <a href="/updates.html">Updates</a>
-        <a href="/about.html">About</a>
-        <a href="/roadmap.html">Roadmap</a>
-        <a href="/game-rules.html">Rules</a>
-        <a href="/support.html" aria-current="page">Support</a>
-        <a href="/privacy.html">Privacy</a>
-        <a class="nav-play" href="/play/">Play free</a>
+      <a class="site-brand" href="/"><img src="/assets/icons/crownlands-icon-192.png" width="38" height="38" alt="" />Crownlands</a>
+      <button class="site-menu-toggle" type="button" aria-expanded="false" aria-controls="siteMenu" data-menu-toggle>Menu</button>
+      <div class="site-nav-links" id="siteMenu" data-site-menu>
+        <a href="/">Home</a><a href="/play/">Play</a><a href="/roadmap.html">Roadmap</a><a href="/world.html">World</a><a href="/how-to-play.html">How to Play</a><a href="/guides.html">Guide</a><a href="/updates.html">Updates</a><a href="/community.html">Community</a><a href="/support.html" aria-current="page">Support</a>
       </div>
     </nav>
   </header>
@@ -36,7 +31,7 @@
       <span class="site-eyebrow">Help center</span>
       <h1>Crownlands support</h1>
       <p>Quick answers for common account, world, battle, installation, and reward questions.</p>
-      <div class="article-byline"><span>Maintained by the Crownlands Development Team</span><time datetime="2026-08-12">Updated August 12, 2026</time></div>
+      <div class="article-byline"><span>Maintained by the Crownlands Development Team</span><time datetime="2026-08-16">Updated August 16, 2026</time></div>
     </header>
 
     <section class="content-section">
@@ -48,7 +43,7 @@
     <section class="content-section">
       <h2>Frequently asked questions</h2>
       <div class="faq-list">
-        <details>
+        <details id="installation">
           <summary>Why can’t I enter the kingdom?</summary>
           <p>Crownlands requires a valid Google sign-in and an available place in The Crown Marches. If the realm is full, the screen may show a queue. A second active session can also replace an older session for the same account.</p>
         </details>
@@ -74,9 +69,22 @@
         </details>
         <details>
           <summary>How do I clear a broken cached build?</summary>
-          <p>Reload while online first. If the problem remains, close every Crownlands tab and clear stored site data for crownland.netlify.app in the browser’s privacy or site settings. Sign in again afterward so the current files and kingdom state can load.</p>
+          <p>Reload while online first. If the problem remains, close every Crownlands tab and clear stored site data for playcrownlands.com in the browser’s privacy or site settings. Sign in again afterward so the current files and kingdom state can load.</p>
         </details>
       </div>
+    </section>
+
+    <section class="content-section" id="gameplay-questions">
+      <h2>Gameplay questions and guides</h2>
+      <p>If the game is working but a result is unclear, begin with the public guide that matches the decision. The beginner guide covers the first city, production, map movement, daily systems, objectives, and clans. The specialist guides explain battle reports, scouting, skills, rallies, reward camps, Strongholds, and the Crown Citadel using current live rules.</p>
+      <div class="site-actions"><a class="site-button secondary" href="/how-to-play.html">Open the beginner guide</a><a class="site-button secondary" href="/guides.html">Browse all guides</a><a class="site-button secondary" href="/world.html">Explore the world</a></div>
+    </section>
+
+    <section class="content-section" id="known-limitations">
+      <h2>Known limitations during active development</h2>
+      <p>Crownlands is playable and remains under active development. Region capacity is configured per map and can change. Achievements are live and receiving presentation polish. Gear is in its beginning stages, so its current variety and progression depth are intentionally limited. Dynamic map expansion is in development and should not be treated as a live feature.</p>
+      <p>Browser storage, service workers, strict content blockers, private browsing, or an interrupted network can affect sign-in and installation. The shared server remains authoritative for resources, marches, rewards, battles, ownership, clans, and rankings after a reconnect.</p>
+      <div class="site-actions"><a class="site-button secondary" href="/roadmap.html">Check development status</a><a class="site-button secondary" href="/updates.html">Read release notes</a></div>
     </section>
 
     <section class="content-section">
@@ -85,7 +93,15 @@
       <div class="site-actions">
         <a class="site-button" href="https://github.com/explocion200/crownlands-game/issues" rel="noopener">Open the issue tracker</a>
         <a class="site-button secondary" href="/how-to-play.html">Read the player guide</a>
+        <a class="site-button secondary" href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer">Ask in Discord</a>
       </div>
+      <p>For public gameplay discussion and non-sensitive questions, the official Discord is available. For a reproducible defect, the issue tracker keeps technical details attached to one report. Never post passwords, sign-in codes, access tokens, private account identifiers, or another person’s personal information in either place.</p>
+    </section>
+
+    <section class="content-section" id="policies">
+      <h2>Policies and account safety</h2>
+      <p>The Privacy Policy explains authentication, gameplay records, browser storage, service providers, retention, and player choices. The Terms describe access to the shared service and virtual resources. Game Rules cover fair play, automation, exploits, harassment, ranking manipulation, and enforcement.</p>
+      <div class="site-actions"><a class="site-button secondary" href="/privacy.html">Privacy Policy</a><a class="site-button secondary" href="/terms.html">Terms of Use</a><a class="site-button secondary" href="/game-rules.html">Game Rules</a></div>
     </section>
   </main>
 
@@ -96,14 +112,17 @@
         <a href="/">Home</a>
         <a href="/play/">Play</a>
         <a href="/guides.html">Guides</a>
+        <a href="/world.html">World</a>
         <a href="/updates.html">Updates</a>
-        <a href="/about.html">About</a>
+        <a href="/community.html">Community</a>
         <a href="/how-to-play.html">How to Play</a>
         <a href="/battle-economy-guide.html">Battle Guide</a>
         <a href="/game-rules.html">Rules</a>
         <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
       </nav>
     </div>
   </footer>
+  <script src="/public-site.js?v=20260816-public-restructure-r1" defer></script>
 </body>
 </html>

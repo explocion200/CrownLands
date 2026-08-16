@@ -8,6 +8,8 @@ const publicPages = [
   "guides.html",
   "updates.html",
   "roadmap.html",
+  "world.html",
+  "community.html",
   "about.html",
   "how-to-play.html",
   "battle-economy-guide.html",
@@ -23,11 +25,14 @@ const publicPages = [
   "terms.html",
 ];
 const requiredNavigation = [
+  "/",
+  "/play/",
+  "/roadmap.html",
+  "/world.html",
+  "/how-to-play.html",
   "/guides.html",
   "/updates.html",
-  "/roadmap.html",
-  "/play/",
-  "/game-rules.html",
+  "/community.html",
   "/support.html",
 ];
 
@@ -64,6 +69,11 @@ const roadmapSource = read("roadmap.html");
 const roadmapDataSource = read("roadmap-data.js");
 const roadmapScriptSource = read("roadmap.js");
 const roadmapStylesSource = read("roadmap.css");
+const worldSource = read("world.html");
+const communitySource = read("community.html");
+const howToSource = read("how-to-play.html");
+const guidesSource = read("guides.html");
+const supportSource = read("support.html");
 
 assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-6031755025291372"/);
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
@@ -75,6 +85,18 @@ assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/
 assert.match(homeSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/"/);
 assert.match(homeSource, /application\/ld\+json/);
 assert.match(homeSource, /data-kingdom-planner/);
+assert.match(homeSource, /<title>Crownlands — Medieval Browser Strategy Game<\/title>/);
+assert.match(homeSource, /Conquer cities\. March armies\. Rule the realm\./);
+for (const phrase of ["15", "Persistent", "Real-time", "City", "Clan", "Daily", "Achievements", "Gear"]) {
+  assert.match(homeSource, new RegExp(`>${phrase}<`), `Homepage is missing the ${phrase} feature chip.`);
+}
+for (const pillar of ["Build cities", "Produce resources", "Scout rivals", "March armies", "Capture territory", "Join clans", "Contest objectives", "Develop a ruler"]) {
+  assert.match(homeSource, new RegExp(pillar), `Homepage is missing the ${pillar} gameplay pillar.`);
+}
+assert.match(homeSource, /class="power-path"/);
+assert.match(homeSource, /Explore all 15 regions/);
+assert.match(homeSource, /Live foundations, active polish, and visible next steps/);
+assert.ok((homeSource.match(/Read the note -&gt;/g) || []).length >= 3, "Homepage needs three linked development notes.");
 assert.match(updatesSource, /data-patch-notes-feed/);
 assert.match(updatesSource, /src="\/patch-notes\.js"[\s\S]*src="\/public-site\.js/);
 assert.match(publicSiteSource, /renderPublicPatchNotes/);
@@ -95,9 +117,49 @@ for (const page of publicPages) {
   assert.match(source, /rel="canonical"\s+href="https:\/\/playcrownlands\.com\//, `${page} needs a canonical URL.`);
   assert.match(source, /href="\/site-info\.css\?v=[^"]+"/, `${page} must use the public content stylesheet.`);
   assert.doesNotMatch(source, /adsbygoogle|securepubads\.g\.doubleclick\.net|googletag/, `${page} must not request Google-served ads.`);
+  assert.doesNotMatch(source, /Five Island|island game|island map|portal system/i, `${page} contains retired public world wording.`);
   assert.ok(visibleWordCount(source) >= 180, `${page} needs at least 180 visible words of original content.`);
   for (const href of requiredNavigation) {
     assert.match(source, new RegExp(`href="${href.replaceAll(".", "\\.")}"`), `${page} does not link to ${href}.`);
+  }
+}
+
+assert.match(worldSource, /<title>Crownlands World — 15 Connected Regions<\/title>/);
+assert.match(worldSource, /Capacity belongs to each region/);
+assert.match(worldSource, /Dynamic realm expansion/);
+assert.match(worldSource, /currently has 15 connected regions/);
+for (const region of ["Crownlands Heart", "West Marches", "East Reach", "North Frontier", "Southfields", "Graywood Hollow", "Greenrook Vale", "Lowroad Vale", "Stonebrook Farms", "Goldmere Plains", "Bandit Wastes", "Ironfall Hills", "Redbanner Fields", "Ashenfen March", "Relic Vale"]) {
+  assert.match(worldSource, new RegExp(region), `World page is missing ${region}.`);
+}
+assert.ok(visibleWordCount(worldSource) >= 650, "World page needs substantial original regional content.");
+assert.match(communitySource, /Share gameplay feedback/);
+assert.match(communitySource, /Report a reproducible bug/);
+assert.match(communitySource, /Suggest a balance change/);
+assert.match(communitySource, /https:\/\/discord\.gg\/F2EdEGuvEy/);
+assert.match(communitySource, /https:\/\/github\.com\/explocion200\/crownlands-game\/issues/);
+assert.ok(visibleWordCount(communitySource) >= 500, "Community page needs substantial original participation guidance.");
+for (const anchor of ["first-five", "main-city", "first-city", "economy", "daily", "map", "scouting", "moving-troops", "camps", "strongholds", "growth", "join-clan", "checklist"]) {
+  assert.match(howToSource, new RegExp(`id="${anchor}"`), `Beginner guide is missing #${anchor}.`);
+}
+for (const anchor of ["cities-levels", "troops-marches", "combat-walls", "scouting-reports", "camps", "strongholds", "clans-rallies", "items-bag", "skills", "achievements", "leaderboards", "pwa-install"]) {
+  assert.match(guidesSource, new RegExp(`id="${anchor}"`), `Guide hub is missing #${anchor}.`);
+}
+for (const anchor of ["installation", "gameplay-questions", "known-limitations", "policies"]) {
+  assert.match(supportSource, new RegExp(`id="${anchor}"`), `Support is missing #${anchor}.`);
+}
+assert.match(supportSource, /playcrownlands\.com/);
+assert.doesNotMatch(supportSource, /crownland\.netlify\.app/);
+
+for (const page of publicPages) {
+  const source = read(page);
+  for (const match of source.matchAll(/href="(\/[^"]+)"/g)) {
+    const href = match[1];
+    if (href === "/" || href.startsWith("/play/") || href.startsWith("/assets/") || href.startsWith("/promo-screenshots/")) continue;
+    const [pathname, fragment] = href.split("#");
+    if (!pathname.endsWith(".html")) continue;
+    const target = pathname.slice(1);
+    assert.ok(fs.existsSync(path.join(root, target)), `${page} links to missing ${pathname}.`);
+    if (fragment) assert.match(read(target), new RegExp(`id="${fragment}"`), `${page} links to missing ${href}.`);
   }
 }
 

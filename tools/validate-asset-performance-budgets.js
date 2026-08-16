@@ -171,7 +171,9 @@ let installPrecacheBytes = 0;
 for (const url of staticCacheUrls) {
   const relativePath = localPathFromUrl(url);
   assert(fs.existsSync(path.join(root, relativePath)), `Precached file ${url} is missing.`);
-  installPrecacheBytes += statBytes(relativePath);
+  installPrecacheBytes += /\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
+    ? normalizedTextBytes(relativePath)
+    : statBytes(relativePath);
 }
 assert(
   installPrecacheBytes <= MAX_INSTALL_PRECACHE_BYTES,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>How to Play Crownlands | Player Guide</title>
+  <title>How to Play Crownlands — Beginner Guide</title>
   <meta name="description" content="A practical Crownlands player guide covering cities, production, upgrades, scouting, combat, skills, clan rallies, Strongholds, camps, and reports." />
   <meta name="author" content="Crownlands Development Team" />
   <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
@@ -17,16 +17,10 @@
 <body>
   <header class="site-header">
     <nav class="site-nav" aria-label="Primary">
-      <a class="site-brand" href="/">Crownlands</a>
-      <div class="site-nav-links">
-        <a href="/guides.html" aria-current="page">Guides</a>
-        <a href="/updates.html">Updates</a>
-        <a href="/about.html">About</a>
-        <a href="/roadmap.html">Roadmap</a>
-        <a href="/game-rules.html">Rules</a>
-        <a href="/support.html">Support</a>
-        <a href="/privacy.html">Privacy</a>
-        <a class="nav-play" href="/play/">Play free</a>
+      <a class="site-brand" href="/"><img src="/assets/icons/crownlands-icon-192.png" width="38" height="38" alt="" />Crownlands</a>
+      <button class="site-menu-toggle" type="button" aria-expanded="false" aria-controls="siteMenu" data-menu-toggle>Menu</button>
+      <div class="site-nav-links" id="siteMenu" data-site-menu>
+        <a href="/">Home</a><a href="/play/">Play</a><a href="/roadmap.html">Roadmap</a><a href="/world.html">World</a><a href="/how-to-play.html" aria-current="page">How to Play</a><a href="/guides.html">Guide</a><a href="/updates.html">Updates</a><a href="/community.html">Community</a><a href="/support.html">Support</a>
       </div>
     </nav>
   </header>
@@ -42,25 +36,33 @@
     <div class="article-layout">
       <nav class="article-index" aria-label="Guide sections">
         <strong>On this page</strong>
-        <a href="#begin">Begin a kingdom</a>
+        <a href="#first-five">First five minutes</a>
+        <a href="#main-city">Your Main City</a>
+        <a href="#first-city">Capture a first city</a>
         <a href="#economy">Production and upgrades</a>
+        <a href="#daily">Daily Login and Quests</a>
         <a href="#map">Read the map</a>
         <a href="#scouting">Scout before attacking</a>
-        <a href="#combat">Send and defend armies</a>
-        <a href="#objectives">Camps and Strongholds</a>
+        <a href="#moving-troops">Move and defend armies</a>
+        <a href="#camps">Camps</a>
+        <a href="#strongholds">Strongholds and Citadel</a>
         <a href="#growth">Skills and items</a>
-        <a href="#clans">Clans, rallies, and reinforcements</a>
-        <a href="#checklist">First-session checklist</a>
+        <a href="#join-clan">Join a clan</a>
+        <a href="#checklist">Beginner tips</a>
       </nav>
 
       <article class="article-body">
-        <section id="begin" class="content-section">
+        <section id="first-five" class="content-section">
           <div class="numbered-step">
             <span class="step-number">1</span>
             <div>
-              <h2>Begin a kingdom</h2>
+              <h2>Your first five minutes</h2>
               <p>Sign in with Google, choose The Crown Marches, and enter the shared realm. A new ruler claims an available starting city in a starter region. That city becomes the main city: the default rally point for certain returned troops, recovered losses, and rewards that need a stable destination.</p>
               <p>The opening goal is not to attack every nearby marker. First identify the main city, its current troop count, the rate at which it produces gold and troops, and the neutral cities within practical marching distance.</p>
+              <h3 id="main-city">Understand your Main City</h3>
+              <p>The Main City is the stable center of a kingdom, not a disposable tutorial marker. Check its city level, stored troops, hourly production, wall condition, and nearby routes. Some returned troops and rewards use it as a safe destination when their original source is no longer owned, so keep it identifiable and reasonably defended.</p>
+              <h3 id="first-city">Capture your first city</h3>
+              <p>Choose a nearby neutral holding with a practical march time. Inspect it, scout if the defense is uncertain, and send enough troops to break the wall and defeat the soldiers behind it while keeping a reserve at home. A capture expands production and territory, but it also creates another border to watch; open the report after arrival before repeating the attack.</p>
             </div>
           </div>
         </section>
@@ -74,7 +76,9 @@
               <p>Each city produces 10 troops per victory point per hour before bonuses. Gold uses its separate city-production curve. Royal Granaries and Tax Stewardship improve those base rates, while Stronghold, Citadel, and timed-item percentages are shown separately so the Economy and city detail panels explain exactly where each total comes from.</p>
               <p>Victory points measure city value and drive base troop production; they do not directly strengthen one attacking soldier, and passive gold does not use VP. Open the <a href="/battle-economy-guide.html">interactive Battle and Economy Guide</a> to compare city levels, production, walls, skills, and battle thresholds.</p>
               <p>Active-map pickups appear every three minutes and alternate between one hour of stored gold production and one hour of stored troop production. The daily limits are 25 of each type, 50 total. Daily login rewards use the current UTC calendar month; missing a day pauses progress, up to two earned rewards can wait, and unclaimed rewards expire at the next month rollover.</p>
-              <p>Open Daily Rewards and choose the Quests tab to see three Daily Missions. They reset at 00:00 UTC and are scaled from a server snapshot of the kingdom&rsquo;s current production, cities, troops, and available activities, so their targets and rewards do not move during the day. Progress comes from validated gameplay. Claim each completed reward manually, or use the one daily reroll to replace an unfinished mission and discard its progress.</p>
+              <h3 id="daily">Use Daily Login and Daily Quests</h3>
+              <p>Open Daily Rewards to see the current Daily Login track, then choose the Quests tab to see three Daily Missions. Login progress follows the UTC calendar month; missing a day pauses progress, up to two earned rewards can wait, and unclaimed rewards expire at month rollover. Only the currently available reward card can be claimed.</p>
+              <p>Daily Quests reset at 00:00 UTC and are scaled from a server snapshot of the kingdom&rsquo;s current production, cities, troops, and available activities, so their targets and rewards do not move during the day. Progress comes from validated gameplay. Claim each completed reward manually, or use the one daily reroll to replace an unfinished mission and discard its progress.</p>
               <p>Troops remain in the city that produced them until they march. That means a productive city can become a useful defensive reserve, but only if its troops are not repeatedly drained. Gold is held at the kingdom level and can be used across the realm.</p>
               <h3>Useful habits</h3>
               <ul>
@@ -115,7 +119,7 @@
           <div class="numbered-step">
             <span class="step-number">5</span>
             <div>
-              <h2>Send armies and protect holdings</h2>
+              <h2 id="moving-troops">Move troops and protect holdings</h2>
               <p>Choose a source city, target, and troop amount to create a march. The server calculates and validates the authoritative route and arrival time together with ownership, available troops, protection rules, and other requirements before accepting the order. Regroup also runs as one server-validated batch: its displayed cost is charged only if every confirmed nearby transfer is created. When a march arrives, the server resolves the outcome and records a report.</p>
               <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience. Newly acquired cities remain immediately attackable and award their normal battle and capture experience.</p>
               <h3>Defense happens in two layers</h3>
@@ -130,7 +134,9 @@
             <span class="step-number">6</span>
             <div>
               <h2>Contest camps, Strongholds, and the Citadel</h2>
+              <h3 id="camps">Reward camps</h3>
               <p>Resource camps reward a ruler who defeats their defenders and holds the position for the required time. Every neutral camp starts with 20,000 troops. Camps have no level or walls, and each stationed troop contributes exactly 1.00 defense power without skill or objective bonuses. Gold and troop camps provide production-based rewards, while Deed and Relic camps use their own award rules. Camps are temporary objectives rather than ordinary permanent cities.</p>
+              <h3 id="strongholds">Strongholds and the Crown Citadel</h3>
               <p>Strongholds grant strategic benefits to their controller. Different Strongholds can improve gold, training, defending-soldier power, or movement. Defense Stronghold and Crown Citadel percentages apply only against each defending soldier&rsquo;s 1.30 base; they never increase walls, Stoneworks, city level, or repair time. The Crown Citadel is the realm’s central prestige objective: its current controller receives the Citadel effect, and the Reign Ledger records cumulative control time.</p>
             </div>
           </div>
@@ -152,7 +158,7 @@
           <div class="numbered-step">
             <span class="step-number">8</span>
             <div>
-              <h2>Coordinate through a clan</h2>
+              <h2 id="join-clan">Join a clan and coordinate</h2>
               <p>Clans provide a shared identity, membership roles, applications, allied map information, shared rewards, and coordinated attacks. Clan members cannot treat allied cities as ordinary enemy targets. Instead, they can send reinforcements to eligible allied holdings.</p>
               <p>Reinforcement troops continue to belong to their sender. In city and objective sieges they join the garrison with their applicable troop-defense bonuses behind the holding&rsquo;s one physical wall. They do not create extra wall layers or duplicate Stoneworks. At reward camps, reinforcement skills do not apply; every added troop contributes exactly 1.00 defense power and there is no wall layer. You may maintain up to two assignments with each clanmate, but each assignment must support a different holding. Ordinary cities reserve up to five reinforcement contributors as soon as their marches launch; allied Strongholds and reward camps do not use this city limit.</p>
               <p>The sender may recall stationed troops, the holding owner may send them home, and battle losses are applied when the position is attacked. Troops return to the city or Stronghold they originally left while it remains owned by the sender. If that holding has been captured before the return begins or while the troops are marching, the server redirects survivors to the sender&rsquo;s current Main City.</p>
@@ -168,7 +174,7 @@
         </section>
 
         <section id="checklist" class="content-section">
-          <h2>First-session checklist</h2>
+          <h2>Beginner tips and first-session checklist</h2>
           <ul>
             <li>Locate the main city and review its production.</li>
             <li>Identify two or three nearby neutral cities rather than spreading in every direction.</li>
@@ -195,14 +201,17 @@
         <a href="/">Home</a>
         <a href="/play/">Play</a>
         <a href="/guides.html">Guides</a>
+        <a href="/world.html">World</a>
         <a href="/updates.html">Updates</a>
-        <a href="/about.html">About</a>
+        <a href="/community.html">Community</a>
         <a href="/battle-economy-guide.html">Battle Guide</a>
         <a href="/game-rules.html">Rules</a>
         <a href="/support.html">Support</a>
         <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
       </nav>
     </div>
   </footer>
+  <script src="/public-site.js?v=20260816-public-restructure-r1" defer></script>
 </body>
 </html>
