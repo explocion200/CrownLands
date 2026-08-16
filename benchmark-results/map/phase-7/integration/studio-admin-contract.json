@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "phase7-studio-admin-contract-v1",
+  "minimumRole": "crownlands_map_admin",
+  "readModels": {
+    "worldGrid": [
+      "coreReservations",
+      "outerRings",
+      "lifecycle"
+    ],
+    "regionInspection": [
+      "mapPreview",
+      "fortyCities",
+      "startingCandidates",
+      "blockers",
+      "roads",
+      "edgeContracts",
+      "packageHash",
+      "validationReceipt",
+      "generatorVersion",
+      "assetLibraryVersion"
+    ]
+  },
+  "lifecycleStates": [
+    "ALLOCATED",
+    "GENERATING",
+    "VALIDATING",
+    "STANDBY",
+    "PUBLISHING",
+    "PUBLISHED",
+    "ACTIVE",
+    "FAILED"
+  ],
+  "actions": {
+    "generate": {
+      "unpublishedOnly": true,
+      "serverAuthoritative": true
+    },
+    "rejectUnpublished": {
+      "unpublishedOnly": true,
+      "serverAuthoritative": true
+    },
+    "regenerateUnpublished": {
+      "unpublishedOnly": true,
+      "versionedRetrySalt": true
+    },
+    "approvePublication": {
+      "explicitApproval": true,
+      "atomic": true
+    },
+    "approveActivation": {
+      "explicitApproval": true,
+      "atomic": true
+    }
+  },
+  "forbiddenForNormalPlayers": [
+    "generate",
+    "publish",
+    "activate",
+    "rewritePackage",
+    "alterEdgeContract",
+    "alterPackageHash",
+    "forceConnectionOpen",
+    "chooseCoordinate",
+    "bypassNpcThreshold"
+  ],
+  "largeStudioRedesignIncluded": false
+}

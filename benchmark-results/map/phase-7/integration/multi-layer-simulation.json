@@ -1,0 +1,126 @@
+{
+  "regionCount": 128,
+  "completeLayer1": true,
+  "completeLayer2": true,
+  "highestLayer": 4,
+  "layerCounts": {
+    "1": 24,
+    "2": 32,
+    "3": 40,
+    "4": 32
+  },
+  "uniqueCoordinates": 128,
+  "uniqueRegionIds": 128,
+  "uniqueCityIds": 5120,
+  "uniquePackageHashes": 128,
+  "neighborPairs": {
+    "directed": 440,
+    "undirected": 220,
+    "reciprocal": 440
+  },
+  "elapsedMs": 5184.3091,
+  "regionsPerSecond": 24.68988587119545,
+  "approximateRssDeltaBytes": 180035584,
+  "controllerGeneration": {
+    "count": 128,
+    "averageMs": 34.9570796875,
+    "p50Ms": 34.244199999999864,
+    "p95Ms": 41.49557499999987,
+    "maximumMs": 61.22779999999966
+  },
+  "store": {
+    "regionCount": 128,
+    "lifecycleCounts": {
+      "ACTIVE": 128
+    },
+    "standbyPackageCount": 0,
+    "publishedPackageCount": 128,
+    "activeRegionCount": 128,
+    "immutableAssetCount": 1536,
+    "stagedPublicationCount": 0,
+    "quarantineCount": 0,
+    "cityDefinitionCount": 5120,
+    "initializedCityCount": 5120,
+    "metrics": {
+      "assetUpload": {
+        "count": 128,
+        "averageMs": 0.1704781249999563,
+        "p50Ms": 0.16270000000008622,
+        "p95Ms": 0.26120999999989175,
+        "maximumMs": 0.37330000000019936
+      },
+      "hashVerification": {
+        "count": 128,
+        "averageMs": 0.7779437499999933,
+        "p50Ms": 0.7296000000000049,
+        "p95Ms": 1.1801950000002301,
+        "maximumMs": 1.622099999999591
+      },
+      "metadataPublication": {
+        "count": 128,
+        "averageMs": 0.0053624999999737355,
+        "p50Ms": 0.004349999999931242,
+        "p95Ms": 0.012214999999878264,
+        "maximumMs": 0.023400000000037835
+      },
+      "activation": {
+        "count": 128,
+        "averageMs": 1.7810671874999713,
+        "p50Ms": 1.7476999999998952,
+        "p95Ms": 2.3434850000000322,
+        "maximumMs": 3.3809999999994034
+      },
+      "duplicatePreventionCount": 0,
+      "gatedToOpenTransitions": 220
+    }
+  },
+  "lazyLoading": {
+    "startupCatalogBytes": 118121,
+    "firstRegionDefinitionBytes": 14994,
+    "startupIncludesDefinitions": false,
+    "startupIncludesMapBytes": false,
+    "cache": {
+      "cacheLimit": 4,
+      "cacheSize": 4,
+      "catalogLookups": {
+        "count": 1,
+        "averageMs": 0.8672999999998865,
+        "p50Ms": 0.8672999999998865,
+        "p95Ms": 0.8672999999998865,
+        "maximumMs": 0.8672999999998865
+      },
+      "regionFetches": {
+        "count": 10,
+        "averageMs": 0.013249999999879946,
+        "p50Ms": 0.007550000000264845,
+        "p95Ms": 0.03335499999957389,
+        "maximumMs": 0.04599999999936699
+      },
+      "transitions": {
+        "count": 1,
+        "averageMs": 0.4765000000006694,
+        "p50Ms": 0.4765000000006694,
+        "p95Ms": 0.4765000000006694,
+        "maximumMs": 0.4765000000006694
+      }
+    }
+  },
+  "roadPresentationCache": {
+    "entries": 36,
+    "hits": 92,
+    "misses": 36
+  },
+  "eventCounts": {
+    "allocation": 128,
+    "generation_start": 128,
+    "validation": 128,
+    "generation_end": 128,
+    "publication_start": 128,
+    "storage_upload": 128,
+    "hash_verification": 128,
+    "publication": 128,
+    "activation": 128,
+    "gated_to_open": 220
+  },
+  "eventsContainSensitivePlayerData": false
+}

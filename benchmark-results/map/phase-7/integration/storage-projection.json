@@ -1,0 +1,29 @@
+{
+  "phase6fRuntimeBaselineBytesPerRegion": 296942.734,
+  "packageMetadataPlanningBytesPerRegion": 36864,
+  "receiptAndIndexPlanningBytesPerRegion": 6144,
+  "projections": {
+    "1000": {
+      "runtimeMapAndThumbnailBytes": 296942734,
+      "runtimeMapAndThumbnailGiB": 0.2765494715422392,
+      "immutableMetadataAndReceiptBytes": 43008000,
+      "completePackageProjectionBytes": 339950734,
+      "completePackageProjectionGiB": 0.3166037928313017
+    },
+    "10000": {
+      "runtimeMapAndThumbnailBytes": 2969427340,
+      "runtimeMapAndThumbnailGiB": 2.765494715422392,
+      "immutableMetadataAndReceiptBytes": 430080000,
+      "completePackageProjectionBytes": 3399507340,
+      "completePackageProjectionGiB": 3.166037928313017
+    },
+    "100000": {
+      "runtimeMapAndThumbnailBytes": 29694273400,
+      "runtimeMapAndThumbnailGiB": 27.65494715422392,
+      "immutableMetadataAndReceiptBytes": 4300800000,
+      "completePackageProjectionBytes": 33995073400,
+      "completePackageProjectionGiB": 31.66037928313017
+    }
+  },
+  "imageQualityChanged": false
+}

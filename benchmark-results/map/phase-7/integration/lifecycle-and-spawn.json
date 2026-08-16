@@ -1,0 +1,91 @@
+{
+  "firstRegionId": "phase6d_region_0001",
+  "secondRegionId": "phase6d_region_0002",
+  "stateFlow": [
+    "ALLOCATED",
+    "GENERATING",
+    "VALIDATING",
+    "STANDBY",
+    "PUBLISHING",
+    "PUBLISHED",
+    "ACTIVE"
+  ],
+  "standbyDiscoverable": false,
+  "publishedActive": false,
+  "packageHashBeforeNeighbor": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+  "packageHashAfterNeighbor": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+  "gateToOpenWithoutRebake": true,
+  "authoritativeSpawnThreshold": {
+    "claimsAccepted": 26,
+    "finalAcceptedClaim": {
+      "cityId": "npc_phase6d_region_0001_9edb7691fc8885",
+      "npcBefore": 15,
+      "npcAfter": 14,
+      "subsequentSpawnEligible": false
+    },
+    "rejectedAtFourteen": {
+      "rejected": true,
+      "code": "spawn-threshold",
+      "message": "Region phase6d_region_0001 is not eligible for a new placement."
+    },
+    "existingPlayersRemoved": false,
+    "travelChangedByThreshold": false,
+    "ownershipReset": false
+  },
+  "secondRegionEligibleForFuturePlacement": {
+    "regionId": "phase6d_region_0002",
+    "spawnEligible": true,
+    "spawnReady": true,
+    "currentNpcCityCount": 40,
+    "minimumNpcCitiesForSpawn": 15,
+    "ownershipStateAuthoritative": true,
+    "topologyValid": true,
+    "reasons": []
+  },
+  "snapshot": {
+    "regionCount": 2,
+    "lifecycleCounts": {
+      "ACTIVE": 2
+    },
+    "standbyPackageCount": 0,
+    "publishedPackageCount": 2,
+    "activeRegionCount": 2,
+    "immutableAssetCount": 24,
+    "stagedPublicationCount": 0,
+    "quarantineCount": 0,
+    "cityDefinitionCount": 80,
+    "initializedCityCount": 80,
+    "metrics": {
+      "assetUpload": {
+        "count": 2,
+        "averageMs": 0.18454999999998734,
+        "p50Ms": 0.18454999999998734,
+        "p95Ms": 0.2210449999999966,
+        "maximumMs": 0.22509999999999764
+      },
+      "hashVerification": {
+        "count": 2,
+        "averageMs": 0.7654500000000013,
+        "p50Ms": 0.7654500000000013,
+        "p95Ms": 0.7905150000000148,
+        "maximumMs": 0.7933000000000163
+      },
+      "metadataPublication": {
+        "count": 2,
+        "averageMs": 0.0034499999999866304,
+        "p50Ms": 0.0034499999999866304,
+        "p95Ms": 0.004034999999993261,
+        "maximumMs": 0.004099999999993997
+      },
+      "activation": {
+        "count": 2,
+        "averageMs": 2.1894000000000204,
+        "p50Ms": 2.1894000000000204,
+        "p95Ms": 2.3246700000000216,
+        "maximumMs": 2.339700000000022
+      },
+      "duplicatePreventionCount": 0,
+      "gatedToOpenTransitions": 1
+    }
+  }
+}

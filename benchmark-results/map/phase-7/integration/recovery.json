@@ -1,0 +1,45 @@
+{
+  "actions": [
+    {
+      "regionId": "recovery-allocated",
+      "action": "resume_generation"
+    },
+    {
+      "regionId": "recovery-generating",
+      "action": "retry_from_allocation"
+    },
+    {
+      "regionId": "recovery-validating",
+      "action": "retry_from_allocation"
+    },
+    {
+      "regionId": "recovery-standby",
+      "action": "no_change"
+    },
+    {
+      "regionId": "recovery-publishing",
+      "action": "rollback_interrupted_publication"
+    },
+    {
+      "regionId": "recovery-published",
+      "action": "no_change"
+    },
+    {
+      "regionId": "recovery-active",
+      "action": "no_change"
+    },
+    {
+      "regionId": "recovery-publishing-marker",
+      "action": "honor_publication_marker"
+    }
+  ],
+  "byAction": {
+    "resume_generation": 1,
+    "retry_from_allocation": 2,
+    "no_change": 3,
+    "rollback_interrupted_publication": 1,
+    "honor_publication_marker": 1
+  },
+  "terminalStatesPreserved": true,
+  "publicationMarkerAuthoritative": true
+}

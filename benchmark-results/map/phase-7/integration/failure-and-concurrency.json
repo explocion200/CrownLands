@@ -1,0 +1,266 @@
+{
+  "deterministicDuplicateJobs": {
+    "samePackageHash": true,
+    "sameMapBytes": true
+  },
+  "coordinateCollision": {
+    "rejected": true,
+    "code": "duplicate-coordinate",
+    "message": "Coordinate -3,-3 is already allocated to phase6d_region_0001."
+  },
+  "regionIdCollision": {
+    "rejected": true,
+    "code": "duplicate-region-id",
+    "message": "Region ID phase6d_region_0001 is already allocated at -3,-3."
+  },
+  "publicationRace": [
+    {
+      "idempotent": false,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    },
+    {
+      "idempotent": true,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "PUBLISHED"
+    }
+  ],
+  "publicationCollision": {
+    "rejected": true,
+    "code": "duplicate-publication",
+    "message": "Region phase6d_region_0001 already published a different package."
+  },
+  "immutableOverwrite": {
+    "rejected": true,
+    "code": "immutable-overwrite",
+    "message": "Immutable asset overwrite attempted at generated-worlds/v1/worlds/phase6d_development_world/seasons/phase6d_development_season/regions/phase6d_region_0001/packages/14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd/map.webp."
+  },
+  "activationRace": [
+    {
+      "idempotent": false,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "ACTIVE",
+      "cityInitialization": {
+        "idempotent": false,
+        "count": 40
+      }
+    },
+    {
+      "idempotent": true,
+      "packageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+      "lifecycle": "ACTIVE"
+    }
+  ],
+  "idempotentCityInitialization": {
+    "idempotent": true,
+    "count": 40
+  },
+  "firstPublishedHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+  "workerCrashAfterMapEncode": {
+    "rejected": true,
+    "code": "worker-crash-after-map-encode",
+    "message": "Injected worker crash after map encode."
+  },
+  "publicationFaults": [
+    {
+      "faultAt": "after_asset_upload",
+      "rejected": true,
+      "code": "crash-after-asset-upload",
+      "message": "Injected worker crash after asset upload.",
+      "snapshot": {
+        "regionCount": 1,
+        "lifecycleCounts": {
+          "STANDBY": 1
+        },
+        "standbyPackageCount": 1,
+        "publishedPackageCount": 0,
+        "activeRegionCount": 0,
+        "immutableAssetCount": 12,
+        "stagedPublicationCount": 0,
+        "quarantineCount": 1,
+        "cityDefinitionCount": 0,
+        "initializedCityCount": 0,
+        "metrics": {
+          "assetUpload": {
+            "count": 1,
+            "averageMs": 0.13250000000005002,
+            "p50Ms": 0.13250000000005002,
+            "p95Ms": 0.13250000000005002,
+            "maximumMs": 0.13250000000005002
+          },
+          "hashVerification": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "metadataPublication": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "activation": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "duplicatePreventionCount": 0,
+          "gatedToOpenTransitions": 0
+        }
+      }
+    },
+    {
+      "faultAt": "publication_transaction",
+      "rejected": true,
+      "code": "publication-transaction-failed",
+      "message": "Injected publication transaction failure.",
+      "snapshot": {
+        "regionCount": 1,
+        "lifecycleCounts": {
+          "STANDBY": 1
+        },
+        "standbyPackageCount": 1,
+        "publishedPackageCount": 0,
+        "activeRegionCount": 0,
+        "immutableAssetCount": 12,
+        "stagedPublicationCount": 0,
+        "quarantineCount": 1,
+        "cityDefinitionCount": 0,
+        "initializedCityCount": 0,
+        "metrics": {
+          "assetUpload": {
+            "count": 1,
+            "averageMs": 0.13049999999998363,
+            "p50Ms": 0.13049999999998363,
+            "p95Ms": 0.13049999999998363,
+            "maximumMs": 0.13049999999998363
+          },
+          "hashVerification": {
+            "count": 1,
+            "averageMs": 0.820699999999988,
+            "p50Ms": 0.820699999999988,
+            "p95Ms": 0.820699999999988,
+            "maximumMs": 0.820699999999988
+          },
+          "metadataPublication": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "activation": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "duplicatePreventionCount": 0,
+          "gatedToOpenTransitions": 0
+        }
+      }
+    },
+    {
+      "faultAt": "validator_failure",
+      "rejected": true,
+      "code": "package-validation-failed",
+      "message": "Injected package validator failure.",
+      "snapshot": {
+        "regionCount": 1,
+        "lifecycleCounts": {
+          "STANDBY": 1
+        },
+        "standbyPackageCount": 1,
+        "publishedPackageCount": 0,
+        "activeRegionCount": 0,
+        "immutableAssetCount": 0,
+        "stagedPublicationCount": 0,
+        "quarantineCount": 1,
+        "cityDefinitionCount": 0,
+        "initializedCityCount": 0,
+        "metrics": {
+          "assetUpload": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "hashVerification": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "metadataPublication": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "activation": {
+            "count": 0,
+            "averageMs": 0,
+            "p50Ms": 0,
+            "p95Ms": 0,
+            "maximumMs": 0
+          },
+          "duplicatePreventionCount": 0,
+          "gatedToOpenTransitions": 0
+        }
+      }
+    }
+  ],
+  "activationTransactionFailure": {
+    "rejected": true,
+    "code": "activation-transaction-failed",
+    "message": "Injected activation transaction failure."
+  },
+  "invalidPackageRejected": {
+    "rejected": true,
+    "code": "",
+    "message": "not_exactly_40_cities duplicate_city_ids"
+  },
+  "adjacentGeneration": {
+    "inheritedPublishedContractAccepted": true,
+    "stalePackageErrors": [
+      "west:stale_or_missing_published_edge_contract"
+    ]
+  },
+  "unpublishedVersionedRetry": {
+    "receipt": {
+      "regionId": "phase6d_region_0001",
+      "coordinate": {
+        "gridX": -3,
+        "gridY": -3
+      },
+      "retrySalt": "revised-config-v2",
+      "lifecycle": "ALLOCATED",
+      "coordinateReused": true
+    },
+    "originalPackageHash": "14d2e636475ff22eade714aa9038f72910d4da83d9c4a386f719b1f868e34dbd",
+    "retryPackageHash": "5d87d61a9043cdb2960cc1692b06f36081aae9180552318d425a144ac79c862b",
+    "publishedRetryRejected": {
+      "rejected": true,
+      "code": "published-package-immutable",
+      "message": "Published packages are immutable; retry requires a new versioned region/package workflow."
+    }
+  },
+  "parallelUniqueAllocations": 4,
+  "parallelPackageDispatchCount": 4,
+  "unauthorizedPlayerAction": {
+    "rejected": true,
+    "code": "permission-denied",
+    "message": "Admin authority is required for region allocation."
+  },
+  "partialRegionsVisible": 0,
+  "inconsistentTopologyPublished": 0
+}

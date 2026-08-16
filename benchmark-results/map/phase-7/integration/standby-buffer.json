@@ -1,0 +1,35 @@
+{
+  "evaluations": [
+    {
+      "bufferSize": 1,
+      "preparationMs": 41.163099999999986,
+      "generation": {
+        "count": 1,
+        "averageMs": 38.9486,
+        "p50Ms": 38.9486,
+        "p95Ms": 38.9486,
+        "maximumMs": 38.9486
+      },
+      "standbyRuntimeAssetBytes": 344998,
+      "discoverableRegions": 0,
+      "resilience": "no warm spare after consumption"
+    },
+    {
+      "bufferSize": 2,
+      "preparationMs": 68.16199999999998,
+      "generation": {
+        "count": 2,
+        "averageMs": 32.65425000000002,
+        "p50Ms": 32.65425000000002,
+        "p95Ms": 33.68515500000003,
+        "maximumMs": 33.79970000000003
+      },
+      "standbyRuntimeAssetBytes": 682706,
+      "discoverableRegions": 0,
+      "resilience": "one package may be consumed while one remains ready"
+    }
+  ],
+  "recommendedBufferSize": 2,
+  "rationale": "A two-package buffer adds one map+thumbnail (about 296943 bytes) while covering the 3413.631 ms approved offline raster p95 and a single worker interruption.",
+  "autoActivationAllowed": false
+}

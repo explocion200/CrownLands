@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "phase": "7",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "assetLibraryModified": false,
+  "assetCount": 118,
+  "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+  "strategy": "cache pre-themed internal road presentations by roadGeometryId|theme before foundation-specific opening harmonization",
+  "combinationCount": 36,
+  "geometryCount": 9,
+  "themeCount": 4,
+  "uncached": {
+    "presentationGeneration": {
+      "count": 36,
+      "averageMs": 212.72699444347785,
+      "p50Ms": 234.47845000191592,
+      "p95Ms": 261.6700000362471,
+      "maximumMs": 277.81649999087676
+    },
+    "wallClockMs": 8147.140300017782
+  },
+  "precomputation": {
+    "build": {
+      "count": 36,
+      "averageMs": 210.55733610895308,
+      "p50Ms": 235.56534998351708,
+      "p95Ms": 255.6616000365466,
+      "maximumMs": 260.3833999601193
+    },
+    "buildWallClockMs": 7580.417899996974,
+    "entryCount": 36,
+    "memoryBytes": 206552113,
+    "memoryMiB": 196.9834451675415
+  },
+  "cached": {
+    "warmLookupCount": 10000,
+    "lookup": {
+      "count": 10000,
+      "averageMs": 0.00033105004113167527,
+      "p50Ms": 0.000200001522898674,
+      "p95Ms": 0.000400003045797348,
+      "maximumMs": 0.3983000060543418
+    },
+    "lookupWallClockMs": 492.36289999680594,
+    "averageSpeedupVsUncached": 642582.5948134095
+  },
+  "correctness": {
+    "byteIdenticalPresentationHashes": true,
+    "combinationHashes": {
+      "base|north": "67fbfba86a1ae0835aeadc4b9815774434655d34f46b6babfad92728ecde6399",
+      "base|east": "6abd0a402c770cceffcd71005f40cf05a1458fa769fe14c7275f40c2361bbe69",
+      "base|south": "e5adef33d0945185943909d6239f413fed275cf717cb71114ca6c96de9bb19af",
+      "base|west": "109c0492002066e2b42646ea986661e471541d737444eee2d192d2a556ab9dca",
+      "east-v2|north": "72b73cb2f5838e6746a34378bdcca89d5a00aa0ca146fd6de3d4080cdb33ed7d",
+      "east-v2|east": "2e22ecbfdca9e2ef4a67bd7c52983ff65cf0a5b96ce3b255dca76d299c17c357",
+      "east-v2|south": "9556b0f4c7f7349493ce9e8eecc98484581f574537200031969a8e764aeebc32",
+      "east-v2|west": "064ca6aa33fb4e8000284378318785be80d7c1c214dc4d62878ac9c8835fa103",
+      "east-v3|north": "74b9195da48cd071c8ce916e2a511afef04a77e86314d5f044b9eb0a21bdc1fe",
+      "east-v3|east": "dfa1b41b6f14152754957f2c64ba027a7df0e539c3064c5388dbf22733cad379",
+      "east-v3|south": "cd79ec53c1353c070d6eb3f70f8066e39c0c6e694182c06bfc9d3479da53f4d0",
+      "east-v3|west": "3782b830fad61b8297d2ade56823dd0d312a7c6b8a0f1f3536e03140d6db7be8",
+      "north-v2|north": "668b108800becbde3ef293975ba097f166941a81118da4971c2df543c9438dd6",
+      "north-v2|east": "44f019278b485a19b116432fcef5009b8acf836a658a8dcc08e0079cc6cf3aaf",
+      "north-v2|south": "693a9e422e00c3579264b54d44fa87a8896d37c50a03ca886451146d53e05aee",
+      "north-v2|west": "0114505919b94d1f5bbff3ade8e8fb69d7d8990492b2aab49b9cfe1191c4cacc",
+      "north-v3|north": "2476284c8a84bc7f822a7cbf4f0046321eba8bd3761b050d073c8dada1147589",
+      "north-v3|east": "3f507d6eb0b7f3522961f247de0a6770272e3490f35351321e2400c978bd05eb",
+      "north-v3|south": "83f17be8456c0ee921e3010a1861c82716047c7fb8a9c306e46445644db60894",
+      "north-v3|west": "eea7f4d2fdf4e34f33111873527705af834b9f74890a89d0e86683869a6f5b59",
+      "south-v2|north": "7aba03b4634877f72f5b529ed04afcbd6182a6f80c5a04d571ea177d2aaea2c5",
+      "south-v2|east": "421d86c7dd91b9b7dcdb0a30baf73c29bfa72e392fb34b661eb19d7c2f914f7c",
+      "south-v2|south": "9de2644fd28e77f16fd0c7f9d603a98fbe3cf35a0025ff35044088412a205635",
+      "south-v2|west": "e422a61139c96a15e9dc33d3e70aab61019ac50d5ba26cef01339029ad5f7b6a",
+      "south-v3|north": "40190115187cdce1129969ffd52a410e4a8fa5a09895c638c4fc1e0187fd0488",
+      "south-v3|east": "c73b5f633133d8ec3dcf9974d9fcd5cf9c421a2fa291388cc815e7664e1f0656",
+      "south-v3|south": "06c834f221b3a942d456ba51f6aa74790f7b3294c9d21b84ad7b703a0d73d7da",
+      "south-v3|west": "aefef3eee0beb411cd7324750f706f893b0601d5a55269be2d8bbbf62ca8ffff",
+      "west-v2|north": "94bf982c0d2f0dfc8745e6d38079bfdb741a080d002dddf0ef2269f6ac0507eb",
+      "west-v2|east": "e4e3db3d1de29f2e3561bd0057885654432843d89b24ab03ba12c248a9089efd",
+      "west-v2|south": "deebcb44a8c0514fe868727b8ea0a1b99f90b6253d4093157553c5f2a1bf0a6e",
+      "west-v2|west": "f05b1c9c21e9398b1ddc0a85482353f66abca678fbe1524560269b980a629726",
+      "west-v3|north": "d16d3125de8e5bf9ee9a410a7328a40ac90eb2583e8209e277ea9b0cb7910460",
+      "west-v3|east": "c0c16881cba1407ce230bdfd507f69ba0d4f7eeb55412af7eea8602ab111e3f5",
+      "west-v3|south": "fb1ee4bd8c0b4287138ff286f8ab74e6473c913c2cfeb6653fe0ac20dcd8d570",
+      "west-v3|west": "39a748469f26e5232df3c84ca02ffe24ad41d269402efe9ee066512f525f1284"
+    },
+    "meaningfulPixelNoiseAdded": false,
+    "imageQualityChanged": false,
+    "roadSocketsChanged": false,
+    "finalFoundationHarmonizationStillAppliedPerMap": true
+  },
+  "tradeoff": {
+    "recommended": true,
+    "scope": "server/admin generation workers only",
+    "reason": "The bounded 36-entry cache removes repeated masked color transfer while retaining map-specific foundation harmonization."
+  }
+}
