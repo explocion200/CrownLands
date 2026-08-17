@@ -1,0 +1,64 @@
+{
+  "phase": "Crownlands Core v2 Phase ART-2 v2",
+  "status": "APPROVED",
+  "authoritativeFinalCoreArtStandard": true,
+  "appliesToPermanentCoreMapCount": 25,
+  "approvedFinalStyleBackgrounds": [
+    "crown-citadel",
+    "ironwatch",
+    "southwest-holding-tower",
+    "west-south-deed-camp",
+    "west-support"
+  ],
+  "approvedFinalStyleBackgroundCount": 5,
+  "unchangedB1BackgroundCount": 5,
+  "newCoreCoordinatesGenerated": 0,
+  "visualRules": {
+    "coreMoreHandcraftedThanOuterRegions": true,
+    "purposefulGameplayReadableDetail": true,
+    "thinIrregularTerrainBlendedMedievalRoads": true,
+    "thickGraphicRoadsProhibited": true,
+    "structuresRootedThroughOccupiedGround": true,
+    "artificialObjectivePadsProhibited": true,
+    "citySafePocketsRemainCalm": true,
+    "perimeterTouchesLiteralImageBoundary": true,
+    "sharedCameraLightingMaterialAndTerrainScale": true,
+    "objectiveSpecificEnvironmentalStorytelling": true
+  },
+  "objectivePlacement": {
+    "crownCitadel": "exact_center",
+    "strongholds": "exact_center",
+    "camps": "near_center_slight_shift_permitted",
+    "holdingTowers": "near_center_slight_shift_permitted",
+    "futureOuterFortresses": "near_center_slight_shift_permitted"
+  },
+  "gameplayGeometryLocked": {
+    "exactCityCapacities": true,
+    "cityCoordinates": true,
+    "objectiveCoordinates": true,
+    "roadSockets": true,
+    "topology": true,
+    "blockers": true,
+    "transitionZones": true,
+    "adjacency": true,
+    "spawnRules": true,
+    "coreHardMinimumSpacingPx": 68,
+    "corePreferredSpacingPx": 70,
+    "outerGeneratedSpacingPx": 112
+  },
+  "nextPhase": {
+    "name": "ART-3",
+    "mayBeginOnlyAfterCheckpointReport": true,
+    "scope": "Rebuild the five existing B1 backgrounds using approved geometry",
+    "newCoreCoordinatesPermitted": false,
+    "maps": [
+      { "coordinate": [-2, -2], "identity": "Warband Camp", "capacity": 55 },
+      { "coordinate": [-1, -2], "identity": "Relic Camp", "capacity": 55 },
+      { "coordinate": [-2, -1], "identity": "Relic Camp", "capacity": 55 },
+      { "coordinate": [-1, -1], "identity": "Holding Tower", "capacity": 55 },
+      { "coordinate": [-1, 0], "identity": "Aurum Keep", "capacity": 60 }
+    ]
+  },
+  "productionActivated": false,
+  "deployed": false
+}

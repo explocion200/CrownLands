@@ -1,0 +1,96 @@
+{
+  "phase": "Crownlands Core v2 Phase ART-2",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "newCoreCoordinatesGenerated": 0,
+  "prototypeBackgroundsOverwritten": 0,
+  "candidateBackgroundCount": 5,
+  "mapDimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "hardMinimumCoreCitySpacingPx": 68,
+  "outerGeneratedPlayerRegionSpacingPx": 112,
+  "entries": [
+    {
+      "key": "crown-citadel",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 0
+      },
+      "capacity": 60,
+      "candidatePngSha256": "a52b0c9f75f74088bc2f213a31404acb6b599184629b3991188493b46bb39123",
+      "candidateWebpSha256": "7983832437f6aba471b97b37cd6928896bed2625113502762eae7c645719d56a",
+      "oldPrototypePngSha256": "f366a2dd6457ee07607062a0b85d135c4ea2fb700de397e8a1112dc18348dcef",
+      "citiesSha256": "57448fbf5ec7904e57bf8bb5c7bd54753e25bbcbb4a11596047f56714d297ab8",
+      "compositionSha256": "2f6777b8797de99851e827c602b2595b82073e77c1fdb86934256d88f2d9cec3",
+      "validationReceiptSha256": "a0affe5decdb934984356d3993769dcdbbfc7fe0d37df47ac823ef2da8672ea9",
+      "minimumCitySpacingPx": 68.542,
+      "qaArtifacts": 12
+    },
+    {
+      "key": "ironwatch",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 1
+      },
+      "capacity": 60,
+      "candidatePngSha256": "b3d3076830dbe808b84b54c5ce15fc86f2ef1a1f01becc3422e50791a3a8fc49",
+      "candidateWebpSha256": "dd29b868a382b38aaea71e9a0aee7e4fc2dfc8345f1af8e99a0d0eb9b8e3a7f7",
+      "oldPrototypePngSha256": "a8fe53010bde5adecc6d602c8848bcb1bd4990e7a93aca3bf851f4b0fa5a7f16",
+      "citiesSha256": "e48b934c3d3a223e3f653e46c403ab220434d8d5823ef865fd0a1ef0aad6e4e7",
+      "compositionSha256": "545f04917b5a92339c9350e5a9cd5cb5edc5683fa4170515ed0bf6624b34330d",
+      "validationReceiptSha256": "adb3a86abf01dedaaff5379ceb89f4bfffe6b3ec2c0d17876fe4cb7a16544963",
+      "minimumCitySpacingPx": 68.797,
+      "qaArtifacts": 12
+    },
+    {
+      "key": "southwest-holding-tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 1
+      },
+      "capacity": 55,
+      "candidatePngSha256": "281d4c54dba76436b014546b1058de257bff6d55f33f59d7f65324a47ecba5c4",
+      "candidateWebpSha256": "8801ee19a5e2b1ac128c1f2d98cb1e36dd855350101447d0e32d4c10c84014bf",
+      "oldPrototypePngSha256": "ea4e8325f03a8e2a020d663aa052f5bad739f726ace744130b9523e760f5c3c4",
+      "citiesSha256": "61bf10588f1dc4c92a36606b9d3c63d0c77b4d08691a87d65baff2ceda9d9848",
+      "compositionSha256": "5ef046bd3effd44b8724a730d21b7656646afd5a583c8dd4f9027f9b47be0769",
+      "validationReceiptSha256": "b5c9312646d064d2955afba794105c6050820db05321f1e2d4af8dc79a02a8e3",
+      "minimumCitySpacingPx": 68.476,
+      "qaArtifacts": 12
+    },
+    {
+      "key": "west-south-deed-camp",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 1
+      },
+      "capacity": 60,
+      "candidatePngSha256": "35ee68767405b8ef7286b41a944222b997890ff3019e5eb83ba815fbf47b9b0e",
+      "candidateWebpSha256": "0ac40e7313a4fe154195e7a9b026c165f61876487a8587f82be5c32363d7bd7d",
+      "oldPrototypePngSha256": "3bf2f43e4b89226022d1e88e547aa77c9794d2e2d04444ad926d94408dbe3f5e",
+      "citiesSha256": "df5407c3a9d0e6b4378f6c30d8a27b8f711c93ab189a736a23b028ecf8d87614",
+      "compositionSha256": "1307f12758debac7710ba24c115440d3dc53e75b7c50b38f18d545a11c0f95c4",
+      "validationReceiptSha256": "ffedcf098ec06abf3eaf4a499b438c7de04bef12c06c08e2f75cc6bf816affd2",
+      "minimumCitySpacingPx": 68.029,
+      "qaArtifacts": 12
+    },
+    {
+      "key": "west-support",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 0
+      },
+      "capacity": 70,
+      "candidatePngSha256": "5b624ecf500101682e85d3be6ec1ddf7fadecbfdcc357fe0ca637a4ad62be2ca",
+      "candidateWebpSha256": "f3b907ed1ea9e3ac0331f0887931131f230bcb3cae12cf7771b072a77e65592a",
+      "oldPrototypePngSha256": "79deadb2f3613b9635ce5b581c3bf511afe70186ccd37297ea89cbfe5800a907",
+      "citiesSha256": "34386c1f177cb6a1f3bb3e34fd730ecdde24a3767d7a0780a026d7cee920f674",
+      "compositionSha256": "40fa18a6afbf175f8ce78b35c990d728075ee1eff3a695af67fb0bea0a4f2cf6",
+      "validationReceiptSha256": "6efb72d06c1055af71f605a60f93505f5ea5ff472cdf2d4e1b25b3f0fec56d69",
+      "minimumCitySpacingPx": 68.007,
+      "qaArtifacts": 12
+    }
+  ]
+}
