@@ -2208,6 +2208,7 @@ const actionButtons = document.getElementById("actionButtons");
 const clearSelectBtn = document.getElementById("clearSelectBtn");
 const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
+const modalHeaderNav = document.getElementById("modalHeaderNav");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const levelUpRewardModal = document.getElementById("levelUpRewardModal");
@@ -30463,12 +30464,12 @@ function renderDailyRewardModalTabs() {
 }
 
 function bindDailyRewardModalTabs() {
-  const tabButtons = [...(modalBody?.querySelectorAll("[data-daily-reward-tab]") || [])];
+  const tabButtons = [...(modalHeaderNav?.querySelectorAll("[data-daily-reward-tab]") || [])];
   const activateTab = tabId => {
     if (!["rewards", "quests", "achievements"].includes(tabId) || tabId === activeDailyRewardModalTab) return;
     activeDailyRewardModalTab = tabId;
     renderDailyLoginRewardModal();
-    const focusActiveTab = () => modalBody?.querySelector(`[data-daily-reward-tab="${tabId}"]`)?.focus();
+    const focusActiveTab = () => modalHeaderNav?.querySelector(`[data-daily-reward-tab="${tabId}"]`)?.focus();
     if (tabId === "quests") {
       void refreshDailyMissionStatus({ silent: true }).finally(focusActiveTab);
     } else if (tabId === "achievements") {
@@ -30535,28 +30536,31 @@ function renderDailyLoginRewardModal() {
     : activeDailyRewardModalTab === "achievements"
       ? "Achievements"
       : "Daily Rewards";
-  const tabsMarkup = renderDailyRewardModalTabs();
+  if (modalHeaderNav) {
+    modalHeaderNav.innerHTML = renderDailyRewardModalTabs();
+    modalHeaderNav.hidden = false;
+  }
   if (activeDailyRewardModalTab === "quests") {
-    modalBody.innerHTML = `${tabsMarkup}${renderDailyQuestTab()}`;
+    modalBody.innerHTML = renderDailyQuestTab();
     bindDailyRewardModalTabs();
     bindDailyQuestControls();
     renderDailyMissions();
     return;
   }
   if (activeDailyRewardModalTab === "achievements") {
-    modalBody.innerHTML = `${tabsMarkup}<section id="dailyRewardPanelAchievements" class="seasonal-achievement-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabAchievements">${renderSeasonalAchievementTab()}</section>`;
+    modalBody.innerHTML = `<section id="dailyRewardPanelAchievements" class="seasonal-achievement-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabAchievements">${renderSeasonalAchievementTab()}</section>`;
     bindDailyRewardModalTabs();
     bindSeasonalAchievementControls();
     return;
   }
   const status = dailyLoginRewardStatus;
   if (dailyLoginRewardStatusLoading && !status) {
-    modalBody.innerHTML = `${tabsMarkup}<section id="dailyRewardPanelRewards" role="tabpanel" aria-labelledby="dailyRewardTabRewards"><div class="daily-reward-loading" role="status">Opening the royal reward ledger…</div></section>`;
+    modalBody.innerHTML = `<section id="dailyRewardPanelRewards" role="tabpanel" aria-labelledby="dailyRewardTabRewards"><div class="daily-reward-loading" role="status">Opening the royal reward ledger…</div></section>`;
     bindDailyRewardModalTabs();
     return;
   }
   if (!status) {
-    modalBody.innerHTML = `${tabsMarkup}
+    modalBody.innerHTML = `
       <section id="dailyRewardPanelRewards" role="tabpanel" aria-labelledby="dailyRewardTabRewards"><div class="daily-reward-error" role="alert">
         <p>${escapeHtml(dailyLoginRewardError || "Daily rewards are unavailable.")}</p>
         <button class="primary" type="button" data-daily-reward-retry>Try again</button>
@@ -30571,7 +30575,7 @@ function renderDailyLoginRewardModal() {
 
   const rewardTrack = DAILY_LOGIN_REWARD_TRACKS[String(status.monthLengthDays)]
     || DAILY_LOGIN_REWARD_TRACKS["30"];
-  modalBody.innerHTML = `${tabsMarkup}
+  modalBody.innerHTML = `
     <section id="dailyRewardPanelRewards" class="daily-reward-panel" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
       <div class="daily-reward-grid" aria-label="${status.monthLengthDays}-day daily reward track">
         ${rewardTrack.map(reward => {
@@ -36189,6 +36193,10 @@ modal.addEventListener("close", () => {
       : "";
   publicPlayerProfileRequestId += 1;
   publicClanProfileRequestId += 1;
+  if (modalHeaderNav) {
+    modalHeaderNav.hidden = true;
+    modalHeaderNav.replaceChildren();
+  }
   cancelAuthoritativeRoutePreviewRefresh();
   stopCityRelinquishCountdown();
   if (rewardedAdShopCountdownTimer) {

@@ -236,6 +236,10 @@ requireMatch(rewardTabsSource, /role="tablist"[\s\S]*aria-label="Daily rewards, 
 requireMatch(rewardTabsSource, /daily-reward-160x160-9bd7a936016f\.webp[\s\S]*hud-report-192x192-21644b7390fb\.webp[\s\S]*hud-achievements-192x192-1efe6767ace6\.webp/, "Reward, Quest, and Achievement tab artwork drifted.");
 requireMatch(rewardTabsSource, /aria-label="\$\{accessibleLabel\}" title="\$\{tab\.label\}"[\s\S]*<img[^>]*alt=""[^>]*>[\s\S]*<\/button>/, "Reward tabs must be icon-only while retaining names, claim alerts, and tooltips.");
 requireMatch(game, /\["ArrowLeft", "ArrowRight", "Home", "End"\][\s\S]*activateTab/, "Reward tabs lost keyboard arrow, Home, or End navigation.");
+requireMatch(html, /id="modalTitle"[\s\S]*id="modalHeaderNav" class="modal-header-nav" hidden[\s\S]*id="modalBody"/, "The shared modal is missing its unclipped header navigation slot.");
+requireMatch(game, /modalHeaderNav\.innerHTML = renderDailyRewardModalTabs\(\)[\s\S]*modalHeaderNav\.hidden = false/, "Reward navigation is not mounted in the shared header slot.");
+requireMatch(game, /modalHeaderNav\?\.querySelectorAll\("\[data-daily-reward-tab\]"\)[\s\S]*modalHeaderNav\?\.querySelector/, "Reward tab binding or focus escaped the shared header slot.");
+requireMatch(game, /modalHeaderNav\.hidden = true[\s\S]*modalHeaderNav\.replaceChildren\(\)/, "Closing the shared modal does not clear its header navigation.");
 requireMatch(game, /async function showDailyLoginRewardsModal[\s\S]*options\.initialTab[\s\S]*:\s*"rewards"/, "Opening the modal no longer defaults to Daily Login or accept direct tab navigation.");
 requireMatch(game, /function renderDailyMissionSection[\s\S]*dailyMissionsList[\s\S]*function renderDailyQuestTab[\s\S]*renderDailyMissionSection\(\)/, "Player Daily Missions are not rendered in the reward modal's Quests tab.");
 requireMatch(game, /function bindDailyQuestControls[\s\S]*handleDailyMissionListClick/, "Daily Mission controls are not connected inside the reward modal.");
@@ -258,11 +262,13 @@ requireMatch(styles, /\.daily-reward-card-day\s*\{[\s\S]*position:\s*absolute[\s
 requireMatch(styles, /\.daily-reward-card\.available\s*\{[\s\S]*border-color:\s*rgba\(110, 47, 53, \.82\)[\s\S]*rgba\(110, 47, 53, \.16\)/, "Claimable cards lost their oxblood-and-parchment highlight treatment.");
 requireMatch(styles, /@keyframes dailyRewardClaimPulse[\s\S]*rgba\(110, 47, 53, \.12\)[\s\S]*rgba\(110, 47, 53, \.2\)/, "Claimable-card pulse no longer uses the subdued oxblood treatment.");
 requireMatch(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.daily-reward-card\.available[\s\S]*animation:\s*none/, "Claimable-card motion is not disabled for reduced-motion users.");
-requireMatch(styles, /\.daily-reward-tabs\s*\{[\s\S]*position:\s*absolute[\s\S]*right:\s*6rem[\s\S]*repeat\(3,\s*44px\)[\s\S]*gap:\s*1\.2rem[\s\S]*\.daily-reward-tabs button:focus-visible[\s\S]*outline:/, "Desktop icon tabs are not spaced across the upper-right with a visible focus state.");
-requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*38px\)[\s\S]*gap:\s*\.9rem/, "Portrait icon tabs no longer preserve clearance from the close button.");
-requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(3,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer preserve clearance from the close button.");
-requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*6/, "The close button is not kept above reward content.");
-requireMatch(html, /daily-rewards\.css\?v=20260813-day-labels-checkmarks-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
+requireMatch(styles, /\.daily-login-reward-modal \.modal-header-nav\s*\{[\s\S]*position:\s*absolute[\s\S]*z-index:\s*7[\s\S]*right:\s*calc\([\s\S]*--daily-header-close-size[\s\S]*--daily-header-control-gap[\s\S]*pointer-events:\s*auto/, "Reward navigation is not layered above the header with calculated close-button clearance.");
+requireMatch(styles, /\.daily-reward-tabs\s*\{[\s\S]*position:\s*static[\s\S]*z-index:\s*auto[\s\S]*repeat\(3,\s*44px\)[\s\S]*gap:\s*1\.2rem[\s\S]*\.daily-reward-tabs button:focus-visible[\s\S]*outline:/, "Desktop icon tabs are not aligned inside the unclipped header slot with a visible focus state.");
+requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*--daily-header-nav-width:\s*calc\(114px \+ 1\.8rem\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*repeat\(3,\s*38px\)[\s\S]*gap:\s*\.9rem/, "Portrait icon tabs no longer preserve calculated clearance from the close button.");
+requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*--daily-header-close-size:\s*40px[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*repeat\(3,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer fit the compact shared header.");
+requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*8[\s\S]*top:\s*var\(--daily-header-block-inset\)[\s\S]*right:\s*var\(--daily-header-inline-inset\)[\s\S]*place-items:\s*center[\s\S]*padding:\s*0/, "The close button is not centered and inset above the reward navigation.");
+requireMatch(html, /daily-rewards\.css\?v=20260817-daily-header-nav-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
+requireMatch(read("docs/visual-qa/daily-rewards-navigation/index.html"), /mobile-viewport\.css[\s\S]*Daily Login[\s\S]*Quests[\s\S]*Achievements/, "The responsive reward-navigation visual QA fixture is missing or incomplete.");
 requireMatch(
   serviceWorker,
   /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null\)/,

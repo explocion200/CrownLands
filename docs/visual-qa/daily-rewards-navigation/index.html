@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Crownlands Daily Navigation QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body { background: #07121a; }
+    .qa-modal:not([open]) { display: none; }
+    .qa-modal[open] { display: grid; place-items: center; max-width: none; max-height: none; }
+    .qa-modal > .modal-card { width: 100%; box-sizing: border-box; }
+    .qa-panel { min-height: 0; padding: .75rem; border: 1px solid #997643; background: #e7d6b4; color: #2f2113; }
+    .qa-panel h3 { margin: 0 0 .35rem; color: #2f2113 !important; }
+    .qa-panel p { margin: 0; color: #5a4632 !important; }
+    .qa-reward-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .35rem; }
+    .qa-reward { min-height: 64px; display: grid; place-items: center; border: 1px solid #997643; background: #d0b98e; color: #2f2113; }
+    @media (max-width: 700px) { .qa-reward-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true"><symbol id="cl-icon-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol></svg>
+  <dialog id="modal" class="modal daily-login-reward-modal qa-modal" aria-labelledby="modalTitle">
+    <article class="modal-card">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+      <h2 id="modalTitle">Daily Rewards</h2>
+      <div id="modalHeaderNav" class="modal-header-nav">
+        <div class="daily-reward-tabs" role="tablist" aria-label="Daily rewards, quests, and achievements">
+          <button type="button" id="dailyRewardTabRewards" role="tab" data-qa-tab="rewards" aria-label="Daily Login" title="Daily Login" aria-selected="true" aria-controls="dailyRewardPanelRewards" class="active"><img src="../../../assets/optimized/daily-reward-160x160-9bd7a936016f.webp" alt="" /></button>
+          <button type="button" id="dailyRewardTabQuests" role="tab" data-qa-tab="quests" aria-label="Quests" title="Quests" aria-selected="false" aria-controls="dailyRewardPanelQuests"><img src="../../../assets/optimized/hud-report-192x192-21644b7390fb.webp" alt="" /></button>
+          <button type="button" id="dailyRewardTabAchievements" role="tab" data-qa-tab="achievements" aria-label="Achievements" title="Achievements" aria-selected="false" aria-controls="dailyRewardPanelAchievements"><img src="../../../assets/optimized/hud-achievements-192x192-1efe6767ace6.webp" alt="" /></button>
+        </div>
+      </div>
+      <div id="modalBody">
+        <section id="dailyRewardPanelRewards" class="daily-reward-panel qa-panel" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
+          <div class="qa-reward-grid">
+            <div class="qa-reward">Day 1</div><div class="qa-reward">Day 2</div><div class="qa-reward">Day 3</div><div class="qa-reward">Day 4</div>
+            <div class="qa-reward">Day 5</div><div class="qa-reward">Day 6</div><div class="qa-reward">Day 7</div><div class="qa-reward">Day 8</div>
+          </div>
+        </section>
+      </div>
+    </article>
+  </dialog>
+  <script>
+    document.querySelector("#modal").showModal();
+    const titles = { rewards: "Daily Rewards", quests: "Quests", achievements: "Achievements" };
+    const rewardsMarkup = document.querySelector("#modalBody").innerHTML;
+    const panelCopy = {
+      quests: ["Daily Quests", "Quest controls remain inside the shared reward panel."],
+      achievements: ["Achievements", "Achievement controls remain inside the shared reward panel."],
+    };
+    document.querySelectorAll("[data-qa-tab]").forEach(button => button.addEventListener("click", () => {
+      const tab = button.dataset.qaTab;
+      document.querySelectorAll("[data-qa-tab]").forEach(candidate => {
+        const selected = candidate === button;
+        candidate.classList.toggle("active", selected);
+        candidate.setAttribute("aria-selected", String(selected));
+      });
+      document.querySelector("#modalTitle").textContent = titles[tab];
+      if (tab === "rewards") {
+        document.querySelector("#modalBody").innerHTML = rewardsMarkup;
+        return;
+      }
+      const [heading, copy] = panelCopy[tab];
+      document.querySelector("#modalBody").innerHTML = `<section id="dailyRewardPanel${heading}" class="qa-panel" role="tabpanel"><h3>${heading}</h3><p>${copy}</p></section>`;
+    }));
+    document.querySelector("#closeModalBtn").addEventListener("click", () => document.querySelector("#modal").close());
+  </script>
+</body>
+</html>
