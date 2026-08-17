@@ -87,8 +87,8 @@ assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not 
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
-assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r5/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r5[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r6/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r6[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
 const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 assert.match(game, /Common Gear Box/);
 assert.match(game, /common-gear-building-shell/);
@@ -204,6 +204,21 @@ const selectedTileRule = css.match(/\.common-gear-bag-tile\.selected\s*\{([^}]*)
 assert.match(selectedTileRule, /outline: 2px solid #7b4c20;/, "The selected bag item needs a clear brass selection ring.");
 assert.match(selectedTileRule, /0 0 18px rgba\(244,195,87,\.88\)/, "The selected bag item needs a visible gold selection glow.");
 assert.doesNotMatch(selectedTileRule, /transform|width|height|margin|padding/, "Selecting a bag tile must not resize or shift it.");
+assert.match(
+  css,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile\[data-gear-stack-key\]\s*\{[^}]*background: var\(--gear-rarity-surface\);/,
+  "Equipment bag rarity surfaces must outrank the shared palette cascade."
+);
+assert.match(
+  css,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile \.common-gear-bag-slot,[\s\S]{0,500}\.common-gear-bag-name\s*\{ color: #efe3c4; \}/,
+  "Dark equipment tiles must keep their labels readable after shared theme styles load."
+);
+assert.match(
+  css,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-selected-panel \.common-gear-actions button\s*\{[^}]*color: #f3dfac;[^}]*background: linear-gradient\(180deg, #87363b, #592328\);/,
+  "Primary equipment actions must retain their readable dark-panel treatment."
+);
 assert.match(css, /\.common-gear-bag-panel\s*\{[^}]*color: #eadcb9;[^}]*background: #191610;/, "Dark equipment bag chrome must use light parchment text.");
 assert.match(css, /\.common-gear-bag-panel > footer span\s*\{[^}]*color: #ead8ae;/, "The bag summary must stay readable on its dark footer.");
 assert.match(css, /\.common-gear-back span\s*\{[^}]*color: inherit;/, "The Back button icon must inherit the button's light text color.");
