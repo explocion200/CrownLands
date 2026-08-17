@@ -87,9 +87,10 @@ assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not 
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
-assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r8/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r6[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
-const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-officer-equipment-polish-r9/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260817-officer-equipment-polish-r7[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
+const gearUi = read("common-gear-ui.js");
+const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
 assert.match(game, /common-gear-building-shell/);
 assert.match(game, /data-gear-merge/);
@@ -105,8 +106,17 @@ assert.match(game, /getCommonGearInstances\(buildingId\)/, "The right bag must l
 assert.match(game, /data-gear-bag-scroll/, "The redesigned officer bag must own vertical scrolling.");
 assert.match(game, /commonGearBagScrollTop/, "Officer bag scroll position must survive rerenders.");
 assert.match(game, /common-gear-bottom-info/, "Selected equipment metadata must render in the bottom strip.");
-assert.match(game, /common-gear-confirm-backdrop/, "Merge must have an in-game confirmation step.");
-assert.match(game, /upgradeCommonGear\(\{ instanceId \}\)/, "Merge must continue through the existing authoritative upgrade callable.");
+assert.match(game, /common-gear-confirm-backdrop/, "Upgrade must have an in-game confirmation step.");
+assert.match(game, /upgradeCommonGear\(\{ instanceId \}\)/, "Upgrade must continue through the existing authoritative upgrade callable.");
+assert.match(gearUi, />\$\{requirement \? "Upgrade" : "Max Level"\}<\//, "The player-facing equipment action must say Upgrade.");
+assert.match(gearUi, />Upgrade requirements<|<span>Upgrade requirements<\/span>/, "The equipment requirement label must say Upgrade requirements.");
+assert.match(gearUi, /Confirm Upgrade/, "The upgrade confirmation action must use Upgrade wording.");
+assert.doesNotMatch(gearUi, />Merge(?:\s|<)|Merge cost|Confirm Merge|Select an item to merge|merged to Level|merge equipment|gear merge/, "Player-facing Merge wording must not remain in the equipment UI.");
+assert.match(gearUi, /role="listbox"[\s\S]{0,240}data-gear-bag-filter-option/, "The equipment filter must use the custom accessible listbox.");
+assert.doesNotMatch(gearUi, /<select[^>]*data-gear-bag-filter/, "The equipment filter must not invoke a mobile native select picker.");
+assert.match(gearUi, /getCommonGearBagFilterOptions[\s\S]{0,260}"all"[\s\S]{0,260}COMMON_GEAR\.SLOTS/, "The custom filter must retain All Slots and every equipment slot.");
+assert.match(gearUi, /data-gear-bag-filter-option[\s\S]{0,900}selectedCommonGearBagFilter[\s\S]{0,220}renderCommonGearBuilding/, "Selecting a custom filter option must rerender the filtered bag.");
+assert.match(gearUi, /event\.key === "ArrowDown"[\s\S]{0,1000}event\.key === "Escape"/, "The custom equipment filter must retain desktop keyboard behavior.");
 assert.match(game, /viewCommonGearBuilding[\s\S]{0,500}renderCommonGearBuilding\(buildingId\)/, "A fresh building response must rerender the officer equipment screen.");
 assert.doesNotMatch(game, /data-gear-mobile-view|selectedCommonGearMobileView|common-gear-mobile-tabs/, "Equipment must keep the desktop three-panel structure instead of using mobile section tabs.");
 
@@ -145,6 +155,30 @@ const stableOrderBefore = groupingContext.groupGear(stableOrderInstances, stable
 const stableOrderAfter = groupingContext.groupGear(stableOrderInstances, stableOrderDefinitions[2].slot, stableOrderInstances[2].instanceId).map(group => group.key).join("|");
 assert.equal(stableOrderAfter, stableOrderBefore, "Selecting a bag item or changing compatibility must not reorder equipment tiles.");
 assert.match(game, /const preservedBagScrollTop = bagScroll\?\.scrollTop \?\? commonGearBagScrollTop;[\s\S]{0,180}bagScroll\.scrollTop = preservedBagScrollTop;/, "Bag selection focus must restore the exact prior scroll position.");
+
+const previewStart = game.indexOf("function getCommonGearUpgradePreview");
+const previewEnd = game.indexOf("function createCommonGearViewModel", previewStart);
+assert(previewStart >= 0 && previewEnd > previewStart, "Could not isolate the upgrade-ready preview helper.");
+const previewTarget = { ...groupedInstances[0], instanceId: "preview_target", isEquipped: true };
+const previewDuplicate = { ...groupedInstances[1], instanceId: "preview_duplicate", isEquipped: false };
+const previewContext = {
+  COMMON_GEAR: gear,
+  formatNumber: value => String(value),
+  state: {
+    gold: 100,
+    globalStats: { baseGoldPerHour: 100 },
+    gear: { instances: { previewTarget, previewDuplicate } },
+  },
+};
+vm.runInNewContext(`${game.slice(previewStart, previewEnd)}\nthis.previewUpgrade = getCommonGearUpgradePreview;`, previewContext);
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, true, "An item with its required duplicate and gold must be upgrade-ready.");
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget]).canUpgrade, false, "An item without its required duplicate must not be upgrade-ready.");
+previewContext.state.gold = 49;
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, false, "An item without enough gold must not be upgrade-ready.");
+assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,120}getCommonGearUpgradePreview/, "Only unequipped upgrade-ready groups may receive bag alerts.");
+assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview/, "Equipped upgrade-ready items must flag their loadout slot.");
+assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");
+assert.match(gearUi, /isUpgradeReady \? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready"/, "Upgradeable equipped items must render the alert on their equipment slot.");
 
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
 assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/, "Selected gear and its upgrade view must render item artwork.");
@@ -224,6 +258,24 @@ assert.match(css, /\.common-gear-bag-panel > footer span\s*\{[^}]*color: #ead8ae
 assert.match(css, /\.common-gear-back span\s*\{[^}]*color: inherit;/, "The Back button icon must inherit the button's light text color.");
 assert.match(css, /\.common-gear-actions button:disabled\s*\{[^}]*color: #ded1b3;[^}]*opacity: 1;/, "Disabled dark action buttons must retain readable light text.");
 assert.match(css, /\.common-gear-bag-name\s*\{[^}]*color: #efe3c4;[^}]*opacity: 1;/, "Bag item names must remain readable on neutral dark tiles.");
+assert.match(
+  css,
+  /#modal\.common-gear-building-modal \.common-gear-screen \.common-gear-loadout-panel \.common-gear-slot\.selected\s*\{[^}]*color: #fff0c6 !important;[^}]*background: linear-gradient\(180deg, #7b3439, #4d2024\) !important;/,
+  "Selected equipment slots must use high-contrast light text on the dark burgundy selection surface."
+);
+assert.match(
+  css,
+  /\.common-gear-slot\.selected \.common-gear-slot-copy b,[\s\S]{0,180}\.common-gear-slot\.selected \.common-gear-slot-copy small\s*\{[^}]*color: #fff0c6 !important;/,
+  "Selected slot labels and levels must remain readable."
+);
+assert.match(css, /\.common-gear-upgrade-ready\s*\{[^}]*position: absolute;[^}]*border: 1px solid #efc86c;[^}]*background: radial-gradient/, "Upgrade-ready alerts must use the fixed medieval badge without affecting tile layout.");
+assert.match(css, /\.common-gear-bag-upgrade-ready\s*\{[^}]*top: 5px;[^}]*right: 5px;/, "Unequipped upgrade alerts must occupy the equipped-badge position.");
+assert.match(css, /\.common-gear-bag-filter-menu\s*\{[^}]*position: absolute;[^}]*right: 0;[^}]*max-height: clamp\(154px, 46dvh, 310px\);[^}]*overflow-y: auto;/, "The custom equipment filter must align to the bag and remain scrollable on mobile landscape.");
+assert.match(css, /\.common-gear-bag-filter-menu\[hidden\]\s*\{ display: none; \}/, "The custom equipment filter must close without exposing its options.");
+assert.match(css, /@media \(max-width: 760px\) and \(orientation: landscape\)[\s\S]{0,800}\.common-gear-bag-filter\s*\{ width: 78px; \}/, "Small landscape equipment filters must stay aligned inside the bag header.");
+assert.match(css, /\[data-gear-officer="treasury"\]\s*\{ --gear-officer-position: 40% 28%; \}/, "The Master of Coin portrait must use its corrected focal alignment.");
+assert.match(css, /\[data-gear-officer="gatehouse"\]\s*\{ --gear-officer-position: 44% 28%; \}/, "The Defensive Commander portrait must use its corrected focal alignment.");
+assert.match(css, /@media \(max-width: 980px\)[\s\S]{0,1800}\.common-gear-character-panel > img\s*\{[^}]*object-fit: cover;[^}]*object-position: var\(--gear-officer-position, center 28%\);/, "Officer focal alignment must remain active on mobile landscape.");
 assert.match(
   css,
   /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
