@@ -1,0 +1,558 @@
+{
+  "developmentOnly": true,
+  "productionActivated": false,
+  "fixture": "loopback real Crownlands renderer with ART-3 candidates",
+  "generatedAt": "2026-08-17T19:36:36.099Z",
+  "results": [
+    {
+      "regionId": "core_b1_warband",
+      "key": "northwest-warband-camp",
+      "mouse": {
+        "distance": 155.24174696260025,
+        "leftId": "core_b1_warband_bench_014",
+        "method": "mouse-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_warband_bench_014",
+            "found": true,
+            "hitCityId": "core_b1_warband_bench_014",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_warband_bench_014"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_warband_bench_037",
+            "found": true,
+            "hitCityId": "core_b1_warband_bench_037",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 317.3399963378906,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 341.1199951171875
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_warband_bench_037"
+          }
+        ],
+        "rightId": "core_b1_warband_bench_037"
+      },
+      "touch": {
+        "distance": 155.24174696260025,
+        "leftId": "core_b1_warband_bench_014",
+        "method": "pointerType-touch-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_warband_bench_014",
+            "found": true,
+            "hitCityId": "core_b1_warband_bench_014",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_warband_bench_014"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_warband_bench_037",
+            "found": true,
+            "hitCityId": "core_b1_warband_bench_037",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 317.3399963378906,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 341.1199951171875
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_warband_bench_037"
+          }
+        ],
+        "rightId": "core_b1_warband_bench_037"
+      }
+    },
+    {
+      "regionId": "core_b1_relic_north",
+      "key": "northwest-relic-camp",
+      "mouse": {
+        "distance": 152.55490814785344,
+        "leftId": "core_b1_relic_north_bench_016",
+        "method": "mouse-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_north_bench_016",
+            "found": true,
+            "hitCityId": "core_b1_relic_north_bench_016",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 578.619873046875,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 602.39990234375,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_north_bench_016"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_north_bench_048",
+            "found": true,
+            "hitCityId": "core_b1_relic_north_bench_048",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 589.280029296875,
+              "top": 336.219970703125,
+              "width": 47.559814453125
+            },
+            "probePoint": {
+              "clientX": 613.0599365234375,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_north_bench_048"
+          }
+        ],
+        "rightId": "core_b1_relic_north_bench_048"
+      },
+      "touch": {
+        "distance": 152.55490814785344,
+        "leftId": "core_b1_relic_north_bench_016",
+        "method": "pointerType-touch-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_north_bench_016",
+            "found": true,
+            "hitCityId": "core_b1_relic_north_bench_016",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 578.619873046875,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 602.39990234375,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_north_bench_016"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_north_bench_048",
+            "found": true,
+            "hitCityId": "core_b1_relic_north_bench_048",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 589.280029296875,
+              "top": 336.219970703125,
+              "width": 47.559814453125
+            },
+            "probePoint": {
+              "clientX": 613.0599365234375,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_north_bench_048"
+          }
+        ],
+        "rightId": "core_b1_relic_north_bench_048"
+      }
+    },
+    {
+      "regionId": "core_b1_relic_transition",
+      "key": "west-north-relic-camp",
+      "mouse": {
+        "distance": 152.50573759698355,
+        "leftId": "core_b1_relic_transition_bench_007",
+        "method": "mouse-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_transition_bench_007",
+            "found": true,
+            "hitCityId": "core_b1_relic_transition_bench_007",
+            "hitClass": "city-node player castle-stage-1 selected",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 372.2799987792969,
+              "top": 336.2200012207031,
+              "width": 47.55999755859375
+            },
+            "probePoint": {
+              "clientX": 396.05999755859375,
+              "clientY": 360
+            },
+            "selectedSourceId": "core_b1_relic_transition_bench_007",
+            "selectedTargetId": ""
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_transition_bench_029",
+            "found": true,
+            "hitCityId": "core_b1_relic_transition_bench_029",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.2200012207031,
+              "top": 336.219970703125,
+              "width": 47.559967041015625
+            },
+            "probePoint": {
+              "clientX": 497.99998474121094,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_transition_bench_029"
+          }
+        ],
+        "rightId": "core_b1_relic_transition_bench_029"
+      },
+      "touch": {
+        "distance": 152.50573759698355,
+        "leftId": "core_b1_relic_transition_bench_007",
+        "method": "pointerType-touch-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_transition_bench_007",
+            "found": true,
+            "hitCityId": "core_b1_relic_transition_bench_007",
+            "hitClass": "city-node player castle-stage-1 selected",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 372.2799987792969,
+              "top": 336.2200012207031,
+              "width": 47.55999755859375
+            },
+            "probePoint": {
+              "clientX": 396.05999755859375,
+              "clientY": 360
+            },
+            "selectedSourceId": "core_b1_relic_transition_bench_007",
+            "selectedTargetId": ""
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_relic_transition_bench_029",
+            "found": true,
+            "hitCityId": "core_b1_relic_transition_bench_029",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.2200012207031,
+              "top": 336.219970703125,
+              "width": 47.559967041015625
+            },
+            "probePoint": {
+              "clientX": 497.99998474121094,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_relic_transition_bench_029"
+          }
+        ],
+        "rightId": "core_b1_relic_transition_bench_029"
+      }
+    },
+    {
+      "regionId": "core_b1_tower",
+      "key": "northwest-holding-tower",
+      "mouse": {
+        "distance": 153.15351775261317,
+        "leftId": "core_b1_tower_bench_007",
+        "method": "mouse-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_tower_bench_007",
+            "found": true,
+            "hitCityId": "core_b1_tower_bench_007",
+            "hitClass": "city-node player castle-stage-1 selected",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.2200012207031,
+              "width": 47.5599365234375
+            },
+            "probePoint": {
+              "clientX": 497.99993896484375,
+              "clientY": 360
+            },
+            "selectedSourceId": "core_b1_tower_bench_007",
+            "selectedTargetId": ""
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_tower_bench_025",
+            "found": true,
+            "hitCityId": "core_b1_tower_bench_025",
+            "hitClass": "city-node neutral castle-stage-1 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.2200012207031,
+              "width": 47.5599365234375
+            },
+            "probePoint": {
+              "clientX": 497.99993896484375,
+              "clientY": 360
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_tower_bench_025"
+          }
+        ],
+        "rightId": "core_b1_tower_bench_025"
+      },
+      "touch": {
+        "distance": 153.15351775261317,
+        "leftId": "core_b1_tower_bench_007",
+        "method": "pointerType-touch-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_tower_bench_007",
+            "found": true,
+            "hitCityId": "core_b1_tower_bench_007",
+            "hitClass": "city-node player castle-stage-1 selected",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.2200012207031,
+              "width": 47.5599365234375
+            },
+            "probePoint": {
+              "clientX": 497.99993896484375,
+              "clientY": 360
+            },
+            "selectedSourceId": "core_b1_tower_bench_007",
+            "selectedTargetId": ""
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_tower_bench_025",
+            "found": true,
+            "hitCityId": "core_b1_tower_bench_025",
+            "hitClass": "city-node neutral castle-stage-1 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.2200012207031,
+              "width": 47.5599365234375
+            },
+            "probePoint": {
+              "clientX": 497.99993896484375,
+              "clientY": 360
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_tower_bench_025"
+          }
+        ],
+        "rightId": "core_b1_tower_bench_025"
+      }
+    },
+    {
+      "regionId": "core_b1_aurum",
+      "key": "aurum-keep",
+      "mouse": {
+        "distance": 156.40012787718558,
+        "leftId": "core_b1_aurum_bench_034",
+        "method": "mouse-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_aurum_bench_034",
+            "found": true,
+            "hitCityId": "core_b1_aurum_bench_034",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.22003173828125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 360.0000305175781
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_aurum_bench_034"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_aurum_bench_047",
+            "found": true,
+            "hitCityId": "core_b1_aurum_bench_047",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_aurum_bench_047"
+          }
+        ],
+        "rightId": "core_b1_aurum_bench_047"
+      },
+      "touch": {
+        "distance": 156.40012787718558,
+        "leftId": "core_b1_aurum_bench_034",
+        "method": "pointerType-touch-center-hit-runtime-event-path",
+        "reliable": true,
+        "results": [
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_aurum_bench_034",
+            "found": true,
+            "hitCityId": "core_b1_aurum_bench_034",
+            "hitClass": "city-node neutral castle-stage-2 targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.22003173828125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 360.0000305175781
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_aurum_bench_034"
+          },
+          {
+            "actionAcknowledged": true,
+            "cityId": "core_b1_aurum_bench_047",
+            "found": true,
+            "hitCityId": "core_b1_aurum_bench_047",
+            "hitClass": "city-node enemy castle-stage-1 enemy-power-in-range targeted",
+            "hitMatches": true,
+            "hitTag": "BUTTON",
+            "modalOpened": false,
+            "nodeRect": {
+              "height": 47.55999755859375,
+              "left": 474.219970703125,
+              "top": 336.219970703125,
+              "width": 47.56005859375
+            },
+            "probePoint": {
+              "clientX": 498,
+              "clientY": 359.9999694824219
+            },
+            "selectedSourceId": "",
+            "selectedTargetId": "core_b1_aurum_bench_047"
+          }
+        ],
+        "rightId": "core_b1_aurum_bench_047"
+      }
+    }
+  ]
+}

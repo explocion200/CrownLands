@@ -1,0 +1,112 @@
+{
+  "phase": "Crownlands Core v2 Phase ART-3",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "artRevisionOnly": true,
+  "authoritativeArtStandard": "ART-2 v2",
+  "newCoreCoordinatesGenerated": 0,
+  "candidateBackgroundCount": 5,
+  "finishedCoreBackgroundCount": 10,
+  "mapDimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "hardMinimumCoreCitySpacingPx": 68,
+  "entries": [
+    {
+      "key": "northwest-warband-camp",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -2
+      },
+      "capacity": 55,
+      "objective": {
+        "type": "warband",
+        "x": 700,
+        "y": 535
+      },
+      "b1PrototypePngSha256": "d511cdddfb98b1d518cc00378c964e62819f0dd038732ddb9cd9d521020c25d8",
+      "candidatePngSha256": "e06a735235b5d80ccd8ecc6b9658009435164a5cfcfc19f89adf7aa2d178e46c",
+      "candidateWebpSha256": "cb1b4fdd6e1baaa0a11ce2ac40bdcc22a8bb5aa161a263521f77ed6dfe178008",
+      "citiesSha256": "b136fb57e0e31fc99a8ac5a8a4dca889ba83d7c5b3385322df248f292b8201dc",
+      "compositionSha256": "7d147ca10a2c26ef5d2cf16d2d2a91ad869c680080038d707c5dc3e2ef0d8b42",
+      "validationReceiptSha256": "88d0eb3d14bb10c28e3e6a2b98e976bdc2eec88a36d0f1ae20c60c32dc4b01e0"
+    },
+    {
+      "key": "northwest-relic-camp",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -2
+      },
+      "capacity": 55,
+      "objective": {
+        "type": "relic",
+        "x": 742,
+        "y": 526
+      },
+      "b1PrototypePngSha256": "ed306c19cfb72c0c1f916870998d18c7f254fb97d70ffbe36cbad1ac4eed805b",
+      "candidatePngSha256": "7c117b958e9c46685fdf42173fbd1314a5c7cc5ec2b3e6a2e729533bb458d582",
+      "candidateWebpSha256": "63e1dff9ea54badbeb5daeb95f4f26a2d80ac475f20e413f74e7e1bb15ced040",
+      "citiesSha256": "9d2038ef8d3f2ffac66f118ddf761450eb4baa8185d30f3729242d6126500ac6",
+      "compositionSha256": "7635a61a778a8179d39fa3b0c5df99e5ab170e80cc48e8258ac6504b3e9a0cf5",
+      "validationReceiptSha256": "0838507c9ab2cb0b49cbc805499e7b5d4eba4862865ee6176ae984501b2bd39d"
+    },
+    {
+      "key": "west-north-relic-camp",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -1
+      },
+      "capacity": 55,
+      "objective": {
+        "type": "relic",
+        "x": 706,
+        "y": 556
+      },
+      "b1PrototypePngSha256": "ff54b05ba710315204ddb2419b040723c454f08df09768baff6bae938b3b13df",
+      "candidatePngSha256": "3b478679f528206aa7199aa8c28411755b17cc2a75f2f718d92099c20ab25d0f",
+      "candidateWebpSha256": "e837a84d685f13e58631a9f3e27596153b3527d7290b023d975b9232a0bc9e89",
+      "citiesSha256": "9a3d15a7c10f7b5274a55c79ca5c537d9f60d02e6973b7115fb838e84ba355dc",
+      "compositionSha256": "9fa4626f1bf195fe31e4ee07ab37cedc2ff5aab383e3c6843db55d430ad51fb9",
+      "validationReceiptSha256": "faab3a5f29c7ea632115b6bd6144763847175c1e9fe75f462aa2d5e2430c2eab"
+    },
+    {
+      "key": "northwest-holding-tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -1
+      },
+      "capacity": 55,
+      "objective": {
+        "type": "holding_tower",
+        "x": 736,
+        "y": 552
+      },
+      "b1PrototypePngSha256": "394d97ffdc93e67ee4a7d72719098ad72eee10603b8704958a7a20c02547c649",
+      "candidatePngSha256": "71e15e143e02ed04d2b415f4591a657adbbbad9a56181007f8ede44e6b442228",
+      "candidateWebpSha256": "46eafe0a682239cb9cb9def37175be6f2e66ace8703e6c4436d26f360915fd6b",
+      "citiesSha256": "50ea352163b907036299978f6d1946f7bcb9d07476657b00149a12e5d414f7c8",
+      "compositionSha256": "48b77dafb0e2f36240a254aa25f0c611349cea9e84a2c1ae28f1b55b96e88aef",
+      "validationReceiptSha256": "e64034e8caa3d77f9c115001175ca0afba57980fb473baec86b0ce1fa9d3391f"
+    },
+    {
+      "key": "aurum-keep",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 0
+      },
+      "capacity": 60,
+      "objective": {
+        "type": "gold_production",
+        "x": 724,
+        "y": 543
+      },
+      "b1PrototypePngSha256": "5be92519a8d9c7aebdffc6886c9a27b71be7b4236f91b369d5ff4db3c793d066",
+      "candidatePngSha256": "76d956dfb5805943d3997e8bbbad03dabab4613a7c0c4c17c15ecdd71f857657",
+      "candidateWebpSha256": "04e5d6970a3eac0d3ab8614c1d7e477af38b88577c2a7e4a7e6a965c6e8e0f14",
+      "citiesSha256": "bdefb84eeedc8c809c5816cd74dbd6ff54df28d5744ca0842ab4a94a2941e57a",
+      "compositionSha256": "2955f1829e115f19776ca0f07eccba522d73be2a7a2479a24b894884c7e09b9f",
+      "validationReceiptSha256": "a90e92e12766145ec9e13e936074c500e0e8756b7a2ae4f157b9e344928d82de"
+    }
+  ]
+}

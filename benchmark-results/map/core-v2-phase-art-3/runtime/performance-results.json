@@ -1,0 +1,94 @@
+{
+  "developmentOnly": true,
+  "productionActivated": false,
+  "fixture": "loopback real Crownlands renderer with ART-3 candidates",
+  "generatedAt": "2026-08-17T19:36:36.099Z",
+  "preset": "low",
+  "results": [
+    {
+      "regionId": "core_b1_warband",
+      "key": "northwest-warband-camp",
+      "preset": "low",
+      "sample": {
+        "durationMs": 3200.800000011921,
+        "fps": 82.79180204917928,
+        "frameCount": 265,
+        "longTaskCount": 2,
+        "longTaskTotalMs": 109,
+        "longestTaskMs": 58,
+        "maximumFrameTimeMs": 55.70000000001164,
+        "medianFrameTimeMs": 7.7999999999883585,
+        "name": "core_b1_warband-low-runtime-density",
+        "p95FrameTimeMs": 39.09999999997672
+      }
+    },
+    {
+      "regionId": "core_b1_relic_north",
+      "key": "northwest-relic-camp",
+      "preset": "low",
+      "sample": {
+        "durationMs": 3209.400000035763,
+        "fps": 90.98273820550452,
+        "frameCount": 292,
+        "longTaskCount": 3,
+        "longTaskTotalMs": 186,
+        "longestTaskMs": 85,
+        "maximumFrameTimeMs": 76.89999999999418,
+        "medianFrameTimeMs": 7.699999999982538,
+        "name": "core_b1_relic_north-low-runtime-density",
+        "p95FrameTimeMs": 31.89999999999418
+      }
+    },
+    {
+      "regionId": "core_b1_relic_transition",
+      "key": "west-north-relic-camp",
+      "preset": "low",
+      "sample": {
+        "durationMs": 3203.699999988079,
+        "fps": 82.0925804541557,
+        "frameCount": 263,
+        "longTaskCount": 7,
+        "longTaskTotalMs": 387,
+        "longestTaskMs": 64,
+        "maximumFrameTimeMs": 62.5,
+        "medianFrameTimeMs": 7.600000000005821,
+        "name": "core_b1_relic_transition-low-runtime-density",
+        "p95FrameTimeMs": 46.20000000001164
+      }
+    },
+    {
+      "regionId": "core_b1_tower",
+      "key": "northwest-holding-tower",
+      "preset": "low",
+      "sample": {
+        "durationMs": 3204,
+        "fps": 64.6067415730337,
+        "frameCount": 207,
+        "longTaskCount": 24,
+        "longTaskTotalMs": 1444,
+        "longestTaskMs": 108,
+        "maximumFrameTimeMs": 109.09999999997672,
+        "medianFrameTimeMs": 7.699999999982538,
+        "name": "core_b1_tower-low-runtime-density",
+        "p95FrameTimeMs": 54.79999999998836
+      }
+    },
+    {
+      "regionId": "core_b1_aurum",
+      "key": "aurum-keep",
+      "preset": "low",
+      "sample": {
+        "durationMs": 3280.099999964237,
+        "fps": 51.827688180803484,
+        "frameCount": 170,
+        "longTaskCount": 32,
+        "longTaskTotalMs": 2122,
+        "longestTaskMs": 77,
+        "maximumFrameTimeMs": 77.70000000001164,
+        "medianFrameTimeMs": 7.900000000023283,
+        "name": "core_b1_aurum-low-runtime-density",
+        "p95FrameTimeMs": 69.5
+      }
+    }
+  ]
+}

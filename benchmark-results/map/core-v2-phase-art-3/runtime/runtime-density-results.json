@@ -1,0 +1,1733 @@
+{
+  "developmentOnly": true,
+  "productionActivated": false,
+  "fixture": "loopback real Crownlands renderer with ART-3 candidates",
+  "generatedAt": "2026-08-17T19:36:36.099Z",
+  "results": [
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "far",
+        "lowZoom": true,
+        "preset": "low",
+        "zoom": 0.4
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 55
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 46
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 1
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 9
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 1
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 32,
+        "tokens": 16
+      },
+      "name": "Warband Camp",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-warband-camp",
+      "regionId": "core_b1_warband",
+      "renderedCityNodes": 55,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 155.24174696260025,
+          "leftId": "core_b1_warband_bench_014",
+          "rightId": "core_b1_warband_bench_037"
+        },
+        {
+          "distance": 155.70806016388488,
+          "leftId": "core_b1_warband_bench_027",
+          "rightId": "core_b1_warband_bench_042"
+        },
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_008"
+        },
+        {
+          "distance": 157.9905060438759,
+          "leftId": "core_b1_warband_bench_015",
+          "rightId": "core_b1_warband_bench_017"
+        },
+        {
+          "distance": 161.0372627685903,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_027"
+        },
+        {
+          "distance": 165.07574019219177,
+          "leftId": "core_b1_warband_bench_023",
+          "rightId": "core_b1_warband_bench_034"
+        },
+        {
+          "distance": 166.18363336983577,
+          "leftId": "core_b1_warband_bench_010",
+          "rightId": "core_b1_warband_bench_044"
+        },
+        {
+          "distance": 167.2423391369542,
+          "leftId": "core_b1_warband_bench_049",
+          "rightId": "core_b1_warband_bench_050"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 55,
+        "cityNames": 1,
+        "foreignLabels": 46,
+        "playerBanners": 9,
+        "shields": 46,
+        "troopCounts": 1
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "medium",
+        "lowZoom": false,
+        "preset": "normal",
+        "zoom": 0.82
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 48
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 40
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 48
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 8
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 32,
+        "tokens": 8
+      },
+      "name": "Warband Camp",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-warband-camp",
+      "regionId": "core_b1_warband",
+      "renderedCityNodes": 48,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 155.24174696260025,
+          "leftId": "core_b1_warband_bench_014",
+          "rightId": "core_b1_warband_bench_037"
+        },
+        {
+          "distance": 155.70806016388488,
+          "leftId": "core_b1_warband_bench_027",
+          "rightId": "core_b1_warband_bench_042"
+        },
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_008"
+        },
+        {
+          "distance": 157.9905060438759,
+          "leftId": "core_b1_warband_bench_015",
+          "rightId": "core_b1_warband_bench_017"
+        },
+        {
+          "distance": 161.0372627685903,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_027"
+        },
+        {
+          "distance": 165.07574019219177,
+          "leftId": "core_b1_warband_bench_023",
+          "rightId": "core_b1_warband_bench_034"
+        },
+        {
+          "distance": 166.18363336983577,
+          "leftId": "core_b1_warband_bench_010",
+          "rightId": "core_b1_warband_bench_044"
+        },
+        {
+          "distance": 167.2423391369542,
+          "leftId": "core_b1_warband_bench_049",
+          "rightId": "core_b1_warband_bench_050"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 48,
+        "cityNames": 48,
+        "foreignLabels": 40,
+        "playerBanners": 8,
+        "shields": 40,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "close",
+        "lowZoom": false,
+        "preset": "close",
+        "zoom": 1
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 34
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 28
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 34
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 6
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 6
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 32,
+        "tokens": 6
+      },
+      "name": "Warband Camp",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-warband-camp",
+      "regionId": "core_b1_warband",
+      "renderedCityNodes": 34,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 155.24174696260025,
+          "leftId": "core_b1_warband_bench_014",
+          "rightId": "core_b1_warband_bench_037"
+        },
+        {
+          "distance": 155.70806016388488,
+          "leftId": "core_b1_warband_bench_027",
+          "rightId": "core_b1_warband_bench_042"
+        },
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_008"
+        },
+        {
+          "distance": 157.9905060438759,
+          "leftId": "core_b1_warband_bench_015",
+          "rightId": "core_b1_warband_bench_017"
+        },
+        {
+          "distance": 161.0372627685903,
+          "leftId": "core_b1_warband_bench_001",
+          "rightId": "core_b1_warband_bench_027"
+        },
+        {
+          "distance": 165.07574019219177,
+          "leftId": "core_b1_warband_bench_023",
+          "rightId": "core_b1_warband_bench_034"
+        },
+        {
+          "distance": 166.18363336983577,
+          "leftId": "core_b1_warband_bench_010",
+          "rightId": "core_b1_warband_bench_044"
+        },
+        {
+          "distance": 167.2423391369542,
+          "leftId": "core_b1_warband_bench_049",
+          "rightId": "core_b1_warband_bench_050"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 34,
+        "cityNames": 34,
+        "foreignLabels": 28,
+        "playerBanners": 6,
+        "shields": 28,
+        "troopCounts": 6
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "far",
+        "lowZoom": true,
+        "preset": "low",
+        "zoom": 0.4
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 55
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 46
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 9
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 28,
+        "tokens": 14
+      },
+      "name": "Relic Camp North-West",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-relic-camp",
+      "regionId": "core_b1_relic_north",
+      "renderedCityNodes": 55,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.55490814785344,
+          "leftId": "core_b1_relic_north_bench_016",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 159.86244086714052,
+          "leftId": "core_b1_relic_north_bench_050",
+          "rightId": "core_b1_relic_north_bench_052"
+        },
+        {
+          "distance": 160.2903615318151,
+          "leftId": "core_b1_relic_north_bench_043",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 161.69724796668618,
+          "leftId": "core_b1_relic_north_bench_012",
+          "rightId": "core_b1_relic_north_bench_043"
+        },
+        {
+          "distance": 161.89193926814266,
+          "leftId": "core_b1_relic_north_bench_009",
+          "rightId": "core_b1_relic_north_bench_031"
+        },
+        {
+          "distance": 162.6407083112958,
+          "leftId": "core_b1_relic_north_bench_022",
+          "rightId": "core_b1_relic_north_bench_053"
+        },
+        {
+          "distance": 163.3217682980441,
+          "leftId": "core_b1_relic_north_bench_004",
+          "rightId": "core_b1_relic_north_bench_020"
+        },
+        {
+          "distance": 164.3471934655411,
+          "leftId": "core_b1_relic_north_bench_036",
+          "rightId": "core_b1_relic_north_bench_041"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 55,
+        "cityNames": 0,
+        "foreignLabels": 46,
+        "playerBanners": 9,
+        "shields": 46,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "medium",
+        "lowZoom": false,
+        "preset": "normal",
+        "zoom": 0.82
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 45
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 37
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 45
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 8
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 28,
+        "tokens": 5
+      },
+      "name": "Relic Camp North-West",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-relic-camp",
+      "regionId": "core_b1_relic_north",
+      "renderedCityNodes": 45,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.55490814785344,
+          "leftId": "core_b1_relic_north_bench_016",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 159.86244086714052,
+          "leftId": "core_b1_relic_north_bench_050",
+          "rightId": "core_b1_relic_north_bench_052"
+        },
+        {
+          "distance": 160.2903615318151,
+          "leftId": "core_b1_relic_north_bench_043",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 161.69724796668618,
+          "leftId": "core_b1_relic_north_bench_012",
+          "rightId": "core_b1_relic_north_bench_043"
+        },
+        {
+          "distance": 161.89193926814266,
+          "leftId": "core_b1_relic_north_bench_009",
+          "rightId": "core_b1_relic_north_bench_031"
+        },
+        {
+          "distance": 162.6407083112958,
+          "leftId": "core_b1_relic_north_bench_022",
+          "rightId": "core_b1_relic_north_bench_053"
+        },
+        {
+          "distance": 163.3217682980441,
+          "leftId": "core_b1_relic_north_bench_004",
+          "rightId": "core_b1_relic_north_bench_020"
+        },
+        {
+          "distance": 164.3471934655411,
+          "leftId": "core_b1_relic_north_bench_036",
+          "rightId": "core_b1_relic_north_bench_041"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 45,
+        "cityNames": 45,
+        "foreignLabels": 37,
+        "playerBanners": 8,
+        "shields": 37,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "close",
+        "lowZoom": false,
+        "preset": "close",
+        "zoom": 1
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 36
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 28
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 36
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 8
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 8
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 20,
+        "routeElements": 28,
+        "tokens": 2
+      },
+      "name": "Relic Camp North-West",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-relic-camp",
+      "regionId": "core_b1_relic_north",
+      "renderedCityNodes": 36,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.55490814785344,
+          "leftId": "core_b1_relic_north_bench_016",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 159.86244086714052,
+          "leftId": "core_b1_relic_north_bench_050",
+          "rightId": "core_b1_relic_north_bench_052"
+        },
+        {
+          "distance": 160.2903615318151,
+          "leftId": "core_b1_relic_north_bench_043",
+          "rightId": "core_b1_relic_north_bench_048"
+        },
+        {
+          "distance": 161.69724796668618,
+          "leftId": "core_b1_relic_north_bench_012",
+          "rightId": "core_b1_relic_north_bench_043"
+        },
+        {
+          "distance": 161.89193926814266,
+          "leftId": "core_b1_relic_north_bench_009",
+          "rightId": "core_b1_relic_north_bench_031"
+        },
+        {
+          "distance": 162.6407083112958,
+          "leftId": "core_b1_relic_north_bench_022",
+          "rightId": "core_b1_relic_north_bench_053"
+        },
+        {
+          "distance": 163.3217682980441,
+          "leftId": "core_b1_relic_north_bench_004",
+          "rightId": "core_b1_relic_north_bench_020"
+        },
+        {
+          "distance": 164.3471934655411,
+          "leftId": "core_b1_relic_north_bench_036",
+          "rightId": "core_b1_relic_north_bench_041"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 2,
+        "openArrows": 2
+      },
+      "visible": {
+        "cities": 36,
+        "cityNames": 36,
+        "foreignLabels": 28,
+        "playerBanners": 8,
+        "shields": 28,
+        "troopCounts": 8
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "far",
+        "lowZoom": true,
+        "preset": "low",
+        "zoom": 0.4
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 55
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 46
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 9
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 24,
+        "routeElements": 28,
+        "tokens": 14
+      },
+      "name": "Relic Camp West-North",
+      "objectiveNodes": 1,
+      "prototypeKey": "west-north-relic-camp",
+      "regionId": "core_b1_relic_transition",
+      "renderedCityNodes": 55,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.50573759698355,
+          "leftId": "core_b1_relic_transition_bench_007",
+          "rightId": "core_b1_relic_transition_bench_029"
+        },
+        {
+          "distance": 156.16977940690063,
+          "leftId": "core_b1_relic_transition_bench_006",
+          "rightId": "core_b1_relic_transition_bench_055"
+        },
+        {
+          "distance": 157.26728839781018,
+          "leftId": "core_b1_relic_transition_bench_042",
+          "rightId": "core_b1_relic_transition_bench_053"
+        },
+        {
+          "distance": 159.0785969261736,
+          "leftId": "core_b1_relic_transition_bench_029",
+          "rightId": "core_b1_relic_transition_bench_043"
+        },
+        {
+          "distance": 160.37767924496225,
+          "leftId": "core_b1_relic_transition_bench_019",
+          "rightId": "core_b1_relic_transition_bench_040"
+        },
+        {
+          "distance": 160.51479682571323,
+          "leftId": "core_b1_relic_transition_bench_038",
+          "rightId": "core_b1_relic_transition_bench_041"
+        },
+        {
+          "distance": 162.0493751916372,
+          "leftId": "core_b1_relic_transition_bench_034",
+          "rightId": "core_b1_relic_transition_bench_050"
+        },
+        {
+          "distance": 162.8066337714775,
+          "leftId": "core_b1_relic_transition_bench_024",
+          "rightId": "core_b1_relic_transition_bench_054"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 55,
+        "cityNames": 0,
+        "foreignLabels": 46,
+        "playerBanners": 9,
+        "shields": 46,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "medium",
+        "lowZoom": false,
+        "preset": "normal",
+        "zoom": 0.82
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 45
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 40
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 45
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 5
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 24,
+        "routeElements": 28,
+        "tokens": 8
+      },
+      "name": "Relic Camp West-North",
+      "objectiveNodes": 1,
+      "prototypeKey": "west-north-relic-camp",
+      "regionId": "core_b1_relic_transition",
+      "renderedCityNodes": 45,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.50573759698355,
+          "leftId": "core_b1_relic_transition_bench_007",
+          "rightId": "core_b1_relic_transition_bench_029"
+        },
+        {
+          "distance": 156.16977940690063,
+          "leftId": "core_b1_relic_transition_bench_006",
+          "rightId": "core_b1_relic_transition_bench_055"
+        },
+        {
+          "distance": 157.26728839781018,
+          "leftId": "core_b1_relic_transition_bench_042",
+          "rightId": "core_b1_relic_transition_bench_053"
+        },
+        {
+          "distance": 159.0785969261736,
+          "leftId": "core_b1_relic_transition_bench_029",
+          "rightId": "core_b1_relic_transition_bench_043"
+        },
+        {
+          "distance": 160.37767924496225,
+          "leftId": "core_b1_relic_transition_bench_019",
+          "rightId": "core_b1_relic_transition_bench_040"
+        },
+        {
+          "distance": 160.51479682571323,
+          "leftId": "core_b1_relic_transition_bench_038",
+          "rightId": "core_b1_relic_transition_bench_041"
+        },
+        {
+          "distance": 162.0493751916372,
+          "leftId": "core_b1_relic_transition_bench_034",
+          "rightId": "core_b1_relic_transition_bench_050"
+        },
+        {
+          "distance": 162.8066337714775,
+          "leftId": "core_b1_relic_transition_bench_024",
+          "rightId": "core_b1_relic_transition_bench_054"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 45,
+        "cityNames": 45,
+        "foreignLabels": 40,
+        "playerBanners": 5,
+        "shields": 40,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "close",
+        "lowZoom": false,
+        "preset": "close",
+        "zoom": 1
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 34
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 30
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 34
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 4
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 4
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 24,
+        "routeElements": 28,
+        "tokens": 5
+      },
+      "name": "Relic Camp West-North",
+      "objectiveNodes": 1,
+      "prototypeKey": "west-north-relic-camp",
+      "regionId": "core_b1_relic_transition",
+      "renderedCityNodes": 34,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 152.50573759698355,
+          "leftId": "core_b1_relic_transition_bench_007",
+          "rightId": "core_b1_relic_transition_bench_029"
+        },
+        {
+          "distance": 156.16977940690063,
+          "leftId": "core_b1_relic_transition_bench_006",
+          "rightId": "core_b1_relic_transition_bench_055"
+        },
+        {
+          "distance": 157.26728839781018,
+          "leftId": "core_b1_relic_transition_bench_042",
+          "rightId": "core_b1_relic_transition_bench_053"
+        },
+        {
+          "distance": 159.0785969261736,
+          "leftId": "core_b1_relic_transition_bench_029",
+          "rightId": "core_b1_relic_transition_bench_043"
+        },
+        {
+          "distance": 160.37767924496225,
+          "leftId": "core_b1_relic_transition_bench_019",
+          "rightId": "core_b1_relic_transition_bench_040"
+        },
+        {
+          "distance": 160.51479682571323,
+          "leftId": "core_b1_relic_transition_bench_038",
+          "rightId": "core_b1_relic_transition_bench_041"
+        },
+        {
+          "distance": 162.0493751916372,
+          "leftId": "core_b1_relic_transition_bench_034",
+          "rightId": "core_b1_relic_transition_bench_050"
+        },
+        {
+          "distance": 162.8066337714775,
+          "leftId": "core_b1_relic_transition_bench_024",
+          "rightId": "core_b1_relic_transition_bench_054"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 34,
+        "cityNames": 34,
+        "foreignLabels": 30,
+        "playerBanners": 4,
+        "shields": 30,
+        "troopCounts": 4
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "far",
+        "lowZoom": true,
+        "preset": "low",
+        "zoom": 0.4
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 55
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 46
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 9
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 28,
+        "routeElements": 28,
+        "tokens": 14
+      },
+      "name": "North-West Holding Tower",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-holding-tower",
+      "regionId": "core_b1_tower",
+      "renderedCityNodes": 55,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 153.15351775261317,
+          "leftId": "core_b1_tower_bench_007",
+          "rightId": "core_b1_tower_bench_025"
+        },
+        {
+          "distance": 154.8709139896837,
+          "leftId": "core_b1_tower_bench_033",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_042"
+        },
+        {
+          "distance": 157.27682601069998,
+          "leftId": "core_b1_tower_bench_003",
+          "rightId": "core_b1_tower_bench_005"
+        },
+        {
+          "distance": 157.68956845650888,
+          "leftId": "core_b1_tower_bench_013",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 157.8923684032892,
+          "leftId": "core_b1_tower_bench_043",
+          "rightId": "core_b1_tower_bench_049"
+        },
+        {
+          "distance": 158.40454538932903,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_045"
+        },
+        {
+          "distance": 159.20113064925135,
+          "leftId": "core_b1_tower_bench_024",
+          "rightId": "core_b1_tower_bench_043"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 55,
+        "cityNames": 0,
+        "foreignLabels": 46,
+        "playerBanners": 9,
+        "shields": 46,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "medium",
+        "lowZoom": false,
+        "preset": "normal",
+        "zoom": 0.82
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 47
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 38
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 47
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 9
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 28,
+        "routeElements": 28,
+        "tokens": 6
+      },
+      "name": "North-West Holding Tower",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-holding-tower",
+      "regionId": "core_b1_tower",
+      "renderedCityNodes": 47,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 153.15351775261317,
+          "leftId": "core_b1_tower_bench_007",
+          "rightId": "core_b1_tower_bench_025"
+        },
+        {
+          "distance": 154.8709139896837,
+          "leftId": "core_b1_tower_bench_033",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_042"
+        },
+        {
+          "distance": 157.27682601069998,
+          "leftId": "core_b1_tower_bench_003",
+          "rightId": "core_b1_tower_bench_005"
+        },
+        {
+          "distance": 157.68956845650888,
+          "leftId": "core_b1_tower_bench_013",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 157.8923684032892,
+          "leftId": "core_b1_tower_bench_043",
+          "rightId": "core_b1_tower_bench_049"
+        },
+        {
+          "distance": 158.40454538932903,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_045"
+        },
+        {
+          "distance": 159.20113064925135,
+          "leftId": "core_b1_tower_bench_024",
+          "rightId": "core_b1_tower_bench_043"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 47,
+        "cityNames": 47,
+        "foreignLabels": 38,
+        "playerBanners": 9,
+        "shields": 38,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "close",
+        "lowZoom": false,
+        "preset": "close",
+        "zoom": 1
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 31
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 24
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 31
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 7
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 7
+        }
+      },
+      "dataCityCount": 55,
+      "expectedCityCapacity": 55,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 28,
+        "routeElements": 28,
+        "tokens": 4
+      },
+      "name": "North-West Holding Tower",
+      "objectiveNodes": 1,
+      "prototypeKey": "northwest-holding-tower",
+      "regionId": "core_b1_tower",
+      "renderedCityNodes": 31,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 153.15351775261317,
+          "leftId": "core_b1_tower_bench_007",
+          "rightId": "core_b1_tower_bench_025"
+        },
+        {
+          "distance": 154.8709139896837,
+          "leftId": "core_b1_tower_bench_033",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_042"
+        },
+        {
+          "distance": 157.27682601069998,
+          "leftId": "core_b1_tower_bench_003",
+          "rightId": "core_b1_tower_bench_005"
+        },
+        {
+          "distance": 157.68956845650888,
+          "leftId": "core_b1_tower_bench_013",
+          "rightId": "core_b1_tower_bench_050"
+        },
+        {
+          "distance": 157.8923684032892,
+          "leftId": "core_b1_tower_bench_043",
+          "rightId": "core_b1_tower_bench_049"
+        },
+        {
+          "distance": 158.40454538932903,
+          "leftId": "core_b1_tower_bench_002",
+          "rightId": "core_b1_tower_bench_045"
+        },
+        {
+          "distance": 159.20113064925135,
+          "leftId": "core_b1_tower_bench_024",
+          "rightId": "core_b1_tower_bench_043"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 1,
+        "openArrows": 3
+      },
+      "visible": {
+        "cities": 31,
+        "cityNames": 31,
+        "foreignLabels": 24,
+        "playerBanners": 7,
+        "shields": 24,
+        "troopCounts": 7
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "far",
+        "lowZoom": true,
+        "preset": "low",
+        "zoom": 0.4
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 60
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 51
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 1
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 10
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 60,
+      "expectedCityCapacity": 60,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 32,
+        "routeElements": 28,
+        "tokens": 14
+      },
+      "name": "Aurum Keep",
+      "objectiveNodes": 1,
+      "prototypeKey": "aurum-keep",
+      "regionId": "core_b1_aurum",
+      "renderedCityNodes": 60,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_aurum_bench_034",
+          "rightId": "core_b1_aurum_bench_047"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_aurum_bench_010",
+          "rightId": "core_b1_aurum_bench_016"
+        },
+        {
+          "distance": 157.19096666157375,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_025"
+        },
+        {
+          "distance": 160.1998751560063,
+          "leftId": "core_b1_aurum_bench_018",
+          "rightId": "core_b1_aurum_bench_053"
+        },
+        {
+          "distance": 161.5487542508453,
+          "leftId": "core_b1_aurum_bench_041",
+          "rightId": "core_b1_aurum_bench_045"
+        },
+        {
+          "distance": 162.7912774076056,
+          "leftId": "core_b1_aurum_bench_025",
+          "rightId": "core_b1_aurum_bench_046"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_002"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_050",
+          "rightId": "core_b1_aurum_bench_051"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 0,
+        "openArrows": 4
+      },
+      "visible": {
+        "cities": 61,
+        "cityNames": 1,
+        "foreignLabels": 51,
+        "playerBanners": 10,
+        "shields": 51,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "medium",
+        "lowZoom": false,
+        "preset": "normal",
+        "zoom": 0.82
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 50
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 41
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 51
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 10
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 0
+        }
+      },
+      "dataCityCount": 60,
+      "expectedCityCapacity": 60,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 32,
+        "routeElements": 28,
+        "tokens": 5
+      },
+      "name": "Aurum Keep",
+      "objectiveNodes": 1,
+      "prototypeKey": "aurum-keep",
+      "regionId": "core_b1_aurum",
+      "renderedCityNodes": 50,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_aurum_bench_034",
+          "rightId": "core_b1_aurum_bench_047"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_aurum_bench_010",
+          "rightId": "core_b1_aurum_bench_016"
+        },
+        {
+          "distance": 157.19096666157375,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_025"
+        },
+        {
+          "distance": 160.1998751560063,
+          "leftId": "core_b1_aurum_bench_018",
+          "rightId": "core_b1_aurum_bench_053"
+        },
+        {
+          "distance": 161.5487542508453,
+          "leftId": "core_b1_aurum_bench_041",
+          "rightId": "core_b1_aurum_bench_045"
+        },
+        {
+          "distance": 162.7912774076056,
+          "leftId": "core_b1_aurum_bench_025",
+          "rightId": "core_b1_aurum_bench_046"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_002"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_050",
+          "rightId": "core_b1_aurum_bench_051"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 0,
+        "openArrows": 4
+      },
+      "visible": {
+        "cities": 51,
+        "cityNames": 51,
+        "foreignLabels": 41,
+        "playerBanners": 10,
+        "shields": 41,
+        "troopCounts": 0
+      }
+    },
+    {
+      "bodySize": {
+        "height": 720,
+        "width": 1280
+      },
+      "camera": {
+        "detailLevel": "close",
+        "lowZoom": false,
+        "preset": "close",
+        "zoom": 1
+      },
+      "collisions": {
+        "castles": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 36
+        },
+        "foreignLabels": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 30
+        },
+        "names": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 37
+        },
+        "objectiveVsCities": 0,
+        "playerBanners": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 7
+        },
+        "troopCounts": {
+          "collisions": 0,
+          "examples": [],
+          "visible": 7
+        }
+      },
+      "dataCityCount": 60,
+      "expectedCityCapacity": 60,
+      "mapFrame": {
+        "height": 720,
+        "width": 996
+      },
+      "marches": {
+        "data": 32,
+        "routeElements": 28,
+        "tokens": 3
+      },
+      "name": "Aurum Keep",
+      "objectiveNodes": 1,
+      "prototypeKey": "aurum-keep",
+      "regionId": "core_b1_aurum",
+      "renderedCityNodes": 36,
+      "selection": {
+        "selectedCityIds": [],
+        "selectedCount": 0
+      },
+      "status": "measured",
+      "tightPairs": [
+        {
+          "distance": 156.40012787718558,
+          "leftId": "core_b1_aurum_bench_034",
+          "rightId": "core_b1_aurum_bench_047"
+        },
+        {
+          "distance": 156.6780137734711,
+          "leftId": "core_b1_aurum_bench_010",
+          "rightId": "core_b1_aurum_bench_016"
+        },
+        {
+          "distance": 157.19096666157375,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_025"
+        },
+        {
+          "distance": 160.1998751560063,
+          "leftId": "core_b1_aurum_bench_018",
+          "rightId": "core_b1_aurum_bench_053"
+        },
+        {
+          "distance": 161.5487542508453,
+          "leftId": "core_b1_aurum_bench_041",
+          "rightId": "core_b1_aurum_bench_045"
+        },
+        {
+          "distance": 162.7912774076056,
+          "leftId": "core_b1_aurum_bench_025",
+          "rightId": "core_b1_aurum_bench_046"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_001",
+          "rightId": "core_b1_aurum_bench_002"
+        },
+        {
+          "distance": 163.59095329510126,
+          "leftId": "core_b1_aurum_bench_050",
+          "rightId": "core_b1_aurum_bench_051"
+        }
+      ],
+      "transitions": {
+        "gatedEdges": 0,
+        "openArrows": 4
+      },
+      "visible": {
+        "cities": 37,
+        "cityNames": 37,
+        "foreignLabels": 30,
+        "playerBanners": 7,
+        "shields": 30,
+        "troopCounts": 7
+      }
+    }
+  ]
+}
