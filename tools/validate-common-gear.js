@@ -87,8 +87,8 @@ assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not 
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
-assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r4/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r4[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r5/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r5[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
 const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 assert.match(game, /Common Gear Box/);
 assert.match(game, /common-gear-building-shell/);
@@ -129,6 +129,22 @@ assert.equal(levelOneStack.count, 2, "Same-key same-level stored duplicates did 
 assert.equal(levelOneStack.representativeInstanceId, "l1_b", "A selected stacked instance must remain the real representative.");
 assert(levelOneStack.instanceIds.every(id => id.startsWith("l1_")), "A bag stack contains an instance from a different level.");
 assert.equal(bagGroups.filter(group => group.level === 2).length, 2, "Equipped and stored Level 2 pieces must remain visibly distinct.");
+
+const stableOrderDefinitions = gear.DEFINITIONS.filter(definition => definition.buildingId === groupingDefinition.buildingId).slice(0, 3);
+const stableOrderInstances = stableOrderDefinitions.map((definition, index) => ({
+  instanceId: `stable_${index}`,
+  gearKey: definition.gearKey,
+  buildingId: definition.buildingId,
+  slot: definition.slot,
+  level: 1,
+  isEquipped: false,
+  isNew: false,
+  acquiredAtMs: index + 10,
+}));
+const stableOrderBefore = groupingContext.groupGear(stableOrderInstances, stableOrderDefinitions[0].slot, stableOrderInstances[0].instanceId).map(group => group.key).join("|");
+const stableOrderAfter = groupingContext.groupGear(stableOrderInstances, stableOrderDefinitions[2].slot, stableOrderInstances[2].instanceId).map(group => group.key).join("|");
+assert.equal(stableOrderAfter, stableOrderBefore, "Selecting a bag item or changing compatibility must not reorder equipment tiles.");
+assert.match(game, /const preservedBagScrollTop = bagScroll\?\.scrollTop \?\? commonGearBagScrollTop;[\s\S]{0,180}bagScroll\.scrollTop = preservedBagScrollTop;/, "Bag selection focus must restore the exact prior scroll position.");
 
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
 assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/, "Selected gear and its upgrade view must render item artwork.");
@@ -184,6 +200,15 @@ assert.match(
 );
 assert.doesNotMatch(css, /\.common-gear-bag-tile\.rarity-common\s*\{[^}]*#283039|\.common-gear-bag-tile\.rarity-common\s*\{[^}]*#111619/, "Common bag tiles must not use the former blue default surface.");
 assert.match(css, /\.common-gear-selected-panel \.common-gear-rarity\.rarity-common\s*\{[^}]*color: #56524b;[^}]*background:/, "Selected Common gear must use neutral rarity styling.");
+const selectedTileRule = css.match(/\.common-gear-bag-tile\.selected\s*\{([^}]*)\}/)?.[1] || "";
+assert.match(selectedTileRule, /outline: 2px solid #7b4c20;/, "The selected bag item needs a clear brass selection ring.");
+assert.match(selectedTileRule, /0 0 18px rgba\(244,195,87,\.88\)/, "The selected bag item needs a visible gold selection glow.");
+assert.doesNotMatch(selectedTileRule, /transform|width|height|margin|padding/, "Selecting a bag tile must not resize or shift it.");
+assert.match(css, /\.common-gear-bag-panel\s*\{[^}]*color: #eadcb9;[^}]*background: #191610;/, "Dark equipment bag chrome must use light parchment text.");
+assert.match(css, /\.common-gear-bag-panel > footer span\s*\{[^}]*color: #ead8ae;/, "The bag summary must stay readable on its dark footer.");
+assert.match(css, /\.common-gear-back span\s*\{[^}]*color: inherit;/, "The Back button icon must inherit the button's light text color.");
+assert.match(css, /\.common-gear-actions button:disabled\s*\{[^}]*color: #ded1b3;[^}]*opacity: 1;/, "Disabled dark action buttons must retain readable light text.");
+assert.match(css, /\.common-gear-bag-name\s*\{[^}]*color: #efe3c4;[^}]*opacity: 1;/, "Bag item names must remain readable on neutral dark tiles.");
 assert.match(
   css,
   /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
