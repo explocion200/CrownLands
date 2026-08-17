@@ -7271,10 +7271,12 @@ function normalizeCombatFortificationSnapshot(raw = null) {
     baseCityWalls: Math.max(0, Math.floor(Number(raw.baseCityWalls) || 0)),
     reinforcedCityWalls: Math.max(0, Math.floor(Number(raw.reinforcedCityWalls) || 0)),
     stoneworksPercent: Math.max(0, Number(raw.stoneworksPercent) || 0),
+    gearWallStrengthPercent: Math.max(0, Number(raw.gearWallStrengthPercent) || 0),
     cityLevelDefensePercent: Math.max(0, Number(raw.cityLevelDefensePercent) || 0),
     defenseCombatVersion: Math.max(0, Math.floor(Number(raw.defenseCombatVersion) || 0)),
     baseDefensePowerPerTroop: Math.max(1, Number(raw.baseDefensePowerPerTroop) || 1),
     shieldwallDisciplinePercent: Math.max(0, Number(raw.shieldwallDisciplinePercent) || 0),
+    gearDefenderStrengthPercent: Math.max(0, Number(raw.gearDefenderStrengthPercent) || 0),
     troopObjectiveDefenseBonusPercent: Math.max(0, Number(raw.troopObjectiveDefenseBonusPercent) || 0),
     objectiveDefenseBonusPercent: Math.max(0, Number(raw.objectiveDefenseBonusPercent) || 0),
     fullWallPower: Math.max(0, Math.floor(Number(raw.fullWallPower) || 0)),
@@ -7852,7 +7854,17 @@ function getCityStats(city, options = {}) {
     ? getSkillPercent("shieldwallDiscipline")
     : 0;
   const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, Number(gearBonuses.wallStrength) || 0);
-  const cityWalls = Math.floor(baseCityWalls * (1 + (stoneworksPercent + gearWallStrengthPercent) / 100));
+  const gearDefenderStrengthPercent = rewardCamp ? 0 : Math.max(0, Number(gearBonuses.defenderStrength) || 0);
+  const gearTroopProductionPercent = stronghold || rewardCamp
+    ? 0
+    : Math.max(0, Number(gearBonuses.troopProductionAllCities) || 0);
+  const gearGoldProductionPercent = stronghold || rewardCamp
+    ? 0
+    : Math.max(0, Number(gearBonuses.goldProductionAllCities) || 0)
+      + (city?.id === state?.mainCityId ? Math.max(0, Number(gearBonuses.goldProductionMainCity) || 0) : 0);
+  const cityWalls = Math.floor(
+    baseCityWalls + baseCityWalls * (stoneworksPercent + gearWallStrengthPercent) / 100
+  );
   const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
   const includeStrongholdBoosts = options.includeStrongholdBoosts !== false;
@@ -7878,7 +7890,7 @@ function getCityStats(city, options = {}) {
     troopProductionBonusPerHour,
   } = calculateTroopProductionRates(
     rawTroopProductionPerHour,
-    royalGranariesPercent + Math.max(0, Number(gearBonuses.troopProductionAllCities) || 0),
+    royalGranariesPercent + gearTroopProductionPercent,
     strongholdTroopBonusPercent,
     warDrumsTroopBonusPercent
   );
@@ -7892,9 +7904,7 @@ function getCityStats(city, options = {}) {
     goldProductionBonusPerHour,
   } = calculateGoldProductionRates(
     rawGoldProductionPerHour,
-    taxStewardshipPercent
-      + Math.max(0, Number(gearBonuses.goldProductionAllCities) || 0)
-      + (city?.id === state?.mainCityId ? Math.max(0, Number(gearBonuses.goldProductionMainCity) || 0) : 0),
+    taxStewardshipPercent + gearGoldProductionPercent,
     strongholdGoldBonusPercent,
     royalTaxDecreeGoldBonusPercent
   );
@@ -7910,14 +7920,17 @@ function getCityStats(city, options = {}) {
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
       : Math.floor(defendingTroops * (1 + defensePercent / 100));
-  const troopDefense = rewardCamp
+  const troopDefenseBeforeGear = rewardCamp
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent
-          + Math.max(0, Number(gearBonuses.defenderStrength) || 0)) / 100
+        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
       ))
       : troopDefenseBeforeObjective;
+  const gearDefenderStrengthBonusPower = soldierDefenseEnabled
+    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * gearDefenderStrengthPercent / 100)
+    : 0;
+  const troopDefense = troopDefenseBeforeGear + gearDefenderStrengthBonusPower;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
@@ -7940,6 +7953,9 @@ function getCityStats(city, options = {}) {
     cityWallsBonus,
     stoneworksPercent,
     gearWallStrengthPercent,
+    gearDefenderStrengthPercent,
+    gearTroopProductionPercent,
+    gearGoldProductionPercent,
     shieldwallDisciplineLevel: soldierDefenseEnabled && includeSkillBoosts && city?.owner === "player"
       ? getSkillLevel("shieldwallDiscipline")
       : 0,
@@ -7968,6 +7984,8 @@ function getCityStats(city, options = {}) {
     goldProductionPerSecond: goldProductionPerHour / 3600,
     baseTroopDefense,
     troopDefenseBeforeObjective,
+    troopDefenseBeforeGear,
+    gearDefenderStrengthBonusPower,
     troopDefense,
     baseTotalDefense,
     totalDefenseBonus,
@@ -8052,10 +8070,12 @@ function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = D
     baseCityWalls: Math.max(0, Math.floor(Number(stats.baseCityWalls) || 0)),
     reinforcedCityWalls: Math.max(0, Math.floor(Number(stats.cityWalls) || 0)),
     stoneworksPercent: Math.max(0, Number(stats.stoneworksPercent) || 0),
+    gearWallStrengthPercent: Math.max(0, Number(stats.gearWallStrengthPercent) || 0),
     cityLevelDefensePercent: Math.max(0, Number(stats.defensePercent) || 0),
     defenseCombatVersion: Math.max(0, Math.floor(Number(stats.defenseCombatVersion) || 0)),
     baseDefensePowerPerTroop: Math.max(1, Number(stats.baseDefensePowerPerTroop) || 1),
     shieldwallDisciplinePercent: Math.max(0, Number(stats.shieldwallDisciplinePercent) || 0),
+    gearDefenderStrengthPercent: Math.max(0, Number(stats.gearDefenderStrengthPercent) || 0),
     objectiveDefenseBonusPercent,
     troopObjectiveDefenseBonusPercent,
     fullWallPower,
@@ -8465,6 +8485,7 @@ function normalizeScoutReportReinforcements(rows) {
       basePower: Math.max(0, Math.floor(Number(row?.basePower) || 0)),
       shieldwallDisciplineLevel: Math.max(0, Math.floor(Number(row?.shieldwallDisciplineLevel) || 0)),
       shieldwallDisciplinePercent: Math.max(0, Number(row?.shieldwallDisciplinePercent) || 0),
+      gearDefenderStrengthPercent: Math.max(0, Number(row?.gearDefenderStrengthPercent) || 0),
       personalDefenseBonusPercent: Math.max(0, Number(row?.personalDefenseBonusPercent) || 0),
       sharedDefenseBonusPercent: Math.max(0, Number(row?.sharedDefenseBonusPercent) || 0),
       effectivePower: Math.max(0, Math.floor(Number(row?.effectivePower) || 0)),
@@ -9946,6 +9967,8 @@ function createScoutReportSnapshot(target) {
     cityLevel: targetType === "camp" ? 0 : stats.level,
     defenseCombatVersion: stats.defenseCombatVersion,
     baseDefensePowerPerTroop: stats.baseDefensePowerPerTroop,
+    gearWallStrengthPercent: stats.gearWallStrengthPercent,
+    gearDefenderStrengthPercent: stats.gearDefenderStrengthPercent,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
@@ -25647,6 +25670,22 @@ function showScoutReportModal(cityId) {
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
   const ownerTroops = Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, report.troops - reinforcementTroops)) || 0));
   const siege = normalizeCombatFortificationSnapshot(report.fortification);
+  const formatGearPercent = value => Math.max(0, Number(value) || 0)
+    .toFixed(2)
+    .replace(/\.00$/, "")
+    .replace(/(\.\d)0$/, "$1");
+  const defenderGearPercent = Math.max(0, Number(
+    siege?.gearDefenderStrengthPercent ?? report.gearDefenderStrengthPercent
+  ) || 0);
+  const wallGearPercent = Math.max(0, Number(
+    siege?.gearWallStrengthPercent ?? report.gearWallStrengthPercent
+  ) || 0);
+  const defenderGearCopy = defenderGearPercent > 0
+    ? ` · Gatehouse gear +${formatGearPercent(defenderGearPercent)}%`
+    : "";
+  const wallGearCopy = wallGearPercent > 0
+    ? ` + Gatehouse gear +${formatGearPercent(wallGearPercent)}%`
+    : "";
   const siegeRepair = siege?.repairAtMs > Date.now()
     ? `<small data-fortification-repair-at-ms="${siege.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}</small>`
     : `<small>Fully repaired now</small>`;
@@ -25687,12 +25726,12 @@ function showScoutReportModal(cityId) {
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutDefenderRow(renderCrownlandsIcon("troops"), reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
-          ${reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
+          ${scoutDefenderRow(renderCrownlandsIcon("troops"), reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%${defenderGearCopy}` : "")}
+          ${reinforcements.map(row => scoutDefenderRow(renderCrownlandsIcon("reinforcement"), row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%${row.gearDefenderStrengthPercent > 0 ? ` · owner gear +${formatGearPercent(row.gearDefenderStrengthPercent)}%` : ""}` : "")).join("")}
           ${rewardCampTarget
             ? scoutBreakdownRow(renderCrownlandsIcon("city"), "Walls", "Camp objectives have no wall layer", 0)
             : siege
-            ? `${scoutBreakdownRow(renderCrownlandsIcon("city"), "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks`, siege.startingWallPower)}${scoutBreakdownRow(renderCrownlandsIcon("shield"), "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
+            ? `${scoutBreakdownRow(renderCrownlandsIcon("city"), "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks${wallGearCopy}`, siege.startingWallPower)}${scoutBreakdownRow(renderCrownlandsIcon("shield"), "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%${defenderGearCopy}` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
             : `${scoutBreakdownRow(renderCrownlandsIcon("shield"), "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow(renderCrownlandsIcon("city"), "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
@@ -26982,7 +27021,7 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
       targetType: isRewardCampTarget(target) ? "camp" : "city",
-      kind: orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind,
+      kind: orderKind === "rally_create" ? "attack" : orderKind,
       requestedTroops: safeRequestedTroops,
     });
     const route = normalizeAuthoritativeRoutePreview(result, getCityRegionId(source), safeRequestedTroops);
@@ -27381,7 +27420,7 @@ function updateTroopSliderModal(source, target, route) {
     "player",
     route.length,
     selectedTroopAmount,
-    orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind
+    orderKind === "rally_create" ? "attack" : orderKind
   );
   const authoritativePreviewMatches = route.authoritativeDurationSeconds > 0
     && getTroopTravelBandIndex(route.authoritativeRequestedTroops) === getTroopTravelBandIndex(selectedTroopAmount);
@@ -33696,9 +33735,15 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
   if (side === "attacker") {
     const baseAttackPower = Math.max(0, Math.floor(Number(raw.baseAttackPower ?? participant.basePower) || 0));
     const totalAttackPower = Math.max(baseAttackPower, Math.floor(Number(raw.totalAttackPower ?? participant.effectivePower) || 0));
+    const gearAttackStrengthBonusPower = Math.max(0, Math.floor(Number(raw.gearAttackStrengthBonusPower) || 0));
     return {
       baseAttackPower,
-      swordmasteryBonusPower: Math.max(0, Math.floor(Number(raw.swordmasteryBonusPower) || (totalAttackPower - baseAttackPower))),
+      swordmasteryBonusPower: Math.max(0, Math.floor(
+        Object.prototype.hasOwnProperty.call(raw, "swordmasteryBonusPower")
+          ? Number(raw.swordmasteryBonusPower) || 0
+          : totalAttackPower - baseAttackPower - gearAttackStrengthBonusPower
+      )),
+      gearAttackStrengthBonusPower,
       totalAttackPower,
     };
   }
@@ -33710,6 +33755,7 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
   const baseTroopDefensePower = Math.max(0, Math.floor(Number(raw.baseTroopDefensePower) || startingTroops));
   const baseDefenseBonusPower = Math.max(0, Math.floor(Number(raw.baseDefenseBonusPower) || 0));
   const shieldwallDisciplineBonusPower = Math.max(0, Math.floor(Number(raw.shieldwallDisciplineBonusPower) || 0));
+  const gearDefenderStrengthBonusPower = Math.max(0, Math.floor(Number(raw.gearDefenderStrengthBonusPower) || 0));
   const soldierDefenseEnabled = Math.floor(Number(participant.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const cityLevelDefensePower = Math.max(0, Math.floor(
     Object.prototype.hasOwnProperty.call(raw, "cityLevelDefensePower")
@@ -33720,6 +33766,7 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
     - baseTroopDefensePower
     - baseDefenseBonusPower
     - shieldwallDisciplineBonusPower
+    - gearDefenderStrengthBonusPower
     - cityLevelDefensePower
     - legacyFortificationPower);
   const objectiveFallback = splitBattleBonusPower(
@@ -33731,6 +33778,7 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
     baseTroopDefensePower,
     baseDefenseBonusPower,
     shieldwallDisciplineBonusPower,
+    gearDefenderStrengthBonusPower,
     cityLevelDefensePower,
     legacyFortificationPower,
     personalObjectiveBonusPower: Math.max(0, Math.floor(
@@ -33764,6 +33812,7 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
         baseCityWalls: Math.max(0, Math.floor(Number(participant.fortifications.baseCityWalls) || 0)),
         cityWalls: Math.max(0, Math.floor(Number(participant.fortifications.cityWalls) || 0)),
         stoneworksPercent: Math.max(0, Number(participant.fortifications.stoneworksPercent) || 0),
+        gearWallStrengthPercent: Math.max(0, Number(participant.fortifications.gearWallStrengthPercent) || 0),
         cityWallSharePercent: Math.max(0, Number(participant.fortifications.cityWallSharePercent) || 0),
         cityWallDefense: Math.max(0, Math.floor(Number(participant.fortifications.cityWallDefense) || 0)),
         stoneworksBonus: Math.max(0, Math.floor(Number(participant.fortifications.stoneworksBonus) || 0)),
@@ -33782,10 +33831,12 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
     basePower: Math.max(0, Math.floor(Number(participant.basePower) || 0)),
     swordmasteryLevel: Math.max(0, Math.floor(Number(participant.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(participant.swordmasteryPercent) || 0),
+    gearAttackStrengthPercent: Math.max(0, Number(participant.gearAttackStrengthPercent) || 0),
     defenseCombatVersion: Math.max(0, Math.floor(Number(participant.defenseCombatVersion) || 0)),
     baseDefensePowerPerTroop: Math.max(1, Number(participant.baseDefensePowerPerTroop) || 1),
     shieldwallDisciplineLevel: Math.max(0, Math.floor(Number(participant.shieldwallDisciplineLevel) || 0)),
     shieldwallDisciplinePercent: Math.max(0, Number(participant.shieldwallDisciplinePercent) || 0),
+    gearDefenderStrengthPercent: Math.max(0, Number(participant.gearDefenderStrengthPercent) || 0),
     personalDefenseBonusPercent: Math.max(0, Number(participant.personalDefenseBonusPercent) || 0),
     sharedDefenseBonusPercent: Math.max(0, Number(participant.sharedDefenseBonusPercent) || 0),
     totalDefenseBonusPercent: Math.max(0, Number(participant.totalDefenseBonusPercent) || 0),
@@ -33874,13 +33925,18 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const stoneworksWallBonusPower = Math.max(0, Math.floor(Number(
     hasStoredWallBreakdown ? rawDefenseBreakdown.stoneworksWallBonusPower : historicalStoneworksWallBonusPower
   ) || 0));
+  const gearWallStrengthBonusPower = Math.max(0, Math.floor(Number(
+    hasStoredWallBreakdown ? rawDefenseBreakdown.gearWallStrengthBonusPower : 0
+  ) || 0));
   const defensePowerBreakdown = {
     baseTroopDefensePower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.baseTroopDefensePower) || defender.powerBreakdown.baseTroopDefensePower)),
     baseDefenseBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.baseDefenseBonusPower) || defender.powerBreakdown.baseDefenseBonusPower)),
     shieldwallDisciplineBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.shieldwallDisciplineBonusPower) || defender.powerBreakdown.shieldwallDisciplineBonusPower)),
+    gearDefenderStrengthBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.gearDefenderStrengthBonusPower) || defender.powerBreakdown.gearDefenderStrengthBonusPower)),
     cityLevelDefensePower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.cityLevelDefensePower) || defender.powerBreakdown.cityLevelDefensePower)),
     baseWallPower,
     stoneworksWallBonusPower,
+    gearWallStrengthBonusPower,
     personalObjectiveBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.personalObjectiveBonusPower) || defender.powerBreakdown.personalObjectiveBonusPower)),
     sharedClanBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.sharedClanBonusPower) || defender.powerBreakdown.sharedClanBonusPower)),
     reinforcementDefensePower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.reinforcementDefensePower) || reinforcements.reduce((total, row) => total + row.effectivePower, 0))),
@@ -33911,6 +33967,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
             baseCityWalls: Math.max(0, Math.floor(Number(target.fortifications.baseCityWalls) || 0)),
             cityWalls: Math.max(0, Math.floor(Number(target.fortifications.cityWalls) || 0)),
             stoneworksPercent: Math.max(0, Number(target.fortifications.stoneworksPercent) || 0),
+            gearWallStrengthPercent: Math.max(0, Number(target.fortifications.gearWallStrengthPercent) || 0),
             fullWallPower: Math.max(0, Math.floor(Number(target.fortifications.fullWallPower) || 0)),
             startingWallPower: Math.max(0, Math.floor(Number(target.fortifications.startingWallPower) || 0)),
             startingIntegrityBps: clamp(Math.floor(Number(target.fortifications.startingIntegrityBps) || 0), 0, 10_000),
@@ -34036,6 +34093,15 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
         ? defenseBreakdown.shieldwallDisciplineBonusPower
         : defenseBreakdown.cityLevelDefensePower
   ) || 0));
+  const participantGearBonusPower = sumDetailedBattleParticipantPower(
+    participants,
+    attacker ? "gearAttackStrengthBonusPower" : "gearDefenderStrengthBonusPower"
+  );
+  const gearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
+    attacker
+      ? attackBreakdown.gearAttackStrengthBonusPower
+      : defenseBreakdown.gearDefenderStrengthBonusPower
+  ) || 0));
   const personalObjectiveBonusPower = attacker ? 0 : (
     sumDetailedBattleParticipantPower(participants, "personalObjectiveBonusPower")
     || Math.max(0, Math.floor(Number(defenseBreakdown.personalObjectiveBonusPower) || 0))
@@ -34056,6 +34122,14 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     ? `+${formatNumber(skillPercents[0])}%`
     : skillPercents.length > 1
       ? "Mixed participant rates"
+      : "";
+  const gearPercents = [...new Set(participants.map(participant => Math.max(0, Number(
+    attacker ? participant?.gearAttackStrengthPercent : participant?.gearDefenderStrengthPercent
+  ) || 0)).filter(percent => percent > 0))];
+  const gearPercentText = gearPercents.length === 1
+    ? `+${gearPercents[0].toFixed(2).replace(/\.00$/, "")}%`
+    : gearPercents.length > 1
+      ? "Mixed equipped-gear rates"
       : "";
   const participantSummary = attacker
     ? participants.length > 1
@@ -34078,6 +34152,9 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     skillPercentText,
+    gearLabel: attacker ? "War Captain gear" : "Defensive Commander gear",
+    gearBonusPower,
+    gearPercentText,
     personalObjectiveBonusPower,
     sharedClanBonusPower,
     otherBonusPower,
@@ -34091,11 +34168,18 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     wallBasePower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.baseWallPower) || 0)),
     wallStoneworksPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)),
     wallStoneworksPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.stoneworksPercent) || 0),
+    wallGearPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
+    wallGearPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.gearWallStrengthPercent) || 0),
     wallHelp: attacker
       ? ""
-      : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)) > 0
-        ? `Stoneworks +${formatNumber(defenseBreakdown.stoneworksWallBonusPower)}`
-        : "No Stoneworks bonus",
+      : [
+          Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)) > 0
+            ? `Stoneworks +${formatNumber(defenseBreakdown.stoneworksWallBonusPower)}`
+            : "",
+          Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)) > 0
+            ? `Gatehouse gear +${formatNumber(defenseBreakdown.gearWallStrengthBonusPower)}`
+            : "",
+        ].filter(Boolean).join(" · ") || "No wall bonuses",
     wallAfter: attacker ? "—" : formatBattleWallAfterStatus(snapshot?.siege),
   };
 }
@@ -34215,6 +34299,14 @@ function getBattleSideBonusEntries(side = {}) {
       help: side.skillPercentText,
     });
   }
+  if (Number(side.gearBonusPower) > 0) {
+    entries.push({
+      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
+      label: side.gearLabel || "Officer gear",
+      value: `+${formatNumber(side.gearBonusPower)} power`,
+      help: side.gearPercentText || "Equipped gear",
+    });
+  }
   if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
     entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
   }
@@ -34227,6 +34319,14 @@ function getBattleSideBonusEntries(side = {}) {
       label: "Stoneworks",
       value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
       help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
+    });
+  }
+  if (side.role === "defender" && Number(side.wallGearPower) > 0) {
+    entries.push({
+      icon: renderCrownlandsIcon("city"),
+      label: "Gatehouse wall gear",
+      value: `+${formatNumber(side.wallGearPower)} wall power`,
+      help: side.wallGearPercent > 0 ? `+${Number(side.wallGearPercent).toFixed(2).replace(/\.00$/, "")}% wall strength` : "Wall only",
     });
   }
   if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
@@ -34863,22 +34963,34 @@ function renderProfileProductionStat(element, baseValue, totalValue, suffix = ""
 
 function getCityStatBonusSources(stats = {}, statType = "") {
   const sources = [];
+  const formatBonusPercent = value => {
+    const numeric = Math.max(0, Number(value) || 0);
+    return numeric.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+  };
   if (statType === "walls" || statType === "defense") {
     if (stats.stoneworksPercent > 0) sources.push(`Stoneworks +${formatNumber(stats.stoneworksPercent)}%`);
+  }
+  if (statType === "walls" && stats.gearWallStrengthPercent > 0) {
+    sources.push(`Gatehouse gear +${formatBonusPercent(stats.gearWallStrengthPercent)}%`);
   }
   const objectiveTroopDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
   if (statType === "defense" && objectiveTroopDefenseBonusPercent > 0) {
     sources.push(`Objective soldier defense +${formatNumber(objectiveTroopDefenseBonusPercent)}%`);
   }
+  if (statType === "defense" && stats.gearDefenderStrengthPercent > 0) {
+    sources.push(`Gatehouse gear +${formatBonusPercent(stats.gearDefenderStrengthPercent)}%`);
+  }
   if (statType === "troops") {
     if (stats.royalGranariesPercent > 0) sources.push(`Royal Granaries +${formatNumber(stats.royalGranariesPercent)}%`);
     if (stats.strongholdTroopBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdTroopBonusPercent)}%`);
     if (stats.warDrumsTroopBonusPercent > 0) sources.push(`War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%`);
+    if (stats.gearTroopProductionPercent > 0) sources.push(`Barracks gear +${formatBonusPercent(stats.gearTroopProductionPercent)}%`);
   }
   if (statType === "gold") {
     if (stats.taxStewardshipPercent > 0) sources.push(`Tax Stewardship +${formatNumber(stats.taxStewardshipPercent)}%`);
     if (stats.strongholdGoldBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdGoldBonusPercent)}%`);
     if (stats.royalTaxDecreeGoldBonusPercent > 0) sources.push(`Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%`);
+    if (stats.gearGoldProductionPercent > 0) sources.push(`Treasury gear +${formatBonusPercent(stats.gearGoldProductionPercent)}%`);
   }
   return sources.length ? `Bonus sources: ${sources.join(" | ")}` : "No active stat bonuses";
 }

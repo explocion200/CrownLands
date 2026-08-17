@@ -106,8 +106,9 @@ const context = {
   skillMultiplier() {
     return 1;
   },
+  activeCommonGearBonuses: { attackStrength: 0, wallRepairSpeed: 0 },
   getCommonGearBonuses() {
-    return { attackStrength: 0, wallRepairSpeed: 0 };
+    return context.activeCommonGearBonuses;
   },
 };
 vm.createContext(context);
@@ -272,6 +273,7 @@ function siegeResult({
   nowMs = 1_800_000,
   version = 1,
   ignoreWallDefense = false,
+  repairReductionPercent = 0,
 } = {}) {
   return context.calculateCombatResult(troops, { level, troops: defenders, legacyDefense: wall + garrison }, {}, {}, {
     attackPower,
@@ -287,6 +289,7 @@ function siegeResult({
     garrisonDefensePower: garrison,
     ignoreWallDefense,
     attackProtection,
+    repairReductionPercent,
     nowMs,
   });
 }
@@ -334,6 +337,18 @@ assert.equal(exactThreshold.fortification.meaningfulWallDamage, true, "Exactly 5
 assert.equal(exactThreshold.fortification.persistentDamageApplied, true);
 assert.equal(exactThreshold.fortification.repairAddedMs, 90_000, "A 5% hit must add exactly 5% of Level 50's 30-minute window.");
 assert.equal(exactThreshold.fortification.repairAtMs, 1_890_000);
+context.activeCommonGearBonuses = { attackStrength: 0, wallRepairSpeed: 10 };
+const cappedRepairReduction = siegeResult({
+  attackPower: 50,
+  troops: 50,
+  defenders: 100,
+  wall: 1_000,
+  garrison: 200,
+  repairReductionPercent: 90,
+});
+assert.equal(cappedRepairReduction.fortification.repairReductionPercent, 95, "Wall repair gear exceeded the 95% combined cap.");
+assert.equal(cappedRepairReduction.fortification.repairAddedMs, 4_500, "The 95% repair cap changed the new-damage increment incorrectly.");
+context.activeCommonGearBonuses = { attackStrength: 0, wallRepairSpeed: 0 };
 const belowThreshold = siegeResult({ attackPower: 49, troops: 49, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(belowThreshold.fortification.meaningfulWallDamage, false);
 assert.equal(belowThreshold.fortification.endingIntegrityBps, 10_000, "Sub-threshold wall damage must not persist.");
