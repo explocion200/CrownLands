@@ -1,0 +1,126 @@
+{
+  "phase": "Crownlands Core v2 Phase ART-1",
+  "approvedBase": "ef66754bab49a88bd694b9f55c5cc3ef1e0333b3",
+  "branch": "codex/core-v2",
+  "developmentOnly": true,
+  "finalMapProductionStarted": false,
+  "additionalCoreMapsGenerated": 0,
+  "prototypeBackgroundsModified": 0,
+  "prototypeDefinitionsModified": 0,
+  "productionModified": false,
+  "productionBaseline": {
+    "maps": 15,
+    "cities": 1050,
+    "directedChains": 210,
+    "generatedActiveRegions": 0
+  },
+  "core": {
+    "maps": 25,
+    "cities": 1480,
+    "spawnEligible": false,
+    "hardMinimumCitySpacingPx": 68,
+    "preferredCitySpacingPx": 70,
+    "outerGeneratedMapSpacingPx": 112,
+    "capacities": {
+      "SUPPORT": 70,
+      "DEED_CAMP": 60,
+      "RELIC_CAMP": 55,
+      "WARBAND_CAMP": 55,
+      "GOLD_CAMP": 55,
+      "HOLDING_TOWER": 55,
+      "STRONGHOLD": 60,
+      "CROWN_CITADEL": 60
+    }
+  },
+  "objectivePlacement": {
+    "CROWN_CITADEL": "exact_center",
+    "STRONGHOLD": "exact_center",
+    "CAMP": "near_center",
+    "HOLDING_TOWER": "near_center",
+    "FUTURE_OUTER_FORTRESS": "near_center"
+  },
+  "style": {
+    "period": "grounded 14th-15th century frontier Europe",
+    "medium": "polished painterly slightly-dimensional game art",
+    "camera": "elevated three-quarter isometric/orthographic",
+    "lighting": "shared soft natural daylight",
+    "palette": "earthy restrained natural materials",
+    "runtimeObjectsDominate": true,
+    "centralThirtyPercentLargelyClear": true,
+    "perimeterTouchesLiteralBoundary": true,
+    "perimeterNarrow": true,
+    "roadsAreControlledBarrierOpenings": true,
+    "noBakedRuntimeObjects": true,
+    "noObviousTileRepetition": true,
+    "noMagicalTerrain": true
+  },
+  "propBudget": {
+    "optionA": { "majorClusters": 1, "mediumClusters": 2 },
+    "optionB": { "majorClusters": 0, "mediumClusters": 3 }
+  },
+  "climates": {
+    "north": "light winter",
+    "west": "grassy temperate",
+    "south": "dry frontier",
+    "east": "tropical lush but open",
+    "center": "balanced transitional Crownlands"
+  },
+  "sourceAssets": [
+    "assets/castles/shack.png",
+    "assets/castles/keep.png",
+    "assets/castles/fort.png",
+    "assets/castles/city.png",
+    "assets/castles/castle.png",
+    "assets/crown-citadel.png",
+    "assets/training-stronghold.png",
+    "assets/gold-stronghold.png",
+    "assets/speed-stronghold.png",
+    "assets/defense-stronghold.png",
+    "assets/camps/gold.png",
+    "assets/camps/troops.png",
+    "assets/camps/items.png",
+    "assets/camps/deed.png"
+  ],
+  "referenceBoards": [
+    "01-general-terrain.png",
+    "02-north-climate.png",
+    "03-west-climate.png",
+    "04-south-climate.png",
+    "05-east-climate.png",
+    "06-citadel-territory.png",
+    "07-stronghold-territory.png",
+    "08-camp-territory.png",
+    "09-tower-territory.png"
+  ],
+  "prototypeClassification": {
+    "A": 0,
+    "B": 0,
+    "C": 10,
+    "visualRebuildRequired": [
+      "crown-citadel",
+      "ironwatch",
+      "southwest-holding-tower",
+      "west-south-deed-camp",
+      "west-support",
+      "northwest-warband-camp",
+      "northwest-relic-camp",
+      "west-north-relic-camp",
+      "northwest-holding-tower",
+      "aurum-keep"
+    ]
+  },
+  "futureRebuild": {
+    "backgrounds": 10,
+    "geometry": 0,
+    "cities": 0,
+    "objectives": 0,
+    "roads": 0,
+    "topology": 0
+  },
+  "approval": {
+    "readyForVisualReview": true,
+    "readyForFinalApproval": true,
+    "finalMapProductionAllowed": false,
+    "batch2Allowed": false
+  }
+}
