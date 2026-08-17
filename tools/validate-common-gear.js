@@ -87,7 +87,7 @@ assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not 
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
-assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r6/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r7/, "The equipment stylesheet must load in the game shell.");
 assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r6[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
 const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 assert.match(game, /Common Gear Box/);
@@ -206,17 +206,17 @@ assert.match(selectedTileRule, /0 0 18px rgba\(244,195,87,\.88\)/, "The selected
 assert.doesNotMatch(selectedTileRule, /transform|width|height|margin|padding/, "Selecting a bag tile must not resize or shift it.");
 assert.match(
   css,
-  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile\[data-gear-stack-key\]\s*\{[^}]*background: var\(--gear-rarity-surface\);/,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile\[data-gear-stack-key\]\s*\{[^}]*background: var\(--gear-rarity-surface\) !important;/,
   "Equipment bag rarity surfaces must outrank the shared palette cascade."
 );
 assert.match(
   css,
-  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile \.common-gear-bag-slot,[\s\S]{0,500}\.common-gear-bag-name\s*\{ color: #efe3c4; \}/,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-bag-panel \.common-gear-bag-tile \.common-gear-bag-slot,[\s\S]{0,500}\.common-gear-bag-name\s*\{ color: #efe3c4 !important; \}/,
   "Dark equipment tiles must keep their labels readable after shared theme styles load."
 );
 assert.match(
   css,
-  /\.common-gear-building-modal \.common-gear-screen \.common-gear-selected-panel \.common-gear-actions button\s*\{[^}]*color: #f3dfac;[^}]*background: linear-gradient\(180deg, #87363b, #592328\);/,
+  /\.common-gear-building-modal \.common-gear-screen \.common-gear-selected-panel \.common-gear-actions button\s*\{[^}]*color: #f3dfac !important;[^}]*background: linear-gradient\(180deg, #87363b, #592328\) !important;/,
   "Primary equipment actions must retain their readable dark-panel treatment."
 );
 assert.match(css, /\.common-gear-bag-panel\s*\{[^}]*color: #eadcb9;[^}]*background: #191610;/, "Dark equipment bag chrome must use light parchment text.");
