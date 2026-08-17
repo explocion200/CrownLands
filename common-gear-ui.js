@@ -642,7 +642,7 @@ function renderInnerCastle(cityId) {
                   aria-pressed="${building.key === selectedBuilding.key ? "true" : "false"}"
                   aria-label="Preview ${escapeHtml(building.label)}"
                   style="--hotspot-left:${building.hotspot.left}%;--hotspot-top:${building.hotspot.top}%;"
-                ><span>${state?.gear?.newMarkers?.[building.key] ? `<b class="common-gear-alert" aria-label="New gear">!</b>` : ""}${escapeHtml(building.label)}</span></button>`).join("")}
+                ><span>${state?.gear?.newMarkers?.[building.key] ? `<b class="inner-castle-hotspot-alert" aria-label="New gear">!</b>` : ""}${escapeHtml(building.label)}</span></button>`).join("")}
             </div>
           </div>
         </div>
