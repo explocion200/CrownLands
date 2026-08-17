@@ -1,4 +1,12 @@
 /* Crownlands Common Gear boxes and officer equipment screens. */
+
+/* Inner Castle palette isolation. */
+#modal.inner-castle-modal .inner-castle-hotspot{border:0!important;background:transparent!important;box-shadow:none!important}
+#modal.inner-castle-modal .inner-castle-hotspot>span{color:#fff0c7!important;background:linear-gradient(#452b1b,#1d1510)!important;text-shadow:0 1px 2px #000!important}
+#modal.inner-castle-modal :is(.inner-castle-hotspot.selected,.inner-castle-hotspot[aria-pressed="true"])>span{border-color:#e2c77f!important;color:#fff7dc!important;background:linear-gradient(#803940,#56252a)!important}
+#modal.inner-castle-modal :is(.inner-castle-hotspot:disabled,.inner-castle-hotspot[aria-disabled="true"])>span{color:rgba(255,240,199,.78)!important;background:#30241c!important;opacity:.76}
+#modal.inner-castle-modal .inner-castle-hotspot-alert{position:absolute;z-index:2;inset:-6px -6px auto auto;display:grid;place-items:center;width:16px;min-width:16px;height:16px;min-height:16px;padding:0;border:1px solid #e5c474!important;border-radius:50%;clip-path:none;color:#fff7dc!important;background:#762b31!important;box-shadow:0 2px 4px #140a06!important;font:900 11px/1 Georgia,serif;pointer-events:none}
+
 .common-gear-box-modal.modal,
 .common-gear-building-modal.modal {
   box-sizing: border-box;

@@ -357,6 +357,36 @@ assert.match(
   /\.inner-castle-hotspot(?:\.selected|\[aria-pressed=["']true["']\])\s*>\s*span\s*\{(?=[^}]*\bcolor\s*:)(?=[^}]*\bbackground\s*:)[^}]*\}/s,
   "The selected Inner Castle hotspot must style its plaque span."
 );
+assert.match(
+  stylesSource,
+  /#modal\.inner-castle-modal\s+\.inner-castle-hotspot[^}]*\bbackground\s*:\s*transparent\s*!important\s*;/s,
+  "Inner Castle hotspot buttons must override the global parchment control backplate."
+);
+assert.match(
+  stylesSource,
+  /#modal\.inner-castle-modal\s+\.inner-castle-hotspot\s*>\s*span\s*\{(?=[^}]*\bcolor\s*:\s*#[0-9a-f]{6}\s*!important)(?=[^}]*\bbackground\s*:)[^}]*\}/is,
+  "Default Inner Castle plaques must retain high-contrast light text on dark wood."
+);
+assert.match(
+  stylesSource,
+  /#modal\.inner-castle-modal\s+:is\([^)]*\.inner-castle-hotspot\.selected[^)]*\.inner-castle-hotspot\[aria-pressed=["']true["']\][^)]*\)\s*>\s*span\s*\{(?=[^}]*\bcolor\s*:\s*#[0-9a-f]{6}\s*!important)(?=[^}]*\bbackground\s*:)[^}]*\}/is,
+  "Selected Inner Castle plaques must retain high-contrast light text on burgundy."
+);
+assert.match(
+  stylesSource,
+  /\.inner-castle-hotspot-alert\s*\{(?=[^}]*\bwidth\s*:\s*16px)(?=[^}]*\bheight\s*:\s*16px)(?=[^}]*\bborder-radius\s*:\s*50%)[^}]*\}/s,
+  "Inner Castle new-gear notifications must render as compact circular badges."
+);
+assert.match(
+  gameSource,
+  /state\?\.gear\?\.newMarkers\?\.\[building\.key\][\s\S]*inner-castle-hotspot-alert[\s\S]*New gear/,
+  "Inner Castle notification badges must remain driven by the existing newMarkers state."
+);
+assert.doesNotMatch(
+  gameSource,
+  /class="common-gear-alert"\s+aria-label="New gear"/,
+  "Inner Castle markers must not reuse the globally paneled Common Gear alert class."
+);
 assert.match(indexSource, /<dialog id="modal" class="modal" aria-labelledby="modalTitle">/, "The shared modal must be labelled by its title.");
 assert.match(indexSource, new RegExp(`name="crownlands-build" content="${BUILD_ID}"`), "The document build ID is stale.");
 assert.match(indexSource, new RegExp(`styles\\.css\\?v=${BUILD_ID}`), "The Inner Castle stylesheet cache tag is stale.");
