@@ -62,12 +62,11 @@ function createCommonGearBagGroups(instances = [], selectedSlot = "head", select
       isCompatible: representative.slot === selectedSlot,
       oldestAcquiredAtMs: group.instances[0]?.acquiredAtMs || 0,
     };
-  }).sort((a, b) => Number(b.isCompatible) - Number(a.isCompatible)
-    || Number(b.isEquipped) - Number(a.isEquipped)
+  }).sort((a, b) => Number(b.isEquipped) - Number(a.isEquipped)
     || b.level - a.level
     || (slotOrder.get(a.representative.slot) ?? 99) - (slotOrder.get(b.representative.slot) ?? 99)
     || a.oldestAcquiredAtMs - b.oldestAcquiredAtMs
-    || a.representativeInstanceId.localeCompare(b.representativeInstanceId));
+    || a.key.localeCompare(b.key));
 }
 
 function createCommonGearViewModel(buildingId) {
@@ -263,7 +262,10 @@ function restoreCommonGearFocus() {
   window.requestAnimationFrame(() => {
     const target = modalBody.querySelector(selector);
     if (!target) return;
+    const bagScroll = modalBody.querySelector("[data-gear-bag-scroll]");
+    const preservedBagScrollTop = bagScroll?.scrollTop ?? commonGearBagScrollTop;
     try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); }
+    if (bagScroll) bagScroll.scrollTop = preservedBagScrollTop;
   });
 }
 
