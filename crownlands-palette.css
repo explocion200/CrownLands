@@ -376,7 +376,7 @@ body {
   text-shadow: none !important;
 }
 
-:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
+:is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal, .island-switcher-modal)) .modal-card)
   :is(p, li, dd, dt, label, span:not(.flag-symbol), small, em) {
   color: var(--cl-text-secondary) !important;
   opacity: 1;
@@ -557,15 +557,14 @@ input[type="range"] {
   color: inherit !important;
 }
 
-/* General controls. Objective action buttons are defined in the later-loaded
-   action-buttons.css and are intentionally excluded here. */
+/* General controls; objective actions are defined later. */
 :is(
   .setup-card,
   .commander-panel,
   .profile-screen,
   .modal .modal-card,
   .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
   color: var(--cl-text) !important;
   border-color: var(--cl-brass) !important;
   background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
