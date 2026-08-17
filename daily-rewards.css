@@ -3,6 +3,11 @@
 }
 
 .daily-login-reward-modal .modal-card {
+  --daily-header-close-size: 44px;
+  --daily-header-block-inset: .44rem;
+  --daily-header-inline-inset: .44rem;
+  --daily-header-control-gap: .75rem;
+  --daily-header-nav-width: calc(132px + 2.4rem);
   height: min(94dvh, 780px);
   max-height: min(94dvh, 780px);
   padding: .72rem .78rem .82rem;
@@ -56,14 +61,49 @@
 }
 
 .daily-login-reward-modal .modal-close {
-  z-index: 6;
+  z-index: 8;
+  top: var(--daily-header-block-inset);
+  right: var(--daily-header-inline-inset);
+  width: var(--daily-header-close-size);
+  min-width: var(--daily-header-close-size);
+  height: var(--daily-header-close-size);
+  min-height: var(--daily-header-close-size);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.daily-login-reward-modal .modal-close .cl-icon {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.daily-login-reward-modal .modal-header-nav {
+  position: absolute;
+  z-index: 7;
+  top: var(--daily-header-block-inset);
+  right: calc(
+    var(--daily-header-inline-inset)
+    + var(--daily-header-close-size)
+    + var(--daily-header-control-gap)
+  );
+  width: var(--daily-header-nav-width);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.daily-login-reward-modal .modal-header-nav[hidden] {
+  display: none;
 }
 
 .daily-reward-tabs {
-  position: absolute;
-  z-index: 5;
-  top: .34rem;
-  right: 6rem;
+  position: static;
+  z-index: auto;
   display: grid;
   grid-template-columns: repeat(3, 44px);
   gap: 1.2rem;
@@ -548,6 +588,10 @@ button.daily-reward-card.available:disabled {
   }
 
   .daily-login-reward-modal .modal-card {
+    --daily-header-block-inset: .34rem;
+    --daily-header-inline-inset: .34rem;
+    --daily-header-control-gap: .65rem;
+    --daily-header-nav-width: calc(114px + 1.8rem);
     padding: .54rem .56rem .62rem;
   }
 
@@ -562,8 +606,6 @@ button.daily-reward-card.available:disabled {
   }
 
   .daily-reward-tabs {
-    top: .3rem;
-    right: 5rem;
     grid-template-columns: repeat(3, 38px);
     gap: .9rem;
   }
@@ -609,6 +651,11 @@ button.daily-reward-card.available:disabled {
 }
 
 @media (max-width: 360px) {
+  .daily-login-reward-modal .modal-card {
+    --daily-header-control-gap: .5rem;
+    --daily-header-nav-width: calc(96px + 1.1rem);
+  }
+
   .daily-login-reward-modal .modal-card h2 {
     margin-right: 12.5rem;
     font-size: .72rem;
@@ -616,7 +663,6 @@ button.daily-reward-card.available:disabled {
   }
 
   .daily-reward-tabs {
-    right: 2.5rem;
     grid-template-columns: repeat(3, 32px);
     gap: .55rem;
   }
@@ -634,6 +680,11 @@ button.daily-reward-card.available:disabled {
 
 @media (max-height: 640px) and (orientation: landscape) {
   .daily-login-reward-modal .modal-card {
+    --daily-header-block-inset: .18rem;
+    --daily-header-inline-inset: .18rem;
+    --daily-header-control-gap: .6rem;
+    --daily-header-nav-width: calc(102px + 1.5rem);
+    --daily-header-close-size: 40px;
     height: calc(100dvh - .3rem);
     max-height: calc(100dvh - .3rem);
     padding: .4rem .44rem .46rem;
@@ -650,8 +701,6 @@ button.daily-reward-card.available:disabled {
   }
 
   .daily-reward-tabs {
-    top: .18rem;
-    right: 5rem;
     grid-template-columns: repeat(3, 34px);
     gap: .75rem;
   }
