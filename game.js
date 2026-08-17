@@ -2054,6 +2054,12 @@ let cityListPage = 0;
 let innerCastleSelectedBuildingKey = "";
 let selectedCommonGearSlot = "head";
 let selectedCommonGearInstanceId = "";
+let selectedCommonGearBagFilter = "all";
+let commonGearBagScrollTop = 0;
+let commonGearActionInFlight = false;
+let commonGearMergeConfirmOpen = false;
+let commonGearViewRequestId = 0;
+let commonGearPendingFocusSelector = "";
 let playableBaseCitiesCache = null;
 let playableBaseCitiesByIdCache = null;
 let playableBaseCitiesByRegionCache = null;
@@ -28626,259 +28632,7 @@ function showCrownCitadelInfoModal(city) {
   void hydrateObjectiveClanAffiliation(city);
 }
 
-function canEnterInnerCastle(city) {
-  return Boolean(
-    city
-    && city.owner === "player"
-    && !isStronghold(city)
-    && isMainCityForList(city)
-  );
-}
-
-function getInnerCastleBuilding(buildingKey) {
-  return INNER_CASTLE_BUILDINGS.find(building => building.key === buildingKey) || null;
-}
-
-function renderInnerCastlePreview(building) {
-  if (!building) return "";
-  const gearBuilding = COMMON_GEAR?.BUILDINGS?.[building.key];
-  return `
-    <img class="inner-castle-preview-art" src="${building.artSrc}" alt="${escapeHtml(building.label)} placeholder artwork" loading="lazy" decoding="async" draggable="false" />
-    <div class="inner-castle-preview-copy">
-      <strong>${escapeHtml(building.label)}</strong>
-      <span>${escapeHtml(building.role)}</span>
-      <small>${gearBuilding ? `${escapeHtml(gearBuilding.characterRole)} gear and bonuses` : "Not yet available"}</small>
-      ${gearBuilding ? `<button class="inner-castle-manage-gear" type="button" data-manage-common-gear="${escapeHtml(building.key)}">Manage Gear</button>` : ""}
-    </div>`;
-}
-
-function bindInnerCastlePreviewActions() {
-  modalBody.querySelector("[data-manage-common-gear]")?.addEventListener("click", event => {
-    showCommonGearBuilding(event.currentTarget.dataset.manageCommonGear);
-  });
-}
-
-function clearInnerCastleModalState() {
-  innerCastleSelectedBuildingKey = "";
-  delete modal.dataset.innerCastleCityId;
-  modal.classList.remove("inner-castle-modal");
-}
-
-function selectInnerCastleBuilding(buildingKey) {
-  if (!modal.classList.contains("inner-castle-modal")) return;
-  const building = getInnerCastleBuilding(buildingKey);
-  if (!building) return;
-  innerCastleSelectedBuildingKey = building.key;
-  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
-    const selected = button.dataset.innerCastleBuilding === building.key;
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-pressed", selected ? "true" : "false");
-  });
-  const preview = modalBody.querySelector("#innerCastlePreview");
-  if (preview) preview.innerHTML = renderInnerCastlePreview(building);
-  bindInnerCastlePreviewActions();
-}
-
-function getCommonGearInstances(buildingId, slot = "") {
-  return Object.values(state?.gear?.instances || {})
-    .filter(instance => instance.buildingId === buildingId && (!slot || instance.slot === slot))
-    .sort((a, b) => b.level - a.level || a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
-}
-
-function renderCommonGearBuilding(buildingId) {
-  const building = COMMON_GEAR?.BUILDINGS?.[buildingId];
-  if (!building || !state) return false;
-  const instances = getCommonGearInstances(buildingId, selectedCommonGearSlot);
-  let selected = state.gear.instances?.[selectedCommonGearInstanceId];
-  if (!selected || selected.buildingId !== buildingId || selected.slot !== selectedCommonGearSlot) {
-    const equippedId = state.gear.equipped?.[buildingId]?.[selectedCommonGearSlot];
-    selected = state.gear.instances?.[equippedId] || instances[0] || null;
-    selectedCommonGearInstanceId = selected?.instanceId || "";
-  }
-  const definition = selected ? COMMON_GEAR.getDefinition(selected.gearKey) : null;
-  const requirement = selected ? COMMON_GEAR.getUpgradeRequirement(selected.level) : null;
-  const duplicateCount = selected
-    ? Object.values(state.gear.instances).filter(item => item.instanceId !== selected.instanceId
-      && item.gearKey === selected.gearKey && item.level === 1 && !item.isEquipped).length
-    : 0;
-  const upgradeGold = requirement ? Math.floor(
-    Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0) * requirement.baseGoldHours
-  ) : 0;
-  const grouped = new Map();
-  instances.forEach(instance => {
-    const key = `${instance.gearKey}:${instance.level}:${instance.isEquipped ? "equipped" : "stored"}`;
-    const group = grouped.get(key) || { representative: instance, count: 0 };
-    group.count += 1;
-    grouped.set(key, group);
-  });
-  modal.classList.remove("inner-castle-modal");
-  modal.classList.add("common-gear-building-modal");
-  modalTitle.textContent = `${building.name} — ${building.characterRole}`;
-  modalBody.innerHTML = `<section class="common-gear-building-shell">
-    <div class="common-gear-character-panel">
-      <img src="${escapeHtml(building.characterArt)}" alt="${escapeHtml(building.characterRole)}" draggable="false" />
-      <div class="common-gear-equipped-slots">${COMMON_GEAR.SLOTS.map(slot => {
-        const equippedId = state.gear.equipped?.[buildingId]?.[slot] || "";
-        const equipped = state.gear.instances?.[equippedId];
-        const equippedDefinition = equipped ? COMMON_GEAR.getDefinition(equipped.gearKey) : null;
-        return `<button class="common-gear-slot${slot === selectedCommonGearSlot ? " selected" : ""}${equipped ? " filled" : ""}" type="button" data-gear-slot="${slot}">
-          ${equippedDefinition ? `<img src="${escapeHtml(equippedDefinition.art)}" alt="" draggable="false" onerror="this.hidden=true" />` : ""}<span>${escapeHtml(slot)}</span><b>${equipped ? `L${equipped.level}` : "+"}</b></button>`;
-      }).join("")}</div>
-    </div>
-    <aside class="common-gear-detail-panel">${selected && definition ? `
-      <img class="common-gear-detail-art" src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
-      <span class="common-gear-rarity">Common · L${selected.level}/${COMMON_GEAR.MAX_LEVEL} · ${escapeHtml(selected.slot)}</span>
-      <strong>${escapeHtml(definition.gearName)}</strong>
-      <small>+${COMMON_GEAR.getBonusPercent(selected).toFixed(2)}% ${escapeHtml(definition.statLabel)}</small>
-      ${requirement ? `<small>Next: +${COMMON_GEAR.BONUS_BY_LEVEL[selected.level + 1].toFixed(2)}%</small>
-        <small>Cost: ${requirement.duplicates} L1 duplicate${requirement.duplicates === 1 ? "" : "s"} (${duplicateCount} owned) + ${formatNumber(upgradeGold)} gold · You: ${formatNumber(state.gold)}</small>` : `<small>Max Level Reached.</small>`}
-      <div class="common-gear-actions">
-        <button type="button" data-gear-equip>${selected.isEquipped ? "Unequip" : "Equip"}</button>
-        <button type="button" data-gear-upgrade ${!requirement || duplicateCount < requirement.duplicates || state.gold < upgradeGold ? "disabled" : ""}>${requirement ? "Upgrade" : "Max Level"}</button>
-      </div>` : `<strong>No ${escapeHtml(selectedCommonGearSlot)} gear yet</strong><small>Open Common Gear Boxes to find gear for this slot.</small>`}</aside>
-    <div class="common-gear-inventory-strip">
-      <button class="common-gear-back" type="button" data-gear-back>‹ Inner Castle</button>
-      <div class="common-gear-grouped-cards">${[...grouped.values()].map(group => {
-        const item = group.representative;
-        const def = COMMON_GEAR.getDefinition(item.gearKey);
-        return `<button class="common-gear-mini-card${item.instanceId === selectedCommonGearInstanceId ? " selected" : ""}" type="button" data-gear-instance="${item.instanceId}">
-          <img src="${escapeHtml(def.art)}" alt="" loading="lazy" draggable="false" onerror="this.hidden=true" /><b>L${item.level}${item.isEquipped ? " · E" : ""}</b><span>${escapeHtml(def.gearName)}</span><small>x${group.count}</small></button>`;
-      }).join("") || `<small class="common-gear-empty-strip">No gear in this slot</small>`}</div>
-    </div>
-  </section>`;
-  modalBody.querySelectorAll("[data-gear-slot]").forEach(button => button.addEventListener("click", () => {
-    selectedCommonGearSlot = button.dataset.gearSlot;
-    selectedCommonGearInstanceId = "";
-    renderCommonGearBuilding(buildingId);
-  }));
-  modalBody.querySelectorAll("[data-gear-instance]").forEach(button => button.addEventListener("click", () => {
-    selectedCommonGearInstanceId = button.dataset.gearInstance;
-    renderCommonGearBuilding(buildingId);
-  }));
-  modalBody.querySelector("[data-gear-back]")?.addEventListener("click", () => {
-    modal.classList.remove("common-gear-building-modal");
-    modal.classList.add("inner-castle-modal");
-    renderInnerCastle(modal.dataset.innerCastleCityId || state.mainCityId);
-  });
-  modalBody.querySelector("[data-gear-equip]")?.addEventListener("click", async event => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    try {
-      const api = getOnlineApi();
-      const result = selected.isEquipped
-        ? await api.unequipCommonGear({ instanceId: selected.instanceId })
-        : await api.equipCommonGear({ instanceId: selected.instanceId });
-      applyServerEconomyResult(result);
-      renderCommonGearBuilding(buildingId);
-    } catch (error) {
-      button.disabled = false;
-      showToast(error?.message || "The gear loadout could not be changed.");
-    }
-  });
-  modalBody.querySelector("[data-gear-upgrade]")?.addEventListener("click", async event => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    try {
-      const result = await getOnlineApi().upgradeCommonGear({ instanceId: selected.instanceId });
-      applyServerEconomyResult(result);
-      showToast(`${definition.gearName} upgraded to Level ${selected.level + 1}.`);
-      renderCommonGearBuilding(buildingId);
-    } catch (error) {
-      button.disabled = false;
-      showToast(error?.message || "The gear upgrade could not be completed.");
-    }
-  });
-  return true;
-}
-
-function showCommonGearBuilding(buildingId) {
-  if (!COMMON_GEAR?.BUILDINGS?.[buildingId]) return;
-  selectedCommonGearSlot = COMMON_GEAR.SLOTS.includes(selectedCommonGearSlot) ? selectedCommonGearSlot : "head";
-  selectedCommonGearInstanceId = "";
-  state.gear = normalizeCommonGearState(state.gear);
-  state.gear.newMarkers[buildingId] = false;
-  getOnlineApi()?.viewCommonGearBuilding?.({ buildingId }).then(result => {
-    if (result?.gear) state.gear = normalizeCommonGearState(result.gear);
-  }).catch(() => {});
-  renderCommonGearBuilding(buildingId);
-}
-
-function renderInnerCastle(cityId) {
-  const city = cityById(cityId);
-  if (!canEnterInnerCastle(city)) return false;
-  const selectedBuilding = getInnerCastleBuilding(innerCastleSelectedBuildingKey)
-    || getInnerCastleBuilding("great-hall")
-    || INNER_CASTLE_BUILDINGS[0];
-  innerCastleSelectedBuildingKey = selectedBuilding.key;
-  modalTitle.textContent = `${city.name} — Inner Castle`;
-  modalBody.innerHTML = `
-    <section class="inner-castle-shell" aria-label="${escapeHtml(city.name)} Inner Castle">
-      <p class="inner-castle-intro">Explore the Royal Bailey. Building functions and upgrades will arrive in a future update.</p>
-      <div class="inner-castle-layout">
-        <div class="inner-castle-stage">
-          <div class="inner-castle-scene">
-            <img class="inner-castle-hub-art" src="${INNER_CASTLE_HUB_ART_SRC}" alt="The Royal Bailey inside ${escapeHtml(city.name)}" loading="lazy" decoding="async" draggable="false" />
-            <div class="inner-castle-hotspots" aria-label="Inner Castle buildings">
-              ${INNER_CASTLE_BUILDINGS.map(building => `
-                <button
-                  class="inner-castle-hotspot${building.key === selectedBuilding.key ? " selected" : ""}"
-                  type="button"
-                  data-inner-castle-building="${building.key}"
-                  aria-controls="innerCastlePreview"
-                  aria-pressed="${building.key === selectedBuilding.key ? "true" : "false"}"
-                  aria-label="Preview ${escapeHtml(building.label)}"
-                  style="--hotspot-left:${building.hotspot.left}%;--hotspot-top:${building.hotspot.top}%;"
-                ><span>${state?.gear?.newMarkers?.[building.key] ? `<b class="common-gear-alert" aria-label="New gear">!</b>` : ""}${escapeHtml(building.label)}</span></button>`).join("")}
-            </div>
-          </div>
-        </div>
-        <aside class="inner-castle-preview-tray" aria-label="Selected building preview">
-          <div id="innerCastlePreview" class="inner-castle-preview" role="status" aria-live="polite" aria-atomic="true">
-            ${renderInnerCastlePreview(selectedBuilding)}
-          </div>
-          <button class="inner-castle-back-btn" type="button" data-inner-castle-back>
-            <span aria-hidden="true">${renderCrownlandsIcon("back")}</span>
-            Back to City Details
-          </button>
-        </aside>
-      </div>
-    </section>`;
-
-  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
-    button.addEventListener("click", () => selectInnerCastleBuilding(button.dataset.innerCastleBuilding));
-  });
-  modalBody.querySelector("[data-inner-castle-back]")?.addEventListener("click", () => {
-    const originCityId = modal.dataset.innerCastleCityId;
-    clearInnerCastleModalState();
-    if (originCityId && cityById(originCityId)) {
-      showCityInfoModal(originCityId);
-      modalBody.querySelector("#enterInnerCastleBtn")?.focus();
-    }
-    else if (modal.open) modal.close();
-  });
-  return true;
-}
-
-function openInnerCastle(cityId) {
-  const city = cityById(cityId);
-  if (!canEnterInnerCastle(city)) {
-    showToast("The Inner Castle is available only in your main city.");
-    return;
-  }
-  clearInnerCastleModalState();
-  delete modal.dataset.cityInfoId;
-  modal.dataset.innerCastleCityId = city.id;
-  modal.classList.add("inner-castle-modal");
-  innerCastleSelectedBuildingKey = "great-hall";
-  if (!renderInnerCastle(city.id)) {
-    clearInnerCastleModalState();
-    return;
-  }
-  if (!modal.open) modal.showModal();
-  modalBody
-    .querySelector('[data-inner-castle-building][aria-pressed="true"]')
-    ?.focus();
-}
+/* Inner Castle navigation and rendering lives in common-gear-ui.js. */
 
 function formatWallIntegrity(integrityBps = 10_000) {
   const percent = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000) / 100;
@@ -31474,37 +31228,7 @@ function renderShopItem(item) {
   `;
 }
 
-function getCommonGearBoxShopPrice() {
-  return Math.max(0, Math.floor(Number(COMMON_GEAR?.SHOP_PRICE_GOLD) || 1_000_000_000));
-}
-
-function renderCommonGearShopItem() {
-  if (!COMMON_GEAR) return "";
-  const purchase = state?.gear?.shopPurchase || {};
-  const purchasedToday = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
-  const price = getCommonGearBoxShopPrice();
-  return `<article class="shop-item common-gear-shop-item" data-shop-item="common_gear_box">
-    <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
-    <div class="shop-item-copy"><strong>Common Gear Box</strong><span>${formatNumber(price)} gold</span>
-      <small>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>Limit: 1 per UTC day · fixed price</small></div>
-    <button class="shop-buy-btn" data-buy-common-gear-box type="button" ${purchasedToday || getProjectedGold() < price ? "disabled" : ""}>${purchasedToday ? "Purchased" : "Buy"}</button>
-  </article>`;
-}
-
-async function buyCommonGearBox() {
-  const api = getOnlineApi();
-  if (!api?.purchaseCommonGearBox) return showToast("Connect to the realm to purchase server-secured Gear Boxes.");
-  const button = modalBody.querySelector("[data-buy-common-gear-box]");
-  if (button) button.disabled = true;
-  try {
-    const result = await api.purchaseCommonGearBox();
-    applyServerEconomyResult(result);
-    showToast("Common Gear Box added to your Bag.");
-  } catch (error) {
-    showToast(error?.message || "The Common Gear Box could not be purchased.");
-  }
-  renderShopModal();
-}
+/* Common Gear shop actions lives in common-gear-ui.js. */
 
 function renderShopModal() {
   if (!state) return;
@@ -31603,70 +31327,7 @@ function getActiveItemEffectSummaryHtml() {
   )).join("");
 }
 
-function renderCommonGearCard(instanceId) {
-  const instance = state?.gear?.instances?.[instanceId];
-  const definition = instance ? COMMON_GEAR?.getDefinition(instance.gearKey) : null;
-  if (!instance || !definition) return "";
-  return `<article class="common-gear-reveal-card">
-    <img src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
-    <span class="common-gear-rarity">Common · Level ${instance.level}</span>
-    <strong>${escapeHtml(definition.gearName)}</strong>
-    <small>${escapeHtml(definition.buildingName)} · ${escapeHtml(definition.characterRole)} · ${escapeHtml(definition.slot)}</small>
-    <b>+${COMMON_GEAR.getBonusPercent(instance).toFixed(2)}%</b>
-    <small>${escapeHtml(definition.statLabel)}</small>
-  </article>`;
-}
-
-function showCommonGearBoxReveal(receipt = null) {
-  if (!state || !COMMON_GEAR) return;
-  modal.className = "common-gear-box-modal modal";
-  modalTitle.textContent = receipt ? "Common Gear Found" : "Common Gear Box";
-  const revealedIds = receipt?.instanceIds || [];
-  modalBody.innerHTML = receipt ? `
-    <section class="common-gear-reveal-shell revealed">
-      <div class="common-gear-reveal-cards">${revealedIds.map(renderCommonGearCard).join("")}</div>
-      <div class="modal-actions">
-        <button class="safe-action" type="button" data-gear-later>Equip Later</button>
-        <button type="button" data-gear-castle>Go to Inner Castle</button>
-      </div>
-    </section>` : `
-    <section class="common-gear-reveal-shell">
-      <button class="common-gear-box-open" type="button" data-open-common-gear aria-label="Open Common Gear Box">
-        <span class="common-gear-box-art" aria-hidden="true">
-          <img class="gear-box-closed-state" src="${COMMON_GEAR_BOX_ITEM.icon}" alt="" draggable="false" />
-          <img class="gear-box-open-state" src="${COMMON_GEAR_BOX_OPEN_ART}" alt="" draggable="false" />
-          <span class="gear-box-latch"></span>
-        </span>
-        <strong>Tap to open</strong>
-        <small>Exactly 3 Common pieces</small>
-      </button>
-    </section>`;
-  modalBody.querySelector("[data-open-common-gear]")?.addEventListener("click", async event => {
-    const button = event.currentTarget;
-    if (!getOnlineApi()?.openCommonGearBox) {
-      showToast("Connect to the realm to open this server-secured Gear Box.");
-      return;
-    }
-    button.disabled = true;
-    button.classList.add("opening");
-    try {
-      const result = await getOnlineApi().openCommonGearBox({ requestId: createDailyMissionRequestId("gear-box") });
-      state.gear = normalizeCommonGearState(result.gear);
-      window.setTimeout(() => showCommonGearBoxReveal(result.receipt), 420);
-    } catch (error) {
-      button.disabled = false;
-      button.classList.remove("opening");
-      showToast(error?.message || "The Gear Box could not be opened.");
-    }
-  });
-  modalBody.querySelector("[data-gear-later]")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("[data-gear-castle]")?.addEventListener("click", () => {
-    const mainCity = cityById(state.mainCityId);
-    if (mainCity) openInnerCastle(mainCity.id);
-    else showToast("Your main city is not available on this map.");
-  });
-  if (!modal.open) modal.showModal();
-}
+/* Common Gear Box reveal flow lives in common-gear-ui.js. */
 
 function showInventoryModal() {
   if (!state) return;
@@ -36502,6 +36163,16 @@ modal.addEventListener("click", event => {
   event.preventDefault();
   event.stopPropagation();
   modal.close();
+});
+modal.addEventListener("cancel", event => {
+  if (!commonGearMergeConfirmOpen || !modal.classList.contains("common-gear-building-modal")) return;
+  event.preventDefault();
+  commonGearMergeConfirmOpen = false;
+  const buildingId = modal.dataset.commonGearBuildingId || "";
+  if (buildingId) {
+    commonGearPendingFocusSelector = "[data-gear-merge]";
+    renderCommonGearBuilding(buildingId);
+  }
 });
 document.addEventListener("pointerdown", event => {
   if (!profileScreen?.classList.contains("open") || modal.open) return;

@@ -13,10 +13,12 @@ const indexSource = read("index.html");
 const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const gameSource = read("game.js");
+const commonGearUiScriptSource = read("common-gear-ui.js");
 const baseCitiesSource = read("base-cities.js");
 const instantEconomyActionsSource = read("instant-economy-actions.js");
 const commonGearSource = read("common-gear.js");
 const stylesSource = read("styles.css");
+const commonGearUiSource = read("common-gear-ui.css");
 const interfaceThemeSource = read("interface-theme.css");
 const manuscriptPrototypeSource = read("manuscript-prototype.css");
 const uiContrastCorrectionSource = read("ui-contrast-correction.css");
@@ -61,9 +63,11 @@ const categoryFileBudgets = {
 const entrypointBudgets = {
   // Shared semantic action tokens add less than 1 KiB to the runtime markup.
   "game.js": 1604 * 1024,
+  "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   "styles.css": 400 * 1024,
+  "common-gear-ui.css": 40 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
@@ -205,7 +209,7 @@ assert.deepEqual(
     .sort(),
   "Only the essential login background and loading ring belong in the installation cache; decorative loading art and transition clouds are runtime-cached."
 );
-for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css", "audio-manager.js"]) {
+for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css", "common-gear-ui.css", "common-gear-ui.js", "audio-manager.js"]) {
   assert(
     !staticCacheUrls.some(url => localPathFromUrl(url) === runtimeOnlyPage),
     `${runtimeOnlyPage} should be cached on demand, not during service-worker installation.`
@@ -239,7 +243,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

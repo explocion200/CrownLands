@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Crownlands Pass 3E Visual QA</title>
   <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css?v=20260816-officer-equipment-ui-r4" />
+  <link rel="stylesheet" href="../../../readability.css" />
   <style>
     :root { color-scheme: dark; }
     body { margin: 0; color: #eadfc7; background: #17120e; font-family: Georgia, serif; }
@@ -25,9 +27,9 @@
     .gear-item { min-width: 0; margin: 0; padding: 5px; border: 1px solid #594a3a; background: #211a15; text-align: center; }
     .gear-item img { width: 100%; display: block; aspect-ratio: 1; object-fit: contain; }
     .gear-item figcaption { overflow: hidden; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
-    .equipped-demo { height: min(710px, 78vh); border: 1px solid #6b5945; border-radius: 6px; overflow: hidden; background: #17120e; }
-    .equipped-demo .common-gear-building-shell { box-sizing: border-box; }
-    .equipped-demo .common-gear-character-panel > img { object-fit: contain; }
+    .equipped-demo { height: min(850px, 88vh); border: 1px solid #6b5945; border-radius: 6px; overflow: hidden; background: #17120e; }
+    .equipped-demo .modal-card { box-sizing: border-box; width: 100%; height: 100%; max-height: none; }
+    .equipped-demo #modalBody { align-self: stretch; min-height: 0; height: auto; }
     .qa-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
     .qa-tabs button { border: 1px solid #6d5943; border-radius: 4px; color: #eadfc7; background: #382920; }
     .qa-tabs button[aria-pressed="true"] { border-color: #ac8450; background: #652a30; }
@@ -50,7 +52,7 @@
 
   <h2>Equipped Gear UI</h2>
   <nav class="qa-tabs" id="officerTabs" aria-label="Officer preview"></nav>
-  <section class="equipped-demo" id="equippedDemo"></section>
+  <section class="equipped-demo common-gear-building-modal" id="equippedDemo"></section>
 
   <h2>Responsive Runtime Captures</h2>
   <section class="runtime-shots">
@@ -81,9 +83,21 @@
   pairGrid.innerHTML = officers.map(officer => `<article class="qa-card"><h3>${officer.role} — ${officer.building.replace("-", " ")}</h3><div class="pair"><figure><img src="${optimized(officer.portrait)}" alt="${officer.role}" /><figcaption>Officer</figcaption></figure><figure><img class="building" src="${optimized(officer.buildingArt)}" alt="${officer.building}" /><figcaption>Pass 3D building</figcaption></figure></div></article>`).join("");
   gearGroups.innerHTML = officers.map(officer => `<article class="qa-card"><h3>${officer.role}</h3><div class="gear-grid">${slots.map((slot, index) => `<figure class="gear-item"><img src="${itemPath(officer, slot, index)}" alt="${slot}" /><figcaption>${slot === "weapon" && officer.id === "treasury" ? "ledger tool" : slot}</figcaption></figure>`).join("")}</div></article>`).join("");
   officerTabs.innerHTML = officers.map((officer, index) => `<button type="button" data-officer="${officer.id}" aria-pressed="${index === 0}">${officer.role}</button>`).join("");
+  const titleCase = value => `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
   function renderEquipped(officer) {
-    const item = (slot, index) => `<img src="${itemPath(officer, slot, index)}" alt="" /><span>${slot === "weapon" && officer.id === "treasury" ? "ledger" : slot}</span><b>L3</b>`;
-    equippedDemo.innerHTML = `<section class="common-gear-building-shell"><div class="common-gear-character-panel"><img src="${optimized(officer.portrait)}" alt="${officer.role}" /><div class="common-gear-equipped-slots">${slots.map((slot, index) => `<button class="common-gear-slot filled${index === 0 ? " selected" : ""}" type="button">${item(slot, index)}</button>`).join("")}</div></div><aside class="common-gear-detail-panel"><img class="common-gear-detail-art" src="${itemPath(officer, "head", 0)}" alt="" /><span class="common-gear-rarity">Common · L3/5 · head</span><strong>${officer.role}'s Equipment</strong><small>Pass 3E visual QA preview</small><div class="common-gear-actions"><button type="button">Unequip</button><button type="button">Upgrade</button></div></aside><div class="common-gear-inventory-strip"><button class="common-gear-back" type="button">‹ Inner Castle</button><div class="common-gear-grouped-cards">${slots.slice(0, 4).map((slot, index) => `<button class="common-gear-mini-card${index === 0 ? " selected" : ""}" type="button"><img src="${itemPath(officer, slot, index)}" alt="" /><b>L3 · E</b><span>${slot}</span><small>x1</small></button>`).join("")}</div></div></section>`;
+    const buildingName = officer.building.split("-").map(titleCase).join(" ");
+    const slotCard = (slot, index) => `<button class="common-gear-slot filled${index === 0 ? " selected" : ""}" type="button"><span class="common-gear-slot-art"><img src="${itemPath(officer, slot, index)}" alt="" /></span><span class="common-gear-slot-copy"><b>${titleCase(slot)}</b><small>Level ${index % 3 + 1}</small></span></button>`;
+    const leftSlots = [0, 2, 4, 6].map(index => slotCard(slots[index], index)).join("");
+    const rightSlots = [1, 3, 5, 7].map(index => slotCard(slots[index], index)).join("");
+    const bagTiles = [...slots.map((slot, index) => ({ slot, index, level: index % 3 + 1, count: index === 0 ? 3 : 1, equipped: index < 4 })), { slot: "head", index: 0, level: 2, count: 1, equipped: false }, { slot: "head", index: 0, level: 4, count: 1, equipped: false }, { slot: "boots", index: 3, level: 1, count: 2, equipped: false }, { slot: "weapon", index: 6, level: 3, count: 1, equipped: false }];
+    equippedDemo.innerHTML = `<div class="modal-card"><button class="modal-close" type="button" aria-label="Close">×</button><h2>${buildingName} — ${officer.role}</h2><div id="modalBody"><section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
+      <div class="common-gear-main">
+        <section class="common-gear-loadout-panel" data-gear-panel="loadout"><header><span>♜</span><strong>Equipment</strong><small>${buildingName}</small></header><div class="common-gear-loadout-grid"><div class="common-gear-slot-column">${leftSlots}</div><figure class="common-gear-character-panel"><img src="${optimized(officer.portrait)}" alt="${officer.role}" /></figure><div class="common-gear-slot-column">${rightSlots}</div></div><footer><span>${officer.role}</span><small>Eight-slot royal loadout</small></footer></section>
+        <section class="common-gear-detail-panel common-gear-selected-panel" data-gear-panel="details"><span class="common-gear-detail-eyebrow">${officer.role}'s</span><strong class="common-gear-detail-name">${officer.role}'s ${officer.id === "treasury" ? "Velvet Cap" : "Riding Helm"}</strong><span class="common-gear-rarity rarity-common">Common · L1/5 · head</span><img class="common-gear-detail-art" src="${itemPath(officer, "head", 0)}" alt="" /><div class="common-gear-level-progress"><span>★</span><i><b style="width:20%"></b></i><em>1/5</em></div><div class="common-gear-effect-copy"><strong>+0.25% officer equipment bonus</strong><small>Next level: +0.50%</small></div><div class="common-gear-merge-cost"><span>Merge cost</span><strong>1 Level 1 duplicate (3 owned) + 330M gold</strong><small>You have 29B gold</small></div><div class="common-gear-actions"><button type="button">Equip</button><button class="common-gear-merge-btn" type="button">Merge</button></div></section>
+        <section class="common-gear-bag-panel" data-gear-panel="bag"><header><strong>Equipment Bag</strong><label><select><option>All slots</option></select></label></header><div class="common-gear-bag-scroll"><div class="common-gear-bag-grid">${bagTiles.map((item, tileIndex) => `<button class="common-gear-mini-card common-gear-bag-tile rarity-common${tileIndex === 0 ? " selected compatible" : item.slot === "head" ? " compatible" : ""}${item.equipped ? " equipped" : ""}" type="button"><span class="common-gear-bag-slot">${item.slot.charAt(0).toUpperCase()}</span>${item.equipped ? `<span class="common-gear-bag-equipped">E</span>` : ""}<img src="${itemPath(officer, item.slot, item.index)}" alt="" /><span class="common-gear-bag-level">L${item.level}</span>${item.count > 1 ? `<span class="common-gear-bag-count">×${item.count}</span>` : ""}<span class="common-gear-bag-name">${titleCase(item.slot)}</span></button>`).join("")}</div></div><footer><span>◆ 15 owned</span><small>12 stacks · matching slots glow</small></footer></section>
+      </div>
+      <footer class="common-gear-footer"><button class="common-gear-back" type="button"><span>‹</span> Back to Inner Castle</button><section class="common-gear-bottom-info"><img src="${itemPath(officer, "head", 0)}" alt="" /><div class="common-gear-bottom-copy"><strong>${officer.role}'s Royal Headgear</strong><p>This head armor is fitted for the ${officer.role}. Its Crownlands craftsmanship grants a kingdom-wide officer bonus.</p><div class="common-gear-bottom-tags"><span>Common</span><span>Armor</span><span>Head</span><span>Level 1</span><span>+0.25%</span></div></div><dl class="common-gear-info-meta"><div><dt>Officer</dt><dd>${officer.role}</dd></div><div><dt>Equip slot</dt><dd>Head</dd></div><div><dt>Current effect</dt><dd>+0.25%</dd></div><div><dt>Merge</dt><dd>Next +0.50%</dd></div><div><dt>Binding</dt><dd>Not tradeable</dd></div><div><dt>State</dt><dd>In bag</dd></div></dl></section></footer>
+    </section></div></div>`;
   }
   officerTabs.addEventListener("click", event => {
     const button = event.target.closest("[data-officer]");

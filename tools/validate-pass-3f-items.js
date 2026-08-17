@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const SOURCE_SIZE = 1254;
-const BUILD_ID = "20260814-readability-r38";
+const BUILD_ID = "20260816-officer-equipment-ui-r4";
 
 const expected = [
   ["item-common-gear-box", "assets/gear/common-gear-box.png", 192, "gear-box"],
@@ -74,7 +74,7 @@ function webpMetadata(buffer) {
 
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const manifestById = new Map(manifest.assets.map(asset => [asset.id, asset]));
-const game = read("game.js");
+const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 const index = read("index.html");
 const guide = read("daily-rewards-guide.html");
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;

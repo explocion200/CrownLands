@@ -20,7 +20,7 @@ export default [
     },
   },
   {
-    files: ["game.js"],
+    files: ["game.js", "common-gear-ui.js"],
     rules: {
       "no-unused-vars": ["error", {
         args: "after-used",
