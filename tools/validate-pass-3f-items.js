@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const SOURCE_SIZE = 1254;
-const BUILD_ID = "20260816-officer-equipment-ui-r4";
+const BUILD_ID = "20260817-map-selector-text-r1";
 
 const expected = [
   ["item-common-gear-box", "assets/gear/common-gear-box.png", 192, "gear-box"],

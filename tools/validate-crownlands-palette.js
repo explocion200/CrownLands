@@ -14,8 +14,8 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260814-readability-r38";
-const cacheVersion = "20260816-officer-equipment-ui-r4";
+const releaseId = "20260817-map-selector-text-r1";
+const cacheVersion = "20260817-map-selector-text-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -103,6 +103,12 @@ assert.match(styles, /\.city-army-count\s*\{[\s\S]*?text-shadow:\s*none;/, "Owne
 assert.match(css, /\.city-node\.player \.city-army-count\s*\{[\s\S]*?filter:\s*none !important;[\s\S]*?text-shadow:\s*none !important;/, "The final palette does not guarantee one crisp owned-city troop text layer.");
 assert.match(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[\s\S]*?background:\s*#667a4a;/, "Clan-city labels do not use moss green.");
 assert.match(styles, /\.city-node\.neutral \.foreign-city-shield\s*\{\s*background:\s*#77736a;/, "Neutral city labels do not use stone gray.");
+assert.match(styles, /\.island-map-picker \.island-map-name\s*\{[\s\S]*?color:\s*#fff8e8;[\s\S]*?text-shadow:/, "The 15-map selector does not keep map names readable over map thumbnails.");
+assert.match(styles, /\.island-map-owned\s*\{[\s\S]*?color:\s*#d3e3eb;[\s\S]*?text-shadow:/, "The 15-map selector does not keep owned-city counts readable over map thumbnails.");
+for (const themeCss of [read("profile-theme.css"), css]) {
+  assert.match(themeCss, /:not\(\.island-map-icon\)/, "A generic modal button rule can still replace the 15-map selector tile colors.");
+  assert.match(themeCss, /:not\(\.leaderboard-modal, \.island-switcher-modal\)/, "Generic modal typography can still recolor the 15-map selector labels.");
+}
 
 assert.match(css, /Scout intelligence uses the shared parchment report family[\s\S]*?\.modal\.scout-report-modal \.scout-report-identities[\s\S]*?border:\s*1px solid var\(--cl-brass\) !important;[\s\S]*?background:\s*var\(--cl-card-bg\) !important;/, "Scout intelligence is not using the standard parchment report card construction.");
 assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-breakdown-row, \.scout-skill-row\)[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Scout list rows retain a conflicting legacy surface.");

@@ -53,7 +53,7 @@ assert.ok(modalClasses.size >= 20, "The reusable modal audit no longer covers th
 assert.ok(css.includes(".modal:not(.level-up-reward-modal)"), "Dynamic modal classes are not protected by the shared mobile rule.");
 
 const releaseId = "20260814-readability-r38";
-const cacheVersion = "20260816-officer-equipment-ui-r4";
+const cacheVersion = "20260817-map-selector-text-r1";
 const styleTag = `mobile-viewport.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The mobile viewport layer is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("action-buttons.css"), "The mobile viewport layer must load after every existing game theme.");

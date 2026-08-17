@@ -42,7 +42,8 @@ for (const [label, theme] of [["Profile theme", profileTheme], ["final palette",
   const sharedCardEnd = theme.indexOf("\n) {", toolbarIndex);
   assert.ok(toolbarIndex >= 0 && sharedCardEnd > toolbarIndex, `${label} shared-card block is missing.`);
   assert.doesNotMatch(theme.slice(toolbarIndex, sharedCardEnd), /\.leaderboard-row\b/, `${label} still replaces the dedicated slate ranking surface.`);
-  assert.ok((theme.match(/\.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card/g) || []).length >= 3, `${label} generic typography still leaks into leaderboard rows or gained unintended specificity.`);
+  const protectedModalTypography = theme.match(/\.modal:where\(:not\(\.leaderboard-modal(?:, \.island-switcher-modal)?\)\) \.modal-card/g) || [];
+  assert.ok(protectedModalTypography.length >= 3, `${label} generic typography still leaks into leaderboard rows or gained unintended specificity.`);
   assert.match(theme, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, `${label} still paints player or clan identity links as generic buttons.`);
 }
 

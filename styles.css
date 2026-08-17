@@ -4587,7 +4587,7 @@ button.inventory-slot {
 }
 .island-map-picker .island-map-name {
   bottom: 1.15rem;
-  color: #fff;
+  color: #fff8e8;
   font-size: .9rem;
   line-height: 1;
   font-weight: 1000;
@@ -4595,10 +4595,11 @@ button.inventory-slot {
 }
 .island-map-owned {
   bottom: .38rem;
-  color: #bfe4ff;
+  color: #d3e3eb;
   font-size: .68rem;
   line-height: 1;
   font-weight: 950;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9);
 }
 .island-map-home-label,
 .island-map-active-label {
