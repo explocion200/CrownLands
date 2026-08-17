@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "prototypeVersion": "core-v2-phase-a-handcrafted-slice-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-deed-camp-west-south-m2-p1",
+  "coordinate": {
+    "gridX": -2,
+    "gridY": 1,
+    "worldLayer": 0
+  },
+  "mapType": "DEED_CAMP",
+  "exactCityCapacity": 60,
+  "profile": {
+    "key": "west-south-deed-camp",
+    "themeKey": "west",
+    "variantKey": "b",
+    "roadGeometryId": "west-v2",
+    "retrySalt": "core-v2-deed-frontier-crossroads-v1-1",
+    "identity": "small frontier farm territory, light fields and a minor crossroads without a large town",
+    "objectiveArt": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+    "objectiveLabel": "Deed Camp"
+  },
+  "cityPlanHash": "f5f7d9f1797d529f9e5e92b7a799e156d0e3fd9d18f1abd2d770fcb15f72f0f6",
+  "compositionPlanHash": "dbd4d2bb6c8426126884a16bfbb33d281d42ecada213afe3738773fb23f1fbfa",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 60,
+    "expectedCapacity": 60,
+    "minimumSpacing": 68.029,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 7,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 2,
+        "south": 2,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-v1",
+    "seedHash": "0c17cc7411fbdc22a534573e4cbb5d58efa5b8d9a770d053f1791154b7fecf3e",
+    "minimumCitySeparation": 68,
+    "cityVisualDiameter": 64,
+    "edgeClearance": {
+      "x": 142,
+      "y": 132
+    },
+    "roadClearanceBeyondVisual": 8,
+    "blockerClearanceBeyondCity": 10,
+    "objectiveClearanceBeyondCity": 14,
+    "candidatePoolSize": 1040,
+    "rejectedByReason": {
+      "outside_land": 575,
+      "road_clearance": 688,
+      "terrain_blocker": 416,
+      "edge_clearance": 45,
+      "objective_clearance": 226
+    },
+    "selectedTrial": 44,
+    "selectionTrialLimit": 192,
+    "minimumObservedSpacing": 68.029,
+    "meanNearestNeighbor": 82.737,
+    "quadrantCounts": [
+      14,
+      14,
+      15,
+      17
+    ]
+  },
+  "receiptHash": "a6ba254b130e25beaebc7df1c7f3218d94f11ad74bb3caa88b1ddec667cc5d59"
+}

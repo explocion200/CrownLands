@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "prototypeVersion": "core-v2-phase-a-handcrafted-slice-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-ironwatch-p0-p1",
+  "coordinate": {
+    "gridX": 0,
+    "gridY": 1,
+    "worldLayer": 0
+  },
+  "mapType": "STRONGHOLD",
+  "exactCityCapacity": 60,
+  "profile": {
+    "key": "ironwatch",
+    "themeKey": "west",
+    "accentThemeKey": "south",
+    "variantKey": "b",
+    "roadGeometryId": "west-v2",
+    "retrySalt": "core-v2-iron-4",
+    "identity": "rocky high ground, dry stone character and hardened defensive approaches",
+    "objectiveArt": "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp",
+    "objectiveLabel": "Ironwatch"
+  },
+  "cityPlanHash": "24b8b5fbb6977a56965c43db7694244628d554c1e019e0f55176a3d0e27b5e23",
+  "compositionPlanHash": "8f7e56ea6b9fe2890fe75183264c2c745cd4d38b296c3748ffb922c99518c80b",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 60,
+    "expectedCapacity": 60,
+    "minimumSpacing": 68.797,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 2,
+        "south": 1,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-v1",
+    "seedHash": "1ea43b7c8928b76579acfec8384116c735159ed1d3ba59e2e11e6ec494253211",
+    "minimumCitySeparation": 68,
+    "cityVisualDiameter": 64,
+    "edgeClearance": {
+      "x": 142,
+      "y": 132
+    },
+    "roadClearanceBeyondVisual": 8,
+    "blockerClearanceBeyondCity": 10,
+    "objectiveClearanceBeyondCity": 14,
+    "candidatePoolSize": 1092,
+    "rejectedByReason": {
+      "outside_land": 532,
+      "road_clearance": 636,
+      "terrain_blocker": 348,
+      "edge_clearance": 2,
+      "objective_clearance": 293
+    },
+    "selectedTrial": 45,
+    "selectionTrialLimit": 192,
+    "minimumObservedSpacing": 68.797,
+    "meanNearestNeighbor": 84.16,
+    "quadrantCounts": [
+      14,
+      16,
+      15,
+      15
+    ]
+  },
+  "receiptHash": "a870a40ed26d6808ea1f66d943402e006652beee16e161abc6e28b8da1022927"
+}

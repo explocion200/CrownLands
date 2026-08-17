@@ -1,0 +1,1191 @@
+{
+  "developmentOnly": true,
+  "generatedAt": "2026-08-17T03:39:16.458Z",
+  "results": [
+    {
+      "label": "55-city Tower reservation",
+      "regionId": "core_a1_tower",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_tower",
+        "prototypeKey": "southwest-holding-tower",
+        "name": "South-West Holding Tower",
+        "expectedCityCapacity": 55,
+        "renderedCityNodes": 46,
+        "dataCityCount": 55,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 2,
+          "gatedEdges": 2
+        },
+        "marches": {
+          "data": 20,
+          "tokens": 5,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 46,
+          "cityNames": 46,
+          "playerBanners": 9,
+          "foreignLabels": 37,
+          "troopCounts": 9,
+          "shields": 36
+        },
+        "collisions": {
+          "castles": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 37,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_tower_bench_044",
+            "rightId": "core_a1_tower_bench_053",
+            "distance": 153.95129099815955
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_040",
+            "distance": 157.72444325468388
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_018",
+            "distance": 159.15401345866212
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_036",
+            "distance": 162.3607095328177
+          },
+          {
+            "leftId": "core_a1_tower_bench_025",
+            "rightId": "core_a1_tower_bench_044",
+            "distance": 163.19313711060278
+          },
+          {
+            "leftId": "core_a1_tower_bench_012",
+            "rightId": "core_a1_tower_bench_055",
+            "distance": 164.55090397806998
+          },
+          {
+            "leftId": "core_a1_tower_bench_008",
+            "rightId": "core_a1_tower_bench_009",
+            "distance": 164.98484778912277
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_012",
+            "distance": 165.8010856418015
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_tower-normal-runtime-density",
+        "durationMs": 3204.100000023842,
+        "frameCount": 97,
+        "fps": 30.273711806522336,
+        "medianFrameTimeMs": 34.69999999999709,
+        "p95FrameTimeMs": 41.80000000000291,
+        "maximumFrameTimeMs": 55.599999999998545,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      }
+    },
+    {
+      "label": "60-city Crown Citadel",
+      "regionId": "core_a1_citadel",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_citadel",
+        "prototypeKey": "crown-citadel",
+        "name": "Crown Citadel",
+        "expectedCityCapacity": 60,
+        "renderedCityNodes": 52,
+        "dataCityCount": 60,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 20,
+          "tokens": 10,
+          "routeElements": 32
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 53,
+          "cityNames": 53,
+          "playerBanners": 8,
+          "foreignLabels": 45,
+          "troopCounts": 8,
+          "shields": 45
+        },
+        "collisions": {
+          "castles": {
+            "visible": 52,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 53,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 45,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_033",
+            "distance": 152.31546211727817
+          },
+          {
+            "leftId": "core_a1_citadel_bench_003",
+            "rightId": "core_a1_citadel_bench_012",
+            "distance": 153.45683432157722
+          },
+          {
+            "leftId": "core_a1_citadel_bench_034",
+            "rightId": "core_a1_citadel_bench_044",
+            "distance": 154.05193929321368
+          },
+          {
+            "leftId": "core_a1_citadel_bench_001",
+            "rightId": "core_a1_citadel_bench_019",
+            "distance": 156.46405337968207
+          },
+          {
+            "leftId": "core_a1_citadel_bench_020",
+            "rightId": "core_a1_citadel_bench_052",
+            "distance": 159.3643623900902
+          },
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_005",
+            "distance": 159.45218719101976
+          },
+          {
+            "leftId": "core_a1_citadel_bench_007",
+            "rightId": "core_a1_citadel_bench_056",
+            "distance": 160.2529250903084
+          },
+          {
+            "leftId": "core_a1_citadel_bench_008",
+            "rightId": "core_a1_citadel_bench_054",
+            "distance": 161.4465855941215
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_citadel-normal-runtime-density",
+        "durationMs": 3202.699999988079,
+        "frameCount": 84,
+        "fps": 26.227870234587275,
+        "medianFrameTimeMs": 34.799999999995634,
+        "p95FrameTimeMs": 55.400000000001455,
+        "maximumFrameTimeMs": 97.19999999999709,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 100,
+        "longestTaskMs": 100
+      }
+    },
+    {
+      "label": "70-city Support",
+      "regionId": "core_a1_support",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_support",
+        "prototypeKey": "west-support",
+        "name": "West Support",
+        "expectedCityCapacity": 70,
+        "renderedCityNodes": 60,
+        "dataCityCount": 70,
+        "objectiveNodes": 0,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 9,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 60,
+          "cityNames": 60,
+          "playerBanners": 11,
+          "foreignLabels": 49,
+          "troopCounts": 11,
+          "shields": 49
+        },
+        "collisions": {
+          "castles": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 49,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_support_bench_008",
+            "rightId": "core_a1_support_bench_017",
+            "distance": 151.82226450688978
+          },
+          {
+            "leftId": "core_a1_support_bench_016",
+            "rightId": "core_a1_support_bench_028",
+            "distance": 152.11837495845137
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_051",
+            "distance": 152.94770348063417
+          },
+          {
+            "leftId": "core_a1_support_bench_049",
+            "rightId": "core_a1_support_bench_056",
+            "distance": 153.44705927452634
+          },
+          {
+            "leftId": "core_a1_support_bench_033",
+            "rightId": "core_a1_support_bench_040",
+            "distance": 154.04220200970903
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_030",
+            "distance": 154.1590088188167
+          },
+          {
+            "leftId": "core_a1_support_bench_027",
+            "rightId": "core_a1_support_bench_061",
+            "distance": 156.16977940690063
+          },
+          {
+            "leftId": "core_a1_support_bench_007",
+            "rightId": "core_a1_support_bench_058",
+            "distance": 156.46405337968207
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_support-normal-runtime-density",
+        "durationMs": 3200.199999988079,
+        "frameCount": 101,
+        "fps": 31.560527467150877,
+        "medianFrameTimeMs": 28,
+        "p95FrameTimeMs": 41.69999999999709,
+        "maximumFrameTimeMs": 48.700000000004366,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      }
+    },
+    {
+      "label": "55-city Tower reservation",
+      "regionId": "core_a1_tower",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_tower",
+        "prototypeKey": "southwest-holding-tower",
+        "name": "South-West Holding Tower",
+        "expectedCityCapacity": 55,
+        "renderedCityNodes": 46,
+        "dataCityCount": 55,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 2,
+          "gatedEdges": 2
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 5,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 46,
+          "cityNames": 46,
+          "playerBanners": 9,
+          "foreignLabels": 37,
+          "troopCounts": 9,
+          "shields": 37
+        },
+        "collisions": {
+          "castles": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 37,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_tower_bench_044",
+            "rightId": "core_a1_tower_bench_053",
+            "distance": 153.95129099815955
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_040",
+            "distance": 157.72444325468388
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_018",
+            "distance": 159.15401345866212
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_036",
+            "distance": 162.3607095328177
+          },
+          {
+            "leftId": "core_a1_tower_bench_025",
+            "rightId": "core_a1_tower_bench_044",
+            "distance": 163.19313711060278
+          },
+          {
+            "leftId": "core_a1_tower_bench_012",
+            "rightId": "core_a1_tower_bench_055",
+            "distance": 164.55090397806998
+          },
+          {
+            "leftId": "core_a1_tower_bench_008",
+            "rightId": "core_a1_tower_bench_009",
+            "distance": 164.98484778912277
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_012",
+            "distance": 165.8010856418015
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_tower-normal-runtime-density",
+        "durationMs": 3200.899999976158,
+        "frameCount": 94,
+        "fps": 29.366740604423804,
+        "medianFrameTimeMs": 34.69999999999709,
+        "p95FrameTimeMs": 41.79999999998836,
+        "maximumFrameTimeMs": 55.60000000000582,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 2
+    },
+    {
+      "label": "55-city Tower reservation",
+      "regionId": "core_a1_tower",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_tower",
+        "prototypeKey": "southwest-holding-tower",
+        "name": "South-West Holding Tower",
+        "expectedCityCapacity": 55,
+        "renderedCityNodes": 46,
+        "dataCityCount": 55,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 2,
+          "gatedEdges": 2
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 5,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 46,
+          "cityNames": 46,
+          "playerBanners": 9,
+          "foreignLabels": 37,
+          "troopCounts": 9,
+          "shields": 37
+        },
+        "collisions": {
+          "castles": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 46,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 37,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 9,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_tower_bench_044",
+            "rightId": "core_a1_tower_bench_053",
+            "distance": 153.95129099815955
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_040",
+            "distance": 157.72444325468388
+          },
+          {
+            "leftId": "core_a1_tower_bench_005",
+            "rightId": "core_a1_tower_bench_018",
+            "distance": 159.15401345866212
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_036",
+            "distance": 162.3607095328177
+          },
+          {
+            "leftId": "core_a1_tower_bench_025",
+            "rightId": "core_a1_tower_bench_044",
+            "distance": 163.19313711060278
+          },
+          {
+            "leftId": "core_a1_tower_bench_012",
+            "rightId": "core_a1_tower_bench_055",
+            "distance": 164.55090397806998
+          },
+          {
+            "leftId": "core_a1_tower_bench_008",
+            "rightId": "core_a1_tower_bench_009",
+            "distance": 164.98484778912277
+          },
+          {
+            "leftId": "core_a1_tower_bench_007",
+            "rightId": "core_a1_tower_bench_012",
+            "distance": 165.8010856418015
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_tower-normal-runtime-density",
+        "durationMs": 3214.099999964237,
+        "frameCount": 105,
+        "fps": 32.66855418349408,
+        "medianFrameTimeMs": 27.80000000000291,
+        "p95FrameTimeMs": 41.60000000000582,
+        "maximumFrameTimeMs": 48.60000000000582,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 3
+    },
+    {
+      "label": "60-city Crown Citadel",
+      "regionId": "core_a1_citadel",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_citadel",
+        "prototypeKey": "crown-citadel",
+        "name": "Crown Citadel",
+        "expectedCityCapacity": 60,
+        "renderedCityNodes": 52,
+        "dataCityCount": 60,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 10,
+          "routeElements": 32
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 53,
+          "cityNames": 53,
+          "playerBanners": 8,
+          "foreignLabels": 45,
+          "troopCounts": 8,
+          "shields": 45
+        },
+        "collisions": {
+          "castles": {
+            "visible": 52,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 53,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 45,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_033",
+            "distance": 152.31546211727817
+          },
+          {
+            "leftId": "core_a1_citadel_bench_003",
+            "rightId": "core_a1_citadel_bench_012",
+            "distance": 153.45683432157722
+          },
+          {
+            "leftId": "core_a1_citadel_bench_034",
+            "rightId": "core_a1_citadel_bench_044",
+            "distance": 154.05193929321368
+          },
+          {
+            "leftId": "core_a1_citadel_bench_001",
+            "rightId": "core_a1_citadel_bench_019",
+            "distance": 156.46405337968207
+          },
+          {
+            "leftId": "core_a1_citadel_bench_020",
+            "rightId": "core_a1_citadel_bench_052",
+            "distance": 159.3643623900902
+          },
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_005",
+            "distance": 159.45218719101976
+          },
+          {
+            "leftId": "core_a1_citadel_bench_007",
+            "rightId": "core_a1_citadel_bench_056",
+            "distance": 160.2529250903084
+          },
+          {
+            "leftId": "core_a1_citadel_bench_008",
+            "rightId": "core_a1_citadel_bench_054",
+            "distance": 161.4465855941215
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_citadel-normal-runtime-density",
+        "durationMs": 3208.2000000476837,
+        "frameCount": 78,
+        "fps": 24.3126987091954,
+        "medianFrameTimeMs": 41.60000000000582,
+        "p95FrameTimeMs": 55.60000000000582,
+        "maximumFrameTimeMs": 76.60000000000582,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 2
+    },
+    {
+      "label": "60-city Crown Citadel",
+      "regionId": "core_a1_citadel",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_citadel",
+        "prototypeKey": "crown-citadel",
+        "name": "Crown Citadel",
+        "expectedCityCapacity": 60,
+        "renderedCityNodes": 52,
+        "dataCityCount": 60,
+        "objectiveNodes": 1,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 10,
+          "routeElements": 32
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 53,
+          "cityNames": 53,
+          "playerBanners": 8,
+          "foreignLabels": 45,
+          "troopCounts": 8,
+          "shields": 45
+        },
+        "collisions": {
+          "castles": {
+            "visible": 52,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 53,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 45,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 8,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_033",
+            "distance": 152.31546211727817
+          },
+          {
+            "leftId": "core_a1_citadel_bench_003",
+            "rightId": "core_a1_citadel_bench_012",
+            "distance": 153.45683432157722
+          },
+          {
+            "leftId": "core_a1_citadel_bench_034",
+            "rightId": "core_a1_citadel_bench_044",
+            "distance": 154.05193929321368
+          },
+          {
+            "leftId": "core_a1_citadel_bench_001",
+            "rightId": "core_a1_citadel_bench_019",
+            "distance": 156.46405337968207
+          },
+          {
+            "leftId": "core_a1_citadel_bench_020",
+            "rightId": "core_a1_citadel_bench_052",
+            "distance": 159.3643623900902
+          },
+          {
+            "leftId": "core_a1_citadel_bench_004",
+            "rightId": "core_a1_citadel_bench_005",
+            "distance": 159.45218719101976
+          },
+          {
+            "leftId": "core_a1_citadel_bench_007",
+            "rightId": "core_a1_citadel_bench_056",
+            "distance": 160.2529250903084
+          },
+          {
+            "leftId": "core_a1_citadel_bench_008",
+            "rightId": "core_a1_citadel_bench_054",
+            "distance": 161.4465855941215
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_citadel-normal-runtime-density",
+        "durationMs": 3206.100000023842,
+        "frameCount": 80,
+        "fps": 24.952434421697728,
+        "medianFrameTimeMs": 41.59999999999127,
+        "p95FrameTimeMs": 55.5,
+        "maximumFrameTimeMs": 62.5,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 3
+    },
+    {
+      "label": "70-city Support",
+      "regionId": "core_a1_support",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_support",
+        "prototypeKey": "west-support",
+        "name": "West Support",
+        "expectedCityCapacity": 70,
+        "renderedCityNodes": 60,
+        "dataCityCount": 70,
+        "objectiveNodes": 0,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 9,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 60,
+          "cityNames": 60,
+          "playerBanners": 11,
+          "foreignLabels": 49,
+          "troopCounts": 11,
+          "shields": 49
+        },
+        "collisions": {
+          "castles": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 49,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_support_bench_008",
+            "rightId": "core_a1_support_bench_017",
+            "distance": 151.82226450688978
+          },
+          {
+            "leftId": "core_a1_support_bench_016",
+            "rightId": "core_a1_support_bench_028",
+            "distance": 152.11837495845137
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_051",
+            "distance": 152.94770348063417
+          },
+          {
+            "leftId": "core_a1_support_bench_049",
+            "rightId": "core_a1_support_bench_056",
+            "distance": 153.44705927452634
+          },
+          {
+            "leftId": "core_a1_support_bench_033",
+            "rightId": "core_a1_support_bench_040",
+            "distance": 154.04220200970903
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_030",
+            "distance": 154.1590088188167
+          },
+          {
+            "leftId": "core_a1_support_bench_027",
+            "rightId": "core_a1_support_bench_061",
+            "distance": 156.16977940690063
+          },
+          {
+            "leftId": "core_a1_support_bench_007",
+            "rightId": "core_a1_support_bench_058",
+            "distance": 156.46405337968207
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_support-normal-runtime-density",
+        "durationMs": 3206.5,
+        "frameCount": 94,
+        "fps": 29.31545298612194,
+        "medianFrameTimeMs": 34.69999999999709,
+        "p95FrameTimeMs": 48.60000000000582,
+        "maximumFrameTimeMs": 55.5,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 2
+    },
+    {
+      "label": "70-city Support",
+      "regionId": "core_a1_support",
+      "runtime": {
+        "status": "measured",
+        "regionId": "core_a1_support",
+        "prototypeKey": "west-support",
+        "name": "West Support",
+        "expectedCityCapacity": 70,
+        "renderedCityNodes": 60,
+        "dataCityCount": 70,
+        "objectiveNodes": 0,
+        "transitions": {
+          "openArrows": 1,
+          "gatedEdges": 3
+        },
+        "marches": {
+          "data": 24,
+          "tokens": 9,
+          "routeElements": 28
+        },
+        "camera": {
+          "zoom": 0.82,
+          "preset": "normal",
+          "detailLevel": "close",
+          "lowZoom": false
+        },
+        "visible": {
+          "cities": 60,
+          "cityNames": 60,
+          "playerBanners": 11,
+          "foreignLabels": 49,
+          "troopCounts": 11,
+          "shields": 49
+        },
+        "collisions": {
+          "castles": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "names": {
+            "visible": 60,
+            "collisions": 0,
+            "examples": []
+          },
+          "playerBanners": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "foreignLabels": {
+            "visible": 49,
+            "collisions": 0,
+            "examples": []
+          },
+          "troopCounts": {
+            "visible": 11,
+            "collisions": 0,
+            "examples": []
+          },
+          "objectiveVsCities": 0
+        },
+        "selection": {
+          "selectedCount": 0,
+          "selectedCityIds": []
+        },
+        "tightPairs": [
+          {
+            "leftId": "core_a1_support_bench_008",
+            "rightId": "core_a1_support_bench_017",
+            "distance": 151.82226450688978
+          },
+          {
+            "leftId": "core_a1_support_bench_016",
+            "rightId": "core_a1_support_bench_028",
+            "distance": 152.11837495845137
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_051",
+            "distance": 152.94770348063417
+          },
+          {
+            "leftId": "core_a1_support_bench_049",
+            "rightId": "core_a1_support_bench_056",
+            "distance": 153.44705927452634
+          },
+          {
+            "leftId": "core_a1_support_bench_033",
+            "rightId": "core_a1_support_bench_040",
+            "distance": 154.04220200970903
+          },
+          {
+            "leftId": "core_a1_support_bench_014",
+            "rightId": "core_a1_support_bench_030",
+            "distance": 154.1590088188167
+          },
+          {
+            "leftId": "core_a1_support_bench_027",
+            "rightId": "core_a1_support_bench_061",
+            "distance": 156.16977940690063
+          },
+          {
+            "leftId": "core_a1_support_bench_007",
+            "rightId": "core_a1_support_bench_058",
+            "distance": 156.46405337968207
+          }
+        ],
+        "bodySize": {
+          "width": 319,
+          "height": 810
+        },
+        "mapFrame": {
+          "width": 996,
+          "height": 720
+        }
+      },
+      "sample": {
+        "name": "core_a1_support-normal-runtime-density",
+        "durationMs": 3205.899999976158,
+        "frameCount": 94,
+        "fps": 29.32093951798218,
+        "medianFrameTimeMs": 34.69999999999709,
+        "p95FrameTimeMs": 48.59999999999127,
+        "maximumFrameTimeMs": 48.69999999999709,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      "repeat": 3
+    }
+  ]
+}

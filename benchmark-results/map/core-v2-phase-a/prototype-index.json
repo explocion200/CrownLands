@@ -1,0 +1,485 @@
+{
+  "schemaVersion": 1,
+  "phase": "Core v2 Phase A",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "approvedBase": "99e56a8b1a4015607cdb438a7c1edc1922eca91e",
+  "exactCoreRegionCount": 25,
+  "exactCoreCityCapacity": 1480,
+  "prototypeCount": 5,
+  "prototypes": [
+    {
+      "key": "crown-citadel",
+      "regionId": "core-v2-crown-citadel-p0-p0",
+      "name": "Crown Citadel",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "CROWN_CITADEL",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "center_balanced",
+        "renderTheme": "west",
+        "transition": "balanced central Crownlands"
+      },
+      "objective": {
+        "type": "crown_citadel",
+        "x": 724,
+        "y": 543,
+        "radiusX": 184,
+        "radiusY": 166,
+        "visualSize": 260,
+        "influenceClearance": 24
+      },
+      "profile": {
+        "key": "crown-citadel",
+        "themeKey": "west",
+        "variantKey": "a",
+        "roadGeometryId": "base",
+        "retrySalt": "core-v2-citadel-ceremonial-balanced-v1",
+        "identity": "balanced central kingdom, maintained approaches, restrained farmland and royal landscaping",
+        "objectiveArt": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
+        "objectiveLabel": "Crown Citadel"
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "94977ecc4d897d4b2ad306e262eb3d2f5818c6d2935f2599a04caa53a9d0db15",
+      "cityPlanHash": "e43d17e30e2d1bae135831cfb4901e350be9d7a3b74db352ccc972200b78918d",
+      "validationReceiptHash": "5a2e06b4e4d2b795427e121874b738049f1ea648672aa078805c6ae69130e907",
+      "cleanMapSha256": "f366a2dd6457ee07607062a0b85d135c4ea2fb700de397e8a1112dc18348dcef",
+      "mapWebpSha256": "7ef9a4c66b7c8a281a85c75a0f6e32ea9bc35880c514f4693a10e51a49e70df9",
+      "thumbnailSha256": "149bcfb828b23b368156d587623cd57c1d23aee8278f293d970cf73b50f2d9cb",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-a/prototypes/crown-citadel"
+    },
+    {
+      "key": "ironwatch",
+      "regionId": "core-v2-ironwatch-p0-p1",
+      "name": "Ironwatch",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "south_center_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "defense",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28
+      },
+      "profile": {
+        "key": "ironwatch",
+        "themeKey": "west",
+        "accentThemeKey": "south",
+        "variantKey": "b",
+        "roadGeometryId": "west-v2",
+        "retrySalt": "core-v2-iron-4",
+        "identity": "rocky high ground, dry stone character and hardened defensive approaches",
+        "objectiveArt": "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp",
+        "objectiveLabel": "Ironwatch"
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "8f7e56ea6b9fe2890fe75183264c2c745cd4d38b296c3748ffb922c99518c80b",
+      "cityPlanHash": "24b8b5fbb6977a56965c43db7694244628d554c1e019e0f55176a3d0e27b5e23",
+      "validationReceiptHash": "a870a40ed26d6808ea1f66d943402e006652beee16e161abc6e28b8da1022927",
+      "cleanMapSha256": "a8fe53010bde5adecc6d602c8848bcb1bd4990e7a93aca3bf851f4b0fa5a7f16",
+      "mapWebpSha256": "4f7920dc772d1e059c27ecfe5d65e67f8ef6ae4f2649b7e3df3f09d5f5c28e76",
+      "thumbnailSha256": "3761dcda596aa41c42ae46ae6cea9d6dd385f769b7433dd03e04a64ac8dafbb2",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-a/prototypes/ironwatch"
+    },
+    {
+      "key": "southwest-holding-tower",
+      "regionId": "core-v2-south-west-holding-tower-m1-p1",
+      "name": "South-West Holding Tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_west_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 724,
+        "y": 543,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true
+      },
+      "profile": {
+        "key": "southwest-holding-tower",
+        "themeKey": "west",
+        "accentThemeKey": "south",
+        "variantKey": "a",
+        "roadGeometryId": "west-v3",
+        "retrySalt": "core-v2-tower-2",
+        "identity": "restrained dry earthworks, military-road character and a clean future Tower reserve",
+        "objectiveArt": null,
+        "objectiveLabel": "Future Holding Tower reservation"
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "fe59b3f005908d68bdc93e5907185f0471ba0259a4095c8840bfc819c441d9ab",
+      "cityPlanHash": "924d551168cc7587dbfecd741d3e5f0a97ff8c4ff266248f42367b50f9fbf8cd",
+      "validationReceiptHash": "363719164bb1e4c10b75455d75fcb60f1a6957ce8e9da722bb27907961e62a1f",
+      "cleanMapSha256": "ea4e8325f03a8e2a020d663aa052f5bad739f726ace744130b9523e760f5c3c4",
+      "mapWebpSha256": "724b6591ce4d8c61215cb29361d2de84142daeaf4858582decaaf18aa0d61da7",
+      "thumbnailSha256": "7847304a7dc25990f157ec2ae60814cbcb1886f0347b29d9b1a4bef7ded28a2c",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-a/prototypes/southwest-holding-tower"
+    },
+    {
+      "key": "west-south-deed-camp",
+      "regionId": "core-v2-deed-camp-west-south-m2-p1",
+      "name": "Deed Camp West-South",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "west_south_transition",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "profile": {
+        "key": "west-south-deed-camp",
+        "themeKey": "west",
+        "variantKey": "b",
+        "roadGeometryId": "west-v2",
+        "retrySalt": "core-v2-deed-frontier-crossroads-v1-1",
+        "identity": "small frontier farm territory, light fields and a minor crossroads without a large town",
+        "objectiveArt": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+        "objectiveLabel": "Deed Camp"
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-south-west-m2-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "dbd4d2bb6c8426126884a16bfbb33d281d42ecada213afe3738773fb23f1fbfa",
+      "cityPlanHash": "f5f7d9f1797d529f9e5e92b7a799e156d0e3fd9d18f1abd2d770fcb15f72f0f6",
+      "validationReceiptHash": "a6ba254b130e25beaebc7df1c7f3218d94f11ad74bb3caa88b1ddec667cc5d59",
+      "cleanMapSha256": "3bf2f43e4b89226022d1e88e547aa77c9794d2e2d04444ad926d94408dbe3f5e",
+      "mapWebpSha256": "800bf54a30c743af0977ea104f32ef5be1e41e4a2805d97a35c6a92d984fe8a7",
+      "thumbnailSha256": "5049ed7475c9606148dcfb2454236854146bebd21b85ff197f6282c325c01d5d",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-a/prototypes/west-south-deed-camp"
+    },
+    {
+      "key": "west-support",
+      "regionId": "core-v2-west-support-m2-p0",
+      "name": "West Support",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "west_grassy_temperate",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "profile": {
+        "key": "west-support",
+        "themeKey": "west",
+        "variantKey": "a",
+        "roadGeometryId": "west-v3",
+        "retrySalt": "core-v2-west-support-open-territory-v1",
+        "identity": "very open grassy fighting territory with restrained temperate field and woodland cues",
+        "objectiveArt": null,
+        "objectiveLabel": null
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "081a6938351f68b173cf79c477d25326f0f448a1bf351118c095347c7a8fc304",
+      "cityPlanHash": "97b5b3defa4956690fce4ddebc07a1d7bd57ee9abf81f4ca1f2e22521b74dd6a",
+      "validationReceiptHash": "d012980b0dc2def405d650925af2388507795b21c5e0d99cb1e3069f66e01e9f",
+      "cleanMapSha256": "79deadb2f3613b9635ce5b581c3bf511afe70186ccd37297ea89cbfe5800a907",
+      "mapWebpSha256": "733638e5d9e14fa2eb0015d2e93bc67b0ee8301691f0bcfe597b65152f81a520",
+      "thumbnailSha256": "7c963c2ee7d8f5fa3cf54966cb8c574d1e79b5a25bf5e498c034d21e1c98448b",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-a/prototypes/west-support"
+    }
+  ],
+  "specificationHash": "e0c23fa870e09d6a9c207d52b4cd137d210bb83b8f00cf0751b8e2a928705f1f",
+  "fortressArchitectureHash": "08c33fad6bc7acbc9adcc9eafd5592247530ba4c8583b8fa02bfc06052aa1871",
+  "indexHash": "6f8e542d71fe8445a42d61f2f05bd336d3849184bb4a69c413164f18a5e12e60"
+}

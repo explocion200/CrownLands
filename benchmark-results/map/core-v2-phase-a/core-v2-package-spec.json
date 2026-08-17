@@ -1,0 +1,2347 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "core-v2-phase-a-spec-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "immutableWhenApproved": true,
+  "coreBounds": {
+    "minGridX": -2,
+    "maxGridX": 2,
+    "minGridY": -2,
+    "maxGridY": 2
+  },
+  "dimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "exactRegionCount": 25,
+  "exactCityCapacity": 1480,
+  "regions": [
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-warband-camp-m2-m2",
+      "name": "Warband Camp",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "WARBAND_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "warband",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-warband-camp-m2-m2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-warband-camp-m2-m2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-warband-camp-m2-m2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-warband-camp-m2-m2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-north-west-m1-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-relic-camp-north-west-m1-m2",
+      "name": "Relic Camp North-West",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-relic-camp-north-west-m1-m2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-relic-camp-north-west-m1-m2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-relic-camp-north-west-m1-m2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-relic-camp-north-west-m1-m2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-support-p0-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-m2-m2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-north-support-p0-m2",
+      "name": "North Support",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-north-support-p0-m2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-north-support-p0-m2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-north-support-p0-m2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-north-support-p0-m2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-north-east-p1-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-north-west-m1-m2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-deed-camp-north-east-p1-m2",
+      "name": "Deed Camp North-East",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-deed-camp-north-east-p1-m2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-deed-camp-north-east-p1-m2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-deed-camp-north-east-p1-m2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-deed-camp-north-east-p1-m2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-north-east-p2-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-support-p0-m2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-gold-camp-north-east-p2-m2",
+      "name": "Gold Camp North-East",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "GOLD_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "gold",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-gold-camp-north-east-p2-m2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-gold-camp-north-east-p2-m2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-gold-camp-north-east-p2-m2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-gold-camp-north-east-p2-m2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-east-north-p2-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-north-east-p1-m2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-relic-camp-west-north-m2-m1",
+      "name": "Relic Camp West-North",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "west_north_transition",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-relic-camp-west-north-m2-m1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-relic-camp-west-north-m2-m1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-relic-camp-west-north-m2-m1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-relic-camp-west-north-m2-m1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-m2-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-north-west-holding-tower-m1-m1",
+      "name": "North-West Holding Tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_center_transition",
+        "renderTheme": "north",
+        "transition": "north to center"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 724,
+        "y": 543,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-north-west-holding-tower-m1-m1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-north-west-holding-tower-m1-m1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-north-west-holding-tower-m1-m1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-north-west-holding-tower-m1-m1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-north-west-m1-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-greybanner-hold-p0-m1",
+      "name": "Greybanner Hold",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "north_center_transition",
+        "renderTheme": "north",
+        "transition": "north to center"
+      },
+      "objective": {
+        "type": "training",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-greybanner-hold-p0-m1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-greybanner-hold-p0-m1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-greybanner-hold-p0-m1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-greybanner-hold-p0-m1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-support-p0-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-north-east-holding-tower-p1-m1",
+      "name": "North-East Holding Tower",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_center_transition",
+        "renderTheme": "north",
+        "transition": "north to center"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 724,
+        "y": 543,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-north-east-holding-tower-p1-m1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-north-east-holding-tower-p1-m1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-north-east-holding-tower-p1-m1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-north-east-holding-tower-p1-m1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-north-east-p1-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-east-north-p2-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-deed-camp-east-north-p2-m1",
+      "name": "Deed Camp East-North",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "east_north_transition",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-deed-camp-east-north-p2-m1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-deed-camp-east-north-p2-m1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-deed-camp-east-north-p2-m1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-deed-camp-east-north-p2-m1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-north-east-p2-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-west-support-m2-p0",
+      "name": "West Support",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "west_grassy_temperate",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-west-support-m2-p0/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-west-support-m2-p0/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-west-support-m2-p0/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-west-support-m2-p0/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-aurum-keep-m1-p0",
+      "name": "Aurum Keep",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "west_center_transition",
+        "renderTheme": "west",
+        "transition": "west to center"
+      },
+      "objective": {
+        "type": "gold_production",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-aurum-keep-m1-p0/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-aurum-keep-m1-p0/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-aurum-keep-m1-p0/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-aurum-keep-m1-p0/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-crown-citadel-p0-p0",
+      "name": "Crown Citadel",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "CROWN_CITADEL",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "center_balanced",
+        "renderTheme": "west",
+        "transition": "balanced central Crownlands"
+      },
+      "objective": {
+        "type": "crown_citadel",
+        "x": 724,
+        "y": 543,
+        "radiusX": 184,
+        "radiusY": 166,
+        "visualSize": 260,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-crown-citadel-p0-p0/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-crown-citadel-p0-p0/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-crown-citadel-p0-p0/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-crown-citadel-p0-p0/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-swiftgate-p1-p0",
+      "name": "Swiftgate",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "east_center_transition",
+        "renderTheme": "east",
+        "transition": "center to east"
+      },
+      "objective": {
+        "type": "march_speed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-swiftgate-p1-p0/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-swiftgate-p1-p0/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-swiftgate-p1-p0/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-swiftgate-p1-p0/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-east-support-p2-p0",
+      "name": "East Support",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "east_tropical_lush",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-east-support-p2-p0/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-east-support-p2-p0/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-east-support-p2-p0/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-east-support-p2-p0/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-east-north-p2-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-deed-camp-west-south-m2-p1",
+      "name": "Deed Camp West-South",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "west_south_transition",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-deed-camp-west-south-m2-p1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-deed-camp-west-south-m2-p1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-deed-camp-west-south-m2-p1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-deed-camp-west-south-m2-p1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-south-west-m2-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-south-west-holding-tower-m1-p1",
+      "name": "South-West Holding Tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_west_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 724,
+        "y": 543,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-south-west-holding-tower-m1-p1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-south-west-holding-tower-m1-p1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-south-west-holding-tower-m1-p1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-south-west-holding-tower-m1-p1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-ironwatch-p0-p1",
+      "name": "Ironwatch",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "south_center_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "defense",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-ironwatch-p0-p1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-ironwatch-p0-p1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-ironwatch-p0-p1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-ironwatch-p0-p1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-south-east-holding-tower-p1-p1",
+      "name": "South-East Holding Tower",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_east_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 724,
+        "y": 543,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-south-east-holding-tower-p1-p1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-south-east-holding-tower-p1-p1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-south-east-holding-tower-p1-p1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-south-east-holding-tower-p1-p1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-relic-camp-east-south-p2-p1",
+      "name": "Relic Camp East-South",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "east_south_transition",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-relic-camp-east-south-p2-p1/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-relic-camp-east-south-p2-p1/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-relic-camp-east-south-p2-p1/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-relic-camp-east-south-p2-p1/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-south-east-p2-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-gold-camp-south-west-m2-p2",
+      "name": "Gold Camp South-West",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "GOLD_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "gold",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-gold-camp-south-west-m2-p2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-gold-camp-south-west-m2-p2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-gold-camp-south-west-m2-p2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-gold-camp-south-west-m2-p2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-deed-camp-south-west-m1-p2",
+      "name": "Deed Camp South-West",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-deed-camp-south-west-m1-p2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-deed-camp-south-west-m1-p2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-deed-camp-south-west-m1-p2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-deed-camp-south-west-m1-p2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-south-west-m2-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-south-support-p0-p2",
+      "name": "South Support",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-south-support-p0-p2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-south-support-p0-p2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-south-support-p0-p2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-south-support-p0-p2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-relic-camp-south-east-p1-p2",
+      "name": "Relic Camp South-East",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-relic-camp-south-east-p1-p2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-relic-camp-south-east-p1-p2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-relic-camp-south-east-p1-p2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-relic-camp-south-east-p1-p2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-south-east-p2-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "packageVersion": "core-v2-phase-a-spec-v1",
+      "regionId": "core-v2-warband-camp-south-east-p2-p2",
+      "name": "Warband Camp South-East",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "WARBAND_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "warband",
+        "x": 724,
+        "y": 543,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24
+      },
+      "purpose": "permanent_core",
+      "permanentCore": true,
+      "spawnEligible": false,
+      "runtimeNpcSpawnThresholdApplies": false,
+      "dimensions": {
+        "width": 1448,
+        "height": 1086
+      },
+      "futureMapAssetReference": "core-v2/maps/core-v2-warband-camp-south-east-p2-p2/map.webp",
+      "futureThumbnailAssetReference": "core-v2/maps/core-v2-warband-camp-south-east-p2-p2/thumbnail.webp",
+      "blockerDefinitionReference": "core-v2/definitions/core-v2-warband-camp-south-east-p2-p2/blockers.json",
+      "cityDefinitionReference": "core-v2/definitions/core-v2-warband-camp-south-east-p2-p2/cities.json",
+      "developmentOnly": true,
+      "productionActivated": false,
+      "publicationAllowed": false,
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      }
+    }
+  ]
+}

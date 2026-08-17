@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "developmentOnly": true,
+  "gameplayImplemented": false,
+  "reservationType": "FORTRESS",
+  "layerOneMapCount": 24,
+  "layerOneReservationCount": 4,
+  "targetDensity": "approximately one Fortress reservation per 6-7 generated maps",
+  "antiStacking": {
+    "cardinalAdjacencyForbidden": true,
+    "sameClockwiseSectorOnNextLayerForbidden": true,
+    "nextLayerSlotOffsetStrategy": "deterministic non-zero offset derived from world/season/layer; reject radial alignment with prior layer",
+    "publishedReservationsImmutable": true
+  },
+  "ring": [
+    {
+      "gridX": -3,
+      "gridY": -3
+    },
+    {
+      "gridX": -2,
+      "gridY": -3
+    },
+    {
+      "gridX": -1,
+      "gridY": -3
+    },
+    {
+      "gridX": 0,
+      "gridY": -3
+    },
+    {
+      "gridX": 1,
+      "gridY": -3
+    },
+    {
+      "gridX": 2,
+      "gridY": -3
+    },
+    {
+      "gridX": 3,
+      "gridY": -3
+    },
+    {
+      "gridX": 3,
+      "gridY": -2
+    },
+    {
+      "gridX": 3,
+      "gridY": -1
+    },
+    {
+      "gridX": 3,
+      "gridY": 0
+    },
+    {
+      "gridX": 3,
+      "gridY": 1
+    },
+    {
+      "gridX": 3,
+      "gridY": 2
+    },
+    {
+      "gridX": 3,
+      "gridY": 3
+    },
+    {
+      "gridX": 2,
+      "gridY": 3
+    },
+    {
+      "gridX": 1,
+      "gridY": 3
+    },
+    {
+      "gridX": 0,
+      "gridY": 3
+    },
+    {
+      "gridX": -1,
+      "gridY": 3
+    },
+    {
+      "gridX": -2,
+      "gridY": 3
+    },
+    {
+      "gridX": -3,
+      "gridY": 3
+    },
+    {
+      "gridX": -3,
+      "gridY": 2
+    },
+    {
+      "gridX": -3,
+      "gridY": 1
+    },
+    {
+      "gridX": -3,
+      "gridY": 0
+    },
+    {
+      "gridX": -3,
+      "gridY": -1
+    },
+    {
+      "gridX": -3,
+      "gridY": -2
+    }
+  ],
+  "reservations": [
+    {
+      "reservationId": "layer-1-fortress-1",
+      "type": "FORTRESS",
+      "worldLayer": 1,
+      "clockwiseSlot": 2,
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -3
+      },
+      "reservationGeometry": {
+        "x": 520,
+        "y": 410,
+        "radiusX": 126,
+        "radiusY": 112
+      },
+      "invisibleInLiveGameplay": true,
+      "developmentOverlayAllowed": true,
+      "immutableOncePublished": true,
+      "requiresPrePublicationValidation": [
+        "40-city-clearance",
+        "road-clearance",
+        "blocker-clearance",
+        "transition-clearance",
+        "edge-clearance",
+        "objective-clearance"
+      ]
+    },
+    {
+      "reservationId": "layer-1-fortress-2",
+      "type": "FORTRESS",
+      "worldLayer": 1,
+      "clockwiseSlot": 8,
+      "coordinate": {
+        "gridX": 3,
+        "gridY": -1
+      },
+      "reservationGeometry": {
+        "x": 908,
+        "y": 420,
+        "radiusX": 126,
+        "radiusY": 112
+      },
+      "invisibleInLiveGameplay": true,
+      "developmentOverlayAllowed": true,
+      "immutableOncePublished": true,
+      "requiresPrePublicationValidation": [
+        "40-city-clearance",
+        "road-clearance",
+        "blocker-clearance",
+        "transition-clearance",
+        "edge-clearance",
+        "objective-clearance"
+      ]
+    },
+    {
+      "reservationId": "layer-1-fortress-3",
+      "type": "FORTRESS",
+      "worldLayer": 1,
+      "clockwiseSlot": 14,
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 3
+      },
+      "reservationGeometry": {
+        "x": 860,
+        "y": 690,
+        "radiusX": 126,
+        "radiusY": 112
+      },
+      "invisibleInLiveGameplay": true,
+      "developmentOverlayAllowed": true,
+      "immutableOncePublished": true,
+      "requiresPrePublicationValidation": [
+        "40-city-clearance",
+        "road-clearance",
+        "blocker-clearance",
+        "transition-clearance",
+        "edge-clearance",
+        "objective-clearance"
+      ]
+    },
+    {
+      "reservationId": "layer-1-fortress-4",
+      "type": "FORTRESS",
+      "worldLayer": 1,
+      "clockwiseSlot": 20,
+      "coordinate": {
+        "gridX": -3,
+        "gridY": 1
+      },
+      "reservationGeometry": {
+        "x": 560,
+        "y": 680,
+        "radiusX": 126,
+        "radiusY": 112
+      },
+      "invisibleInLiveGameplay": true,
+      "developmentOverlayAllowed": true,
+      "immutableOncePublished": true,
+      "requiresPrePublicationValidation": [
+        "40-city-clearance",
+        "road-clearance",
+        "blocker-clearance",
+        "transition-clearance",
+        "edge-clearance",
+        "objective-clearance"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "prototypeVersion": "core-v2-phase-a-handcrafted-slice-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-crown-citadel-p0-p0",
+  "coordinate": {
+    "gridX": 0,
+    "gridY": 0,
+    "worldLayer": 0
+  },
+  "mapType": "CROWN_CITADEL",
+  "exactCityCapacity": 60,
+  "profile": {
+    "key": "crown-citadel",
+    "themeKey": "west",
+    "variantKey": "a",
+    "roadGeometryId": "base",
+    "retrySalt": "core-v2-citadel-ceremonial-balanced-v1",
+    "identity": "balanced central kingdom, maintained approaches, restrained farmland and royal landscaping",
+    "objectiveArt": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
+    "objectiveLabel": "Crown Citadel"
+  },
+  "cityPlanHash": "e43d17e30e2d1bae135831cfb4901e350be9d7a3b74db352ccc972200b78918d",
+  "compositionPlanHash": "94977ecc4d897d4b2ad306e262eb3d2f5818c6d2935f2599a04caa53a9d0db15",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 60,
+    "expectedCapacity": 60,
+    "minimumSpacing": 68.542,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 1,
+        "south": 2,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-v1",
+    "seedHash": "6c67424decc01ed25b20183f94d512d6341e61ea270888fd67f0193ab6cf5e5f",
+    "minimumCitySeparation": 68,
+    "cityVisualDiameter": 64,
+    "edgeClearance": {
+      "x": 142,
+      "y": 132
+    },
+    "roadClearanceBeyondVisual": 8,
+    "blockerClearanceBeyondCity": 10,
+    "objectiveClearanceBeyondCity": 14,
+    "candidatePoolSize": 1111,
+    "rejectedByReason": {
+      "outside_land": 513,
+      "edge_clearance": 3,
+      "road_clearance": 460,
+      "terrain_blocker": 344,
+      "objective_clearance": 472
+    },
+    "selectedTrial": 71,
+    "selectionTrialLimit": 192,
+    "minimumObservedSpacing": 68.542,
+    "meanNearestNeighbor": 81.705,
+    "quadrantCounts": [
+      15,
+      16,
+      15,
+      14
+    ]
+  },
+  "receiptHash": "5a2e06b4e4d2b795427e121874b738049f1ea648672aa078805c6ae69130e907"
+}

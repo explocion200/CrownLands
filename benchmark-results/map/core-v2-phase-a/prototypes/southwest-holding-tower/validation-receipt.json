@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "prototypeVersion": "core-v2-phase-a-handcrafted-slice-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-south-west-holding-tower-m1-p1",
+  "coordinate": {
+    "gridX": -1,
+    "gridY": 1,
+    "worldLayer": 0
+  },
+  "mapType": "HOLDING_TOWER",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "southwest-holding-tower",
+    "themeKey": "west",
+    "accentThemeKey": "south",
+    "variantKey": "a",
+    "roadGeometryId": "west-v3",
+    "retrySalt": "core-v2-tower-2",
+    "identity": "restrained dry earthworks, military-road character and a clean future Tower reserve",
+    "objectiveArt": null,
+    "objectiveLabel": "Future Holding Tower reservation"
+  },
+  "cityPlanHash": "924d551168cc7587dbfecd741d3e5f0a97ff8c4ff266248f42367b50f9fbf8cd",
+  "compositionPlanHash": "fe59b3f005908d68bdc93e5907185f0471ba0259a4095c8840bfc819c441d9ab",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.476,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 7,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 2,
+        "south": 2,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-v1",
+    "seedHash": "ee38b70178091aaab894827a3cf2895b4bd83f976e4af46f56bf4818a2d5dfc3",
+    "minimumCitySeparation": 68,
+    "cityVisualDiameter": 64,
+    "edgeClearance": {
+      "x": 142,
+      "y": 132
+    },
+    "roadClearanceBeyondVisual": 8,
+    "blockerClearanceBeyondCity": 10,
+    "objectiveClearanceBeyondCity": 14,
+    "candidatePoolSize": 1016,
+    "rejectedByReason": {
+      "outside_land": 564,
+      "edge_clearance": 17,
+      "terrain_blocker": 344,
+      "road_clearance": 712,
+      "objective_clearance": 314
+    },
+    "selectedTrial": 155,
+    "selectionTrialLimit": 192,
+    "minimumObservedSpacing": 68.476,
+    "meanNearestNeighbor": 86.611,
+    "quadrantCounts": [
+      12,
+      16,
+      14,
+      13
+    ]
+  },
+  "receiptHash": "363719164bb1e4c10b75455d75fcb60f1a6957ce8e9da722bb27907961e62a1f"
+}

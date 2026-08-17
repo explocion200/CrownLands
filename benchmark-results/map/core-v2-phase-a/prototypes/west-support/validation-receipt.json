@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "prototypeVersion": "core-v2-phase-a-handcrafted-slice-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-west-support-m2-p0",
+  "coordinate": {
+    "gridX": -2,
+    "gridY": 0,
+    "worldLayer": 0
+  },
+  "mapType": "SUPPORT",
+  "exactCityCapacity": 70,
+  "profile": {
+    "key": "west-support",
+    "themeKey": "west",
+    "variantKey": "a",
+    "roadGeometryId": "west-v3",
+    "retrySalt": "core-v2-west-support-open-territory-v1",
+    "identity": "very open grassy fighting territory with restrained temperate field and woodland cues",
+    "objectiveArt": null,
+    "objectiveLabel": null
+  },
+  "cityPlanHash": "97b5b3defa4956690fce4ddebc07a1d7bd57ee9abf81f4ca1f2e22521b74dd6a",
+  "compositionPlanHash": "081a6938351f68b173cf79c477d25326f0f448a1bf351118c095347c7a8fc304",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 70,
+    "expectedCapacity": 70,
+    "minimumSpacing": 68.007,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 5,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 2,
+        "south": 1,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 0,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-v1",
+    "seedHash": "89a746f91b9b4c37b21ecc6e14df6252869da725687c05491485b12e985d8a81",
+    "minimumCitySeparation": 68,
+    "cityVisualDiameter": 64,
+    "edgeClearance": {
+      "x": 142,
+      "y": 132
+    },
+    "roadClearanceBeyondVisual": 8,
+    "blockerClearanceBeyondCity": 10,
+    "objectiveClearanceBeyondCity": 14,
+    "candidatePoolSize": 1137,
+    "rejectedByReason": {
+      "outside_land": 577,
+      "edge_clearance": 29,
+      "road_clearance": 924,
+      "terrain_blocker": 323
+    },
+    "selectedTrial": 31,
+    "selectionTrialLimit": 192,
+    "minimumObservedSpacing": 68.007,
+    "meanNearestNeighbor": 77.127,
+    "quadrantCounts": [
+      22,
+      17,
+      17,
+      14
+    ]
+  },
+  "receiptHash": "d012980b0dc2def405d650925af2388507795b21c5e0d99cb1e3069f66e01e9f"
+}

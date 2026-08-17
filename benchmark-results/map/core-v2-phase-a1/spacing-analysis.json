@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "phase": "Core v2 Phase A.1",
+  "developmentOnly": true,
+  "sourcePhase": "Core v2 Phase A",
+  "units": "source-image pixels at 1448x1086",
+  "p5Definition": "linear interpolation over per-city nearest-neighbor distances",
+  "pairThresholdDefinition": "unordered city pairs with center-to-center distance strictly below threshold",
+  "thresholdsPx": [
+    70,
+    75,
+    80,
+    90,
+    100,
+    112
+  ],
+  "results": [
+    {
+      "key": "crown-citadel",
+      "name": "Crown Citadel",
+      "mapType": "CROWN_CITADEL",
+      "exactCityCapacity": 60,
+      "actualCityCount": 60,
+      "minCenterSpacingPx": 68.542,
+      "p5NearestNeighborSpacingPx": 68.593,
+      "medianNearestNeighborSpacingPx": 79.474,
+      "maxNearestNeighborSpacingPx": 116.211,
+      "pairCountsUnderPx": {
+        "70": 3,
+        "75": 10,
+        "80": 18,
+        "90": 39,
+        "100": 54,
+        "112": 71
+      },
+      "tightestPairs": [
+        {
+          "leftId": "core_137edcb01078fb7532",
+          "rightId": "core_94c614ada9199d0b68",
+          "distance": 68.542
+        },
+        {
+          "leftId": "core_0fd3f9629eb4be343e",
+          "rightId": "core_32a5b2700f4827cabc",
+          "distance": 68.593
+        },
+        {
+          "leftId": "core_955162b0a1408ce1e6",
+          "rightId": "core_bba585145006a0f644",
+          "distance": 68.964
+        },
+        {
+          "leftId": "core_0ad9fe1742d9295b9a",
+          "rightId": "core_5171dbe9dd0eac6808",
+          "distance": 70.093
+        },
+        {
+          "leftId": "core_137edcb01078fb7532",
+          "rightId": "core_139347d169d4d642dd",
+          "distance": 71.176
+        },
+        {
+          "leftId": "core_602ab5a2d104a8e809",
+          "rightId": "core_d74372b7bf3b600083",
+          "distance": 71.309
+        },
+        {
+          "leftId": "core_1c756c1abb032ccc17",
+          "rightId": "core_e9ea5b5ce2307e01c3",
+          "distance": 71.568
+        },
+        {
+          "leftId": "core_20eaa882e3491d6402",
+          "rightId": "core_ded35e5f90fd7e59bf",
+          "distance": 72.173
+        },
+        {
+          "leftId": "core_602ab5a2d104a8e809",
+          "rightId": "core_976317345472c5214f",
+          "distance": 74.525
+        },
+        {
+          "leftId": "core_2a4eb0fa2fd34a6238",
+          "rightId": "core_486c4b9cae6243d93b",
+          "distance": 74.632
+        }
+      ],
+      "nearestNeighborSpacingPx": [
+        68.542,
+        68.542,
+        68.593,
+        68.593,
+        68.964,
+        68.964,
+        70.093,
+        70.093,
+        71.176,
+        71.309,
+        71.309,
+        71.568,
+        71.568,
+        72.173,
+        72.173,
+        74.525,
+        74.632,
+        74.632,
+        75.166,
+        75.166,
+        76.158,
+        76.158,
+        77.279,
+        77.279,
+        78.026,
+        78.16,
+        78.518,
+        78.518,
+        78.816,
+        78.892,
+        80.056,
+        80.131,
+        80.529,
+        80.623,
+        80.623,
+        80.957,
+        81.043,
+        81.043,
+        81.584,
+        83.678,
+        83.678,
+        84.149,
+        84.599,
+        84.599,
+        86.885,
+        86.885,
+        87.235,
+        87.235,
+        88.685,
+        89.067,
+        91.049,
+        94.26,
+        94.53,
+        95.189,
+        103.175,
+        103.175,
+        103.247,
+        109.128,
+        113.464,
+        116.211
+      ]
+    },
+    {
+      "key": "ironwatch",
+      "name": "Ironwatch",
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "actualCityCount": 60,
+      "minCenterSpacingPx": 68.797,
+      "p5NearestNeighborSpacingPx": 69.123,
+      "medianNearestNeighborSpacingPx": 78.361,
+      "maxNearestNeighborSpacingPx": 181.025,
+      "pairCountsUnderPx": {
+        "70": 2,
+        "75": 15,
+        "80": 25,
+        "90": 46,
+        "100": 62,
+        "112": 83
+      },
+      "tightestPairs": [
+        {
+          "leftId": "core_d0e02b8a2da6475b9d",
+          "rightId": "core_f18c4016807f0b9bf5",
+          "distance": 68.797
+        },
+        {
+          "leftId": "core_0403ec2f865c7f5810",
+          "rightId": "core_720540a16300b67fd5",
+          "distance": 69.123
+        },
+        {
+          "leftId": "core_779df0312e6c21e315",
+          "rightId": "core_a3f47fe8c5f5a47e71",
+          "distance": 70.178
+        },
+        {
+          "leftId": "core_cefaecac10a4fe3562",
+          "rightId": "core_f18c4016807f0b9bf5",
+          "distance": 70.682
+        },
+        {
+          "leftId": "core_76730b100fa0a4c81b",
+          "rightId": "core_c36885742f3f30272e",
+          "distance": 70.711
+        },
+        {
+          "leftId": "core_56d4844630945b7773",
+          "rightId": "core_db6f510aade084619e",
+          "distance": 70.767
+        },
+        {
+          "leftId": "core_9070708793fafb74ce",
+          "rightId": "core_95213247c7dd0d82db",
+          "distance": 71.561
+        },
+        {
+          "leftId": "core_59d15e311cfdf71b81",
+          "rightId": "core_720540a16300b67fd5",
+          "distance": 71.84
+        },
+        {
+          "leftId": "core_1836b9223c5f585da3",
+          "rightId": "core_6ad28d7b0f39066588",
+          "distance": 72
+        },
+        {
+          "leftId": "core_779df0312e6c21e315",
+          "rightId": "core_e9b3989b3f2c755ed4",
+          "distance": 72.035
+        }
+      ],
+      "nearestNeighborSpacingPx": [
+        68.797,
+        68.797,
+        69.123,
+        69.123,
+        70.178,
+        70.178,
+        70.682,
+        70.711,
+        70.711,
+        70.767,
+        70.767,
+        71.561,
+        71.561,
+        71.84,
+        72,
+        72,
+        72.035,
+        72.173,
+        72.45,
+        74,
+        74,
+        74.027,
+        74.027,
+        74.33,
+        75.425,
+        75.472,
+        76.557,
+        77.897,
+        78,
+        78,
+        78.721,
+        79.196,
+        79.31,
+        79.31,
+        79.649,
+        80.056,
+        80.604,
+        80.604,
+        81.222,
+        82.073,
+        84.22,
+        84.38,
+        84.971,
+        84.971,
+        86.833,
+        89.202,
+        89.202,
+        89.454,
+        91.548,
+        92.418,
+        92.698,
+        100.005,
+        104.69,
+        104.738,
+        104.738,
+        105.423,
+        119.369,
+        134.302,
+        147.503,
+        181.025
+      ]
+    },
+    {
+      "key": "southwest-holding-tower",
+      "name": "South-West Holding Tower",
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "actualCityCount": 55,
+      "minCenterSpacingPx": 68.476,
+      "p5NearestNeighborSpacingPx": 70.725,
+      "medianNearestNeighborSpacingPx": 83.259,
+      "maxNearestNeighborSpacingPx": 146.895,
+      "pairCountsUnderPx": {
+        "70": 1,
+        "75": 9,
+        "80": 15,
+        "90": 31,
+        "100": 45,
+        "112": 60
+      },
+      "tightestPairs": [
+        {
+          "leftId": "core_c693956b21b4452a5d",
+          "rightId": "core_ed33f0127eb86103cc",
+          "distance": 68.476
+        },
+        {
+          "leftId": "core_1089ada4a1c6eb763d",
+          "rightId": "core_c10bb0570af18918b6",
+          "distance": 70.725
+        },
+        {
+          "leftId": "core_1089ada4a1c6eb763d",
+          "rightId": "core_4ee6f35f87fed719c4",
+          "distance": 71.063
+        },
+        {
+          "leftId": "core_172145cb4a78c0ebd2",
+          "rightId": "core_ad3b491ca36484d352",
+          "distance": 72.801
+        },
+        {
+          "leftId": "core_76c51ba040d7b16943",
+          "rightId": "core_c693956b21b4452a5d",
+          "distance": 73.055
+        },
+        {
+          "leftId": "core_18ea3fa0fd229a57dc",
+          "rightId": "core_1d3c8f0fca83307530",
+          "distance": 73.437
+        },
+        {
+          "leftId": "core_2547661e1bbed71403",
+          "rightId": "core_fca3045c8cab52aa42",
+          "distance": 73.546
+        },
+        {
+          "leftId": "core_172145cb4a78c0ebd2",
+          "rightId": "core_2547661e1bbed71403",
+          "distance": 74.041
+        },
+        {
+          "leftId": "core_db05c96153d9766e53",
+          "rightId": "core_e8f222ec700f9870dc",
+          "distance": 74.947
+        },
+        {
+          "leftId": "core_c9214f0385edc0cec8",
+          "rightId": "core_cec096a03e427fb7b2",
+          "distance": 75.69
+        }
+      ],
+      "nearestNeighborSpacingPx": [
+        68.476,
+        68.476,
+        70.725,
+        70.725,
+        71.063,
+        72.801,
+        72.801,
+        73.055,
+        73.437,
+        73.437,
+        73.546,
+        73.546,
+        74.947,
+        74.947,
+        75.69,
+        75.69,
+        76.007,
+        76.007,
+        76.243,
+        76.243,
+        77.885,
+        77.885,
+        78.772,
+        78.772,
+        79.63,
+        79.63,
+        81.908,
+        83.259,
+        84.404,
+        84.404,
+        84.528,
+        85.071,
+        85.428,
+        85.428,
+        85.907,
+        86.533,
+        86.608,
+        87.71,
+        87.71,
+        88.814,
+        89.022,
+        89.404,
+        90.554,
+        90.554,
+        91.269,
+        94.154,
+        94.541,
+        104.101,
+        104.12,
+        112.272,
+        116.4,
+        128.503,
+        134.48,
+        139.205,
+        146.895
+      ]
+    },
+    {
+      "key": "west-south-deed-camp",
+      "name": "Deed Camp West-South",
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "actualCityCount": 60,
+      "minCenterSpacingPx": 68.029,
+      "p5NearestNeighborSpacingPx": 68.264,
+      "medianNearestNeighborSpacingPx": 74.813,
+      "maxNearestNeighborSpacingPx": 167.672,
+      "pairCountsUnderPx": {
+        "70": 6,
+        "75": 20,
+        "80": 30,
+        "90": 50,
+        "100": 59,
+        "112": 74
+      },
+      "tightestPairs": [
+        {
+          "leftId": "core_5f1ecb6d3865829807",
+          "rightId": "core_7e3e4489b1174f3cd8",
+          "distance": 68.029
+        },
+        {
+          "leftId": "core_203bf73a5f0d6a941b",
+          "rightId": "core_36d262f53b8f816991",
+          "distance": 68.264
+        },
+        {
+          "leftId": "core_203bf73a5f0d6a941b",
+          "rightId": "core_8a444f343694766805",
+          "distance": 68.884
+        },
+        {
+          "leftId": "core_2541f48c94478ceead",
+          "rightId": "core_945eed45b3287202bf",
+          "distance": 69.007
+        },
+        {
+          "leftId": "core_241ac71f9ad5e25326",
+          "rightId": "core_865efc47f7bcd4e3a0",
+          "distance": 69.642
+        },
+        {
+          "leftId": "core_afd7beddad5b7eba31",
+          "rightId": "core_ceceaf49bf8dfd779f",
+          "distance": 69.871
+        },
+        {
+          "leftId": "core_2541f48c94478ceead",
+          "rightId": "core_9af2f8cdc285dad142",
+          "distance": 70.228
+        },
+        {
+          "leftId": "core_2e6ddc731b368cddd9",
+          "rightId": "core_af4ac18b8219dd977b",
+          "distance": 70.228
+        },
+        {
+          "leftId": "core_d577df34e651048765",
+          "rightId": "core_d7cc4a087c8559c3f1",
+          "distance": 70.257
+        },
+        {
+          "leftId": "core_2b46989962370415f5",
+          "rightId": "core_c7338121362b7c739a",
+          "distance": 70.456
+        }
+      ],
+      "nearestNeighborSpacingPx": [
+        68.029,
+        68.029,
+        68.264,
+        68.264,
+        68.884,
+        69.007,
+        69.007,
+        69.642,
+        69.642,
+        69.871,
+        69.871,
+        70.228,
+        70.228,
+        70.228,
+        70.257,
+        70.257,
+        70.456,
+        70.456,
+        71.701,
+        72.622,
+        72.863,
+        73.171,
+        74.169,
+        74.169,
+        74.25,
+        74.25,
+        74.525,
+        74.673,
+        74.733,
+        74.813,
+        74.813,
+        76.42,
+        77.466,
+        77.801,
+        77.801,
+        78.549,
+        78.721,
+        79.906,
+        82.298,
+        82.608,
+        82.608,
+        82.861,
+        82.861,
+        84.077,
+        84.172,
+        84.202,
+        85.428,
+        87.006,
+        89.051,
+        92.849,
+        95.462,
+        96.607,
+        104.389,
+        107.019,
+        110.209,
+        116.709,
+        123.483,
+        129.553,
+        135.074,
+        167.672
+      ]
+    },
+    {
+      "key": "west-support",
+      "name": "West Support",
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "actualCityCount": 70,
+      "minCenterSpacingPx": 68.007,
+      "p5NearestNeighborSpacingPx": 68.348,
+      "medianNearestNeighborSpacingPx": 75.611,
+      "maxNearestNeighborSpacingPx": 111.158,
+      "pairCountsUnderPx": {
+        "70": 6,
+        "75": 24,
+        "80": 38,
+        "90": 73,
+        "100": 89,
+        "112": 100
+      },
+      "tightestPairs": [
+        {
+          "leftId": "core_1d0917b5e1c7377016",
+          "rightId": "core_4421c601ff81b7f206",
+          "distance": 68.007
+        },
+        {
+          "leftId": "core_42cc07d7fde431eb29",
+          "rightId": "core_65e4a81e900ab6cf32",
+          "distance": 68.25
+        },
+        {
+          "leftId": "core_3d7e847d62764999c8",
+          "rightId": "core_c08b7ee635cebe2a9c",
+          "distance": 68.469
+        },
+        {
+          "leftId": "core_bc10723cbf9fd66224",
+          "rightId": "core_e2b48c5d1c0e73badc",
+          "distance": 68.819
+        },
+        {
+          "leftId": "core_719b94f7ae446fd82d",
+          "rightId": "core_9d78c469436c4b901e",
+          "distance": 68.884
+        },
+        {
+          "leftId": "core_3d7e847d62764999c8",
+          "rightId": "core_6ce29aee05f7d82d4f",
+          "distance": 69.065
+        },
+        {
+          "leftId": "core_655a2ab1280718a628",
+          "rightId": "core_e89e93594c3fd7135c",
+          "distance": 70.007
+        },
+        {
+          "leftId": "core_16c505858d1cb3bee0",
+          "rightId": "core_e52360031d235e43ee",
+          "distance": 70.093
+        },
+        {
+          "leftId": "core_3c2d992eefd4473aae",
+          "rightId": "core_bc10723cbf9fd66224",
+          "distance": 70.214
+        },
+        {
+          "leftId": "core_3a6c706d4cbcc2bb29",
+          "rightId": "core_876de7db5a949c2842",
+          "distance": 70.576
+        }
+      ],
+      "nearestNeighborSpacingPx": [
+        68.007,
+        68.007,
+        68.25,
+        68.25,
+        68.469,
+        68.469,
+        68.819,
+        68.819,
+        68.884,
+        68.884,
+        69.065,
+        70.007,
+        70.007,
+        70.093,
+        70.093,
+        70.214,
+        70.576,
+        70.576,
+        70.937,
+        71.007,
+        71.028,
+        71.063,
+        71.063,
+        71.113,
+        72,
+        72.007,
+        73.246,
+        73.682,
+        73.682,
+        73.824,
+        73.824,
+        74.673,
+        74.673,
+        74.953,
+        75.611,
+        75.611,
+        75.822,
+        75.822,
+        76.026,
+        76.322,
+        76.485,
+        76.557,
+        76.557,
+        77.833,
+        78.109,
+        78.313,
+        78.721,
+        79.706,
+        80.006,
+        80.006,
+        80.808,
+        80.808,
+        81.099,
+        81.154,
+        82.152,
+        82.492,
+        83.546,
+        83.863,
+        84.291,
+        85.428,
+        85.428,
+        86.163,
+        86.683,
+        87.023,
+        90.139,
+        90.802,
+        90.802,
+        99.005,
+        100.285,
+        111.158
+      ]
+    }
+  ]
+}
