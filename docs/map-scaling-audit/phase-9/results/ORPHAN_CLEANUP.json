@@ -1,0 +1,326 @@
+{
+  "schemaVersion": "phase9-orphan-cleanup-result-v1",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "mode": "DRY_RUN",
+  "retentionHours": {
+    "GENERATING": 24,
+    "ABANDONED_UPLOAD": 168,
+    "FAILED": 720,
+    "ROLLED_BACK": 720,
+    "SUPERSEDED": 720
+  },
+  "syntheticPolicyCasesPassed": 9,
+  "publicationMarkersChecked": true,
+  "observations": [
+    {
+      "regionId": "phase6d_region_0001",
+      "lifecycle": "ACTIVE",
+      "packageHash": "3baf94779ebe8bbab4644befaa661976b799bfae72dcfc85c0c360386f7757c5",
+      "publicationMarkerExists": true,
+      "immutablePackage": true,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.48168361111111113
+    },
+    {
+      "regionId": "phase6d_region_0002",
+      "lifecycle": "ACTIVE",
+      "packageHash": "51dfd250ed180f229955dc41f2ef2af3a01dd4ff765f29b4c524591a0eeb412c",
+      "publicationMarkerExists": true,
+      "immutablePackage": true,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4845113888888889
+    },
+    {
+      "regionId": "phase6d_region_0003",
+      "lifecycle": "ACTIVE",
+      "packageHash": "869bbc65a89794105403e7d5e16204106cc3f33cc0c39500d90a50d0e72d0373",
+      "publicationMarkerExists": true,
+      "immutablePackage": true,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4845113888888889
+    },
+    {
+      "regionId": "phase6d_region_0004",
+      "lifecycle": "STANDBY",
+      "packageHash": "43cc7e5e735c7dbedaca37c7ed445f1ff6f8c9950613aaddea724d19a3403336",
+      "publicationMarkerExists": false,
+      "immutablePackage": true,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4883002777777778
+    },
+    {
+      "regionId": "phase6d_region_0005",
+      "lifecycle": "STANDBY",
+      "packageHash": "3b9a5f12f507dbb9519ca8b9ae7830af9f4cb539bea725a0be54950d9030d4ea",
+      "publicationMarkerExists": false,
+      "immutablePackage": true,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.48721333333333333
+    },
+    {
+      "regionId": "phase9_core_n1_n1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n1_n2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4845113888888889
+    },
+    {
+      "regionId": "phase9_core_n1_p0",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n1_p1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n1_p2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n2_n1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n2_n2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4855083333333333
+    },
+    {
+      "regionId": "phase9_core_n2_p0",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n2_p1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_n2_p2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p0_n1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p0_n2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p0_p0",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p0_p1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p0_p2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p1_n1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p1_n2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p1_p0",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p1_p1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p1_p2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p2_n1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p2_n2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p2_p0",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p2_p1",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    },
+    {
+      "regionId": "phase9_core_p2_p2",
+      "lifecycle": "ACTIVE",
+      "packageHash": null,
+      "publicationMarkerExists": false,
+      "immutablePackage": false,
+      "eligible": false,
+      "reason": "published-or-protected",
+      "ageHours": 0.4981566666666667
+    }
+  ],
+  "eligibleCount": 0,
+  "protectedPublishedCount": 28,
+  "publishedPackageDeletionAttempted": false,
+  "deletionPerformed": false,
+  "auditReceiptId": "orphan_cleanup_dry_run_1786920563576",
+  "productionMutationPerformed": false,
+  "result": "PASS",
+  "completedAt": "2026-08-16T22:49:23.744Z"
+}

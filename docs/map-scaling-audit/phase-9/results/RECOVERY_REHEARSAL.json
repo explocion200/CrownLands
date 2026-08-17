@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "phase9-recovery-rehearsal-result-v1",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "controlsRemainedOff": true,
+  "firestore": {
+    "documentsDeletedAndRestored": [
+      "generatedWorlds/phase9_staging_world/seasons/phase9_staging_season_2026/regions/phase6d_region_0001",
+      "generatedWorlds/phase9_staging_world/seasons/phase9_staging_season_2026/catalog/phase6d_region_0001",
+      "generatedWorlds/phase9_staging_world/seasons/phase9_staging_season_2026/packages/3baf94779ebe8bbab4644befaa661976b799bfae72dcfc85c0c360386f7757c5",
+      "generatedWorlds/phase9_staging_world/seasons/phase9_staging_season_2026/regions/phase6d_region_0001/cities/npc_phase6d_region_0001_07cb109877ed9f",
+      "generatedWorlds/phase9_staging_world/seasons/phase9_staging_season_2026/edgeContracts/phase6d_region_0001_east"
+    ],
+    "destructiveAssertionsCompletedBeforeCloneCreation": true,
+    "activeLifecycleRestored": true,
+    "catalogRestored": true,
+    "packageRecordRestored": true,
+    "ownershipRestored": true,
+    "edgeContractRestored": true,
+    "publicationMarkerPreserved": true,
+    "pitrSnapshotTime": "2026-08-16T22:27:00Z",
+    "pitrCloneCreatedAndVerified": true,
+    "pitrCloneDeletedAfterVerification": true
+  },
+  "storage": {
+    "versioningEnabled": true,
+    "archivedVersionRecoveryCompletedBeforeCloneCreation": true,
+    "liveObjectRestored": true,
+    "restoredHashVerified": true,
+    "retainedVersionCount": 6,
+    "publishedPackageRegenerated": false
+  },
+  "productionMutationPerformed": false,
+  "receiptId": "recovery_1786919282494",
+  "completedAt": "2026-08-16T22:47:09.128Z"
+}

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "phase9-network-qa-result-v1",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "endpointsWereRealStagingStorage": true,
+  "syntheticAuthenticatedPlayer": true,
+  "goodWifi": {
+    "status": 200,
+    "elapsedMs": 575.1734000000006,
+    "bytes": 326452,
+    "cacheControl": "public, max-age=31536000, immutable",
+    "etagPresent": true
+  },
+  "cachedRepeat": {
+    "status": 304,
+    "elapsedMs": 616.5924999999988,
+    "bytes": 0,
+    "cacheControl": "public, max-age=31536000, immutable"
+  },
+  "moderateMobile": {
+    "status": 200,
+    "elapsedMs": 1191.9062999999987,
+    "actualHttpBytes": 326452,
+    "modeledLatencyMs": 150,
+    "modeledBitsPerSecond": 5000000,
+    "model": "real staging response plus deterministic client-side latency/throughput throttling"
+  },
+  "throttledSlowNetwork": {
+    "status": 200,
+    "elapsedMs": 3470.6202999999987,
+    "actualHttpBytes": 319164,
+    "modeledLatencyMs": 400,
+    "modeledBitsPerSecond": 1000000,
+    "model": "real staging response plus deterministic client-side latency/throughput throttling"
+  },
+  "regionTransition": {
+    "status": 200,
+    "elapsedMs": 753.1219999999994,
+    "bytes": 319164
+  },
+  "failedRequestRecovery": {
+    "initialStatus": 403,
+    "recoveryStatus": 200,
+    "recoveryMs": 831.4889000000003,
+    "recovered": true
+  },
+  "limitation": "Moderate and slow profiles use deterministic client-side throttling over real staging HTTP responses; they are not carrier-field measurements.",
+  "productionMutationPerformed": false,
+  "result": "PASS_WITH_LIMITATION",
+  "completedAt": "2026-08-16T22:59:37.767Z"
+}

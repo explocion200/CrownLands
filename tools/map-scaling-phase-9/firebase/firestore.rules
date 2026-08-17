@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function stagingAdmin() {
+      return signedIn()
+        && request.auth.token.crownlandsMapAdmin == true
+        && request.auth.token.crownlandsEnvironment == 'staging';
+    }
+
+    function activeRegion(worldId, seasonId, regionId) {
+      return get(/databases/$(database)/documents/generatedWorlds/$(worldId)/seasons/$(seasonId)/regions/$(regionId)).data.lifecycle == 'ACTIVE';
+    }
+
+    match /phase9Controls/{environment} {
+      allow read: if signedIn() && environment == 'staging';
+      allow write: if false;
+    }
+
+    match /phase9AdminAuthorities/{uid} {
+      allow read: if stagingAdmin() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /phase9Audit/{entryId} {
+      allow read: if stagingAdmin();
+      allow write: if false;
+    }
+
+    match /phase9Operations/{operationId} {
+      allow read: if stagingAdmin();
+      allow write: if false;
+    }
+
+    match /generatedWorlds/{worldId}/seasons/{seasonId} {
+      allow read: if stagingAdmin();
+      allow write: if false;
+
+      match /regions/{regionId} {
+        allow read: if stagingAdmin() || (signedIn() && resource.data.lifecycle == 'ACTIVE');
+        allow write: if false;
+
+        match /cities/{cityId} {
+          allow read: if stagingAdmin() || (signedIn() && activeRegion(worldId, seasonId, regionId));
+          allow write: if false;
+        }
+      }
+
+      match /catalog/{regionId} {
+        allow read: if stagingAdmin() || (signedIn() && resource.data.lifecycle == 'ACTIVE');
+        allow write: if false;
+      }
+
+      match /edgeContracts/{contractId} {
+        allow read: if stagingAdmin()
+          || (signedIn() && activeRegion(worldId, seasonId, resource.data.regionId));
+        allow write: if false;
+      }
+
+      match /packages/{packageHash} {
+        allow read: if stagingAdmin();
+        allow write: if false;
+      }
+
+      match /publicationMarkers/{regionId} {
+        allow read: if stagingAdmin();
+        allow write: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

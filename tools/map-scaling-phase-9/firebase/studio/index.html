@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crownlands Studio — STAGING</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; background: #101510; color: #ecf0df; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at top, #25301f, #101510 42rem); }
+    .warning { position: sticky; top: 0; z-index: 10; padding: 12px; text-align: center; font-weight: 900; letter-spacing: .14em; color: #261900; background: #ffc44d; border-bottom: 3px solid #ff8a00; }
+    main { max-width: 1380px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 4px; font-family: Georgia, serif; font-size: clamp(28px, 5vw, 52px); }
+    .subtitle { color: #b4c399; margin: 0 0 24px; }
+    .grid { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 18px; align-items: start; }
+    .card { border: 1px solid #4b5c3f; background: rgba(22, 30, 19, .94); border-radius: 12px; padding: 16px; box-shadow: 0 12px 28px #0008; }
+    .card h2 { margin-top: 0; font-size: 18px; }
+    label { display: block; margin: 10px 0 5px; color: #cad5b7; font-size: 13px; }
+    input, select, button, textarea { width: 100%; border-radius: 7px; border: 1px solid #5c704c; background: #0d120c; color: #f4f7ec; padding: 9px 10px; }
+    textarea { min-height: 82px; resize: vertical; }
+    button { cursor: pointer; background: #35492c; font-weight: 700; margin-top: 8px; }
+    button:hover { background: #47623a; }
+    button.danger { background: #692c25; border-color: #9f4b3f; }
+    .flags { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; }
+    .flag-on { color: #72df82; font-weight: 800; }
+    .flag-off { color: #ff8c76; font-weight: 800; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #38452f; padding: 8px; text-align: left; }
+    tr[data-region] { cursor: pointer; }
+    tr[data-region]:hover { background: #2b3725; }
+    .map-wrap { position: relative; width: 100%; aspect-ratio: 1448 / 1086; overflow: hidden; border-radius: 8px; border: 1px solid #617651; background: #0a0d09; }
+    .map-wrap img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .city { position: absolute; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: #f7d164; border: 2px solid #3b2410; box-shadow: 0 0 0 2px #fff8; }
+    .meta { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; color: #cbd5bd; }
+    .status { min-height: 22px; margin-top: 10px; color: #f0c66f; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } main { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <div class="warning">STAGING — crownlands-map-staging-2026 — NEVER PRODUCTION</div>
+  <main>
+    <h1>Crownlands Studio</h1>
+    <p class="subtitle">Phase 9 generated-world inspection and kill-switch console. Credentials stay in memory and are never persisted.</p>
+    <div class="grid">
+      <section class="card">
+        <h2>Operator session</h2>
+        <label for="token">Short-lived staging Firebase ID token</label>
+        <textarea id="token" autocomplete="off" spellcheck="false" placeholder="Paste a short-lived STAGING admin token"></textarea>
+        <button id="connect">Connect to STAGING</button>
+        <div id="status" class="status"></div>
+        <h2>Controls</h2>
+        <div id="flags" class="flags"><span>Not connected</span></div>
+        <button id="stop" class="danger">STOP EXPANSION</button>
+        <button id="refresh">Refresh inspection data</button>
+        <p class="meta">Environment: STAGING<br>Project: crownlands-map-staging-2026<br>Production target: forbidden</p>
+      </section>
+      <section class="card">
+        <h2>Region lifecycle</h2>
+        <table>
+          <thead><tr><th>Region</th><th>Coordinate</th><th>Lifecycle</th><th>NPC</th><th>Package</th></tr></thead>
+          <tbody id="regions"><tr><td colspan="5">Connect to inspect staging.</td></tr></tbody>
+        </table>
+        <h2>Selected region</h2>
+        <div id="map" class="map-wrap"></div>
+        <div id="selection" class="meta">No region selected.</div>
+        <button id="publish">Approve publication</button>
+        <button id="activate">Approve activation</button>
+      </section>
+    </div>
+  </main>
+  <script>
+    "use strict";
+    const PROJECT = "crownlands-map-staging-2026";
+    const PRODUCTION = "crown-land-b15e0";
+    const WORLD = "phase9_staging_world";
+    const SEASON = "phase9_staging_season_2026";
+    const FIRESTORE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+    const FUNCTIONS = Object.freeze({
+      control: `https://us-central1-${PROJECT}.cloudfunctions.net/phase9SetControl`,
+      publish: `https://us-central1-${PROJECT}.cloudfunctions.net/phase9PublishRegion`,
+      activate: `https://us-central1-${PROJECT}.cloudfunctions.net/phase9ActivateRegion`,
+    });
+    const state = { token: "", control: null, regions: [], selected: null };
+    const $ = id => document.getElementById(id);
+    function decode(v) {
+      if (!v) return null;
+      if ("nullValue" in v) return null;
+      if ("stringValue" in v) return v.stringValue;
+      if ("integerValue" in v) return Number(v.integerValue);
+      if ("doubleValue" in v) return Number(v.doubleValue);
+      if ("booleanValue" in v) return v.booleanValue;
+      if ("timestampValue" in v) return v.timestampValue;
+      if ("mapValue" in v) return Object.fromEntries(Object.entries(v.mapValue.fields || {}).map(([k, x]) => [k, decode(x)]));
+      if ("arrayValue" in v) return (v.arrayValue.values || []).map(decode);
+      return null;
+    }
+    const documentData = doc => Object.fromEntries(Object.entries(doc.fields || {}).map(([k, v]) => [k, decode(v)]));
+    async function request(url, options = {}) {
+      const response = await fetch(url, { ...options, headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.token}`, ...(options.headers || {}) } });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.error) throw new Error(body.error?.message || `${response.status} ${response.statusText}`);
+      return body.result || body;
+    }
+    const call = (url, action, extra) => request(url, { method: "POST", body: JSON.stringify({ data: {
+      schemaVersion: "phase9-staging-admin-v1", action, environment: "STAGING", projectId: PROJECT,
+      productionProjectId: PRODUCTION, worldId: WORLD, seasonId: SEASON, ...extra,
+    } }) });
+    async function refresh() {
+      if (!state.token) throw new Error("Paste a short-lived staging token first.");
+      const [controlDoc, regionList] = await Promise.all([
+        request(`${FIRESTORE}/phase9Controls/staging`),
+        request(`${FIRESTORE}/generatedWorlds/${WORLD}/seasons/${SEASON}/regions?pageSize=100`),
+      ]);
+      state.control = documentData(controlDoc);
+      state.regions = (regionList.documents || []).map(doc => documentData(doc)).filter(region => Number(region.worldLayer) >= 1);
+      render();
+      $("status").textContent = `Connected to STAGING. Revision ${state.control.revision}.`;
+    }
+    function render() {
+      const names = ["generatedWorldEnabled", "generationEnabled", "publicationEnabled", "activationEnabled", "expansionEnabled"];
+      $("flags").innerHTML = names.map(name => `<span>${name}</span><span class="${state.control[name] ? "flag-on" : "flag-off"}">${state.control[name] ? "ON" : "OFF"}</span>`).join("");
+      $("regions").innerHTML = state.regions.map(region => `<tr data-region="${region.regionId}"><td>${region.regionId}</td><td>${region.gridX}, ${region.gridY}</td><td>${region.lifecycle}</td><td>${region.currentNpcCityCount ?? "—"}</td><td>${String(region.packageHash || "").slice(0, 10)}</td></tr>`).join("");
+      document.querySelectorAll("tr[data-region]").forEach(row => row.addEventListener("click", () => selectRegion(row.dataset.region)));
+    }
+    async function selectRegion(regionId) {
+      const region = state.regions.find(item => item.regionId === regionId);
+      const cities = await request(`${FIRESTORE}/generatedWorlds/${WORLD}/seasons/${SEASON}/regions/${regionId}/cities?pageSize=100`).catch(() => ({ documents: [] }));
+      state.selected = { ...region, cities: (cities.documents || []).map(documentData) };
+      const packageHash = region.packageHash;
+      const objectPath = `generated-worlds/v1/worlds/${WORLD}/seasons/${SEASON}/regions/${regionId}/packages/${packageHash}/map.webp`;
+      const url = `https://firebasestorage.googleapis.com/v0/b/${PROJECT}.firebasestorage.app/o/${encodeURIComponent(objectPath)}?alt=media`;
+      $("map").innerHTML = packageHash ? `<img alt="Generated staging region ${regionId}" src="${url}">` : "";
+      for (const city of state.selected.cities) {
+        const marker = document.createElement("span"); marker.className = "city";
+        marker.style.left = `${city.x / 1448 * 100}%`; marker.style.top = `${city.y / 1086 * 100}%`;
+        marker.title = `${city.cityId} — ${city.ownerType}`; $("map").append(marker);
+      }
+      $("selection").textContent = JSON.stringify({ regionId, lifecycle: region.lifecycle, packageHash, cityCount: state.selected.cities.length, runtimeTopology: region.runtimeTopology }, null, 2);
+    }
+    async function setControl(flag, enabled) {
+      await call(FUNCTIONS.control, "set-control", { flag, enabled, expectedRevision: state.control.revision });
+      await refresh();
+    }
+    $("connect").onclick = async () => { state.token = $("token").value.trim(); $("token").value = ""; try { await refresh(); } catch (e) { $("status").textContent = e.message; } };
+    $("refresh").onclick = () => refresh().catch(e => $("status").textContent = e.message);
+    $("stop").onclick = () => setControl("expansionEnabled", false).catch(e => $("status").textContent = e.message);
+    $("publish").onclick = () => state.selected && call(FUNCTIONS.publish, "publish", { regionId: state.selected.regionId, packageHash: state.selected.packageHash }).then(refresh).catch(e => $("status").textContent = e.message);
+    $("activate").onclick = () => state.selected && call(FUNCTIONS.activate, "activate", { regionId: state.selected.regionId, packageHash: state.selected.packageHash }).then(refresh).catch(e => $("status").textContent = e.message);
+  </script>
+</body>
+</html>

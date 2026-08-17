@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "phase9-real-security-rules-probe-v1",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "storage": {
+    "publicPublishedActiveMapStatus": 200,
+    "publicPublishedActiveHashVerified": true,
+    "authenticatedActiveMapStatus": 200,
+    "authenticatedActiveHashVerified": true,
+    "authenticatedStandbyMapStatus": 403,
+    "publicationMarkerRequired": true
+  },
+  "crossServiceRulesRole": "roles/firebaserules.firestoreServiceAgent",
+  "productionMutationPerformed": false,
+  "result": "PASS",
+  "completedAt": "2026-08-16T23:32:24.709Z"
+}

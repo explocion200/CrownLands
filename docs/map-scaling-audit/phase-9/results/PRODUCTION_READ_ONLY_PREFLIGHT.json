@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "phase9-read-only-production-preflight-v1",
+  "mode": "READ_ONLY",
+  "projectId": "crown-land-b15e0",
+  "allowedExternalMethods": [
+    "GET",
+    "POST_RUN_QUERY"
+  ],
+  "mutationMethodsPresent": false,
+  "productionBaseline": {
+    "mapCount": 15,
+    "cityDefinitionCount": 1050,
+    "directedMapChainCount": 210,
+    "generatedActiveRegionCount": 0,
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+  },
+  "rolloutControls": "NOT_PROVISIONED_EFFECTIVELY_OFF",
+  "generatedWorldCollections": {
+    "activeCatalogDocuments": 0,
+    "coordinateLockDocuments": 0,
+    "packageDocuments": 0,
+    "duplicateCoordinateDocumentNames": 0,
+    "duplicatePackageDocumentNames": 0
+  },
+  "pass": true,
+  "productionMutationPerformed": false,
+  "checkedAt": "2026-08-17T01:33:41.480Z"
+}

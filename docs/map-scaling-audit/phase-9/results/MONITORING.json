@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "phase9-staging-monitoring-result-v1",
+  "result": "PASS",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "metricType": "custom.googleapis.com/crownlands/phase9/signals",
+  "metricDescriptor": {
+    "created": false,
+    "exists": true
+  },
+  "policyCount": 14,
+  "policies": [
+    {
+      "signal": "generation_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/3413657253935886999",
+      "enabled": true
+    },
+    {
+      "signal": "retry_rate",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/3712082710694413282",
+      "enabled": true
+    },
+    {
+      "signal": "queue_age",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/10719920744285718648",
+      "enabled": true
+    },
+    {
+      "signal": "standby_buffer_below_2",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/6712777744629608220",
+      "enabled": true
+    },
+    {
+      "signal": "publication_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/6712777744629607115",
+      "enabled": true
+    },
+    {
+      "signal": "activation_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/3712082710694416326",
+      "enabled": true
+    },
+    {
+      "signal": "package_hash_mismatch",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/14482581321737630372",
+      "enabled": true
+    },
+    {
+      "signal": "edge_contract_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/10719920744285719225",
+      "enabled": true
+    },
+    {
+      "signal": "duplicate_coordinate",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/14547413266352529511",
+      "enabled": true
+    },
+    {
+      "signal": "storage_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/553485467948712705",
+      "enabled": true
+    },
+    {
+      "signal": "controller_heartbeat_missing",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/553485467948712865",
+      "enabled": true
+    },
+    {
+      "signal": "city_placement_failure",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/553485467948715284",
+      "enabled": true
+    },
+    {
+      "signal": "function_error",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/9540644862293061869",
+      "enabled": true
+    },
+    {
+      "signal": "firestore_transaction_abort",
+      "created": true,
+      "policyName": "projects/crownlands-map-staging-2026/alertPolicies/12395711017460934679",
+      "enabled": true
+    }
+  ],
+  "safeTriggerTest": {
+    "executed": true,
+    "triggeredSignalCount": 14,
+    "triggeredAt": "2026-08-16T22:44:16.755Z",
+    "resetToZero": true,
+    "productionSignalsEmitted": false
+  },
+  "notificationChannelsConfigured": false,
+  "notificationLimitation": "Policies create Cloud Monitoring incidents, but no external paging channel was authorized for this task.",
+  "productionMutationPerformed": false
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "phase9-staging-config-v1",
+  "environment": "STAGING",
+  "productionProjectId": "crown-land-b15e0",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "firestoreDatabaseId": "(default)",
+  "firestoreLocation": "nam5",
+  "storageLocation": "US-EAST1",
+  "storageBucket": "crownlands-map-staging-2026.firebasestorage.app",
+  "syntheticWorldId": "phase9_staging_world",
+  "syntheticSeasonId": "phase9_staging_season_2026",
+  "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+  "recommendedStandbyBuffer": 2,
+  "recommendedWorkerConcurrency": 2,
+  "roadPresentationCacheLimit": 12,
+  "staticPlayerRegionCityCapacity": 40,
+  "minimumNpcCitiesForSpawn": 15,
+  "initialFlags": {
+    "generatedWorldEnabled": false,
+    "generationEnabled": false,
+    "publicationEnabled": false,
+    "activationEnabled": false,
+    "expansionEnabled": false
+  },
+  "operatorConfirmations": {
+    "mutation": "PHASE9_STAGING_MUTATION:crownlands-map-staging-2026",
+    "destructiveCleanup": "PHASE9_DESTRUCTIVE_STAGING_CLEANUP:crownlands-map-staging-2026"
+  }
+}

@@ -1,0 +1,422 @@
+{
+  "schemaVersion": "phase9-real-staging-rehearsal-results-v1",
+  "environment": "STAGING",
+  "projectIdentity": {
+    "staging": {
+      "projectId": "crownlands-map-staging-2026",
+      "projectNumber": "292945299558",
+      "displayName": "Crownlands Phase 9 Staging"
+    },
+    "production": {
+      "projectId": "crown-land-b15e0",
+      "projectNumber": "542378516435",
+      "displayName": "Crown Land"
+    },
+    "distinctProjects": true
+  },
+  "productionMutationPerformed": false,
+  "stage0": {
+    "deployedControlsInitiallyOff": true,
+    "controls": {
+      "generatedWorldEnabled": false,
+      "generationEnabled": false,
+      "publicationEnabled": false,
+      "activationEnabled": false,
+      "expansionEnabled": false,
+      "revision": 18
+    },
+    "codeDeploymentChangedExistingWorld": false,
+    "bootstrap": {
+      "initialRevision": 18,
+      "expiresAt": "2026-08-17T02:19:23.888Z"
+    }
+  },
+  "identities": {
+    "syntheticOnly": true,
+    "productionPlayerDataCopied": false,
+    "adminUid": "qpk3oISbp2gMAmvYOiAVCmpzc6m2",
+    "playerCount": 3
+  },
+  "security": {
+    "unauthenticatedFirestoreWrite": {
+      "passed": true,
+      "status": 403
+    },
+    "normalPlayerControlWrite": {
+      "passed": true,
+      "status": 403
+    },
+    "forgedAdminAuthorityWrite": {
+      "passed": true,
+      "status": 403
+    },
+    "normalPlayerPrivilegedCallable": {
+      "passed": true,
+      "httpStatus": 403,
+      "callableStatus": "PERMISSION_DENIED",
+      "message": "A server-issued Crownlands staging-admin claim is required."
+    },
+    "malformedToken": {
+      "passed": true,
+      "httpStatus": 401,
+      "callableStatus": "UNAUTHENTICATED",
+      "message": "Unauthenticated"
+    },
+    "staleAdminRevision": {
+      "passed": true,
+      "httpStatus": 403,
+      "callableStatus": "PERMISSION_DENIED",
+      "message": "The server-side staging-admin authority is inactive or stale."
+    },
+    "revokedAdminAuthority": {
+      "passed": true,
+      "httpStatus": 403,
+      "callableStatus": "PERMISSION_DENIED",
+      "message": "The server-side staging-admin authority is inactive or stale."
+    },
+    "controlsOffBlockAllocation": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "generatedWorldEnabled is OFF."
+    },
+    "publicationOff": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "publicationEnabled is OFF."
+    },
+    "activationOff": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "activationEnabled is OFF."
+    },
+    "generationKillSwitch": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "generationEnabled is OFF."
+    },
+    "expansionKillSwitch": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "expansionEnabled is OFF."
+    },
+    "publicationKillSwitch": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "publicationEnabled is OFF."
+    },
+    "activationKillSwitch": {
+      "passed": true,
+      "httpStatus": 400,
+      "callableStatus": "FAILED_PRECONDITION",
+      "message": "activationEnabled is OFF."
+    },
+    "wrongEnvironmentClaim": {
+      "passed": true,
+      "httpStatus": 403,
+      "callableStatus": "PERMISSION_DENIED",
+      "message": "A synthetic staging identity is required."
+    },
+    "belowThresholdPlacement": {
+      "passed": true,
+      "httpStatus": 429,
+      "callableStatus": "RESOURCE_EXHAUSTED",
+      "message": "The authoritative NPC-city threshold blocks new placement."
+    },
+    "adminClientDirectLifecycleWrite": {
+      "passed": true,
+      "status": 403
+    },
+    "normalPlayerStandbyRead": {
+      "passed": true
+    },
+    "normalPlayerActiveRead": {
+      "passed": true
+    }
+  },
+  "seasonBootstrap": {
+    "coreRegionCount": 25,
+    "coreSpawnEligibleCount": 0,
+    "objectiveStateInitialized": true
+  },
+  "lifecycle": {
+    "activePlayerRegions": [
+      "phase6d_region_0001",
+      "phase6d_region_0002",
+      "phase6d_region_0003"
+    ],
+    "standbyPlayerRegions": [
+      "phase6d_region_0004",
+      "phase6d_region_0005"
+    ],
+    "publicationCount": 3,
+    "activationCount": 3,
+    "publicationObjectVerificationCount": [
+      9,
+      9,
+      9
+    ],
+    "exactlyFortyInitialized": true,
+    "edgeContractDocumentCount": 12,
+    "openEdges": [
+      {
+        "from": "phase6d_region_0001",
+        "side": "east",
+        "to": "phase6d_region_0002"
+      },
+      {
+        "from": "phase6d_region_0002",
+        "side": "east",
+        "to": "phase6d_region_0003"
+      },
+      {
+        "from": "phase6d_region_0002",
+        "side": "south",
+        "to": "phase9_core_n2_n2"
+      },
+      {
+        "from": "phase6d_region_0002",
+        "side": "west",
+        "to": "phase6d_region_0001"
+      },
+      {
+        "from": "phase6d_region_0003",
+        "side": "south",
+        "to": "phase9_core_n1_n2"
+      },
+      {
+        "from": "phase6d_region_0003",
+        "side": "west",
+        "to": "phase6d_region_0002"
+      }
+    ],
+    "hiddenOpenTargetCount": 0
+  },
+  "spawnThreshold": {
+    "initialNpcCities": 40,
+    "claimAllowedAtNpcBefore": 15,
+    "npcAfterBoundaryClaim": 14,
+    "spawnEligibleAfterBoundaryClaim": false,
+    "subsequentClaimRejected": true,
+    "existingOwnershipAndTravelPreserved": true,
+    "simultaneousSameCityClaim": {
+      "successes": 1,
+      "rejections": 1
+    }
+  },
+  "workers": {
+    "recommendedConcurrency": 2,
+    "workerCountUsed": 2,
+    "generationMs": [
+      102.16699999999946,
+      67.79030000000057,
+      84.88190000000031,
+      58.513099999996484,
+      54.85190000000148
+    ],
+    "uploadMs": [
+      2451.3072999999968,
+      2211.8120999999956,
+      2189.8796,
+      1827.7669999999998,
+      1930.288499999995
+    ],
+    "totalUploadBytes": 1899161,
+    "processMemoryMiB": 100.3828125,
+    "retries": 0,
+    "failures": 0,
+    "roadCache": {
+      "limit": 12,
+      "entries": 4,
+      "hits": 1,
+      "misses": 4,
+      "evictions": 0,
+      "hitRate": 0.2
+    }
+  },
+  "controls": {
+    "propagationMeasurements": [
+      {
+        "revision": 19,
+        "propagationMs": 456.33520000000135,
+        "flag": "generatedWorldEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 20,
+        "propagationMs": 448.4506000000001,
+        "flag": "generationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 21,
+        "propagationMs": 439.72360000000117,
+        "flag": "expansionEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 22,
+        "propagationMs": 749.5161000000007,
+        "flag": "publicationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 23,
+        "propagationMs": 591.7180000000008,
+        "flag": "activationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 24,
+        "propagationMs": 540.0236000000004,
+        "flag": "generationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 25,
+        "propagationMs": 479.79419999999664,
+        "flag": "generationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 26,
+        "propagationMs": 659.9395000000004,
+        "flag": "expansionEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 27,
+        "propagationMs": 428.61640000000625,
+        "flag": "expansionEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 28,
+        "propagationMs": 736.6448000000019,
+        "flag": "publicationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 29,
+        "propagationMs": 385.8610000000044,
+        "flag": "publicationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 30,
+        "propagationMs": 397.47380000000703,
+        "flag": "activationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 31,
+        "propagationMs": 362.94660000000295,
+        "flag": "activationEnabled",
+        "enabled": true
+      },
+      {
+        "revision": 32,
+        "propagationMs": 460.4331000000093,
+        "flag": "expansionEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 33,
+        "propagationMs": 506.0482999999949,
+        "flag": "activationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 34,
+        "propagationMs": 395.79210000000603,
+        "flag": "publicationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 35,
+        "propagationMs": 515.1415000000125,
+        "flag": "generationEnabled",
+        "enabled": false
+      },
+      {
+        "revision": 36,
+        "propagationMs": 483.59859999999753,
+        "flag": "generatedWorldEnabled",
+        "enabled": false
+      }
+    ],
+    "gameplayDuringGenerationOff": {
+      "environment": "STAGING",
+      "projectId": "crownlands-map-staging-2026",
+      "regionId": "phase6d_region_0001",
+      "cityId": "npc_phase6d_region_0001_08a0f87f765cae",
+      "npcBefore": 39,
+      "npcAfter": 38,
+      "subsequentSpawnEligible": true,
+      "controlRevision": 24
+    },
+    "gameplayDuringExpansionOff": {
+      "environment": "STAGING",
+      "projectId": "crownlands-map-staging-2026",
+      "regionId": "phase6d_region_0001",
+      "cityId": "npc_phase6d_region_0001_09599882199968",
+      "npcBefore": 38,
+      "npcAfter": 37,
+      "subsequentSpawnEligible": true,
+      "controlRevision": 26
+    },
+    "independentKillSwitchesPassed": true,
+    "final": {
+      "revision": 36,
+      "activationEnabled": false,
+      "generationEnabled": false,
+      "environment": "STAGING",
+      "recommendedStandbyBuffer": 2,
+      "updatedBy": "qpk3oISbp2gMAmvYOiAVCmpzc6m2",
+      "generatedWorldEnabled": false,
+      "publicationEnabled": false,
+      "schemaVersion": "phase9-staging-controls-v1",
+      "updatedAt": "2026-08-16T22:20:35.433Z",
+      "expansionEnabled": false
+    }
+  },
+  "storage": {
+    "bucket": "crownlands-map-staging-2026.firebasestorage.app",
+    "packageCount": 5,
+    "immutableObjectCount": 45,
+    "overwriteRejected": true,
+    "firstMapHashVerified": true,
+    "firstFetchMs": 537.1962000000058,
+    "conditionalRepeatStatus": 304,
+    "conditionalRepeatMs": 423.06870000000345,
+    "cacheControl": "public, max-age=31536000, immutable",
+    "etagPresent": true,
+    "hashSpecificUrl": true,
+    "overwriteAttemptMs": 1408.6416999999929
+  },
+  "standbyBuffer": {
+    "target": 2,
+    "finalCount": 2,
+    "replenishedAfterThreeActivations": true
+  },
+  "audit": {
+    "entryCount": 78,
+    "actions": [
+      "activate",
+      "allocate",
+      "claim-city",
+      "publish",
+      "set-control",
+      "transition"
+    ],
+    "unnecessaryPlayerPersonalDataLogged": false
+  },
+  "durationMs": 76825.3759,
+  "productionDeploymentPerformed": false,
+  "productionExpansionEnabled": false
+}

@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /generated-worlds/v1/worlds/{worldId}/seasons/{seasonId}/regions/{regionId}/packages/{packageHash}/{filePath=**} {
+      allow read: if resource != null
+        && resource.metadata.packageHash == packageHash
+        && resource.metadata.environment == 'STAGING'
+        && resource.metadata.immutable == 'true'
+        && firestore.exists(/databases/(default)/documents/generatedWorlds/$(worldId)/seasons/$(seasonId)/publicationMarkers/$(regionId));
+      allow create, update, delete: if false;
+    }
+
+    match /phase9-backups/{filePath=**} {
+      allow read, write: if false;
+    }
+
+    match /{filePath=**} {
+      allow read, write: if false;
+    }
+  }
+}

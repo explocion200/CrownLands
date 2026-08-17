@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "phase9-physical-device-qa-v1",
+  "environment": "STAGING",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "desktop": {
+    "browser": "Chrome desktop through the Codex browser bridge",
+    "studioUrl": "https://crownlands-map-staging-2026.web.app/",
+    "stagingBannerVerified": true,
+    "studioDomAndVisualInspection": "PASS",
+    "credentialsPersisted": false
+  },
+  "android": {
+    "status": "NOT_RUN",
+    "reason": "No physical Android device was attached or available."
+  },
+  "iphone": {
+    "status": "NOT_RUN",
+    "reason": "No physical iPhone was attached or available."
+  },
+  "emulationAcceptedAsSubstitute": false,
+  "requiredGatePassed": false,
+  "productionMutationPerformed": false,
+  "result": "BLOCKED_REQUIRED_QA"
+}

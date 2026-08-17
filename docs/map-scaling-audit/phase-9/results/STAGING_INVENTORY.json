@@ -1,0 +1,262 @@
+{
+  "schemaVersion": "phase9-staging-inventory-v1",
+  "capturedAt": "2026-08-16T23:32:25.397Z",
+  "environment": "STAGING",
+  "stagingProject": {
+    "projectId": "crownlands-map-staging-2026",
+    "projectNumber": "292945299558",
+    "displayName": "Crownlands Phase 9 Staging"
+  },
+  "productionIdentityUsedForGuardOnly": {
+    "projectId": "crown-land-b15e0",
+    "projectNumber": "542378516435",
+    "displayName": "Crown Land"
+  },
+  "projectsAreDistinct": true,
+  "firestore": {
+    "name": "projects/crownlands-map-staging-2026/databases/(default)",
+    "locationId": "nam5",
+    "type": "FIRESTORE_NATIVE",
+    "concurrencyMode": "PESSIMISTIC",
+    "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_ENABLED",
+    "versionRetentionPeriod": "604800s",
+    "deleteProtectionState": "DELETE_PROTECTION_ENABLED",
+    "backupSchedules": [
+      {
+        "name": "projects/crownlands-map-staging-2026/databases/(default)/backupSchedules/b332c0b7-5275-4a27-9550-b53fad39e6f5",
+        "createTime": "2026-08-16T22:21:53.101229Z",
+        "retention": "604800s",
+        "dailyRecurrence": {},
+        "updateTime": "2026-08-16T22:21:53.101229Z"
+      }
+    ]
+  },
+  "storage": {
+    "name": "crownlands-map-staging-2026.firebasestorage.app",
+    "location": "US-EAST1",
+    "versioning": {
+      "enabled": true
+    },
+    "uniformBucketLevelAccess": {
+      "enabled": true,
+      "lockedTime": "2026-11-14T21:37:34.412Z"
+    },
+    "cors": [
+      {
+        "origin": [
+          "http://localhost:4173",
+          "https://crownlands-map-staging-2026.web.app"
+        ],
+        "method": [
+          "GET",
+          "HEAD"
+        ],
+        "responseHeader": [
+          "Content-Type",
+          "Cache-Control",
+          "ETag",
+          "x-goog-generation"
+        ],
+        "maxAgeSeconds": 3600
+      }
+    ]
+  },
+  "functions": [
+    {
+      "name": "phase9ActivateRegion",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-activation@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9activateregion-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9AllocateRegion",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-generation@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9allocateregion-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9ClaimCity",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-activation@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9claimcity-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9Health",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-monitoring@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9health-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9PublishRegion",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-publication@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9publishregion-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9SetControl",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-operator@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9setcontrol-jn7uhvm6yq-uc.a.run.app"
+    },
+    {
+      "name": "phase9TransitionRegion",
+      "state": "ACTIVE",
+      "environment": "GEN_2",
+      "runtime": "nodejs22",
+      "serviceAccountEmail": "phase9-generation@crownlands-map-staging-2026.iam.gserviceaccount.com",
+      "availableMemory": "1024Mi",
+      "maxInstanceCount": 2,
+      "maxInstanceRequestConcurrency": 1,
+      "timeoutSeconds": 540,
+      "uri": "https://phase9transitionregion-jn7uhvm6yq-uc.a.run.app"
+    }
+  ],
+  "iam": {
+    "rolesByServiceAccount": {
+      "phase9-generation@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.user",
+        "roles/firebaseauth.viewer",
+        "roles/logging.logWriter",
+        "roles/storage.objectCreator"
+      ],
+      "phase9-publication@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.user",
+        "roles/firebaseauth.viewer",
+        "roles/logging.logWriter",
+        "roles/storage.objectViewer"
+      ],
+      "phase9-activation@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.user",
+        "roles/firebaseauth.viewer",
+        "roles/logging.logWriter"
+      ],
+      "phase9-backup@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.importExportAdmin",
+        "roles/logging.logWriter",
+        "roles/storage.objectAdmin"
+      ],
+      "phase9-monitoring@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.viewer",
+        "roles/logging.logWriter",
+        "roles/monitoring.metricWriter"
+      ],
+      "phase9-operator@crownlands-map-staging-2026.iam.gserviceaccount.com": [
+        "roles/datastore.user",
+        "roles/firebaseauth.viewer",
+        "roles/logging.logWriter"
+      ]
+    },
+    "broadOwnerOrEditorAssignedToPhase9Accounts": false,
+    "crossServiceRules": {
+      "serviceAccount": "service-292945299558@gcp-sa-firebasestorage.iam.gserviceaccount.com",
+      "role": "roles/firebaserules.firestoreServiceAgent",
+      "enabled": true
+    }
+  },
+  "auth": {
+    "anonymousEnabled": true,
+    "webApps": [
+      {
+        "name": "projects/crownlands-map-staging-2026/webApps/1:292945299558:web:1625aa209a8d38471645a7",
+        "displayName": "Crownlands Phase 9 Staging QA",
+        "platform": "WEB",
+        "appId": "1:292945299558:web:1625aa209a8d38471645a7",
+        "namespace": "ZWI2NTYxZjItYjhjYy00ZmNiLTgzNzItMDI5YjI1NTdmNjVl",
+        "apiKeyId": "9ef947d1-9921-4fe2-882c-557e6ade3e96",
+        "state": "ACTIVE",
+        "expireTime": "1970-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "monitoring": {
+    "phase9AlertPolicyCount": 14,
+    "allEnabled": true
+  },
+  "billing": {
+    "enabled": true,
+    "budgetName": "billingAccounts/01E8A8-279C20-29E91F/budgets/6a1600b3-7044-483d-94b2-f95d78887fe6",
+    "budgetUsd": 25,
+    "thresholdRules": [
+      {
+        "thresholdPercent": 0.5,
+        "spendBasis": "CURRENT_SPEND"
+      },
+      {
+        "thresholdPercent": 0.8,
+        "spendBasis": "CURRENT_SPEND"
+      },
+      {
+        "thresholdPercent": 1,
+        "spendBasis": "CURRENT_SPEND"
+      },
+      {
+        "thresholdPercent": 1,
+        "spendBasis": "FORECASTED_SPEND"
+      }
+    ],
+    "actualCostAvailability": "Cloud Billing budget APIs expose configuration, not same-day incurred-cost totals; billing export was not authorized/configured."
+  },
+  "stagingWorld": {
+    "regionCount": 30,
+    "lifecycleCounts": {
+      "ACTIVE": 28,
+      "STANDBY": 2
+    },
+    "immutablePackageRecords": 5,
+    "publicationMarkers": 3,
+    "auditEntries": 85,
+    "syntheticOnly": true
+  },
+  "controls": {
+    "environment": "STAGING",
+    "revision": 36,
+    "updatedAt": "2026-08-16T22:20:35.433Z",
+    "expansionEnabled": false,
+    "recommendedStandbyBuffer": 2,
+    "schemaVersion": "phase9-staging-controls-v1",
+    "generatedWorldEnabled": false,
+    "updatedBy": "qpk3oISbp2gMAmvYOiAVCmpzc6m2",
+    "generationEnabled": false,
+    "publicationEnabled": false,
+    "activationEnabled": false
+  },
+  "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+  "productionMutationPerformed": false,
+  "result": "PASS"
+}
