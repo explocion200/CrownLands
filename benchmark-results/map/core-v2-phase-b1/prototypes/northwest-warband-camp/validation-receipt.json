@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-b1-west-northwest-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-warband-camp-m2-m2",
+  "coordinate": {
+    "gridX": -2,
+    "gridY": -2,
+    "worldLayer": 0
+  },
+  "mapType": "WARBAND_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "northwest-warband-camp",
+    "themeKey": "north",
+    "variantKey": "a",
+    "roadGeometryId": "north-v3",
+    "retrySalt": "core-v2-b1-warband-cold-churned-frontier-v1",
+    "identity": "light-winter battlefield frontier with pale trampled ground and restrained military traces",
+    "objectiveArt": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+    "objectiveLabel": "Warband Camp",
+    "objectiveOffset": {
+      "x": -24,
+      "y": -8
+    },
+    "transitionSides": [
+      "south"
+    ],
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "churned winter ground",
+        "broken barricade trace",
+        "sparse damaged field edge",
+        "winter vegetation"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "15622b9928916c2d6aeea2eb53843283538aee381e1faf4840383dffb0aba3bf",
+  "compositionPlanHash": "aca1e7dc18ab2a0d27bc31870a5043404b83773057657858f444f52131c9217d",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 69.354,
+    "preferredSpacingViolations": 4,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 25.298221281347036
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 5,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-b1-v1",
+    "seedHash": "cd77467fcf8d2be10fc164e3c92a5e167d8ff75353b022c86de73a6abaf68a00",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1122,
+    "rejectedByReason": {
+      "edge_clearance": 30,
+      "outside_land": 576,
+      "road_clearance": 717,
+      "terrain_blocker": 316,
+      "objective_clearance": 229
+    },
+    "selectedTrial": 242,
+    "selectionTrialLimit": 256,
+    "minimumObservedSpacing": 69.354,
+    "meanNearestNeighbor": 85.1,
+    "preferredSpacingViolations": 4,
+    "quadrantCounts": [
+      15,
+      12,
+      14,
+      14
+    ]
+  },
+  "receiptHash": "c48fcc82ca22aae2c86d5534ae6698d2c71188cd534de86f551da62675c180cc"
+}

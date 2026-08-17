@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "phase": "Core v2 Phase B1",
+  "batchVersion": "core-v2-phase-b1-west-northwest-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "approvedBase": "8909aeee24aa99ecb58851c41eccac36815b4a54",
+  "exactBatchMapCount": 5,
+  "exactBatchCityCapacity": 280,
+  "exactCoreRegionCount": 25,
+  "exactCoreCityCapacity": 1480,
+  "prototypes": [
+    {
+      "key": "northwest-warband-camp",
+      "regionId": "core-v2-warband-camp-m2-m2",
+      "name": "Warband Camp",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "WARBAND_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "warband",
+        "x": 700,
+        "y": 535,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": -24,
+          "y": -8
+        }
+      },
+      "profile": {
+        "key": "northwest-warband-camp",
+        "themeKey": "north",
+        "variantKey": "a",
+        "roadGeometryId": "north-v3",
+        "retrySalt": "core-v2-b1-warband-cold-churned-frontier-v1",
+        "identity": "light-winter battlefield frontier with pale trampled ground and restrained military traces",
+        "objectiveArt": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+        "objectiveLabel": "Warband Camp",
+        "objectiveOffset": {
+          "x": -24,
+          "y": -8
+        },
+        "transitionSides": [
+          "south"
+        ],
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "churned winter ground",
+            "broken barricade trace",
+            "sparse damaged field edge",
+            "winter vegetation"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-north-west-m1-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "aca1e7dc18ab2a0d27bc31870a5043404b83773057657858f444f52131c9217d",
+      "cityPlanHash": "15622b9928916c2d6aeea2eb53843283538aee381e1faf4840383dffb0aba3bf",
+      "validationReceiptHash": "c48fcc82ca22aae2c86d5534ae6698d2c71188cd534de86f551da62675c180cc",
+      "cleanMapSha256": "d511cdddfb98b1d518cc00378c964e62819f0dd038732ddb9cd9d521020c25d8",
+      "mapWebpSha256": "0af61df7a93a9d81f4bfa00049475befa8d5772d25359ae8877a38f6d40cc6c8",
+      "thumbnailSha256": "1ba2d00d090a09fda51ba6f8c92be4418605e6993edab44e3e6b2d2da310c444",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-b1/prototypes/northwest-warband-camp"
+    },
+    {
+      "key": "northwest-relic-camp",
+      "regionId": "core-v2-relic-camp-north-west-m1-m2",
+      "name": "Relic Camp North-West",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -2,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_light_winter",
+        "renderTheme": "north",
+        "transition": "north edge blend"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 742,
+        "y": 526,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": 18,
+          "y": -17
+        }
+      },
+      "profile": {
+        "key": "northwest-relic-camp",
+        "themeKey": "north",
+        "variantKey": "b",
+        "roadGeometryId": "east-v2",
+        "retrySalt": "core-v2-b1-northern-relic-weathered-stones-v1",
+        "identity": "frost-worn sacred territory with small old-stone and archaeological cues",
+        "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+        "objectiveLabel": "Relic Camp",
+        "objectiveOffset": {
+          "x": 18,
+          "y": -17
+        },
+        "transitionSides": [
+          "south"
+        ],
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "weathered stone remnant",
+            "frost-worn foundation",
+            "restrained burial mound",
+            "sparse winter vegetation"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-support-p0-m2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-m2-m2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "07d8f70b209a3acfb0e5790cd298830a5796dee7898a324d1d74dcd427eabb36",
+      "cityPlanHash": "b6a4e988bc770f23c3998c02fb0f1303e00e03ec5d6a26f7deefd2bdf0f50ca6",
+      "validationReceiptHash": "b7f31bf3ed594bd995a3bd29df4e14267fd51665492381d51b906d52502db33a",
+      "cleanMapSha256": "ed306c19cfb72c0c1f916870998d18c7f254fb97d70ffbe36cbad1ac4eed805b",
+      "mapWebpSha256": "21f12e83454cac25d8168afddf38e3ac91b271c96092904b04c9d7673d4090e1",
+      "thumbnailSha256": "7668170982175fbda8df3d447455dc72e20686a22bdbf097e6646f3a4958dd4f",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-b1/prototypes/northwest-relic-camp"
+    },
+    {
+      "key": "west-north-relic-camp",
+      "regionId": "core-v2-relic-camp-west-north-m2-m1",
+      "name": "Relic Camp West-North",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "west_north_transition",
+        "renderTheme": "west",
+        "transition": "west grassy"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 706,
+        "y": 556,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": -18,
+          "y": 13
+        }
+      },
+      "profile": {
+        "key": "west-north-relic-camp",
+        "themeKey": "west",
+        "accentThemeKey": "north",
+        "variantKey": "a",
+        "roadGeometryId": "west-v2",
+        "retrySalt": "core-v2-b1-transitional-relic-grass-and-stone-v1",
+        "identity": "grassier western Relic territory with cool northern stone and restrained sacred ruins",
+        "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+        "objectiveLabel": "Relic Camp",
+        "objectiveOffset": {
+          "x": -18,
+          "y": 13
+        },
+        "transitionSides": [
+          "north",
+          "south",
+          "east"
+        ],
+        "edgeThemeOverrides": {
+          "north": "north"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "western sacred-stone cluster",
+            "old countryside foundation",
+            "cool rock trace",
+            "restrained grassland"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-m2-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "816c9a97ffb23f511c1c279450e252e12b29ca96d055b0c92c3d5ba305025197",
+      "cityPlanHash": "9f89a9b45da4603d1bbc405a832107ce50610193b9d0cdf7bf694cd0feac7bfa",
+      "validationReceiptHash": "2d5d3b5637fbefea059671dfa720e2db2008aff239d14472b8244949ea0f1c67",
+      "cleanMapSha256": "ff54b05ba710315204ddb2419b040723c454f08df09768baff6bae938b3b13df",
+      "mapWebpSha256": "934c9777fc58c9167fec00f5c783ef13aee7b5b1798ccbd65a9d2f40762c94b1",
+      "thumbnailSha256": "d569ebdb5657f1e8d11cdaa86a89b1ba363df326581890713aa565e42c65ff34",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-b1/prototypes/west-north-relic-camp"
+    },
+    {
+      "key": "northwest-holding-tower",
+      "regionId": "core-v2-north-west-holding-tower-m1-m1",
+      "name": "North-West Holding Tower",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "north_center_transition",
+        "renderTheme": "north",
+        "transition": "north to center"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 736,
+        "y": 552,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true,
+        "placementPolicy": "near_center_reservation",
+        "offsetFromCenter": {
+          "x": 12,
+          "y": 9
+        }
+      },
+      "profile": {
+        "key": "northwest-holding-tower",
+        "themeKey": "north",
+        "accentThemeKey": "west",
+        "variantKey": "a",
+        "roadGeometryId": "north-v2",
+        "retrySalt": "core-v2-b1-tower-contested-cold-frontier-v1",
+        "identity": "contested west-north military frontier with an open future Holding Tower reserve",
+        "objectiveArt": null,
+        "objectiveLabel": "Future Holding Tower reservation",
+        "objectiveOffset": {
+          "x": 12,
+          "y": 9
+        },
+        "transitionSides": [
+          "west",
+          "south"
+        ],
+        "edgeThemeOverrides": {
+          "west": "west",
+          "south": "west"
+        },
+        "propPlan": {
+          "majorClusters": 0,
+          "mediumClusters": 3,
+          "cueAssignments": [
+            "scarred field trace",
+            "low defensive earthwork",
+            "old barricade trace",
+            "open military road ground"
+          ],
+          "centralTreatment": "reservation-clear"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-north-west-m1-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-greybanner-hold-p0-m1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-aurum-keep-m1-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-west-north-m2-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "d9694c52b5381fe82adae8409c77c3d7fd014874f872877d175741ed931e653c",
+      "cityPlanHash": "93966fc754733c45184d1850269b2e11b8e217e69a47ab58b666c94d7b52e5ba",
+      "validationReceiptHash": "f04ebdbd87e90461c92b6c7dd74e3828c231363c4aac582349e4bf82f41b4cfb",
+      "cleanMapSha256": "394d97ffdc93e67ee4a7d72719098ad72eee10603b8704958a7a20c02547c649",
+      "mapWebpSha256": "6fb272bdca8a6de4328da54dabba17ca1735518bcf7b3923467ee80aee154975",
+      "thumbnailSha256": "7e046c41d96915a9eae8cc9471d67982234a47a19792f618d8459ed7bd35aa6e",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-b1/prototypes/northwest-holding-tower"
+    },
+    {
+      "key": "aurum-keep",
+      "regionId": "core-v2-aurum-keep-m1-p0",
+      "name": "Aurum Keep",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "west_center_transition",
+        "renderTheme": "west",
+        "transition": "west to center"
+      },
+      "objective": {
+        "type": "gold_production",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28,
+        "placementPolicy": "exact_center",
+        "offsetFromCenter": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "profile": {
+        "key": "aurum-keep",
+        "themeKey": "west",
+        "variantKey": "b",
+        "roadGeometryId": "east-v3",
+        "retrySalt": "core-v2-b1-aurum-productive-western-estate-v1",
+        "identity": "prosperous western productive territory with restrained managed fields and estate cues",
+        "objectiveArt": "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp",
+        "objectiveLabel": "Aurum Keep",
+        "objectiveOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "transitionSides": [],
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "managed farmland",
+            "small orchard/estate cue",
+            "supply ground",
+            "open rich grassland"
+          ],
+          "centralTreatment": "centered-stronghold-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-west-holding-tower-m1-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-west-support-m2-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "f4d03bb2cd744aabc267f42015d70ef449dcd8ed7bea0c66543f7d7dfc8de3c4",
+      "cityPlanHash": "de0506a0c57332520b14ee97dd13a7cd42a21de8695168e8bc1250fa80cbd935",
+      "validationReceiptHash": "a1f22c683cc32f4796715db61432ff86b7637d0384c9caba8ea36cb9360aad21",
+      "cleanMapSha256": "5be92519a8d9c7aebdffc6886c9a27b71be7b4236f91b369d5ff4db3c793d066",
+      "mapWebpSha256": "f590555601f615b957c05aa04397c61ef368d588c5487a52156d9b4352f3c590",
+      "thumbnailSha256": "eeb1c5182bbd61040834927594c176c70a701d8450c62b8223ef7873499d0b8f",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-b1/prototypes/aurum-keep"
+    }
+  ],
+  "indexHash": "59115c556943885bf0b9f7da9feb2483b4ef62518729e93d02a3d5a2bb97b0a3"
+}

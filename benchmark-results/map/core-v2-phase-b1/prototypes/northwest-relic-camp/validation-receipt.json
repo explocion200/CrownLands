@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-b1-west-northwest-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-relic-camp-north-west-m1-m2",
+  "coordinate": {
+    "gridX": -1,
+    "gridY": -2,
+    "worldLayer": 0
+  },
+  "mapType": "RELIC_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "northwest-relic-camp",
+    "themeKey": "north",
+    "variantKey": "b",
+    "roadGeometryId": "east-v2",
+    "retrySalt": "core-v2-b1-northern-relic-weathered-stones-v1",
+    "identity": "frost-worn sacred territory with small old-stone and archaeological cues",
+    "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+    "objectiveLabel": "Relic Camp",
+    "objectiveOffset": {
+      "x": 18,
+      "y": -17
+    },
+    "transitionSides": [
+      "south"
+    ],
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "weathered stone remnant",
+        "frost-worn foundation",
+        "restrained burial mound",
+        "sparse winter vegetation"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "b6a4e988bc770f23c3998c02fb0f1303e00e03ec5d6a26f7deefd2bdf0f50ca6",
+  "compositionPlanHash": "07d8f70b209a3acfb0e5790cd298830a5796dee7898a324d1d74dcd427eabb36",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.264,
+    "preferredSpacingViolations": 2,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 24.758836806279895
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 7,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 2,
+        "south": 1,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-b1-v1",
+    "seedHash": "5abb6da7154c4238039c61aa81127b7a3d9b4be8731e9f4b15a2c0af6c7994ca",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1121,
+    "rejectedByReason": {
+      "outside_land": 529,
+      "terrain_blocker": 328,
+      "road_clearance": 694,
+      "objective_clearance": 231
+    },
+    "selectedTrial": 80,
+    "selectionTrialLimit": 256,
+    "minimumObservedSpacing": 68.264,
+    "meanNearestNeighbor": 86.114,
+    "preferredSpacingViolations": 2,
+    "quadrantCounts": [
+      11,
+      15,
+      15,
+      14
+    ]
+  },
+  "receiptHash": "b7f31bf3ed594bd995a3bd29df4e14267fd51665492381d51b906d52502db33a"
+}

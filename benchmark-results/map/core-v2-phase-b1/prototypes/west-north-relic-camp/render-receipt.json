@@ -1,0 +1,34 @@
+{
+  "renderer": "phase6d-pillow-modular-v1",
+  "pillowVersion": "12.3.0",
+  "quality": 84,
+  "method": 6,
+  "transitionBandCount": 3,
+  "cleanPng": {
+    "path": "map-clean.png",
+    "width": 1448,
+    "height": 1086,
+    "mode": "RGB",
+    "opaque": true,
+    "bytes": 2624638,
+    "sha256": "ff54b05ba710315204ddb2419b040723c454f08df09768baff6bae938b3b13df"
+  },
+  "map": {
+    "path": "map.webp",
+    "width": 1448,
+    "height": 1086,
+    "mode": "RGB",
+    "opaque": true,
+    "bytes": 239436,
+    "sha256": "934c9777fc58c9167fec00f5c783ef13aee7b5b1798ccbd65a9d2f40762c94b1"
+  },
+  "thumbnail": {
+    "path": "thumbnail.webp",
+    "width": 320,
+    "height": 240,
+    "mode": "RGB",
+    "opaque": true,
+    "bytes": 15214,
+    "sha256": "d569ebdb5657f1e8d11cdaa86a89b1ba363df326581890713aa565e42c65ff34"
+  }
+}

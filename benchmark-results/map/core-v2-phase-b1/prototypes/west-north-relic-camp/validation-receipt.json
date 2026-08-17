@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-b1-west-northwest-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-relic-camp-west-north-m2-m1",
+  "coordinate": {
+    "gridX": -2,
+    "gridY": -1,
+    "worldLayer": 0
+  },
+  "mapType": "RELIC_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "west-north-relic-camp",
+    "themeKey": "west",
+    "accentThemeKey": "north",
+    "variantKey": "a",
+    "roadGeometryId": "west-v2",
+    "retrySalt": "core-v2-b1-transitional-relic-grass-and-stone-v1",
+    "identity": "grassier western Relic territory with cool northern stone and restrained sacred ruins",
+    "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+    "objectiveLabel": "Relic Camp",
+    "objectiveOffset": {
+      "x": -18,
+      "y": 13
+    },
+    "transitionSides": [
+      "north",
+      "south",
+      "east"
+    ],
+    "edgeThemeOverrides": {
+      "north": "north"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "western sacred-stone cluster",
+        "old countryside foundation",
+        "cool rock trace",
+        "restrained grassland"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "9f89a9b45da4603d1bbc405a832107ce50610193b9d0cdf7bf694cd0feac7bfa",
+  "compositionPlanHash": "816c9a97ffb23f511c1c279450e252e12b29ca96d055b0c92c3d5ba305025197",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.352,
+    "preferredSpacingViolations": 2,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 22.203603311174515
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 5,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 3,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-b1-v1",
+    "seedHash": "72711587eaa6d49ff02750c47a1356c0599fea44739aaecd05fef4a6b431453c",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1137,
+    "rejectedByReason": {
+      "outside_land": 553,
+      "terrain_blocker": 347,
+      "road_clearance": 679,
+      "objective_clearance": 228
+    },
+    "selectedTrial": 198,
+    "selectionTrialLimit": 256,
+    "minimumObservedSpacing": 68.352,
+    "meanNearestNeighbor": 81.634,
+    "preferredSpacingViolations": 2,
+    "quadrantCounts": [
+      12,
+      14,
+      14,
+      15
+    ]
+  },
+  "receiptHash": "2d5d3b5637fbefea059671dfa720e2db2008aff239d14472b8244949ea0f1c67"
+}

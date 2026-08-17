@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-b1-west-northwest-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-north-west-holding-tower-m1-m1",
+  "coordinate": {
+    "gridX": -1,
+    "gridY": -1,
+    "worldLayer": 0
+  },
+  "mapType": "HOLDING_TOWER",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "northwest-holding-tower",
+    "themeKey": "north",
+    "accentThemeKey": "west",
+    "variantKey": "a",
+    "roadGeometryId": "north-v2",
+    "retrySalt": "core-v2-b1-tower-contested-cold-frontier-v1",
+    "identity": "contested west-north military frontier with an open future Holding Tower reserve",
+    "objectiveArt": null,
+    "objectiveLabel": "Future Holding Tower reservation",
+    "objectiveOffset": {
+      "x": 12,
+      "y": 9
+    },
+    "transitionSides": [
+      "west",
+      "south"
+    ],
+    "edgeThemeOverrides": {
+      "west": "west",
+      "south": "west"
+    },
+    "propPlan": {
+      "majorClusters": 0,
+      "mediumClusters": 3,
+      "cueAssignments": [
+        "scarred field trace",
+        "low defensive earthwork",
+        "old barricade trace",
+        "open military road ground"
+      ],
+      "centralTreatment": "reservation-clear"
+    }
+  },
+  "cityPlanHash": "93966fc754733c45184d1850269b2e11b8e217e69a47ab58b666c94d7b52e5ba",
+  "compositionPlanHash": "d9694c52b5381fe82adae8409c77c3d7fd014874f872877d175741ed931e653c",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.768,
+    "preferredSpacingViolations": 4,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_reservation",
+      "offset": 15
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 5,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-b1-v1",
+    "seedHash": "46c7740592a284e1fba63222078128bcef05c37c632a368641e5ff516eba2fcf",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1086,
+    "rejectedByReason": {
+      "outside_land": 550,
+      "road_clearance": 622,
+      "terrain_blocker": 359,
+      "objective_clearance": 315,
+      "edge_clearance": 12
+    },
+    "selectedTrial": 179,
+    "selectionTrialLimit": 256,
+    "minimumObservedSpacing": 68.768,
+    "meanNearestNeighbor": 85.648,
+    "preferredSpacingViolations": 4,
+    "quadrantCounts": [
+      14,
+      14,
+      14,
+      13
+    ]
+  },
+  "receiptHash": "f04ebdbd87e90461c92b6c7dd74e3828c231363c4aac582349e4bf82f41b4cfb"
+}
