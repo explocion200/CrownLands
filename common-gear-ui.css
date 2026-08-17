@@ -425,58 +425,58 @@
 .common-gear-bag-name { position: absolute; right: 23px; bottom: 5px; left: 28px; overflow: hidden; color: #efe3c4; font-size: .48rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; opacity: 1; }
 
 /* Keep equipment surfaces authoritative when the shared palette loads later. */
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile[data-gear-stack-key] {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile[data-gear-stack-key] {
   color: #f4ead0 !important;
   background: var(--gear-rarity-surface) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile[data-gear-stack-key]:not(.compatible):not(.selected) {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile[data-gear-stack-key]:not(.compatible):not(.selected) {
   border-color: var(--gear-rarity-edge) !important;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.08), 0 3px 7px rgba(36,23,11,.45) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile.compatible[data-gear-stack-key] {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile.compatible[data-gear-stack-key] {
   border-color: #c5a052 !important;
   box-shadow: inset 0 0 0 2px rgba(255,238,170,.18), 0 0 8px var(--gear-rarity-glow) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile.selected[data-gear-stack-key] {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile.selected[data-gear-stack-key] {
   border-color: #f4cf78 !important;
   outline: 2px solid #7b4c20 !important;
   outline-offset: -5px;
   box-shadow: inset 0 0 0 3px rgba(255,247,197,.48), 0 0 0 2px #d1a64d, 0 0 18px rgba(244,195,87,.88) !important;
   transform: none !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-slot,
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-level,
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-name { color: #efe3c4 !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header strong,
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > header strong { color: #e8d6aa !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header > span { color: #d6b66e !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header small { color: #a89165 !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > footer span { color: #ead8ae !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > footer small { color: #c6b58b !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back,
-.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back span { color: #ead8ae !important; }
-.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-slot,
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-level,
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel .common-gear-bag-tile .common-gear-bag-name { color: #efe3c4 !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header strong,
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > header strong { color: #e8d6aa !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header > span { color: #d6b66e !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-loadout-panel > header small { color: #a89165 !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > footer span { color: #ead8ae !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-bag-panel > footer small { color: #c6b58b !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back,
+#modal.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back span { color: #ead8ae !important; }
+#modal.common-gear-building-modal .common-gear-screen .common-gear-footer .common-gear-back {
   border-color: #76552d !important;
   background: linear-gradient(180deg, #432e20, #241a14) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions button {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions button {
   border-color: #6d3e2e !important;
   color: #f3dfac !important;
   background: linear-gradient(180deg, #87363b, #592328) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions .common-gear-merge-btn {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions .common-gear-merge-btn {
   border-color: #97713b !important;
   color: #3c2d1c !important;
   background: linear-gradient(180deg, #e6ce92, #bd9855) !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions button:disabled {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions button:disabled {
   border-color: #766957 !important;
   color: #ded1b3 !important;
   background: linear-gradient(180deg, #5a4b40, #3a312a) !important;
   filter: none !important;
   opacity: 1 !important;
 }
-.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions .common-gear-merge-btn:disabled {
+#modal.common-gear-building-modal .common-gear-screen .common-gear-selected-panel .common-gear-actions .common-gear-merge-btn:disabled {
   border-color: #8c744f !important;
   color: #59472f !important;
   background: linear-gradient(180deg, #c9b889, #ab966d) !important;
