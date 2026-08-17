@@ -4,8 +4,8 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
-const gameSource = read("game.js");
-const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const gameSource = `${read("game.js")}\n${read("common-gear-ui.js")}`;
+const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
 const serverSource = read("functions/index.js");
@@ -82,7 +82,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260814-readability-r38";
+const BUILD_ID = "20260816-officer-equipment-ui-r4";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
@@ -316,7 +316,7 @@ assert.match(selectSource, /getInnerCastleBuilding\(buildingKey\)/, "Building se
 
 const cleanupSource = extractFunction(gameSource, "clearInnerCastleModalState");
 assert.match(cleanupSource, /delete modal\.dataset\.innerCastleCityId/, "Modal cleanup must clear the Inner Castle city ID.");
-assert.match(cleanupSource, /modal\.classList\.remove\(["']inner-castle-modal["']\)/, "Modal cleanup must restore the shared dialog layout.");
+assert.match(cleanupSource, /modal\.classList\.remove\([^)]*["']inner-castle-modal["']/, "Modal cleanup must restore the shared dialog layout.");
 assert.match(
   gameSource,
   /modal\.addEventListener\(["']close["'][\s\S]*?clearInnerCastleModalState\(\)/,

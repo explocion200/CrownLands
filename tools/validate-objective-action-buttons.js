@@ -124,11 +124,12 @@ assert.ok(wheelFunctions[2].includes("cl-action-send"), "Owned Stronghold/Citade
 assert.ok(wheelFunctions[3].includes("cl-action-send camp-recall-action"), "Held Camp Recall is missing its movement token.");
 
 const releaseId = "20260814-readability-r38";
+const cacheVersion = "20260816-officer-equipment-ui-r4";
 const styleTag = `action-buttons.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The shared action-button stylesheet is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("profile-theme.css"), "The shared action-button stylesheet must load after legacy and Profile theme layers.");
 assert.ok(worker.includes(`/${styleTag}`), "The shared action-button stylesheet is missing from the offline shell.");
-assert.ok(worker.includes(`CACHE_VERSION = "${releaseId}"`), "The action-button release does not restart stale clients.");
+assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The action-button release does not restart stale clients.");
 for (const source of [builder, manifestBuilder, artifactValidator]) {
   assert.ok(source.includes("action-buttons.css"), "The shared action-button stylesheet is missing from production packaging.");
 }

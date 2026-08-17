@@ -7,7 +7,7 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 const css = read("mobile-viewport.css");
 const index = read("index.html");
 const worker = read("service-worker.js");
-const game = read("game.js");
+const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 const builder = read("tools/build-production-client.js");
 const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
@@ -53,11 +53,12 @@ assert.ok(modalClasses.size >= 20, "The reusable modal audit no longer covers th
 assert.ok(css.includes(".modal:not(.level-up-reward-modal)"), "Dynamic modal classes are not protected by the shared mobile rule.");
 
 const releaseId = "20260814-readability-r38";
+const cacheVersion = "20260816-officer-equipment-ui-r4";
 const styleTag = `mobile-viewport.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The mobile viewport layer is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("action-buttons.css"), "The mobile viewport layer must load after every existing game theme.");
 assert.ok(worker.includes(`/${styleTag}`), "The mobile viewport layer is missing from the offline shell.");
-assert.ok(worker.includes(`CACHE_VERSION = "${releaseId}"`), "The mobile viewport release does not restart stale clients.");
+assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The mobile viewport release does not restart stale clients.");
 for (const source of [builder, manifestBuilder, artifactValidator, budgetValidator]) {
   assert.ok(source.includes("mobile-viewport.css"), "The mobile viewport layer is missing from production packaging or budgets.");
 }

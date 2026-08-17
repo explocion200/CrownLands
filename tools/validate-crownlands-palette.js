@@ -15,6 +15,7 @@ const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
 const releaseId = "20260814-readability-r38";
+const cacheVersion = "20260816-officer-equipment-ui-r4";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -124,7 +125,7 @@ assert.ok(index.indexOf(paletteTag) > index.indexOf("profile-theme.css"), "The C
 assert.ok(index.indexOf("action-buttons.css") > index.indexOf(paletteTag), "The exact objective-action layer must remain authoritative after the palette.");
 assert.ok(index.indexOf("mobile-viewport.css") > index.indexOf("action-buttons.css"), "Mobile reachability must remain the final stylesheet.");
 assert.ok(worker.includes(`/${paletteTag}`), "The Crownlands palette is missing from the offline shell.");
-assert.ok(worker.includes(`CACHE_VERSION = "${releaseId}"`), "The palette release does not restart stale clients.");
+assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The palette release does not restart stale clients.");
 for (const source of [builder, manifestBuilder, artifactValidator, budgetValidator]) {
   assert.ok(source.includes("crownlands-palette.css"), "The Crownlands palette is missing from production delivery or budgets.");
 }

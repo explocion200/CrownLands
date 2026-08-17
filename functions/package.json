@@ -15,7 +15,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "lint": "node --check index.js && node --check playerFlagConfig.js && node --check dailyMissions.js && node --check seasonalAchievements.js && node --check ../instant-economy-actions.js && node --check ../base-cities.js && node --check ../game.js && node --check ../firebaseClient.js && node --check ../animation-manager.js && node --check ../audio-manager.js && pnpm exec eslint index.js playerFlagConfig.js dailyMissions.js seasonalAchievements.js authoritative-route-planner.js authoritative-route-policy.js clanQuestPeriod.js ../instant-economy-actions.js ../game.js ../firebaseClient.js ../animation-manager.js ../audio-manager.js ../route-worker.js",
+    "lint": "node --check index.js && node --check playerFlagConfig.js && node --check dailyMissions.js && node --check seasonalAchievements.js && node --check ../instant-economy-actions.js && node --check ../base-cities.js && node --check ../common-gear-ui.js && node --check ../game.js && node --check ../firebaseClient.js && node --check ../animation-manager.js && node --check ../audio-manager.js && pnpm exec eslint index.js playerFlagConfig.js dailyMissions.js seasonalAchievements.js authoritative-route-planner.js authoritative-route-policy.js clanQuestPeriod.js ../instant-economy-actions.js ../common-gear-ui.js ../game.js ../firebaseClient.js ../animation-manager.js ../audio-manager.js ../route-worker.js",
     "setup:hooks": "git config core.hooksPath .githooks",
     "test:route-parity": "node ../tools/validate-server-route-parity.js",
     "pretest:emulators": "node ../tools/generate-release-manifest.js",

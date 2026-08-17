@@ -605,6 +605,12 @@ body { color: var(--cl-readable-dark); }
   color: var(--cl-readable-dark-strong) !important;
 }
 
+/* The officer workbench uses the mockup's burgundy title banner, not parchment. */
+.common-gear-building-modal > .modal-card > h2 {
+  color: #f2dfad !important;
+  text-shadow: 0 2px 1px #1a0c09;
+}
+
 :where(.shop-item, .inventory-slot, .inventory-selection, .shop-balance, .inventory-summary) :where(strong, b) {
   color: var(--cl-readable-paper-strong);
 }

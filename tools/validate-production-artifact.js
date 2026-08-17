@@ -4,7 +4,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
-  "index.html", "styles.css", "interface-theme.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
+  "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
   "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
   "assets/map-editor-data.js", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js",

@@ -86,14 +86,53 @@ const rules = read("firestore.rules");
 assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not seed authoritative gear.");
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
-const game = read("game.js");
+const clientIndex = read("index.html");
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260816-officer-equipment-ui-r4/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260816-officer-equipment-ui-r4[\s\S]*game\.js\?v=20260816-officer-equipment-ui-r4/, "The equipment runtime must load before game.js.");
+const game = `${read("game.js")}\n${read("common-gear-ui.js")}`;
 assert.match(game, /Common Gear Box/);
 assert.match(game, /common-gear-building-shell/);
-assert.match(game, /data-gear-upgrade/);
+assert.match(game, /data-gear-merge/);
 assert.match(game, /data-manage-common-gear/);
+assert.match(game, /function createCommonGearViewModel/, "The officer equipment renderer must consume a display view model.");
+assert.match(game, /function createCommonGearBagGroups/, "The officer bag must use an explicit stack grouping helper.");
+assert.match(
+  game,
+  /const key = `\$\{instance\.gearKey\}:\$\{instance\.level\}:\$\{displayBucket\}`/,
+  "Equipment bag stacks must be separated by gear key, exact level, and equipped display state."
+);
+assert.match(game, /getCommonGearInstances\(buildingId\)/, "The right bag must load every slot for only the active officer.");
+assert.match(game, /data-gear-bag-scroll/, "The redesigned officer bag must own vertical scrolling.");
+assert.match(game, /commonGearBagScrollTop/, "Officer bag scroll position must survive rerenders.");
+assert.match(game, /common-gear-bottom-info/, "Selected equipment metadata must render in the bottom strip.");
+assert.match(game, /common-gear-confirm-backdrop/, "Merge must have an in-game confirmation step.");
+assert.match(game, /upgradeCommonGear\(\{ instanceId \}\)/, "Merge must continue through the existing authoritative upgrade callable.");
+assert.match(game, /viewCommonGearBuilding[\s\S]{0,500}renderCommonGearBuilding\(buildingId\)/, "A fresh building response must rerender the officer equipment screen.");
+assert.doesNotMatch(game, /data-gear-mobile-view|selectedCommonGearMobileView|common-gear-mobile-tabs/, "Equipment must keep the desktop three-panel structure instead of using mobile section tabs.");
+
+const groupingStart = game.indexOf("function createCommonGearBagGroups");
+const groupingEnd = game.indexOf("function createCommonGearViewModel", groupingStart);
+assert(groupingStart >= 0 && groupingEnd > groupingStart, "Could not isolate the bag grouping helper.");
+const groupingContext = { COMMON_GEAR: gear };
+vm.runInNewContext(`${game.slice(groupingStart, groupingEnd)}\nthis.groupGear = createCommonGearBagGroups;`, groupingContext);
+const groupingDefinition = gear.DEFINITIONS[0];
+const groupedInstances = [
+  { instanceId: "l1_a", gearKey: groupingDefinition.gearKey, buildingId: groupingDefinition.buildingId, slot: groupingDefinition.slot, level: 1, isEquipped: false, isNew: false, acquiredAtMs: 1 },
+  { instanceId: "l1_b", gearKey: groupingDefinition.gearKey, buildingId: groupingDefinition.buildingId, slot: groupingDefinition.slot, level: 1, isEquipped: false, isNew: true, acquiredAtMs: 2 },
+  { instanceId: "l2_bag", gearKey: groupingDefinition.gearKey, buildingId: groupingDefinition.buildingId, slot: groupingDefinition.slot, level: 2, isEquipped: false, isNew: false, acquiredAtMs: 3 },
+  { instanceId: "l2_equipped", gearKey: groupingDefinition.gearKey, buildingId: groupingDefinition.buildingId, slot: groupingDefinition.slot, level: 2, isEquipped: true, isNew: false, acquiredAtMs: 4 },
+];
+const bagGroups = groupingContext.groupGear(groupedInstances, groupingDefinition.slot, "l1_b");
+assert.equal(bagGroups.length, 3, "Different levels or equipped display buckets were merged into one bag stack.");
+const levelOneStack = bagGroups.find(group => group.level === 1);
+assert.equal(levelOneStack.count, 2, "Same-key same-level stored duplicates did not stack.");
+assert.equal(levelOneStack.representativeInstanceId, "l1_b", "A selected stacked instance must remain the real representative.");
+assert(levelOneStack.instanceIds.every(id => id.startsWith("l1_")), "A bag stack contains an instance from a different level.");
+assert.equal(bagGroups.filter(group => group.level === 2).length, 2, "Equipped and stored Level 2 pieces must remain visibly distinct.");
+
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
 assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/, "Selected gear and its upgrade view must render item artwork.");
-assert.match(game, /class="common-gear-mini-card[\s\S]{0,260}def\.art/, "Building inventory cards must render item artwork.");
+assert.match(game, /function renderCommonGearBagTile[\s\S]{0,1800}def\.art/, "Building inventory cards must render item artwork.");
 assert.match(game, /class="common-gear-reveal-card"[\s\S]{0,140}definition\.art/, "Box reveals must render item artwork.");
 assert.match(game, /onerror="this\.hidden=true"/, "Gear art must fail gracefully without obscuring labels.");
 assert.match(
@@ -111,7 +150,7 @@ const economyResultSection = game.slice(
   game.indexOf("function mergeServerEconomyRefreshOptions")
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
-const css = `${read("styles.css")}\n${read("interface-theme.css")}`;
+const css = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
 assert.match(
   css,
   /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,
@@ -129,9 +168,22 @@ assert.match(
 );
 assert.match(
   css,
-  /@media \(max-height: 520px\)[\s\S]{0,2200}\.common-gear-building-shell\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\) 68px;/,
-  "Short landscape screens need a compact non-overlapping Common Gear layout."
+  /@media \(max-height: 560px\) and \(orientation: landscape\)[\s\S]{0,1800}\.common-gear-screen\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\) 58px;/,
+  "Short landscape screens need a compact non-overlapping officer equipment layout."
 );
+assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\)[\s\S]{0,3000}\.common-gear-slot\s*\{[^}]*min-height: 0;/, "Short landscape loadouts must fit all four slot rows.");
+assert.match(css, /\.common-gear-main\s*\{[^}]*grid-template-columns:[^}]*1\.12fr[^}]*\.72fr[^}]*1\.05fr/, "Wide equipment screens must keep loadout, detail, and bag columns.");
+assert.match(css, /\.common-gear-bag-scroll\s*\{[^}]*overflow-y: auto;/, "The officer equipment bag must scroll vertically.");
+assert.match(css, /\.common-gear-bag-grid\s*\{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/, "The officer bag must render as a tile grid.");
+assert.match(css, /@media \(max-width: 980px\)[\s\S]{0,1800}\.common-gear-main\s*\{[^}]*display: grid;[^}]*grid-template-columns:[^}]*1\.12fr[^}]*\.76fr[^}]*1\.08fr/, "Narrow equipment screens must retain the loadout, detail, and bag columns.");
+assert.doesNotMatch(css, /common-gear-mobile-tabs|data-gear-mobile-view/, "The equipment stylesheet must not restore the retired mobile tab layout.");
+assert.match(
+  css,
+  /\.common-gear-bag-tile\.rarity-common\s*\{[^}]*--gear-rarity-edge: #98948b;[^}]*--gear-rarity-surface:[^}]*#42413e[^}]*#252522[^}]*#171816/,
+  "Common bag tiles must use the neutral gray rarity surface."
+);
+assert.doesNotMatch(css, /\.common-gear-bag-tile\.rarity-common\s*\{[^}]*#283039|\.common-gear-bag-tile\.rarity-common\s*\{[^}]*#111619/, "Common bag tiles must not use the former blue default surface.");
+assert.match(css, /\.common-gear-selected-panel \.common-gear-rarity\.rarity-common\s*\{[^}]*color: #56524b;[^}]*background:/, "Selected Common gear must use neutral rarity styling.");
 assert.match(
   css,
   /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
@@ -142,7 +194,6 @@ for (const [selector, label] of [
   ["\\.inventory-slot-image", "Bag slot"],
   ["\\.inventory-selection-image", "selected Bag item"],
   ["\\.inner-castle-preview-art", "Inner Castle preview"],
-  ["\\.common-gear-character-panel > img", "officer character"],
 ]) {
   assert.match(
     css,
@@ -150,6 +201,7 @@ for (const [selector, label] of [
     `${label} artwork must be fully contained instead of cropped.`
   );
 }
+assert.match(css, /\.common-gear-character-panel > img\s*\{[^}]*object-fit: (?:cover|contain);/, "Officer artwork must deliberately fill or fit its portrait frame.");
 
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 const expectedAssets = ["gear-war-captain", "gear-master-of-coin", "gear-cavalry-master", "gear-defensive-commander", "item-common-gear-box"];
