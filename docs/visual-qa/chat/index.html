@@ -97,20 +97,20 @@
         <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-f330cd084a9f.webp" width="192" height="192" alt="" />
       </button>
       <nav class="bottom-nav" aria-label="Game menu" data-chat-quick-blocker>
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button" aria-label="Reports">
-          <img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" />
-          <strong class="nav-btn-heading">Reports</strong>
-          <small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small>
+        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming attack" hidden>
+          <span class="nav-btn-icon" aria-hidden="true">&#9876;</span>
+          <strong class="nav-btn-heading"><span id="incomingAttackCount" class="nav-btn-count">1</span> Incoming</strong>
+          <small id="incomingAttackTime" class="nav-btn-label">00:38</small>
         </button>
         <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Outgoing movement" hidden>
           <span class="nav-btn-icon" aria-hidden="true">&#10148;</span>
           <strong class="nav-btn-heading"><span id="outgoingAttackCount" class="nav-btn-count">1</span> Outgoing</strong>
           <small id="outgoingAttackTime" class="nav-btn-label">01:42</small>
         </button>
-        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming attack" hidden>
-          <span class="nav-btn-icon" aria-hidden="true">&#9876;</span>
-          <strong class="nav-btn-heading"><span id="incomingAttackCount" class="nav-btn-count">1</span> Incoming</strong>
-          <small id="incomingAttackTime" class="nav-btn-label">00:38</small>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" aria-label="Reports">
+          <img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" />
+          <strong class="nav-btn-heading">Reports</strong>
+          <small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small>
         </button>
       </nav>
     </section>

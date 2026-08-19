@@ -7060,6 +7060,7 @@ button.inventory-slot {
   height: 100dvh;
   margin: 0;
   border-radius: 0;
+  overflow: clip;
 }
 
 .setup-screen {
@@ -7122,15 +7123,6 @@ button.inventory-slot {
   border: 1px solid rgba(255,255,255,.14);
   border-radius: 20px;
   box-shadow: 0 12px 35px rgba(0,0,0,.36);
-}
-.bottom-nav:has(.incoming-attack-btn:not([hidden])),
-.bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-  width: 220px;
-  min-width: 220px;
-}
-.bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-  width: 314px;
-  min-width: 314px;
 }
 .nav-btn {
   border-radius: 14px;
@@ -7231,15 +7223,6 @@ button.inventory-slot {
     height: 52px;
     padding: .32rem;
   }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])),
-  .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-    width: 204px;
-    min-width: 204px;
-  }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-    width: 286px;
-    min-width: 286px;
-  }
   .nav-btn {
     font-size: .66rem;
   }
@@ -7257,15 +7240,6 @@ button.inventory-slot {
   .bottom-nav {
     width: 122px;
     min-width: 122px;
-  }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])),
-  .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-    width: 232px;
-    min-width: 232px;
-  }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-    width: 322px;
-    min-width: 322px;
   }
   .toast {
     left: calc((100vw - 410px) / 2);

@@ -8,6 +8,8 @@ const index = read("index.html");
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("ui-contrast-correction.css")}\n${read("action-buttons.css")}`;
 const game = read("game.js");
 const layoutRuntime = read("ui-layout-runtime.js");
+const benchmarkRuntime = read("tools/map-benchmark/injected-runtime.js");
+const benchmarkFirebase = read("tools/map-benchmark/mock-firebase.js");
 const manifest = JSON.parse(read("assets/optimized/manifest.json"));
 
 assert.match(
@@ -87,8 +89,8 @@ assert.doesNotMatch(
 );
 assert.match(
   layoutRuntime,
-  /function restoreOperationAlertGroup\(\)[\s\S]*?nav\.appendChild\(outgoing\);[\s\S]*?nav\.appendChild\(incoming\);/,
-  "The HUD runtime must keep Outgoing and Incoming in the Reports group and in that order.",
+  /function restoreOperationAlertStack\(\)[\s\S]*?nav\.appendChild\(incoming\);[\s\S]*?nav\.appendChild\(outgoing\);[\s\S]*?nav\.appendChild\(reports\);/,
+  "The HUD runtime must restore Incoming and Outgoing above the Reports anchor in deterministic order.",
 );
 assert.match(
   layoutRuntime,
@@ -97,9 +99,53 @@ assert.match(
 );
 assert.match(
   styles,
-  /\.bottom-nav \.report-nav-btn\s*\{\s*order:\s*1;[\s\S]*?\.bottom-nav \.outgoing-attack-btn\s*\{\s*order:\s*2;[\s\S]*?\.bottom-nav \.incoming-attack-btn\s*\{\s*order:\s*3;/,
-  "The operation control order must be Reports, Outgoing, Incoming.",
+  /\.bottom-nav\s*\{[\s\S]{0,420}?--cl-operation-stack-gap:\s*9px;[\s\S]{0,420}?flex-direction:\s*column;[\s\S]{0,420}?gap:\s*var\(--cl-operation-stack-gap\) !important;[\s\S]*?\.bottom-nav \.incoming-attack-btn\s*\{\s*order:\s*1;[\s\S]*?\.bottom-nav \.outgoing-attack-btn\s*\{\s*order:\s*2;[\s\S]*?\.bottom-nav \.report-nav-btn\s*\{\s*order:\s*3;[\s\S]*?flex:\s*0 0 46px;/,
+  "The operation controls must form a 9px vertical Incoming, Outgoing, Reports stack.",
 );
+assert.doesNotMatch(
+  styles,
+  /\.bottom-nav:has\(\.(?:incoming|outgoing)-attack-btn:not\(\[hidden\]\)\)[\s\S]{0,180}?width:/,
+  "Movement visibility must not expand the Reports group horizontally.",
+);
+assert.match(
+  styles,
+  /\/\* === V9 LANDSCAPE \/ HORIZONTAL LAYOUT === \*\/[\s\S]{0,240}?\.phone-shell\s*\{[\s\S]{0,240}?overflow:\s*clip;/,
+  "The landscape shell must not become a focus-scroll container and shift fixed HUD anchors.",
+);
+assert.match(
+  index,
+  /id="incomingAttackBtn"[\s\S]{0,900}?id="outgoingAttackBtn"[\s\S]{0,900}?id="logBtn"/,
+  "The operation controls must preserve visual and accessibility order in the document.",
+);
+assert.match(
+  benchmarkRuntime,
+  /function setHudOperationState\(mode = "none"\)[\s\S]{0,900}?emitVisualQaArmies\(armies\)[\s\S]{0,240}?updateIncomingAttackUi\(\);[\s\S]{0,120}?updateOutgoingAttackUi\(\);/,
+  "Real-game visual QA must exercise the movement render path.",
+);
+assert.doesNotMatch(
+  benchmarkRuntime.match(/function setHudOperationState[\s\S]*?\n  \}/)?.[0] || "",
+  /(?:incomingAttackBtn|outgoingAttackBtn)\.hidden\s*=/,
+  "Real-game visual QA must not fake movement visibility with direct DOM toggles.",
+);
+assert.match(
+  benchmarkFirebase,
+  /subscribeChatMessages[\s\S]{0,700}?subscribeLogical\(`chat\.\$\{normalizedChannel\}`[\s\S]{0,700}?handlers\.onMessages/,
+  "The real-game HUD harness must retain deterministic Global and Clan subscription coverage.",
+);
+[
+  "01-desktop-reports-only.jpg",
+  "02-desktop-movement-stack.jpg",
+  "03-844-reports-quick-peek.jpg",
+  "04-844-incoming-quick-peek.jpg",
+  "05-844-outgoing-quick-peek.jpg",
+  "06-844-both-quick-peek.jpg",
+  "07-568-reports-quick-state.jpg",
+  "08-568-both-quick-state.jpg",
+  "09-844-full-hud-both-and-chat.jpg",
+].forEach(fileName => assert.ok(
+  fs.existsSync(path.join(root, "docs/visual-qa/hud-movement-stack/screenshots", fileName)),
+  `Missing HUD movement-stack screenshot ${fileName}.`,
+));
 assert.match(
   styles,
   /grid-template-rows:\s*22px 10px 9px;[\s\S]*?font-variant-numeric:\s*tabular-nums;/,

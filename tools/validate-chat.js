@@ -39,7 +39,7 @@ const baseHudGeometry = UI.calculateQuickPanelGeometry({
   toggleRect: { left: 475, top: 318, height: 56 },
   viewportWidth: 844,
   viewportHeight: 390,
-  blockerRects: [{ left: 12, right: 124, top: 316, bottom: 378 }],
+  blockerRects: [{ left: 12, right: 110, top: 332, bottom: 378 }],
 });
 assert.deepEqual({
   visible: baseHudGeometry.visible,
@@ -47,26 +47,26 @@ assert.deepEqual({
   width: baseHudGeometry.width,
   availableWidth: baseHudGeometry.availableWidth,
   messageLimit: baseHudGeometry.messageLimit,
-}, { visible: true, left: 133, width: 333, availableWidth: 333, messageLimit: 3 });
+}, { visible: true, left: 119, width: 347, availableWidth: 347, messageLimit: 3 });
 
 const oneMovementGeometry = UI.calculateQuickPanelGeometry({
   toggleRect: { left: 475, top: 318, height: 56 },
   viewportWidth: 844,
   viewportHeight: 390,
-  blockerRects: [{ left: 12, right: 232, top: 316, bottom: 378 }],
+  blockerRects: [{ left: 12, right: 110, top: 277, bottom: 378 }],
 });
 assert.deepEqual({
   visible: oneMovementGeometry.visible,
   left: oneMovementGeometry.left,
   width: oneMovementGeometry.width,
   messageLimit: oneMovementGeometry.messageLimit,
-}, { visible: true, left: 241, width: 225, messageLimit: 2 });
+}, { visible: true, left: 119, width: 347, messageLimit: 3 });
 
 const bothMovementGeometry = UI.calculateQuickPanelGeometry({
   toggleRect: { left: 475, top: 318, height: 56 },
   viewportWidth: 844,
   viewportHeight: 390,
-  blockerRects: [{ left: 12, right: 326, top: 316, bottom: 378 }],
+  blockerRects: [{ left: 12, right: 110, top: 222, bottom: 378 }],
 });
 assert.deepEqual({
   visible: bothMovementGeometry.visible,
@@ -74,16 +74,16 @@ assert.deepEqual({
   width: bothMovementGeometry.width,
   availableWidth: bothMovementGeometry.availableWidth,
   messageLimit: bothMovementGeometry.messageLimit,
-}, { visible: false, left: 466, width: 0, availableWidth: 131, messageLimit: 0 });
+}, { visible: true, left: 119, width: 347, availableWidth: 347, messageLimit: 3 });
 
 const narrowGeometry = UI.calculateQuickPanelGeometry({
   toggleRect: { left: 207, top: 248, height: 56 },
   viewportWidth: 568,
   viewportHeight: 320,
-  blockerRects: [{ left: 12, right: 124, top: 246, bottom: 308 }],
+  blockerRects: [{ left: 12, right: 110, top: 152, bottom: 308 }],
 });
 assert.equal(narrowGeometry.visible, false);
-assert.equal(narrowGeometry.availableWidth, 65);
+assert.equal(narrowGeometry.availableWidth, 79);
 assert.equal(UI.CHAT_QUICK_MIN_READABLE_WIDTH, 160);
 
 assert.equal(UI.CHAT_SEND_COOLDOWN_MS, 3000);

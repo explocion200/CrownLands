@@ -1241,10 +1241,12 @@
 
 .bottom-nav {
   --cl-operation-button-width: clamp(78px, calc((100vw - 42px) / 3), 98px);
+  --cl-operation-stack-gap: 9px;
   display: flex !important;
+  flex-direction: column;
   align-items: stretch;
-  justify-content: flex-start;
-  gap: 6px !important;
+  justify-content: flex-end;
+  gap: var(--cl-operation-stack-gap) !important;
   width: max-content !important;
   min-width: 0 !important;
   height: auto !important;
@@ -1255,7 +1257,7 @@
   box-shadow: none !important;
 }
 
-.bottom-nav .report-nav-btn {
+.bottom-nav .incoming-attack-btn {
   order: 1;
 }
 
@@ -1263,14 +1265,14 @@
   order: 2;
 }
 
-.bottom-nav .incoming-attack-btn {
+.bottom-nav .report-nav-btn {
   order: 3;
 }
 
 .bottom-nav .report-nav-btn,
 .outgoing-attack-btn,
 .incoming-attack-btn {
-  flex: 0 0 var(--cl-operation-button-width);
+  flex: 0 0 46px;
   width: var(--cl-operation-button-width);
   height: 46px;
   min-height: 46px;
