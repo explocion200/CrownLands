@@ -541,6 +541,110 @@
     return { ...emitVisualQaArmies(armies), kinds };
   }
 
+  function createHudOperationArmies(mode = "none") {
+    const normalizedMode = ["none", "incoming", "outgoing", "both"].includes(mode) ? mode : "none";
+    const playerCity = state.cities.find(city => (
+      city.owner === "player" || String(city.ownerUid || "") === fixture.player.uid
+    ) && !isStronghold(city));
+    const rivalCity = state.cities.find(city => (
+      String(city.ownerUid || "") !== fixture.player.uid
+    ) && !isStronghold(city));
+    const template = benchmarkState.createdArmies[0];
+    if (!playerCity || !rivalCity || !template) return [];
+    const operationEndsAtMs = Date.now() + 10 * 60 * 1000;
+    const common = {
+      ...template,
+      kind: "attack",
+      launchKind: "attack",
+      launchedAtMs: Date.now() - 30000,
+      arrivesAtMs: operationEndsAtMs,
+      status: "active",
+      sourceRegionId: fixture.primaryRegionId,
+      targetRegionId: fixture.primaryRegionId,
+    };
+    const armies = [];
+    if (normalizedMode === "outgoing" || normalizedMode === "both") {
+      armies.push({
+        ...common,
+        id: "benchmark-hud-outgoing",
+        ownerUid: fixture.player.uid,
+        ownerName: fixture.player.displayName,
+        fromId: playerCity.id,
+        fromName: playerCity.name,
+        toId: rivalCity.id,
+        toName: rivalCity.name,
+        targetOwnerUid: String(rivalCity.ownerUid || ""),
+        viewerAccess: "owner",
+        troopVisibility: "exact",
+      });
+    }
+    if (normalizedMode === "incoming" || normalizedMode === "both") {
+      armies.push({
+        ...common,
+        id: "benchmark-hud-incoming",
+        ownerUid: "benchmark-hud-rival",
+        ownerName: "Rival Scout",
+        fromId: rivalCity.id,
+        fromName: rivalCity.name,
+        toId: playerCity.id,
+        toName: playerCity.name,
+        targetOwnerUid: fixture.player.uid,
+        viewerAccess: "target",
+        troopVisibility: "estimate",
+      });
+    }
+    return armies;
+  }
+
+  function setHudOperationState(mode = "none") {
+    if (state) state.attacks = [];
+    pendingOutgoingMissions = new Map();
+    onlineArmiesByIsland = new Map();
+    onlineArmies = [];
+    onlineClanRallies = [];
+    onlineReinforcements = [];
+    onlineHeldCampStates.clear();
+    onlineCampStates.forEach((camp, id) => onlineCampStates.set(id, { ...camp, holderUid: "" }));
+    const armies = createHudOperationArmies(mode);
+    const result = emitVisualQaArmies(armies);
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+    return {
+      ...result,
+      mode,
+      incomingVisible: Boolean(incomingAttackBtn && !incomingAttackBtn.hidden),
+      outgoingVisible: Boolean(outgoingAttackBtn && !outgoingAttackBtn.hidden),
+    };
+  }
+
+  function startHudChatQa() {
+    return window.CrownlandsChat?.start?.({
+      api: window.CrownlandsOnline,
+      uid: fixture.player.uid,
+      clanId: "benchmark-clan",
+    });
+  }
+
+  function applyHudQaState() {
+    const query = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const operationMode = hash.get("operations") || query.get("hudOperations") || "none";
+    const chatMode = hash.get("chat") || query.get("chatMode") || "closed";
+    const operationResult = setHudOperationState(operationMode);
+    const controller = window.CrownlandsChat?.init?.();
+    if (["closed", "quick", "full"].includes(chatMode)) controller?.setMode?.(chatMode);
+    const chat = controller?.diagnostics?.() || null;
+    document.documentElement.dataset.hudQaOperations = String(operationMode);
+    document.documentElement.dataset.hudQaOperationCount = String(operationResult.requested || 0);
+    document.documentElement.dataset.hudQaIncomingVisible = String(operationResult.incomingVisible);
+    document.documentElement.dataset.hudQaOutgoingVisible = String(operationResult.outgoingVisible);
+    document.documentElement.dataset.hudQaChatMode = String(chat?.mode || "");
+    document.documentElement.dataset.hudQaChatListeners = String(chat?.totalListeners || 0);
+    document.documentElement.dataset.hudQaGlobalListeners = String(chat?.globalListeners || 0);
+    document.documentElement.dataset.hudQaClanListeners = String(chat?.clanListeners || 0);
+    return { operationResult, chat };
+  }
+
   async function setVisualZoom(nextZoom) {
     const rect = mapFrame.getBoundingClientRect();
     zoom = clampZoomForViewport(Number(nextZoom) || MIN_ZOOM, rect);
@@ -685,6 +789,9 @@
     switchNeighborAndReturn,
     setVisualMarchCount,
     showVisualMissionKinds,
+    setHudOperationState,
+    startHudChatQa,
+    applyHudQaState,
     setVisualZoom,
     closeModal: () => { if (modal.open) modal.close(); },
     resetMarchProfile,
@@ -703,6 +810,8 @@
       benchmarkState.regionLoadLatencyMs = performance.now() - regionStartedAt;
       benchmarkState.createdArmies = createBenchmarkArmies();
       emitBenchmarkArmies();
+      startHudChatQa();
+      applyHudQaState();
       const requestedVisualZoom = Number(new URLSearchParams(location.search).get("visualZoom"));
       zoom = Number.isFinite(requestedVisualZoom)
         ? clampZoomForViewport(requestedVisualZoom)
@@ -719,4 +828,5 @@
       console.error("Crownlands Phase 0 benchmark failed to start", error);
     }
   })();
+  window.addEventListener("hashchange", applyHudQaState);
 })();

@@ -11,6 +11,16 @@
   const eventTraffic = [];
   const writes = [];
   const islandHandlers = new Map();
+  const chatMessages = {
+    global: [
+      { id: "benchmark-global-1", channel: "global", channelId: "global", senderUid: "benchmark-ally-1", senderDisplayName: "Lady Maeve", text: "The western road is clear.", createdAtMs: fixture.fixedEpochMs - 120000, status: "visible" },
+      { id: "benchmark-global-2", channel: "global", channelId: "global", senderUid: "benchmark-ally-2", senderDisplayName: "Thane Rowan", text: "Scouts reached Ironfall Hills.", createdAtMs: fixture.fixedEpochMs - 60000, status: "visible" },
+      { id: "benchmark-global-3", channel: "global", channelId: "global", senderUid: "benchmark-ally-3", senderDisplayName: "Queen Elinor", text: "Hold the eastern crossing.", createdAtMs: fixture.fixedEpochMs - 15000, status: "visible" },
+    ],
+    clan: [
+      { id: "benchmark-clan-1", channel: "clan", channelId: "benchmark-clan", senderUid: "benchmark-ally-4", senderDisplayName: "Marshal Alden", text: "Reinforcements are ready.", createdAtMs: fixture.fixedEpochMs - 45000, status: "visible" },
+    ],
+  };
   let listenerSequence = 0;
 
   function recordEvent(source, documents, detail = {}) {
@@ -203,6 +213,21 @@
     subscribePlayerCamps: handlers => emptySubscription("player.heldCamps", "player", handlers, "onCamps", []),
     subscribeServerReports: handlers => emptySubscription("player.serverReports", "player", handlers, "onReports", []),
     subscribeRealmActivity: handlers => emptySubscription("global.realmActivity", "global", handlers, "onEvents", []),
+    subscribeChatMessages({ channel = "global" } = {}, handlers = {}) {
+      const normalizedChannel = channel === "clan" ? "clan" : "global";
+      const unsubscribe = subscribeLogical(`chat.${normalizedChannel}`, "chat");
+      queueMicrotask(() => {
+        const messages = chatMessages[normalizedChannel];
+        recordEvent(`chat.${normalizedChannel}`, messages);
+        handlers.onMessages?.(messages, {
+          initial: true,
+          hasMore: false,
+          changes: messages.map(message => ({ type: "added", message })),
+        });
+      });
+      return unsubscribe;
+    },
+    loadOlderChatMessages: async () => [],
     subscribePlayerGlobalStats(handlers = {}) {
       const stats = { victories: 12, defeats: 3, citiesCaptured: 20 };
       const unsubscribe = subscribeLogical("player.globalStats", "player");

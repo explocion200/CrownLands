@@ -59,18 +59,20 @@
     positionProperties.forEach(property => element.style.removeProperty(property));
   }
 
-  function restoreOperationAlertGroup() {
+  function restoreOperationAlertStack() {
     const nav = document.querySelector(".bottom-nav");
+    const reports = document.querySelector("#logBtn");
     const outgoing = document.querySelector("#outgoingAttackBtn");
     const incoming = document.querySelector("#incomingAttackBtn");
-    if (!nav || !outgoing || !incoming) return;
+    if (!nav || !reports || !outgoing || !incoming) return;
     [outgoing, incoming].forEach(element => {
       clearManagedPosition(element);
       element.style.removeProperty("width");
       element.style.removeProperty("height");
     });
-    nav.appendChild(outgoing);
     nav.appendChild(incoming);
+    nav.appendChild(outgoing);
+    nav.appendChild(reports);
   }
 
   function alignChatToBag() {
@@ -87,7 +89,7 @@
 
   function applyLayout() {
     const preset = choosePreset();
-    restoreOperationAlertGroup();
+    restoreOperationAlertStack();
     Object.entries(preset?.components || {}).forEach(([id, component]) => {
       const element = document.querySelector(selectors[id]);
       if (!element || !component || typeof component !== "object") return;
