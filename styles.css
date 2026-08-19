@@ -9646,7 +9646,6 @@ button.inventory-slot {
 .daily-mission-row:hover,
 .daily-mission-row:focus-visible { border-color: rgba(242, 200, 104, .62); }
 .daily-mission-row.complete { border-color: rgba(126, 190, 103, .42); background: rgba(18, 55, 41, .62); }
-.daily-mission-row.claimed { opacity: .76; }
 .daily-mission-icon {
   width: 32px;
   height: 32px;

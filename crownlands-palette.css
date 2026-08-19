@@ -784,8 +784,8 @@ input[type="range"] {
   background: var(--cl-success) !important;
 }
 
-:is(.daily-reward-card.claimed, .daily-mission-row.complete, .seasonal-achievement-row.complete)
-  :is(strong, span, small, b) {
+.modal .modal-card :is(.daily-reward-card.claimed, .daily-mission-row.complete, .seasonal-achievement-row.complete)
+  :is(strong, span, small, b, p) {
   color: inherit !important;
 }
 
