@@ -5,6 +5,10 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createCrownlandsPlayerFlags() {
   "use strict";
 
+  const LEGACY_VERSION = 1;
+  const CURRENT_VERSION = 2;
+  const SUPPORTED_VERSIONS = Object.freeze([LEGACY_VERSION, CURRENT_VERSION]);
+
   const COLORS = Object.freeze([
     Object.freeze({ value: "#A52A2A", label: "Crimson", family: "red" }),
     Object.freeze({ value: "#6E2025", label: "Oxblood", family: "red" }),
@@ -29,19 +33,19 @@
   ]);
 
   const PATTERNS = Object.freeze([
-    Object.freeze({ key: "split", label: "Split" }),
-    Object.freeze({ key: "diagonal", label: "Diagonal" }),
-    Object.freeze({ key: "band", label: "Band" }),
+    Object.freeze({ key: "split", label: "Vertical Split" }),
+    Object.freeze({ key: "diagonal", label: "Diagonal Split" }),
+    Object.freeze({ key: "band", label: "Horizontal Band" }),
     Object.freeze({ key: "cross", label: "Cross" }),
     Object.freeze({ key: "saltire", label: "Saltire" }),
     Object.freeze({ key: "chevron", label: "Chevron" }),
     Object.freeze({ key: "quartered", label: "Quartered" }),
-    Object.freeze({ key: "pale", label: "Pale" }),
-    Object.freeze({ key: "chief", label: "Chief" }),
-    Object.freeze({ key: "bend", label: "Bend" }),
-    Object.freeze({ key: "fess", label: "Per Fess" }),
+    Object.freeze({ key: "pale", label: "Vertical Band" }),
+    Object.freeze({ key: "chief", label: "Top Band" }),
+    Object.freeze({ key: "bend", label: "Diagonal Band" }),
+    Object.freeze({ key: "fess", label: "Horizontal Split" }),
     Object.freeze({ key: "pile", label: "Heraldic Pile" }),
-    Object.freeze({ key: "canton", label: "Canton" }),
+    Object.freeze({ key: "canton", label: "Corner Block" }),
     Object.freeze({ key: "invertedChevron", label: "Inverted Chevron" }),
   ]);
 
@@ -70,6 +74,12 @@
     Object.freeze({ key: "fleur-de-lis", label: "Fleur-de-lis", icon: "flag-fleur-de-lis" }),
     Object.freeze({ key: "oak-tree", label: "Oak Tree", icon: "flag-oak-tree" }),
     Object.freeze({ key: "sunburst", label: "Sunburst", icon: "flag-sunburst" }),
+    Object.freeze({ key: "cross", label: "Cross Pattée", icon: "flag-cross" }),
+    Object.freeze({ key: "moon", label: "Crescent Moon", icon: "flag-moon" }),
+    Object.freeze({ key: "diamond", label: "Heraldic Lozenge", icon: "flag-diamond" }),
+    Object.freeze({ key: "guardian", label: "Guardian Shield", icon: "flag-guardian" }),
+    Object.freeze({ key: "banner", label: "Forked War Banner", icon: "flag-banner" }),
+    Object.freeze({ key: "helm", label: "Great Helm", icon: "flag-helm" }),
   ]);
 
   const COLOR_VALUES = Object.freeze(COLORS.map(option => option.value));
@@ -105,6 +115,7 @@
   });
 
   const DEFAULT_FLAG = Object.freeze({
+    version: CURRENT_VERSION,
     primary: "#315A8A",
     secondary: "#C69A45",
     symbolColor: "#F2E2BF",
@@ -132,6 +143,12 @@
     return HEX_COLOR.test(color) ? color.toUpperCase() : "";
   }
 
+  function getFlagVersion(flag = null) {
+    if (!flag || typeof flag !== "object" || Array.isArray(flag)) return LEGACY_VERSION;
+    const version = Number(flag.version);
+    return SUPPORTED_VERSIONS.includes(version) ? version : LEGACY_VERSION;
+  }
+
   function firstValue(source, keys) {
     for (const key of keys) {
       if (source && Object.prototype.hasOwnProperty.call(source, key)) return source[key];
@@ -154,10 +171,11 @@
     return selectStable(SYMBOL_KEYS, stableKey, `symbol:${candidate}`) || DEFAULT_FLAG.symbol;
   }
 
-  function createDeterministicFlag(stableKey = "") {
+  function createDeterministicFlag(stableKey = "", version = CURRENT_VERSION) {
     const primary = selectStable(COLOR_VALUES, stableKey, "primary") || DEFAULT_FLAG.primary;
     const secondaryChoices = COLOR_VALUES.filter(color => color !== primary);
     return {
+      version: SUPPORTED_VERSIONS.includes(Number(version)) ? Number(version) : CURRENT_VERSION,
       primary,
       secondary: selectStable(secondaryChoices, stableKey, "secondary") || DEFAULT_FLAG.secondary,
       symbolColor: selectStable(["#F2E2BF", "#DDD0AE", "#202426", "#303436"], stableKey, "symbolColor") || DEFAULT_FLAG.symbolColor,
@@ -168,13 +186,59 @@
 
   function normalizeFlag(flag = null, stableKey = "") {
     const source = flag && typeof flag === "object" && !Array.isArray(flag) ? flag : {};
-    const fallback = createDeterministicFlag(stableKey);
+    const version = getFlagVersion(source);
+    const fallback = createDeterministicFlag(stableKey, version);
     const primary = normalizeHexColor(firstValue(source, ["primary", "primaryColor", "fieldColor", "background"])) || fallback.primary;
     const secondary = normalizeHexColor(firstValue(source, ["secondary", "accent", "accentColor", "secondaryColor", "patternColor"])) || fallback.secondary;
     const symbolColor = normalizeHexColor(firstValue(source, ["symbolColor", "iconColor", "chargeColor", "emblemColor"])) || DEFAULT_FLAG.symbolColor;
     const pattern = normalizePattern(firstValue(source, ["pattern", "patternId"]), stableKey);
     const symbol = normalizeSymbol(firstValue(source, ["symbol", "symbolId", "icon", "emblem"]), stableKey);
-    return { primary, secondary, symbolColor, pattern, symbol };
+    return { version, primary, secondary, symbolColor, pattern, symbol };
+  }
+
+  function toStoredFlag(flag = null, stableKey = "", options = {}) {
+    const normalized = normalizeFlag(flag, stableKey);
+    const requestedVersion = Number(options.version);
+    const version = SUPPORTED_VERSIONS.includes(requestedVersion) ? requestedVersion : normalized.version;
+    const stored = {
+      primary: normalized.primary,
+      secondary: normalized.secondary,
+      symbolColor: normalized.symbolColor,
+      pattern: normalized.pattern,
+      symbol: normalized.symbol,
+    };
+    if (version >= CURRENT_VERSION) stored.version = CURRENT_VERSION;
+    return stored;
+  }
+
+  function createVersion2Flag(flag = null, stableKey = "") {
+    return normalizeFlag({ ...toStoredFlag(flag, stableKey, { version: CURRENT_VERSION }), version: CURRENT_VERSION }, stableKey);
+  }
+
+  function colorLuminance(value) {
+    const color = normalizeHexColor(value) || DEFAULT_FLAG.primary;
+    const channels = [1, 3, 5].map(index => Number.parseInt(color.slice(index, index + 2), 16) / 255)
+      .map(channel => channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+  }
+
+  function getContrastRatio(left, right) {
+    const leftLuminance = colorLuminance(left);
+    const rightLuminance = colorLuminance(right);
+    return (Math.max(leftLuminance, rightLuminance) + 0.05) / (Math.min(leftLuminance, rightLuminance) + 0.05);
+  }
+
+  function getContrastWarnings(flag = null, stableKey = "") {
+    const normalized = normalizeFlag(flag, stableKey);
+    const fieldContrast = getContrastRatio(normalized.primary, normalized.secondary);
+    const symbolContrast = Math.min(
+      getContrastRatio(normalized.symbolColor, normalized.primary),
+      getContrastRatio(normalized.symbolColor, normalized.secondary)
+    );
+    const warnings = [];
+    if (fieldContrast < 1.35) warnings.push("Background and pattern colors may blend together.");
+    if (symbolContrast < 2.25) warnings.push("The symbol may be hard to read at map size.");
+    return Object.freeze({ fieldContrast, symbolContrast, warnings: Object.freeze(warnings) });
   }
 
   function randomIndex(length, randomInt) {
@@ -185,11 +249,19 @@
 
   function createRandomFlag(randomInt = null) {
     const primary = COLOR_VALUES[randomIndex(COLOR_VALUES.length, randomInt)] || DEFAULT_FLAG.primary;
-    const secondaryChoices = COLOR_VALUES.filter(color => color !== primary);
+    const readableSecondaryChoices = COLOR_VALUES.filter(color => color !== primary && getContrastRatio(color, primary) >= 1.45);
+    const secondaryChoices = readableSecondaryChoices.length ? readableSecondaryChoices : COLOR_VALUES.filter(color => color !== primary);
+    const secondary = secondaryChoices[randomIndex(secondaryChoices.length, randomInt)] || DEFAULT_FLAG.secondary;
+    const symbolChoices = ["#F2E2BF", "#DDD0AE", "#202426", "#303436"]
+      .map(color => ({ color, contrast: Math.min(getContrastRatio(color, primary), getContrastRatio(color, secondary)) }))
+      .sort((left, right) => right.contrast - left.contrast);
+    const readableSymbolChoices = symbolChoices.filter(option => option.contrast >= 2.5);
+    const symbolPool = readableSymbolChoices.length ? readableSymbolChoices : symbolChoices.slice(0, 1);
     return {
+      version: CURRENT_VERSION,
       primary,
-      secondary: secondaryChoices[randomIndex(secondaryChoices.length, randomInt)] || DEFAULT_FLAG.secondary,
-      symbolColor: ["#F2E2BF", "#DDD0AE", "#202426", "#303436"][randomIndex(4, randomInt)] || DEFAULT_FLAG.symbolColor,
+      secondary,
+      symbolColor: symbolPool[randomIndex(symbolPool.length, randomInt)]?.color || DEFAULT_FLAG.symbolColor,
       pattern: PATTERN_KEYS[randomIndex(PATTERN_KEYS.length, randomInt)] || DEFAULT_FLAG.pattern,
       symbol: SYMBOL_KEYS[randomIndex(SYMBOL_KEYS.length, randomInt)] || DEFAULT_FLAG.symbol,
     };
@@ -213,6 +285,9 @@
   }
 
   return Object.freeze({
+    LEGACY_VERSION,
+    CURRENT_VERSION,
+    SUPPORTED_VERSIONS,
     COLORS,
     COLOR_VALUES,
     PATTERNS,
@@ -222,14 +297,20 @@
     LEGACY_SYMBOL_MAP,
     DEFAULT_FLAG,
     normalizeHexColor,
+    getFlagVersion,
     normalizePattern,
     normalizeSymbol,
     normalizeFlag,
+    toStoredFlag,
+    createVersion2Flag,
     createDeterministicFlag,
     createRandomFlag,
     getColorOption,
     getSymbol,
     getSymbolOutline,
+    colorLuminance,
+    getContrastRatio,
+    getContrastWarnings,
     stableHash,
   });
 });

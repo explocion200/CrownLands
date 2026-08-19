@@ -332,7 +332,7 @@ requires(
 );
 requires(
   client,
-  /function applyBattleReportTargetFlags[\s\S]*?applyFlagToElement\(flag,\s*report\.opponentFlag,\s*report\.opponentUid\)/,
+  /function applyBattleReportTargetFlags[\s\S]*?FlagRenderer\.render\(flag, report\.opponentFlag, \{ stableKey: report\.opponentUid, context: "battle-report-list", size: "small" \}\)/,
   "Compact report target flags are not hydrated from report snapshots against the stable opponent identity."
 );
 requires(

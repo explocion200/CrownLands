@@ -44,8 +44,9 @@ service cloud.firestore {
 
     function validPlayerFlagValue(flag) {
       return flag is map
-        && flag.keys().hasOnly(['primary', 'secondary', 'symbolColor', 'pattern', 'symbol'])
+        && flag.keys().hasOnly(['version', 'primary', 'secondary', 'symbolColor', 'pattern', 'symbol'])
         && flag.keys().hasAll(['primary', 'secondary', 'pattern', 'symbol'])
+        && (!flag.keys().hasAny(['version']) || flag.version == 2)
         && validPlayerFlagColor(flag.primary)
         && validPlayerFlagColor(flag.secondary)
         && (!flag.keys().hasAny(['symbolColor']) || validPlayerFlagColor(flag.symbolColor))
@@ -57,10 +58,20 @@ service cloud.firestore {
           'crown', 'lion', 'eagle', 'double-eagle', 'wolf', 'stag', 'boar', 'bear',
           'horse', 'dragon', 'griffin', 'raven', 'falcon', 'serpent', 'crossed-swords',
           'battle-axe', 'war-hammer', 'spearhead', 'gauntlet', 'tower', 'castle-gate',
-          'fleur-de-lis', 'oak-tree', 'sunburst',
-          'castle', 'star', 'swords', 'fleur', 'cross', 'sun', 'moon', 'knight',
-          'diamond', 'spire', 'guardian', 'banner', 'helm', 'keep'
+          'fleur-de-lis', 'oak-tree', 'sunburst', 'cross', 'moon', 'diamond', 'guardian',
+          'banner', 'helm',
+          'castle', 'star', 'swords', 'fleur', 'sun', 'knight', 'spire', 'keep'
         ];
+    }
+
+    function validOptionalPlayerFlag(container) {
+      return container is map
+        && (!container.keys().hasAny(['flag']) || validPlayerFlagValue(container.flag));
+    }
+
+    function validPlayerSaveFlag() {
+      return !request.resource.data.keys().hasAny(['state'])
+        || (request.resource.data.state is map && validOptionalPlayerFlag(request.resource.data.state));
     }
 
     function validPlayerProfileNameCreate() {
@@ -190,8 +201,11 @@ service cloud.firestore {
       allow delete: if false;
 
       match /saves/{saveId} {
-        allow read, create, update: if ownsPlayerDoc(uid)
+        allow read: if ownsPlayerDoc(uid)
           && saveId == 'default-fresh-2026-07-26-server-reset';
+        allow create, update: if ownsPlayerDoc(uid)
+          && saveId == 'default-fresh-2026-07-26-server-reset'
+          && validPlayerSaveFlag();
         allow delete: if false;
       }
 
@@ -558,7 +572,10 @@ service cloud.firestore {
 
       match /presence/{uid} {
         allow read: if signedIn() && isCurrentIslandId(islandId);
-        allow create, update, delete: if ownsPlayerDoc(uid) && isCurrentIslandId(islandId);
+        allow create, update: if ownsPlayerDoc(uid)
+          && isCurrentIslandId(islandId)
+          && validOptionalPlayerFlag(request.resource.data);
+        allow delete: if ownsPlayerDoc(uid) && isCurrentIslandId(islandId);
       }
     }
   }

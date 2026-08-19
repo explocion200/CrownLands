@@ -1064,6 +1064,12 @@ const CROWNLANDS_ICON_KEYS = new Set([
   "flag-fleur-de-lis",
   "flag-oak-tree",
   "flag-sunburst",
+  "flag-cross",
+  "flag-moon",
+  "flag-diamond",
+  "flag-guardian",
+  "flag-banner",
+  "flag-helm",
 ]);
 
 const CROWNLANDS_ICON_ALIASES = Object.freeze({
@@ -1095,6 +1101,11 @@ const FLAG_COLOR_OPTIONS = PLAYER_FLAG_CONFIG.COLORS;
 const FLAG_COLORS = PLAYER_FLAG_CONFIG.COLOR_VALUES;
 const FLAG_PATTERNS = PLAYER_FLAG_CONFIG.PATTERNS;
 const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG.SYMBOLS;
+const FlagRenderer = globalThis.CrownlandsFlagRenderer?.create({
+  config: PLAYER_FLAG_CONFIG,
+  renderIcon: renderCrownlandsIcon,
+});
+if (!FlagRenderer) throw new Error("Crownlands FlagRenderer did not load.");
 const CLAN_SHIELD_COLORS = [
   { value: "#7a2638", label: "Castilian crimson" },
   { value: "#a84432", label: "Brick red" },
@@ -2003,6 +2014,10 @@ let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
+let flagSavedBaseline = null;
+let flagEditorSection = "colors";
+let flagSaveInFlight = false;
+let pendingFlagEditorExit = null;
 let activeProfileTab = "profile";
 let clanSnapshot = null;
 let clanMembers = [];
@@ -2173,6 +2188,13 @@ const pushAlertsStatus = document.getElementById("pushAlertsStatus");
 const animationModeButtons = Array.from(document.querySelectorAll("[data-animation-mode-option]"));
 const animationModeStatus = document.getElementById("animationModeStatus");
 const flagEditorPreview = document.getElementById("flagEditorPreview");
+const flagEditorSmallPreview = document.getElementById("flagEditorSmallPreview");
+const flagEditorPatternName = document.getElementById("flagEditorPatternName");
+const flagEditorSymbolName = document.getElementById("flagEditorSymbolName");
+const flagEditorContrastWarning = document.getElementById("flagEditorContrastWarning");
+const flagEditorDirtyStatus = document.getElementById("flagEditorDirtyStatus");
+const flagEditorSaveStatus = document.getElementById("flagEditorSaveStatus");
+const flagEditorControlScroll = document.getElementById("flagEditorControlScroll");
 const flagPrimaryColors = document.getElementById("flagPrimaryColors");
 const flagSecondaryColors = document.getElementById("flagSecondaryColors");
 const flagSymbolColors = document.getElementById("flagSymbolColors");
@@ -2180,6 +2202,12 @@ const flagPatternOptions = document.getElementById("flagPatternOptions");
 const flagSymbolOptions = document.getElementById("flagSymbolOptions");
 const flagSaveBtn = document.getElementById("flagSaveBtn");
 const flagBackBtn = document.getElementById("flagBackBtn");
+const flagResetBtn = document.getElementById("flagResetBtn");
+const flagRandomizeBtn = document.getElementById("flagRandomizeBtn");
+const flagSwapColorsBtn = document.getElementById("flagSwapColorsBtn");
+const flagEditorTabButtons = Array.from(document.querySelectorAll("[data-flag-editor-tab]"));
+const flagEditorPanels = Array.from(document.querySelectorAll("[data-flag-editor-panel]"));
+const flagDiscardDialog = document.getElementById("flagDiscardDialog");
 const mapFrame = document.getElementById("mapFrame");
 const citadelAssaultCountdown = document.getElementById("citadelAssaultCountdown");
 const citadelAssaultCountdownTime = document.getElementById("citadelAssaultCountdownTime");
@@ -10990,7 +11018,7 @@ function getPlayerProfileSnapshot() {
     mainRegionId,
     activeRegionId,
     playerName: profileName,
-    flag: state?.flag || createDefaultFlag(),
+    flag: PLAYER_FLAG_CONFIG.toStoredFlag(state?.flag || createDefaultFlag(), getCurrentOnlineUid() || profileName),
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     skillPresets: state ? normalizeSkillPresets(state.skillPresets) : createDefaultSkillPresets(),
@@ -11373,7 +11401,7 @@ function getOnlinePresenceSnapshot() {
   return {
     displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
     playerName: state?.playerName || "Ruler",
-    flag: state?.flag || createDefaultFlag(),
+    flag: PLAYER_FLAG_CONFIG.toStoredFlag(state?.flag || createDefaultFlag(), getCurrentOnlineUid() || state?.playerName),
     mainCityId: stats?.mainCityId || state?.mainCityId || "",
     mainRegionId: stats?.mainRegionId || mainRegionId,
     mainIslandId: stats?.mainIslandId || state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
@@ -11391,7 +11419,7 @@ function getKingPowerLeaderboardSnapshot() {
   return {
     displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
     playerName: state?.playerName || "Ruler",
-    flag: state?.flag || createDefaultFlag(),
+    flag: PLAYER_FLAG_CONFIG.toStoredFlag(state?.flag || createDefaultFlag(), getCurrentOnlineUid() || state?.playerName),
     kingPower: getKingPower(),
     kingPowerVersion: Math.max(KING_POWER_AUTHORITY_VERSION, Math.floor(Number(stats?.version) || 0)),
     cityCount,
@@ -11615,7 +11643,7 @@ function renderPublicPlayerProfile(profile) {
           : `<p class="public-profile-empty">Not in a clan.</p>`}
       </section>
     </div>`;
-  applyFlagToElement(modalBody.querySelector("#publicPlayerFlag"), profile.flag, profile.uid);
+  FlagRenderer.render(modalBody.querySelector("#publicPlayerFlag"), profile.flag, { stableKey: profile.uid, context: "public-profile" });
 }
 
 async function showPublicPlayerProfile(uid = "") {
@@ -21027,7 +21055,11 @@ function renderHud() {
   const flagSignature = getFlagSignature(state.flag);
   if (hudKingdomFlag && flagSignature !== lastHudFlagSignature) {
     lastHudFlagSignature = flagSignature;
-    applyFlagToElement(hudKingdomFlag, state.flag, getCurrentOnlineUid() || state.playerName);
+    FlagRenderer.render(hudKingdomFlag, state.flag, {
+      stableKey: getCurrentOnlineUid() || state.playerName,
+      context: "hud",
+      size: "small",
+    });
   }
   renderClanHudAccess();
   renderDailyLoginRewardButton();
@@ -21178,31 +21210,6 @@ function updateActiveItemEffectsStackDensity() {
   activeItemEffectsStack.classList.toggle("dense", activeCount > 3);
 }
 
-function applyFlagToElement(element, flag, stableKey = "") {
-  if (!element) return;
-  const normalized = normalizeFlag(flag, stableKey);
-  const renderSignature = `${normalized.primary}:${normalized.secondary}:${normalized.symbolColor}:${normalized.pattern}:${normalized.symbol}`;
-  const existingSymbol = element.querySelector(".flag-symbol");
-  if (element.dataset.flagRenderSignature === renderSignature && existingSymbol?.firstElementChild) return;
-  const primaryOption = PLAYER_FLAG_CONFIG.getColorOption(normalized.primary);
-  const secondaryOption = PLAYER_FLAG_CONFIG.getColorOption(normalized.secondary);
-  element.style.setProperty("--flag-primary", normalized.primary);
-  element.style.setProperty("--flag-secondary", normalized.secondary);
-  element.style.setProperty("--flag-symbol-color", normalized.symbolColor);
-  element.style.setProperty("--flag-symbol-outline", PLAYER_FLAG_CONFIG.getSymbolOutline(normalized.symbolColor));
-  element.dataset.flagPrimaryDye = primaryOption?.label || "Custom heraldic color";
-  element.dataset.flagSecondaryDye = secondaryOption?.label || "Custom heraldic color";
-  for (const option of FLAG_PATTERNS) element.classList.remove(`pattern-${option.key}`);
-  element.classList.add(`pattern-${normalized.pattern}`);
-  const symbol = FLAG_SYMBOLS.find(option => option.key === normalized.symbol) || FLAG_SYMBOLS[0];
-  const symbolElement = element.querySelector(".flag-symbol");
-  if (symbolElement) {
-    symbolElement.dataset.flagSymbol = symbol.key;
-    symbolElement.innerHTML = renderCrownlandsIcon(symbol.icon || symbol.key, "flag-symbol-icon");
-  }
-  element.dataset.flagRenderSignature = renderSignature;
-}
-
 function getCityOwnerFlag(city) {
   if (!city) return null;
   if (city.owner === "player") return normalizeFlag(state.flag, getCurrentOnlineUid() || "local-player");
@@ -21225,7 +21232,11 @@ function applyCityOwnerFlags(container, city) {
   const flag = getCityOwnerFlag(city);
   if (!flag) return;
   const stableKey = city.ownerUid || (city.owner === "player" ? getCurrentOnlineUid() : "");
-  container.querySelectorAll(".city-kingdom-flag").forEach(element => applyFlagToElement(element, flag, stableKey));
+  container.querySelectorAll(".city-kingdom-flag").forEach(element => FlagRenderer.render(element, flag, {
+    stableKey,
+    context: "city",
+    size: "small",
+  }));
 }
 
 function getCityOwnerDisplayName(city) {
@@ -21560,12 +21571,57 @@ function showProfileScreen() {
   showProfileView();
 }
 
-function closeProfileScreen() {
+function getFlagEditorSignature(flag) {
+  if (!flag) return "";
+  const normalized = normalizeFlag(flag, getCurrentOnlineUid() || state?.playerName || "local-player");
+  return JSON.stringify([
+    normalized.version,
+    normalized.primary,
+    normalized.secondary,
+    normalized.symbolColor,
+    normalized.pattern,
+    normalized.symbol,
+  ]);
+}
+
+function isFlagEditorDirty() {
+  return Boolean(flagDraft && flagSavedBaseline && getFlagEditorSignature(flagDraft) !== getFlagEditorSignature(flagSavedBaseline));
+}
+
+function requestFlagEditorExit(action) {
+  if (!isFlagEditorDirty()) {
+    action();
+    return;
+  }
+  pendingFlagEditorExit = action;
+  if (flagDiscardDialog?.showModal) {
+    if (!flagDiscardDialog.open) flagDiscardDialog.showModal();
+    return;
+  }
+  if (window.confirm("Discard your unsaved flag changes?")) {
+    const pendingAction = pendingFlagEditorExit;
+    pendingFlagEditorExit = null;
+    pendingAction?.();
+  }
+}
+
+function clearFlagEditorSession() {
+  flagDraft = null;
+  flagSavedBaseline = null;
+  flagSaveInFlight = false;
+  pendingFlagEditorExit = null;
+}
+
+function closeProfileScreen(options = {}) {
   if (!profileScreen) return;
+  if (!options.force && !flagEditorView?.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(() => closeProfileScreen({ force: true }));
+    return;
+  }
   profileScreen.classList.remove("open");
   profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
   profileScreen.setAttribute("aria-hidden", "true");
-  flagDraft = null;
+  clearFlagEditorSession();
   activeProfileTab = "profile";
   skillPresetMarkupSignature = "";
   cancelProfileNameEdit();
@@ -21579,8 +21635,12 @@ function animateUiTabPanel(panel) {
   window.setTimeout(() => panel.classList.remove("ui-tab-entering"), 260);
 }
 
-function showProfileView() {
+function showProfileView(options = {}) {
   if (!profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(() => showProfileView({ force: true }));
+    return;
+  }
   activeProfileTab = "profile";
   profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   profileView.hidden = false;
@@ -21588,7 +21648,7 @@ function showProfileView() {
   settingsView.hidden = true;
   clanView.hidden = true;
   flagEditorView.hidden = true;
-  flagDraft = null;
+  clearFlagEditorSession();
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileScreen();
@@ -21596,8 +21656,12 @@ function showProfileView() {
   animateUiTabPanel(profileView);
 }
 
-function showProfileSkills() {
+function showProfileSkills(options = {}) {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(() => showProfileSkills({ force: true }));
+    return;
+  }
   activeProfileTab = "skills";
   profileScreen.classList.add("skills-active");
   profileScreen.classList.remove("settings-active", "clan-active", "flag-editor-active");
@@ -21606,7 +21670,7 @@ function showProfileSkills() {
   settingsView.hidden = true;
   clanView.hidden = true;
   flagEditorView.hidden = true;
-  flagDraft = null;
+  clearFlagEditorSession();
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileSkills();
@@ -21614,8 +21678,12 @@ function showProfileSkills() {
   animateUiTabPanel(skillsView);
 }
 
-function showProfileSettings() {
+function showProfileSettings(options = {}) {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(() => showProfileSettings({ force: true }));
+    return;
+  }
   activeProfileTab = "settings";
   profileScreen.classList.add("settings-active");
   profileScreen.classList.remove("skills-active", "clan-active", "flag-editor-active");
@@ -21624,7 +21692,7 @@ function showProfileSettings() {
   settingsView.hidden = false;
   clanView.hidden = true;
   flagEditorView.hidden = true;
-  flagDraft = null;
+  clearFlagEditorSession();
   cancelProfileNameEdit();
   updateProfileTabHeader();
   updatePushAlertsUi();
@@ -22318,8 +22386,12 @@ async function refreshClanState(options = {}) {
   }
 }
 
-function showProfileClan() {
+function showProfileClan(options = {}) {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
+    requestFlagEditorExit(() => showProfileClan({ force: true }));
+    return;
+  }
   const enteringClan = activeProfileTab !== "clan";
   if (enteringClan) {
     activeClanMobileSection = "overview";
@@ -22334,6 +22406,7 @@ function showProfileClan() {
   settingsView.hidden = true;
   clanView.hidden = false;
   flagEditorView.hidden = true;
+  clearFlagEditorSession();
   updateProfileTabHeader();
   renderClanView();
   resetUiScrollTop(clanView);
@@ -22718,10 +22791,18 @@ function renderClanApplicantFlag(index) {
 
 function applyClanRosterFlags() {
   clanMembers.forEach((member, index) => {
-    applyFlagToElement(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag(), member.uid);
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag(), {
+      stableKey: member.uid,
+      context: "clan-roster",
+      size: "small",
+    });
   });
   clanApplications.forEach((application, index) => {
-    applyFlagToElement(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag(), application.uid);
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag(), {
+      stableKey: application.uid,
+      context: "clan-application",
+      size: "small",
+    });
   });
 }
 
@@ -23673,7 +23754,10 @@ function renderProfileScreen() {
       ? `View Achievements · ${claimable} Ready`
       : "View Achievements";
   }
-  applyFlagToElement(profileKingdomFlag, state.flag, getCurrentOnlineUid() || state.playerName);
+  FlagRenderer.render(profileKingdomFlag, state.flag, {
+    stableKey: getCurrentOnlineUid() || state.playerName,
+    context: "profile",
+  });
   renderProfileClanAffiliation();
   updatePushAlertsUi();
 }
@@ -23996,42 +24080,109 @@ function showFlagEditor() {
   activeProfileTab = "profile";
   profileScreen.classList.add("flag-editor-active");
   profileScreen.classList.remove("skills-active", "settings-active");
-  flagDraft = normalizeFlag(state.flag);
+  const stableKey = getCurrentOnlineUid() || state.playerName;
+  flagSavedBaseline = normalizeFlag(state.flag, stableKey);
+  flagDraft = { ...flagSavedBaseline };
+  flagEditorSection = "colors";
+  flagSaveInFlight = false;
+  if (flagEditorSaveStatus) {
+    flagEditorSaveStatus.textContent = "";
+    delete flagEditorSaveStatus.dataset.state;
+  }
   profileView.hidden = true;
   skillsView.hidden = true;
   settingsView.hidden = true;
   flagEditorView.hidden = false;
   updateProfileTabHeader();
+  setFlagEditorSection("colors", { resetScroll: false });
   renderFlagEditor();
-  resetUiScrollTop(flagEditorView);
+  if (flagEditorControlScroll) flagEditorControlScroll.scrollTop = 0;
+}
+
+function setFlagEditorSection(section, { resetScroll = true } = {}) {
+  const nextSection = ["colors", "pattern", "symbol"].includes(section) ? section : "colors";
+  flagEditorSection = nextSection;
+  flagEditorTabButtons.forEach(button => {
+    const active = button.dataset.flagEditorTab === nextSection;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  flagEditorPanels.forEach(panel => {
+    panel.hidden = panel.dataset.flagEditorPanel !== nextSection;
+  });
+  if (resetScroll && flagEditorControlScroll) flagEditorControlScroll.scrollTop = 0;
+}
+
+function updateFlagDraft(updates) {
+  if (!flagDraft || flagSaveInFlight) return;
+  flagDraft = normalizeFlag({ ...flagDraft, ...updates }, getCurrentOnlineUid() || state?.playerName);
+  if (flagEditorSaveStatus) {
+    flagEditorSaveStatus.textContent = "";
+    delete flagEditorSaveStatus.dataset.state;
+  }
+  renderFlagEditor();
 }
 
 function renderFlagEditor() {
   if (!flagDraft) return;
-  applyFlagToElement(flagEditorPreview, flagDraft, getCurrentOnlineUid() || state.playerName);
+  const stableKey = getCurrentOnlineUid() || state.playerName;
+  FlagRenderer.render(flagEditorPreview, flagDraft, {
+    stableKey,
+    context: "editor-preview",
+    size: "large",
+  });
+  FlagRenderer.render(flagEditorSmallPreview, flagDraft, {
+    stableKey,
+    context: "editor-map-preview",
+    size: "small",
+  });
+  const selectedPattern = FLAG_PATTERNS.find(option => option.key === flagDraft.pattern);
+  const selectedSymbol = FLAG_SYMBOLS.find(option => option.key === flagDraft.symbol);
+  if (flagEditorPatternName) flagEditorPatternName.textContent = selectedPattern?.label || flagDraft.pattern;
+  if (flagEditorSymbolName) flagEditorSymbolName.textContent = selectedSymbol?.label || flagDraft.symbol;
+  const contrast = PLAYER_FLAG_CONFIG.getContrastWarnings(flagDraft, stableKey);
+  if (flagEditorContrastWarning) {
+    flagEditorContrastWarning.hidden = contrast.warnings.length === 0;
+    flagEditorContrastWarning.textContent = contrast.warnings.join(" ");
+  }
+  const dirty = isFlagEditorDirty();
+  if (flagEditorDirtyStatus) flagEditorDirtyStatus.textContent = dirty ? "Unsaved changes" : "No unsaved changes";
+  if (flagSaveBtn) {
+    flagSaveBtn.disabled = flagSaveInFlight || !dirty;
+    flagSaveBtn.textContent = flagSaveInFlight ? "Saving…" : "Save Flag";
+  }
+  if (flagResetBtn) flagResetBtn.disabled = flagSaveInFlight || !dirty;
+  if (flagRandomizeBtn) flagRandomizeBtn.disabled = flagSaveInFlight;
+  if (flagSwapColorsBtn) flagSwapColorsBtn.disabled = flagSaveInFlight;
   renderFlagSwatches(flagPrimaryColors, "primary");
   renderFlagSwatches(flagSecondaryColors, "secondary");
   renderFlagSwatches(flagSymbolColors, "symbolColor");
 
   flagPatternOptions.innerHTML = FLAG_PATTERNS.map(option => {
     const selected = flagDraft.pattern === option.key;
-    return `<button type="button" data-flag-pattern="${option.key}" class="${selected ? "active" : ""}" aria-pressed="${selected}">${option.label}</button>`;
+    return `<button type="button" data-flag-pattern="${option.key}" class="player-flag-editor__control player-flag-editor__pattern-card${selected ? " active" : ""}" aria-pressed="${selected}"><span class="kingdom-flag flag-pattern-thumbnail" data-flag-pattern-preview="${option.key}" aria-hidden="true"><span class="flag-symbol"></span></span><span>${escapeHtml(option.label)}</span></button>`;
   }).join("");
+  flagPatternOptions.querySelectorAll("[data-flag-pattern-preview]").forEach(preview => {
+    FlagRenderer.render(preview, { ...flagDraft, pattern: preview.dataset.flagPatternPreview }, {
+      stableKey,
+      context: "editor-pattern-option",
+      size: "thumbnail",
+      hideSymbol: true,
+    });
+  });
   flagPatternOptions.querySelectorAll("button[data-flag-pattern]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
-      flagDraft.pattern = buttonElement.dataset.flagPattern;
-      renderFlagEditor();
+      updateFlagDraft({ pattern: buttonElement.dataset.flagPattern });
     });
   });
 
   flagSymbolOptions.innerHTML = FLAG_SYMBOLS.map(option => {
     const selected = flagDraft.symbol === option.key;
-    return `<button type="button" data-flag-symbol="${option.key}" class="${selected ? "active" : ""}" aria-label="${option.label}" aria-pressed="${selected}" title="${option.label}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}</button>`;
+    return `<button type="button" data-flag-symbol="${option.key}" class="player-flag-editor__control player-flag-editor__symbol-card${selected ? " active" : ""}" aria-label="${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}">${renderCrownlandsIcon(option.icon || option.key, "flag-editor-symbol-icon")}<span>${escapeHtml(option.label)}</span></button>`;
   }).join("");
   flagSymbolOptions.querySelectorAll("button[data-flag-symbol]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
-      flagDraft.symbol = buttonElement.dataset.flagSymbol;
-      renderFlagEditor();
+      updateFlagDraft({ symbol: buttonElement.dataset.flagSymbol });
     });
   });
 }
@@ -24044,37 +24195,93 @@ function renderFlagSwatches(container, key) {
     : [Object.freeze({ value: currentColor, label: "Current saved color" }), ...FLAG_COLOR_OPTIONS].filter(option => option.value);
   container.innerHTML = options.map(option => {
     const selected = flagDraft[key] === option.value;
-    return `<button type="button" data-flag-color="${option.value}" class="flag-color-swatch${selected ? " active" : ""}" style="--flag-swatch:${option.value}" aria-label="Select ${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}"></button>`;
+    const checkColor = PLAYER_FLAG_CONFIG.getContrastRatio(option.value, "#F2E2BF") >= 3 ? "#F2E2BF" : "#202426";
+    return `<button type="button" data-flag-color="${option.value}" class="player-flag-editor__control player-flag-editor__swatch flag-color-swatch${selected ? " active" : ""}" style="--flag-swatch:${option.value};--flag-check-color:${checkColor};background-color:var(--flag-swatch)" aria-label="Select ${escapeHtml(option.label)}" aria-pressed="${selected}" title="${escapeHtml(option.label)}"></button>`;
   }).join("");
   container.querySelectorAll("button[data-flag-color]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => {
-      flagDraft[key] = buttonElement.dataset.flagColor;
-      renderFlagEditor();
+      updateFlagDraft({ [key]: buttonElement.dataset.flagColor });
     });
   });
 }
 
-async function saveFlagEditor() {
-  if (!state || !flagDraft) return;
-  state.flag = normalizeFlag(flagDraft, getCurrentOnlineUid() || state.playerName);
+function commitSavedPlayerFlag(nextFlag, stableKey) {
+  state.flag = nextFlag;
+  state.lastRealTimeMs = Date.now();
   playerCities().forEach(city => {
-    city.ownerFlag = state.flag;
-    markOwnedCityChanged(city, false);
+    city.ownerFlag = nextFlag;
+    localDirtyCityIds.delete(city.id);
   });
-  saveGame();
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => ({ ...city, ownerFlag: nextFlag }));
+    updateIslandSummariesFromOwnedCityCache();
+  }
   rememberCurrentPlayerIdentity();
+  FlagRenderer.refresh(stableKey, nextFlag);
   renderHud();
   renderCities(true);
-  showProfileView();
-  showToast("Kingdom flag saved. Updating your cities...");
-  const [identitySynced, cloudSaved] = await Promise.all([
-    syncPlayerIdentityToAllOwnedCities({ forceLeaderboard: true }),
-    flushOnlineSave(true),
-  ]);
-  if (getOnlineApi()?.isSignedIn?.() && (!identitySynced || !cloudSaved)) {
-    showToast("Flag saved. Online flag sync will retry.");
-  } else {
-    showToast("Kingdom flag updated everywhere.");
+  renderProfileScreen();
+}
+
+async function saveFlagEditor() {
+  if (!state || !flagDraft || flagSaveInFlight || !isFlagEditorDirty()) return;
+  const stableKey = getCurrentOnlineUid() || state.playerName || "local-player";
+  const nextFlag = PLAYER_FLAG_CONFIG.createVersion2Flag(flagDraft, stableKey);
+  const storedFlag = PLAYER_FLAG_CONFIG.toStoredFlag(nextFlag, stableKey);
+  const api = getOnlineApi();
+  const signedIn = Boolean(api?.isSignedIn?.());
+  flagSaveInFlight = true;
+  if (flagEditorSaveStatus) {
+    flagEditorSaveStatus.textContent = signedIn ? "Saving everywhere…" : "Saving locally…";
+    flagEditorSaveStatus.dataset.state = "saving";
+  }
+  renderFlagEditor();
+
+  try {
+    if (signedIn) {
+      if (!api.savePlayerProfile || !api.syncPlayerIdentity || !api.saveGameSnapshot || !api.savePresence) {
+        throw new Error("Flag sync is not available. Please retry after reconnecting.");
+      }
+      const cloudState = { ...getPlayerCloudStateSnapshot(), flag: storedFlag };
+      const leaderboardEntry = { ...getKingPowerLeaderboardSnapshot(), flag: storedFlag };
+      const activeIslandId = state.online?.islandId || getOnlineIslandId(getActiveOnlineRegionId());
+      const results = await Promise.all([
+        api.savePlayerProfile(stripServerEconomyProfileFields(cloudState)),
+        api.syncPlayerIdentity({
+          ownerName: state.playerName || "Ruler",
+          ownerFlag: storedFlag,
+          ownerKingPower: getKingPower(),
+          mainCityId: leaderboardEntry.mainCityId,
+          mainRegionId: leaderboardEntry.mainRegionId,
+          mainIslandId: leaderboardEntry.mainIslandId,
+        }),
+        api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT),
+        api.savePresence(activeIslandId, { ...getOnlinePresenceSnapshot(), flag: storedFlag }),
+      ]);
+      if (results.some(result => result === false)) throw new Error("One or more flag destinations did not confirm the save.");
+      const identityResult = results[1];
+      if (identityResult?.globalStats) applyGlobalStatsSnapshot(identityResult.globalStats, { render: false });
+    }
+
+    commitSavedPlayerFlag(nextFlag, stableKey);
+    if (!signedIn) saveGame();
+    flagSavedBaseline = { ...nextFlag };
+    flagDraft = { ...nextFlag };
+    if (flagEditorSaveStatus) {
+      flagEditorSaveStatus.textContent = signedIn ? "Saved everywhere" : "Saved locally";
+      flagEditorSaveStatus.dataset.state = "success";
+    }
+    showToast(signedIn ? "Kingdom flag updated everywhere." : "Kingdom flag saved locally.");
+  } catch (error) {
+    console.warn("Could not save kingdom flag everywhere", error);
+    if (flagEditorSaveStatus) {
+      flagEditorSaveStatus.textContent = "Save failed — retry";
+      flagEditorSaveStatus.dataset.state = "error";
+    }
+    showToast(error?.message || "Could not save the kingdom flag. Please retry.");
+  } finally {
+    flagSaveInFlight = false;
+    renderFlagEditor();
   }
 }
 
@@ -25796,8 +26003,8 @@ function showScoutReportModal(cityId) {
       <div class="scout-report-timing"><span>Report age: <b data-scout-report-age>${formatDuration(age)}</b></span><span>Expires in: <b data-scout-report-expires>${formatDuration(remaining)}</b></span></div>
     </div>
   `;
-  applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag, currentPlayerUid);
-  applyFlagToElement(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag, reportedOwnerUid);
+  FlagRenderer.render(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag, { stableKey: currentPlayerUid, context: "scout-report" });
+  FlagRenderer.render(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag, { stableKey: reportedOwnerUid, context: "scout-report" });
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
@@ -33386,7 +33593,11 @@ function renderLeaderboardRows(rows) {
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
   entries.forEach((entry, index) => {
-    applyFlagToElement(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag(), entry.uid);
+    FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag(), {
+      stableKey: entry.uid,
+      context: "leaderboard",
+      size: "small",
+    });
   });
 }
 
@@ -33667,7 +33878,7 @@ function applyBattleReportTargetFlags(reports = []) {
   reports.forEach((report, index) => {
     if (!report?.opponentFlag) return;
     const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
-    applyFlagToElement(flag, report.opponentFlag, report.opponentUid);
+    FlagRenderer.render(flag, report.opponentFlag, { stableKey: report.opponentUid, context: "battle-report-list", size: "small" });
   });
 }
 
@@ -34686,7 +34897,10 @@ function applyDetailedBattleFlags(snapshot) {
   ]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
     const side = element.dataset.battleParticipantFlag;
-    applyFlagToElement(element, flags.get(side) || createDefaultFlag(), snapshot[side]?.ownerUid || side);
+    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), {
+      stableKey: snapshot[side]?.ownerUid || side,
+      context: "battle-report-detail",
+    });
   });
 }
 
@@ -34701,7 +34915,7 @@ function applyLegacyBattleFlags(report = null) {
     const stableKey = side === (report?.type === "defense" ? "defender" : "attacker")
       ? getCurrentOnlineUid()
       : report?.opponentUid || side;
-    applyFlagToElement(element, flags.get(side) || createDefaultFlag(), stableKey);
+    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), { stableKey, context: "battle-report-legacy" });
   });
 }
 
@@ -34777,10 +34991,10 @@ async function showBattleReportDetail(reportId) {
   if (!modal.open) modal.showModal();
   if (report.type === "scout") {
     if (isDefenderScoutReport(report)) {
-      applyFlagToElement(
+      FlagRenderer.render(
         modalBody.querySelector("#scoutedReportAttackerFlag"),
         report.opponentFlag || createDefaultFlag(),
-        report.opponentUid
+        { stableKey: report.opponentUid, context: "scout-report-detail" }
       );
     }
     return;
@@ -36155,6 +36369,38 @@ if (profileNameInput) {
 }
 if (flagSaveBtn) flagSaveBtn.addEventListener("click", saveFlagEditor);
 if (flagBackBtn) flagBackBtn.addEventListener("click", showProfileView);
+if (flagResetBtn) flagResetBtn.addEventListener("click", () => {
+  if (!flagSavedBaseline || flagSaveInFlight) return;
+  flagDraft = { ...flagSavedBaseline };
+  if (flagEditorSaveStatus) flagEditorSaveStatus.textContent = "";
+  renderFlagEditor();
+});
+if (flagRandomizeBtn) flagRandomizeBtn.addEventListener("click", () => {
+  if (flagSaveInFlight) return;
+  flagDraft = createRandomFlag();
+  if (flagEditorSaveStatus) flagEditorSaveStatus.textContent = "";
+  renderFlagEditor();
+});
+if (flagSwapColorsBtn) flagSwapColorsBtn.addEventListener("click", () => {
+  if (!flagDraft || flagSaveInFlight) return;
+  updateFlagDraft({ primary: flagDraft.secondary, secondary: flagDraft.primary });
+});
+flagEditorTabButtons.forEach(button => {
+  button.addEventListener("click", () => setFlagEditorSection(button.dataset.flagEditorTab));
+});
+if (flagDiscardDialog) {
+  flagDiscardDialog.addEventListener("close", () => {
+    const shouldDiscard = flagDiscardDialog.returnValue === "discard";
+    const action = pendingFlagEditorExit;
+    pendingFlagEditorExit = null;
+    if (shouldDiscard) action?.();
+  });
+  flagDiscardDialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    pendingFlagEditorExit = null;
+    flagDiscardDialog.close("stay");
+  });
+}
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;

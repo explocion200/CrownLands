@@ -18,7 +18,7 @@ const rootFiles = [
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
-  "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
+  "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
   "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
@@ -67,6 +67,7 @@ copy("audio/manifest.json");
 copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath));
 copy("functions/clanQuestPeriod.js");
 copy("functions/playerFlagConfig.js");
+copy("functions/flagRenderer.js");
 
 const stamp = spawnSync(process.execPath, [path.join(__dirname, "stamp-deploy-build.js"), "--root", "dist"], {
   cwd: root,

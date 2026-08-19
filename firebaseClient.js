@@ -90,8 +90,8 @@
 
   function cleanPlayerFlag(flag, stableKey = "", { allowNull = false } = {}) {
     if ((!flag || typeof flag !== "object") && allowNull) return null;
-    if (!PLAYER_FLAG_CONFIG?.normalizeFlag) return flag && typeof flag === "object" ? flag : null;
-    return PLAYER_FLAG_CONFIG.normalizeFlag(flag, stableKey || client.user?.uid || "local-player");
+    if (!PLAYER_FLAG_CONFIG?.toStoredFlag) return flag && typeof flag === "object" ? flag : null;
+    return PLAYER_FLAG_CONFIG.toStoredFlag(flag, stableKey || client.user?.uid || "local-player");
   }
 
   function createSessionId() {
