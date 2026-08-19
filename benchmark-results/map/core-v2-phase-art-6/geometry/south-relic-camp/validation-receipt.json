@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-6-final-south-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-relic-camp-south-east-p1-p2",
+  "coordinate": {
+    "gridX": 1,
+    "gridY": 2,
+    "worldLayer": 0
+  },
+  "mapType": "RELIC_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "south-relic-camp",
+    "themeKey": "south",
+    "accentThemeKey": "east",
+    "variantKey": "b",
+    "roadGeometryId": "north-v3",
+    "retrySalt": "core-v2-art6-south-relic-sun-weathered-ruins-v1",
+    "identity": "ancient southern territory with sun-weathered foundations, partially buried stone, dry paths, and a restrained return of eastern moisture",
+    "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+    "objectiveLabel": "Relic Camp",
+    "objectiveOffset": {
+      "x": 18,
+      "y": 12
+    },
+    "transitionSides": [
+      "north",
+      "east"
+    ],
+    "transitionFamily": "core-v2-south-east",
+    "transitionRgb": [
+      156,
+      151,
+      102
+    ],
+    "edgeThemeOverrides": {
+      "north": "east",
+      "east": "east"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "sun-weathered ruin cluster",
+        "partially buried stone fragments",
+        "old dry footpaths",
+        "sparse greener eastern reclaim"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "a7024af86c34a28554f727375b44b5e618e3d5da2bb00cad4626ed11c8dd5c35",
+  "compositionPlanHash": "ad816fe7fefbfbeb35b4c14247a67934bdbdb50e8dbbf52239a7737dede49839",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.007,
+    "preferredSpacingViolations": 10,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 21.633307652783937
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 2,
+        "south": 1,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art6-v1",
+    "seedHash": "faa6c71a075943164f3b0330aeba21d1f881c5b9430bb4aae87e4d0c84afcba5",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1029,
+    "rejectedByReason": {
+      "outside_land": 511,
+      "terrain_blocker": 431,
+      "road_clearance": 673,
+      "objective_clearance": 233,
+      "edge_clearance": 3
+    },
+    "selectedTrial": 124,
+    "selectionTrialLimit": 360,
+    "minimumObservedSpacing": 68.007,
+    "meanNearestNeighbor": 81.999,
+    "preferredSpacingViolations": 10,
+    "quadrantCounts": [
+      13,
+      14,
+      15,
+      13
+    ]
+  },
+  "receiptHash": "cb547b241760cf1585694d0cf14cf57198cb66a066bf4b117d8373268b0db40a"
+}

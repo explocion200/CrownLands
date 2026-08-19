@@ -1,0 +1,35 @@
+{
+  "phase": "Core v2 Phase ART-6",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "approvalStatus": "APPROVED_LOCKED",
+  "finalCoreArtStandardLocked": true,
+  "reviewedCandidateCount": 5,
+  "completedCoreMapCount": 25,
+  "representedCoreCityCapacity": 1480,
+  "approvalQuestions": {
+    "allFiveMeetFinalCoreQualityBar": true,
+    "allTwentyFiveBelongToOneVisualFamily": true,
+    "southSupportReadableAt70Cities": true,
+    "goldMiningPerimeterBiasedAndCitySafe": true,
+    "deedSettlementSubordinateToRuntimeCities": true,
+    "southRelicDistinctFromOtherRelicMaps": true,
+    "southeastWarbandDistinctFromNorthernWarband": true,
+    "westSouthEastClimateProgressionNatural": true,
+    "roadsThinNaturalAndMedieval": true,
+    "allCitySafeAreasClean": true,
+    "interactiveRuntimeQAStillDeferred": true,
+    "readyForVisualApproval": true,
+    "approvedAndLocked": true
+  },
+  "staticRuntimeOverlayStatus": "PASS_ACTUAL_CURRENT_RUNTIME_ASSETS",
+  "browserRuntimeStatus": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+  "interactiveRuntimeQA": {
+    "status": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+    "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION",
+    "productionBlocking": true,
+    "artProductionBlocking": false,
+    "requiredBeforeProductionUse": true,
+    "futureGate": "FINAL_CONSOLIDATED_INTERACTIVE_CORE_QA_ALL_25_MAPS"
+  }
+}

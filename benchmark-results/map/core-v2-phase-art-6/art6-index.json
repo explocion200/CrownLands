@@ -1,0 +1,688 @@
+{
+  "schemaVersion": 1,
+  "phase": "Core v2 Phase ART-6",
+  "batchVersion": "core-v2-phase-art-6-final-south-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "approvedBase": "47b2e81d11370554af57fb8098f31da24b345d4d",
+  "exactBatchMapCount": 5,
+  "exactBatchCityCapacity": 295,
+  "finishedCoreMapCountAfterApproval": 25,
+  "representedCoreCityCapacityBeforeArt6": 1185,
+  "representedCoreCityCapacityAfterApproval": 1480,
+  "exactCoreRegionCount": 25,
+  "exactCoreCityCapacity": 1480,
+  "entries": [
+    {
+      "key": "southwest-gold-camp",
+      "regionId": "core-v2-gold-camp-south-west-m2-p2",
+      "name": "Gold Camp South-West",
+      "coordinate": {
+        "gridX": -2,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "GOLD_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "gold",
+        "x": 706,
+        "y": 555,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": -18,
+          "y": 12
+        }
+      },
+      "profile": {
+        "key": "southwest-gold-camp",
+        "themeKey": "south",
+        "accentThemeKey": "west",
+        "variantKey": "b",
+        "roadGeometryId": "south-v2",
+        "retrySalt": "core-v2-art6-southwest-gold-dry-resource-frontier-v1",
+        "identity": "dry southwestern mining frontier with restrained edge-biased mine workings, western grass influence, and an open city-safe interior",
+        "objectiveArt": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+        "objectiveLabel": "Gold Camp",
+        "objectiveOffset": {
+          "x": -18,
+          "y": 12
+        },
+        "transitionSides": [
+          "north",
+          "west"
+        ],
+        "transitionFamily": "core-v2-south-west",
+        "transitionRgb": [
+          161,
+          145,
+          102
+        ],
+        "edgeThemeOverrides": {
+          "north": "south",
+          "west": "west"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "edge-biased mine entrances",
+            "dry spoil and ore-cart trace",
+            "dusty worker paths",
+            "open western-southern city ground"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-west-south-m2-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "a608c858f38bb58277983dcfb184dae6236062257fa328eaba36b8ae0339a3c3",
+      "cityPlanHash": "ba1d1aa45e4fe1bd9ef8ec17794b872c3eb63458de58f959f43d7cb8e954794d",
+      "validationReceiptHash": "e72efa4d8463bba249184f40a0f3a1400d638c878adc73f813bb351e61c0c9f7",
+      "geometryDraftSha256": "8082670fcd59e4094678f951543f0183cafdcdac779c114b11f8506a93547b9d",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-6/geometry/southwest-gold-camp",
+      "candidatePngSha256": "152f38072a460312690421b046ec293271f1a5986e6127748adf8dd1739cddc9",
+      "candidateWebpSha256": "a35136f89057f05ef5923b28139a0e7f14ccd61e4db540f9b85a66b6b278bc40",
+      "thumbnailSha256": "5809ad6fa147269f4683823f4ba977a82233794a0afd8ca7f0eab69d87498c49",
+      "citiesSha256": "df009c60bd8cde99763ae47653b22bd0809e33076ecff1bf39a4cc72e532a455",
+      "compositionSha256": "e7bcc83dace796961ab5f73d0fdd8b59fec3ba0fd73e1992464fee1b875b786c",
+      "validationReceiptSha256": "7bc68c316e9022979c9759345ee4d85a66dea11c08c2fca70caf0dd7cc2d57d0",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-6/candidates/southwest-gold-camp"
+    },
+    {
+      "key": "south-deed-camp",
+      "regionId": "core-v2-deed-camp-south-west-m1-p2",
+      "name": "Deed Camp South-West",
+      "coordinate": {
+        "gridX": -1,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 708,
+        "y": 553,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": -16,
+          "y": 10
+        }
+      },
+      "profile": {
+        "key": "south-deed-camp",
+        "themeKey": "south",
+        "accentThemeKey": "west",
+        "variantKey": "c",
+        "roadGeometryId": "west-v3",
+        "retrySalt": "core-v2-art6-south-deed-warm-settled-frontier-v1",
+        "identity": "warm settled southern frontier with a restrained off-center Crownlands cottage cluster, dry farm traces, and open city-safe terrain",
+        "objectiveArt": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+        "objectiveLabel": "Deed Camp",
+        "objectiveOffset": {
+          "x": -16,
+          "y": 10
+        },
+        "transitionSides": [
+          "north",
+          "west"
+        ],
+        "transitionFamily": "core-v2-south-west",
+        "transitionRgb": [
+          161,
+          145,
+          102
+        ],
+        "edgeThemeOverrides": {
+          "west": "west"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "small off-center dry settlement",
+            "fenced plots and shed",
+            "dusty wagon lane",
+            "open warm pasture"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-west-holding-tower-m1-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-south-west-m2-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "7b154ec607d9da2f413eb0595e170ab4afdce7713720f8c102dcba62ad476090",
+      "cityPlanHash": "049bb8e4ae10613807501e3cb4dc8efa1edbfc20849910575c8ecaa985e9b244",
+      "validationReceiptHash": "dc8d6236a189886cc82d31af390fb349386e96a17f0814b93ea500fc559ec54c",
+      "geometryDraftSha256": "00be2b00e25f07c7ffc5d82363bbe1d8cc55ee3623cbb637c3d059715cc6cf00",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-6/geometry/south-deed-camp",
+      "candidatePngSha256": "34d9b0a275aa10a65ccae4297ee1e475037cc1651738145a959c9d3551e6cdb9",
+      "candidateWebpSha256": "af190ee12c108bcb51a027657a9d99f7b109720ca39b567385e9ac615e21924c",
+      "thumbnailSha256": "c0be18c9ab2a37735a8a3ec2e6003738146766b822f0cd59350485b672758e53",
+      "citiesSha256": "456c3c16ac3927da07eaf8669eda9342fa666e414f8acf901c5ff03b4644c0ab",
+      "compositionSha256": "723ebf85cf2fb5f4c75564cb3e569a4e20a715c085105faae69a5802237459c0",
+      "validationReceiptSha256": "7134e0812f220879fb067a0326e394e537581c24f1dd791fdbad9e960f6db10a",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-6/candidates/south-deed-camp"
+    },
+    {
+      "key": "south-support",
+      "regionId": "core-v2-south-support-p0-p2",
+      "name": "South Support",
+      "coordinate": {
+        "gridX": 0,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "profile": {
+        "key": "south-support",
+        "themeKey": "south",
+        "variantKey": "a",
+        "roadGeometryId": "east-v2",
+        "retrySalt": "core-v2-art6-south-support-open-dry-frontier-v1",
+        "identity": "the clean central southern frontier with dry grass, dusty soil variation, restrained erosion and maximum 70-city readability",
+        "objectiveArt": null,
+        "objectiveLabel": null,
+        "objectiveOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "transitionSides": [
+          "north"
+        ],
+        "transitionFamily": "core-v2-south-center",
+        "transitionRgb": [
+          174,
+          148,
+          94
+        ],
+        "propPlan": {
+          "majorClusters": 0,
+          "mediumClusters": 3,
+          "cueAssignments": [
+            "dry field boundary",
+            "subtle drainage and erosion",
+            "small weathered tree group",
+            "open sun-worn pasture"
+          ],
+          "centralTreatment": "none"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-south-west-m1-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "e01542143b3258d6e27c20fa179ad77231446274242554b6d62c14203ac34763",
+      "cityPlanHash": "606c1c94f4f298ccb5b949a0a4200aec588e090ad3e71e30bc57514c8c805457",
+      "validationReceiptHash": "a865feee80eccb0ccf464978f8a8e4861400192a19bf477433ad75bdd6424748",
+      "geometryDraftSha256": "c9910169cbd53022c4c4da0b26961a4f5680dbfc20e6617efb1e66c7a573df60",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-6/geometry/south-support",
+      "candidatePngSha256": "5e1ce980a746d10fcb42ac5ab0a65c786e773d802f31bd35db8b17ed72614b11",
+      "candidateWebpSha256": "85e161689bc1146f616b7287bcc70ee6a67e87b984ae958766f4831748d0e99b",
+      "thumbnailSha256": "3a03ed4f8023372a63c6c258a5aabfe999490c6d28bc4317431b121184098767",
+      "citiesSha256": "c380535b4812004532c4e9b45799e73accd80631df27b14d09054326eb10291d",
+      "compositionSha256": "d4605120703a6f2a2499c201a64bc96536965cc02a8f7e701b4353f2488e51c6",
+      "validationReceiptSha256": "e20ee687135c73e959d8665ac1bd20c501f4a12cf2b438dfc85939c3b0991fd8",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-6/candidates/south-support"
+    },
+    {
+      "key": "south-relic-camp",
+      "regionId": "core-v2-relic-camp-south-east-p1-p2",
+      "name": "Relic Camp South-East",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 742,
+        "y": 555,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": 18,
+          "y": 12
+        }
+      },
+      "profile": {
+        "key": "south-relic-camp",
+        "themeKey": "south",
+        "accentThemeKey": "east",
+        "variantKey": "b",
+        "roadGeometryId": "north-v3",
+        "retrySalt": "core-v2-art6-south-relic-sun-weathered-ruins-v1",
+        "identity": "ancient southern territory with sun-weathered foundations, partially buried stone, dry paths, and a restrained return of eastern moisture",
+        "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+        "objectiveLabel": "Relic Camp",
+        "objectiveOffset": {
+          "x": 18,
+          "y": 12
+        },
+        "transitionSides": [
+          "north",
+          "east"
+        ],
+        "transitionFamily": "core-v2-south-east",
+        "transitionRgb": [
+          156,
+          151,
+          102
+        ],
+        "edgeThemeOverrides": {
+          "north": "east",
+          "east": "east"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "sun-weathered ruin cluster",
+            "partially buried stone fragments",
+            "old dry footpaths",
+            "sparse greener eastern reclaim"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-south-east-p2-p2",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-support-p0-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "ad816fe7fefbfbeb35b4c14247a67934bdbdb50e8dbbf52239a7737dede49839",
+      "cityPlanHash": "a7024af86c34a28554f727375b44b5e618e3d5da2bb00cad4626ed11c8dd5c35",
+      "validationReceiptHash": "cb547b241760cf1585694d0cf14cf57198cb66a066bf4b117d8373268b0db40a",
+      "geometryDraftSha256": "bd6e11c1505f3f1b75077d7bc9a4e32969dc58a979c1ab8775bf44fc20913869",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-6/geometry/south-relic-camp",
+      "candidatePngSha256": "5835c64a8fe83b851b305e8fc74a7ebf82022f6a7792df9e903228885ca4617f",
+      "candidateWebpSha256": "07311f58843e5fdf5f7ecd50cd580c3935b5a2734e5a4f8cbbb5b6aab5a7b92b",
+      "thumbnailSha256": "eed7fc6d9db4303403a374c917f34bb790a5528fa11f4e931748f5ee60dc9694",
+      "citiesSha256": "8f11a0111848cfa92939f8c78f0b0e7fe52d1c9db818cd4cba14a8954a043b80",
+      "compositionSha256": "82c16748b7af353b5c18ff4b89cdc14b16a481ef02c6ea67f1b4095a709d48b3",
+      "validationReceiptSha256": "329d639ebda75f2a467afd4c8c72333c29f71a409a7e13ff71fb9721e64fc524",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-6/candidates/south-relic-camp"
+    },
+    {
+      "key": "southeast-warband-camp",
+      "regionId": "core-v2-warband-camp-south-east-p2-p2",
+      "name": "Warband Camp South-East",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 2,
+        "worldLayer": 0
+      },
+      "mapType": "WARBAND_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_dry_frontier",
+        "renderTheme": "south",
+        "transition": "south edge blend"
+      },
+      "objective": {
+        "type": "warband",
+        "x": 740,
+        "y": 539,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": 16,
+          "y": -4
+        }
+      },
+      "profile": {
+        "key": "southeast-warband-camp",
+        "themeKey": "south",
+        "accentThemeKey": "east",
+        "variantKey": "c",
+        "roadGeometryId": "south-v3",
+        "retrySalt": "core-v2-art6-southeast-warband-warm-military-frontier-v1",
+        "identity": "warm southeastern military frontier with dusty churned soil, restrained damaged defenses, supply wear, and subtle eastern vegetation",
+        "objectiveArt": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+        "objectiveLabel": "Warband Camp",
+        "objectiveOffset": {
+          "x": 16,
+          "y": -4
+        },
+        "transitionSides": [
+          "north",
+          "east"
+        ],
+        "transitionFamily": "core-v2-south-east",
+        "transitionRgb": [
+          156,
+          151,
+          102
+        ],
+        "edgeThemeOverrides": {
+          "north": "east",
+          "east": "east"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "restrained supply-wagon trace",
+            "broken barricade fragments",
+            "dusty hoof-worn ground",
+            "subtle eastern vegetation influence"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "605523c0bcda5bc16afa6421401312188d8683683bf78791a79f4a79ffc2d613",
+      "cityPlanHash": "926d1184724d1a4f0ac3853a9d6ffe4a9f4dd71f8c3e6d0f121c72ef095dc517",
+      "validationReceiptHash": "f740e34a65077db19b1041e4bb474f9923e53ce6fb2fadd75c69cda26fce890c",
+      "geometryDraftSha256": "68467df238f011ef27d5dab0dece754916bfa228ef59f79e3fe9b4b94ccb6f65",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-6/geometry/southeast-warband-camp",
+      "candidatePngSha256": "22029a74d12064a9aac75a28f908ada7e118207b732d307880463a9ad569bf85",
+      "candidateWebpSha256": "6041ba0aefca214d88db61ed235e4f9c406a0697fe11bdb39bb18aa4d472395e",
+      "thumbnailSha256": "bc2de535a43706cd71f8a8440a29953f49735b47a2ba1208093bb930affc8690",
+      "citiesSha256": "6f7f75d6608bdf575cba91e4142f1c78cad598cadf41e23b6a199fabf9053528",
+      "compositionSha256": "f90bee26b8ce9618eced3dd3f2bd8ba7d7cca80f3fa6825785a2aa4ad8fa0376",
+      "validationReceiptSha256": "22ab9073de99e3df1c3160d55836adf1c3cb8c85e8ee9d9b693f35fca6911a84",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-6/candidates/southeast-warband-camp"
+    }
+  ],
+  "finalArtCandidateCount": 5,
+  "finalArtStandard": "ART-2 v2 + ART-3 + ART-4 + ART-5",
+  "newCoreCoordinatesGenerated": 5,
+  "allOtherCoreCoordinatesGenerated": 0,
+  "mapDimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "art6CityCapacity": 295,
+  "remainingCoreCoordinates": 0,
+  "indexHash": "5e3a7a3371700f690cd62e61efba9e279ff9b32cbdbfcff825f381e30564bc96"
+}

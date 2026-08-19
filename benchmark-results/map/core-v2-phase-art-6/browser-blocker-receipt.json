@@ -1,0 +1,18 @@
+{
+  "phase": "Core v2 Phase ART-6",
+  "developmentOnly": true,
+  "interactiveRuntimeQA": {
+    "status": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+    "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION",
+    "productionBlocking": true,
+    "artProductionBlocking": false,
+    "requiredBeforeProductionUse": true,
+    "futureGate": "FINAL_CONSOLIDATED_INTERACTIVE_CORE_QA_ALL_25_MAPS"
+  },
+  "inheritedFrom": "Core v2 Phase ART-4.1",
+  "crownlandsFailure": false,
+  "art6BrowserAttempted": false,
+  "art6ArtChangedByBrowserAttempt": false,
+  "productionStateChanged": false,
+  "mustIncludeAll25MapsInFinalConsolidatedReview": true
+}

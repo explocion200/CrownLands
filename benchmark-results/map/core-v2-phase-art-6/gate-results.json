@@ -1,0 +1,58 @@
+{
+  "phase": "Core v2 Phase ART-6",
+  "approvedBase": "47b2e81d11370554af57fb8098f31da24b345d4d",
+  "branch": "codex/core-v2",
+  "developmentOnly": true,
+  "visualApproval": "APPROVED_LOCKED_BY_USER",
+  "finalCoreArtStandardLocked": true,
+  "art6Validator": "PASS_STATIC_VISUAL_REVIEW",
+  "staticReleaseGate": "PASS_NODE_22",
+  "dependencyAudit": "PASS_ZERO_KNOWN_PRODUCTION_VULNERABILITIES",
+  "lint": "PASS",
+  "applicationTests": "PASS",
+  "routeParity": {
+    "status": "PASS",
+    "liveMaps": 15,
+    "liveCities": 1050,
+    "directedChains": 210
+  },
+  "productionBuild": "PASS_262_FILES_21_49_MIB",
+  "artifactValidation": "PASS_263_FILES_21_52_MIB",
+  "firebaseEmulatorSuite": {
+    "status": "PASS",
+    "nodeRuntime": 22,
+    "discoveredFiles": 17,
+    "passedFiles": 17,
+    "preExecutionPortConflict": "NONE"
+  },
+  "phase0": "PASS_253_CHECKS",
+  "phase1Authoritative": "PASS_216_CHECKS",
+  "phase2Regression": "PASS_297_CHECKS",
+  "phase2Capacity": "PASS_24_CHECKS",
+  "phase2Decision": "PASS_146_CHECKS",
+  "phase3Through6fApplicableValidators": "PASS",
+  "coreLockedSourceHashInvariants": "PASS",
+  "productionLeakageFindings": 0,
+  "secretFindings": 0,
+  "machineLocalPathFindings": 0,
+  "gitDiffCheck": "PASS",
+  "interactiveRuntimeQA": {
+    "status": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+    "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION",
+    "productionBlocking": true,
+    "artProductionBlocking": false,
+    "futureGate": "FINAL_CONSOLIDATED_INTERACTIVE_CORE_QA_ALL_25_MAPS"
+  },
+  "production": {
+    "maps": 15,
+    "cities": 1050,
+    "directedChains": 210,
+    "generatedActiveRegions": 0,
+    "changed": false
+  },
+  "committed": true,
+  "pushed": true,
+  "deployed": false,
+  "merged": false,
+  "productionIntegrated": false
+}

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-6-final-south-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-warband-camp-south-east-p2-p2",
+  "coordinate": {
+    "gridX": 2,
+    "gridY": 2,
+    "worldLayer": 0
+  },
+  "mapType": "WARBAND_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "southeast-warband-camp",
+    "themeKey": "south",
+    "accentThemeKey": "east",
+    "variantKey": "c",
+    "roadGeometryId": "south-v3",
+    "retrySalt": "core-v2-art6-southeast-warband-warm-military-frontier-v1",
+    "identity": "warm southeastern military frontier with dusty churned soil, restrained damaged defenses, supply wear, and subtle eastern vegetation",
+    "objectiveArt": "assets/optimized/camp-troops-384x384-2f712333e891.webp",
+    "objectiveLabel": "Warband Camp",
+    "objectiveOffset": {
+      "x": 16,
+      "y": -4
+    },
+    "transitionSides": [
+      "north",
+      "east"
+    ],
+    "transitionFamily": "core-v2-south-east",
+    "transitionRgb": [
+      156,
+      151,
+      102
+    ],
+    "edgeThemeOverrides": {
+      "north": "east",
+      "east": "east"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "restrained supply-wagon trace",
+        "broken barricade fragments",
+        "dusty hoof-worn ground",
+        "subtle eastern vegetation influence"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "926d1184724d1a4f0ac3853a9d6ffe4a9f4dd71f8c3e6d0f121c72ef095dc517",
+  "compositionPlanHash": "605523c0bcda5bc16afa6421401312188d8683683bf78791a79f4a79ffc2d613",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.029,
+    "preferredSpacingViolations": 6,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 16.492422502470642
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 1,
+        "south": 2,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art6-v1",
+    "seedHash": "2c2e74b0049d1d4382afdd5c9ca5081de983d26195e827fcd5167502f7d31ef8",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1121,
+    "rejectedByReason": {
+      "outside_land": 500,
+      "terrain_blocker": 327,
+      "road_clearance": 700,
+      "edge_clearance": 1,
+      "objective_clearance": 231
+    },
+    "selectedTrial": 260,
+    "selectionTrialLimit": 360,
+    "minimumObservedSpacing": 68.029,
+    "meanNearestNeighbor": 85.596,
+    "preferredSpacingViolations": 6,
+    "quadrantCounts": [
+      14,
+      13,
+      14,
+      14
+    ]
+  },
+  "receiptHash": "f740e34a65077db19b1041e4bb474f9923e53ce6fb2fadd75c69cda26fce890c"
+}

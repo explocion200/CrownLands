@@ -1,0 +1,27 @@
+{
+  "phase": "Core v2 Phase ART-6",
+  "developmentOnly": true,
+  "measurementMode": "STATIC_AVAILABLE_HARNESS_ONLY",
+  "staticQaRenderer": {
+    "candidateCount": 5,
+    "approximateWallSeconds": 30.2,
+    "includes": [
+      "actual city and objective composites",
+      "per-map QA panels",
+      "phase and full-Core comparison galleries",
+      "1448x1086 WebP encoding",
+      "320x240 thumbnail encoding"
+    ]
+  },
+  "outputs": [
+    { "key": "southwest-gold-camp", "webpBytes": 643198, "thumbnailBytes": 30962 },
+    { "key": "south-deed-camp", "webpBytes": 715934, "thumbnailBytes": 30998 },
+    { "key": "south-support", "webpBytes": 700176, "thumbnailBytes": 28314 },
+    { "key": "south-relic-camp", "webpBytes": 653056, "thumbnailBytes": 26380 },
+    { "key": "southeast-warband-camp", "webpBytes": 697400, "thumbnailBytes": 27538 }
+  ],
+  "browserInteractiveFpsMeasured": false,
+  "browserInteractiveClaimMade": false,
+  "interactiveRuntimeQA": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+  "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION"
+}

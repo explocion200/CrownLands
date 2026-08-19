@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-6-final-south-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-south-support-p0-p2",
+  "coordinate": {
+    "gridX": 0,
+    "gridY": 2,
+    "worldLayer": 0
+  },
+  "mapType": "SUPPORT",
+  "exactCityCapacity": 70,
+  "profile": {
+    "key": "south-support",
+    "themeKey": "south",
+    "variantKey": "a",
+    "roadGeometryId": "east-v2",
+    "retrySalt": "core-v2-art6-south-support-open-dry-frontier-v1",
+    "identity": "the clean central southern frontier with dry grass, dusty soil variation, restrained erosion and maximum 70-city readability",
+    "objectiveArt": null,
+    "objectiveLabel": null,
+    "objectiveOffset": {
+      "x": 0,
+      "y": 0
+    },
+    "transitionSides": [
+      "north"
+    ],
+    "transitionFamily": "core-v2-south-center",
+    "transitionRgb": [
+      174,
+      148,
+      94
+    ],
+    "propPlan": {
+      "majorClusters": 0,
+      "mediumClusters": 3,
+      "cueAssignments": [
+        "dry field boundary",
+        "subtle drainage and erosion",
+        "small weathered tree group",
+        "open sun-worn pasture"
+      ],
+      "centralTreatment": "none"
+    }
+  },
+  "cityPlanHash": "606c1c94f4f298ccb5b949a0a4200aec588e090ad3e71e30bc57514c8c805457",
+  "compositionPlanHash": "e01542143b3258d6e27c20fa179ad77231446274242554b6d62c14203ac34763",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 70,
+    "expectedCapacity": 70,
+    "minimumSpacing": 69.007,
+    "preferredSpacingViolations": 6,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "not_applicable",
+      "offset": 0
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 1,
+        "south": 2,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art6-v1",
+    "seedHash": "3228bfc48a5a8833097d3d5b38bb3cb41e62f2c1a9591049457aa2c43834b085",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1105,
+    "rejectedByReason": {
+      "outside_land": 523,
+      "edge_clearance": 10,
+      "road_clearance": 898,
+      "terrain_blocker": 367
+    },
+    "selectedTrial": 223,
+    "selectionTrialLimit": 360,
+    "minimumObservedSpacing": 69.007,
+    "meanNearestNeighbor": 79.502,
+    "preferredSpacingViolations": 6,
+    "quadrantCounts": [
+      17,
+      18,
+      18,
+      17
+    ]
+  },
+  "receiptHash": "a865feee80eccb0ccf464978f8a8e4861400192a19bf477433ad75bdd6424748"
+}

@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-6-final-south-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-gold-camp-south-west-m2-p2",
+  "coordinate": {
+    "gridX": -2,
+    "gridY": 2,
+    "worldLayer": 0
+  },
+  "mapType": "GOLD_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "southwest-gold-camp",
+    "themeKey": "south",
+    "accentThemeKey": "west",
+    "variantKey": "b",
+    "roadGeometryId": "south-v2",
+    "retrySalt": "core-v2-art6-southwest-gold-dry-resource-frontier-v1",
+    "identity": "dry southwestern mining frontier with restrained edge-biased mine workings, western grass influence, and an open city-safe interior",
+    "objectiveArt": "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp",
+    "objectiveLabel": "Gold Camp",
+    "objectiveOffset": {
+      "x": -18,
+      "y": 12
+    },
+    "transitionSides": [
+      "north",
+      "west"
+    ],
+    "transitionFamily": "core-v2-south-west",
+    "transitionRgb": [
+      161,
+      145,
+      102
+    ],
+    "edgeThemeOverrides": {
+      "north": "south",
+      "west": "west"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "edge-biased mine entrances",
+        "dry spoil and ore-cart trace",
+        "dusty worker paths",
+        "open western-southern city ground"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "ba1d1aa45e4fe1bd9ef8ec17794b872c3eb63458de58f959f43d7cb8e954794d",
+  "compositionPlanHash": "a608c858f38bb58277983dcfb184dae6236062257fa328eaba36b8ae0339a3c3",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.029,
+    "preferredSpacingViolations": 4,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 21.633307652783937
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 6,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 1,
+        "south": 1,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art6-v1",
+    "seedHash": "d48070155da9bc04d214157997879dbcbf1bbca2718b8e885aff402e7eb1dbbf",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1073,
+    "rejectedByReason": {
+      "edge_clearance": 33,
+      "outside_land": 582,
+      "road_clearance": 679,
+      "terrain_blocker": 391,
+      "objective_clearance": 232
+    },
+    "selectedTrial": 194,
+    "selectionTrialLimit": 360,
+    "minimumObservedSpacing": 68.029,
+    "meanNearestNeighbor": 81.7,
+    "preferredSpacingViolations": 4,
+    "quadrantCounts": [
+      14,
+      14,
+      13,
+      14
+    ]
+  },
+  "receiptHash": "e72efa4d8463bba249184f40a0f3a1400d638c878adc73f813bb351e61c0c9f7"
+}
