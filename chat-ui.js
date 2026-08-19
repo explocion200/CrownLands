@@ -290,7 +290,8 @@
     article.className = "chat-message";
     article.dataset.messageId = message.id;
 
-    const header = documentRef.createElement("header");
+    const line = documentRef.createElement("p");
+    line.className = "chat-message-line";
     const sender = documentRef.createElement("button");
     sender.type = "button";
     sender.className = "chat-message-sender player-name-link";
@@ -298,16 +299,19 @@
     sender.setAttribute("aria-label", `View ${message.senderDisplayName}'s profile`);
     if (!message.senderUid) sender.disabled = true;
     else sender.addEventListener("click", () => onSender?.(message.senderUid));
+    const colon = documentRef.createElement("span");
+    colon.className = "chat-message-colon";
+    colon.textContent = ": ";
+    const body = documentRef.createElement("span");
+    body.className = "chat-message-text";
+    body.textContent = message.text;
     const time = documentRef.createElement("time");
     time.dateTime = message.createdAtMs ? new Date(message.createdAtMs).toISOString() : "";
     time.textContent = message.createdAtMs
       ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(message.createdAtMs)
       : "Now";
-    header.append(sender, time);
-
-    const body = documentRef.createElement("p");
-    body.textContent = message.text;
-    article.append(header, body);
+    line.append(sender, colon, body, time);
+    article.append(line);
     return article;
   }
 
@@ -341,6 +345,8 @@
     let uid = "";
     let clanId = "";
     let mode = "closed";
+    let sessionStarted = false;
+    let sessionUid = "";
     let channel = "global";
     let sending = false;
     let loadingOlder = false;
@@ -697,6 +703,7 @@
         return diagnostics();
       }
       const accountChanged = nextUid !== uid;
+      const freshSession = !sessionStarted || nextUid !== sessionUid;
       api = nextApi;
       uid = nextUid;
       clanId = nextClanId;
@@ -707,6 +714,11 @@
         errors = { global: "", clan: "" };
         unread = { global: false, clan: false };
         lastReadAtMs = { global: loadLastRead("global"), clan: loadLastRead("clan") };
+      }
+      if (freshSession) {
+        sessionStarted = true;
+        sessionUid = nextUid;
+        setMode("quick");
       }
       subscriptions.start(api, uid, clanId);
       renderUnread();
@@ -734,7 +746,8 @@
       return diagnostics();
     }
 
-    function dispose() {
+    function dispose(options = {}) {
+      const resetSession = options.resetSession === true;
       cooldown.stop();
       subscriptions.stop();
       api = null;
@@ -745,7 +758,11 @@
       errors = { global: "", clan: "" };
       unread = { global: false, clan: false };
       lastReadAtMs = { global: null, clan: null };
-      setMode("closed");
+      if (resetSession) {
+        sessionStarted = false;
+        sessionUid = "";
+        setMode("closed");
+      }
       renderUnread();
       renderQuick();
       renderMessages();
@@ -758,6 +775,8 @@
         channel,
         uid,
         clanId,
+        sessionStarted,
+        sessionUid,
         renderedMessages: messages[channel].length,
         unread: { ...unread },
         quickPreviewVisible,
