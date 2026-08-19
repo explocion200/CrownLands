@@ -136,8 +136,8 @@ assert.doesNotMatch(index.slice(index.indexOf("cl-icon-flag-crown"), index.index
 
 assert.match(styles, /@media \(max-width: 640px\) and \(orientation: portrait\)[\s\S]*\.flag-editor-view \{ grid-template-columns: minmax\(0, 1fr\)/);
 assert.match(correction, /@media \(max-width: 640px\) and \(orientation: portrait\)[\s\S]*repeat\(4, minmax\(44px, 1fr\)\)/);
-assert.match(index, /crownlands-build" content="20260819-welcome-report-contrast-r1"/);
-assert.match(worker, /CACHE_VERSION = "20260819-welcome-report-contrast-r1"/);
+assert.match(index, /crownlands-build" content="20260819-targeted-ui-contrast-r2"/);
+assert.match(worker, /CACHE_VERSION = "20260819-targeted-ui-contrast-r2"/);
 for (const source of [index, worker]) assert.match(source, /functions\/playerFlagConfig\.js\?v=20260814-readability-r38/);
 for (const source of [productionBuilder, productionValidator]) assert.match(source, /functions\/playerFlagConfig\.js/);
 

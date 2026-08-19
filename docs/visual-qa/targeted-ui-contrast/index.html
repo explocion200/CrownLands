@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Targeted UI Contrast QA</title>
+  <link rel="stylesheet" href="../../../styles.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../interface-theme.css?v=20260819-inner-castle-labels-r1" />
+  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css?v=20260818-common-gear-r2" />
+  <link rel="stylesheet" href="../../../readability.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-action-buttons-r32" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260814-action-buttons-r32" />
+  <link rel="stylesheet" href="../../../chat.css?v=20260813-chat-r31" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      padding: 24px;
+      color: #f2e2bf;
+      background: #111820;
+      overflow: auto;
+    }
+    .qa-page { width: min(1400px, 100%); margin: 0 auto; display: grid; gap: 22px; }
+    .qa-heading { margin: 0; color: #f2e2bf; font-size: 1.55rem; }
+    .qa-note { margin: -.7rem 0 0; color: #c8b992; font: 700 .78rem/1.45 system-ui, sans-serif; }
+    .qa-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .qa-wide { grid-column: 1 / -1; }
+    body:has(.qa-grid > div:target) .qa-grid > div:not(:target) { display: none; }
+    .qa-grid > div:target { grid-column: 1 / -1; }
+    .qa-modal.modal,
+    .qa-profile.profile-screen {
+      position: relative !important;
+      inset: auto !important;
+      z-index: auto !important;
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      padding: 0 !important;
+      overflow: visible !important;
+      opacity: 1 !important;
+      transform: none !important;
+      border: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      pointer-events: auto !important;
+    }
+    .qa-modal .modal-card,
+    .qa-profile .qa-profile-card {
+      position: relative;
+      inset: auto;
+      width: 100%;
+      max-width: none;
+      max-height: none;
+      min-width: 0;
+      margin: 0;
+      padding: 13px;
+      overflow: visible;
+    }
+    .qa-profile .qa-profile-card {
+      color: var(--cl-text);
+      border: 1px solid var(--cl-brass);
+      border-radius: 8px;
+      background: var(--cl-panel-bg);
+      box-shadow: var(--cl-card-shadow);
+    }
+    .qa-modal .modal-card > h2 { margin: 0 0 10px !important; }
+    .qa-stage-title { margin: 0 0 9px; color: #f2e2bf; font: 900 .74rem/1.2 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .qa-grid .clan-section-nav { margin: 0; }
+    .qa-grid .clan-section-nav button { padding-inline: .35rem; }
+    .qa-grid .clan-section-nav button > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .qa-grid .clan-section-nav-mark svg { width: 1em; height: 1em; fill: currentColor; }
+    .qa-overview-panel, .qa-rewards-panel {
+      margin-top: 10px;
+      padding: 14px;
+      border: 1px solid rgba(153, 118, 67, .7);
+      border-radius: 8px;
+      background: rgba(231, 214, 180, .75);
+    }
+    .qa-overview-panel p, .qa-rewards-panel p { margin: .25rem 0 0; }
+    .qa-modal .clan-rallies-panel { margin-top: 10px; }
+    .qa-modal .seasonal-achievement-list,
+    .qa-modal .daily-missions-list { min-height: 0; grid-template-rows: none; overflow: visible; }
+    .qa-modal .seasonal-achievement-row,
+    .qa-modal .daily-mission-row { cursor: default; }
+    .qa-icon {
+      display: inline-grid;
+      width: 1em;
+      height: 1em;
+      place-items: center;
+      font-size: 1em;
+      line-height: 1;
+    }
+    @media (max-width: 1050px) {
+      body { padding: 14px; }
+      .qa-grid { grid-template-columns: 1fr; }
+      .qa-wide { grid-column: auto; }
+    }
+    @media (max-width: 620px) {
+      body { padding: 8px; }
+      .qa-grid { gap: 12px; }
+      .qa-modal .modal-card { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="cl-icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="qa-cl-icon-information" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><path d="M16 14v8M16 9h.01" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="qa-cl-icon-attack" viewBox="0 0 32 32"><path d="M7 5l20 20-4 3L4 8zM25 5L5 25l4 3L28 8z"/></symbol>
+    <symbol id="qa-cl-icon-rewards" viewBox="0 0 32 32"><path d="M5 12h22v16H5zM3 8h26v7H3zM14 8h4v20h-4z"/><path d="M16 8c-5 0-8-2-8-5 4 0 7 1 8 5zm0 0c5 0 8-2 8-5-4 0-7 1-8 5z"/></symbol>
+    <symbol id="qa-cl-icon-clan" viewBox="0 0 32 32"><path d="M16 3l10 5v7c0 7-4 11-10 14C10 26 6 22 6 15V8z"/><path d="M10 12h12M16 7v17" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="qa-cl-icon-achievement" viewBox="0 0 32 32"><path d="M8 5h16v17l-8 6-8-6z"/><path d="M12 13l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+  </svg>
+  <main class="qa-page" data-qa-root>
+    <h1 class="qa-heading">Targeted UI Contrast</h1>
+    <p class="qa-note">Production stylesheet order. Each label is rendered once so visual ghosting cannot be mistaken for duplicated markup.</p>
+
+    <section class="qa-grid" aria-label="Clan selected tab comparisons">
+      <div id="qa-clan-overview" data-qa-capture="clan-overview">
+        <h2 class="qa-stage-title">1 · Clan Overview selected</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+            <button type="button" role="tab" class="active" data-clan-section="overview" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
+          </nav>
+          <div class="qa-overview-panel"><strong>Clan Overview</strong><p>Kingdoms united under one banner.</p></div>
+        </article></section>
+      </div>
+
+      <div id="qa-clan-warroom-tab" data-qa-capture="clan-warroom-tab">
+        <h2 class="qa-stage-title">2 · Clan War Room selected</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" class="active" data-clan-section="warroom" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
+          </nav>
+          <div class="qa-overview-panel"><strong>War Room selected</strong><p>Rally commands and clan campaign coordination.</p></div>
+        </article></section>
+      </div>
+
+      <div id="qa-clan-rewards" data-qa-capture="clan-rewards">
+        <h2 class="qa-stage-title">3 · Clan Rewards selected</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" class="active" data-clan-section="rewards" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
+          </nav>
+          <div class="qa-rewards-panel"><strong>Clan Rewards</strong><p>Three rewards are ready to claim.</p></div>
+        </article></section>
+      </div>
+
+      <div id="qa-clan-members" data-qa-capture="clan-members">
+        <h2 class="qa-stage-title">4 · Clan Members selected</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" class="active" data-clan-section="members" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
+          </nav>
+          <div class="qa-overview-panel"><strong>Clan Members</strong><p>Leader, officers, and members remain under the same banner.</p></div>
+        </article></section>
+      </div>
+
+      <div id="qa-war-room" class="qa-wide" data-qa-capture="war-room">
+        <h2 class="qa-stage-title">5 · War Room Rallies content</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <section class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel active" role="tabpanel">
+            <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>1</b></div>
+            <div class="clan-war-room-feature">
+              <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
+              <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+              <div class="clan-rally-list">
+                <p class="clan-muted">No rally requests are active.</p>
+                <article class="clan-rally-card forming">
+                  <header><span><small>North Frontier</small><strong>Greybanner Hold</strong></span><b>2/3</b></header>
+                  <div class="clan-rally-summary"><span>Leader <strong>Sir Render</strong></span><span><strong>4.2M</strong> assembled</span><span><strong>900K</strong> inbound</span><span class="clan-rally-status">Forming</span></div>
+                  <ul><li><span><strong>Sir Prize</strong><small>Ally · Ready</small></span><b>2.1M</b></li></ul>
+                  <footer><button type="button">Join Rally</button></footer>
+                </article>
+              </div>
+            </div>
+          </section>
+        </article></section>
+      </div>
+
+      <div id="qa-achievements" class="qa-wide" data-qa-capture="achievements">
+        <h2 class="qa-stage-title">6 · Achievement icon states</h2>
+        <section class="modal qa-modal daily-login-reward-modal" open><article class="modal-card">
+          <section class="seasonal-achievement-panel">
+            <header class="seasonal-achievement-hero"><div><span>Monthly Campaign</span><h3>Seasonal Achievements</h3><p>August 2026</p></div><div class="seasonal-achievement-totals"><strong>19 / 40</strong><span>Complete</span><strong>18 / 40</strong><span>Claimed</span></div></header>
+            <nav class="seasonal-achievement-filters" aria-label="Achievement categories"><button type="button" class="active" aria-pressed="true">All</button><button type="button">Conquest</button><button type="button">Combat</button><button type="button">Growth</button></nav>
+            <div class="seasonal-achievement-list">
+              <article class="seasonal-achievement-row complete claimed" role="button" tabindex="0">
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span>
+                <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>First Blood</strong><p>Capture your first enemy city.</p><div class="seasonal-achievement-progress"><span style="width:100%"></span></div><small>1 / 1</small></div>
+                <div class="seasonal-achievement-reward"><span>Reward</span><strong>0.5h troop production · 233K</strong><b>COMPLETED</b></div>
+              </article>
+              <article class="seasonal-achievement-row complete" role="button" tabindex="0">
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span>
+                <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>Raider</strong><p>Capture ten enemy cities.</p><div class="seasonal-achievement-progress"><span style="width:100%"></span></div><small>10 / 10</small></div>
+                <div class="seasonal-achievement-reward"><span>Reward</span><strong>1h troop production · 481K</strong><button type="button">Claim</button></div>
+              </article>
+              <article class="seasonal-achievement-row" role="button" tabindex="0">
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-achievement"></use></svg></span>
+                <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>Conqueror II</strong><p>Capture fifty enemy cities.</p><div class="seasonal-achievement-progress"><span style="width:40%"></span></div><small>20 / 50</small></div>
+                <div class="seasonal-achievement-reward"><span>Reward</span><strong>Royal Tax Decree</strong><small>In progress</small></div>
+              </article>
+            </div>
+          </section>
+        </article></section>
+      </div>
+
+      <div id="qa-quests" class="qa-wide" data-qa-capture="quests">
+        <h2 class="qa-stage-title">7 · Completed Daily Quests</h2>
+        <section class="modal qa-modal daily-login-reward-modal" open><article class="modal-card">
+          <section class="daily-missions-section">
+            <header class="daily-missions-heading"><div class="profile-section-heading"><span>Daily</span><h3>Missions <b>3/3</b></h3></div><div class="daily-missions-meta"><span>New missions in 12:10:25</span><span>Reroll: 1</span></div></header>
+            <div class="daily-missions-list">
+              <article class="daily-mission-row complete claimed" tabindex="0">
+                <span class="daily-mission-icon" aria-hidden="true"><span class="qa-icon">➶</span></span>
+                <div class="daily-mission-copy"><div><strong>Muster the Host</strong><span>9.3M/9.3M</span></div><small>Send 9,300,000 troops into battle</small><span class="daily-mission-progress"><i style="width:100%"></i></span></div>
+                <div class="daily-mission-reward"><small>Reward</small><strong>1h troops · 1.8M</strong></div><div class="daily-mission-action"><span class="daily-mission-completed"><span class="qa-icon">✓</span> Completed</span></div>
+              </article>
+              <article class="daily-mission-row complete" tabindex="0">
+                <span class="daily-mission-icon" aria-hidden="true"><span class="qa-icon">♜</span></span>
+                <div class="daily-mission-copy"><div><strong>Master of Camps</strong><span>1/1</span></div><small>Capture 1 different Camp type</small><span class="daily-mission-progress"><i style="width:100%"></i></span></div>
+                <div class="daily-mission-reward"><small>Reward</small><strong>1h troops · 1.8M</strong></div><div class="daily-mission-action"><button type="button">Claim</button></div>
+              </article>
+              <article class="daily-mission-row" tabindex="0">
+                <span class="daily-mission-icon" aria-hidden="true"><span class="qa-icon">♟</span></span>
+                <div class="daily-mission-copy"><div><strong>Strengthen the Realm</strong><span>1/2</span></div><small>Upgrade cities by 2 total levels</small><span class="daily-mission-progress"><i style="width:50%"></i></span></div>
+                <div class="daily-mission-reward"><small>Reward</small><strong>1h gold · 3.4B</strong></div><div class="daily-mission-action"><span class="daily-mission-difficulty">Medium</span></div>
+              </article>
+            </div>
+          </section>
+        </article></section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
