@@ -1,0 +1,27 @@
+{
+  "phase": "Core v2 Phase ART-5",
+  "developmentOnly": true,
+  "measurementMode": "STATIC_AVAILABLE_HARNESS_ONLY",
+  "staticQaRenderer": {
+    "candidateCount": 5,
+    "approximateWallSeconds": 30.2,
+    "includes": [
+      "actual city and objective composites",
+      "per-map QA panels",
+      "phase comparison galleries",
+      "1448x1086 WebP encoding",
+      "320x240 thumbnail encoding"
+    ]
+  },
+  "outputs": [
+    { "key": "east-deed-camp", "webpBytes": 698616, "thumbnailBytes": 29928 },
+    { "key": "swiftgate", "webpBytes": 703558, "thumbnailBytes": 28216 },
+    { "key": "east-support", "webpBytes": 637808, "thumbnailBytes": 23710 },
+    { "key": "southeast-holding-tower", "webpBytes": 680488, "thumbnailBytes": 29330 },
+    { "key": "east-southeast-relic-camp", "webpBytes": 608784, "thumbnailBytes": 23716 }
+  ],
+  "browserInteractiveFpsMeasured": false,
+  "browserInteractiveClaimMade": false,
+  "interactiveRuntimeQA": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+  "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION"
+}

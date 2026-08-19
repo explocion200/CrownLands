@@ -9,7 +9,7 @@
   "exactBatchMapCount": 5,
   "exactBatchCityCapacity": 300,
   "finishedCoreMapCountAfterApproval": 15,
-  "representedCoreCityCapacityAfterApproval": 880,
+  "representedCoreCityCapacityAfterApproval": 885,
   "exactCoreRegionCount": 25,
   "exactCoreCityCapacity": 1480,
   "entries": [
@@ -678,5 +678,5 @@
     "width": 1448,
     "height": 1086
   },
-  "indexHash": "319095149229a9db60950e73c59fb54790a2572d3caf919457ca05f4ff47fe04"
+  "indexHash": "87aa9cdf41ab02378ff23984be45819243e4221038a681df7280596db12a5410"
 }

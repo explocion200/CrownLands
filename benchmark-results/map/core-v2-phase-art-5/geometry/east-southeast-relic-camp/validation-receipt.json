@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-5-east-southeast-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-relic-camp-east-south-p2-p1",
+  "coordinate": {
+    "gridX": 2,
+    "gridY": 1,
+    "worldLayer": 0
+  },
+  "mapType": "RELIC_CAMP",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "east-southeast-relic-camp",
+    "themeKey": "east",
+    "accentThemeKey": "south",
+    "variantKey": "c",
+    "roadGeometryId": "north-v3",
+    "retrySalt": "core-v2-art5-east-southeast-relic-mossy-ruins-v1",
+    "identity": "old sacred eastern territory with mossy weathered stone, damp reclaimed foundations, and a gradual warmer southern transition",
+    "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+    "objectiveLabel": "Relic Camp",
+    "objectiveOffset": {
+      "x": 22,
+      "y": 15
+    },
+    "transitionSides": [
+      "south",
+      "west"
+    ],
+    "transitionFamily": "core-v2-east-south",
+    "transitionRgb": [
+      158,
+      151,
+      108
+    ],
+    "edgeThemeOverrides": {
+      "south": "south"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "mossy archaeological cluster",
+        "vegetation-reclaimed foundation trace",
+        "ancient worn footpath",
+        "open east-south sacred countryside"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "af9364b31183977dbfe08cad246f8b7cfc65040a36ef56375cf83c82860791e3",
+  "compositionPlanHash": "047312ca2b7ecf0553d52940e7834feaad42c524fa806e9b92cc9be67e659feb",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 68.096,
+    "preferredSpacingViolations": 2,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 26.627053911388693
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 4,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art5-v1",
+    "seedHash": "a5f80ea30469857fb038fc591f1c6bf7b552098454b4cd791838e2ff0fce406a",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1112,
+    "rejectedByReason": {
+      "outside_land": 518,
+      "edge_clearance": 3,
+      "road_clearance": 714,
+      "objective_clearance": 229,
+      "terrain_blocker": 327
+    },
+    "selectedTrial": 41,
+    "selectionTrialLimit": 320,
+    "minimumObservedSpacing": 68.096,
+    "meanNearestNeighbor": 87.743,
+    "preferredSpacingViolations": 2,
+    "quadrantCounts": [
+      15,
+      12,
+      14,
+      14
+    ]
+  },
+  "receiptHash": "b024076f413cb82f6aa3e4b08c03bbf5858c5430bfd17c90c6c7d22796d06587"
+}

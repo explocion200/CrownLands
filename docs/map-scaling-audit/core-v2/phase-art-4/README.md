@@ -2,7 +2,7 @@
 
 Phase ART-4 creates exactly five new development-only permanent-Core candidates at final art quality: North Support `(0,-2)`, Northeast Deed Camp `(1,-2)`, Northeast Gold Camp `(2,-2)`, Greybanner Hold `(0,-1)`, and Northeast Holding Tower `(1,-1)`.
 
-The batch adds exactly 300 city positions (`70/60/55/60/55`). Together with the ten locked ART-2 v2 and ART-3 candidates, 15 Core maps now have final-art candidates representing 880 of the locked 1,480-city Core capacity. No other Core coordinate was generated.
+The batch adds exactly 300 city positions (`70/60/55/60/55`). The first ten approved maps represent 585 cities (`305 + 280`), so the 15 Core final-art candidates represent **885** of the locked 1,480-city Core capacity. The earlier 880 figure was an arithmetic-only reporting error; no city layout or capacity changed. No other Core coordinate was generated.
 
 All outputs are under `benchmark-results/map/core-v2-phase-art-4/`. They are development-only and are not production-published, activated, merged, deployed, or referenced by the live game.
 

@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-5-east-southeast-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-deed-camp-east-north-p2-m1",
+  "coordinate": {
+    "gridX": 2,
+    "gridY": -1,
+    "worldLayer": 0
+  },
+  "mapType": "DEED_CAMP",
+  "exactCityCapacity": 60,
+  "profile": {
+    "key": "east-deed-camp",
+    "themeKey": "east",
+    "accentThemeKey": "north",
+    "variantKey": "b",
+    "roadGeometryId": "north-v2",
+    "retrySalt": "core-v2-art5-east-deed-settled-frontier-v1",
+    "identity": "settled eastern frontier with rich grass, damp soil, a restrained off-center cottage cluster, and a gradual northern transition",
+    "objectiveArt": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+    "objectiveLabel": "Deed Camp",
+    "objectiveOffset": {
+      "x": 18,
+      "y": -10
+    },
+    "transitionSides": [
+      "north"
+    ],
+    "transitionFamily": "core-v2-east-north",
+    "transitionRgb": [
+      142,
+      159,
+      132
+    ],
+    "edgeThemeOverrides": {
+      "north": "north"
+    },
+    "propPlan": {
+      "majorClusters": 1,
+      "mediumClusters": 2,
+      "cueAssignments": [
+        "small off-center eastern settlement",
+        "tiny garden and pasture plots",
+        "wagon lane and storage cue",
+        "open verdant city-safe ground"
+      ],
+      "centralTreatment": "objective-only"
+    }
+  },
+  "cityPlanHash": "34f1e12a0e65abf57764a133c6a0c238a1e7943917098d596da5e9695c17aef0",
+  "compositionPlanHash": "502f05270e961c7e421c183a70d1b68fee1aa9593c7d8bfaf31bea11607b4f56",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 60,
+    "expectedCapacity": 60,
+    "minimumSpacing": 68.066,
+    "preferredSpacingViolations": 6,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_camp",
+      "offset": 20.591260281974
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 7,
+      "perimeterSideCoverage": {
+        "north": 1,
+        "east": 2,
+        "south": 2,
+        "west": 2
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 1,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art5-v1",
+    "seedHash": "b10363748b8059d9bf037624276d913056029a99d68b967395da0026b38f3ab6",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1088,
+    "rejectedByReason": {
+      "outside_land": 577,
+      "edge_clearance": 35,
+      "road_clearance": 749,
+      "terrain_blocker": 310,
+      "objective_clearance": 231
+    },
+    "selectedTrial": 303,
+    "selectionTrialLimit": 320,
+    "minimumObservedSpacing": 68.066,
+    "meanNearestNeighbor": 83.25,
+    "preferredSpacingViolations": 6,
+    "quadrantCounts": [
+      14,
+      16,
+      15,
+      15
+    ]
+  },
+  "receiptHash": "ecd02ca38420a0610625cacbf4162cb9ae061cc70a6fe854ee098487fc1f61e0"
+}

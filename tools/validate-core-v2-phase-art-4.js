@@ -90,7 +90,7 @@ function validateBatch() {
   assert.equal(index.exactBatchCityCapacity, 300);
   assert.equal(index.finalArtCandidateCount, 5);
   assert.equal(index.finishedCoreMapCountAfterApproval, 15);
-  assert.equal(index.representedCoreCityCapacityAfterApproval, 880);
+  assert.equal(index.representedCoreCityCapacityAfterApproval, 885);
   assert.equal(index.exactCoreRegionCount, 25);
   assert.equal(index.exactCoreCityCapacity, 1480);
   assert.equal(index.newCoreCoordinatesGenerated, 5);
@@ -162,7 +162,7 @@ function validateBatch() {
     rows.push({ key: entry.key, capacity: cities.length, minimumSpacing: Number(observedMinimum.toFixed(3)), objective: entry.objective });
   }
   assert.equal(globalCityIds.size, 300);
-  return { maps: rows.length, cities: globalCityIds.size, finishedCoreMaps: 15, representedCoreCities: 880, rows };
+  return { maps: rows.length, cities: globalCityIds.size, finishedCoreMaps: 15, representedCoreCities: 885, rows };
 }
 
 function validateVisualReview() {

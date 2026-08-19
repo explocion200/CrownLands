@@ -4,7 +4,7 @@ The ART-4 validator confirms:
 
 - exactly five new coordinates: `(0,-2)`, `(1,-2)`, `(2,-2)`, `(0,-1)`, `(1,-1)`;
 - exact capacities `70/60/55/60/55`, totaling 300;
-- 15 final-art Core candidates and 880 represented Core cities after this batch;
+- 15 final-art Core candidates and 885 represented Core cities after this batch; the earlier 880 figure was corrected without changing any map capacity or city layout;
 - the other ten Core coordinates remain absent from ART-4;
 - deterministic unique city IDs and minimum spacing at or above 68 px;
 - Greybanner remains exact center `(724,543)`;

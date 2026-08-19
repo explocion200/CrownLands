@@ -1,0 +1,679 @@
+{
+  "schemaVersion": 1,
+  "phase": "Core v2 Phase ART-5",
+  "batchVersion": "core-v2-phase-art-5-east-southeast-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "approvedBase": "996e54c279c442592bb31dfea032097d80fc7d0a",
+  "exactBatchMapCount": 5,
+  "exactBatchCityCapacity": 300,
+  "finishedCoreMapCountAfterApproval": 20,
+  "representedCoreCityCapacityAfterApproval": 1185,
+  "exactCoreRegionCount": 25,
+  "exactCoreCityCapacity": 1480,
+  "entries": [
+    {
+      "key": "east-deed-camp",
+      "regionId": "core-v2-deed-camp-east-north-p2-m1",
+      "name": "Deed Camp East-North",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": -1,
+        "worldLayer": 0
+      },
+      "mapType": "DEED_CAMP",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "east_north_transition",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "deed",
+        "x": 742,
+        "y": 533,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": 18,
+          "y": -10
+        }
+      },
+      "profile": {
+        "key": "east-deed-camp",
+        "themeKey": "east",
+        "accentThemeKey": "north",
+        "variantKey": "b",
+        "roadGeometryId": "north-v2",
+        "retrySalt": "core-v2-art5-east-deed-settled-frontier-v1",
+        "identity": "settled eastern frontier with rich grass, damp soil, a restrained off-center cottage cluster, and a gradual northern transition",
+        "objectiveArt": "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp",
+        "objectiveLabel": "Deed Camp",
+        "objectiveOffset": {
+          "x": 18,
+          "y": -10
+        },
+        "transitionSides": [
+          "north"
+        ],
+        "transitionFamily": "core-v2-east-north",
+        "transitionRgb": [
+          142,
+          159,
+          132
+        ],
+        "edgeThemeOverrides": {
+          "north": "north"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "small off-center eastern settlement",
+            "tiny garden and pasture plots",
+            "wagon lane and storage cue",
+            "open verdant city-safe ground"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-gold-camp-north-east-p2-m2",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "502f05270e961c7e421c183a70d1b68fee1aa9593c7d8bfaf31bea11607b4f56",
+      "cityPlanHash": "34f1e12a0e65abf57764a133c6a0c238a1e7943917098d596da5e9695c17aef0",
+      "validationReceiptHash": "ecd02ca38420a0610625cacbf4162cb9ae061cc70a6fe854ee098487fc1f61e0",
+      "geometryDraftSha256": "d6441758251b1c2fff920f7d18652267a2dfdbbb7cc8c6fba906d1870c4b27a9",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-5/geometry/east-deed-camp",
+      "candidatePngSha256": "3c38098df5acf8f8e1c137202ab23e28b4e1ba5e059a713360e1e387b9deeda0",
+      "candidateWebpSha256": "34d669e9312b09b8600a1018fdf9e85913b36f9755bed94fe54e234d38a13b73",
+      "thumbnailSha256": "78a31e3280fbbd3feda214cf1c18455d9571c0e65ca1848e36b3ea77b4a4ff23",
+      "citiesSha256": "bd09274ed7eb141ef4ce547310b67ad8f328686d4c4e62da30fad70011179cb6",
+      "compositionSha256": "23b0f42e47d83fadd585de80337466f91476a7d7373f3285e1509e1b4e366f2e",
+      "validationReceiptSha256": "6ee408ab4c50da28cc3cf4d1615bc6a2e95a333f78b5237ea43e05a16432261e",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-5/candidates/east-deed-camp"
+    },
+    {
+      "key": "swiftgate",
+      "regionId": "core-v2-swiftgate-p1-p0",
+      "name": "Swiftgate",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "STRONGHOLD",
+      "exactCityCapacity": 60,
+      "climate": {
+        "id": "east_center_transition",
+        "renderTheme": "east",
+        "transition": "center to east"
+      },
+      "objective": {
+        "type": "march_speed",
+        "x": 724,
+        "y": 543,
+        "radiusX": 132,
+        "radiusY": 122,
+        "visualSize": 154,
+        "influenceClearance": 28,
+        "placementPolicy": "exact_center",
+        "offsetFromCenter": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "profile": {
+        "key": "swiftgate",
+        "themeKey": "east",
+        "accentThemeKey": "west",
+        "variantKey": "c",
+        "roadGeometryId": "east-v3",
+        "retrySalt": "core-v2-art5-swiftgate-movement-corridor-v1",
+        "identity": "major Crownlands movement corridor with a centered march-speed Stronghold, converging thin wagon roads, and restrained travel wear",
+        "objectiveArt": "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp",
+        "objectiveLabel": "Swiftgate",
+        "objectiveOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "transitionSides": [
+          "west"
+        ],
+        "transitionFamily": "core-v2-east-center",
+        "transitionRgb": [
+          132,
+          157,
+          118
+        ],
+        "edgeThemeOverrides": {
+          "west": "west"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "restrained waystation trace",
+            "milestone and wagon-wear cue",
+            "hoof-worn feeder paths",
+            "open movement corridor"
+          ],
+          "centralTreatment": "centered-stronghold-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-north-east-holding-tower-p1-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-crown-citadel-p0-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "fac1f8c54d15d1ba0c91d76e3ecdb3b346d4e992bb7b15909c3fa4b5c7de15aa",
+      "cityPlanHash": "e877e214c7d0ad912042cb5ceb08133700f67fc62acb86f66efbabd420e5cdfd",
+      "validationReceiptHash": "955de394c40e6b38fc63aefd1c10db780ac95058ca37c0a15095a928c29548fd",
+      "geometryDraftSha256": "7045924f17c72b433116ac82a2f74177cf72f59826429b0a14b9660201b1bb66",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-5/geometry/swiftgate",
+      "candidatePngSha256": "16983a8feebb279c96b437f745f0158bfa48329b4a7ed6fdddf65f9989b44b87",
+      "candidateWebpSha256": "8d47039c22b500370cec586d35d4a6b804fb9050be00da3e9595d277caee44ed",
+      "thumbnailSha256": "56f36eda6f0d1f1505ec0c09d7112868395830b2e3657db4f829507fbd19f855",
+      "citiesSha256": "72c4b961f40484882016ac5827d7afe355f4f86d86979c75daf60d154ab6397b",
+      "compositionSha256": "f83baa2d3a310618257d8db5a695e36f79bb82b69aea3c767491b6c45fa5c46a",
+      "validationReceiptSha256": "9ed5177ecb386ed4eb2971a23fead4650ecd5702b7fa8aaa1fe0151b706ddb3a",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-5/candidates/swiftgate"
+    },
+    {
+      "key": "east-support",
+      "regionId": "core-v2-east-support-p2-p0",
+      "name": "East Support",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 0,
+        "worldLayer": 0
+      },
+      "mapType": "SUPPORT",
+      "exactCityCapacity": 70,
+      "climate": {
+        "id": "east_tropical_lush",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "none"
+      },
+      "profile": {
+        "key": "east-support",
+        "themeKey": "east",
+        "variantKey": "a",
+        "roadGeometryId": "west-v2",
+        "retrySalt": "core-v2-art5-east-support-open-verdant-ground-v1",
+        "identity": "clean productive eastern countryside with rich grass, restrained hedges, damp drainage traces, and maximum 70-city readability",
+        "objectiveArt": null,
+        "objectiveLabel": null,
+        "objectiveOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "transitionSides": [],
+        "transitionFamily": "core-v2-east",
+        "transitionRgb": [
+          132,
+          157,
+          118
+        ],
+        "propPlan": {
+          "majorClusters": 0,
+          "mediumClusters": 3,
+          "cueAssignments": [
+            "verdant field boundary",
+            "subtle wet drainage trace",
+            "small healthy tree group",
+            "open eastern grassland"
+          ],
+          "centralTreatment": "none"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-deed-camp-east-north-p2-m1",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "963889383d5d27cd0bd841c070066a86c388d84de5528c0e60b78031bbfa8b09",
+      "cityPlanHash": "49580dd0a5faaa3761487ea76c4927460be5eaaa15943629eb2ee6c04328ffa8",
+      "validationReceiptHash": "66199a2931ca537aaf280461cf6806640f030ddeff60506f78cdc265264479bb",
+      "geometryDraftSha256": "ca1fd067d2fcf989a5e8743b9060a6de28938209ba6b94a889636131f2797d32",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-5/geometry/east-support",
+      "candidatePngSha256": "a9e3570c010625933f06f1da140f9a3a122d62104136e33d22d714559007ad71",
+      "candidateWebpSha256": "440dc64e1af0655fe9c3b12658d4fcefcde317a2aac36fba53fe3928aa382744",
+      "thumbnailSha256": "82c7fb71434e11baa9c9e60cabf16e196a658a9bc0104a7fa3c769e64966cace",
+      "citiesSha256": "d2212d95f5e4d849aa77a52144162c640bcf9b0e7e596050f23cf2fe351f8701",
+      "compositionSha256": "21f7dd5fa3d63a04b1b774dd02abe072c4801bf4bd730b6496b8e2eec56ad68d",
+      "validationReceiptSha256": "069c954ff5131f5c9b5bc492f8d42b2fcc21ab0223d842b20264b897881feca1",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-5/candidates/east-support"
+    },
+    {
+      "key": "southeast-holding-tower",
+      "regionId": "core-v2-south-east-holding-tower-p1-p1",
+      "name": "South-East Holding Tower",
+      "coordinate": {
+        "gridX": 1,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "HOLDING_TOWER",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "south_east_transition",
+        "renderTheme": "south",
+        "transition": "center to south"
+      },
+      "objective": {
+        "type": "holding_tower",
+        "x": 736,
+        "y": 555,
+        "radiusX": 142,
+        "radiusY": 126,
+        "visualSize": 0,
+        "influenceClearance": 30,
+        "reservationOnly": true,
+        "placementPolicy": "near_center_reservation",
+        "offsetFromCenter": {
+          "x": 12,
+          "y": 12
+        }
+      },
+      "profile": {
+        "key": "southeast-holding-tower",
+        "themeKey": "east",
+        "accentThemeKey": "south",
+        "variantKey": "b",
+        "roadGeometryId": "south-v3",
+        "retrySalt": "core-v2-art5-southeast-tower-contested-transition-v1",
+        "identity": "contested southeastern strategic ground with mixed verdant and warming terrain, restrained earthworks, and a clear future Tower reservation",
+        "objectiveArt": null,
+        "objectiveLabel": "Future Holding Tower reservation",
+        "objectiveOffset": {
+          "x": 12,
+          "y": 12
+        },
+        "transitionSides": [
+          "south",
+          "west"
+        ],
+        "transitionFamily": "core-v2-east-south",
+        "transitionRgb": [
+          158,
+          151,
+          108
+        ],
+        "edgeThemeOverrides": {
+          "south": "south",
+          "west": "south"
+        },
+        "propPlan": {
+          "majorClusters": 0,
+          "mediumClusters": 3,
+          "cueAssignments": [
+            "crossing military tracks",
+            "low defensive ditch trace",
+            "broken barricade remnant",
+            "mixed green and dry strategic ground"
+          ],
+          "centralTreatment": "reservation-clear"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-swiftgate-p1-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-east-south-p2-p1",
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-relic-camp-south-east-p1-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-ironwatch-p0-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "0379c0bc79b4afb2f78ae6a601374c55252bcd77635835f68ff42370ee5d5c63",
+      "cityPlanHash": "b8aa9f7918f3ce5e81279f8a944ca69108d1c1873eea186c97b61090277cf8e9",
+      "validationReceiptHash": "d8fcde3f22236310fbe637bfec14c0b2b92dbbc6b9f306fe44bc422c9c7b1653",
+      "geometryDraftSha256": "956bd8f9ad8f7323f85d7ea587a718d30987cfa190cb67dbafa6bc1cce08634f",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-5/geometry/southeast-holding-tower",
+      "candidatePngSha256": "1b0e8e9577a25c839a5229abf039cb28342ca89837ec12b9403ca944f9c072ce",
+      "candidateWebpSha256": "1ea409afce1718c84cc1135ebc01e657e566c96abf6b199bc751c1752c3df529",
+      "thumbnailSha256": "f77526da577ea3383909c3cf5e832db8c846d513af2a21d8d125575a3783e8a3",
+      "citiesSha256": "f88b74121d4add63aa7ae1f21cd00a20159dcd039a63a008025b2e46d452f0d9",
+      "compositionSha256": "2f8322b4dbba279b802f03d19fc81ed99fafaee5dfc1cb493e6df5ced713653d",
+      "validationReceiptSha256": "f8ad82a82daae739f7dacaeef16a9fe84082a4ed66d45198d418946196beec04",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-5/candidates/southeast-holding-tower"
+    },
+    {
+      "key": "east-southeast-relic-camp",
+      "regionId": "core-v2-relic-camp-east-south-p2-p1",
+      "name": "Relic Camp East-South",
+      "coordinate": {
+        "gridX": 2,
+        "gridY": 1,
+        "worldLayer": 0
+      },
+      "mapType": "RELIC_CAMP",
+      "exactCityCapacity": 55,
+      "climate": {
+        "id": "east_south_transition",
+        "renderTheme": "east",
+        "transition": "east lush"
+      },
+      "objective": {
+        "type": "relic",
+        "x": 746,
+        "y": 558,
+        "radiusX": 112,
+        "radiusY": 104,
+        "visualSize": 132,
+        "influenceClearance": 24,
+        "placementPolicy": "near_center_camp",
+        "offsetFromCenter": {
+          "x": 22,
+          "y": 15
+        }
+      },
+      "profile": {
+        "key": "east-southeast-relic-camp",
+        "themeKey": "east",
+        "accentThemeKey": "south",
+        "variantKey": "c",
+        "roadGeometryId": "north-v3",
+        "retrySalt": "core-v2-art5-east-southeast-relic-mossy-ruins-v1",
+        "identity": "old sacred eastern territory with mossy weathered stone, damp reclaimed foundations, and a gradual warmer southern transition",
+        "objectiveArt": "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp",
+        "objectiveLabel": "Relic Camp",
+        "objectiveOffset": {
+          "x": 22,
+          "y": 15
+        },
+        "transitionSides": [
+          "south",
+          "west"
+        ],
+        "transitionFamily": "core-v2-east-south",
+        "transitionRgb": [
+          158,
+          151,
+          108
+        ],
+        "edgeThemeOverrides": {
+          "south": "south"
+        },
+        "propPlan": {
+          "majorClusters": 1,
+          "mediumClusters": 2,
+          "cueAssignments": [
+            "mossy archaeological cluster",
+            "vegetation-reclaimed foundation trace",
+            "ancient worn footpath",
+            "open east-south sacred countryside"
+          ],
+          "centralTreatment": "objective-only"
+        }
+      },
+      "topology": {
+        "cardinalOnly": true,
+        "connections": {
+          "north": {
+            "state": "OPEN",
+            "regionId": "core-v2-east-support-p2-p0",
+            "reciprocalSide": "south",
+            "runtimeStateOutsideArtwork": true
+          },
+          "east": {
+            "state": "GATED",
+            "regionId": null,
+            "reciprocalSide": "west",
+            "runtimeStateOutsideArtwork": true,
+            "futureOuterNeighbor": true
+          },
+          "south": {
+            "state": "OPEN",
+            "regionId": "core-v2-warband-camp-south-east-p2-p2",
+            "reciprocalSide": "north",
+            "runtimeStateOutsideArtwork": true
+          },
+          "west": {
+            "state": "OPEN",
+            "regionId": "core-v2-south-east-holding-tower-p1-p1",
+            "reciprocalSide": "east",
+            "runtimeStateOutsideArtwork": true
+          }
+        },
+        "roadSockets": {
+          "north": {
+            "x": 724,
+            "y": 0,
+            "tangentOffset": 0.5
+          },
+          "east": {
+            "x": 1448,
+            "y": 543,
+            "tangentOffset": 0.5
+          },
+          "south": {
+            "x": 724,
+            "y": 1086,
+            "tangentOffset": 0.5
+          },
+          "west": {
+            "x": 0,
+            "y": 543,
+            "tangentOffset": 0.5
+          }
+        }
+      },
+      "compositionPlanHash": "047312ca2b7ecf0553d52940e7834feaad42c524fa806e9b92cc9be67e659feb",
+      "cityPlanHash": "af9364b31183977dbfe08cad246f8b7cfc65040a36ef56375cf83c82860791e3",
+      "validationReceiptHash": "b024076f413cb82f6aa3e4b08c03bbf5858c5430bfd17c90c6c7d22796d06587",
+      "geometryDraftSha256": "058ad1cf3c62a87d42fd38b52f19e54256a6aa062fd68f1dad40bc194f6d9d0b",
+      "outputDirectory": "benchmark-results/map/core-v2-phase-art-5/geometry/east-southeast-relic-camp",
+      "candidatePngSha256": "2570757042a96dfe95e726eba4a38b24c8b4b6e757294fe4e9add0eb81177fb9",
+      "candidateWebpSha256": "a44b7e62176c617a8b8509aea520da6b4773a43b6e4259d21e2b959757c18aab",
+      "thumbnailSha256": "9cd80be3ee5ec41637afd5d760b28506ebe289d43751a93486b97b945bb6d913",
+      "citiesSha256": "a41c0f016fb34bbca7d1e9ca980e7f79a201515d58c9ff5ec430f054627ed98f",
+      "compositionSha256": "9971ce23fd969646edf9e24294425432cd9e44dc4f4722ae13ff86d7a966257d",
+      "validationReceiptSha256": "027f975d23157580382a71f18a1e84a2ae04f9666e699a483c408822b99ef97a",
+      "candidateDirectory": "benchmark-results/map/core-v2-phase-art-5/candidates/east-southeast-relic-camp"
+    }
+  ],
+  "finalArtCandidateCount": 5,
+  "finalArtStandard": "ART-2 v2 + ART-3 + ART-4",
+  "newCoreCoordinatesGenerated": 5,
+  "allOtherCoreCoordinatesGenerated": 0,
+  "mapDimensions": {
+    "width": 1448,
+    "height": 1086
+  },
+  "representedCoreCityCapacityBeforeArt5": 885,
+  "art5CityCapacity": 300,
+  "remainingSouthBatchCapacity": 295,
+  "indexHash": "d6e569bdaffa27e777871767f582a2c0707cc459a8ef49de1edae4578852d4c2"
+}

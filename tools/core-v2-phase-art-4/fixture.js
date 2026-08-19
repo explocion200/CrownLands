@@ -285,7 +285,7 @@ function createFixture() {
     productionActivated: false,
     candidateCount: newEntries.length,
     finishedCoreMapCount: 15,
-    representedCoreCityCapacity: 880,
+    representedCoreCityCapacity: 885,
   };
   return fixture;
 }

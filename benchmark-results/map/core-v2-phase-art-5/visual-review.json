@@ -1,0 +1,30 @@
+{
+  "phase": "Core v2 Phase ART-5",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "reviewedCandidateCount": 5,
+  "approvalQuestions": {
+    "allFiveMeetFinalCoreQualityBar": true,
+    "allTwentyBelongToOneVisualFamily": true,
+    "swiftgateExactlyCentered": true,
+    "swiftgateMovementIdentityWithoutOversizedRoads": true,
+    "eastSupportReadableAt70Cities": true,
+    "deedSettlementSubordinateToRuntimeCities": true,
+    "towerReservationSuitableWithoutPad": true,
+    "eastRelicDistinctFromExistingRelicMaps": true,
+    "eastToSouthClimateProgressionNatural": true,
+    "allCitySafeAreasClean": true,
+    "interactiveRuntimeQAStillDeferred": true,
+    "readyForVisualApproval": true
+  },
+  "staticRuntimeOverlayStatus": "PASS_ACTUAL_CURRENT_RUNTIME_ASSETS",
+  "browserRuntimeStatus": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+  "interactiveRuntimeQA": {
+    "status": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+    "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION",
+    "productionBlocking": true,
+    "artProductionBlocking": false,
+    "requiredBeforeProductionUse": true,
+    "futureGate": "FINAL_CONSOLIDATED_INTERACTIVE_CORE_QA_ALL_25_MAPS"
+  }
+}

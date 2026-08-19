@@ -5,10 +5,10 @@ const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { buildCoreSpecification, hashObject } = require("./core-v2-phase-a/spec");
-const { BATCH_COORDINATES, BATCH_VERSION, buildBatch } = require("./core-v2-phase-art-4/batch");
+const { BATCH_COORDINATES, BATCH_VERSION, buildBatch } = require("./core-v2-phase-art-5/batch");
 
 const ROOT = path.resolve(__dirname, "..");
-const OUTPUT_ROOT = path.join(ROOT, "benchmark-results", "map", "core-v2-phase-art-4");
+const OUTPUT_ROOT = path.join(ROOT, "benchmark-results", "map", "core-v2-phase-art-5");
 const COMPOSER = path.join(ROOT, "tools", "map-scaling-phase-6d", "compose_map.py");
 
 function writeJson(filePath, value) {
@@ -69,23 +69,23 @@ function main() {
   }
   const index = {
     schemaVersion: 1,
-    phase: "Core v2 Phase ART-4",
+    phase: "Core v2 Phase ART-5",
     batchVersion: BATCH_VERSION,
     developmentOnly: true,
     productionActivated: false,
     publicationAllowed: false,
-    approvedBase: "d42f8590054bcfa22328dd06b0bc6b167d8de20a",
+    approvedBase: "996e54c279c442592bb31dfea032097d80fc7d0a",
     exactBatchMapCount: entries.length,
     exactBatchCityCapacity: entries.reduce((sum, entry) => sum + entry.exactCityCapacity, 0),
-    finishedCoreMapCountAfterApproval: 15,
-    representedCoreCityCapacityAfterApproval: 885,
+    finishedCoreMapCountAfterApproval: 20,
+    representedCoreCityCapacityAfterApproval: 1185,
     exactCoreRegionCount: specification.exactRegionCount,
     exactCoreCityCapacity: specification.exactCityCapacity,
     entries,
   };
   index.indexHash = hashObject({ ...index, indexHash: undefined });
-  writeJson(path.join(OUTPUT_ROOT, "art4-index.json"), index);
-  console.log(`Core v2 Phase ART-4 prepared ${entries.length} development-only geometry packages / ${index.exactBatchCityCapacity} cities.`);
+  writeJson(path.join(OUTPUT_ROOT, "art5-index.json"), index);
+  console.log(`Core v2 Phase ART-5 prepared ${entries.length} development-only geometry packages / ${index.exactBatchCityCapacity} cities.`);
   console.log(`Output: ${path.relative(ROOT, OUTPUT_ROOT)}`);
 }
 
