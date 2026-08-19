@@ -242,6 +242,10 @@ service cloud.firestore {
         allow read, create, update, delete: if false;
       }
 
+      match /chatSendRequests/{requestId} {
+        allow read, create, update, delete: if false;
+      }
+
       match /notificationTokens/{tokenId} {
         allow read: if ownsPlayerDoc(uid);
         allow create, update: if ownsPlayerDoc(uid)
@@ -268,10 +272,23 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    function clanMember(clanId) {
+    function currentPlayerAccount() {
       return signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && isCurrentGeneration(get(/databases/$(database)/documents/players/$(request.auth.uid)).data);
+    }
+
+    function clanMember(clanId) {
+      return currentPlayerAccount()
+        && get(/databases/$(database)/documents/players/$(request.auth.uid)).data.clanId == clanId
+        && exists(/databases/$(database)/documents/clans/$(clanId))
         && get(/databases/$(database)/documents/clans/$(clanId)).data.resetGeneration == currentResetGeneration()
-        && exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid));
+        && get(/databases/$(database)/documents/clans/$(clanId)).data.worldId == currentWorldId()
+        && get(/databases/$(database)/documents/clans/$(clanId)).data.status == 'active'
+        && exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.status == 'active'
+        && isCurrentGeneration(get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data);
     }
 
     function clanManager(clanId) {
@@ -365,7 +382,10 @@ service cloud.firestore {
       }
 
       match /messages/{messageId} {
-        allow read, create, update, delete: if false;
+        allow read: if clanMember(clanId)
+          && isCurrentGeneration(resource.data)
+          && resource.data.status == 'visible';
+        allow create, update, delete: if false;
       }
 
       match /messageReports/{reportId} {
@@ -379,6 +399,14 @@ service cloud.firestore {
 
     match /clanLeaderboards/{resetId}/entries/{clanId} {
       allow read: if signedIn() && resetId == currentResetGeneration();
+      allow create, update, delete: if false;
+    }
+
+    match /globalChat/{resetId}/messages/{messageId} {
+      allow read: if currentPlayerAccount()
+        && resetId == currentResetGeneration()
+        && isCurrentGeneration(resource.data)
+        && resource.data.status == 'visible';
       allow create, update, delete: if false;
     }
 
@@ -425,6 +453,10 @@ service cloud.firestore {
     }
 
     match /serverConfig/{configId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /serverRateLimits/{rateLimitId} {
       allow read, create, update, delete: if false;
     }
 

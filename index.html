@@ -16,21 +16,22 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260817-daily-header-nav-r1" />
+  <meta name="crownlands-build" content="20260818-global-clan-chat-r1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260817-daily-header-nav-r1" />
+  <link rel="stylesheet" href="styles.css?v=20260818-global-clan-chat-r1" />
   <link rel="stylesheet" href="interface-theme.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="daily-rewards.css?v=20260817-daily-header-nav-r1" />
+  <link rel="stylesheet" href="daily-rewards.css?v=20260818-global-clan-chat-r1" />
   <link rel="stylesheet" href="common-gear-ui.css?v=20260817-inner-castle-labels-r1" />
-  <link rel="stylesheet" href="readability.css?v=20260817-daily-header-nav-r1" />
+  <link rel="stylesheet" href="readability.css?v=20260818-global-clan-chat-r1" />
   <link rel="stylesheet" href="manuscript-prototype.css?v=20260813-manuscript-prototype-r4" />
   <link rel="stylesheet" href="ui-contrast-correction.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="profile-theme.css?v=20260817-daily-header-nav-r1" />
-  <link rel="stylesheet" href="crownlands-palette.css?v=20260817-daily-header-nav-r1" />
+  <link rel="stylesheet" href="profile-theme.css?v=20260818-global-clan-chat-r1" />
+  <link rel="stylesheet" href="crownlands-palette.css?v=20260818-global-clan-chat-r1" />
   <link rel="stylesheet" href="action-buttons.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="mobile-viewport.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="chat.css?v=20260818-global-clan-chat-r1" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-c8507d1988d6.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-2038de353a91.webp" fetchpriority="high" />
@@ -200,6 +201,15 @@
         </div>
       </header>
 
+      <button id="chatToggleBtn" class="resource-pill chat-toggle-btn" type="button" aria-label="Open chat" aria-controls="quickChat chatDialog" aria-expanded="false">
+        <svg class="cl-icon chat-toggle-chevron" aria-hidden="true"><use href="#cl-icon-back"></use></svg>
+        <span class="sr-only">Chat</span>
+        <span id="chatToggleUnread" class="chat-toggle-unread" aria-label="Unread chat messages" hidden></span>
+      </button>
+      <section id="quickChat" class="quick-chat" role="button" tabindex="0" aria-label="Open full chat" hidden>
+        <div class="quick-chat-heading"><strong>Realm Chat</strong><span>Tap to open</span></div>
+        <div id="quickChatMessages" class="quick-chat-messages" aria-live="polite"></div>
+      </section>
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
         <img class="bag-icon" src="assets/optimized/hud-bag-192x192-8d79a1879913.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
       </button>
@@ -477,6 +487,48 @@
     </article>
   </dialog>
 
+  <dialog id="chatDialog" class="modal chat-modal" aria-labelledby="chatTitle">
+    <article class="modal-card chat-card">
+      <header class="chat-header">
+        <div>
+          <span class="chat-eyebrow">Crownlands Chronicle</span>
+          <h2 id="chatTitle">Realm Chat</h2>
+        </div>
+        <div class="chat-window-actions">
+          <button id="chatMinimizeBtn" class="chat-minimize-btn" type="button" aria-label="Minimize chat">
+            <svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-forward"></use></svg>
+          </button>
+          <button id="chatCloseBtn" class="modal-close" type="button" aria-label="Close chat">
+            <svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg>
+          </button>
+        </div>
+      </header>
+      <div class="chat-tabs" role="tablist" aria-label="Chat channels">
+        <button class="active" type="button" role="tab" aria-selected="true" data-chat-channel="global">
+          Global <span class="chat-tab-unread" aria-label="Unread Global messages" hidden></span>
+        </button>
+        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-chat-channel="clan">
+          Clan <span class="chat-tab-unread" aria-label="Unread Clan messages" hidden></span>
+        </button>
+      </div>
+      <div class="chat-history">
+        <button id="chatLoadOlderBtn" class="chat-load-older" type="button" hidden>Load older messages</button>
+        <div id="chatMessageList" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <p id="chatEmptyState" class="chat-empty-state">No global messages yet. Begin the chronicle.</p>
+        <button id="chatNewMessagesBtn" class="chat-new-messages" type="button" hidden>New messages ↓</button>
+      </div>
+      <form id="chatComposer" class="chat-composer">
+        <label class="sr-only" for="chatMessageInput">Enter your chat message</label>
+        <textarea id="chatMessageInput" rows="2" maxlength="250" enterkeyhint="send" autocomplete="off" placeholder="Enter your message..."></textarea>
+        <div class="chat-composer-actions">
+          <small id="chatCharacterCount">0/250</small>
+          <button id="chatSendBtn" class="primary-btn" type="submit" disabled>Send</button>
+        </div>
+      </form>
+      <p id="chatStatus" class="chat-status" role="status" hidden></p>
+    </article>
+  </dialog>
+
   <dialog
     id="levelUpRewardModal"
     class="modal level-up-reward-modal"
@@ -509,17 +561,18 @@
   <script src="economy-config.js?v=20260805-linear-walls-v1"></script>
   <script src="common-gear.js?v=20260812-visual-correction-pass-4a-r1"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
-  <script src="ui-layout-config.js?v=20260813-editor-layout-r1"></script>
+  <script src="ui-layout-config.js?v=20260818-global-clan-chat-r1"></script>
   <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
   <script src="functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2"></script>
   <script src="functions/playerFlagConfig.js?v=20260814-readability-r38"></script>
-  <script src="firebaseClient.js?v=20260814-readability-r38"></script>
+  <script src="firebaseClient.js?v=20260818-global-clan-chat-r1"></script>
+  <script src="chat-ui.js?v=20260818-global-clan-chat-r1"></script>
   <script src="audio-manager.js?v=20260812-core-visual-pass-2"></script>
   <script src="animation-manager.js?v=20260810-daily-mission-camp-fix-v1"></script>
   <script src="instant-economy-actions.js?v=20260810-instant-economy-actions-v1"></script>
   <script src="base-cities.js?v=20260813-base-cities-split-r1"></script>
   <script src="common-gear-ui.js?v=20260817-inner-castle-labels-r1"></script>
-  <script src="game.js?v=20260817-daily-header-nav-r1"></script>
-  <script src="ui-layout-runtime.js?v=20260814-readability-r38"></script>
+  <script src="game.js?v=20260818-global-clan-chat-r1"></script>
+  <script src="ui-layout-runtime.js?v=20260818-global-clan-chat-r1"></script>
 </body>
 </html>

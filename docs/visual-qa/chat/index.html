@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crownlands Chat Visual QA</title>
+  <base href="../../../" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="interface-theme.css" />
+  <link rel="stylesheet" href="readability.css" />
+  <link rel="stylesheet" href="manuscript-prototype.css" />
+  <link rel="stylesheet" href="ui-contrast-correction.css" />
+  <link rel="stylesheet" href="profile-theme.css" />
+  <link rel="stylesheet" href="crownlands-palette.css" />
+  <link rel="stylesheet" href="action-buttons.css" />
+  <link rel="stylesheet" href="mobile-viewport.css" />
+  <link rel="stylesheet" href="chat.css" />
+  <style>
+    body { overflow: hidden; }
+    .qa-map {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(18, 15, 10, .1), rgba(18, 15, 10, .2)),
+        url("assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp") center / cover;
+    }
+    .qa-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 110px rgba(16, 10, 6, .52); }
+    .qa-label {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      z-index: 20;
+      transform: translateX(-50%);
+      padding: .38rem .7rem;
+      color: #f5e6c3;
+      border: 1px solid rgba(190, 145, 63, .62);
+      border-radius: 4px;
+      background: rgba(41, 27, 18, .82);
+      font: 700 .7rem/1 "Cinzel", serif;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .qa-controls {
+      position: absolute;
+      z-index: 300;
+      top: 48px;
+      left: 12px;
+      display: flex;
+      gap: 4px;
+    }
+    .qa-controls[hidden] { display: none; }
+    .qa-controls button { min-height: 30px; padding: 4px 7px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="cl-icon-back" viewBox="0 0 32 32"><path d="M19 7l-9 9 9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-forward" viewBox="0 0 32 32"><path d="M13 7l9 9-9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  </svg>
+  <main class="phone-shell">
+    <section class="game-view" aria-label="Chat visual QA map">
+      <div class="qa-map"></div>
+      <div class="qa-vignette"></div>
+      <span class="qa-label">Chat visual QA · local mock data</span>
+      <div class="qa-controls" aria-label="Chat collision QA controls" hidden>
+        <button type="button" data-qa-alerts="none">No alerts</button>
+        <button type="button" data-qa-alerts="incoming">Incoming only</button>
+        <button type="button" data-qa-alerts="outgoing">Outgoing only</button>
+        <button type="button" data-qa-alerts="both">Both alerts</button>
+        <button type="button" data-qa-reconstruct-hud>Reconstruct HUD</button>
+        <button type="button" data-qa-server-cooldown>Force server cooldown</button>
+      </div>
+
+      <button id="chatToggleBtn" class="resource-pill chat-toggle-btn" type="button" aria-label="Open chat" aria-controls="quickChat chatDialog" aria-expanded="false">
+        <svg class="cl-icon chat-toggle-chevron" aria-hidden="true"><use href="#cl-icon-back"></use></svg>
+        <span class="sr-only">Chat</span>
+        <span id="chatToggleUnread" class="chat-toggle-unread" aria-label="Unread chat messages" hidden></span>
+      </button>
+      <section id="quickChat" class="quick-chat" role="button" tabindex="0" aria-label="Open full chat" hidden>
+        <div class="quick-chat-heading"><strong>Realm Chat</strong><span>Tap to open</span></div>
+        <div id="quickChatMessages" class="quick-chat-messages" aria-live="polite"></div>
+      </section>
+      <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
+        <img class="bag-icon" src="assets/optimized/hud-bag-192x192-8d79a1879913.webp" width="192" height="192" alt="" />
+      </button>
+      <button id="shopBtn" class="resource-pill shop-btn" type="button" aria-label="Open shop">
+        <img class="shop-icon" src="assets/optimized/hud-shop-192x192-631cf3c626d5.webp" width="192" height="192" alt="" />
+      </button>
+      <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
+        <img class="city-list-icon" src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" width="192" height="192" alt="" />
+      </button>
+      <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island">
+        <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-f330cd084a9f.webp" width="192" height="192" alt="" />
+      </button>
+      <nav class="bottom-nav" aria-label="Game menu" data-chat-quick-blocker>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" aria-label="Reports">
+          <img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-21644b7390fb.webp" width="192" height="192" alt="" />
+          <strong class="nav-btn-heading">Reports</strong>
+          <small class="nav-btn-label nav-btn-timer-placeholder" aria-hidden="true">&nbsp;</small>
+        </button>
+        <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Outgoing movement" hidden>
+          <span class="nav-btn-icon" aria-hidden="true">&#10148;</span>
+          <strong class="nav-btn-heading"><span id="outgoingAttackCount" class="nav-btn-count">1</span> Outgoing</strong>
+          <small id="outgoingAttackTime" class="nav-btn-label">01:42</small>
+        </button>
+        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming attack" hidden>
+          <span class="nav-btn-icon" aria-hidden="true">&#9876;</span>
+          <strong class="nav-btn-heading"><span id="incomingAttackCount" class="nav-btn-count">1</span> Incoming</strong>
+          <small id="incomingAttackTime" class="nav-btn-label">00:38</small>
+        </button>
+      </nav>
+    </section>
+  </main>
+
+  <dialog id="chatDialog" class="modal chat-modal" aria-labelledby="chatTitle">
+    <article class="modal-card chat-card">
+      <header class="chat-header">
+        <div><span class="chat-eyebrow">Crownlands Chronicle</span><h2 id="chatTitle">Realm Chat</h2></div>
+        <div class="chat-window-actions">
+          <button id="chatMinimizeBtn" class="chat-minimize-btn" type="button" aria-label="Minimize chat"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-forward"></use></svg></button>
+          <button id="chatCloseBtn" class="modal-close" type="button" aria-label="Close chat"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+        </div>
+      </header>
+      <div class="chat-tabs" role="tablist" aria-label="Chat channels">
+        <button class="active" type="button" role="tab" aria-selected="true" data-chat-channel="global">Global <span class="chat-tab-unread" aria-label="Unread Global messages" hidden></span></button>
+        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-chat-channel="clan">Clan <span class="chat-tab-unread" aria-label="Unread Clan messages" hidden></span></button>
+      </div>
+      <div class="chat-history">
+        <button id="chatLoadOlderBtn" class="chat-load-older" type="button" hidden>Load older messages</button>
+        <div id="chatMessageList" class="chat-message-list" role="log" aria-live="polite" aria-relevant="additions text"></div>
+        <p id="chatEmptyState" class="chat-empty-state">No global messages yet. Begin the chronicle.</p>
+        <button id="chatNewMessagesBtn" class="chat-new-messages" type="button" hidden>New messages ↓</button>
+      </div>
+      <form id="chatComposer" class="chat-composer">
+        <label class="sr-only" for="chatMessageInput">Enter your chat message</label>
+        <textarea id="chatMessageInput" rows="2" maxlength="250" enterkeyhint="send" autocomplete="off" placeholder="Enter your message..."></textarea>
+        <div class="chat-composer-actions"><small id="chatCharacterCount">0/250</small><button id="chatSendBtn" class="primary-btn" type="submit" disabled>Send</button></div>
+      </form>
+      <p id="chatStatus" class="chat-status" role="status" hidden></p>
+    </article>
+  </dialog>
+
+  <script src="release-config.js"></script>
+  <script src="ui-layout-config.js"></script>
+  <script src="chat-ui.js?v=collision-cooldown-qa"></script>
+  <script src="ui-layout-runtime.js"></script>
+  <script src="docs/visual-qa/chat/fixture.js?v=collision-cooldown-qa-2"></script>
+</body>
+</html>

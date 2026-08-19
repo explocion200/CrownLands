@@ -267,7 +267,7 @@ requireMatch(styles, /\.daily-reward-tabs\s*\{[\s\S]*position:\s*static[\s\S]*z-
 requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*--daily-header-nav-width:\s*calc\(114px \+ 1\.8rem\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*repeat\(3,\s*38px\)[\s\S]*gap:\s*\.9rem/, "Portrait icon tabs no longer preserve calculated clearance from the close button.");
 requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*--daily-header-close-size:\s*40px[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*repeat\(3,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer fit the compact shared header.");
 requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*8[\s\S]*top:\s*var\(--daily-header-block-inset\)[\s\S]*right:\s*var\(--daily-header-inline-inset\)[\s\S]*place-items:\s*center[\s\S]*padding:\s*0/, "The close button is not centered and inset above the reward navigation.");
-requireMatch(html, /daily-rewards\.css\?v=20260817-daily-header-nav-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
+requireMatch(html, /daily-rewards\.css\?v=20260818-global-clan-chat-r1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
 requireMatch(read("docs/visual-qa/daily-rewards-navigation/index.html"), /mobile-viewport\.css[\s\S]*Daily Login[\s\S]*Quests[\s\S]*Achievements/, "The responsive reward-navigation visual QA fixture is missing or incomplete.");
 requireMatch(
   serviceWorker,

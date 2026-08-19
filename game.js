@@ -13865,6 +13865,29 @@ function isOnlineWorldActive() {
   return Boolean(state?.online?.islandId && getOnlineApi()?.isSignedIn?.());
 }
 
+function getChatController() {
+  return window.CrownlandsChat?.init?.({
+    onToast: message => showToast(message),
+    onRealtimeError: error => markOnlineRealtimeRecoveryNeeded(error),
+  }) || null;
+}
+
+function startOnlineChat() {
+  const api = getOnlineApi();
+  const uid = getCurrentOnlineUid();
+  if (!state || !uid || !api?.isSignedIn?.() || !isOnlineWorldActive()) return false;
+  getChatController()?.start({ api, uid, clanId: state.clanId || "" });
+  return true;
+}
+
+function updateOnlineChatClan(clanId = "") {
+  window.CrownlandsChat?.updateClan?.(String(clanId || ""));
+}
+
+function disposeOnlineChat() {
+  window.CrownlandsChat?.dispose?.();
+}
+
 function queueOnlineIdentityRepair() {
   const api = getOnlineApi();
   if (
@@ -13905,6 +13928,7 @@ function retireActiveOnlineIslandSubscription() {
 
 function disconnectOnlineWorld() {
   cancelLoginPresentationSequence();
+  disposeOnlineChat();
   stopDailyMissionLifecycle({ clear: true });
   stopSeasonalAchievementLifecycle({ clear: true });
   retireActiveOnlineIslandSubscription();
@@ -14527,12 +14551,14 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     }
   }
 
-  return connectOnlineIsland(activeRegionId, {
+  const connected = await connectOnlineIsland(activeRegionId, {
     claimHome: activeRegionId === homeRegionId && needsMainCityClaim,
     homeRegionId,
     profile,
     allowWelcomeBack: true,
   });
+  if (connected) startOnlineChat();
+  return connected;
 }
 
 function startOnlineSetupInBackground() {
@@ -17656,6 +17682,7 @@ async function startFromInput(forceFresh = false) {
     const connected = await setupOnlineWorld();
     if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
     setupScreen.classList.remove("visible");
+    startOnlineChat();
     syncWorldMusicState();
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
@@ -21488,6 +21515,7 @@ function handleOnlinePlayerClanSnapshot(event) {
   state.clanRole = String(detail.clanRole || "");
   state.pendingClanApplicationId = String(detail.pendingClanApplicationId || "");
   state.clanJoinCooldownUntilMs = normalizeTimestampMs(detail.clanJoinCooldownUntilMs);
+  updateOnlineChatClan(state.clanId);
   rememberPlayerIdentity({
     uid: getCurrentOnlineUid(),
     displayName: state.playerName,
@@ -32472,11 +32500,18 @@ async function resetSkills() {
   showToast(spentPoints > 0 ? `Skills reset: +${formatNumber(spentPoints)} points` : "Skill points repaired");
 }
 
+function notifyMovementHudOccupancyChange(control, wasHidden) {
+  if (!control) return;
+  if (control.hidden !== wasHidden) window.dispatchEvent(new Event("crownlands:hud-occupancy-changed"));
+}
+
 function updateIncomingAttackUi() {
   if (!incomingAttackBtn) return;
   const incoming = getIncomingAttacks();
   const incomingIds = new Set(incoming.map(attack => String(attack.key || getArmyTokenId(attack))));
+  const incomingWasHidden = incomingAttackBtn.hidden;
   incomingAttackBtn.hidden = incoming.length === 0;
+  notifyMovementHudOccupancyChange(incomingAttackBtn, incomingWasHidden);
   incomingAttackBtn.classList.toggle("active", incoming.length > 0);
   if (!incoming.length) {
     if (lastAudioIncomingAttackIds.size > 0) syncWorldMusicState();
@@ -32506,7 +32541,9 @@ function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
   const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const outgoingWasHidden = outgoingAttackBtn.hidden;
   outgoingAttackBtn.hidden = total === 0;
+  notifyMovementHudOccupancyChange(outgoingAttackBtn, outgoingWasHidden);
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
     if (outgoingAttackCount) outgoingAttackCount.textContent = "0";
@@ -36037,7 +36074,9 @@ window.addEventListener("crownlands:auth", async () => {
   resetOnlineSaveCircuitForAuth(getOnlineApi()?.getUser?.()?.uid || "");
   if (getOnlineApi()?.isSignedIn?.()) {
     watchGameServerMembership();
+    if (state) startOnlineChat();
   } else {
+    disposeOnlineChat();
     stopGameServerMembershipWatcher({ clear: true });
     stopDailyMissionLifecycle({ clear: true });
     stopSeasonalAchievementLifecycle({ clear: true });
@@ -36056,6 +36095,10 @@ window.addEventListener("crownlands:auth", async () => {
   }
 });
 window.addEventListener("crownlands:push-message", handlePushMessage);
+window.addEventListener("crownlands:chat-player-profile", event => {
+  const uid = String(event?.detail?.uid || "").trim();
+  if (uid) showPublicPlayerProfile(uid);
+});
 window.addEventListener("crownlands:player-clan", handleOnlinePlayerClanSnapshot);
 window.addEventListener("crownlands:daily-login-reward", handleOnlineDailyLoginRewardSnapshot);
 window.addEventListener("crownlands:online-error", event => {
@@ -36212,8 +36255,12 @@ cityLayer.addEventListener("pointerover", event => {
   if (targetId) scheduleOrderRoutePrefetch(targetId);
 });
 window.addEventListener("pagehide", markGameBackgrounded);
+window.addEventListener("pagehide", disposeOnlineChat);
 window.addEventListener("pagehide", () => crownlandsAnimations?.clearAll?.());
-window.addEventListener("pageshow", () => handleGameForegroundSignal("pageshow"));
+window.addEventListener("pageshow", () => {
+  handleGameForegroundSignal("pageshow");
+  startOnlineChat();
+});
 window.addEventListener("focus", () => handleGameForegroundSignal("focus"));
 document.addEventListener("freeze", markGameBackgrounded);
 document.addEventListener("resume", () => handleGameForegroundSignal("resume"));
