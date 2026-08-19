@@ -1,0 +1,54 @@
+{
+  "phase": "Core v2 Phase ART-4.1",
+  "recordedForCheckpoint": "Core v2 Phase ART-4",
+  "developmentOnly": true,
+  "interactiveRuntimeQA": {
+    "status": "DEFERRED_EXTERNAL_TOOL_BLOCK",
+    "blocker": "CODEX_BROWSER_LOCAL_ORIGIN_PERMISSION",
+    "productionBlocking": true,
+    "artProductionBlocking": false
+  },
+  "evidence": {
+    "loopbackFixtureUrl": "http://127.0.0.1:8816/__core_b1__/",
+    "fixtureHttpStatus": 200,
+    "freshBrowserSessionRetried": true,
+    "browserResult": "saved_local_origin_permission_block",
+    "alternatePortAttempted": false,
+    "alternateHostnameAttempted": false,
+    "alternateBrowserAttempted": false,
+    "rawCdpAttempted": false,
+    "crownlandsFailure": false
+  },
+  "scope": {
+    "candidateArtChangedByBrowserAttempts": false,
+    "geometryChangedByBrowserAttempts": false,
+    "runtimeCodeChangedByBrowserAttempts": false,
+    "productionStateChanged": false
+  },
+  "requiredFutureGate": {
+    "name": "FINAL_CONSOLIDATED_INTERACTIVE_CORE_QA_ALL_25_MAPS",
+    "mustIncludeDeferredArt4Maps": true,
+    "requiredBefore": [
+      "production Core replacement",
+      "live world migration merge",
+      "Core v2 activation",
+      "season reset use"
+    ],
+    "coverage": [
+      "low, normal, and close zoom",
+      "mouse selection",
+      "touch-equivalent selection",
+      "labels",
+      "banners",
+      "troop text",
+      "selection rings",
+      "action wheels",
+      "routes",
+      "objective artwork",
+      "OPEN and GATED edges",
+      "55, 60, and 70-city densities",
+      "performance"
+    ]
+  },
+  "approvedDecision": "ART-4 approved for development art checkpoint; interactive runtime QA explicitly deferred and not passed."
+}

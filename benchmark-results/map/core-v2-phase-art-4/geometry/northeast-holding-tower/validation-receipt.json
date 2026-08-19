@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "batchVersion": "core-v2-phase-art-4-north-northeast-v1",
+  "developmentOnly": true,
+  "productionActivated": false,
+  "publicationAllowed": false,
+  "regionId": "core-v2-north-east-holding-tower-p1-m1",
+  "coordinate": {
+    "gridX": 1,
+    "gridY": -1,
+    "worldLayer": 0
+  },
+  "mapType": "HOLDING_TOWER",
+  "exactCityCapacity": 55,
+  "profile": {
+    "key": "northeast-holding-tower",
+    "themeKey": "north",
+    "accentThemeKey": "east",
+    "variantKey": "c",
+    "roadGeometryId": "east-v3",
+    "retrySalt": "core-v2-art4-northeast-tower-contested-transition-v1",
+    "identity": "contested northeastern crossing with a clear future Tower reservation and restrained earthwork traces",
+    "objectiveArt": null,
+    "objectiveLabel": "Future Holding Tower reservation",
+    "objectiveOffset": {
+      "x": 10,
+      "y": 12
+    },
+    "transitionSides": [
+      "east",
+      "south"
+    ],
+    "transitionFamily": "core-v2-north-east",
+    "transitionRgb": [
+      142,
+      159,
+      132
+    ],
+    "edgeThemeOverrides": {
+      "east": "east",
+      "south": "east"
+    },
+    "propPlan": {
+      "majorClusters": 0,
+      "mediumClusters": 3,
+      "cueAssignments": [
+        "crossing military tracks",
+        "low defensive ditch trace",
+        "broken barricade remnant",
+        "open strategic ground"
+      ],
+      "centralTreatment": "reservation-clear"
+    }
+  },
+  "cityPlanHash": "b9a053e50450ec4adc83a0fa9c043fdd9fe3ba71a941016358cb1f3c0b4e4f43",
+  "compositionPlanHash": "d89f781336c59787a578b630cd9e6de0f0fcc7120ad5f06ef9353b47f22b94b5",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "exactCapacity": 55,
+    "expectedCapacity": 55,
+    "minimumSpacing": 70.036,
+    "preferredSpacingViolations": 0,
+    "cityObjectiveConflicts": 0,
+    "cityBlockerConflicts": 0,
+    "cityRoadConflicts": 0,
+    "cityTransitionConflicts": 0,
+    "objectivePlacement": {
+      "valid": true,
+      "policy": "near_center_reservation",
+      "offset": 15.620499351813312
+    },
+    "propRuleCompliant": true,
+    "geometryArtParity": {
+      "valid": true,
+      "errors": [],
+      "blockerPairs": 4,
+      "roadPairs": 4,
+      "edgeExitCounts": {
+        "north": 1,
+        "east": 1,
+        "south": 1,
+        "west": 1
+      },
+      "barrierSegmentsTouchingBoundary": 7,
+      "perimeterSideCoverage": {
+        "north": 2,
+        "east": 2,
+        "south": 2,
+        "west": 1
+      },
+      "roadSocketAligned": true,
+      "transitionBandCount": 2,
+      "roadGeometryThemeIndependent": true,
+      "publishedEdgeContractValid": true
+    }
+  },
+  "metrics": {
+    "generator": "hand-directed-deterministic-safe-coordinate-plan-art4-v1",
+    "seedHash": "e341f729907c1c22742abe195f83a44b4b65803b68d9336084f278e401fda42c",
+    "minimumCitySeparation": 68,
+    "preferredCitySeparation": 70,
+    "candidatePoolSize": 1097,
+    "rejectedByReason": {
+      "outside_land": 560,
+      "road_clearance": 653,
+      "terrain_blocker": 332,
+      "edge_clearance": 12,
+      "objective_clearance": 313
+    },
+    "selectedTrial": 151,
+    "selectionTrialLimit": 320,
+    "minimumObservedSpacing": 70.036,
+    "meanNearestNeighbor": 85.756,
+    "preferredSpacingViolations": 0,
+    "quadrantCounts": [
+      15,
+      13,
+      13,
+      14
+    ]
+  },
+  "receiptHash": "9126e74ad524d4e670ed938013f8d63b20889c54c2fe9d48f32e42396d797f0f"
+}
