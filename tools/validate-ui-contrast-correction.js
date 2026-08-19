@@ -202,7 +202,7 @@ assert.match(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;/, "I
 assert.match(game, /outgoingAttackBtn\.hidden\s*=\s*total === 0;/, "Troop Movements no longer preserves dynamic visibility.");
 
 const manuscriptIndex = index.indexOf("manuscript-prototype.css");
-const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260819-targeted-ui-contrast-r1");
+const correctionIndex = index.indexOf("ui-contrast-correction.css?v=20260819-targeted-ui-contrast-r2");
 assert.ok(manuscriptIndex >= 0 && correctionIndex > manuscriptIndex, "The contrast correction must load after every existing stylesheet.");
 for (const source of [serviceWorker, productionBuilder, releaseManifest, productionValidator, assetBudget]) {
   assert.ok(source.includes("ui-contrast-correction.css"), "The contrast correction is missing from release packaging or validation.");

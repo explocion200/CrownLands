@@ -4,15 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Crownlands Targeted UI Contrast QA</title>
-  <link rel="stylesheet" href="../../../styles.css?v=20260819-targeted-ui-contrast-r1" />
+  <link rel="stylesheet" href="../../../styles.css?v=20260819-targeted-ui-contrast-r2" />
   <link rel="stylesheet" href="../../../interface-theme.css?v=20260819-inner-castle-labels-r1" />
-  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260819-targeted-ui-contrast-r1" />
+  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260819-targeted-ui-contrast-r2" />
   <link rel="stylesheet" href="../../../common-gear-ui.css?v=20260818-common-gear-r2" />
   <link rel="stylesheet" href="../../../readability.css?v=20260819-welcome-report-contrast-r1" />
-  <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260819-targeted-ui-contrast-r1" />
-  <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260819-targeted-ui-contrast-r1" />
-  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-targeted-ui-contrast-r1" />
-  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260819-targeted-ui-contrast-r1" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260819-targeted-ui-contrast-r2" />
   <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-action-buttons-r32" />
   <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260814-action-buttons-r32" />
   <link rel="stylesheet" href="../../../chat.css?v=20260813-chat-r31" />
@@ -113,6 +113,13 @@
   </style>
 </head>
 <body>
+  <svg class="cl-icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="qa-cl-icon-information" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/><path d="M16 14v8M16 9h.01" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+    <symbol id="qa-cl-icon-attack" viewBox="0 0 32 32"><path d="M7 5l20 20-4 3L4 8zM25 5L5 25l4 3L28 8z"/></symbol>
+    <symbol id="qa-cl-icon-rewards" viewBox="0 0 32 32"><path d="M5 12h22v16H5zM3 8h26v7H3zM14 8h4v20h-4z"/><path d="M16 8c-5 0-8-2-8-5 4 0 7 1 8 5zm0 0c5 0 8-2 8-5-4 0-7 1-8 5z"/></symbol>
+    <symbol id="qa-cl-icon-clan" viewBox="0 0 32 32"><path d="M16 3l10 5v7c0 7-4 11-10 14C10 26 6 22 6 15V8z"/><path d="M10 12h12M16 7v17" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="qa-cl-icon-achievement" viewBox="0 0 32 32"><path d="M8 5h16v17l-8 6-8-6z"/><path d="M12 13l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.6"/></symbol>
+  </svg>
   <main class="qa-page" data-qa-root>
     <h1 class="qa-heading">Targeted UI Contrast</h1>
     <p class="qa-note">Production stylesheet order. Each label is rendered once so visual ghosting cannot be mistaken for duplicated markup.</p>
@@ -122,10 +129,10 @@
         <h2 class="qa-stage-title">1 · Clan Overview selected</h2>
         <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
           <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
-            <button type="button" role="tab" class="active" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">◆</span></span><span>Overview</span></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">⚔</span></span><span>War Room</span><b>2</b></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♜</span></span><span>Rewards</span><b class="alert">3</b></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♟</span></span><span>Members</span><b>24</b></button>
+            <button type="button" role="tab" class="active" data-clan-section="overview" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
           </nav>
           <div class="qa-overview-panel"><strong>Clan Overview</strong><p>Kingdoms united under one banner.</p></div>
         </article></section>
@@ -135,10 +142,10 @@
         <h2 class="qa-stage-title">2 · Clan War Room selected</h2>
         <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
           <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">◆</span></span><span>Overview</span></button>
-            <button type="button" role="tab" class="active" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">⚔</span></span><span>War Room</span><b>2</b></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♜</span></span><span>Rewards</span><b class="alert">3</b></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♟</span></span><span>Members</span><b>24</b></button>
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" class="active" data-clan-section="warroom" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
           </nav>
           <div class="qa-overview-panel"><strong>War Room selected</strong><p>Rally commands and clan campaign coordination.</p></div>
         </article></section>
@@ -148,17 +155,30 @@
         <h2 class="qa-stage-title">3 · Clan Rewards selected</h2>
         <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
           <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">◆</span></span><span>Overview</span></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">⚔</span></span><span>War Room</span><b>2</b></button>
-            <button type="button" role="tab" class="active" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♜</span></span><span>Rewards</span><b class="alert">3</b></button>
-            <button type="button" role="tab" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><span class="qa-icon">♟</span></span><span>Members</span><b>24</b></button>
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" class="active" data-clan-section="rewards" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" data-clan-section="members" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
           </nav>
           <div class="qa-rewards-panel"><strong>Clan Rewards</strong><p>Three rewards are ready to claim.</p></div>
         </article></section>
       </div>
 
+      <div id="qa-clan-members" data-qa-capture="clan-members">
+        <h2 class="qa-stage-title">4 · Clan Members selected</h2>
+        <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
+          <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+            <button type="button" role="tab" data-clan-section="overview" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-information"></use></svg></span><span>Overview</span></button>
+            <button type="button" role="tab" data-clan-section="warroom" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span><span>War Room</span><b>2</b></button>
+            <button type="button" role="tab" data-clan-section="rewards" aria-selected="false"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span><span>Rewards</span><b class="alert">3</b></button>
+            <button type="button" role="tab" class="active" data-clan-section="members" aria-selected="true"><span class="clan-section-nav-mark" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-clan"></use></svg></span><span>Members</span><b>24</b></button>
+          </nav>
+          <div class="qa-overview-panel"><strong>Clan Members</strong><p>Leader, officers, and members remain under the same banner.</p></div>
+        </article></section>
+      </div>
+
       <div id="qa-war-room" class="qa-wide" data-qa-capture="war-room">
-        <h2 class="qa-stage-title">4 · War Room Rallies content</h2>
+        <h2 class="qa-stage-title">5 · War Room Rallies content</h2>
         <section class="profile-screen qa-profile open" aria-hidden="false"><article class="clan-content qa-profile-card">
           <section class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel active" role="tabpanel">
             <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>1</b></div>
@@ -180,24 +200,24 @@
       </div>
 
       <div id="qa-achievements" class="qa-wide" data-qa-capture="achievements">
-        <h2 class="qa-stage-title">5 · Completed Achievements</h2>
+        <h2 class="qa-stage-title">6 · Achievement icon states</h2>
         <section class="modal qa-modal daily-login-reward-modal" open><article class="modal-card">
           <section class="seasonal-achievement-panel">
             <header class="seasonal-achievement-hero"><div><span>Monthly Campaign</span><h3>Seasonal Achievements</h3><p>August 2026</p></div><div class="seasonal-achievement-totals"><strong>19 / 40</strong><span>Complete</span><strong>18 / 40</strong><span>Claimed</span></div></header>
             <nav class="seasonal-achievement-filters" aria-label="Achievement categories"><button type="button" class="active" aria-pressed="true">All</button><button type="button">Conquest</button><button type="button">Combat</button><button type="button">Growth</button></nav>
             <div class="seasonal-achievement-list">
               <article class="seasonal-achievement-row complete claimed" role="button" tabindex="0">
-                <span class="seasonal-achievement-row-icon" aria-hidden="true"><span class="qa-icon">⚔</span></span>
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-attack"></use></svg></span>
                 <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>First Blood</strong><p>Capture your first enemy city.</p><div class="seasonal-achievement-progress"><span style="width:100%"></span></div><small>1 / 1</small></div>
                 <div class="seasonal-achievement-reward"><span>Reward</span><strong>0.5h troop production · 233K</strong><b>COMPLETED</b></div>
               </article>
               <article class="seasonal-achievement-row complete" role="button" tabindex="0">
-                <span class="seasonal-achievement-row-icon" aria-hidden="true"><span class="qa-icon">♜</span></span>
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-rewards"></use></svg></span>
                 <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>Raider</strong><p>Capture ten enemy cities.</p><div class="seasonal-achievement-progress"><span style="width:100%"></span></div><small>10 / 10</small></div>
                 <div class="seasonal-achievement-reward"><span>Reward</span><strong>1h troop production · 481K</strong><button type="button">Claim</button></div>
               </article>
               <article class="seasonal-achievement-row" role="button" tabindex="0">
-                <span class="seasonal-achievement-row-icon" aria-hidden="true"><span class="qa-icon">♛</span></span>
+                <span class="seasonal-achievement-row-icon" aria-hidden="true"><svg class="cl-icon"><use href="#qa-cl-icon-achievement"></use></svg></span>
                 <div class="seasonal-achievement-row-copy"><span>Conquest</span><strong>Conqueror II</strong><p>Capture fifty enemy cities.</p><div class="seasonal-achievement-progress"><span style="width:40%"></span></div><small>20 / 50</small></div>
                 <div class="seasonal-achievement-reward"><span>Reward</span><strong>Royal Tax Decree</strong><small>In progress</small></div>
               </article>
@@ -207,7 +227,7 @@
       </div>
 
       <div id="qa-quests" class="qa-wide" data-qa-capture="quests">
-        <h2 class="qa-stage-title">6 · Completed Daily Quests</h2>
+        <h2 class="qa-stage-title">7 · Completed Daily Quests</h2>
         <section class="modal qa-modal daily-login-reward-modal" open><article class="modal-card">
           <section class="daily-missions-section">
             <header class="daily-missions-heading"><div class="profile-section-heading"><span>Daily</span><h3>Missions <b>3/3</b></h3></div><div class="daily-missions-meta"><span>New missions in 12:10:25</span><span>Reroll: 1</span></div></header>

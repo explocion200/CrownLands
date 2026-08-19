@@ -48,10 +48,10 @@ assert.match(css, /\.battle-report-card\.scout \.battle-report-result\s*\{[\s\S]
 assert.match(css, /\.battle-report-card\.defeat \.battle-report-result[\s\S]*?var\(--cl-profile-danger\)/, "Defeat state meaning was lost during theme unification.");
 assert.match(css, /\.clan-member-row\.selected[\s\S]*?var\(--cl-profile-success\)/, "Ally or success state meaning was lost during theme unification.");
 
-const themeTag = "profile-theme.css?v=20260819-targeted-ui-contrast-r1";
+const themeTag = "profile-theme.css?v=20260819-targeted-ui-contrast-r2";
 assert.ok(index.includes(themeTag), "The game does not load the unified Profile theme.");
 assert.ok(index.indexOf(themeTag) > index.indexOf("ui-contrast-correction.css"), "The unified Profile theme must load after every legacy color layer.");
-assert.ok(worker.includes(`/profile-theme.css?v=20260819-targeted-ui-contrast-r1`), "The unified Profile theme is missing from the offline shell.");
+assert.ok(worker.includes(`/profile-theme.css?v=20260819-targeted-ui-contrast-r2`), "The unified Profile theme is missing from the offline shell.");
 for (const source of [builder, manifestBuilder, artifactValidator]) {
   assert.ok(source.includes("profile-theme.css"), "The unified Profile theme is missing from release packaging.");
 }

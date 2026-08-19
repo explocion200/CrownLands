@@ -202,6 +202,30 @@
   color: var(--cl-tab-selected-text) !important;
 }
 
+:is(.profile-screen .clan-content, .modal .modal-card) .clan-section-nav button[aria-selected="true"] .clan-section-nav-mark .cl-icon {
+  color: inherit !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+}
+
+:is(.profile-screen .clan-content, .modal .modal-card) .clan-section-nav button[data-clan-section="warroom"] > b {
+  color: #fff8e8 !important;
+  border-color: #c96b63 !important;
+  background: #8f302f !important;
+}
+
+:is(.profile-screen .clan-content, .modal .modal-card) .clan-section-nav button[data-clan-section="rewards"] > b {
+  color: #2f2113 !important;
+  border-color: #e0bb62 !important;
+  background: #d3aa45 !important;
+}
+
+:is(.profile-screen .clan-content, .modal .modal-card) .clan-section-nav button[data-clan-section="members"] > b {
+  color: #fff8e8 !important;
+  border-color: #92a174 !important;
+  background: #52633c !important;
+}
+
 /* Clan information panels --------------------------------------------- */
 
 :is(
@@ -335,6 +359,20 @@
 
 :is(.profile-screen .clan-content, .modal .modal-card) .clan-rally-status {
   color: #f0cd88 !important;
+}
+
+:is(.profile-screen .clan-content, .modal .modal-card) .clan-rallies-panel .clan-social-heading > b {
+  color: #fff8e8 !important;
+  border-color: #c96b63 !important;
+  background: #8f302f !important;
+}
+
+.modal .modal-card .seasonal-achievement-row:not(.complete) .seasonal-achievement-row-icon,
+.modal .modal-card .seasonal-achievement-row:not(.complete) .seasonal-achievement-row-icon .cl-icon {
+  color: #ddd0ae !important;
+  fill: currentColor !important;
+  stroke: currentColor !important;
+  opacity: 1;
 }
 
 :is(

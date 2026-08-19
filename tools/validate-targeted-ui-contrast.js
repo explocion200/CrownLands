@@ -18,9 +18,18 @@ function occurrences(source, needle) {
 
 const clanContext = ":is(.profile-screen .clan-content, .modal .modal-card)";
 assert.ok(
-  occurrences(contrast, `${clanContext} .clan-section-nav button[aria-selected="true"]`) === 3,
-  "The selected Clan tab's icon, label, and badge do not all own their contextual foreground.",
+  occurrences(contrast, `${clanContext} .clan-section-nav button[aria-selected="true"]`) >= 4,
+  "The selected Clan tab's SVG, icon wrapper, label, and badge do not all own their contextual foreground.",
 );
+assert.match(
+  contrast,
+  /\.clan-section-nav button\[aria-selected="true"\] \.clan-section-nav-mark \.cl-icon\s*\{[\s\S]*?color:\s*inherit !important;[\s\S]*?fill:\s*currentColor !important;[\s\S]*?stroke:\s*currentColor !important;/,
+  "Selected Clan SVG icons are not locked to the approved ivory foreground.",
+);
+for (const section of ["warroom", "rewards", "members"]) {
+  assert.match(contrast, new RegExp(`button\\[data-clan-section="${section}"\\] > b`), `The ${section} badge lacks its semantic color rule.`);
+}
+assert.match(contrast, /\.clan-rallies-panel \.clan-social-heading > b\s*\{[\s\S]*?background:\s*#8f302f !important;/, "The War Room rally-count badge is not red.");
 assert.ok(
   occurrences(contrast, `${clanContext} .clan-rallies-panel`) >= 3,
   "The War Room surface and typography do not outrank generic Profile text rules.",
@@ -46,6 +55,11 @@ assert.doesNotMatch(
   /\.seasonal-achievement-row\.claimed\s*\{[^}]*opacity\s*:/,
   "Claimed Achievements still fade the entire row.",
 );
+assert.match(
+  contrast,
+  /\.seasonal-achievement-row:not\(\.complete\) \.seasonal-achievement-row-icon,[\s\S]*?color:\s*#ddd0ae !important;[\s\S]*?fill:\s*currentColor !important;/,
+  "Unfinished Achievement icons do not retain their readable bone-on-iron foreground.",
+);
 
 const clanNavRenderer = game.slice(game.indexOf("function renderClanSectionNavigation"), game.indexOf("function renderClanBrowserNavigation"));
 assert.equal(occurrences(clanNavRenderer, "<span>${section.label}</span>"), 1, "Clan tab labels are rendered more than once.");
@@ -55,7 +69,7 @@ assert.match(dailyMissionRenderer, /dailyMissionsList\.innerHTML\s*=\s*dailyMiss
 const achievementRenderer = game.slice(game.indexOf("function renderSeasonalAchievementTab"), game.indexOf("function bindSeasonalAchievementControls"));
 assert.equal(occurrences(achievementRenderer, "const rows = filtered.map"), 1, "Achievement rows are rendered through duplicate map passes.");
 
-for (const marker of ["clan-overview", "clan-warroom-tab", "clan-rewards", "war-room", "achievements", "quests"]) {
+for (const marker of ["clan-overview", "clan-warroom-tab", "clan-rewards", "clan-members", "war-room", "achievements", "quests"]) {
   assert.match(fixture, new RegExp(`data-qa-capture="${marker}"`), `Visual QA is missing the ${marker} state.`);
 }
 assert.match(
