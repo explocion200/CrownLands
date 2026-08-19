@@ -5,6 +5,7 @@
   const selectors = {
     profile: ".profile-stack",
     fullscreen: "#fullscreenBtn",
+    chat: "#chatToggleBtn",
     inventory: "#inventoryBtn",
     shop: "#shopBtn",
     activeEffects: "#activeItemEffectsStack",
@@ -27,6 +28,7 @@
     bottomCenter: ["center", "bottom"],
     bottomRight: ["right", "bottom"],
   };
+  const chatRowGap = 9;
   const positionProperties = ["left", "right", "top", "bottom", "transform", "z-index"];
 
   function choosePreset() {
@@ -71,6 +73,18 @@
     nav.appendChild(incoming);
   }
 
+  function alignChatToBag() {
+    const chat = document.querySelector(selectors.chat);
+    const bag = document.querySelector(selectors.inventory);
+    if (!chat || !bag) return;
+    const chatRect = chat.getBoundingClientRect();
+    const bagRect = bag.getBoundingClientRect();
+    if (!chatRect.width || !chatRect.height || !bagRect.width || !bagRect.height) return;
+    const centeredTop = bagRect.top + (bagRect.height - chatRect.height) / 2;
+    chat.style.right = `${Math.max(0, window.innerWidth - bagRect.left + chatRowGap)}px`;
+    chat.style.bottom = `${Math.max(0, window.innerHeight - centeredTop - chatRect.height)}px`;
+  }
+
   function applyLayout() {
     const preset = choosePreset();
     restoreOperationAlertGroup();
@@ -101,6 +115,8 @@
       if (Number.isFinite(Number(component.zIndex))) layoutElement.style.zIndex = String(component.zIndex);
       layoutElement.classList.toggle("hud-layout-hidden", component.visible === false);
     });
+    alignChatToBag();
+    window.dispatchEvent(new Event("crownlands:ui-layout-applied"));
   }
 
   applyLayout();

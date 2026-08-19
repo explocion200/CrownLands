@@ -7,7 +7,7 @@ const index = read("index.html");
 const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
-const buildId = "20260817-daily-header-nav-r1";
+const buildId = "20260818-global-clan-chat-r1";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);

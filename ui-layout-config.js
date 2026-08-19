@@ -1,6 +1,6 @@
 window.CROWNLANDS_UI_LAYOUT_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T18:08:00.000Z",
+  "updatedAt": "2026-08-19T01:00:00.000Z",
   "presets": {
     "landscapeTablet": {
       "label": "Landscape / Tablet",
@@ -24,6 +24,15 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
           "height": 38,
           "visible": true,
           "zIndex": 40
+        },
+        "chat": {
+          "anchor": "bottomRight",
+          "offsetX": 313,
+          "offsetY": 16,
+          "width": 56,
+          "height": 56,
+          "visible": true,
+          "zIndex": 57
         },
         "inventory": {
           "anchor": "bottomRight",
@@ -139,6 +148,15 @@ window.CROWNLANDS_UI_LAYOUT_CONFIG = {
           "height": 38,
           "visible": true,
           "zIndex": 40
+        },
+        "chat": {
+          "anchor": "bottomRight",
+          "offsetX": 313,
+          "offsetY": 16,
+          "width": 56,
+          "height": 56,
+          "visible": true,
+          "zIndex": 57
         },
         "inventory": {
           "anchor": "bottomRight",

@@ -355,7 +355,7 @@ const UI_LAYOUT_PRESETS = {
   desktop: { label: "Desktop", width: 1440, height: 900 },
 };
 const UI_LAYOUT_COMPONENT_IDS = new Set([
-  "profile", "fullscreen", "inventory", "shop", "activeEffects", "cityList",
+  "profile", "fullscreen", "chat", "inventory", "shop", "activeEffects", "cityList",
   "islandSwitch", "returnHome", "commanderPanel", "outgoingMarch",
   "incomingMarch", "reportsNav",
 ]);

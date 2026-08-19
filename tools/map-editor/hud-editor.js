@@ -7,6 +7,7 @@
   const COMPONENTS = [
     { id: "profile", label: "Profile, Level & Gold", group: "Identity", icon: "Profile", aspect: false, minW: 110, minH: 70 },
     { id: "fullscreen", label: "Fullscreen Button", group: "Buttons", icon: "Fullscreen", aspect: true, minW: 36, minH: 36 },
+    { id: "chat", label: "Chat Toggle", group: "Buttons", icon: "Chat", aspect: true, minW: 44, minH: 44 },
     { id: "inventory", label: "Bag / Inventory", group: "Buttons", icon: "Bag", aspect: true, minW: 40, minH: 40 },
     { id: "shop", label: "Shop", group: "Buttons", icon: "Shop", aspect: true, minW: 40, minH: 40 },
     { id: "activeEffects", label: "Active Effect Badges", group: "Status", icon: "Effects", aspect: false, minW: 56, minH: 40 },
@@ -24,7 +25,7 @@
   const defaultsByPreset = {
     landscapeTablet: {
       profile: ["topLeft", 12, 9, 164, 114, 40], fullscreen: ["topRight", 12, 9, 38, 38, 40],
-      inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
+      chat: ["bottomRight", 313, 16, 56, 56, 57], inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
       activeEffects: ["centerRight", 12, 0, 66, 176, 56], cityList: ["bottomRight", 88, 12, 64, 64, 55],
       islandSwitch: ["bottomRight", 12, 12, 64, 64, 55], returnHome: ["centerLeft", 12, 0, 42, 42, 54],
       commanderPanel: ["topRight", 12, 70, 318, 308, 50], outgoingMarch: ["bottomLeft", 122, 18, 94, 50, 56],
@@ -32,7 +33,7 @@
     },
     desktop: {
       profile: ["topLeft", 12, 9, 164, 114, 40], fullscreen: ["topRight", 12, 9, 38, 38, 40],
-      inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
+      chat: ["bottomRight", 313, 16, 56, 56, 57], inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
       activeEffects: ["centerRight", 12, 0, 66, 176, 56], cityList: ["bottomRight", 88, 12, 64, 64, 55],
       islandSwitch: ["bottomRight", 12, 12, 64, 64, 55], returnHome: ["centerLeft", 12, 0, 42, 42, 54],
       commanderPanel: ["topRight", 12, 70, 410, 818, 50], outgoingMarch: ["bottomLeft", 128, 18, 98, 50, 56],
@@ -162,6 +163,7 @@
       <div class="hud-preview-gold"><span>🪙</span><strong>1,250,000</strong></div>
     </div>`;
     if (id === "fullscreen") return `<div class="hud-preview-fullscreen">⛶</div>`;
+    if (id === "chat") return `<div class="hud-preview-fullscreen" aria-label="Chat toggle">‹</div>`;
     if (id === "inventory") return icon("/assets/bag-icon.png?v=20260812-global-hud-pass-3g-r1", "Bag");
     if (id === "shop") return icon("/assets/shop-icon.png?v=20260812-global-hud-pass-3g-r1", "Shop");
     if (id === "cityList") return icon("/assets/city-list-icon.png?v=20260812-global-hud-pass-3g-r1", "City list");

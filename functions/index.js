@@ -10,6 +10,7 @@ const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
+const CHAT = require("./chat.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -16089,6 +16090,209 @@ function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
   }, { merge: true });
 }
 
+function chatRateLimitRef(uid = "") {
+  return db.doc(`serverRateLimits/chat_${safeString(uid, 128)}`);
+}
+
+function chatSendRequestRef(uid = "", messageId = "") {
+  return db.doc(`players/${safeString(uid, 128)}/chatSendRequests/${safeString(messageId, 64)}`);
+}
+
+function chatRestrictionRef(uid = "") {
+  return db.doc(`realmSecurity/${RESET_GENERATION}/chatRestrictions/${safeString(uid, 128)}`);
+}
+
+function globalChatMessageRef(messageId = "") {
+  return db.doc(`globalChat/${RESET_GENERATION}/messages/${safeString(messageId, 64)}`);
+}
+
+function clanChatMessageRef(clanId = "", messageId = "") {
+  return db.doc(`clans/${safeString(clanId, 128)}/messages/${safeString(messageId, 64)}`);
+}
+
+function assertChatPayloadDoesNotSpoofIdentity(data = {}) {
+  const serverOwnedFields = [
+    "senderUid", "senderDisplayName", "displayName", "playerName",
+    "createdAt", "createdAtMs", "timestamp", "moderator", "admin",
+  ];
+  if (serverOwnedFields.some(field => Object.prototype.hasOwnProperty.call(data, field))) {
+    throw new HttpsError("invalid-argument", "Chat identity and timestamps are assigned by Crownlands.");
+  }
+  if (Object.prototype.hasOwnProperty.call(data, "clanId")) {
+    throw new HttpsError("invalid-argument", "Clan Chat always uses your current authoritative clan.");
+  }
+}
+
+function assertCurrentChatAccount(profileSnap) {
+  const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
+  if (!profileSnap?.exists
+    || safeString(profile.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
+  }
+  return profile;
+}
+
+function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
+  if (!restrictionSnap?.exists) return;
+  const restriction = restrictionSnap.data() || {};
+  if (restriction.banned === true || safeString(restriction.status, 32) === "banned") {
+    throw new HttpsError("permission-denied", "This account is not permitted to use Crownlands chat.");
+  }
+  const mutedUntilMs = Math.max(0, timestampToMs(restriction.mutedUntilMs || restriction.mutedUntil));
+  if (mutedUntilMs > nowMs) {
+    throw new HttpsError("permission-denied", "This account is temporarily muted in Crownlands chat.", {
+      mutedUntilMs,
+    });
+  }
+}
+
+exports.sendChatMessage = timedCallable("sendChatMessage", {
+  region: "us-central1",
+  maxInstances: 30,
+  invoker: "public",
+}, async request => {
+  const uid = request.auth?.uid || "";
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in before using Crownlands chat.");
+  requireCompatibleClient(request.data || {});
+  assertChatPayloadDoesNotSpoofIdentity(request.data || {});
+
+  const channel = CHAT.normalizeChatChannel(request.data?.channel);
+  if (!channel) throw new HttpsError("invalid-argument", "Choose Global or Clan Chat.");
+  const validatedText = CHAT.normalizeChatText(request.data?.text);
+  if (!validatedText.ok) throw new HttpsError("invalid-argument", validatedText.reason);
+  const requestId = CHAT.normalizeChatRequestId(request.data?.requestId);
+  if (!requestId) throw new HttpsError("invalid-argument", "A valid chat request ID is required.");
+
+  const nowMs = Date.now();
+  const messageId = CHAT.chatMessageId(uid, requestId);
+  const profileRef = db.doc(`players/${uid}`);
+  const restrictionRef = chatRestrictionRef(uid);
+  const rateRef = chatRateLimitRef(uid);
+  const requestRef = chatSendRequestRef(uid, messageId);
+
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [profileSnap, restrictionSnap, rateSnap, requestSnap] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(restrictionRef),
+      transaction.get(rateRef),
+      transaction.get(requestRef),
+    ]);
+    const profile = assertCurrentChatAccount(profileSnap);
+    assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
+
+    const clanId = channel === "clan" ? safeString(profile.clanId, 128) : "";
+    const signature = CHAT.chatRequestSignature({ uid, channel, clanId, text: validatedText.text });
+    if (requestSnap.exists) {
+      const receipt = requestSnap.data() || {};
+      if (safeString(receipt.signature, 80) !== signature) {
+        throw new HttpsError("invalid-argument", "That chat request ID was already used for another message.");
+      }
+      const cooldownUntilMs = Math.max(0, Math.floor(safeNumber(receipt.cooldownUntilMs, 0)));
+      return {
+        ok: true,
+        replayed: true,
+        messageId: safeString(receipt.messageId, 64) || messageId,
+        channel,
+        clanId,
+        createdAtMs: Math.max(0, Math.floor(safeNumber(receipt.createdAtMs, nowMs))),
+        cooldownMs: CHAT.CHAT_SEND_COOLDOWN_MS,
+        cooldownUntilMs,
+        retryAfterMs: Math.max(0, cooldownUntilMs - nowMs),
+        serverNowMs: nowMs,
+      };
+    }
+
+    let messageRef = globalChatMessageRef(messageId);
+    if (channel === "clan") {
+      if (!clanId) throw new HttpsError("failed-precondition", "You are not currently in a clan.");
+      const [clanSnap, membershipSnap] = await Promise.all([
+        transaction.get(db.doc(`clans/${clanId}`)),
+        transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      ]);
+      const clan = clanSnap.exists ? clanSnap.data() || {} : {};
+      const membership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+      const validMembership = clanSnap.exists
+        && membershipSnap.exists
+        && clan.status === "active"
+        && safeString(clan.resetGeneration, 120) === RESET_GENERATION
+        && safeString(clan.worldId, 120) === ONLINE_WORLD_ID
+        && safeString(membership.uid, 128) === uid
+        && safeString(membership.status, 32) === "active"
+        && safeString(membership.resetGeneration, 120) === RESET_GENERATION
+        && safeString(membership.worldId, 120) === ONLINE_WORLD_ID;
+      if (!validMembership) {
+        throw new HttpsError("permission-denied", "Your current Clan Chat membership could not be verified.");
+      }
+      messageRef = clanChatMessageRef(clanId, messageId);
+    }
+
+    const cooldown = CHAT.evaluateChatSendCooldown(rateSnap.exists ? rateSnap.data() || {} : {}, nowMs);
+    if (!cooldown.ok) {
+      throw new HttpsError("resource-exhausted", cooldown.reason, {
+        retryAfterMs: cooldown.retryAfterMs,
+        cooldownUntilMs: cooldown.cooldownUntilMs,
+        serverNowMs: nowMs,
+      });
+    }
+
+    const senderDisplayName = normalizePlayerName(profile.playerName || profile.displayName || "Ruler");
+    const expiresAtMs = nowMs + CHAT.CHAT_RETENTION_MS;
+    const requestExpiresAtMs = nowMs + CHAT.CHAT_REQUEST_RETENTION_MS;
+    transaction.create(messageRef, {
+      id: messageId,
+      chatSchemaVersion: CHAT.CHAT_SCHEMA_VERSION,
+      channel,
+      channelId: channel === "clan" ? clanId : "global",
+      senderUid: uid,
+      senderDisplayName,
+      text: validatedText.text,
+      status: "visible",
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      createdAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAtMs,
+      expiresAt: Timestamp.fromMillis(expiresAtMs),
+    });
+    transaction.create(requestRef, {
+      chatSchemaVersion: CHAT.CHAT_SCHEMA_VERSION,
+      uid,
+      requestId,
+      signature,
+      messageId,
+      channel,
+      clanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      createdAtMs: nowMs,
+      cooldownUntilMs: cooldown.cooldownUntilMs,
+      expiresAtMs: requestExpiresAtMs,
+      expiresAt: Timestamp.fromMillis(requestExpiresAtMs),
+    });
+    transaction.set(rateRef, {
+      ...cooldown.next,
+      uid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return {
+      ok: true,
+      replayed: false,
+      messageId,
+      channel,
+      clanId,
+      createdAtMs: nowMs,
+      cooldownMs: CHAT.CHAT_SEND_COOLDOWN_MS,
+      cooldownUntilMs: cooldown.cooldownUntilMs,
+      retryAfterMs: CHAT.CHAT_SEND_COOLDOWN_MS,
+      serverNowMs: nowMs,
+    };
+  });
+});
+
 exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -26449,6 +26653,42 @@ exports.cleanupAntiFarmInstallations = onSchedule({
 }, async () => {
   const result = await cleanupExpiredAntiFarmInstallations(Date.now());
   console.log("Expired Crownlands installation links cleaned", result);
+});
+
+async function cleanupExpiredChatCollectionGroup(collectionId = "", nowMs = Date.now(), maxBatches = 8) {
+  let deleted = 0;
+  let batches = 0;
+  while (batches < maxBatches) {
+    const snapshot = await db.collectionGroup(collectionId)
+      .where("expiresAtMs", "<=", nowMs)
+      .limit(450)
+      .get();
+    if (snapshot.empty) break;
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snapshot.size;
+    batches += 1;
+    if (snapshot.size < 450) break;
+  }
+  return { deleted, batches, backlogPossible: batches >= maxBatches };
+}
+
+exports.cleanupExpiredChat = onSchedule({
+  region: "us-central1",
+  schedule: "every 1 hours",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, async () => {
+  const nowMs = Date.now();
+  const [messages, requests] = await Promise.all([
+    cleanupExpiredChatCollectionGroup("messages", nowMs),
+    cleanupExpiredChatCollectionGroup("chatSendRequests", nowMs),
+  ]);
+  console.log("Expired Crownlands chat data cleaned", { messages, requests });
+  return { messages, requests };
 });
 
 exports.cleanupExpiredBulkOrderRequests = onSchedule({

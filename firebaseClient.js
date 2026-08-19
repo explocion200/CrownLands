@@ -780,6 +780,91 @@
     return callServerFunction("claimClanQuestReward", payload);
   }
 
+  async function sendChatMessage(payload = {}) {
+    return callServerFunction("sendChatMessage", payload);
+  }
+
+  function cleanChatMessage(snapshot) {
+    const data = snapshot?.data ? snapshot.data() || {} : snapshot || {};
+    return {
+      id: String(snapshot?.id || data.id || "").slice(0, 64),
+      channel: String(data.channel || "").slice(0, 16),
+      channelId: String(data.channelId || "").slice(0, 128),
+      senderUid: String(data.senderUid || "").slice(0, 128),
+      senderDisplayName: cleanPlayerName(data.senderDisplayName || "Ruler"),
+      text: String(data.text || "").slice(0, 1000),
+      createdAtMs: Math.max(0, timestampToMs(data.createdAtMs || data.createdAt)),
+      status: String(data.status || "visible").slice(0, 24),
+    };
+  }
+
+  function getChatMessagesCollection(channel = "global", clanId = "") {
+    if (!client.db || !client.modules?.firestore?.collection) return null;
+    const { collection } = client.modules.firestore;
+    if (channel === "global") return collection(client.db, "globalChat", RESET_GENERATION, "messages");
+    const safeClanId = String(clanId || "").trim().slice(0, 128);
+    return safeClanId ? collection(client.db, "clans", safeClanId, "messages") : null;
+  }
+
+  function subscribeChatMessages({ channel = "global", clanId = "", limitCount = 80 } = {}, handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return () => {};
+    const messagesRef = getChatMessagesCollection(channel, clanId);
+    if (!messagesRef) return () => {};
+    const { onSnapshot, query, where, orderBy, limit } = client.modules.firestore;
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 80)));
+    const messagesQuery = query(
+      messagesRef,
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      where("status", "==", "visible"),
+      orderBy("createdAtMs", "desc"),
+      limit(safeLimit)
+    );
+    let deliveredInitialSnapshot = false;
+    return onSnapshot(
+      messagesQuery,
+      snapshot => {
+        const messages = snapshot.docs.map(cleanChatMessage).reverse();
+        const changes = snapshot.docChanges().map(change => ({
+          type: change.type,
+          message: cleanChatMessage(change.doc),
+        }));
+        if (typeof handlers.onMessages === "function") {
+          handlers.onMessages(messages, {
+            initial: !deliveredInitialSnapshot,
+            changes,
+            fromCache: Boolean(snapshot.metadata?.fromCache),
+            hasMore: snapshot.size >= safeLimit,
+          });
+        }
+        deliveredInitialSnapshot = true;
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, channel);
+      }
+    );
+  }
+
+  async function loadOlderChatMessages({ channel = "global", clanId = "", beforeCreatedAtMs = 0, limitCount = 50 } = {}) {
+    await init();
+    if (!requireSignedIn()) return [];
+    const messagesRef = getChatMessagesCollection(channel, clanId);
+    if (!messagesRef) return [];
+    const { getDocs, query, where, orderBy, startAfter, limit } = client.modules.firestore;
+    const safeBefore = Math.max(1, Math.floor(Number(beforeCreatedAtMs) || 0));
+    const safeLimit = Math.max(1, Math.min(80, Math.floor(Number(limitCount) || 50)));
+    const constraints = [
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      where("status", "==", "visible"),
+      orderBy("createdAtMs", "desc"),
+    ];
+    if (safeBefore) constraints.push(startAfter(safeBefore));
+    constraints.push(limit(safeLimit));
+    const snapshot = await getDocs(query(messagesRef, ...constraints));
+    return snapshot.docs.map(cleanChatMessage).reverse();
+  }
+
   async function loadClan(clanId = "") {
     await init();
     if (!requireSignedIn() || !clanId) return null;
@@ -2644,6 +2729,7 @@
     sendClanGift,
     claimClanGiftPool,
     claimClanQuestReward,
+    sendChatMessage,
     loadClan,
     searchClans,
     loadClanMembers,
@@ -2656,6 +2742,8 @@
     subscribeDailyMissionState,
     subscribeSeasonalAchievementState,
     subscribeClanRallies,
+    subscribeChatMessages,
+    loadOlderChatMessages,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
