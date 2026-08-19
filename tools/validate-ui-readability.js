@@ -7,7 +7,7 @@ const index = read("index.html");
 const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
-const buildId = "20260818-global-clan-chat-r1";
+const buildId = "20260819-welcome-report-contrast-r1";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -65,7 +65,11 @@ const contrastPairs = [
   ["primary action", "#fff8e7", "#502226", 7],
   ["Welcome Back body", "#f4ead4", "#0b2031", 7],
   ["Welcome Back secondary", "#cad9df", "#0b2031", 4.5],
-  ["Welcome Back action", "#251603", "#e7b94d", 7]
+  ["Welcome Back action", "#fff8e8", "#542728", 7],
+  ["Detailed Victory", "#fffdf5", "#58735f", 4.5],
+  ["Detailed Defeat", "#fff9ef", "#62504d", 4.5],
+  ["Incoming march text", "#fff8e8", "#8a3934", 4.5],
+  ["Outgoing march text", "#fff8e8", "#3e5664", 4.5]
 ];
 
 for (const [label, foreground, background, minimum] of contrastPairs) {

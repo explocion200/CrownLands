@@ -11,6 +11,8 @@ const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const indexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
 const readabilitySource = fs.readFileSync(path.join(root, "readability.css"), "utf8");
+const profileThemeSource = fs.readFileSync(path.join(root, "profile-theme.css"), "utf8");
+const paletteSource = fs.readFileSync(path.join(root, "crownlands-palette.css"), "utf8");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -33,6 +35,10 @@ requireMatch(extractFunction(clientSource, "showOfflineRewardsModal"), /modal\.c
 requireMatch(extractFunction(clientSource, "showGameServerInactivityNotice"), /modal\.className\s*=\s*"modal offline-reward-modal";/, "The inactivity Welcome Back notice can retain stale modal styling.");
 requireMatch(readabilitySource, /\.offline-reward-modal \.modal-card\s*\{[\s\S]*?color:\s*#f4ead4;[\s\S]*?background:\s*linear-gradient\(180deg, #123b56, #0b2031 70%, #071722\);/, "Welcome Back lacks a readable dark modal surface.");
 requireMatch(readabilitySource, /\.offline-reward-modal \.offline-reward-grid > div\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #153d55, #0b2639\);/, "Welcome Back production cards lack readable contrast.");
+requireMatch(readabilitySource, /\.offline-reward-modal \.offline-collect-btn\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?border:\s*2px solid #c69a45 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #72363a, #542728\) !important;/, "Welcome Back Collect does not use the prominent burgundy, gold, and ivory primary-action treatment.");
+for (const source of [profileThemeSource, paletteSource]) {
+  requireMatch(source, /:not\(\.offline-collect-btn\)/, "A generic modal button rule can still repaint Welcome Back Collect as a secondary parchment control.");
+}
 
 const sandbox = {
   WELCOME_BACK_SUMMARY_VERSION: 1,
