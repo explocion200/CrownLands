@@ -36,7 +36,7 @@ for (const family of [
 ]) assert.ok(css.includes(family), `The Profile theme does not cover ${family}.`);
 
 assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card\)[\s\S]*?:is\(h1, h2, h3, h4,[\s\S]*?color:\s*var\(--cl-profile-gold\) !important;/, "Interface headings do not use the Profile gold treatment.");
-assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal\)\) \.modal-card\)[\s\S]*?:is\(p, li, dd, dt, label, span:not\(\.flag-symbol\), small, em\)[\s\S]*?color:\s*var\(--cl-profile-muted\) !important;/, "Supporting interface copy does not use the Profile muted treatment without overriding player flags, map-selector labels, or dedicated leaderboard colors.");
+assert.match(css, /:is\(\.setup-card, \.commander-panel, \.profile-screen, \.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card\)[\s\S]*?:is\(p, li, dd, dt, label, span:not\(\.flag-symbol\), small, em\)[\s\S]*?color:\s*var\(--cl-profile-muted\) !important;/, "Supporting interface copy does not use the Profile muted treatment without overriding player flags, map-selector labels, or dedicated report colors.");
 assert.doesNotMatch(css, /\.leaderboard-toolbar,\s*\.leaderboard-row,/, "The intermediate Profile theme still replaces the dedicated leaderboard surface.");
 assert.match(css, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, "The intermediate Profile theme still paints player or clan identity links as generic controls.");
 assert.match(css, /\.profile-screen-header\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #071b2a\) !important;/, "The Profile header itself is not using the unified navy shell.");
@@ -48,10 +48,10 @@ assert.match(css, /\.battle-report-card\.scout \.battle-report-result\s*\{[\s\S]
 assert.match(css, /\.battle-report-card\.defeat \.battle-report-result[\s\S]*?var\(--cl-profile-danger\)/, "Defeat state meaning was lost during theme unification.");
 assert.match(css, /\.clan-member-row\.selected[\s\S]*?var\(--cl-profile-success\)/, "Ally or success state meaning was lost during theme unification.");
 
-const themeTag = "profile-theme.css?v=20260818-global-clan-chat-r1";
+const themeTag = "profile-theme.css?v=20260819-welcome-report-contrast-r1";
 assert.ok(index.includes(themeTag), "The game does not load the unified Profile theme.");
 assert.ok(index.indexOf(themeTag) > index.indexOf("ui-contrast-correction.css"), "The unified Profile theme must load after every legacy color layer.");
-assert.ok(worker.includes(`/profile-theme.css?v=20260818-global-clan-chat-r1`), "The unified Profile theme is missing from the offline shell.");
+assert.ok(worker.includes(`/profile-theme.css?v=20260819-welcome-report-contrast-r1`), "The unified Profile theme is missing from the offline shell.");
 for (const source of [builder, manifestBuilder, artifactValidator]) {
   assert.ok(source.includes("profile-theme.css"), "The unified Profile theme is missing from release packaging.");
 }

@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Crownlands Report and Leaderboard Readability QA</title>
-  <link rel="stylesheet" href="../../../styles.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../styles.css?v=20260819-welcome-report-contrast-r1" />
   <link rel="stylesheet" href="../../../interface-theme.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="../../../daily-rewards.css" />
-  <link rel="stylesheet" href="../../../readability.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../readability.css?v=20260819-welcome-report-contrast-r1" />
   <link rel="stylesheet" href="../../../manuscript-prototype.css" />
   <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="../../../profile-theme.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260819-welcome-report-contrast-r1" />
   <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260814-readability-r38" />
   <style>
@@ -106,7 +106,8 @@
     body[data-panel] .qa-heading { display: none; }
     body[data-panel] .qa-grid { width: 100%; grid-template-columns: 1fr; }
     body[data-panel="reports"] .leaderboard-modal,
-    body[data-panel="leaderboards"] .battle-report-modal { display: none !important; }
+    body[data-panel="leaderboards"] .battle-report-modal,
+    body[data-panel] .offline-reward-modal { display: none !important; }
     @media (max-width: 820px) {
       body { padding: 10px; }
       .qa-grid { grid-template-columns: 1fr; }
@@ -148,6 +149,11 @@
               <div class="battle-report-opponent"><span class="qa-flag" aria-hidden="true">♜</span><button class="player-name-link" type="button">Sir Render</button></div>
               <div class="battle-report-actions"><button type="button" aria-label="Open report">›</button></div>
             </article>
+          </div>
+          <p class="qa-section-label">Detailed Outcomes</p>
+          <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
+            <div class="battle-visual-outcome victory" data-qa-outcome="victory"><span>Victory</span><strong>Your side captured the holding</strong></div>
+            <div class="battle-visual-outcome defeat" data-qa-outcome="defeat"><span>Defeat</span><strong>Opponent captured the camp</strong></div>
           </div>
         </div>
       </div>
@@ -197,6 +203,51 @@
         </div>
       </div>
     </section>
+
+    <section class="modal offline-reward-modal qa-modal" aria-label="Welcome Back collect action sample">
+      <div class="modal-card">
+        <h2>Welcome Back</h2>
+        <button class="modal-close" type="button" aria-label="Close">×</button>
+        <div id="modalBody">
+          <div class="offline-reward-panel">
+            <p>Your kingdom kept producing while you were away.</p>
+            <div class="offline-reward-grid"><div><span>Gold collected</span><strong>103,343,839</strong></div><div><span>Troops produced</span><strong>50,677</strong></div></div>
+            <div class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><p>No cities were lost.</p></div>
+            <button class="offline-collect-btn" type="button" data-qa-welcome-collect>Collect</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal incoming-attack-modal qa-modal" aria-label="Incoming march readability sample">
+      <div class="modal-card">
+        <h2>Incoming Threat</h2>
+        <div id="modalBody"><div class="incoming-attack-panel">
+          <div class="incoming-attack-summary"><strong>1</strong><span>incoming attack is heading toward your cities.</span><small>Soonest arrival: 19m 4s</small></div>
+          <article class="incoming-attack-card" data-qa-march="incoming">
+            <div class="incoming-attack-badge"><strong>19m 4s</strong><small>Attack</small></div>
+            <div class="incoming-attack-city"><span>North Frontier</span><strong>Ironwatch</strong><small>Lv 1 · 131K troops · 171K defense</small></div>
+            <div class="incoming-attack-force"><span>Attacker</span><button class="player-name-link incoming-attacker-link" type="button">Sir Render</button><small>Estimated troops: 10M–20M from Foxwick</small></div>
+            <button class="incoming-attack-locate" type="button" aria-label="Go to Ironwatch">⌖</button>
+          </article>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="modal outgoing-attack-modal qa-modal" aria-label="Outgoing march readability sample">
+      <div class="modal-card">
+        <h2>Kingdom Activity</h2>
+        <div id="modalBody"><div class="incoming-attack-panel">
+          <div class="incoming-attack-summary"><strong>1</strong><span>active march</span><small>Soonest arrival: 12m 18s</small></div>
+          <article class="incoming-attack-card outgoing-attack-card" data-qa-march="outgoing">
+            <div class="incoming-attack-badge"><strong>12m 18s</strong><small>Transfer</small></div>
+            <div class="incoming-attack-city"><span>Crownlands Heart</span><strong>Highworth</strong><small>Moving troops to Highworth</small></div>
+            <div class="incoming-attack-force"><span>Origin</span><strong>Ironwatch</strong><small>540K troops from Ironwatch</small></div>
+            <button class="incoming-attack-locate" type="button" aria-label="Go to march">⌖</button>
+          </article>
+        </div></div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -213,6 +264,14 @@
         ["[data-qa-report='scout'] .battle-report-result small", "fff8e8", "scout age"],
         ["[data-qa-report='scout'] .battle-report-city > span", "fff8e8", "level badge"],
         ["[data-qa-report='scout'] .battle-report-city > strong", "2f2113", "report city"],
+        ["[data-qa-outcome='victory'] > span", "fffdf5", "detailed victory outcome"],
+        ["[data-qa-outcome='defeat'] > span", "fff9ef", "detailed defeat outcome"],
+        ["[data-qa-welcome-collect]", "fff8e8", "Welcome Back collect action"],
+        ["[data-qa-march='incoming'] .incoming-attack-city > span", "fff8e8", "incoming region"],
+        ["[data-qa-march='incoming'] .incoming-attack-force > small", "fff8e8", "incoming estimate"],
+        ["[data-qa-march='incoming'] .incoming-attacker-link", "fff8e8", "incoming attacker"],
+        ["[data-qa-march='outgoing'] .incoming-attack-city > strong", "fff8e8", "outgoing destination"],
+        ["[data-qa-march='outgoing'] .incoming-attack-force > small", "fff8e8", "outgoing troop count"],
         ["[data-qa-list='players'] .player-name-link", "fff8e8", "player name"],
         ["[data-qa-list='players'] .leaderboard-ruler small", "d3e3eb", "player location"],
         ["[data-qa-list='players'] .leaderboard-power strong", "fff0bc", "player power"],
@@ -237,6 +296,8 @@
           const style = getComputedStyle(link);
           if (style.backgroundImage !== "none" || style.backgroundColor !== "rgba(0, 0, 0, 0)") throw new Error(`clan link ${index + 1}: legacy button surface remains`);
         });
+        const collectBackground = getComputedStyle(document.querySelector("[data-qa-welcome-collect]")).backgroundImage;
+        if (!collectBackground.includes("rgb(114, 54, 58)") || !collectBackground.includes("rgb(84, 39, 40)")) throw new Error("Welcome Back collect action: burgundy face missing");
         status.dataset.state = "pass";
         status.textContent = "PASS — final computed colors are readable and no legacy clan-link button surfaces remain.";
       } catch (error) {

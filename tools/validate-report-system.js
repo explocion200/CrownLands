@@ -86,6 +86,11 @@ assert.match(styles, /\.battle-visual-hero\s*\{[\s\S]*?grid-template-columns:[\s
 assert.match(styles, /\.battle-report-hero-flag\.kingdom-flag-large[\s\S]*?width:\s*116px[\s\S]*?@media \(max-width: 760px\)[\s\S]*?\.battle-visual-hero/, "Large flags or the responsive visual report layout are missing.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?\.battle-report-modal \.battle-visual-outcome > span[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Detailed Victory remains unreadable or retains the full red center block.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome\.defeat > span[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Detailed Defeat does not use the restrained outcome badge.");
+assert.match(functionBody(client, "renderBattleReportHero"), /battle-visual-outcome[\s\S]*?<span>\$\{escapeHtml\(badge\.label/, "The detailed report outcome label is missing from the semantic result badge.");
+for (const themeSource of [read("profile-theme.css"), finalPalette]) {
+  assert.match(themeSource, /\.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card/, "Generic modal typography can still recolor the dedicated detailed-report outcome badge.");
+}
+assert.match(visualQa, /data-qa-outcome="victory"[\s\S]*?data-qa-outcome="defeat"/, "The report readability QA page does not exercise both detailed outcome badges.");
 
 const battleSandbox = {
   DEFENSE_COMBAT_VERSION: 1,

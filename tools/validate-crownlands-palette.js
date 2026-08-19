@@ -14,8 +14,8 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260818-global-clan-chat-r1";
-const cacheVersion = "20260818-global-clan-chat-r1";
+const releaseId = "20260819-welcome-report-contrast-r1";
+const cacheVersion = "20260819-welcome-report-contrast-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -107,12 +107,16 @@ assert.match(styles, /\.island-map-picker \.island-map-name\s*\{[\s\S]*?color:\s
 assert.match(styles, /\.island-map-owned\s*\{[\s\S]*?color:\s*#d3e3eb;[\s\S]*?text-shadow:/, "The 15-map selector does not keep owned-city counts readable over map thumbnails.");
 for (const themeCss of [read("profile-theme.css"), css]) {
   assert.match(themeCss, /:not\(\.island-map-icon\)/, "A generic modal button rule can still replace the 15-map selector tile colors.");
-  assert.match(themeCss, /:not\(\.leaderboard-modal, \.island-switcher-modal\)/, "Generic modal typography can still recolor the 15-map selector labels.");
+  assert.match(themeCss, /:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)/, "Generic modal typography can still recolor the 15-map selector labels or detailed report outcomes.");
 }
 
 assert.match(css, /Scout intelligence uses the shared parchment report family[\s\S]*?\.modal\.scout-report-modal \.scout-report-identities[\s\S]*?border:\s*1px solid var\(--cl-brass\) !important;[\s\S]*?background:\s*var\(--cl-card-bg\) !important;/, "Scout intelligence is not using the standard parchment report card construction.");
 assert.match(css, /\.modal\.scout-report-modal :is\(\.scout-breakdown-row, \.scout-skill-row\)[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "Scout list rows retain a conflicting legacy surface.");
 assert.match(css, /\.modal\.battle-report-modal \.battle-report-card \.battle-report-city > span,[\s\S]*?\.battle-report-result :is\(strong, small\)[\s\S]*?color:\s*var\(--cl-text-bright\) !important;/, "Battle report result and level text can still disappear into semantic badges.");
+for (const themeCss of [read("profile-theme.css"), css]) {
+  assert.match(themeCss, /\.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card/, "Generic modal typography can still repaint detailed report outcomes with parchment ink.");
+  assert.match(themeCss, /:not\(\.offline-collect-btn\)/, "Generic modal controls can still repaint Welcome Back Collect as a secondary action.");
+}
 assert.doesNotMatch(css, /\.leaderboard-toolbar,\s*\.leaderboard-row,/, "The generic parchment card palette still overrides the dedicated slate leaderboard surface.");
 assert.match(css, /\.modal:where\(:not\(\.leaderboard-modal\)\) \.modal-card/, "Generic parchment typography still overrides dedicated leaderboard text colors or gained excess specificity.");
 assert.match(css, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, "Generic controls still give leaderboard identity links an opaque button surface.");

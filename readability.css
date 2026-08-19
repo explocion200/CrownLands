@@ -691,6 +691,15 @@ body { color: var(--cl-readable-dark); }
   opacity: 1;
 }
 
+/* March cards keep ivory copy on their red/blue command surfaces. */
+:is(.modal.incoming-attack-modal, .modal.outgoing-attack-modal)
+  :is(.incoming-attack-card, .outgoing-attack-card)
+  :is(strong, span, small, b, .player-name-link) {
+  color: #fff8e8 !important;
+  opacity: 1;
+  text-shadow: 0 1px 1px rgba(3, 16, 28, .78) !important;
+}
+
 /* City information nests dark military/economic tiles inside a parchment modal. */
 :where(
   .modal-city-stats .stat-wide,
@@ -1206,7 +1215,20 @@ body { color: var(--cl-readable-dark); }
 }
 
 .offline-reward-modal .offline-collect-btn {
-  color: #251603;
-  border-color: #ffe19a;
-  background: linear-gradient(180deg, #ffe197, #e7b94d 72%, #a86c18);
+  min-height: 50px;
+  color: #fff8e8 !important;
+  border: 2px solid #c69a45 !important;
+  background: linear-gradient(180deg, #72363a, #542728) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .2), 0 4px 10px rgba(47, 33, 19, .3) !important;
+  letter-spacing: .06em;
+  text-shadow: 0 1px 1px rgba(47, 33, 19, .82) !important;
+}
+
+.offline-reward-modal .offline-collect-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.offline-reward-modal .offline-collect-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 3px rgba(47, 33, 19, .34), 0 2px 5px rgba(47, 33, 19, .26) !important;
 }
