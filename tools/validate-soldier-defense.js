@@ -85,7 +85,7 @@ for (const [level, expected] of benchmarks) {
 for (const [source, label] of [[server, "Server"], [client, "Client"]]) {
   const stats = extractFunction(source, "getCityStats");
   assert.match(stats, /defensePercent = soldierDefenseEnabled \|\| rewardCamp \? 0 : level \* 2/, `${label} removed the legacy fallback or camp override.`);
-  assert.match(stats, /cityWalls = Math\.floor\(baseCityWalls \* \(1 \+ \(stoneworksPercent \+ gearWallStrengthPercent\) \/ 100\)\)/, `${label} wall does not add Stoneworks and equipped gear against base walls.`);
+  assert.match(stats, /cityWalls = Math\.floor\([\s\S]*?baseCityWalls \+ baseCityWalls \* \(stoneworksPercent \+ gearWallStrengthPercent\) \/ 100[\s\S]*?\)/, `${label} wall does not add Stoneworks and equipped gear against base walls.`);
   assert.match(stats, /BASE_TROOP_DEFENSE_POWER \* \([\s\S]*?shieldwallDisciplinePercent \+ objectiveTroopDefenseBonusPercent[\s\S]*?(?:gearDefenderStrengthPercent|gearBonuses\.defenderStrength)/, `${label} soldier defense does not add Shieldwall, objective support, and equipped gear against 1.30.`);
   assert.match(stats, /totalDefense = soldierDefenseEnabled[\s\S]*?cityWalls \+ troopDefense/, `${label} modern total defense does not keep walls separate from soldiers.`);
   assert.match(stats, /objectiveTroopDefenseBonusPercent/, `${label} does not expose the soldier-only objective-defense field.`);

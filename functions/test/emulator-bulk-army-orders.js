@@ -2,6 +2,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const economyConfig = require("../economy-config.json");
+const commonGear = require("../common-gear.js");
 const realm = require("../release-config.json");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
@@ -127,6 +128,18 @@ async function setFreshEconomy(profileRef, cityRefs, gold, troopsByCity = new Ma
   }));
 }
 
+function createGearState(equippedGearKey = "", storedGearKey = "") {
+  const state = commonGear.createDefaultState();
+  [equippedGearKey, storedGearKey].filter(Boolean).forEach((gearKey, index) => {
+    const definition = commonGear.getDefinition(gearKey);
+    assert(definition, `Unknown Common Gear key ${gearKey}.`);
+    const instanceId = `bulk_speed_gear_${index}`;
+    state.instances[instanceId] = { instanceId, gearKey, level: 5 };
+    if (index === 0 && equippedGearKey) state.equipped[definition.buildingId][definition.slot] = instanceId;
+  });
+  return commonGear.normalizeState(state);
+}
+
 async function main() {
   const user = await createAuthUser();
   const claim = await callFunction("claimStartingCity", user.token, { playerName: "Bulk Order Sentinel" });
@@ -141,7 +154,11 @@ async function main() {
   assert(candidates.length >= 8, "The emulator world did not provide enough cities for bulk-order coverage.");
 
   const coordinatePatch = index => ({
-    x: Number(sourceData.x || 0) + ((index % 2 ? 1 : -1) * (70 + index * 8)),
+    x: Number(sourceData.x || 0) + (index === 0
+      ? 350
+      : index === 6
+        ? 600
+        : ((index % 2 ? 1 : -1) * (70 + index * 8))),
     y: Number(sourceData.y || 0) + ((index % 3 ? 1 : -1) * (55 + index * 7)),
     regionId,
     worldId: realm.worldId,
@@ -350,7 +367,143 @@ async function main() {
   const throttleProfile = (await profileRef.get()).data() || {};
   assert(Number(throttleProfile.gold) === scoutCost * 3, "A throttled Scout Nearby request charged gold.");
 
-  console.log("Bulk army-order emulator coverage passed: duplicate replay, cleaned-ID collision safety, identical/distinct concurrency, gold/troop rollback, and weighted throttling.");
+  // Bulk Scout Nearby must use the same equipped necklace bonus as an individual scout preview.
+  await db.doc(`serverRateLimits/armyLaunch_${user.uid}`).delete();
+  const scoutGearKey = commonGear.DEFINITIONS.find(definition => (
+    definition.buildingId === "royal-stables" && definition.slot === "necklace"
+  ))?.gearKey;
+  const unequippedScoutGear = createGearState("", scoutGearKey);
+  await profileRef.set({ gear: unequippedScoutGear }, { merge: true });
+  const scoutPreviewWithoutGear = await callFunction("previewArmyRoute", user.token, {
+    fromId: sourceRef.id,
+    toId: neutralRefs[0].id,
+    sourceRegionId: regionId,
+    targetRegionId: regionId,
+    targetType: "city",
+    kind: "scout",
+    requestedTroops: 1,
+  });
+  await setFreshEconomy(profileRef, [sourceRef], scoutCost * 4, new Map([[sourceRef.id, 20]]));
+  const unequippedScoutRequestId = `scout_unequipped_${crypto.randomBytes(5).toString("hex")}`;
+  const unequippedBulkScout = await callFunction("sendNearbyScouts", user.token, {
+    sourceCityId: sourceRef.id,
+    sourceRegionId: regionId,
+    targetCityIds: [neutralRefs[0].id],
+    requestId: unequippedScoutRequestId,
+  });
+  assert(unequippedBulkScout.armies?.length === 1, "The unequipped-gear Scout Nearby check did not launch one scout.");
+  assert(
+    Math.ceil(Number(unequippedBulkScout.armies[0].total) * 1000) === Number(scoutPreviewWithoutGear.durationMs),
+    "An owned but unequipped Cavalry Master necklace changed Bulk Scout Nearby ETA."
+  );
+  await db.doc(`armies/${unequippedBulkScout.armies[0].id}`).set({ status: "resolved" }, { merge: true });
+  await db.doc(`serverRateLimits/armyLaunch_${user.uid}`).delete();
+  await profileRef.set({ gear: createGearState(scoutGearKey) }, { merge: true });
+  const scoutPreviewWithGear = await callFunction("previewArmyRoute", user.token, {
+    fromId: sourceRef.id,
+    toId: neutralRefs[0].id,
+    sourceRegionId: regionId,
+    targetRegionId: regionId,
+    targetType: "city",
+    kind: "scout",
+    requestedTroops: 1,
+  });
+  assert(
+    Number(scoutPreviewWithGear.durationMs) < Number(scoutPreviewWithoutGear.durationMs),
+    "Equipping the Cavalry Master necklace did not shorten individual scout ETA."
+  );
+  await setFreshEconomy(profileRef, [sourceRef], scoutCost * 3, new Map([[sourceRef.id, 20]]));
+  const gearScoutRequestId = `scout_gear_${crypto.randomBytes(5).toString("hex")}`;
+  const gearedBulkScout = await callFunction("sendNearbyScouts", user.token, {
+    sourceCityId: sourceRef.id,
+    sourceRegionId: regionId,
+    targetCityIds: [neutralRefs[0].id],
+    requestId: gearScoutRequestId,
+  });
+  assert(gearedBulkScout.armies?.length === 1, "The gear Scout Nearby check did not launch one scout.");
+  assert(
+    Math.ceil(Number(gearedBulkScout.armies[0].total) * 1000) === Number(scoutPreviewWithGear.durationMs),
+    `Bulk Scout Nearby ETA does not match the equivalent individual scout ETA with scoutSpeed: bulk=${Math.ceil(Number(gearedBulkScout.armies[0].total) * 1000)} preview=${Number(scoutPreviewWithGear.durationMs)} bulkPath=${Number(gearedBulkScout.armies[0].pathLength)} previewPath=${Number(scoutPreviewWithGear.length)}.`
+  );
+  assert(
+    Number(gearedBulkScout.armies[0].total) < Number(unequippedBulkScout.armies[0].total),
+    "Equipping the Cavalry Master necklace did not shorten Bulk Scout Nearby ETA."
+  );
+  await db.doc(`armies/${gearedBulkScout.armies[0].id}`).set({ status: "resolved" }, { merge: true });
+
+  // Bulk Regroup must use the same equipped armor bonus as an individual owned transfer preview.
+  await db.doc(`serverRateLimits/armyLaunch_${user.uid}`).delete();
+  const ownedMarchGearKey = commonGear.DEFINITIONS.find(definition => (
+    definition.buildingId === "royal-stables" && definition.slot === "head"
+  ))?.gearKey;
+  await profileRef.set({ gear: createGearState("", ownedMarchGearKey) }, { merge: true });
+  const regroupPreviewWithoutGear = await callFunction("previewArmyRoute", user.token, {
+    fromId: regroupSourceRefs[0].id,
+    toId: sourceRef.id,
+    sourceRegionId: regionId,
+    targetRegionId: regionId,
+    targetType: "city",
+    kind: "transfer",
+    requestedTroops: 100,
+  });
+  await setFreshEconomy(
+    profileRef,
+    [sourceRef, regroupSourceRefs[0]],
+    regroupCost * 4,
+    new Map([[sourceRef.id, 20], [regroupSourceRefs[0].id, 100]])
+  );
+  const unequippedRegroupRequestId = `regroup_unequipped_${crypto.randomBytes(5).toString("hex")}`;
+  const unequippedRegroup = await callFunction("sendRegroupOrders", user.token, {
+    targetCityId: sourceRef.id,
+    targetRegionId: regionId,
+    sourceCityIds: [regroupSourceRefs[0].id],
+    requestId: unequippedRegroupRequestId,
+  });
+  assert(unequippedRegroup.armies?.length === 1, "The unequipped-gear Regroup check did not launch one transfer.");
+  assert(
+    Math.ceil(Number(unequippedRegroup.armies[0].total) * 1000) === Number(regroupPreviewWithoutGear.durationMs),
+    "Owned but unequipped Cavalry Master armor changed Bulk Regroup ETA."
+  );
+  await db.doc(`armies/${unequippedRegroup.armies[0].id}`).set({ status: "resolved" }, { merge: true });
+  await db.doc(`serverRateLimits/armyLaunch_${user.uid}`).delete();
+  await profileRef.set({ gear: createGearState(ownedMarchGearKey) }, { merge: true });
+  const regroupPreviewWithGear = await callFunction("previewArmyRoute", user.token, {
+    fromId: regroupSourceRefs[0].id,
+    toId: sourceRef.id,
+    sourceRegionId: regionId,
+    targetRegionId: regionId,
+    targetType: "city",
+    kind: "transfer",
+    requestedTroops: 100,
+  });
+  assert(
+    Number(regroupPreviewWithGear.durationMs) < Number(regroupPreviewWithoutGear.durationMs),
+    "Equipping Cavalry Master armor did not shorten individual transfer ETA."
+  );
+  await setFreshEconomy(
+    profileRef,
+    [sourceRef, regroupSourceRefs[0]],
+    regroupCost * 3,
+    new Map([[sourceRef.id, 20], [regroupSourceRefs[0].id, 100]])
+  );
+  const gearRegroupRequestId = `regroup_gear_${crypto.randomBytes(5).toString("hex")}`;
+  const gearedRegroup = await callFunction("sendRegroupOrders", user.token, {
+    targetCityId: sourceRef.id,
+    targetRegionId: regionId,
+    sourceCityIds: [regroupSourceRefs[0].id],
+    requestId: gearRegroupRequestId,
+  });
+  assert(gearedRegroup.armies?.length === 1, "The gear Regroup check did not launch one transfer.");
+  assert(
+    Math.ceil(Number(gearedRegroup.armies[0].total) * 1000) === Number(regroupPreviewWithGear.durationMs),
+    `Bulk Regroup ETA does not match the equivalent individual transfer ETA with ownedMarchSpeed: bulk=${Math.ceil(Number(gearedRegroup.armies[0].total) * 1000)} preview=${Number(regroupPreviewWithGear.durationMs)}.`
+  );
+  assert(
+    Number(gearedRegroup.armies[0].total) < Number(unequippedRegroup.armies[0].total),
+    "Equipping Cavalry Master armor did not shorten Bulk Regroup ETA."
+  );
+
+  console.log("Bulk army-order emulator coverage passed: duplicate replay, cleaned-ID collision safety, identical/distinct concurrency, rollback, throttling, and equipped/unequipped Scout/Regroup speed parity.");
 }
 
 main().then(() => process.exit(0)).catch(error => {

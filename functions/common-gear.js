@@ -143,7 +143,7 @@
     if (buildingId === "barracks") {
       if (ARMOR_SLOTS.has(slot)) return ["troopProductionAllCities", "troop production in all owned cities"];
       if (slot === "weapon") return ["attackStrength", "attack strength for all attacks"];
-      return ["casualtyEfficiency", "casualty recovery efficiency"];
+      return ["casualtyEfficiency", "casualty recovery with Field Medics (75% combined cap; recovered troops return to the main city)"];
     }
     if (buildingId === "treasury") {
       if (slot === "necklace") return ["goldProductionAllCities", "gold production in all owned cities"];
@@ -156,7 +156,7 @@
     }
     if (ARMOR_SLOTS.has(slot)) return ["wallStrength", "wall strength in all owned cities"];
     if (slot === "weapon") return ["defenderStrength", "defending soldier strength in all owned cities"];
-    return ["wallRepairSpeed", "global wall repair speed"];
+    return ["wallRepairSpeed", "reduced repair time added by new wall damage"];
   }
 
   const DEFINITIONS = Object.freeze(Object.values(BUILDINGS).flatMap(building => (

@@ -3476,7 +3476,9 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
   const gearBonuses = defenderProfile ? getCommonGearBonuses(defenderProfile) : {};
   const stoneworksPercent = !rewardCamp && defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const gearWallStrengthPercent = rewardCamp ? 0 : Math.max(0, safeNumber(gearBonuses.wallStrength, 0));
-  const cityWalls = Math.floor(baseCityWalls * (1 + (stoneworksPercent + gearWallStrengthPercent) / 100));
+  const cityWalls = Math.floor(
+    baseCityWalls + baseCityWalls * (stoneworksPercent + gearWallStrengthPercent) / 100
+  );
   const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const shieldwallDisciplinePercent = soldierDefenseEnabled && defenderProfile
     ? getSkillPercent(defenderProfile, "shieldwallDiscipline")
@@ -3493,13 +3495,17 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     : soldierDefenseEnabled
       ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
       : Math.floor(troopCount * (1 + defensePercent / 100));
-  const troopDefense = rewardCamp
+  const troopDefenseBeforeGear = rewardCamp
     ? baseTroopDefense
     : soldierDefenseEnabled
       ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent + gearDefenderStrengthPercent) / 100
+        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
       ))
       : troopDefenseBeforeObjective;
+  const gearDefenderStrengthBonusPower = soldierDefenseEnabled
+    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * gearDefenderStrengthPercent / 100)
+    : 0;
+  const troopDefense = troopDefenseBeforeGear + gearDefenderStrengthBonusPower;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
@@ -3527,6 +3533,8 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     shieldwallDisciplinePercent,
     baseTroopDefense,
     troopDefenseBeforeObjective,
+    troopDefenseBeforeGear,
+    gearDefenderStrengthBonusPower,
     troopDefense,
     baseTotalDefense,
     objectiveTroopDefenseBonusPercent,
@@ -3613,9 +3621,11 @@ function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()
     baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
     reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
     stoneworksPercent: Math.max(0, safeNumber(ownerStats.stoneworksPercent, 0)),
+    gearWallStrengthPercent: Math.max(0, safeNumber(ownerStats.gearWallStrengthPercent, 0)),
     defenseCombatVersion: Math.max(0, Math.floor(safeNumber(ownerStats.defenseCombatVersion, 0))),
     baseDefensePowerPerTroop: Math.max(1, safeNumber(ownerStats.baseDefensePowerPerTroop, 1)),
     shieldwallDisciplinePercent: Math.max(0, safeNumber(ownerStats.shieldwallDisciplinePercent, 0)),
+    gearDefenderStrengthPercent: Math.max(0, safeNumber(ownerStats.gearDefenderStrengthPercent, 0)),
     objectiveDefenseBonusPercent,
     troopObjectiveDefenseBonusPercent,
     fullWallPower,
@@ -4506,10 +4516,12 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       baseCityWalls: Math.max(0, Math.floor(safeNumber(options.fortification.baseCityWalls, 0))),
       reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(options.fortification.reinforcedCityWalls, 0))),
       stoneworksPercent: Math.max(0, safeNumber(options.fortification.stoneworksPercent, 0)),
+      gearWallStrengthPercent: Math.max(0, safeNumber(options.fortification.gearWallStrengthPercent, 0)),
       cityLevelDefensePercent: Math.max(0, safeNumber(options.fortification.cityLevelDefensePercent, 0)),
       defenseCombatVersion: Math.max(0, Math.floor(safeNumber(options.fortification.defenseCombatVersion, 0))),
       baseDefensePowerPerTroop: Math.max(1, safeNumber(options.fortification.baseDefensePowerPerTroop, 1)),
       shieldwallDisciplinePercent: Math.max(0, safeNumber(options.fortification.shieldwallDisciplinePercent, 0)),
+      gearDefenderStrengthPercent: Math.max(0, safeNumber(options.fortification.gearDefenderStrengthPercent, 0)),
       troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(
         options.fortification.troopObjectiveDefenseBonusPercent,
         0
@@ -5356,6 +5368,7 @@ function normalizeRallyParticipant(raw = {}) {
     returnArmyId: normalizeRallyId(raw.returnArmyId),
     attackSkillLevel: Math.max(0, Math.floor(safeNumber(raw.attackSkillLevel, 0))),
     attackBonusPercent: Math.max(0, safeNumber(raw.attackBonusPercent, 0)),
+    attackGearPercent: Math.max(0, safeNumber(raw.attackGearPercent, 0)),
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, 0)),
     fieldMedicsPercent: Math.max(0, safeNumber(raw.fieldMedicsPercent, 0)),
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
@@ -5593,6 +5606,7 @@ function createRallyParticipantSnapshot({
     assembledAtMs,
     attackSkillLevel: getSkillLevel(profile, "swordmastery"),
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
+    attackGearPercent: getCommonGearBonuses(profile).attackStrength,
     attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
       skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100
     ),
@@ -5659,8 +5673,8 @@ function createRallyAssemblyMovement({
 } = {}) {
   const troops = Math.max(1, Math.floor(safeNumber(participant.troops, 1)));
   const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
-  const speedMultiplier = skillMultiplier(profile, "marchOrders")
-    * (1 + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+  const speedMultiplier = addCommonGearMarchSpeed(profile, "rally_join", skillMultiplier(profile, "marchOrders")
+    * (1 + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100));
   const duration = calculateTravelTime({
     pathLength: validatedRoute.pathLength,
     troopCount: troops,
@@ -7158,6 +7172,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
       basePower: Math.max(0, Math.floor(safeNumber(row?.basePower, row?.troops))),
       shieldwallDisciplineLevel: Math.max(0, Math.floor(safeNumber(row?.shieldwallDisciplineLevel, 0))),
       shieldwallDisciplinePercent: Math.max(0, safeNumber(row?.shieldwallDisciplinePercent, 0)),
+      gearDefenderStrengthPercent: Math.max(0, safeNumber(row?.gearDefenderStrengthPercent, 0)),
       personalDefenseBonusPercent: Math.max(0, safeNumber(row?.personalBonusPercent, 0)),
       sharedDefenseBonusPercent: Math.max(0, safeNumber(row?.sharedBonusPercent, 0)),
       effectivePower: Math.max(0, Math.floor(safeNumber(row?.effectivePower, row?.basePower))),
@@ -7171,12 +7186,14 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
       baseCityWalls: Math.max(0, Math.floor(safeNumber(stats.baseCityWalls, 0))),
       reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(stats.cityWalls, 0))),
       stoneworksPercent: Math.max(0, safeNumber(stats.stoneworksPercent, 0)),
+      gearWallStrengthPercent: Math.max(0, safeNumber(stats.gearWallStrengthPercent, 0)),
       cityLevelDefensePercent: Math.max(0, safeNumber(stats.defensePercent, 0)),
       objectiveDefenseBonusPercent: Math.max(0, safeNumber(defensePackages.fortification.objectiveDefenseBonusPercent, 0)),
       troopObjectiveDefenseBonusPercent: getObjectiveTroopDefenseBonusPercent(stats),
       defenseCombatVersion: Math.max(0, Math.floor(safeNumber(defensePackages.defenseCombatVersion, 0))),
       baseDefensePowerPerTroop: Math.max(1, safeNumber(stats.baseDefensePowerPerTroop, 1)),
       shieldwallDisciplinePercent: Math.max(0, safeNumber(stats.shieldwallDisciplinePercent, 0)),
+      gearDefenderStrengthPercent: Math.max(0, safeNumber(stats.gearDefenderStrengthPercent, 0)),
       fullWallPower: Math.max(0, Math.floor(safeNumber(defensePackages.fortification.fullWallPower, 0))),
       currentWallPower: Math.max(0, Math.floor(safeNumber(defensePackages.fortification.currentWallPower, 0))),
       integrityBps: clampInt(defensePackages.fortification.integrityBps, 0, 10_000),
@@ -7213,6 +7230,8 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     siegeCombatVersion: fortification ? SIEGE_COMBAT_VERSION : 0,
     defenseCombatVersion: Math.max(0, Math.floor(safeNumber(stats.defenseCombatVersion, 0))),
     baseDefensePowerPerTroop: Math.max(1, safeNumber(stats.baseDefensePowerPerTroop, 1)),
+    gearWallStrengthPercent: Math.max(0, safeNumber(stats.gearWallStrengthPercent, 0)),
+    gearDefenderStrengthPercent: Math.max(0, safeNumber(stats.gearDefenderStrengthPercent, 0)),
     fortification,
     owner: getOwnerUid(target) ? "enemy" : "neutral",
     ownerUid: safeString(getOwnerUid(target), 128),
@@ -7718,12 +7737,25 @@ function splitBattleObjectiveBonusPower(totalPower = 0, personalPercent = 0, sha
   };
 }
 
-function createBattleAttackPowerBreakdown(basePower = 0, effectivePower = 0) {
+function createBattleAttackPowerBreakdown(
+  basePower = 0,
+  effectivePower = 0,
+  swordmasteryPercent = 0,
+  gearAttackStrengthPercent = 0
+) {
   const baseAttackPower = Math.max(0, Math.floor(safeNumber(basePower, 0)));
   const totalAttackPower = Math.max(baseAttackPower, Math.floor(safeNumber(effectivePower, baseAttackPower)));
+  const totalBonusPower = Math.max(0, totalAttackPower - baseAttackPower);
+  const skillPercent = Math.max(0, safeNumber(swordmasteryPercent, 0));
+  const gearPercent = Math.max(0, safeNumber(gearAttackStrengthPercent, 0));
+  const combinedPercent = skillPercent + gearPercent;
+  const gearAttackStrengthBonusPower = combinedPercent > 0
+    ? Math.floor(totalBonusPower * gearPercent / combinedPercent)
+    : 0;
   return {
     baseAttackPower,
-    swordmasteryBonusPower: Math.max(0, totalAttackPower - baseAttackPower),
+    swordmasteryBonusPower: Math.max(0, totalBonusPower - gearAttackStrengthBonusPower),
+    gearAttackStrengthBonusPower,
     totalAttackPower,
   };
 }
@@ -7765,20 +7797,32 @@ function createBattleDefensePowerBreakdown(row = {}, { siege = false } = {}) {
     : 0;
   const personalPercent = Math.max(0, safeNumber(row.personalDefenseBonusPercent ?? row.personalBonusPercent, 0));
   const sharedPercent = Math.max(0, safeNumber(row.sharedDefenseBonusPercent ?? row.sharedBonusPercent, 0));
+  const gearPercent = soldierDefenseEnabled
+    ? Math.max(0, safeNumber(row.gearDefenderStrengthPercent, 0))
+    : 0;
   const totalBonusPower = Math.max(0, effectivePower - basePower);
-  const combinedPercent = shieldwallPercent + personalPercent + sharedPercent;
-  const shieldwallDisciplineBonusPower = soldierDefenseEnabled && combinedPercent > 0
-    ? Math.floor(totalBonusPower * shieldwallPercent / combinedPercent)
+  const combinedPercent = shieldwallPercent + gearPercent + personalPercent + sharedPercent;
+  const gearDefenderStrengthBonusPower = soldierDefenseEnabled
+    ? Math.min(totalBonusPower, Math.max(0, Math.floor(safeNumber(
+      row.gearDefenderStrengthBonusPower,
+      combinedPercent > 0 ? totalBonusPower * gearPercent / combinedPercent : 0
+    ))))
+    : 0;
+  const nonGearBonusPower = Math.max(0, totalBonusPower - gearDefenderStrengthBonusPower);
+  const nonGearCombinedPercent = shieldwallPercent + personalPercent + sharedPercent;
+  const resolvedShieldwallDisciplineBonusPower = soldierDefenseEnabled && nonGearCombinedPercent > 0
+    ? Math.floor(nonGearBonusPower * shieldwallPercent / nonGearCombinedPercent)
     : 0;
   const objective = splitBattleObjectiveBonusPower(
-    totalBonusPower - shieldwallDisciplineBonusPower,
+    nonGearBonusPower - resolvedShieldwallDisciplineBonusPower,
     personalPercent,
     sharedPercent
   );
   return {
     baseTroopDefensePower: startingTroops,
     baseDefenseBonusPower,
-    shieldwallDisciplineBonusPower,
+    shieldwallDisciplineBonusPower: resolvedShieldwallDisciplineBonusPower,
+    gearDefenderStrengthBonusPower,
     cityLevelDefensePower,
     legacyFortificationPower: fortificationPower,
     ...objective,
@@ -7792,6 +7836,7 @@ function createBattleWallPowerBreakdown(siege = null, owner = {}, defenderBonuse
     return {
       baseWallPower: 0,
       stoneworksWallBonusPower: 0,
+      gearWallStrengthBonusPower: 0,
       personalObjectiveBonusPower: 0,
       sharedClanBonusPower: 0,
       totalWallPower: 0,
@@ -7802,23 +7847,29 @@ function createBattleWallPowerBreakdown(siege = null, owner = {}, defenderBonuse
     startingWallPower,
     Math.floor(Math.max(0, safeNumber(owner.fortifications?.baseCityWalls, 0)) * integrityBps / 10_000)
   );
-  const reinforcedWalls = Math.max(0, safeNumber(owner.fortifications?.cityWalls, 0));
-  const rawStoneworksPower = Math.floor(
-    Math.max(0, reinforcedWalls - safeNumber(owner.fortifications?.baseCityWalls, 0))
-      * integrityBps / 10_000
+  const fullBaseWallPower = Math.max(0, safeNumber(owner.fortifications?.baseCityWalls, 0));
+  const reinforcedWalls = Math.max(fullBaseWallPower, safeNumber(owner.fortifications?.cityWalls, 0));
+  const ownerWallPower = Math.min(
+    startingWallPower,
+    Math.floor(reinforcedWalls * integrityBps / 10_000)
   );
-  const stoneworksWallBonusPower = Math.min(
-    Math.max(0, startingWallPower - baseWallPower),
-    rawStoneworksPower
-  );
+  const ownerWallBonusPower = Math.max(0, ownerWallPower - baseWallPower);
+  const stoneworksPercent = Math.max(0, safeNumber(owner.fortifications?.stoneworksPercent, 0));
+  const gearWallStrengthPercent = Math.max(0, safeNumber(owner.fortifications?.gearWallStrengthPercent, 0));
+  const combinedOwnerWallPercent = stoneworksPercent + gearWallStrengthPercent;
+  const stoneworksWallBonusPower = combinedOwnerWallPercent > 0
+    ? Math.floor(ownerWallBonusPower * stoneworksPercent / combinedOwnerWallPercent)
+    : ownerWallBonusPower;
+  const gearWallStrengthBonusPower = Math.max(0, ownerWallBonusPower - stoneworksWallBonusPower);
   const objective = splitBattleObjectiveBonusPower(
-    startingWallPower - baseWallPower - stoneworksWallBonusPower,
+    startingWallPower - ownerWallPower,
     defenderBonuses.personalDefenseBonusPercent,
     defenderBonuses.sharedDefenseBonusPercent
   );
   return {
     baseWallPower,
     stoneworksWallBonusPower,
+    gearWallStrengthBonusPower,
     ...objective,
     totalWallPower: startingWallPower,
   };
@@ -7873,6 +7924,8 @@ function createDetailedBattleSnapshot({
       baseDefensePowerPerTroop: row.baseDefensePowerPerTroop,
       shieldwallDisciplineLevel: row.shieldwallDisciplineLevel,
       shieldwallDisciplinePercent: row.shieldwallDisciplinePercent,
+      gearDefenderStrengthPercent: row.gearDefenderStrengthPercent,
+      gearDefenderStrengthBonusPower: row.gearDefenderStrengthBonusPower,
       effectivePower: row.effectivePower,
       objectiveSource: safeString(row.objectiveSource, 48),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
@@ -7886,11 +7939,12 @@ function createDetailedBattleSnapshot({
       .find(entry => entry.uid === row.uid) || {};
     const startingTroops = Math.max(0, Math.floor(safeNumber(row.troops, 0)));
     const swordmasteryPercent = Math.max(0, safeNumber(row.attackBonusPercent, 0));
+    const gearAttackStrengthPercent = Math.max(0, safeNumber(row.attackGearPercent, 0));
     const effectivePower = Math.max(0, Math.floor(safeNumber(row.effectivePower, 0)));
     const basePower = getBattleAttackerBasePower({
       troops: startingTroops,
       effectivePower,
-      bonusPercent: swordmasteryPercent,
+      bonusPercent: swordmasteryPercent + gearAttackStrengthPercent,
       attackPowerPerTroop: row.attackPowerPerTroop,
     });
     return {
@@ -7904,8 +7958,14 @@ function createDetailedBattleSnapshot({
       basePower,
       swordmasteryLevel: Math.max(0, Math.floor(safeNumber(row.attackSkillLevel, 0))),
       swordmasteryPercent,
+      gearAttackStrengthPercent,
       effectivePower,
-      powerBreakdown: createBattleAttackPowerBreakdown(basePower, effectivePower),
+      powerBreakdown: createBattleAttackPowerBreakdown(
+        basePower,
+        effectivePower,
+        swordmasteryPercent,
+        gearAttackStrengthPercent
+      ),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(settled.survivors, row.troops))),
     };
@@ -7923,10 +7983,12 @@ function createDetailedBattleSnapshot({
     + Math.max(0, Math.floor(safeNumber(result.survivors, 0)));
   const attackerSwordmasteryPercent = combatSnapshot?.swordmasteryPercent
     ?? getSkillPercent(attackerProfile, "swordmastery");
+  const attackerGearStrengthPercent = combatSnapshot?.attackStrengthPercent
+    ?? getCommonGearBonuses(attackerProfile).attackStrength;
   const attackerBasePower = getBattleAttackerBasePower({
     troops: attackerStartingTroops,
     effectivePower: result.attackPower,
-    bonusPercent: attackerSwordmasteryPercent,
+    bonusPercent: attackerSwordmasteryPercent + attackerGearStrengthPercent,
     attackPowerPerTroop: combatSnapshot?.attackPowerPerTroop,
   });
   const normalizedProtection = normalizeAttackProtectionSnapshot(attackProtection);
@@ -7941,6 +8003,8 @@ function createDetailedBattleSnapshot({
     baseDefensePowerPerTroop: defensePackages.owner.baseDefensePowerPerTroop,
     shieldwallDisciplineLevel: defensePackages.owner.shieldwallDisciplineLevel,
     shieldwallDisciplinePercent: defensePackages.owner.shieldwallDisciplinePercent,
+    gearDefenderStrengthPercent: defensePackages.owner.gearDefenderStrengthPercent,
+    gearDefenderStrengthBonusPower: defensePackages.owner.gearDefenderStrengthBonusPower,
     personalDefenseBonusPercent: Math.max(
       0,
       safeNumber(defenderBonuses.personalDefenseBonusPercent, defenderBonuses.cityDefenseBonusPercent)
@@ -7956,6 +8020,7 @@ function createDetailedBattleSnapshot({
       baseCityWalls: defensePackages.owner.baseCityWalls,
       cityWalls: defensePackages.owner.cityWalls,
       stoneworksPercent: defensePackages.owner.stoneworksPercent,
+      gearWallStrengthPercent: defensePackages.owner.gearWallStrengthPercent,
     },
   };
   defenderSnapshot.powerBreakdown = createBattleDefensePowerBreakdown(defenderSnapshot, { siege: Boolean(siege) });
@@ -7968,9 +8033,11 @@ function createDetailedBattleSnapshot({
     baseTroopDefensePower: defenderSnapshot.powerBreakdown.baseTroopDefensePower,
     baseDefenseBonusPower: defenderSnapshot.powerBreakdown.baseDefenseBonusPower,
     shieldwallDisciplineBonusPower: defenderSnapshot.powerBreakdown.shieldwallDisciplineBonusPower,
+    gearDefenderStrengthBonusPower: defenderSnapshot.powerBreakdown.gearDefenderStrengthBonusPower,
     cityLevelDefensePower: defenderSnapshot.powerBreakdown.cityLevelDefensePower,
     baseWallPower: wallPowerBreakdown.baseWallPower,
     stoneworksWallBonusPower: wallPowerBreakdown.stoneworksWallBonusPower,
+    gearWallStrengthBonusPower: wallPowerBreakdown.gearWallStrengthBonusPower,
     personalObjectiveBonusPower: defenderSnapshot.powerBreakdown.personalObjectiveBonusPower
       + wallPowerBreakdown.personalObjectiveBonusPower,
     sharedClanBonusPower: defenderSnapshot.powerBreakdown.sharedClanBonusPower
@@ -7983,9 +8050,11 @@ function createDetailedBattleSnapshot({
     defensePowerBreakdown.baseTroopDefensePower,
     defensePowerBreakdown.baseDefenseBonusPower,
     defensePowerBreakdown.shieldwallDisciplineBonusPower,
+    defensePowerBreakdown.gearDefenderStrengthBonusPower,
     defensePowerBreakdown.cityLevelDefensePower,
     defensePowerBreakdown.baseWallPower,
     defensePowerBreakdown.stoneworksWallBonusPower,
+    defensePowerBreakdown.gearWallStrengthBonusPower,
     defensePowerBreakdown.personalObjectiveBonusPower,
     defensePowerBreakdown.sharedClanBonusPower,
     defensePowerBreakdown.reinforcementDefensePower,
@@ -8047,6 +8116,7 @@ function createDetailedBattleSnapshot({
         baseCityWalls: defensePackages.owner.baseCityWalls,
         cityWalls: defensePackages.owner.cityWalls,
         stoneworksPercent: defensePackages.owner.stoneworksPercent,
+        gearWallStrengthPercent: defensePackages.owner.gearWallStrengthPercent,
         fullWallPower: siege?.fullWallPower || 0,
         startingWallPower: siege?.startingWallPower || 0,
         startingIntegrityBps: siege?.startingIntegrityBps ?? 10_000,
@@ -8066,8 +8136,14 @@ function createDetailedBattleSnapshot({
       basePower: attackerBasePower,
       swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
       swordmasteryPercent: attackerSwordmasteryPercent,
+      gearAttackStrengthPercent: attackerGearStrengthPercent,
       effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
-      powerBreakdown: createBattleAttackPowerBreakdown(attackerBasePower, result.attackPower),
+      powerBreakdown: createBattleAttackPowerBreakdown(
+        attackerBasePower,
+        result.attackPower,
+        attackerSwordmasteryPercent,
+        attackerGearStrengthPercent
+      ),
       losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
     },
@@ -8084,7 +8160,12 @@ function createDetailedBattleSnapshot({
       defenderLosses,
       attackerSurvivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
       defenderSurvivors: Math.max(0, defendersAtStart - defenderLosses),
-      attackPowerBreakdown: createBattleAttackPowerBreakdown(attackerBasePower, result.attackPower),
+      attackPowerBreakdown: createBattleAttackPowerBreakdown(
+        attackerBasePower,
+        result.attackPower,
+        attackerSwordmasteryPercent,
+        attackerGearStrengthPercent
+      ),
       defensePowerBreakdown,
     },
     formula: {
@@ -9794,7 +9875,7 @@ function calculateDefenderArmyPackages({
     : Math.max(0, ownerStats.totalDefense - ownerStats.strongholdDefenseBonus);
   const ownerEffectivePower = siegeEnabled
     ? soldierDefenseEnabled
-      ? Math.max(0, Math.floor(safeNumber(ownerStats.troopDefense, 0)))
+      ? Math.max(0, Math.floor(safeNumber(ownerStats.troopDefenseBeforeGear, ownerStats.troopDefense)))
       : Math.max(0, Math.floor(ownerBasePower * (1 + ownerStats.strongholdDefenseBonusPercent / 100)))
     : Math.max(0, Math.floor(safeNumber(ownerStats.totalDefense, 0)));
   const ownerPackage = {
@@ -9809,6 +9890,8 @@ function calculateDefenderArmyPackages({
     baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
     shieldwallDisciplineLevel: Math.max(0, Math.floor(safeNumber(ownerStats.shieldwallDisciplineLevel, 0))),
     shieldwallDisciplinePercent: Math.max(0, safeNumber(ownerStats.shieldwallDisciplinePercent, 0)),
+    gearDefenderStrengthPercent: Math.max(0, safeNumber(ownerStats.gearDefenderStrengthPercent, 0)),
+    gearDefenderStrengthBonusPower: 0,
     personalBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
       ownerBonuses.personalDefenseBonusPercent,
       getObjectiveTroopDefenseBonusPercent(ownerStats)
@@ -9819,7 +9902,11 @@ function calculateDefenderArmyPackages({
     baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
     cityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
     stoneworksPercent: Math.max(0, safeNumber(ownerStats.stoneworksPercent, 0)),
+    gearWallStrengthPercent: Math.max(0, safeNumber(ownerStats.gearWallStrengthPercent, 0)),
   };
+  const destinationGearDefenderStrengthPercent = rewardCamp
+    ? 0
+    : Math.max(0, safeNumber(ownerStats.gearDefenderStrengthPercent, 0));
   const reinforcementPackages = (Array.isArray(contributions) ? contributions : []).map(contribution => {
     const profile = contributorProfiles.get(contribution.ownerUid) || {};
     const stats = contributorStats.get(contribution.ownerUid) || {};
@@ -9865,6 +9952,8 @@ function calculateDefenderArmyPackages({
       baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
       shieldwallDisciplineLevel,
       shieldwallDisciplinePercent,
+      gearDefenderStrengthPercent: destinationGearDefenderStrengthPercent,
+      gearDefenderStrengthBonusPower: 0,
       personalBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
         stats.personalObjectiveTroopDefenseBonusPercent,
         safeNumber(stats.personalStrongholdDefenseBonusPercent, bonusPercent)
@@ -9883,6 +9972,22 @@ function calculateDefenderArmyPackages({
       effectivePower: Math.max(0, effectivePower),
     };
   }).filter(row => row.ownerUid && row.troops > 0);
+  const defenderRows = [ownerPackage, ...reinforcementPackages].filter(row => row.troops > 0);
+  const totalDefenderTroops = defenderRows.reduce((total, row) => total + row.troops, 0);
+  const totalGearDefenderStrengthBonusPower = soldierDefenseEnabled && totalDefenderTroops > 0
+    ? Math.floor(
+      totalDefenderTroops * BASE_TROOP_DEFENSE_POWER * destinationGearDefenderStrengthPercent / 100
+    )
+    : 0;
+  let remainingGearDefenderStrengthBonusPower = totalGearDefenderStrengthBonusPower;
+  defenderRows.forEach((row, index) => {
+    const bonusPower = index === defenderRows.length - 1
+      ? remainingGearDefenderStrengthBonusPower
+      : Math.floor(totalGearDefenderStrengthBonusPower * row.troops / totalDefenderTroops);
+    row.gearDefenderStrengthBonusPower = Math.max(0, bonusPower);
+    row.effectivePower += row.gearDefenderStrengthBonusPower;
+    remainingGearDefenderStrengthBonusPower -= row.gearDefenderStrengthBonusPower;
+  });
   const totalGarrisonDefense = Math.max(
     0,
     ownerPackage.effectivePower
@@ -18493,6 +18598,7 @@ function normalizeAttackCombatSnapshot(raw = null) {
     version: ATTACK_COMBAT_SNAPSHOT_VERSION,
     swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
     swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
+    attackStrengthPercent: Math.max(0, safeNumber(raw.attackStrengthPercent, 0)),
     attackPowerPerTroop,
     launchTroops,
     launchAttackPower: Math.max(0, Math.floor(safeNumber(
@@ -18505,13 +18611,15 @@ function normalizeAttackCombatSnapshot(raw = null) {
 function createAttackCombatSnapshot(troops = 1, attackerProfile = {}) {
   const launchTroops = Math.max(1, Math.floor(safeNumber(troops, 1)));
   const swordmasteryPercent = Math.max(0, getSkillPercent(attackerProfile, "swordmastery"));
+  const attackStrengthPercent = Math.max(0, getCommonGearBonuses(attackerProfile).attackStrength);
   const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * (
-    skillMultiplier(attackerProfile, "swordmastery") + getCommonGearBonuses(attackerProfile).attackStrength / 100
+    skillMultiplier(attackerProfile, "swordmastery") + attackStrengthPercent / 100
   );
   return normalizeAttackCombatSnapshot({
     version: ATTACK_COMBAT_SNAPSHOT_VERSION,
     swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
     swordmasteryPercent,
+    attackStrengthPercent,
     attackPowerPerTroop,
     launchTroops,
     launchAttackPower: Math.floor(launchTroops * attackPowerPerTroop),
@@ -19715,8 +19823,8 @@ exports.sendNearbyScouts = timedCallable(
           globalStats: economy.globalStats,
           city: source,
         });
-      const speedMultiplier = skillMultiplier(profile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+      const speedMultiplier = addCommonGearMarchSpeed(profile, "scout", skillMultiplier(profile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100));
       const armies = targets.map((target, index) => {
         const route = routes[index];
         const targetOwnerUid = getOwnerUid(target);
@@ -19946,8 +20054,8 @@ exports.sendRegroupOrders = timedCallable(
           globalStats: economy.globalStats,
           city: target,
         });
-      const speedMultiplier = skillMultiplier(profile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+      const speedMultiplier = addCommonGearMarchSpeed(profile, "transfer", skillMultiplier(profile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100));
       const armies = sources.map((source, index) => {
         const troops = Math.max(1, Math.floor(safeNumber(source.troops, 0)));
         const route = routes[index];
