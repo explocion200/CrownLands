@@ -27,7 +27,16 @@
         linear-gradient(rgba(18, 15, 10, .1), rgba(18, 15, 10, .2)),
         url("assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp") center / cover;
     }
-    .qa-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 110px rgba(16, 10, 6, .52); }
+    body[data-chat-qa-terrain="bright"] .qa-map { background-position: 34% 24%; }
+    body[data-chat-qa-terrain="dark"] .qa-map {
+      background-position: 83% 74%;
+      filter: brightness(.68) saturate(.92);
+    }
+    body[data-chat-qa-terrain="detail"] .qa-map {
+      background-position: 68% 64%;
+      background-size: auto, 142% auto;
+    }
+    .qa-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 70px rgba(16, 10, 6, .18); }
     .qa-label {
       position: absolute;
       top: 14px;
@@ -72,6 +81,10 @@
         <button type="button" data-qa-alerts="outgoing">Outgoing only</button>
         <button type="button" data-qa-alerts="both">Both alerts</button>
         <button type="button" data-qa-reconstruct-hud>Reconstruct HUD</button>
+        <button type="button" data-qa-map-change>Map change</button>
+        <button type="button" data-qa-reconnect>Reconnect</button>
+        <button type="button" data-qa-new-session>New session</button>
+        <button type="button" data-qa-unrelated-modal>Unrelated modal</button>
         <button type="button" data-qa-server-cooldown>Force server cooldown</button>
       </div>
 
@@ -116,6 +129,11 @@
     </section>
   </main>
 
+  <dialog id="qaUnrelatedModal" aria-label="Unrelated game modal QA">
+    <p>Unrelated game modal lifecycle check.</p>
+    <button type="button" data-qa-close-unrelated>Close</button>
+  </dialog>
+
   <dialog id="chatDialog" class="modal chat-modal" aria-labelledby="chatTitle">
     <article class="modal-card chat-card">
       <header class="chat-header">
@@ -146,8 +164,8 @@
 
   <script src="release-config.js"></script>
   <script src="ui-layout-config.js"></script>
-  <script src="chat-ui.js?v=collision-cooldown-qa"></script>
+  <script src="chat-ui.js?v=default-quick-alpha-qa"></script>
   <script src="ui-layout-runtime.js"></script>
-  <script src="docs/visual-qa/chat/fixture.js?v=collision-cooldown-qa-2"></script>
+  <script src="docs/visual-qa/chat/fixture.js?v=default-quick-alpha-qa"></script>
 </body>
 </html>

@@ -181,15 +181,21 @@ class FakeElement {
 }
 const fakeDocument = { createElement: tagName => new FakeElement(tagName) };
 const unsafeText = `<img src=x onerror="globalThis.pwned=true">`;
+let openedSenderUid = "";
 const rendered = UI.renderMessageElement(fakeDocument, {
   id: "unsafe",
   senderUid: "attacker",
   senderDisplayName: "<script>name</script>",
   text: unsafeText,
   createdAtMs: Date.now(),
-});
-assert.equal(rendered.children[1].textContent, unsafeText, "Message text was not rendered as inert text content.");
-assert.equal(rendered.children[0].children[0].textContent, "<script>name</script>".slice(0, 18));
+}, senderUid => { openedSenderUid = senderUid; });
+const renderedLine = rendered.children[0];
+assert.equal(renderedLine.className, "chat-message-line");
+assert.equal(renderedLine.children[0].textContent, "<script>name</script>".slice(0, 18));
+assert.equal(renderedLine.children[1].textContent, ": ", "The sender colon must remain inline with the clickable player name.");
+assert.equal(renderedLine.children[2].textContent, unsafeText, "Message text was not rendered as inert inline text content.");
+renderedLine.children[0].listeners.click();
+assert.equal(openedSenderUid, "attacker", "Inline compact layout removed the existing sender profile action.");
 
 const server = source("functions/index.js");
 const rules = source("firestore.rules");
@@ -219,7 +225,10 @@ requires(client, /function subscribeChatMessages[\s\S]*?onSnapshot/, "Chat must 
 requires(client, /const safeLimit = Math\.max\(1, Math\.min\(100,[\s\S]*?limit\(safeLimit\)/, "Initial chat reads must be bounded.");
 requires(ui, /textContent\s*=\s*message\.text/, "User-authored chat content must use textContent.");
 assert.doesNotMatch(ui, /\.innerHTML\s*=/, "Chat UI must not inject message HTML.");
+requires(ui, /line\.append\(sender, colon, body, time\)/, "Full Global and Clan Chat must render sender, colon, message, and timestamp on one line.");
+requires(ui, /name\.textContent\s*=\s*`\$\{message\.senderDisplayName\}:`/, "Quick Peek must render the sender and colon inline.");
 requires(game, /function disposeOnlineChat[\s\S]*?CrownlandsChat\?\.dispose/, "Chat listeners must be disposed with the online session.");
+requires(game, /disposeOnlineChat\(\{ resetSession: true \}\)/, "Authentication teardown must reset the Chat session default.");
 requires(game, /crownlands:chat-player-profile/, "Chat sender names must open public profiles.");
 requires(game, /function notifyMovementHudOccupancyChange[\s\S]*?crownlands:hud-occupancy-changed/, "Movement HUD visibility changes must trigger collision recalculation.");
 requires(game, /incomingAttackBtn\.hidden\s*=\s*incoming\.length === 0;[\s\S]*?notifyMovementHudOccupancyChange\(incomingAttackBtn/, "Incoming HUD visibility changes must notify the chat collision runtime.");
@@ -231,10 +240,20 @@ requires(html, /data-chat-channel="global"/, "Global Chat tab is missing.");
 requires(html, /data-chat-channel="clan"/, "Clan Chat tab is missing.");
 requires(styles, /\.chat-toggle-btn[\s\S]*?width:\s*56px[\s\S]*?height:\s*56px/, "Chat HUD control must use the compact 56px footprint.");
 requires(styles, /\.quick-chat\s*\{[\s\S]*?height:\s*64px[\s\S]*?overflow:\s*hidden/, "Quick Peek must remain a compact same-row HUD panel.");
+requires(styles, /\.quick-chat\s*\{[\s\S]*?opacity:\s*1[\s\S]*?rgba\(49, 33, 23, \.72\)[\s\S]*?rgba\(22, 16, 12, \.72\)/, "Quick Peek must keep opaque foreground content over a visibly alpha-enabled surface.");
+const quickChatRule = styles.match(/\.quick-chat\s*\{([\s\S]*?)\n\}/)?.[1] || "";
+assert.doesNotMatch(quickChatRule, /backdrop-filter/, "Quick Peek must not use backdrop blur.");
+assert.deepEqual([...quickChatRule.matchAll(/\bopacity:\s*([^;]+)/g)].map(match => match[1].trim()), ["1"], "Quick Peek foreground opacity must remain exactly 1.");
+requires(styles, /\.quick-chat-messages\s*\{[\s\S]*?gap:\s*\.14rem/, "Quick Peek rows must use compact readable vertical spacing.");
+requires(styles, /\.chat-message\s*\{[\s\S]*?padding:\s*\.08rem\s+\.34rem/, "Full Chat rows must use compact vertical padding.");
+requires(styles, /\.chat-message\s+\.chat-message-line\s*\{[\s\S]*?white-space:\s*pre-wrap/, "Long Full Chat messages must wrap without clipping.");
+requires(styles, /\.chat-message-sender\s*\{[\s\S]*?min-height:\s*0/, "Clickable player names must not retain the shared 28px profile-link height inside compact Chat rows.");
 requires(ui, /calculateQuickPanelGeometry[\s\S]*?blockerRects[\s\S]*?minimumReadableWidth[\s\S]*?messageLimit/, "Quick Peek must derive width and message count from measured HUD blockers.");
 requires(ui, /crownlands:hud-occupancy-changed/, "Quick Peek must react to dynamic HUD occupancy without reopening chat.");
 assert.doesNotMatch(ui, /requestAnimationFrame|setInterval/, "Quick Peek collision and cooldown handling must not use a persistent animation or polling loop.");
 requires(ui, /createChatCooldownTimer[\s\S]*?clearTimer[\s\S]*?cooldown\.stop\(\)/, "Client cooldown timers must be explicitly cleaned up.");
+requires(ui, /const freshSession = !sessionStarted \|\| nextUid !== sessionUid[\s\S]*?setMode\("quick"\)/, "A fresh authenticated Chat session must default to logical Quick mode.");
+requires(ui, /function dispose\(options = \{\}\)[\s\S]*?options\.resetSession === true[\s\S]*?if \(resetSession\)[\s\S]*?setMode\("closed"\)/, "Transient Chat teardown must preserve manual mode while auth teardown resets the session.");
 requires(layoutRuntime, /function alignChatToBag[\s\S]*?bagRect\.left \+ chatRowGap[\s\S]*?centeredTop[\s\S]*?crownlands:ui-layout-applied/, "Chat must follow the unchanged Bag rectangle across responsive HUD breakpoints.");
 requires(source("ui-layout-config.js"), /"chat":\s*\{[\s\S]*?"offsetX":\s*313[\s\S]*?"offsetY":\s*16[\s\S]*?"width":\s*56[\s\S]*?"height":\s*56[\s\S]*?"inventory":\s*\{[\s\S]*?"offsetX":\s*240[\s\S]*?"width":\s*64[\s\S]*?"height":\s*64/, "Chat must be centered beside the unchanged Bag geometry.");
 requires(styles, /@media \(max-width: 900px\) and \(orientation: landscape\)[\s\S]*?grid-template-rows: auto auto minmax\(0, 1fr\) auto auto !important;/, "Landscape-phone Chat must override the shared two-row modal grid.");
@@ -247,6 +266,8 @@ for (const collectionGroup of ["messages", "chatSendRequests"]) {
 }
 requires(releaseManifestBuilder, /"chat\.css", "chat-ui\.js"/, "Chat assets must participate in release integrity hashes.");
 requires(visualFixture, /chat\.css[\s\S]*?chat-ui\.js[\s\S]*?fixture\.js/, "Chat visual QA must load the production styles and runtime.");
+requires(source("docs/visual-qa/chat/fixture.js"), /\[1, 2, 3\]\.includes\(requestedMessageCount\)/, "Chat visual QA must exercise one-, two-, and three-message Quick Peek states.");
+requires(source("docs/visual-qa/chat/fixture.js"), /params\.get\("rapid"\) === "1"[\s\S]*?changes:\s*\[\{ type: "added", message \}\]/, "Chat visual QA must exercise rapid incoming message presentation.");
 
 function jpegDimensions(buffer) {
   assert.equal(buffer.toString("hex", 0, 2), "ffd8", "Screenshot is not a JPEG.");
@@ -274,6 +295,28 @@ for (const [fileName, width, height] of [
   ["full-cooldown-ready.jpg", 844, 390],
 ]) {
   const dimensions = jpegDimensions(fs.readFileSync(path.join(root, "docs", "visual-qa", "chat", fileName)));
+  assert.deepEqual(dimensions, { width, height }, `${fileName} has the wrong dimensions.`);
+}
+
+for (const [fileName, width, height] of [
+  ["01-quick-bright-844x390.jpg", 844, 390],
+  ["02-quick-dark-detail-844x390.jpg", 844, 390],
+  ["03-quick-transparency-close-844x390.jpg", 844, 390],
+  ["04-fresh-entry-default-quick-844x390.jpg", 844, 390],
+  ["05-full-global-6-compact-1248x900.jpg", 1248, 900],
+  ["06-full-clan-4-compact-1248x900.jpg", 1248, 900],
+  ["07-long-wrap-568x320.jpg", 568, 320],
+  ["08-fresh-entry-logical-quick-568x320.jpg", 568, 320],
+  ["09-combined-hud-844x390.jpg", 844, 390],
+]) {
+  const dimensions = jpegDimensions(fs.readFileSync(path.join(
+    root,
+    "docs",
+    "visual-qa",
+    "chat-compact-rows",
+    "screenshots",
+    fileName
+  )));
   assert.deepEqual(dimensions, { width, height }, `${fileName} has the wrong dimensions.`);
 }
 
