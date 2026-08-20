@@ -36,6 +36,9 @@ async function main() {
   assert.ok(rulesetName, "Production has no active Cloud Firestore ruleset.");
   const release = releases.find(candidate => candidate.rulesetName === rulesetName);
   assert.ok(release, `Could not resolve the active Firestore release for ${rulesetName}.`);
+  const rulesets = await rulesApi.listAllRulesets(projectId);
+  const activeRuleset = rulesets.find(candidate => candidate.name === rulesetName);
+  assert.ok(activeRuleset, `Could not resolve the active Firestore ruleset metadata for ${rulesetName}.`);
   const deployedFiles = await rulesApi.getRulesetContent(rulesetName);
   const deployedRules = deployedFiles.find(file => path.basename(file.name || "") === "firestore.rules")
     || deployedFiles[0];
@@ -68,8 +71,8 @@ async function main() {
     ].join(" "));
   }
 
-  assert.ok(Date.parse(release.createTime) >= deployedAtOrAfter,
-    "The active Firestore release predates this commit. Deploy firestore:rules from this checkout.");
+  assert.ok(Date.parse(activeRuleset.createTime) >= deployedAtOrAfter,
+    "The active Firestore ruleset predates this commit. Deploy firestore:rules from this checkout.");
 
   console.log([
     `Production flag backend matches ${projectId}.`,
