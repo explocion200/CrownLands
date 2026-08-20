@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Inner Castle Alert QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <style>
+    html,
+    body {
+      width: 100%;
+      min-width: 0;
+      min-height: 100%;
+      margin: 0;
+      background: #17130f;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    #modal.inner-castle-modal {
+      display: grid;
+      place-items: center;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #modal.inner-castle-modal .modal-card {
+      width: 100%;
+      opacity: 1;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+  <dialog id="modal" class="modal inner-castle-modal" aria-labelledby="modalTitle" open>
+    <div class="modal-card">
+      <button class="modal-close" type="button" aria-label="Close">×</button>
+      <h2 id="modalTitle">Eldermere — Inner Castle</h2>
+      <div id="modalBody">
+        <section class="inner-castle-shell" aria-label="Eldermere Inner Castle">
+          <p class="inner-castle-intro">Choose a building within the Royal Bailey.</p>
+          <div class="inner-castle-layout">
+            <div class="inner-castle-stage">
+              <div class="inner-castle-scene">
+                <img class="inner-castle-hub-art" src="../../../assets/optimized/inner-castle-hub-1280x960-82bf384e502b.webp" alt="The Royal Bailey inside Eldermere" />
+                <div class="inner-castle-hotspots" aria-label="Inner Castle buildings">
+                  <button class="inner-castle-hotspot" type="button" data-inner-castle-building="treasury" aria-pressed="false" aria-label="Preview Treasury" style="--hotspot-left:19%;--hotspot-top:24%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Treasury</span>
+                      <b class="inner-castle-hotspot-alert" aria-label="New gear">!</b>
+                    </span>
+                  </button>
+                  <button class="inner-castle-hotspot selected" type="button" data-inner-castle-building="great-hall" aria-pressed="true" aria-label="Preview Great Hall" style="--hotspot-left:50%;--hotspot-top:20%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Great Hall</span>
+                    </span>
+                  </button>
+                  <button class="inner-castle-hotspot" type="button" data-inner-castle-building="barracks" aria-pressed="false" aria-label="Preview Barracks" style="--hotspot-left:81%;--hotspot-top:25%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Barracks</span>
+                    </span>
+                  </button>
+                  <button class="inner-castle-hotspot" type="button" data-inner-castle-building="alehouse" aria-pressed="false" aria-label="Preview Alehouse" style="--hotspot-left:19%;--hotspot-top:57%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Alehouse</span>
+                    </span>
+                  </button>
+                  <button class="inner-castle-hotspot" type="button" data-inner-castle-building="gatehouse" aria-pressed="false" aria-label="Preview Gatehouse" style="--hotspot-left:50%;--hotspot-top:75%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Gatehouse</span>
+                      <b class="inner-castle-hotspot-alert" aria-label="New gear">!</b>
+                    </span>
+                  </button>
+                  <button class="inner-castle-hotspot" type="button" data-inner-castle-building="royal-stables" aria-pressed="false" aria-label="Preview Royal Stables" style="--hotspot-left:81%;--hotspot-top:58%;">
+                    <span class="inner-castle-hotspot-plaque">
+                      <span class="inner-castle-hotspot-title">Royal Stables</span>
+                      <b class="inner-castle-hotspot-alert" aria-label="New gear">!</b>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <aside class="inner-castle-preview-tray" aria-label="Selected building preview">
+              <div class="inner-castle-preview" role="status" aria-live="polite" aria-atomic="true">
+                <img class="inner-castle-preview-art" src="../../../assets/optimized/inner-castle-great-hall-512x512-d8cadbae3772.webp" alt="Great Hall" />
+                <div class="inner-castle-preview-copy">
+                  <strong>Great Hall</strong>
+                  <span>Ruler power / kingdom upgrades</span>
+                  <small>Not yet available</small>
+                </div>
+              </div>
+              <button class="inner-castle-back-btn" type="button"><span aria-hidden="true">‹</span>Back to City Details</button>
+            </aside>
+          </div>
+        </section>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>
