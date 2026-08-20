@@ -19140,17 +19140,26 @@ function getTroopProductionPerSecond() {
   return playerCities().reduce((sum, city) => sum + getCityStats(city).troopProductionPerSecond, 0);
 }
 
+function getHarvestBonusBaseRates() {
+  return playerRegularCities().reduce((rates, city) => {
+    const stats = getCityStats(city, {
+      includeSkillBoosts: false,
+      includeStrongholdBoosts: false,
+      includeTimedItemBoosts: false,
+    });
+    rates.goldPerHour += Math.max(0, Number(stats.baseGoldProductionPerHour) || 0);
+    rates.troopsPerHour += Math.max(0, Number(stats.baseTroopProductionPerHour) || 0);
+    return rates;
+  }, { goldPerHour: 0, troopsPerHour: 0 });
+}
+
 function getHarvestBonusGoldReward() {
-  const passiveGold = Math.floor(getGoldPerSecond({ includeTimedItemBoosts: false }) * HARVEST_BONUS_GOLD_SECONDS);
+  const passiveGold = Math.floor(getHarvestBonusBaseRates().goldPerHour * HARVEST_BONUS_GOLD_SECONDS / 3600);
   return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
 }
 
 function getHarvestBonusTroopReward() {
-  const passiveTroopsPerSecond = playerCities().reduce(
-    (sum, city) => sum + getCityStats(city, { includeTimedItemBoosts: false }).troopProductionPerSecond,
-    0
-  );
-  const passiveTroops = Math.floor(passiveTroopsPerSecond * HARVEST_BONUS_TROOP_SECONDS);
+  const passiveTroops = Math.floor(getHarvestBonusBaseRates().troopsPerHour * HARVEST_BONUS_TROOP_SECONDS / 3600);
   return clamp(Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops), HARVEST_BONUS_MIN_TROOPS, HARVEST_BONUS_MAX_TROOPS);
 }
 

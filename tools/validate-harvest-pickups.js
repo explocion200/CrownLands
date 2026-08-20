@@ -60,6 +60,97 @@ assert.match(collectSource, /result\?\.currentUser\?\.daily/, "Pickup count mess
 assert.match(collectSource, /destinationRegionId:\s*type === "troops" \? String\(result\?\.targetRegionId/, "Troop pickups must use the server-confirmed Main City region for their animation.");
 assert.match(serverSource, /targetRegionId:\s*normalizeRegionId\(mainEntry\.city\.regionId \|\| mainInfo\.regionId\)/, "The pickup response must identify the credited Main City region.");
 
+const serverRewardSource = extractFunction(serverSource, "getHarvestBonusReward");
+assert.match(
+  serverRewardSource,
+  /const rates = getRewardedAdBaseRates\(economy\);/,
+  "Server pickup rewards must use the canonical raw rewarded-ad base-rate helper.",
+);
+assert.match(
+  serverRewardSource,
+  /rates\.goldPerHour \* HARVEST_BONUS_GOLD_SECONDS \/ 3600/,
+  "Gold pickups must be calculated from raw hourly Gold production.",
+);
+assert.match(
+  serverRewardSource,
+  /rates\.troopsPerHour \* HARVEST_BONUS_TROOP_SECONDS \/ 3600/,
+  "Troop pickups must be calculated from raw hourly troop production.",
+);
+assert.doesNotMatch(
+  serverSource,
+  /function getHarvestEconomyRates\(/,
+  "The obsolete boosted pickup-rate helper must not remain available.",
+);
+
+const serverRewardContext = {
+  HARVEST_BONUS_GOLD_SECONDS: 3600,
+  HARVEST_BONUS_TROOP_SECONDS: 3600,
+  HARVEST_BONUS_MIN_GOLD: 250,
+  HARVEST_BONUS_MIN_TROOPS: 250,
+  HARVEST_BONUS_MAX_TROOPS: Number.MAX_SAFE_INTEGER,
+  rawRates: { goldPerHour: 10_000, troopsPerHour: 7_200 },
+  getRewardedAdBaseRates() { return serverRewardContext.rawRates; },
+  clampInt(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, Math.floor(Number(value) || 0)));
+  },
+};
+vm.createContext(serverRewardContext);
+vm.runInContext(serverRewardSource, serverRewardContext);
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 10_000);
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 7_200);
+serverRewardContext.rawRates = { goldPerHour: 10_000.9, troopsPerHour: 7_200.9 };
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 10_000, "Gold pickup rewards must floor fractional production.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 7_200, "Troop pickup rewards must floor fractional production.");
+serverRewardContext.rawRates = { goldPerHour: 100, troopsPerHour: 100 };
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 250, "Gold pickup minimums must remain intact.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 250, "Troop pickup minimums must remain intact.");
+
+const localCities = [
+  { baseGold: 10_000, baseTroops: 7_200, boostedGold: 19_000, boostedTroops: 13_000 },
+];
+const localStatOptions = [];
+const localRewardContext = {
+  HARVEST_BONUS_GOLD_SECONDS: 3600,
+  HARVEST_BONUS_TROOP_SECONDS: 3600,
+  HARVEST_BONUS_MIN_GOLD: 250,
+  HARVEST_BONUS_MIN_TROOPS: 250,
+  HARVEST_BONUS_MAX_TROOPS: Number.MAX_SAFE_INTEGER,
+  playerRegularCities: () => localCities.filter(city => !city.isStronghold),
+  getCityStats(city, options) {
+    localStatOptions.push(options);
+    return {
+      baseGoldProductionPerHour: city.baseGold,
+      baseTroopProductionPerHour: city.baseTroops,
+      goldProductionPerHour: city.boostedGold,
+      troopProductionPerHour: city.boostedTroops,
+    };
+  },
+  clamp(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, Number(value) || 0));
+  },
+};
+vm.createContext(localRewardContext);
+for (const functionName of [
+  "getHarvestBonusBaseRates",
+  "getHarvestBonusGoldReward",
+  "getHarvestBonusTroopReward",
+]) {
+  vm.runInContext(extractFunction(gameSource, functionName), localRewardContext);
+}
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 10_000, "Local Gold pickups must ignore the 19,000/hour boosted rate.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 7_200, "Local troop pickups must ignore the 13,000/hour boosted rate.");
+assert.deepEqual(
+  JSON.parse(JSON.stringify(localStatOptions.at(-1))),
+  { includeSkillBoosts: false, includeStrongholdBoosts: false, includeTimedItemBoosts: false },
+  "Local pickup base-rate calculation must explicitly disable every local production-bonus category.",
+);
+localCities.push({ baseGold: 2_500, baseTroops: 1_200, boostedGold: 9_999_999, boostedTroops: 9_999_999 });
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 12_500, "A normal-city raw production increase must increase the local Gold pickup.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 8_400, "A normal-city raw production increase must increase the local troop pickup.");
+localCities.push({ isStronghold: true, baseGold: 5_000_000, baseTroops: 5_000_000, boostedGold: 9_999_999, boostedTroops: 9_999_999 });
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 12_500, "Stronghold production must not increase the local Gold pickup.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 8_400, "Stronghold production must not increase the local troop pickup.");
+
 const profileButton = { id: "profile-button" };
 const profileTroopTotal = { id: "profile-troops", hidden: false, getClientRects: () => [] };
 const renderedMainCity = {

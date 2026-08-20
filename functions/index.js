@@ -12231,21 +12231,6 @@ function createWelcomeBackSummary(economy = null, welcomeBack = null, lossSnapsh
   });
 }
 
-function getHarvestEconomyRates(economy = null) {
-  if (!economy) return { goldPerSecond: 0, troopProductionPerSecond: 0 };
-  return economy.cityEntries.reduce((totals, entry) => {
-    const city = entry?.city || {};
-    if (isStronghold(city) || getOwnerUid(city) !== economy.uid) return totals;
-    const stats = getCityProductionStats(city, economy.profileAfter, economy.bonuses, {
-      includeWarDrums: false,
-      includeRoyalTaxDecree: false,
-    });
-    totals.goldPerSecond += Math.max(0, safeNumber(stats.goldProductionPerSecond, 0));
-    totals.troopProductionPerSecond += Math.max(0, safeNumber(stats.troopProductionPerSecond, 0));
-    return totals;
-  }, { goldPerSecond: 0, troopProductionPerSecond: 0 });
-}
-
 function getRewardedAdBaseRates(economy = null) {
   if (!economy) return { goldPerHour: 0, troopsPerHour: 0 };
   return economy.cityEntries.reduce((totals, entry) => {
@@ -12277,16 +12262,16 @@ function getRewardedAdPreviewRewardsFromStats(stats = {}) {
 }
 
 function getHarvestBonusReward(economy = null, type = "gold") {
-  const rates = getHarvestEconomyRates(economy);
+  const rates = getRewardedAdBaseRates(economy);
   if (type === "troops") {
-    const passiveTroops = Math.floor(rates.troopProductionPerSecond * HARVEST_BONUS_TROOP_SECONDS);
+    const passiveTroops = Math.floor(rates.troopsPerHour * HARVEST_BONUS_TROOP_SECONDS / 3600);
     return clampInt(
       Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops),
       HARVEST_BONUS_MIN_TROOPS,
       HARVEST_BONUS_MAX_TROOPS
     );
   }
-  const passiveGold = Math.floor(rates.goldPerSecond * HARVEST_BONUS_GOLD_SECONDS);
+  const passiveGold = Math.floor(rates.goldPerHour * HARVEST_BONUS_GOLD_SECONDS / 3600);
   return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
 }
 
