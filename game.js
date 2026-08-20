@@ -1100,7 +1100,8 @@ if (!PLAYER_FLAG_CONFIG) throw new Error("Crownlands player flag configuration d
 const FLAG_COLOR_OPTIONS = PLAYER_FLAG_CONFIG.COLORS;
 const FLAG_COLORS = PLAYER_FLAG_CONFIG.COLOR_VALUES;
 const FLAG_PATTERNS = PLAYER_FLAG_CONFIG.PATTERNS;
-const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG.SYMBOLS;
+const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG.SELECTABLE_SYMBOLS;
+const EXTERNAL_FLAG_ICON_KEYS = new Set(FLAG_SYMBOLS.map(option => option.icon));
 const FlagRenderer = globalThis.CrownlandsFlagRenderer?.create({
   config: PLAYER_FLAG_CONFIG,
   renderIcon: renderCrownlandsIcon,
@@ -35296,7 +35297,10 @@ function renderCrownlandsIcon(name, className = "") {
   const iconKey = getCrownlandsIconKey(name);
   const extraClass = String(className || "").trim();
   const classes = extraClass ? `cl-icon ${escapeHtml(extraClass)}` : "cl-icon";
-  return `<svg class="${classes}" aria-hidden="true" focusable="false"><use href="#cl-icon-${iconKey}"></use></svg>`;
+  const href = EXTERNAL_FLAG_ICON_KEYS.has(iconKey)
+    ? `/assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
+    : `#cl-icon-${iconKey}`;
+  return `<svg class="${classes}" aria-hidden="true" focusable="false"><use href="${href}"></use></svg>`;
 }
 
 function renderCrownlandsGlyph(name, className = "") {

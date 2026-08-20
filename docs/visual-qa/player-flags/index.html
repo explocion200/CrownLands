@@ -225,7 +225,7 @@
     </dialog>
 
     <section class="qa-panel"><h2>Patterns</h2><div id="patternCatalog" class="qa-catalog"></div></section>
-    <section class="qa-panel"><h2>Symbols</h2><div id="symbolCatalog" class="qa-catalog"></div></section>
+    <section class="qa-panel"><h2>Renderer compatibility symbols (30 supported)</h2><div id="symbolCatalog" class="qa-catalog"></div></section>
 
     <section class="qa-panel">
       <h2>Map owner flags</h2>
@@ -262,7 +262,10 @@
       document.body.prepend(document.importNode(sprite, true));
 
       function iconMarkup(symbol) {
-        return `<svg class="cl-icon flag-symbol-icon" aria-hidden="true"><use href="#cl-icon-${symbol.icon}"></use></svg>`;
+        const href = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key)
+          ? `../../../assets/flag-symbols/runtime.svg#cl-icon-${symbol.icon}`
+          : `#cl-icon-${symbol.icon}`;
+        return `<svg class="cl-icon flag-symbol-icon" aria-hidden="true"><use href="${href}"></use></svg>`;
       }
 
       const flagRenderer = window.CrownlandsFlagRenderer.create({
@@ -280,6 +283,8 @@
       function renderPreview() {
         const flag = paintFlag(document.getElementById("livePreview"), draft, "qa-editor");
         paintFlag(document.getElementById("smallPreview"), draft, "qa-editor");
+        document.getElementById("qaPatternName").textContent = config.PATTERNS.find(option => option.key === draft.pattern)?.label || draft.pattern;
+        document.getElementById("qaSymbolName").textContent = config.getSymbol(draft.symbol, "qa-editor").label;
         const previewValues = document.getElementById("previewValues");
         if (previewValues) previewValues.textContent = JSON.stringify(flag);
         document.querySelectorAll("[data-qa-color-key]").forEach(button => {
@@ -313,7 +318,16 @@
 
       document.getElementById("symbolCatalog").innerHTML = config.SYMBOLS.map(option => `<article class="qa-symbol-card"><div class="kingdom-flag" data-symbol="${option.key}"><span class="flag-symbol"></span></div><span>${option.label}</span></article>`).join("");
       document.querySelectorAll("[data-symbol]").forEach(element => paintFlag(element, { ...draft, symbol: element.dataset.symbol }, `symbol-${element.dataset.symbol}`));
-      document.getElementById("qaSymbolOptions").innerHTML = config.SYMBOLS.map(option => `<button type="button" class="player-flag-editor__control player-flag-editor__symbol-card${option.key === draft.symbol ? " active" : ""}" aria-label="${option.label}" aria-pressed="${option.key === draft.symbol}">${iconMarkup(option)}<span>${option.label}</span></button>`).join("");
+      function renderSymbolOptions() {
+        const container = document.getElementById("qaSymbolOptions");
+        container.innerHTML = config.SELECTABLE_SYMBOLS.map(option => `<button type="button" class="player-flag-editor__control player-flag-editor__symbol-card${option.key === draft.symbol ? " active" : ""}" data-qa-symbol="${option.key}" aria-label="${option.label}" aria-pressed="${option.key === draft.symbol}">${iconMarkup(option)}<span>${option.label}</span></button>`).join("");
+        container.querySelectorAll("[data-qa-symbol]").forEach(button => button.addEventListener("click", () => {
+          draft.symbol = button.dataset.qaSymbol;
+          renderPreview();
+          renderSymbolOptions();
+        }));
+      }
+      renderSymbolOptions();
 
       function showEditorTab(key) {
         document.querySelectorAll("[data-qa-tab]").forEach(button => {
@@ -354,6 +368,7 @@
 
       const migrationFixtures = [
         ["Fully valid old flag", { primary: "#1f5f91", secondary: "#d3a62e", symbolColor: "#d9e2e8", pattern: "diagonal", symbol: "crown" }],
+        ["Legacy-only stored symbol remains readable", { ...ownerA, symbol: "double-eagle" }],
         ["Removed old symbol", { ...ownerA, symbol: "castle" }],
         ["Invalid old color", { ...ownerA, primary: "parchment" }],
         ["Invalid old pattern", { ...ownerA, pattern: "unknown" }],
@@ -379,6 +394,8 @@
         pass: getComputedStyle(button).backgroundColor === expectedRgb(button.dataset.flagColor),
       }));
       checks.push({ label: "30 symbol cards", pass: document.querySelectorAll("[data-symbol]").length === 30 });
+      checks.push({ label: "21 selectable symbol cards", pass: document.querySelectorAll("[data-qa-symbol]").length === 21 });
+      checks.push({ label: "legacy-only symbols hidden from selector", pass: config.LEGACY_ONLY_SYMBOL_KEYS.every(key => !document.querySelector(`[data-qa-symbol="${key}"]`)) });
       checks.push({ label: "14 pattern cards", pass: document.querySelectorAll("[data-pattern]").length === 14 });
       const declaredCaptureWidth = Number(qaParams.get("width")) || 0;
       checks.push({
@@ -431,6 +448,12 @@
         document.getElementById("qaSaveStatus").dataset.state = "success";
         document.getElementById("qaSaveStatus").textContent = "Saved everywhere";
         document.querySelector(".player-flag-editor__dirty-status").textContent = "No unsaved changes";
+      } else if (qaState === "legacy") {
+        draft.symbol = "double-eagle";
+        renderPreview();
+        renderSymbolOptions();
+        showEditorTab("symbol");
+        document.querySelector(".player-flag-editor__dirty-status").textContent = "Legacy-only saved symbol · readable, not selectable";
       } else if (qaState === "discard") {
         document.getElementById("qaDiscardDialog").showModal();
       } else if (qaState === "surfaces") {

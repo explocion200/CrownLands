@@ -52,7 +52,7 @@
   const SYMBOLS = Object.freeze([
     Object.freeze({ key: "crown", label: "Crown", icon: "flag-crown" }),
     Object.freeze({ key: "lion", label: "Lion Rampant", icon: "flag-lion" }),
-    Object.freeze({ key: "eagle", label: "Eagle", icon: "flag-eagle" }),
+    Object.freeze({ key: "eagle", label: "Eagle Displayed", icon: "flag-eagle" }),
     Object.freeze({ key: "double-eagle", label: "Double-Headed Eagle", icon: "flag-double-eagle" }),
     Object.freeze({ key: "wolf", label: "Wolf Head", icon: "flag-wolf" }),
     Object.freeze({ key: "stag", label: "Stag / Hart", icon: "flag-stag" }),
@@ -68,7 +68,7 @@
     Object.freeze({ key: "battle-axe", label: "Battle Axe", icon: "flag-battle-axe" }),
     Object.freeze({ key: "war-hammer", label: "War Hammer", icon: "flag-war-hammer" }),
     Object.freeze({ key: "spearhead", label: "Spearhead", icon: "flag-spearhead" }),
-    Object.freeze({ key: "gauntlet", label: "Gauntlet / Armored Fist", icon: "flag-gauntlet" }),
+    Object.freeze({ key: "gauntlet", label: "Armored Fist", icon: "flag-gauntlet" }),
     Object.freeze({ key: "tower", label: "Tower", icon: "flag-tower" }),
     Object.freeze({ key: "castle-gate", label: "Castle Gate", icon: "flag-castle-gate" }),
     Object.freeze({ key: "fleur-de-lis", label: "Fleur-de-lis", icon: "flag-fleur-de-lis" }),
@@ -82,9 +82,25 @@
     Object.freeze({ key: "helm", label: "Great Helm", icon: "flag-helm" }),
   ]);
 
+  const LEGACY_ONLY_SYMBOL_KEYS = Object.freeze([
+    "double-eagle",
+    "griffin",
+    "raven",
+    "falcon",
+    "moon",
+    "diamond",
+    "guardian",
+    "banner",
+    "helm",
+  ]);
+  const SELECTABLE_SYMBOLS = Object.freeze(
+    SYMBOLS.filter(option => !LEGACY_ONLY_SYMBOL_KEYS.includes(option.key))
+  );
+
   const COLOR_VALUES = Object.freeze(COLORS.map(option => option.value));
   const PATTERN_KEYS = Object.freeze(PATTERNS.map(option => option.key));
   const SYMBOL_KEYS = Object.freeze(SYMBOLS.map(option => option.key));
+  const SELECTABLE_SYMBOL_KEYS = Object.freeze(SELECTABLE_SYMBOLS.map(option => option.key));
   const COLOR_BY_VALUE = new Map(COLORS.map(option => [option.value, option]));
   const SYMBOL_BY_KEY = new Map(SYMBOLS.map(option => [option.key, option]));
   const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -180,7 +196,7 @@
       secondary: selectStable(secondaryChoices, stableKey, "secondary") || DEFAULT_FLAG.secondary,
       symbolColor: selectStable(["#F2E2BF", "#DDD0AE", "#202426", "#303436"], stableKey, "symbolColor") || DEFAULT_FLAG.symbolColor,
       pattern: selectStable(PATTERN_KEYS, stableKey, "pattern") || DEFAULT_FLAG.pattern,
-      symbol: selectStable(SYMBOL_KEYS, stableKey, "symbol") || DEFAULT_FLAG.symbol,
+      symbol: selectStable(SELECTABLE_SYMBOL_KEYS, stableKey, "symbol") || DEFAULT_FLAG.symbol,
     };
   }
 
@@ -263,7 +279,7 @@
       secondary,
       symbolColor: symbolPool[randomIndex(symbolPool.length, randomInt)]?.color || DEFAULT_FLAG.symbolColor,
       pattern: PATTERN_KEYS[randomIndex(PATTERN_KEYS.length, randomInt)] || DEFAULT_FLAG.pattern,
-      symbol: SYMBOL_KEYS[randomIndex(SYMBOL_KEYS.length, randomInt)] || DEFAULT_FLAG.symbol,
+      symbol: SELECTABLE_SYMBOL_KEYS[randomIndex(SELECTABLE_SYMBOL_KEYS.length, randomInt)] || DEFAULT_FLAG.symbol,
     };
   }
 
@@ -294,6 +310,9 @@
     PATTERN_KEYS,
     SYMBOLS,
     SYMBOL_KEYS,
+    SELECTABLE_SYMBOLS,
+    SELECTABLE_SYMBOL_KEYS,
+    LEGACY_ONLY_SYMBOL_KEYS,
     LEGACY_SYMBOL_MAP,
     DEFAULT_FLAG,
     normalizeHexColor,

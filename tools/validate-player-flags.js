@@ -10,6 +10,7 @@ const game = read("game.js");
 const firebaseClient = read("firebaseClient.js");
 const server = read("functions/index.js");
 const index = read("index.html");
+const runtimeSprite = read("assets/flag-symbols/runtime.svg");
 const worker = read("service-worker.js");
 const styles = read("styles.css");
 const editorStyles = read("player-flag-editor.css");
@@ -48,6 +49,12 @@ assert.deepEqual(config.toStoredFlag(runtimeLegacy, "owner-a"), legacy, "Reading
 const runtimeV2 = config.createVersion2Flag(legacy, "owner-a");
 assert.deepEqual(runtimeV2, { version: 2, ...legacy });
 assert.deepEqual(config.toStoredFlag(runtimeV2, "owner-a"), { ...legacy, version: 2 });
+const approvedRoundTrip = config.normalizeFlag(
+  JSON.parse(JSON.stringify(config.toStoredFlag({ ...runtimeV2, symbol: "war-hammer" }, "round-trip-owner"))),
+  "round-trip-owner"
+);
+assert.equal(approvedRoundTrip.symbol, "war-hammer", "An approved symbol did not survive save/reload normalization.");
+assert.equal(approvedRoundTrip.version, 2, "The saved approved symbol lost its schema version on reload.");
 assert.equal(config.getFlagVersion({ version: 99 }), 1, "Unknown versions must be treated as legacy at read time.");
 assert.deepEqual(Object.keys(config.toStoredFlag({ ...legacy, version: 99 }, "owner-a")).sort(), Object.keys(legacy).sort());
 
@@ -75,15 +82,23 @@ assert.deepEqual(
 );
 assert.equal(config.normalizeFlag({ ...legacy, primary: "#12abEF" }, "owner-a").primary, "#12ABEF");
 
-const restoredSymbols = ["cross", "moon", "diamond", "guardian", "banner", "helm"];
+const selectableSymbols = [
+  "crown", "lion", "eagle", "wolf", "stag", "boar", "bear", "horse", "dragon",
+  "serpent", "crossed-swords", "battle-axe", "war-hammer", "spearhead", "gauntlet",
+  "tower", "castle-gate", "fleur-de-lis", "oak-tree", "sunburst", "cross",
+];
+const legacyOnlySymbols = ["double-eagle", "griffin", "raven", "falcon", "moon", "diamond", "guardian", "banner", "helm"];
 assert.equal(config.SYMBOL_KEYS.length, 30, "The v2 catalog must contain exactly 30 stable symbol IDs.");
-for (const symbol of restoredSymbols) assert.ok(config.SYMBOL_KEYS.includes(symbol), `Missing restored ${symbol} ID.`);
+assert.deepEqual(config.SELECTABLE_SYMBOL_KEYS, selectableSymbols, "The editor must expose exactly the 21 approved symbols.");
+assert.deepEqual(config.LEGACY_ONLY_SYMBOL_KEYS, legacyOnlySymbols, "The legacy-only compatibility set changed.");
+for (const symbol of legacyOnlySymbols) assert.ok(config.SYMBOL_KEYS.includes(symbol), `Missing readable legacy-only ${symbol} ID.`);
 assert.equal(config.PATTERN_KEYS.length, 14);
 for (const pattern of config.PATTERN_KEYS) assert.ok(styles.includes(`pattern-${pattern}`), `Missing ${pattern} CSS geometry.`);
 for (const symbol of config.SYMBOLS) {
-  assert.equal((index.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `Missing or duplicated ${symbol.label} SVG.`);
+  const source = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key) ? runtimeSprite : index;
+  assert.equal((source.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `Missing or duplicated ${symbol.label} SVG.`);
 }
-assert.doesNotMatch(index.slice(index.indexOf("cl-icon-flag-crown"), index.indexOf("</svg>")), /<text|<image|href="https?:/i);
+assert.doesNotMatch(`${runtimeSprite}\n${index.slice(index.indexOf("cl-icon-flag-double-eagle"), index.indexOf("</svg>"))}`, /<text|<image|href="https?:/i);
 
 class FakeClassList {
   constructor() { this.values = new Set(["kingdom-flag"]); }
@@ -115,6 +130,15 @@ assert.match(symbolNode.innerHTML, /flag-lion/);
 assert.equal(fakeElement.dataset.flagVersion, "2");
 assert.equal(fakeElement.dataset.flagContext, "test");
 
+for (const symbol of legacyOnlySymbols) {
+  const historicalFlag = { ...runtimeV2, symbol };
+  const normalized = renderer.render(fakeElement, historicalFlag, { stableKey: `legacy-${symbol}`, context: "legacy-fixture", size: "small" });
+  assert.equal(normalized.symbol, symbol, `${symbol} no longer normalizes for historical flags.`);
+  assert.equal(symbolNode.dataset.flagSymbol, symbol, `${symbol} no longer reaches the shared renderer.`);
+  assert.match(symbolNode.innerHTML, new RegExp(`flag-${symbol}`), `${symbol} fallback geometry no longer renders.`);
+  assert.equal(config.toStoredFlag(historicalFlag, `legacy-${symbol}`).symbol, symbol, `${symbol} is rewritten when stored.`);
+}
+
 assert.match(manuscript, /button:not\(\.player-flag-editor__control\)/, "Shared manuscript buttons still capture editor controls.");
 for (const theme of [profileTheme, palette]) assert.match(theme, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/);
 assert.match(editorStyles, /background-color:\s*var\(--flag-swatch\)/);
@@ -129,6 +153,8 @@ const editorRenderer = extractFunction(game, "renderFlagEditor");
 assert.match(editorRenderer, /FlagRenderer\.render\(flagEditorPreview/);
 assert.match(editorRenderer, /FlagRenderer\.render\(flagEditorSmallPreview/);
 assert.match(editorRenderer, /hideSymbol:\s*true/);
+assert.match(game, /const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG\.SELECTABLE_SYMBOLS;/, "The editor does not use the 21-symbol selectable catalog.");
+assert.match(game, /EXTERNAL_FLAG_ICON_KEYS\.has\(iconKey\)[\s\S]*?\/assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}/, "Approved flag icons are not routed to the same-origin runtime sprite.");
 assert.match(game, /function isFlagEditorDirty\(\)/);
 assert.match(game, /flagDiscardDialog\.addEventListener\("close"/);
 
@@ -155,7 +181,7 @@ assert.match(rules, /hasOnly\(\['version', 'primary', 'secondary', 'symbolColor'
 assert.match(rules, /!flag\.keys\(\)\.hasAny\(\['version'\]\) \|\| flag\.version == 2/);
 assert.match(rules, /function validPlayerSaveFlag\(\)/);
 assert.match(rules, /match \/presence\/\{uid\}[\s\S]*validOptionalPlayerFlag\(request\.resource\.data\)/);
-for (const symbol of restoredSymbols) assert.match(rules, new RegExp(`'${symbol}'`));
+for (const symbol of legacyOnlySymbols) assert.match(rules, new RegExp(`'${symbol}'`));
 
 assert.match(index, /id="flagEditorSmallPreview"/);
 assert.match(index, /data-flag-editor-tab="colors"/);
@@ -170,9 +196,12 @@ for (const source of [index, worker]) {
 for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /functions\/flagRenderer\.js/);
   assert.match(source, /player-flag-editor\.css/);
+  assert.match(source, /assets\/flag-symbols\/runtime\.svg/);
 }
-for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "14 pattern cards", "computed visual checks"]) {
+for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "21 selectable symbol cards", "legacy-only symbols hidden from selector", "14 pattern cards", "computed visual checks"]) {
   assert.ok(qaPage.includes(token), `Player-flag visual QA is missing ${token}.`);
 }
+assert.match(qaPage, /function renderSymbolOptions\(\)/, "Player-flag visual QA lacks live symbol selection wiring.");
+assert.match(qaPage, /draft\.symbol = button\.dataset\.qaSymbol;[\s\S]*renderPreview\(\);[\s\S]*renderSymbolOptions\(\);/, "Player-flag visual QA does not repaint both previews and selected controls after a symbol change.");
 
 console.log("Validated versioned player flags, shared renderer surfaces, persistence ordering, CSS isolation, Firestore schema, and QA coverage.");

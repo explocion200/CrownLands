@@ -9,6 +9,7 @@ const baseCss = read("styles.css");
 const paletteCss = read("crownlands-palette.css");
 const profileCss = read("profile-theme.css");
 const index = read("index.html");
+const flagRuntimeSprite = read("assets/flag-symbols/runtime.svg");
 const game = read("game.js");
 const serviceWorker = read("service-worker.js");
 const uiLayoutRuntime = read("ui-layout-runtime.js");
@@ -178,7 +179,7 @@ assert.match(baseCss, /\.flag-swatch-grid \.flag-color-swatch[\s\S]*?background-
 assert.match(profileCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Profile button theme can still overwrite inactive flag swatches.");
 assert.match(paletteCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Crownlands palette can still overwrite inactive flag swatches.");
 assert.match(game, /data-flag-color[\s\S]{0,400}aria-pressed="\$\{selected\}"/, "Flag swatches must expose their selected state.");
-assert.match(index, /id="cl-icon-flag-horse"[\s\S]{0,260}M8 29l1-11/, "The dedicated heraldic horse charge is missing.");
+assert.match(flagRuntimeSprite, /id="cl-icon-flag-horse"[\s\S]*?<path\b[^>]*\bd="[^"]+"/, "The dedicated heraldic horse charge is missing from the runtime sprite.");
 assert.match(index, /hud-report-192x192-21644b7390fb\.webp/, "The approved Report artwork changed.");
 assert.match(index, /id="logBtn"[\s\S]{0,520}class="nav-btn-heading">Reports<\/strong>[\s\S]{0,160}nav-btn-timer-placeholder/, "Reports is missing the aligned heading and reserved timer row.");
 assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="outgoingAttackCount"[\s\S]{0,100}Outgoing<\/strong>[\s\S]{0,160}id="outgoingAttackTime"/, "Troop Movements is missing its aligned count, label, and timer treatment.");

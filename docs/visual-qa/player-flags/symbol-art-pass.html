@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Selected Heraldic Symbol Integration</title>
+  <link rel="stylesheet" href="../../../styles.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../player-flag-editor.css?v=20260819-player-flags-v2-r1" />
+  <style>
+    :root { color-scheme: dark; --ink: #2d2016; --parchment: #f2e2bf; --burgundy: #722f37; --gold: #c69a45; --navy: #243447; --forest: #355e3b; --charcoal: #303436; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 568px; color: var(--ink); background: #17110d; font-family: Georgia, serif; }
+    html[data-proof-capture="true"] body { width: var(--proof-capture-width); }
+    html[data-proof-capture="true"] .proof-shell { width: calc(var(--proof-capture-width) - 40px); max-width: none; }
+    .proof-shell { width: min(1420px, 100%); margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
+    .proof-header, .proof-section { border: 2px solid #997643; background: #ead9b7; box-shadow: 0 12px 30px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,250,230,.65); }
+    .proof-header { padding: 18px 22px; color: #f7e8c6; background: linear-gradient(180deg, #71343a, #4b2228); }
+    .proof-header h1, .proof-header p { margin: 0; }
+    .proof-header p { margin-top: 6px; color: #f2e2bf !important; }
+    .proof-meta { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .proof-status, .proof-chip { padding: 6px 9px; border: 1px solid rgba(242,226,191,.44); color: #f2e2bf; background: rgba(18,12,10,.28); font: 800 11px/1.25 ui-monospace, monospace; }
+    .proof-status.pass { color: #e2efcb; border-color: #91a56f; }
+    .proof-status.fail { color: #ffd8d0; border-color: #d16d65; }
+    .proof-section { padding: 16px; }
+    .proof-section__heading { margin: 0 0 12px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+    .proof-section h2, .proof-section p { margin: 0; }
+    .proof-section h2 { color: #6e2025; }
+    .proof-section p { color: #5a4632 !important; font-size: 12px; }
+    .proof-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .proof-card { min-width: 0; min-height: 216px; padding: 9px; display: grid; grid-template-columns: 100px minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 7px 9px; border: 1px solid #9c7a4b; background: #dfcda9; box-shadow: inset 0 0 0 1px rgba(255,247,222,.6); }
+    .proof-card[data-selected="true"] { border-color: #6e2025; background: #e4cfaa; }
+    .proof-card__head { grid-column: 1 / -1; min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .proof-card__head strong { min-width: 0; color: #4f2026; font-size: 13px; line-height: 1.05; }
+    .proof-card__head code { color: #5a4632; font-size: 10px; white-space: nowrap; }
+    .proof-card__large { width: 100px; height: 100px; display: grid; place-items: center; color: #39261b; background: radial-gradient(circle, #f5e7c8 0 42%, #d4bd91 43% 100%); border: 1px solid #a48452; }
+    .proof-card__large svg { width: 96px; height: 96px; }
+    .proof-card__scales { min-width: 0; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 6px; }
+    .proof-sample { min-width: 0; display: grid; place-items: center; gap: 2px; color: #5a4632; font: 800 8px/1 ui-monospace, monospace; text-align: center; }
+    .proof-editor-size { width: 52px; min-height: 48px; padding: 3px; display: grid; place-items: center; border: 1px solid #8d6c40; background: linear-gradient(180deg, #e5d5b0, #c2aa79); }
+    .proof-editor-size svg { width: 28px; height: 28px; color: #4b2d1c; }
+    .proof-flag { position: relative; overflow: hidden; isolation: isolate; }
+    .proof-flag--preview { width: 72px !important; height: 52px !important; }
+    .proof-flag--preview .flag-symbol-icon { width: 48px !important; height: 48px !important; }
+    .proof-flag--map { width: 36px !important; height: 27px !important; }
+    .proof-flag--map .flag-symbol-icon { width: 22px !important; height: 22px !important; }
+    .proof-card__contrasts { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .proof-contrast { min-width: 0; height: 34px; display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 5px; color: #4d3928; font: 800 8px/1.1 ui-monospace, monospace; }
+    .proof-contrast .kingdom-flag { width: 52px !important; height: 34px !important; }
+    .proof-contrast .flag-symbol-icon { width: 28px !important; height: 28px !important; }
+    .comparison-table { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .comparison-pair { padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid #9c7a4b; color: #4d3928; background: #dfcda9; font-size: 11px; font-weight: 800; text-align: center; }
+    .comparison-pair svg { width: 32px; height: 32px; color: #4b2d1c; }
+    .comparison-pair b { color: #8a5e27; }
+    .challenge-flags { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .challenge-card { padding: 10px; display: grid; justify-items: center; gap: 7px; border: 1px solid #9c7a4b; background: #dfcda9; }
+    .challenge-card .kingdom-flag { width: 142px !important; height: 94px !important; }
+    .challenge-card .flag-symbol-icon { width: 68px !important; height: 68px !important; }
+    .challenge-card strong { color: #4f2026; font-size: 12px; }
+    .city-strip { padding: 14px; display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 6px; border: 1px solid #8a6a42; background: #bda77e; }
+    .city-symbol { min-width: 0; display: grid; justify-items: center; gap: 4px; color: #4a3428; font: 800 8px/1 ui-monospace, monospace; }
+    .city-symbol .kingdom-flag { width: 36px !important; height: 27px !important; }
+    .city-symbol .flag-symbol-icon { width: 22px !important; height: 22px !important; }
+    .city-symbol span { overflow: hidden; max-width: 100%; text-overflow: ellipsis; }
+    html[data-proof-view="selected"] .proof-section:not([data-section="selected"]),
+    html[data-proof-view="selected"] .proof-header p,
+    html[data-proof-view="selected"] .proof-meta .proof-chip { display: none; }
+    html[data-proof-view="selected"] .proof-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    html[data-proof-view="selected"] .proof-card { min-height: 240px; grid-template-columns: 118px minmax(0, 1fr); }
+    html[data-proof-view="selected"] .proof-card__large { width: 118px; height: 118px; }
+    html[data-proof-view="selected"] .proof-card__large svg { width: 112px; height: 112px; }
+    html[data-proof-view="challenges"] .proof-section:not([data-section="challenges"]),
+    html[data-proof-view="challenges"] .proof-header p,
+    html[data-proof-view="challenges"] .proof-meta .proof-chip { display: none; }
+    html[data-proof-view="city"] .proof-section:not([data-section="city"]),
+    html[data-proof-view="city"] .proof-header p,
+    html[data-proof-view="city"] .proof-meta .proof-chip { display: none; }
+    html[data-proof-view="catalog"] .proof-section:not([data-section="comparisons"]):not([data-section="all"]) { display: none; }
+    @media (max-width: 980px) { .proof-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .comparison-table { grid-template-columns: repeat(2, minmax(0, 1fr)); } .challenge-flags { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <main class="proof-shell">
+    <header class="proof-header">
+      <h1>Crownlands selected heraldic symbol integration</h1>
+      <p>Approved source traces · allowlisted inline SVG silhouettes · saved IDs preserved · actual shared renderer at flag and city sizes</p>
+      <div class="proof-meta"><span id="proofStatus" class="proof-status">Loading production sprite…</span><span class="proof-chip">21 approved selectable traces</span><span class="proof-chip">9 legacy-only renderer fallbacks</span><span class="proof-chip">1 documented eagle alternate</span><span class="proof-chip">22px city size decides</span></div>
+    </header>
+
+    <section class="proof-section" data-section="comparisons">
+      <div class="proof-section__heading"><h2>Required silhouette comparisons</h2><p>Paired without labels inside the art area.</p></div>
+      <div id="comparisonTable" class="comparison-table"></div>
+    </section>
+
+    <section class="proof-section" data-section="all">
+      <div class="proof-section__heading"><h2>All 30 stable symbols</h2><p>96px master · 28px editor · 48px flag · 22px city · both contrast directions</p></div>
+      <div id="allSymbols" class="proof-grid"></div>
+    </section>
+
+    <section class="proof-section" data-section="selected">
+      <div class="proof-section__heading"><h2>Selected uploaded-symbol integrations</h2><p>Enlarged traced-source set; no stored IDs changed.</p></div>
+      <div id="selectedSymbols" class="proof-grid"></div>
+    </section>
+
+    <section class="proof-section" data-section="challenges">
+      <div class="proof-section__heading"><h2>Difficult symbols on real flags</h2><p>Production patterns and the shared FlagRenderer.</p></div>
+      <div id="challengeFlags" class="challenge-flags"></div>
+    </section>
+
+    <section class="proof-section" data-section="city">
+      <div class="proof-section__heading"><h2>Approved city-size recognition strip</h2><p>All 21 selectable symbols at 22px.</p></div>
+      <div id="cityStrip" class="city-strip"></div>
+    </section>
+  </main>
+
+  <script src="../../../functions/playerFlagConfig.js?v=20260819-player-flags-v2-r1"></script>
+  <script src="../../../functions/flagRenderer.js?v=20260819-player-flags-v2-r1"></script>
+  <script>
+    (async function runSymbolProof() {
+      const config = window.CrownlandsPlayerFlags;
+      const params = new URLSearchParams(location.search);
+      document.documentElement.dataset.proofView = params.get("view") || "all";
+      if (params.has("width")) {
+        const captureWidth = Math.max(568, Math.min(1920, Number(params.get("width")) || 1440));
+        document.documentElement.dataset.proofCapture = "true";
+        document.documentElement.style.setProperty("--proof-capture-width", `${captureWidth}px`);
+      }
+      const manifest = await fetch("../../../assets/flag-symbols/selected/manifest.json", { cache: "no-store" }).then(response => response.json());
+      const selected = new Set(manifest.entries.filter(entry => entry.selected).map(entry => entry.symbolId));
+      const runtimeSpriteMarkup = await fetch("../../../assets/flag-symbols/runtime.svg", { cache: "no-store" }).then(response => response.text());
+      const runtimeSpriteDocument = new DOMParser().parseFromString(runtimeSpriteMarkup, "image/svg+xml");
+      const comparisons = [["eagle", "double-eagle"], ["raven", "falcon"], ["griffin", "dragon"], ["lion", "bear"], ["wolf", "horse"], ["battle-axe", "war-hammer"], ["tower", "castle-gate"], ["crossed-swords", "spearhead"]];
+      const cityOrder = config.SELECTABLE_SYMBOL_KEYS;
+      const combinations = [
+        { primary: "#722F37", secondary: "#4A3428", symbolColor: "#F2E2BF", pattern: "chief", label: "parchment / burgundy" },
+        { primary: "#243447", secondary: "#547A9A", symbolColor: "#C69A45", pattern: "bend", label: "aged gold / navy" },
+        { primary: "#F2E2BF", secondary: "#DDD0AE", symbolColor: "#303436", pattern: "quartered", label: "charcoal / parchment" },
+        { primary: "#355E3B", secondary: "#667A4A", symbolColor: "#F2E2BF", pattern: "chevron", label: "ivory / forest" },
+      ];
+
+      const indexMarkup = await fetch("../../../index.html", { cache: "no-store" }).then(response => response.text());
+      const documentCopy = new DOMParser().parseFromString(indexMarkup, "text/html");
+      const sprite = documentCopy.querySelector(".cl-icon-sprite");
+      if (!sprite) throw new Error("Production icon sprite was not found.");
+      document.body.prepend(document.importNode(sprite, true));
+
+      const symbolByKey = key => config.SYMBOLS.find(option => option.key === key);
+      const iconMarkup = symbol => {
+        const href = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key)
+          ? `../../../assets/flag-symbols/runtime.svg#cl-icon-${symbol.icon}`
+          : `#cl-icon-${symbol.icon}`;
+        return `<svg class="cl-icon flag-symbol-icon" aria-hidden="true"><use href="${href}"></use></svg>`;
+      };
+      const renderer = window.CrownlandsFlagRenderer.create({ config, renderIcon(icon) { return iconMarkup(config.SYMBOLS.find(option => option.icon === icon) || config.SYMBOLS[0]); } });
+      const paint = (element, symbol, combo, stableKey, size = "small") => renderer.render(element, { version: 2, ...combo, symbol }, { stableKey, context: "symbol-art-proof", size });
+
+      function cardMarkup(symbol) {
+        return `<article class="proof-card" data-proof-key="${symbol.key}" data-selected="${selected.has(symbol.key)}">
+          <div class="proof-card__head"><strong>${symbol.label}</strong><code>${symbol.key}</code></div>
+          <div class="proof-card__large">${iconMarkup(symbol)}</div>
+          <div class="proof-card__scales">
+            <div class="proof-sample"><span class="proof-editor-size">${iconMarkup(symbol)}</span><span>editor 28</span></div>
+            <div class="proof-sample"><span class="kingdom-flag proof-flag proof-flag--map"><span class="flag-symbol"></span></span><span>city 22</span></div>
+            <div class="proof-sample" style="grid-column:1/-1"><span class="kingdom-flag proof-flag proof-flag--preview"><span class="flag-symbol"></span></span><span>flag 48</span></div>
+          </div>
+          <div class="proof-card__contrasts">
+            <div class="proof-contrast"><span class="kingdom-flag" data-contrast="light"><span class="flag-symbol"></span></span><span>light / dark</span></div>
+            <div class="proof-contrast"><span class="kingdom-flag" data-contrast="dark"><span class="flag-symbol"></span></span><span>dark / light</span></div>
+          </div>
+        </article>`;
+      }
+
+      function hydrateCards(container, symbols, prefix) {
+        container.innerHTML = symbols.map(cardMarkup).join("");
+        container.querySelectorAll("[data-proof-key]").forEach((card, index) => {
+          const key = card.dataset.proofKey;
+          const combo = combinations[index % combinations.length];
+          paint(card.querySelector(".proof-flag--preview"), key, combo, `${prefix}-${key}-preview`);
+          paint(card.querySelector(".proof-flag--map"), key, combo, `${prefix}-${key}-map`, "small");
+          paint(card.querySelector('[data-contrast="light"]'), key, combinations[0], `${prefix}-${key}-light`);
+          paint(card.querySelector('[data-contrast="dark"]'), key, combinations[2], `${prefix}-${key}-dark`);
+        });
+      }
+
+      hydrateCards(document.getElementById("allSymbols"), config.SYMBOLS, "all");
+      hydrateCards(document.getElementById("selectedSymbols"), config.SYMBOLS.filter(symbol => selected.has(symbol.key)), "selected");
+
+      document.getElementById("comparisonTable").innerHTML = comparisons.map(([left, right]) => `<div class="comparison-pair">${iconMarkup(symbolByKey(left))}<span>${left}<br><b>versus</b><br>${right}</span>${iconMarkup(symbolByKey(right))}</div>`).join("");
+
+      const challengeKeys = ["battle-axe", "war-hammer", "eagle", "lion", "dragon", "serpent", "gauntlet", "oak-tree", "castle-gate", "sunburst"];
+      const challengeFlags = document.getElementById("challengeFlags");
+      challengeFlags.innerHTML = challengeKeys.map(key => `<article class="challenge-card" data-challenge="${key}"><span class="kingdom-flag"><span class="flag-symbol"></span></span><strong>${symbolByKey(key).label}</strong></article>`).join("");
+      challengeFlags.querySelectorAll("[data-challenge]").forEach((card, index) => paint(card.querySelector(".kingdom-flag"), card.dataset.challenge, combinations[index % combinations.length], `challenge-${card.dataset.challenge}`));
+
+      const cityStrip = document.getElementById("cityStrip");
+      cityStrip.innerHTML = cityOrder.map((key, index) => `<div class="city-symbol" data-city-symbol="${key}"><span class="kingdom-flag"><span class="flag-symbol"></span></span><span>${key}</span></div>`).join("");
+      cityStrip.querySelectorAll("[data-city-symbol]").forEach((item, index) => paint(item.querySelector(".kingdom-flag"), item.dataset.citySymbol, combinations[index % combinations.length], `city-${item.dataset.citySymbol}`, "small"));
+
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const allIds = [...document.querySelectorAll("[id]")].map(node => node.id);
+      const duplicateIds = [...new Set(allIds.filter((id, index) => allIds.indexOf(id) !== index))];
+      const missingUses = [...document.querySelectorAll("use")]
+        .map(use => use.getAttribute("href") || use.getAttribute("xlink:href"))
+        .filter(href => {
+          if (!href) return true;
+          const id = href.split("#")[1];
+          return href.includes("assets/flag-symbols/runtime.svg#")
+            ? !runtimeSpriteDocument.getElementById(id)
+            : !document.getElementById(id);
+        });
+      const symbolNodes = config.SYMBOLS.map(symbol => selected.has(symbol.key)
+        ? runtimeSpriteDocument.getElementById(`cl-icon-${symbol.icon}`)
+        : document.getElementById(`cl-icon-${symbol.icon}`));
+      const missingSymbols = symbolNodes.filter(node => !node);
+      const malformedGeometry = symbolNodes.filter(node => {
+        const paths = [...node.querySelectorAll("path")];
+        if (!paths.length && !node.querySelector("circle,rect,polygon,ellipse")) return true;
+        return paths.some(path => {
+          const data = path.getAttribute("d");
+          if (!data) return true;
+          try { new Path2D(data); return false; } catch (error) { return true; }
+        });
+      });
+      const failures = [];
+      if (duplicateIds.length) failures.push(`duplicate IDs: ${duplicateIds.join(", ")}`);
+      if (missingUses.length) failures.push(`${missingUses.length} unresolved use references`);
+      if (missingSymbols.length) failures.push(`${missingSymbols.length} missing symbols`);
+      if (malformedGeometry.length) failures.push(`${malformedGeometry.length} malformed or empty geometries`);
+      const status = document.getElementById("proofStatus");
+      status.className = `proof-status ${failures.length ? "fail" : "pass"}`;
+      status.textContent = failures.length ? `FAIL · ${failures.join(" · ")}` : `PASS · 30 IDs · 21 source traces · all <use> refs · non-empty SVG geometry`;
+      window.__symbolArtProof = { config, manifest, selected: [...selected], comparisons, duplicateIds, missingUses, missingSymbols, malformedGeometry, failures };
+    })().catch(error => {
+      const status = document.getElementById("proofStatus");
+      status.className = "proof-status fail";
+      status.textContent = `FAIL · ${error.message}`;
+      window.__symbolArtProof = { failures: [error.message] };
+      console.error(error);
+    });
+  </script>
+</body>
+</html>
