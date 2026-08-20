@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gear = require(path.join(root, "common-gear.js"));
+const serverGear = require(path.join(root, "functions", "common-gear.js"));
 
 function pngMetadata(relativePath) {
   const buffer = fs.readFileSync(path.join(root, relativePath));
@@ -53,10 +54,11 @@ assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 75);
 assert.deepEqual(gear.BONUS_BY_LEVEL, { 1: .25, 2: .5, 3: .8, 4: 1.15, 5: 1.5 });
 assert.deepEqual(gear.UPGRADE_BY_LEVEL, {
   1: { duplicates: 1, baseGoldHours: .5 },
-  2: { duplicates: 2, baseGoldHours: 1 },
-  3: { duplicates: 3, baseGoldHours: 2 },
-  4: { duplicates: 4, baseGoldHours: 4 },
+  2: { duplicates: 1, baseGoldHours: 1 },
+  3: { duplicates: 1, baseGoldHours: 2 },
+  4: { duplicates: 1, baseGoldHours: 4 },
 });
+assert.deepEqual(serverGear.UPGRADE_BY_LEVEL, gear.UPGRADE_BY_LEVEL, "Client and server upgrade requirements must stay synchronized.");
 
 const sample = gear.createDefaultState();
 const attackDefinition = gear.DEFINITIONS.find(item => item.statType === "attackStrength");
@@ -71,7 +73,12 @@ for (const callable of ["getCommonGearStatus", "purchaseCommonGearBox", "openCom
   assert.match(index, new RegExp(`exports\\.${callable}\\s*=`), `Missing ${callable} callable.`);
 }
 assert.match(index, /crypto\.randomInt\(0, COMMON_GEAR\.DEFINITIONS\.length\)/, "Box rolls must use server cryptographic randomness.");
-assert.match(index, /candidate\.level === 1 && !candidate\.isEquipped/, "Upgrades must consume only unequipped Level 1 duplicates.");
+assert.match(
+  index,
+  /candidate\.instanceId !== instance\.instanceId[\s\S]{0,180}candidate\.gearKey === instance\.gearKey[\s\S]{0,120}candidate\.level === instance\.level[\s\S]{0,120}!candidate\.isEquipped/,
+  "Upgrades must consume only a different unequipped matching same-level instance."
+);
+assert.doesNotMatch(index, /candidate\.level === 1/, "The server must not accept Level 1 materials for every upgrade level.");
 assert.match(index, /relicRewardItem[\s\S]{0,180}crypto\.randomInt\(1, 101\)/, "Relic Camp bonus must roll only with a rewarded item payout.");
 assert.match(index, /claimedPosition\.day % 7 === 0 \? 1 : 0/, "Weekly daily-login milestones must award a Common Gear Box.");
 assert.match(index, /currentState\.completedCount[\s\S]{0,1500}gear\.commonGearBoxes \+= 1/, "Completing all three daily missions must award a box once.");
@@ -111,6 +118,10 @@ assert.match(game, /upgradeCommonGear\(\{ instanceId \}\)/, "Upgrade must contin
 assert.match(gearUi, />\$\{requirement \? "Upgrade" : "Max Level"\}<\//, "The player-facing equipment action must say Upgrade.");
 assert.match(gearUi, />Upgrade requirements<|<span>Upgrade requirements<\/span>/, "The equipment requirement label must say Upgrade requirements.");
 assert.match(gearUi, /Confirm Upgrade/, "The upgrade confirmation action must use Upgrade wording.");
+assert.match(gearUi, /Requires \$\{requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Selected gear requirements must name the matching current-level copy.");
+assert.match(gearUi, /This consumes \$\{requirement\.duplicates\} unequipped matching Level \$\{selected\.level\}/, "Upgrade confirmation must identify the stored same-level material.");
+assert.match(gearUi, /Next \+\$\{viewModel\.nextBonus\.toFixed\(2\)\}% · Requires \$\{viewModel\.requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Bottom metadata must show the same-level upgrade material.");
+assert.doesNotMatch(gearUi, /Level 1 duplicate|Level 1 duplicates/, "Old always-Level-1 material wording must not remain in the equipment UI.");
 assert.doesNotMatch(gearUi, />Merge(?:\s|<)|Merge cost|Confirm Merge|Select an item to merge|merged to Level|merge equipment|gear merge/, "Player-facing Merge wording must not remain in the equipment UI.");
 assert.match(gearUi, /role="listbox"[\s\S]{0,240}data-gear-bag-filter-option/, "The equipment filter must use the custom accessible listbox.");
 assert.doesNotMatch(gearUi, /<select[^>]*data-gear-bag-filter/, "The equipment filter must not invoke a mobile native select picker.");
@@ -165,14 +176,36 @@ const previewContext = {
   COMMON_GEAR: gear,
   formatNumber: value => String(value),
   state: {
-    gold: 100,
+    gold: 1000,
     globalStats: { baseGoldPerHour: 100 },
     gear: { instances: { previewTarget, previewDuplicate } },
   },
 };
 vm.runInNewContext(`${game.slice(previewStart, previewEnd)}\nthis.previewUpgrade = getCommonGearUpgradePreview;`, previewContext);
-assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, true, "An item with its required duplicate and gold must be upgrade-ready.");
+for (let level = 1; level < gear.MAX_LEVEL; level += 1) {
+  const target = { ...previewTarget, level, instanceId: `preview_target_${level}`, isEquipped: level % 2 === 1 };
+  const matching = { ...previewDuplicate, level, instanceId: `preview_matching_${level}`, isEquipped: false };
+  const wrongLevel = { ...previewDuplicate, level: level === 1 ? 2 : 1, instanceId: `preview_wrong_level_${level}`, isEquipped: false };
+  assert.equal(
+    previewContext.previewUpgrade(target, [target, matching]).canUpgrade,
+    true,
+    `A Level ${level} target with another stored matching Level ${level} copy must be upgrade-ready.`
+  );
+  assert.equal(
+    previewContext.previewUpgrade(target, [target, wrongLevel]).canUpgrade,
+    false,
+    `A Level ${level} target must ignore a different-level material.`
+  );
+}
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, true, "An item with its required matching copy and gold must be upgrade-ready.");
 assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget]).canUpgrade, false, "An item without its required duplicate must not be upgrade-ready.");
+const equippedMaterial = { ...previewDuplicate, isEquipped: true };
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, equippedMaterial]).canUpgrade, false, "An equipped item must not be consumed as upgrade material.");
+const otherDefinition = gear.DEFINITIONS.find(definition => definition.gearKey !== previewTarget.gearKey);
+const wrongGear = { ...previewDuplicate, gearKey: otherDefinition.gearKey, buildingId: otherDefinition.buildingId, slot: otherDefinition.slot };
+assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, wrongGear]).canUpgrade, false, "Different gear must not count as upgrade material.");
+const maxTarget = { ...previewTarget, level: gear.MAX_LEVEL };
+assert.equal(previewContext.previewUpgrade(maxTarget, [maxTarget, { ...previewDuplicate, level: gear.MAX_LEVEL }]).canUpgrade, false, "Level 5 gear must never be upgrade-ready.");
 previewContext.state.gold = 49;
 assert.equal(previewContext.previewUpgrade(previewTarget, [previewTarget, previewDuplicate]).canUpgrade, false, "An item without enough gold must not be upgrade-ready.");
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,120}getCommonGearUpgradePreview/, "Only unequipped upgrade-ready groups may receive bag alerts.");

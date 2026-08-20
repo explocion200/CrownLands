@@ -16,9 +16,9 @@
   const BONUS_BY_LEVEL = Object.freeze({ 1: 0.25, 2: 0.5, 3: 0.8, 4: 1.15, 5: 1.5 });
   const UPGRADE_BY_LEVEL = Object.freeze({
     1: Object.freeze({ duplicates: 1, baseGoldHours: 0.5 }),
-    2: Object.freeze({ duplicates: 2, baseGoldHours: 1 }),
-    3: Object.freeze({ duplicates: 3, baseGoldHours: 2 }),
-    4: Object.freeze({ duplicates: 4, baseGoldHours: 4 }),
+    2: Object.freeze({ duplicates: 1, baseGoldHours: 1 }),
+    3: Object.freeze({ duplicates: 1, baseGoldHours: 2 }),
+    4: Object.freeze({ duplicates: 1, baseGoldHours: 4 }),
   });
   const SLOTS = Object.freeze(["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"]);
   const ARMOR_SLOTS = new Set(["head", "chest", "pants", "boots", "gloves", "belt"]);

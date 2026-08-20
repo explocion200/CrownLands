@@ -12652,10 +12652,15 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
     if (!requirement) throw new HttpsError("failed-precondition", "Max Level Reached.");
     const materials = Object.values(gear.instances)
       .filter(candidate => candidate.instanceId !== instance.instanceId
-        && candidate.gearKey === instance.gearKey && candidate.level === 1 && !candidate.isEquipped)
+        && candidate.gearKey === instance.gearKey
+        && candidate.level === instance.level
+        && !candidate.isEquipped)
       .sort((a, b) => a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
     if (materials.length < requirement.duplicates) {
-      throw new HttpsError("failed-precondition", `You need ${requirement.duplicates} unequipped Level 1 duplicate${requirement.duplicates === 1 ? "" : "s"}.`);
+      throw new HttpsError(
+        "failed-precondition",
+        `You need ${requirement.duplicates} unequipped matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}.`
+      );
     }
     const rates = getRewardedAdBaseRates(economy);
     const cost = Math.max(0, Math.floor(rates.goldPerHour * requirement.baseGoldHours));
