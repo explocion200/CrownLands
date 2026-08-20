@@ -4,13 +4,19 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Crownlands Player Flag QA</title>
-  <link rel="stylesheet" href="../../../styles.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../styles.css?v=20260819-welcome-report-contrast-r1" />
   <link rel="stylesheet" href="../../../interface-theme.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="../../../readability.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260818-global-clan-chat-r1" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css?v=20260817-inner-castle-labels-r1" />
+  <link rel="stylesheet" href="../../../readability.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260813-manuscript-prototype-r4" />
   <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="../../../profile-theme.css?v=20260814-readability-r38" />
-  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260819-welcome-report-contrast-r1" />
+  <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../player-flag-editor.css?v=20260819-player-flags-v2-r1" />
+  <link rel="stylesheet" href="../../../chat.css?v=20260818-global-clan-chat-r1" />
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -52,7 +58,7 @@
       background: transparent !important;
       box-shadow: none !important;
     }
-    .qa-editor-grid { display: grid; grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr); gap: 16px; }
+    .qa-profile-screen .player-flag-editor { height: min(560px, calc(100dvh - 80px)); }
     .qa-preview-card { min-height: 230px; padding: 16px; display: grid; place-items: center; align-content: center; gap: 12px; border: 1px solid #997643; background: #e7d6b4; }
     .qa-preview-card .kingdom-flag { width: 210px; height: 145px; }
     .qa-preview-card .flag-symbol { font-size: 4.2rem; }
@@ -100,12 +106,61 @@
     .qa-migrations { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
     .qa-migration { padding: 10px; border: 1px solid #997643; background: #e7d6b4; }
     .qa-migration code { color: #2f2113; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .qa-surface-board { grid-column: 1 / -1; padding: 1rem; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; align-content: start; }
+    .qa-surface-board > h3 { grid-column: 1 / -1; margin: 0; color: #5b242b; }
+    .qa-surface-card { min-height: 112px; padding: .8rem; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .8rem; border: 1px solid #997643; background: #e7d6b4; color: #342315; }
+    .qa-surface-card .kingdom-flag { width: 72px; height: 52px; }
+    .qa-surface-card strong, .qa-surface-card span { color: inherit !important; }
+    .qa-surface-card div { display: grid; gap: .25rem; }
+    .qa-profile-screen .player-flag-editor__tab-panel[hidden] { display: none; }
+    html[data-qa-state="surfaces"] .player-flag-editor__actions { display: none; }
     @media (max-width: 760px) {
       body { padding: 8px; }
-      .qa-editor-grid { grid-template-columns: 1fr; }
       .qa-color-group .flag-swatch-grid { grid-template-columns: repeat(5, minmax(40px, 1fr)); }
       .qa-panel { padding: 12px; }
     }
+    html[data-qa-editor-capture="true"],
+    html[data-qa-editor-capture="true"] body {
+      width: var(--qa-capture-width, 100%);
+      height: var(--qa-capture-height, 100%) !important;
+      min-height: 0 !important;
+      max-height: var(--qa-capture-height, 100%);
+      overflow: hidden;
+    }
+    html[data-qa-editor-capture="true"] body { padding: 0; background: #17110d; }
+    html[data-qa-editor-capture="true"] .qa-shell,
+    html[data-qa-editor-capture="true"] .qa-editor-panel,
+    html[data-qa-editor-capture="true"] .qa-profile-screen.profile-screen {
+      width: var(--qa-capture-width, 100%) !important;
+      height: var(--qa-capture-height, 100%) !important;
+      min-height: 0 !important;
+      max-height: var(--qa-capture-height, 100%) !important;
+      overflow: hidden !important;
+    }
+    html[data-qa-editor-capture="true"] .qa-header,
+    html[data-qa-editor-capture="true"] .qa-panel:not(.qa-editor-panel),
+    html[data-qa-editor-capture="true"] .qa-editor-panel > h2 { display: none; }
+    html[data-qa-editor-capture="true"] .qa-editor-panel { padding: 0; border: 0; }
+    html[data-qa-editor-capture="true"] .qa-profile-screen .player-flag-editor { height: 100%; max-height: 100%; box-sizing: border-box; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor { padding: .4rem; gap: .4rem; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__workspace { grid-template-columns: minmax(180px, .64fr) minmax(0, 1.6fr); gap: .45rem; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__preview-panel { padding: .38rem; grid-template-rows: auto minmax(72px, 1fr) auto auto; gap: .22rem; }
+    html[data-qa-capture-layout="short-landscape"] .kingdom-flag-editor { width: 132px !important; min-height: 72px !important; height: 92px !important; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__selection-summary { display: none; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__tabs { padding: .3rem; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__tab { min-height: 38px !important; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__control-scroll { padding: .35rem; }
+    html[data-qa-capture-layout="short-landscape"] .player-flag-editor__actions { padding: .3rem; }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__preview-panel { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto; padding: .5rem; }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__title { grid-column: 1 / -1; }
+    html[data-qa-capture-layout="portrait"] .kingdom-flag-editor { grid-row: 2 / 4; width: 130px !important; height: 92px !important; }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__map-preview { width: auto; }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__selection-summary { grid-template-columns: minmax(0, 1fr); }
+    html[data-qa-capture-layout="portrait"] .flag-swatch-grid { grid-template-columns: repeat(5, minmax(44px, 1fr)) !important; }
+    html[data-qa-capture-layout="portrait"] .flag-symbol-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    html[data-qa-capture-layout="portrait"] .player-flag-editor__save-status { grid-column: 1 / -1; grid-row: 1; min-height: .8rem; }
   </style>
 </head>
 <body>
@@ -116,25 +171,61 @@
       <div id="qaStatus" class="qa-status" role="status">Loading the production SVG sprite…</div>
     </header>
 
-    <section class="qa-panel">
+    <section class="qa-panel qa-editor-panel">
       <h2>Flag editor</h2>
-      <div class="profile-screen qa-profile-screen open">
-        <div class="qa-editor-grid">
-          <div class="qa-preview-card">
-            <div id="livePreview" class="kingdom-flag kingdom-flag-editor" aria-label="Live player flag preview"><span class="flag-symbol"></span></div>
-            <div id="previewValues" class="qa-preview-values"></div>
+      <div class="profile-screen flag-editor-active qa-profile-screen open">
+        <div class="flag-editor-view player-flag-editor">
+          <div class="player-flag-editor__workspace">
+            <aside class="player-flag-editor__preview-panel">
+              <div class="player-flag-editor__title"><span>Kingdom identity</span><h3>Flag Editor</h3></div>
+              <div id="livePreview" class="kingdom-flag kingdom-flag-editor" aria-label="Live player flag preview"><span class="flag-symbol"></span></div>
+              <div class="player-flag-editor__map-preview"><span>Map size</span><span id="smallPreview" class="kingdom-flag kingdom-flag-small city-kingdom-flag"><span class="flag-symbol"></span></span></div>
+              <dl class="player-flag-editor__selection-summary"><div><dt>Pattern</dt><dd id="qaPatternName">Chevron</dd></div><div><dt>Symbol</dt><dd id="qaSymbolName">Lion</dd></div></dl>
+              <p id="qaContrastWarning" class="player-flag-editor__warning" aria-live="polite" hidden></p>
+              <p class="player-flag-editor__dirty-status">Live draft preview</p>
+            </aside>
+            <section class="player-flag-editor__controls-panel">
+              <div class="player-flag-editor__tabs" role="tablist">
+                <button class="player-flag-editor__control player-flag-editor__tab active" type="button" aria-selected="true" data-qa-tab="colors">Colors</button>
+                <button class="player-flag-editor__control player-flag-editor__tab" type="button" aria-selected="false" data-qa-tab="pattern">Pattern</button>
+                <button class="player-flag-editor__control player-flag-editor__tab" type="button" aria-selected="false" data-qa-tab="symbol">Symbol</button>
+              </div>
+              <div class="player-flag-editor__control-scroll">
+                <div class="player-flag-editor__tab-panel qa-color-groups">
+                  <section class="flag-control-group qa-color-group"><h4>Background Color</h4><div id="primaryColors" class="flag-swatch-grid"></div></section>
+                  <section class="flag-control-group qa-color-group"><h4>Pattern Color</h4><div id="accentColors" class="flag-swatch-grid"></div></section>
+                  <button id="qaGenericButton" class="player-flag-editor__control player-flag-editor__utility" type="button">Swap Background &amp; Pattern</button>
+                  <section class="flag-control-group qa-color-group"><h4>Symbol Color</h4><div id="iconColors" class="flag-swatch-grid"></div></section>
+                </div>
+                <div class="player-flag-editor__tab-panel" data-qa-panel="pattern" hidden><section class="flag-control-group"><h4>Pattern</h4><div id="qaPatternOptions" class="flag-option-grid"></div></section></div>
+                <div class="player-flag-editor__tab-panel" data-qa-panel="symbol" hidden><section class="flag-control-group flag-symbol-control"><h4>Symbol</h4><div id="qaSymbolOptions" class="flag-symbol-grid"></div></section></div>
+              </div>
+            </section>
           </div>
-          <div class="qa-color-groups">
-            <section class="qa-color-group"><h3>Primary Color</h3><div id="primaryColors" class="flag-swatch-grid"></div></section>
-            <section class="qa-color-group"><h3>Accent Color</h3><div id="accentColors" class="flag-swatch-grid"></div></section>
-            <section class="qa-color-group"><h3>Icon Color</h3><div id="iconColors" class="flag-swatch-grid"></div></section>
+          <div class="flag-editor-actions player-flag-editor__actions">
+            <button class="player-flag-editor__control profile-secondary-btn" type="button">Reset</button>
+            <button class="player-flag-editor__control profile-secondary-btn" type="button">Randomize</button>
+            <span id="qaSaveStatus" class="player-flag-editor__save-status">Unsaved changes</span>
+            <button class="player-flag-editor__control profile-secondary-btn" type="button">Cancel</button>
+            <button id="qaSaveButton" class="player-flag-editor__control profile-primary-btn" type="button">Save Flag</button>
           </div>
         </div>
       </div>
     </section>
 
+    <dialog id="qaDiscardDialog" class="flag-discard-dialog" aria-labelledby="qaDiscardTitle">
+      <form method="dialog" class="flag-discard-dialog__card">
+        <h2 id="qaDiscardTitle">Discard flag changes?</h2>
+        <p>Your unsaved colors, pattern, and symbol will be lost.</p>
+        <div class="flag-discard-dialog__actions">
+          <button class="player-flag-editor__control profile-secondary-btn" type="submit">Stay Editing</button>
+          <button class="player-flag-editor__control profile-primary-btn" type="submit">Discard Changes</button>
+        </div>
+      </form>
+    </dialog>
+
     <section class="qa-panel"><h2>Patterns</h2><div id="patternCatalog" class="qa-catalog"></div></section>
-    <section class="qa-panel"><h2>Symbols</h2><div id="symbolCatalog" class="qa-catalog"></div></section>
+    <section class="qa-panel"><h2>Renderer compatibility symbols (30 supported)</h2><div id="symbolCatalog" class="qa-catalog"></div></section>
 
     <section class="qa-panel">
       <h2>Map owner flags</h2>
@@ -145,12 +236,24 @@
     <section class="qa-panel"><h2>Compatibility migration</h2><div id="migrationCases" class="qa-migrations"></div></section>
   </main>
 
-  <script src="../../../functions/playerFlagConfig.js?v=20260814-readability-r38"></script>
+  <script src="../../../functions/playerFlagConfig.js?v=20260819-player-flags-v2-r1"></script>
+  <script src="../../../functions/flagRenderer.js?v=20260819-player-flags-v2-r1"></script>
   <script>
     (async function runFlagQa() {
       const config = window.CrownlandsPlayerFlags;
       const status = document.getElementById("qaStatus");
-      const draft = { primary: "#315A8A", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "chevron", symbol: "lion" };
+      const draft = { version: 2, primary: "#315A8A", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "chevron", symbol: "lion" };
+      const qaParams = new URLSearchParams(location.search);
+      if (qaParams.has("editor")) {
+        const captureWidth = Math.max(320, Math.min(1920, Number(qaParams.get("width")) || innerWidth));
+        const captureHeight = Math.max(320, Math.min(1080, Number(qaParams.get("height")) || innerHeight));
+        document.documentElement.dataset.qaEditorCapture = "true";
+        document.documentElement.dataset.qaCaptureLayout = captureWidth <= 640 && captureHeight > captureWidth
+          ? "portrait"
+          : captureHeight <= 460 ? "short-landscape" : "desktop";
+        document.documentElement.style.setProperty("--qa-capture-width", `${captureWidth}px`);
+        document.documentElement.style.setProperty("--qa-capture-height", `${captureHeight}px`);
+      }
 
       const indexMarkup = await fetch("../../../index.html", { cache: "no-store" }).then(response => response.text());
       const documentCopy = new DOMParser().parseFromString(indexMarkup, "text/html");
@@ -159,28 +262,31 @@
       document.body.prepend(document.importNode(sprite, true));
 
       function iconMarkup(symbol) {
-        return `<svg class="cl-icon flag-symbol-icon" aria-hidden="true"><use href="#cl-icon-${symbol.icon}"></use></svg>`;
+        const href = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key)
+          ? `../../../assets/flag-symbols/runtime.svg#cl-icon-${symbol.icon}`
+          : `#cl-icon-${symbol.icon}`;
+        return `<svg class="cl-icon flag-symbol-icon" aria-hidden="true"><use href="${href}"></use></svg>`;
       }
 
+      const flagRenderer = window.CrownlandsFlagRenderer.create({
+        config,
+        renderIcon(icon) {
+          const symbol = config.SYMBOLS.find(option => option.icon === icon) || config.SYMBOLS[0];
+          return iconMarkup(symbol);
+        },
+      });
+
       function paintFlag(element, rawFlag, stableKey = "qa") {
-        const flag = config.normalizeFlag(rawFlag, stableKey);
-        element.style.setProperty("--flag-primary", flag.primary);
-        element.style.setProperty("--flag-secondary", flag.secondary);
-        element.style.setProperty("--flag-symbol-color", flag.symbolColor);
-        element.style.setProperty("--flag-symbol-outline", config.getSymbolOutline(flag.symbolColor));
-        config.PATTERN_KEYS.forEach(pattern => element.classList.remove(`pattern-${pattern}`));
-        element.classList.add(`pattern-${flag.pattern}`);
-        const charge = config.getSymbol(flag.symbol, stableKey);
-        const symbolElement = element.querySelector(".flag-symbol");
-        symbolElement.dataset.flagSymbol = charge.key;
-        symbolElement.innerHTML = iconMarkup(charge);
-        element.dataset.flagRenderSignature = [flag.primary, flag.secondary, flag.symbolColor, flag.pattern, flag.symbol].join(":");
-        return flag;
+        return flagRenderer.render(element, rawFlag, { stableKey, context: "visual-qa" });
       }
 
       function renderPreview() {
         const flag = paintFlag(document.getElementById("livePreview"), draft, "qa-editor");
-        document.getElementById("previewValues").textContent = JSON.stringify(flag);
+        paintFlag(document.getElementById("smallPreview"), draft, "qa-editor");
+        document.getElementById("qaPatternName").textContent = config.PATTERNS.find(option => option.key === draft.pattern)?.label || draft.pattern;
+        document.getElementById("qaSymbolName").textContent = config.getSymbol(draft.symbol, "qa-editor").label;
+        const previewValues = document.getElementById("previewValues");
+        if (previewValues) previewValues.textContent = JSON.stringify(flag);
         document.querySelectorAll("[data-qa-color-key]").forEach(button => {
           button.classList.toggle("active", draft[button.dataset.qaColorKey] === button.dataset.flagColor);
           button.setAttribute("aria-pressed", String(draft[button.dataset.qaColorKey] === button.dataset.flagColor));
@@ -189,7 +295,11 @@
 
       function renderSwatches(containerId, key) {
         const container = document.getElementById(containerId);
-        container.innerHTML = config.COLORS.map(option => `<button class="flag-color-swatch" type="button" data-qa-color-key="${key}" data-flag-color="${option.value}" style="--flag-swatch:${option.value}" aria-label="${option.label}" title="${option.label}"></button>`).join("");
+        const normalizedCurrent = config.normalizeHexColor(draft[key]);
+        const options = config.COLORS.some(option => option.value === normalizedCurrent)
+          ? config.COLORS
+          : [{ value: normalizedCurrent, label: "Current saved color" }, ...config.COLORS];
+        container.innerHTML = options.map(option => `<button class="player-flag-editor__control player-flag-editor__swatch flag-color-swatch" type="button" data-qa-color-key="${key}" data-flag-color="${option.value}" style="--flag-swatch:${option.value};background-color:var(--flag-swatch)" aria-label="${option.label}" title="${option.label}"></button>`).join("");
         container.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
           draft[key] = button.dataset.flagColor;
           renderPreview();
@@ -203,9 +313,33 @@
 
       document.getElementById("patternCatalog").innerHTML = config.PATTERNS.map(option => `<article class="qa-pattern-card"><div class="kingdom-flag" data-pattern="${option.key}"><span class="flag-symbol"></span></div><span>${option.label}</span></article>`).join("");
       document.querySelectorAll("[data-pattern]").forEach(element => paintFlag(element, { ...draft, pattern: element.dataset.pattern, symbol: "crown" }, `pattern-${element.dataset.pattern}`));
+      document.getElementById("qaPatternOptions").innerHTML = config.PATTERNS.map(option => `<button type="button" class="player-flag-editor__control player-flag-editor__pattern-card${option.key === draft.pattern ? " active" : ""}" aria-pressed="${option.key === draft.pattern}"><span class="kingdom-flag flag-pattern-thumbnail" data-qa-pattern-preview="${option.key}" aria-hidden="true"><span class="flag-symbol"></span></span><span>${option.label}</span></button>`).join("");
+      document.querySelectorAll("[data-qa-pattern-preview]").forEach(element => flagRenderer.render(element, { ...draft, pattern: element.dataset.qaPatternPreview }, { stableKey: `pattern-option-${element.dataset.qaPatternPreview}`, context: "editor-pattern-option", size: "thumbnail", hideSymbol: true }));
 
       document.getElementById("symbolCatalog").innerHTML = config.SYMBOLS.map(option => `<article class="qa-symbol-card"><div class="kingdom-flag" data-symbol="${option.key}"><span class="flag-symbol"></span></div><span>${option.label}</span></article>`).join("");
       document.querySelectorAll("[data-symbol]").forEach(element => paintFlag(element, { ...draft, symbol: element.dataset.symbol }, `symbol-${element.dataset.symbol}`));
+      function renderSymbolOptions() {
+        const container = document.getElementById("qaSymbolOptions");
+        container.innerHTML = config.SELECTABLE_SYMBOLS.map(option => `<button type="button" class="player-flag-editor__control player-flag-editor__symbol-card${option.key === draft.symbol ? " active" : ""}" data-qa-symbol="${option.key}" aria-label="${option.label}" aria-pressed="${option.key === draft.symbol}">${iconMarkup(option)}<span>${option.label}</span></button>`).join("");
+        container.querySelectorAll("[data-qa-symbol]").forEach(button => button.addEventListener("click", () => {
+          draft.symbol = button.dataset.qaSymbol;
+          renderPreview();
+          renderSymbolOptions();
+        }));
+      }
+      renderSymbolOptions();
+
+      function showEditorTab(key) {
+        document.querySelectorAll("[data-qa-tab]").forEach(button => {
+          const active = button.dataset.qaTab === key;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", String(active));
+        });
+        document.querySelector(".qa-color-groups").hidden = key !== "colors";
+        document.querySelectorAll("[data-qa-panel]").forEach(panel => { panel.hidden = panel.dataset.qaPanel !== key; });
+        document.querySelector(".player-flag-editor__control-scroll").scrollTop = 0;
+      }
+      document.querySelectorAll("[data-qa-tab]").forEach(button => button.addEventListener("click", () => showEditorTab(button.dataset.qaTab)));
 
       const ownerA = { primary: "#315A8A", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "chevron", symbol: "lion" };
       const ownerB = { primary: "#6E2025", secondary: "#DDD0AE", symbolColor: "#202426", pattern: "saltire", symbol: "dragon" };
@@ -234,6 +368,7 @@
 
       const migrationFixtures = [
         ["Fully valid old flag", { primary: "#1f5f91", secondary: "#d3a62e", symbolColor: "#d9e2e8", pattern: "diagonal", symbol: "crown" }],
+        ["Legacy-only stored symbol remains readable", { ...ownerA, symbol: "double-eagle" }],
         ["Removed old symbol", { ...ownerA, symbol: "castle" }],
         ["Invalid old color", { ...ownerA, primary: "parchment" }],
         ["Invalid old pattern", { ...ownerA, pattern: "unknown" }],
@@ -258,14 +393,80 @@
         label: `swatch ${button.dataset.flagColor}`,
         pass: getComputedStyle(button).backgroundColor === expectedRgb(button.dataset.flagColor),
       }));
-      checks.push({ label: "24 symbol cards", pass: document.querySelectorAll("[data-symbol]").length === 24 });
+      checks.push({ label: "30 symbol cards", pass: document.querySelectorAll("[data-symbol]").length === 30 });
+      checks.push({ label: "21 selectable symbol cards", pass: document.querySelectorAll("[data-qa-symbol]").length === 21 });
+      checks.push({ label: "legacy-only symbols hidden from selector", pass: config.LEGACY_ONLY_SYMBOL_KEYS.every(key => !document.querySelector(`[data-qa-symbol="${key}"]`)) });
       checks.push({ label: "14 pattern cards", pass: document.querySelectorAll("[data-pattern]").length === 14 });
-      checks.push({ label: "no horizontal page clipping", pass: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1 });
+      const declaredCaptureWidth = Number(qaParams.get("width")) || 0;
+      checks.push({
+        label: "no horizontal page clipping",
+        pass: declaredCaptureWidth
+          ? document.body.scrollWidth <= declaredCaptureWidth + 1
+          : document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      });
       checks.push({ label: "relationship CSS does not recolor owner flag", pass: getComputedStyle(document.querySelector('[data-city-case="0"] .flag-symbol')).color === expectedRgb(ownerA.symbolColor) });
       const failures = checks.filter(check => !check.pass);
       status.className = `qa-status ${failures.length ? "fail" : "pass"}`;
+      const computedStyles = {
+        firstSwatch: {
+          backgroundColor: getComputedStyle(document.querySelector(".flag-color-swatch")).backgroundColor,
+          backgroundImage: getComputedStyle(document.querySelector(".flag-color-swatch")).backgroundImage,
+          flagSwatch: getComputedStyle(document.querySelector(".flag-color-swatch")).getPropertyValue("--flag-swatch").trim(),
+        },
+        genericButton: {
+          backgroundColor: getComputedStyle(document.getElementById("qaGenericButton")).backgroundColor,
+          backgroundImage: getComputedStyle(document.getElementById("qaGenericButton")).backgroundImage,
+        },
+      };
       status.textContent = failures.length ? `FAIL · ${failures.map(check => check.label).join(", ")}` : `PASS · ${checks.length} computed visual checks`;
-      window.__flagQa = { config, draft, paintFlag, checks, failures, ownerA, ownerB };
+      window.__flagQa = { config, draft, flagRenderer, paintFlag, checks, failures, computedStyles, ownerA, ownerB };
+
+      const qaState = qaParams.get("state") || "colors";
+      document.documentElement.dataset.qaState = qaState;
+      if (["colors", "pattern", "symbol"].includes(qaState)) showEditorTab(qaState);
+      if (qaState === "custom-color") {
+        draft.primary = "#1F5F91";
+        renderSwatches("primaryColors", "primary");
+        renderPreview();
+        showEditorTab("colors");
+        document.querySelector(".player-flag-editor__dirty-status").textContent = "Historical custom color preserved";
+      } else if (qaState === "low-contrast") {
+        draft.primary = "#202426";
+        draft.secondary = "#303436";
+        draft.symbolColor = "#202426";
+        renderPreview();
+        const warning = document.getElementById("qaContrastWarning");
+        warning.hidden = false;
+        warning.textContent = "Low contrast: the pattern and symbol may disappear at map size.";
+        document.querySelector(".player-flag-editor__dirty-status").textContent = "Unsaved changes";
+      } else if (qaState === "saving") {
+        document.getElementById("qaSaveButton").disabled = true;
+        document.getElementById("qaSaveButton").textContent = "Saving…";
+        document.getElementById("qaSaveStatus").textContent = "Saving everywhere…";
+      } else if (qaState === "success") {
+        document.getElementById("qaSaveButton").disabled = true;
+        document.getElementById("qaSaveStatus").dataset.state = "success";
+        document.getElementById("qaSaveStatus").textContent = "Saved everywhere";
+        document.querySelector(".player-flag-editor__dirty-status").textContent = "No unsaved changes";
+      } else if (qaState === "legacy") {
+        draft.symbol = "double-eagle";
+        renderPreview();
+        renderSymbolOptions();
+        showEditorTab("symbol");
+        document.querySelector(".player-flag-editor__dirty-status").textContent = "Legacy-only saved symbol · readable, not selectable";
+      } else if (qaState === "discard") {
+        document.getElementById("qaDiscardDialog").showModal();
+      } else if (qaState === "surfaces") {
+        const surfaces = [
+          ["City marker", "The newly saved flag at real map size", "city"],
+          ["Leaderboard", "Ruler row identity", "leaderboard"],
+          ["Scout report", "Snapshot identity remains explicit", "scout-report"],
+          ["Detailed battle report", "The same shared renderer and flag", "battle-report"],
+        ];
+        const workspace = document.querySelector(".player-flag-editor__workspace");
+        workspace.innerHTML = `<section class="qa-surface-board"><h3>One saved flag · shared renderer surfaces</h3>${surfaces.map(([title, copy], index) => `<article class="qa-surface-card"><span class="kingdom-flag kingdom-flag-small" data-qa-surface="${index}"><span class="flag-symbol"></span></span><div><strong>${title}</strong><span>${copy}</span></div></article>`).join("")}</section>`;
+        surfaces.forEach((surface, index) => flagRenderer.render(document.querySelector(`[data-qa-surface="${index}"]`), draft, { stableKey: "qa-saved-ruler", context: surface[2], size: "small" }));
+      }
     })().catch(error => {
       const status = document.getElementById("qaStatus");
       status.className = "qa-status fail";

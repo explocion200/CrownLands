@@ -8,6 +8,7 @@ const config = require(path.join(root, "functions", "playerFlagConfig.js"));
 const game = read("game.js");
 const server = read("functions/index.js");
 const index = read("index.html");
+const runtimeSprite = read("assets/flag-symbols/runtime.svg");
 const styles = read("styles.css");
 
 const expectedColors = [
@@ -27,24 +28,37 @@ const expectedSymbols = [
   "crown", "lion", "eagle", "double-eagle", "wolf", "stag", "boar", "bear",
   "horse", "dragon", "griffin", "raven", "falcon", "serpent", "crossed-swords",
   "battle-axe", "war-hammer", "spearhead", "gauntlet", "tower", "castle-gate",
-  "fleur-de-lis", "oak-tree", "sunburst",
+  "fleur-de-lis", "oak-tree", "sunburst", "cross", "moon", "diamond", "guardian",
+  "banner", "helm",
+];
+const expectedSelectableSymbols = [
+  "crown", "lion", "eagle", "wolf", "stag", "boar", "bear", "horse",
+  "dragon", "serpent", "crossed-swords", "battle-axe", "war-hammer", "spearhead",
+  "gauntlet", "tower", "castle-gate", "fleur-de-lis", "oak-tree", "sunburst", "cross",
+];
+const expectedLegacyOnlySymbols = [
+  "double-eagle", "griffin", "raven", "falcon", "moon", "diamond", "guardian", "banner", "helm",
 ];
 
 assert.deepEqual(config.COLORS.map(({ label, value }) => [label, value]), expectedColors, "The curated heraldic palette changed.");
 assert.deepEqual(config.PATTERN_KEYS, expectedPatterns, "The supported heraldic patterns changed.");
 assert.deepEqual(config.SYMBOL_KEYS, expectedSymbols, "The medieval symbol catalog changed.");
+assert.deepEqual(config.SELECTABLE_SYMBOL_KEYS, expectedSelectableSymbols, "The approved selectable symbol catalog changed.");
+assert.deepEqual(config.LEGACY_ONLY_SYMBOL_KEYS, expectedLegacyOnlySymbols, "The legacy-only compatibility catalog changed.");
 assert.equal(new Set(config.COLOR_VALUES).size, 20, "Flag colors must remain distinct.");
-assert.equal(new Set(config.SYMBOL_KEYS).size, 24, "Flag symbol IDs must remain distinct.");
+assert.equal(new Set(config.SYMBOL_KEYS).size, 30, "Flag symbol IDs must remain distinct.");
+assert.equal(new Set(config.SELECTABLE_SYMBOL_KEYS).size, 21, "Selectable flag symbol IDs must remain distinct.");
 
 for (const pattern of expectedPatterns) {
   assert.ok(styles.includes(`.kingdom-flag.pattern-${pattern}`), `Missing rendering for ${pattern}.`);
 }
 for (const symbol of config.SYMBOLS) {
   assert.match(symbol.icon, /^flag-[a-z-]+$/, `${symbol.label} must use a dedicated heraldic icon.`);
-  assert.equal((index.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `${symbol.label} must have exactly one SVG sprite symbol.`);
+  const source = config.SELECTABLE_SYMBOL_KEYS.includes(symbol.key) ? runtimeSprite : index;
+  assert.equal((source.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `${symbol.label} must have exactly one SVG sprite symbol.`);
 }
 
-assert.match(index, /functions\/playerFlagConfig\.js\?v=20260814-readability-r38[\s\S]*firebaseClient\.js[\s\S]*game\.js/, "The shared flag config must load before persistence and gameplay.");
+assert.match(index, /functions\/playerFlagConfig\.js\?v=20260819-player-flags-v2-r1[\s\S]*functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1[\s\S]*firebaseClient\.js[\s\S]*game\.js/, "The shared flag config and renderer must load before persistence and gameplay.");
 assert.match(game, /const PLAYER_FLAG_CONFIG = globalThis\.CrownlandsPlayerFlags/);
 assert.match(server, /require\("\.\/playerFlagConfig\.js"\)/);
 assert.match(game, /function createRandomFlag\(\)[\s\S]*PLAYER_FLAG_CONFIG\.createRandomFlag\(\)/);
@@ -53,18 +67,26 @@ assert.match(server, /function createRandomPlayerFlag\(\)[\s\S]*PLAYER_FLAG_CONF
 const variants = new Set();
 for (let trial = 0; trial < 250; trial += 1) {
   const flag = config.createRandomFlag();
+  assert.equal(flag.version, 2);
   assert.ok(config.COLOR_VALUES.includes(flag.primary));
   assert.ok(config.COLOR_VALUES.includes(flag.secondary));
   assert.notEqual(flag.primary, flag.secondary);
   assert.ok(config.COLOR_VALUES.includes(flag.symbolColor));
   assert.ok(config.PATTERN_KEYS.includes(flag.pattern));
-  assert.ok(config.SYMBOL_KEYS.includes(flag.symbol));
+  assert.ok(config.SELECTABLE_SYMBOL_KEYS.includes(flag.symbol));
   variants.add(JSON.stringify(flag));
 }
 assert.ok(variants.size > 100, "Starter flags do not provide enough random variation.");
 
+for (const legacySymbol of expectedLegacyOnlySymbols) {
+  const historical = { version: 2, primary: "#315A8A", secondary: "#C69A45", symbolColor: "#F2E2BF", pattern: "diagonal", symbol: legacySymbol };
+  assert.equal(config.normalizeFlag(historical, `legacy-${legacySymbol}`).symbol, legacySymbol, `${legacySymbol} is no longer readable.`);
+  assert.equal(config.toStoredFlag(historical, `legacy-${legacySymbol}`).symbol, legacySymbol, `${legacySymbol} is rewritten during persistence.`);
+}
+
 const validOld = { primary: "#1f5f91", secondary: "#d3a62e", symbolColor: "#d9e2e8", pattern: "diagonal", symbol: "crown" };
 assert.deepEqual(config.normalizeFlag(validOld, "player-a"), {
+  version: 1,
   primary: "#1F5F91",
   secondary: "#D3A62E",
   symbolColor: "#D9E2E8",
@@ -87,24 +109,24 @@ assert.match(repairedA.primary, /^#[0-9A-F]{6}$/);
 assert.match(repairedA.secondary, /^#[0-9A-F]{6}$/);
 assert.equal(repairedA.symbolColor, "#4A3428", "Icon-color aliases must migrate independently.");
 assert.ok(config.PATTERN_KEYS.includes(repairedA.pattern));
-assert.ok(config.SYMBOL_KEYS.includes(repairedA.symbol));
+assert.ok(config.SELECTABLE_SYMBOL_KEYS.includes(repairedA.symbol));
 assert.notDeepEqual(config.normalizeFlag(corrupted, "another-player"), repairedA, "Stable IDs should distribute corrupt flags across the catalog.");
 
 const aliases = config.normalizeFlag({
   primaryColor: "#A52A2A", accentColor: "#315A8A", chargeColor: "#F2E2BF",
   patternId: "saltire", icon: "flag-fleur",
 }, "aliases");
-assert.deepEqual(aliases, { primary: "#A52A2A", secondary: "#315A8A", symbolColor: "#F2E2BF", pattern: "saltire", symbol: "fleur-de-lis" });
+assert.deepEqual(aliases, { version: 1, primary: "#A52A2A", secondary: "#315A8A", symbolColor: "#F2E2BF", pattern: "saltire", symbol: "fleur-de-lis" });
 
 const oldestStoredShape = config.normalizeFlag({
   background: "#17324d", patternColor: "#d8bd78", emblemColor: "#ffffff",
   pattern: "split", emblem: "crown",
 }, "oldest-shape");
-assert.deepEqual(oldestStoredShape, { primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" }, "The earliest persisted background/patternColor/emblem fields must migrate without losing valid choices.");
+assert.deepEqual(oldestStoredShape, { version: 1, primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" }, "The earliest persisted background/patternColor/emblem fields must migrate without losing valid choices.");
 
 assert.match(server, /previous\.flag && typeof previous\.flag === "object"[\s\S]*normalizeServerFlag\(previous\.flag, uid\)[\s\S]*createRandomPlayerFlag\(\)/, "Fresh profiles must preserve and normalize existing flags before randomizing missing flags.");
 assert.doesNotMatch(server, /requestData\.flag[\s\S]{0,300}createFreshResetPlayerProfile/, "Clients must not choose the authoritative starter flag.");
-assert.match(index, /id="flagSaveBtn"[\s\S]*?id="flagBackBtn"/, "The flag editor must retain Save Flag and Back actions.");
+assert.match(index, /id="flagBackBtn"[\s\S]*?id="flagSaveBtn"/, "The flag editor must retain Cancel and Save Flag actions.");
 assert.doesNotMatch(index, /id="flagExitBtn"/, "The redundant flag Exit action returned.");
 
 console.log("Validated shared heraldic catalogs, random starter flags, and deterministic legacy migration.");

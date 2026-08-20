@@ -13,8 +13,8 @@ const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8")
 const firestoreIndexes = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const callableAccessCheck = fs.readFileSync(path.join(root, "tools", "validate-clan-callable-access.js"), "utf8");
 const showProfileSkillsSource = client.slice(
-  client.indexOf("function showProfileSkills()"),
-  client.indexOf("function showProfileSettings()")
+  client.indexOf("function showProfileSkills("),
+  client.indexOf("function showProfileSettings(")
 );
 const updateArmyTokenElementSource = client.slice(
   client.indexOf("function updateArmyTokenElement("),
@@ -152,7 +152,7 @@ requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRender
 requires(updateArmyTokenElementSource, /const clanAlly = isCurrentClanmateArmy\(attack\)[\s\S]*?clanAlly[\s\S]*?"clan-ally"[\s\S]*?relationshipLabel = clanAlly \? "Clan ally "/, "Moving clanmate army markers do not use the current green allied relationship with an accessible label.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
 requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
-requires(client, /function showProfileClan\(\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
+requires(client, /function showProfileClan\([^)]*\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
 requires(client, /function handleOnlinePlayerClanSnapshot[\s\S]*?previousClanId\s*!==\s*state\.clanId[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Changing clans does not reset mobile navigation to Overview.");
 requires(
   client,

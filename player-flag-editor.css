@@ -1,0 +1,389 @@
+/* Version 2 player-flag editor. Keep this namespace isolated from shared manuscript buttons. */
+.profile-screen.flag-editor-active {
+  width: min(980px, calc(100% - 1rem));
+  height: min(620px, calc(100dvh - .75rem));
+}
+
+.profile-screen .player-flag-editor {
+  min-width: 0;
+  min-height: 0;
+  padding: .65rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: .6rem;
+  overflow: hidden !important;
+  color: #2f2116;
+}
+
+.player-flag-editor__workspace {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(190px, .72fr) minmax(0, 1.55fr);
+  gap: .7rem;
+  overflow: hidden;
+}
+
+.player-flag-editor__preview-panel,
+.player-flag-editor__controls-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(0deg, rgba(70, 48, 24, .045) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #e0d1ad, #bda476);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 220, .28), 0 7px 14px rgba(0, 0, 0, .16);
+}
+
+.player-flag-editor__preview-panel {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: .65rem;
+  display: grid;
+  grid-template-rows: auto minmax(86px, 1fr) auto auto auto;
+  place-items: center;
+  align-content: stretch;
+  gap: .42rem;
+  overflow: hidden;
+}
+
+.player-flag-editor__title { text-align: center; }
+.player-flag-editor__title > span {
+  color: #6d2d35;
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.player-flag-editor__title h3 {
+  margin: .05rem 0 0;
+  color: #3b2412;
+  font: 900 1.05rem/1.1 var(--font-display, serif);
+}
+
+.profile-screen .player-flag-editor .kingdom-flag-editor {
+  width: min(190px, 90%);
+  height: min(138px, 100%);
+  min-height: 86px;
+  aspect-ratio: 1.38;
+}
+
+.player-flag-editor__map-preview {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  color: #5a4028;
+  font-size: .67rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.player-flag-editor__selection-summary {
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .35rem;
+}
+.player-flag-editor__selection-summary div {
+  min-width: 0;
+  padding: .28rem .38rem;
+  border: 1px solid rgba(91, 62, 35, .28);
+  background: rgba(255, 247, 220, .27);
+  text-align: center;
+}
+.player-flag-editor__selection-summary dt {
+  color: #704e30;
+  font-size: .55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.player-flag-editor__selection-summary dd {
+  margin: .06rem 0 0;
+  overflow: hidden;
+  color: #321f12;
+  font-size: .68rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-flag-editor__warning,
+.player-flag-editor__dirty-status {
+  margin: 0;
+  color: #6b3b17;
+  font-size: .62rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+.player-flag-editor__warning { color: #7b2227; }
+
+.player-flag-editor__controls-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+.player-flag-editor__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .35rem;
+  padding: .45rem;
+  border-bottom: 1px solid rgba(84, 55, 31, .42);
+  background: rgba(83, 48, 25, .1);
+}
+.profile-screen .player-flag-editor .player-flag-editor__tab {
+  min-height: 42px;
+  padding: .45rem;
+  color: #50351f;
+  border: 1px solid rgba(83, 54, 31, .62);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e8d8b3, #c4ad7d);
+  box-shadow: inset 0 1px rgba(255, 249, 227, .45), 0 2px 0 rgba(65, 41, 24, .24);
+  font-size: .74rem;
+  font-weight: 950;
+}
+.profile-screen .player-flag-editor .player-flag-editor__tab.active {
+  color: #fff7e5;
+  border-color: #481b21;
+  background: linear-gradient(180deg, #7d3540, #55232a);
+}
+
+.player-flag-editor__control-scroll {
+  min-width: 0;
+  min-height: 0;
+  padding: .55rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+.player-flag-editor__tab-panel { display: grid; gap: .5rem; }
+.player-flag-editor__tab-panel[hidden] { display: none; }
+.profile-screen .player-flag-editor .flag-control-group {
+  min-width: 0;
+  padding: .55rem;
+  gap: .42rem;
+}
+.profile-screen .player-flag-editor .flag-control-group h4 {
+  color: #3b2412;
+  font-size: .75rem;
+}
+
+.profile-screen .player-flag-editor .flag-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(44px, 1fr));
+  gap: .45rem;
+}
+.profile-screen .player-flag-editor .player-flag-editor__swatch {
+  position: relative;
+  width: 100%;
+  min-width: 44px;
+  max-width: 58px;
+  height: 44px;
+  justify-self: center;
+  appearance: none;
+  color: transparent;
+  border: 2px solid rgba(65, 45, 26, .78);
+  border-radius: 5px;
+  background-color: var(--flag-swatch);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, .22), transparent 28%, transparent 72%, rgba(0, 0, 0, .2)),
+    linear-gradient(90deg, rgba(255, 255, 255, .08), transparent 45%, rgba(0, 0, 0, .1));
+  box-shadow: inset 0 0 0 1px rgba(255, 247, 216, .2), 0 3px 6px rgba(0, 0, 0, .24);
+  opacity: 1;
+}
+.profile-screen .player-flag-editor .player-flag-editor__swatch::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 13px;
+  height: 7px;
+  border-left: 3px solid var(--flag-check-color);
+  border-bottom: 3px solid var(--flag-check-color);
+  opacity: 0;
+  transform: translate(-50%, -65%) rotate(-45deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
+}
+.profile-screen .player-flag-editor .player-flag-editor__swatch:is(.active, [aria-pressed="true"]) {
+  border-color: #fff1c8;
+  outline: 3px solid #6d2d35;
+  outline-offset: 1px;
+}
+.profile-screen .player-flag-editor .player-flag-editor__swatch:is(.active, [aria-pressed="true"])::after { opacity: 1; }
+
+.profile-screen .player-flag-editor .player-flag-editor__utility,
+.profile-screen .player-flag-editor .player-flag-editor__pattern-card,
+.profile-screen .player-flag-editor .player-flag-editor__symbol-card,
+.profile-screen .player-flag-editor__actions .player-flag-editor__control,
+.flag-discard-dialog .player-flag-editor__control {
+  min-height: 44px;
+  color: #3b2818;
+  border: 1px solid rgba(85, 58, 39, .82);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e5d5b0, #c2aa79);
+  box-shadow: inset 0 1px rgba(255, 248, 220, .45), 0 3px 0 rgba(61, 38, 22, .3);
+  text-shadow: none;
+}
+.profile-screen .player-flag-editor .player-flag-editor__utility {
+  width: 100%;
+  font-size: .7rem;
+  font-weight: 900;
+}
+.profile-screen .player-flag-editor .flag-option-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .48rem;
+}
+.profile-screen .player-flag-editor .player-flag-editor__pattern-card {
+  min-width: 0;
+  min-height: 68px;
+  padding: .38rem;
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  align-items: center;
+  gap: .5rem;
+  color: #3b2818 !important;
+  font-size: .68rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: left;
+}
+.flag-pattern-thumbnail { width: 64px; height: 42px; }
+.profile-screen .player-flag-editor .player-flag-editor__pattern-card.active,
+.profile-screen .player-flag-editor .player-flag-editor__symbol-card.active {
+  border-color: #6d2d35;
+  outline: 2px solid #6d2d35;
+  outline-offset: -2px;
+  background: linear-gradient(180deg, #f6e7c3, #cda963);
+}
+
+.profile-screen .player-flag-editor .flag-symbol-control .flag-symbol-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .45rem;
+}
+.profile-screen .player-flag-editor .player-flag-editor__symbol-card {
+  min-width: 0;
+  min-height: 66px;
+  padding: .35rem .2rem;
+  display: grid;
+  grid-template-rows: 28px auto;
+  place-items: center;
+  gap: .22rem;
+  color: #3b2818 !important;
+  font-size: .55rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+.profile-screen .player-flag-editor .player-flag-editor__symbol-card .cl-icon {
+  width: 28px;
+  height: 28px;
+  color: #4b2d1c !important;
+  filter: none;
+}
+
+.profile-screen .player-flag-editor__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  min-width: 0;
+  padding: .45rem;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: .45rem;
+  border: 1px solid rgba(84, 55, 31, .58);
+  border-radius: 5px;
+  background: linear-gradient(180deg, #d9c79f, #b29868);
+  box-shadow: 0 -4px 12px rgba(30, 18, 10, .18);
+}
+.profile-screen .player-flag-editor__actions .player-flag-editor__control {
+  min-width: 86px;
+  padding: .5rem .7rem;
+  font-size: .69rem;
+  font-weight: 950;
+}
+.profile-screen .player-flag-editor__actions .profile-primary-btn,
+.flag-discard-dialog .profile-primary-btn {
+  color: #fff7e5;
+  border-color: #481b21;
+  background: linear-gradient(180deg, #7d3540, #55232a);
+}
+.player-flag-editor__save-status {
+  min-width: 0;
+  color: #533a25;
+  font-size: .67rem;
+  font-weight: 900;
+  text-align: center;
+}
+.player-flag-editor__save-status[data-state="success"] { color: #24552f; }
+.player-flag-editor__save-status[data-state="error"] { color: #842b30; }
+
+.player-flag-editor__control:focus-visible {
+  outline: 3px solid #9ed5ff;
+  outline-offset: 2px;
+}
+.player-flag-editor__control:not(:disabled):hover { filter: brightness(1.06) saturate(1.04); }
+.player-flag-editor__control:not(:disabled):active { transform: translateY(1px); }
+.player-flag-editor__control:disabled { cursor: not-allowed; filter: grayscale(.3); opacity: .58; }
+
+.flag-discard-dialog {
+  width: min(420px, calc(100% - 1.5rem));
+  padding: 0;
+  color: #352316;
+  border: 1px solid #6d4c2d;
+  border-radius: 6px;
+  background: #d9c8a0;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, .55);
+}
+.flag-discard-dialog::backdrop { background: rgba(8, 7, 5, .72); }
+.flag-discard-dialog__card { padding: 1rem; display: grid; gap: .7rem; }
+.flag-discard-dialog__card h2,
+.flag-discard-dialog__card p { margin: 0; }
+.flag-discard-dialog__card h2 { font: 900 1.15rem var(--font-display, serif); }
+.flag-discard-dialog__card p { line-height: 1.45; }
+.flag-discard-dialog__actions { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+
+@media (max-height: 460px) and (orientation: landscape) {
+  .profile-screen .player-flag-editor { padding: .4rem; gap: .4rem; }
+  .player-flag-editor__workspace { grid-template-columns: minmax(180px, .64fr) minmax(0, 1.6fr); gap: .45rem; }
+  .player-flag-editor__preview-panel { padding: .38rem; grid-template-rows: auto minmax(72px, 1fr) auto auto; gap: .22rem; }
+  .profile-screen .player-flag-editor .kingdom-flag-editor { width: 132px; min-height: 72px; height: 92px; }
+  .player-flag-editor__selection-summary { display: none; }
+  .player-flag-editor__tabs { padding: .3rem; }
+  .profile-screen .player-flag-editor .player-flag-editor__tab { min-height: 38px; }
+  .player-flag-editor__control-scroll { padding: .35rem; }
+  .profile-screen .player-flag-editor__actions { padding: .3rem; }
+  .profile-screen .player-flag-editor__actions .player-flag-editor__control { min-height: 40px; }
+}
+
+@media (max-width: 640px) and (orientation: portrait) {
+  .profile-screen .player-flag-editor { padding: .5rem; }
+  .player-flag-editor__workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .player-flag-editor__preview-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
+    place-items: center;
+    padding: .5rem;
+  }
+  .player-flag-editor__title { grid-column: 1 / -1; }
+  .profile-screen .player-flag-editor .kingdom-flag-editor { grid-row: 2 / 4; width: 130px; height: 92px; }
+  .player-flag-editor__map-preview { width: auto; }
+  .player-flag-editor__selection-summary { grid-template-columns: minmax(0, 1fr); }
+  .player-flag-editor__warning,
+  .player-flag-editor__dirty-status { grid-column: 1 / -1; }
+  .profile-screen .player-flag-editor .flag-swatch-grid { grid-template-columns: repeat(5, minmax(44px, 1fr)); }
+  .profile-screen .player-flag-editor .flag-symbol-control .flag-symbol-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .profile-screen .player-flag-editor__actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .player-flag-editor__save-status { grid-column: 1 / -1; grid-row: 1; min-height: .8rem; }
+  .profile-screen .player-flag-editor__actions .player-flag-editor__control { min-width: 0; padding-inline: .35rem; }
+}

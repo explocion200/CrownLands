@@ -6468,7 +6468,7 @@ function getOwnerName(city = {}, fallback = "Unknown") {
 
 function normalizeServerFlag(flag = null, stableKey = "") {
   if (!flag || typeof flag !== "object") return null;
-  return PLAYER_FLAG_CONFIG.normalizeFlag(flag, stableKey);
+  return PLAYER_FLAG_CONFIG.toStoredFlag(flag, stableKey);
 }
 
 function isCurrentWorldIslandId(islandId = "") {

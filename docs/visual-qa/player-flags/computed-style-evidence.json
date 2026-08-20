@@ -1,0 +1,24 @@
+{
+  "capturedAt": "2026-08-19",
+  "fixture": "docs/visual-qa/player-flags/index.html?editor=1",
+  "productionStylesheetOrder": true,
+  "swatch": {
+    "dataFlagColor": "#A52A2A",
+    "customProperty": "#A52A2A",
+    "computedBackgroundColor": "rgb(165, 42, 42)",
+    "computedBackgroundImage": "linear-gradient(rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0) 28%, rgba(0, 0, 0, 0) 72%, rgba(0, 0, 0, 0.2)), linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.1))"
+  },
+  "firstSixSwatches": [
+    { "id": "#A52A2A", "computed": "rgb(165, 42, 42)" },
+    { "id": "#6E2025", "computed": "rgb(110, 32, 37)" },
+    { "id": "#722F37", "computed": "rgb(114, 47, 55)" },
+    { "id": "#315A8A", "computed": "rgb(49, 90, 138)" },
+    { "id": "#243447", "computed": "rgb(36, 52, 71)" },
+    { "id": "#547A9A", "computed": "rgb(84, 122, 154)" }
+  ],
+  "genericEditorButton": {
+    "computedBackgroundColor": "rgba(0, 0, 0, 0)",
+    "computedBackgroundImage": "linear-gradient(rgb(229, 213, 176), rgb(194, 170, 121))"
+  },
+  "result": "PASS: swatches retain their individual inline CSS-variable colors while ordinary editor buttons retain the parchment gradient."
+}

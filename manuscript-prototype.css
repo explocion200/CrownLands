@@ -139,7 +139,7 @@
   .battle-report-back,
   .battle-report-detail-btn,
   .battle-report-locate-btn
-) {
+):not(.player-flag-editor__control) {
   border: 1px solid rgba(85, 58, 39, .82);
   border-radius: 4px;
   color: var(--manuscript-ink);
@@ -160,7 +160,7 @@
   .shop-buy-btn:not(:disabled),
   .daily-mission-action button:not(:disabled),
   .troop-slider-confirm.attack:not(:disabled)
-) {
+):not(.player-flag-editor__control) {
   color: #fff7e5;
   border-color: #481b21;
   background: var(--manuscript-button-primary);
@@ -168,19 +168,19 @@
 }
 
 @media (hover: hover) {
-  :is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(:disabled):hover {
+  :is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(.player-flag-editor__control):not(:disabled):hover {
     filter: brightness(1.045) saturate(.98);
     border-color: var(--manuscript-burgundy);
   }
 }
 
-:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(:disabled):active {
+:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(.player-flag-editor__control):not(:disabled):active {
   transform: translateY(2px);
   filter: brightness(.95);
   box-shadow: inset 0 2px 3px rgba(62, 37, 22, .18), 0 1px 0 rgba(62, 37, 22, .34);
 }
 
-:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:disabled {
+:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(.player-flag-editor__control):disabled {
   color: #6f6353;
   border-color: rgba(92, 75, 55, .45);
   background: linear-gradient(180deg, #d8cbb1, #bcae91);

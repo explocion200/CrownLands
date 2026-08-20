@@ -34,7 +34,9 @@ const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-mani
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Preserve the complete offline game shell while allowing the shared WCAG
 // contrast layer to grow by no more than one tightly bounded 64 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3200 * 1024;
+// The shared flag renderer and Main's layout runtime add under 16 KiB to the
+// offline shell while keeping the installation cache below 3.15 MiB.
+const MAX_INSTALL_PRECACHE_BYTES = 3216 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;

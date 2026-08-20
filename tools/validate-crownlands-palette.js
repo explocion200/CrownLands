@@ -14,8 +14,8 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260819-targeted-ui-contrast-r2";
-const cacheVersion = "20260819-targeted-ui-contrast-r2";
+const releaseId = "20260819-player-flags-v2-r1";
+const cacheVersion = "20260819-player-flags-v2-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");

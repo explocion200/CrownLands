@@ -385,7 +385,7 @@ async function main() {
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   assert(profile.playerName === "Preserved Ruler", "Ruler name was not preserved.");
-  const expectedPreservedFlag = playerFlagConfig.normalizeFlag(preservedFlag, users[0].uid);
+  const expectedPreservedFlag = playerFlagConfig.toStoredFlag(preservedFlag, users[0].uid);
   assert(
     JSON.stringify(profile.flag) === JSON.stringify(expectedPreservedFlag),
     "Personal flag components were not preserved through legacy-field migration."

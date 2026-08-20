@@ -140,7 +140,7 @@ requires(server, /function createScoutReportSnapshot[\s\S]*?ownerFlag:\s*normali
 requires(server, /createScoutReportSnapshot\(combatTarget,[\s\S]*?targetStats, defensePackages\)/, "City scout reports do not receive the exact reinforcement defender packages.");
 requires(server, /function createIslandReportProjection[\s\S]*?troopCount:\s*0[\s\S]*?scoutReport:\s*null/, "Exact scout reinforcement intelligence can leak into public island reports.");
 requires(client, /function showScoutReportModal[\s\S]*?City owner[\s\S]*?Clan reinforcement[\s\S]*?scoutDefenderRow/, "Detailed scout reports do not list the city owner and each reinforcing player separately.");
-requires(client, /function showScoutReportModal[\s\S]*?scoutReportPlayerFlag[\s\S]*?scoutReportDefenderFlag[\s\S]*?applyFlagToElement\(modalBody\.querySelector\("#scoutReportPlayerFlag"\), state\.flag, currentPlayerUid\)[\s\S]*?applyFlagToElement\(modalBody\.querySelector\("#scoutReportDefenderFlag"\), reportedOwnerFlag, reportedOwnerUid\)/, "Detailed scout reports do not hydrate both kingdom flags against their stable player identities.");
+requires(client, /function showScoutReportModal[\s\S]*?scoutReportPlayerFlag[\s\S]*?scoutReportDefenderFlag[\s\S]*?FlagRenderer\.render\(modalBody\.querySelector\("#scoutReportPlayerFlag"\), state\.flag, \{ stableKey: currentPlayerUid, context: "scout-report" \}\)[\s\S]*?FlagRenderer\.render\(modalBody\.querySelector\("#scoutReportDefenderFlag"\), reportedOwnerFlag, \{ stableKey: reportedOwnerUid, context: "scout-report" \}\)/, "Detailed scout reports do not hydrate both kingdom flags against their stable player identities.");
 requires(
   client,
   /const attackBlockLabel = clanAlly \? "Reinforce"[\s\S]*?aria-label="\$\{clanAlly \? `Reinforce/,

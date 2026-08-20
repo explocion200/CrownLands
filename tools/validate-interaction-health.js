@@ -156,9 +156,10 @@ assert.match(dialogOpenScrollReset, /requestAnimationFrame/, "Dialog scroll must
 assert.match(dialogOpenScrollReset, /addEventListener\("close"/, "Closed dialogs must discard their previous scroll position.");
 assert.match(dialogOpenScrollReset, /addEventListener\("toggle"/, "Dialog opening must reset scroll after native browser state settles.");
 assert.match(dialogScrollReset, /#modalBody/, "The shared modal body must return to its top whenever a dialog opens.");
-for (const view of ["profileView", "skillsView", "settingsView", "clanView", "flagEditorView"]) {
+for (const view of ["profileView", "skillsView", "settingsView", "clanView"]) {
   assert.match(game, new RegExp(`resetUiScrollTop\\(${view}\\)`), `${view} must open at its top.`);
 }
+assert.match(game, /flagEditorControlScroll\.scrollTop = 0/, "The flag editor's independently scrollable controls must open at their top.");
 
 const nearbyPreload = extractFunction("preloadNearbyIslandMaps");
 assert.match(nearbyPreload, /saveData/, "Speculative map loads must respect Save-Data.");
