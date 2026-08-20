@@ -1,0 +1,933 @@
+{
+  "schemaVersion": "core-v2-auto-reset-1-validation-v1",
+  "passed": true,
+  "study": {
+    "schemaVersion": "core-v2-auto-reset-1-v1",
+    "passed": true,
+    "productionMutationPerformed": false,
+    "productionDeploymentPerformed": false,
+    "scheduler": {
+      "timeZone": "Etc/UTC",
+      "monthlyResetCron": "0 0 1 * *",
+      "prebuildCoordinatorCron": "0 * * * *",
+      "catchUpCron": "*/15 * * * *",
+      "calendar": [
+        {
+          "boundary": "2026-09-01T00:00:00.000Z",
+          "targetSeasonId": "season-2026-09",
+          "sourceSeasonId": "season-2026-08",
+          "nextSeasonId": "season-2026-10",
+          "daysInPriorMonth": 31
+        },
+        {
+          "boundary": "2026-10-01T00:00:00.000Z",
+          "targetSeasonId": "season-2026-10",
+          "sourceSeasonId": "season-2026-09",
+          "nextSeasonId": "season-2026-11",
+          "daysInPriorMonth": 30
+        },
+        {
+          "boundary": "2026-11-01T00:00:00.000Z",
+          "targetSeasonId": "season-2026-11",
+          "sourceSeasonId": "season-2026-10",
+          "nextSeasonId": "season-2026-12",
+          "daysInPriorMonth": 31
+        },
+        {
+          "boundary": "2026-12-01T00:00:00.000Z",
+          "targetSeasonId": "season-2026-12",
+          "sourceSeasonId": "season-2026-11",
+          "nextSeasonId": "season-2027-01",
+          "daysInPriorMonth": 30
+        },
+        {
+          "boundary": "2027-01-01T00:00:00.000Z",
+          "targetSeasonId": "season-2027-01",
+          "sourceSeasonId": "season-2026-12",
+          "nextSeasonId": "season-2027-02",
+          "daysInPriorMonth": 31
+        },
+        {
+          "boundary": "2028-02-01T00:00:00.000Z",
+          "targetSeasonId": "season-2028-02",
+          "sourceSeasonId": "season-2028-01",
+          "nextSeasonId": "season-2028-03",
+          "daysInPriorMonth": 31
+        },
+        {
+          "boundary": "2028-03-01T00:00:00.000Z",
+          "targetSeasonId": "season-2028-03",
+          "sourceSeasonId": "season-2028-02",
+          "nextSeasonId": "season-2028-04",
+          "daysInPriorMonth": 29
+        }
+      ],
+      "seasonIdFormat": "season-YYYY-MM"
+    },
+    "stateMachine": {
+      "legalTransitionsTested": 10,
+      "illegalTransitionsRejected": 4
+    },
+    "controls": {
+      "productionDefaultsOff": true,
+      "allKillSwitchesEngaged": true,
+      "eachKillSwitch": [
+        {
+          "action": "prebuild",
+          "blocked": true
+        },
+        {
+          "action": "reset",
+          "blocked": true
+        },
+        {
+          "action": "migration",
+          "blocked": true
+        },
+        {
+          "action": "cutover",
+          "blocked": true
+        },
+        {
+          "action": "generation",
+          "blocked": true
+        },
+        {
+          "action": "publication",
+          "blocked": true
+        },
+        {
+          "action": "activation",
+          "blocked": true
+        },
+        {
+          "action": "expansion",
+          "blocked": true
+        }
+      ]
+    },
+    "prebuildWindows": [
+      {
+        "hoursBefore": 24,
+        "durationMs": 517.037,
+        "retryAndAlertMarginMinutes": 1440,
+        "valid": true,
+        "coreMaps": 25,
+        "coreCities": 1480,
+        "activeOuterRegions": 193,
+        "standbyRegions": 2
+      },
+      {
+        "hoursBefore": 6,
+        "durationMs": 487.635,
+        "retryAndAlertMarginMinutes": 360,
+        "valid": true,
+        "coreMaps": 25,
+        "coreCities": 1480,
+        "activeOuterRegions": 193,
+        "standbyRegions": 2
+      },
+      {
+        "hoursBefore": 1,
+        "durationMs": 557.119,
+        "retryAndAlertMarginMinutes": 60,
+        "valid": true,
+        "coreMaps": 25,
+        "coreCities": 1480,
+        "activeOuterRegions": 193,
+        "standbyRegions": 2
+      }
+    ],
+    "recommendedPrebuildHours": 24,
+    "retryPolicy": {
+      "maximumAttempts": 3,
+      "backoff": "exponential",
+      "idempotentOnly": true
+    },
+    "hardAbortPolicy": {
+      "integrityFailuresRetried": false,
+      "pointerChanged": false,
+      "oldSeasonRemainsAuthoritative": true,
+      "failedNamespaceRetained": true
+    },
+    "successfulScheduledPath": {
+      "prebuildStatus": "PREBUILT",
+      "finalStatus": "OLD_SEASON_ARCHIVED",
+      "stateHistory": [
+        {
+          "from": "SCHEDULED",
+          "to": "PREBUILDING",
+          "at": "2026-08-31T00:00:00.000Z"
+        },
+        {
+          "from": "PREBUILDING",
+          "to": "PREBUILT",
+          "at": "2026-08-31T00:00:00.000Z"
+        },
+        {
+          "from": "PREBUILT",
+          "to": "RESET_FREEZE",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "RESET_FREEZE",
+          "to": "FINAL_SNAPSHOT",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "FINAL_SNAPSHOT",
+          "to": "MIGRATING",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "MIGRATING",
+          "to": "VALIDATING",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "VALIDATING",
+          "to": "CUTOVER_READY",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "CUTOVER_READY",
+          "to": "CUTTING_OVER",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "CUTTING_OVER",
+          "to": "ACTIVE",
+          "at": "2026-09-01T00:00:00.000Z"
+        },
+        {
+          "from": "ACTIVE",
+          "to": "OLD_SEASON_ARCHIVED",
+          "at": "2026-09-01T00:00:00.000Z"
+        }
+      ],
+      "transientAttempts": {
+        "attemptCount": 3,
+        "attempts": [
+          {
+            "attempt": 1,
+            "code": "unavailable",
+            "classification": "TRANSIENT",
+            "message": "prebuild-temporary"
+          },
+          {
+            "attempt": 2,
+            "code": "unavailable",
+            "classification": "TRANSIENT",
+            "message": "prebuild-temporary"
+          }
+        ]
+      },
+      "goNoGo": {
+        "automaticCutoverAllowed": true,
+        "hardCheckCount": 39,
+        "passedCheckCount": 39,
+        "failedCheckCount": 0,
+        "failures": [],
+        "checks": [
+          {
+            "name": "environment.correctProject",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "environment.correctCurrentSeason",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "environment.expectedSchedulerInvocation",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "environment.duplicateResetLockSafe",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "environment.expectedCandidateVersion",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "backup.completed",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "backup.receiptValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "backup.recoveryProtectionApproved",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "core.mapCount",
+            "actual": 25,
+            "passed": true
+          },
+          {
+            "name": "core.cityCount",
+            "actual": 1480,
+            "passed": true
+          },
+          {
+            "name": "core.packageHashValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "core.objectiveCount",
+            "actual": 17,
+            "passed": true
+          },
+          {
+            "name": "core.objectiveCoordinatesValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "core.topologyValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "core.allSpawnIneligible",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "outer.requiredActiveCapacityExists",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "outer.allRegionsHave40Cities",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "outer.standbyRegionCount",
+            "actual": 2,
+            "passed": true
+          },
+          {
+            "name": "outer.edgeContractsValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "outer.clockwiseAllocationValid",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.exactPlayerCountProcessed",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.flagsMatch",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.clansMatch",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.ownedCommonGearMatches",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.equippedCommonGearMatches",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.gearLevelsMatch",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.gearUpgradesMatch",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "persistence.gearDuplicateProgressionMatches",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "resetState.bagConsumablesMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldCityOwnershipMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldMarchesMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldRalliesMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldReinforcementsMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldObjectiveOwnershipMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.oldMainCityAssignmentsMigrated",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "resetState.prohibitedSeasonalStateRemaining",
+            "actual": 0,
+            "passed": true
+          },
+          {
+            "name": "security.mainCityRestrictionActive",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "security.environmentGuardActive",
+            "actual": true,
+            "passed": true
+          },
+          {
+            "name": "security.unauthorizedCutoverPaths",
+            "actual": 0,
+            "passed": true
+          }
+        ],
+        "receiptHash": "e4337d9e1f005d51a379c96a537a77dfebb617c3ed7e0e243b8d7d2f46998228"
+      },
+      "receipt": {
+        "operationId": "monthly-reset-be5ddd15718da91e8688f493",
+        "sourceSeason": "season-2026-08",
+        "targetSeason": "season-2026-09",
+        "scheduledTime": "2026-09-01T00:00:00.000Z",
+        "actualStartTime": "2026-08-31T00:00:00.000Z",
+        "actualEndTime": "2026-09-01T00:00:00.000Z",
+        "candidateVersion": "core-v2-auto-reset-1-reset2-candidate-v1",
+        "coreHash": "397387df340ce3ed9171ef4e494623ea4dd4632af5324abf0a357c504c355d00",
+        "playerCount": 5000,
+        "clanCount": 125,
+        "gearCount": 74000,
+        "gearChecksum": "8fc9da7d3fd94225ba56e45895a030957e6e0db55da2a33c7912d986f759060a",
+        "cityCounts": {
+          "core": 1480,
+          "outerPerRegion": 40
+        },
+        "objectiveCount": 17,
+        "backupReceipt": {
+          "operationId": "monthly-reset-be5ddd15718da91e8688f493",
+          "backupId": "backup-monthly-reset-be5ddd15718da91e8688f493",
+          "startedAt": "2026-09-01T00:00:00.000Z",
+          "completedAt": "2026-09-01T00:00:00.000Z",
+          "completed": true,
+          "receiptValid": true,
+          "recoveryProtectionApproved": true,
+          "playerCount": 5000,
+          "clanCount": 125,
+          "coverageHash": "a196b3a687a604e031e742cc8bc54c3b4893871bc8d27992f57f61c96ad653fa"
+        },
+        "validationReceipt": {
+          "automaticCutoverAllowed": true,
+          "hardCheckCount": 39,
+          "passedCheckCount": 39,
+          "failedCheckCount": 0,
+          "failures": [],
+          "checks": [
+            {
+              "name": "environment.correctProject",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "environment.correctCurrentSeason",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "environment.expectedSchedulerInvocation",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "environment.duplicateResetLockSafe",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "environment.expectedCandidateVersion",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "backup.completed",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "backup.receiptValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "backup.recoveryProtectionApproved",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "core.mapCount",
+              "actual": 25,
+              "passed": true
+            },
+            {
+              "name": "core.cityCount",
+              "actual": 1480,
+              "passed": true
+            },
+            {
+              "name": "core.packageHashValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "core.objectiveCount",
+              "actual": 17,
+              "passed": true
+            },
+            {
+              "name": "core.objectiveCoordinatesValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "core.topologyValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "core.allSpawnIneligible",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "outer.requiredActiveCapacityExists",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "outer.allRegionsHave40Cities",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "outer.standbyRegionCount",
+              "actual": 2,
+              "passed": true
+            },
+            {
+              "name": "outer.edgeContractsValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "outer.clockwiseAllocationValid",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.exactPlayerCountProcessed",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.flagsMatch",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.clansMatch",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.ownedCommonGearMatches",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.equippedCommonGearMatches",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.gearLevelsMatch",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.gearUpgradesMatch",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "persistence.gearDuplicateProgressionMatches",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "resetState.bagConsumablesMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldCityOwnershipMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldMarchesMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldRalliesMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldReinforcementsMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldObjectiveOwnershipMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.oldMainCityAssignmentsMigrated",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "resetState.prohibitedSeasonalStateRemaining",
+              "actual": 0,
+              "passed": true
+            },
+            {
+              "name": "security.mainCityRestrictionActive",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "security.environmentGuardActive",
+              "actual": true,
+              "passed": true
+            },
+            {
+              "name": "security.unauthorizedCutoverPaths",
+              "actual": 0,
+              "passed": true
+            }
+          ],
+          "receiptHash": "e4337d9e1f005d51a379c96a537a77dfebb617c3ed7e0e243b8d7d2f46998228"
+        },
+        "cutoverTransaction": {
+          "pointerChanged": true,
+          "revision": 2,
+          "atomic": true
+        },
+        "archiveResult": {
+          "seasonId": "season-2026-08",
+          "status": "RETIRED_READ_ONLY",
+          "deleted": false,
+          "retentionDays": 30
+        },
+        "finalStatus": "OLD_SEASON_ARCHIVED",
+        "immutable": true,
+        "receiptHash": "a13afe411badc550277e603eb5dcba8b71a9bdd26758777c37ca4022e7a6d791"
+      },
+      "zeroHumanInterventionAfterScheduleDispatch": true
+    },
+    "failedScheduledPath": {
+      "finalStatus": "VALIDATION_FAILED",
+      "failedChecks": [
+        {
+          "name": "persistence.gearLevelsMatch",
+          "actual": false,
+          "passed": false
+        }
+      ],
+      "oldSeasonRemainsAuthoritative": true,
+      "pointerSeasonId": "season-2026-08",
+      "maintenanceUnwound": true
+    },
+    "duplicateInvocation": {
+      "status": "DUPLICATE_SAFE_EXIT",
+      "duplicateResetCreated": false,
+      "duplicateMigration": false,
+      "duplicateStartingCities": false
+    },
+    "candidateNotPrebuiltAtBoundary": {
+      "status": "RESET_ABORTED",
+      "oldSeasonRemainsAuthoritative": true,
+      "freezeEntered": false
+    },
+    "lateStarts": [
+      {
+        "minutesLate": 1,
+        "status": "DUPLICATE_SAFE_EXIT",
+        "duplicateResetCreated": false
+      },
+      {
+        "minutesLate": 15,
+        "status": "DUPLICATE_SAFE_EXIT",
+        "duplicateResetCreated": false
+      },
+      {
+        "minutesLate": 120,
+        "status": "DUPLICATE_SAFE_EXIT",
+        "duplicateResetCreated": false
+      }
+    ],
+    "freezeBenchmarks": [
+      {
+        "playerCount": 30,
+        "measuredDevelopmentModelMs": 42.166,
+        "stages": [
+          {
+            "name": "final_snapshot",
+            "durationMs": 1.62
+          },
+          {
+            "name": "persistent_migration",
+            "durationMs": 3.999
+          },
+          {
+            "name": "persistence_validation",
+            "durationMs": 36.388
+          },
+          {
+            "name": "go_and_pointer_transaction",
+            "durationMs": 0.08
+          }
+        ],
+        "persistentHash": "7cec86fa126fdc376aa1813599f3d68794738eeb45fa7cd63c38ca281bd549f3"
+      },
+      {
+        "playerCount": 5000,
+        "measuredDevelopmentModelMs": 8219.849,
+        "stages": [
+          {
+            "name": "final_snapshot",
+            "durationMs": 410.59
+          },
+          {
+            "name": "persistent_migration",
+            "durationMs": 829.331
+          },
+          {
+            "name": "persistence_validation",
+            "durationMs": 6979.812
+          },
+          {
+            "name": "go_and_pointer_transaction",
+            "durationMs": 0.074
+          }
+        ],
+        "persistentHash": "477f03098cbfdf4106ed8d212200d65dbaac535329ee164e67f0766fac644e31"
+      }
+    ],
+    "multiMonth": {
+      "transitions": [
+        {
+          "sourceSeasonId": "season-2026-08",
+          "targetSeasonId": "season-2026-09",
+          "status": "OLD_SEASON_ARCHIVED",
+          "playerCount": 5000,
+          "clanCount": 125,
+          "gearCount": 74000,
+          "gearHash": "e3133a5de524ca0a6f209370bda91cc2dd4f762060777f29ddc8a293af0bf288",
+          "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+          "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+          "consumablesMigrated": 0,
+          "worldStateMigrated": 0,
+          "archivedReadOnly": true,
+          "duplicateSeasonData": 0
+        },
+        {
+          "sourceSeasonId": "season-2026-09",
+          "targetSeasonId": "season-2026-10",
+          "status": "OLD_SEASON_ARCHIVED",
+          "playerCount": 5000,
+          "clanCount": 125,
+          "gearCount": 74000,
+          "gearHash": "1ed06fb0a3d6ab1441ea09fd00590bac0218d2fdee3ed99be7a2d4e1ec583cc2",
+          "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+          "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+          "consumablesMigrated": 0,
+          "worldStateMigrated": 0,
+          "archivedReadOnly": true,
+          "duplicateSeasonData": 0
+        },
+        {
+          "sourceSeasonId": "season-2026-10",
+          "targetSeasonId": "season-2026-11",
+          "status": "OLD_SEASON_ARCHIVED",
+          "playerCount": 5000,
+          "clanCount": 125,
+          "gearCount": 74000,
+          "gearHash": "87c447c0b3d0c4939d93b901d625c9d36e99820d5f53021dca72ff49832bc414",
+          "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+          "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+          "consumablesMigrated": 0,
+          "worldStateMigrated": 0,
+          "archivedReadOnly": true,
+          "duplicateSeasonData": 0
+        },
+        {
+          "sourceSeasonId": "season-2026-11",
+          "targetSeasonId": "season-2026-12",
+          "status": "OLD_SEASON_ARCHIVED",
+          "playerCount": 5000,
+          "clanCount": 125,
+          "gearCount": 74000,
+          "gearHash": "c081f396b998d6e97fa3526e0f2a8aefa941ef759a3e00c6054de324b6357966",
+          "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+          "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+          "consumablesMigrated": 0,
+          "worldStateMigrated": 0,
+          "archivedReadOnly": true,
+          "duplicateSeasonData": 0
+        }
+      ],
+      "passed": true,
+      "playerCount": 5000,
+      "gearCountStable": true,
+      "clanCountStable": true,
+      "flagsPersisted": true,
+      "noConsumablesPersisted": true,
+      "oldSeasonsArchivedNotDeleted": true
+    },
+    "archive": {
+      "status": "RETIRED_READ_ONLY",
+      "retentionDays": 30,
+      "automaticDeleteEnabled": false,
+      "approximateBytesPerSynthetic5000PlayerSeason": 32229018,
+      "projected12MonthBytes": 386748216
+    },
+    "alerts": {
+      "INFO": [
+        "prebuild-started",
+        "prebuild-complete",
+        "freeze-started",
+        "cutover-complete",
+        "old-season-archived"
+      ],
+      "WARNING": [
+        "transient-retry",
+        "standby-below-target",
+        "scheduler-late-1m",
+        "reset-runtime-warning"
+      ],
+      "CRITICAL": [
+        "prebuild-failure",
+        "backup-failure",
+        "migration-failure",
+        "pagination-stall",
+        "gear-mismatch",
+        "clan-mismatch",
+        "flag-mismatch",
+        "unexpected-consumable-persistence",
+        "core-count-mismatch",
+        "city-count-mismatch",
+        "topology-mismatch",
+        "objective-mismatch",
+        "reset-lock-conflict",
+        "pointer-cutover-failure",
+        "scheduler-missed",
+        "reset-runtime-critical",
+        "post-cutover-smoke-failure"
+      ],
+      "runtimeSeconds": {
+        "warning": 900,
+        "critical": 1800
+      },
+      "paginationNoProgressSeconds": {
+        "warning": 120,
+        "critical": 300
+      },
+      "standbyRegionCount": {
+        "warningBelow": 2,
+        "criticalBelow": 1
+      }
+    },
+    "productionRecoveryProtection": {
+      "observedPitr": "DISABLED",
+      "observedDeleteProtection": "DISABLED",
+      "recommendation": "Enable Firestore PITR and delete protection; require a completed, validated backup receipt before automatic cutover.",
+      "productionEnablementBlocked": true
+    },
+    "durationMs": 157939.906,
+    "receiptHash": "8bfcdf6df27a42ab8f63f626f9c79494b9034a9786e4a093b76b17f7a0234d75"
+  },
+  "scheduledStaging": {
+    "available": true,
+    "passed": true,
+    "status": "PASS",
+    "receiptHash": "726ab25dae1ed576e7145f66b8764cdd3a9b30ef477e6696849bb850c7b528e2"
+  },
+  "reset2CandidatePreserved": {
+    "candidateId": "reset2-candidate-2e68667049a02b05",
+    "sourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "exactSourceHashesUnchanged": true
+  },
+  "productionBaseline": {
+    "maps": 15,
+    "cities": 1050,
+    "directedChains": 210,
+    "generatedActiveRegions": 0
+  },
+  "assetManifest": {
+    "count": 118,
+    "hash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+  },
+  "schedulerSourceHashes": {
+    "automaticReset": "0da5b85f8daeb4382a8ca2c60b8e063870d77e9180442be5f032429f970c8311",
+    "firebaseAdapter": "b12ab1ef65c6e4ac58bd3ebda524a029ee257f029158c23f7c7595166c6808e7",
+    "schedulerExports": "1e20655bec41d8c6629e2b6259e21c40506e765085366573f21bb7f1fc39aff9",
+    "productionOffConfig": "74c997498b030b0daf5d8eedc4f583d56a1559929e64a64f6e072b7fc0838963"
+  },
+  "productionMutationPerformed": false,
+  "productionDeploymentPerformed": false
+}

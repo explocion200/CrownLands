@@ -1,0 +1,9 @@
+{
+  "functions": [
+    {
+      "source": "functions-auto-reset",
+      "codebase": "auto-reset",
+      "runtime": "nodejs22"
+    }
+  ]
+}

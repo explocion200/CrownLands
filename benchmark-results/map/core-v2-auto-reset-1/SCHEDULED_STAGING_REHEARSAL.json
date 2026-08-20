@@ -1,0 +1,521 @@
+{
+  "schemaVersion": "core-v2-auto-reset-1-scheduled-staging-v1",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "isolated": true,
+  "sourceReset2RunId": "reset2-aug25-exact-candidate-v5",
+  "sourceReset2ReceiptHash": "88068b02556aaadf27ca16e4db3df313712cd8431e1fb8f654fd6730b0519896",
+  "failurePath": {
+    "candidateVersion": "auto-reset-1-staging-hard-failure-v4",
+    "operationId": "monthly-reset-125d3e757d5c1388a57fad54",
+    "schedule": {
+      "prebuildAt": "2026-08-20T10:23:00.000Z",
+      "resetAt": "2026-08-20T10:24:00.000Z",
+      "jobs": [
+        {
+          "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-prebuildNextMonthlySeason-us-central1",
+          "schedule": "23 10 20 8 *",
+          "state": "ENABLED",
+          "timeZone": "Etc/UTC"
+        },
+        {
+          "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-runMonthlySeasonReset-us-central1",
+          "schedule": "24 10 20 8 *",
+          "state": "ENABLED",
+          "timeZone": "Etc/UTC"
+        }
+      ]
+    },
+    "prebuildWaitMs": 114590,
+    "resetWaitMs": 57196,
+    "finalStatus": "VALIDATION_FAILED",
+    "operationState": "VALIDATION_FAILED",
+    "receiptHash": "e66083fb556400d358452b3b72864dec50c5011910cf08e9691bc24f3d110a97",
+    "goNoGo": {
+      "automaticCutoverAllowed": false,
+      "checks": [
+        {
+          "actual": true,
+          "passed": true,
+          "name": "environment.correctProject"
+        },
+        {
+          "name": "environment.correctCurrentSeason",
+          "passed": true,
+          "actual": true
+        },
+        {
+          "actual": true,
+          "name": "environment.expectedSchedulerInvocation",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "environment.duplicateResetLockSafe",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "name": "environment.expectedCandidateVersion",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "name": "backup.completed",
+          "passed": true
+        },
+        {
+          "name": "backup.receiptValid",
+          "passed": true,
+          "actual": true
+        },
+        {
+          "actual": true,
+          "name": "backup.recoveryProtectionApproved",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "core.mapCount",
+          "actual": 25
+        },
+        {
+          "name": "core.cityCount",
+          "actual": 1480,
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "core.packageHashValid",
+          "actual": true
+        },
+        {
+          "name": "core.objectiveCount",
+          "passed": true,
+          "actual": 17
+        },
+        {
+          "actual": true,
+          "name": "core.objectiveCoordinatesValid",
+          "passed": true
+        },
+        {
+          "name": "core.topologyValid",
+          "actual": true,
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "core.allSpawnIneligible",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "outer.requiredActiveCapacityExists"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "outer.allRegionsHave40Cities"
+        },
+        {
+          "passed": true,
+          "actual": 2,
+          "name": "outer.standbyRegionCount"
+        },
+        {
+          "actual": true,
+          "name": "outer.edgeContractsValid",
+          "passed": true
+        },
+        {
+          "name": "outer.clockwiseAllocationValid",
+          "passed": true,
+          "actual": true
+        },
+        {
+          "passed": true,
+          "name": "persistence.exactPlayerCountProcessed",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "persistence.flagsMatch"
+        },
+        {
+          "actual": true,
+          "name": "persistence.clansMatch",
+          "passed": true
+        },
+        {
+          "actual": true,
+          "name": "persistence.ownedCommonGearMatches",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "persistence.equippedCommonGearMatches",
+          "actual": true
+        },
+        {
+          "name": "persistence.gearLevelsMatch",
+          "passed": false,
+          "actual": false
+        },
+        {
+          "actual": true,
+          "name": "persistence.gearUpgradesMatch",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "persistence.gearDuplicateProgressionMatches",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "name": "resetState.bagConsumablesMigrated",
+          "actual": 0
+        },
+        {
+          "name": "resetState.oldCityOwnershipMigrated",
+          "actual": 0,
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "name": "resetState.oldMarchesMigrated",
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "name": "resetState.oldRalliesMigrated",
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "passed": true,
+          "name": "resetState.oldReinforcementsMigrated"
+        },
+        {
+          "actual": 0,
+          "name": "resetState.oldObjectiveOwnershipMigrated",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "resetState.oldMainCityAssignmentsMigrated",
+          "actual": 0
+        },
+        {
+          "passed": true,
+          "name": "resetState.prohibitedSeasonalStateRemaining",
+          "actual": 0
+        },
+        {
+          "name": "security.mainCityRestrictionActive",
+          "actual": true,
+          "passed": true
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "security.environmentGuardActive"
+        },
+        {
+          "passed": true,
+          "name": "security.unauthorizedCutoverPaths",
+          "actual": 0
+        }
+      ],
+      "hardCheckCount": 39,
+      "failures": [
+        {
+          "name": "persistence.gearLevelsMatch",
+          "actual": false,
+          "passed": false
+        }
+      ],
+      "failedCheckCount": 1,
+      "passedCheckCount": 38,
+      "receiptHash": "98408aed49a875b2b7b04b25c002fca3e64eaf73c5e5f53ccff95f22b2fa8837"
+    },
+    "oldSeasonRemainsAuthoritative": true,
+    "automaticCutoverAllowed": false
+  },
+  "successPath": {
+    "candidateVersion": "auto-reset-1-staging-success-v4",
+    "operationId": "monthly-reset-12e3bf15fc8a4927e4cf07d4",
+    "schedule": {
+      "prebuildAt": "2026-08-20T10:26:00.000Z",
+      "resetAt": "2026-08-20T10:27:00.000Z",
+      "jobs": [
+        {
+          "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-prebuildNextMonthlySeason-us-central1",
+          "schedule": "26 10 20 8 *",
+          "state": "ENABLED",
+          "timeZone": "Etc/UTC"
+        },
+        {
+          "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-runMonthlySeasonReset-us-central1",
+          "schedule": "27 10 20 8 *",
+          "state": "ENABLED",
+          "timeZone": "Etc/UTC"
+        }
+      ]
+    },
+    "prebuildWaitMs": 115608,
+    "resetWaitMs": 62530,
+    "finalStatus": "OLD_SEASON_ARCHIVED",
+    "operationState": "OLD_SEASON_ARCHIVED",
+    "receiptHash": "0f2bceaae0e5aa8b8e18e48c05b2506a1f9c2be2cd91cc105a8e76ea9aaa2aa4",
+    "goNoGo": {
+      "failedCheckCount": 0,
+      "automaticCutoverAllowed": true,
+      "checks": [
+        {
+          "passed": true,
+          "name": "environment.correctProject",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "environment.correctCurrentSeason"
+        },
+        {
+          "passed": true,
+          "name": "environment.expectedSchedulerInvocation",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "environment.duplicateResetLockSafe"
+        },
+        {
+          "passed": true,
+          "name": "environment.expectedCandidateVersion",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "name": "backup.completed",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "backup.receiptValid"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "backup.recoveryProtectionApproved"
+        },
+        {
+          "passed": true,
+          "actual": 25,
+          "name": "core.mapCount"
+        },
+        {
+          "actual": 1480,
+          "passed": true,
+          "name": "core.cityCount"
+        },
+        {
+          "actual": true,
+          "name": "core.packageHashValid",
+          "passed": true
+        },
+        {
+          "actual": 17,
+          "passed": true,
+          "name": "core.objectiveCount"
+        },
+        {
+          "passed": true,
+          "name": "core.objectiveCoordinatesValid",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "core.topologyValid"
+        },
+        {
+          "actual": true,
+          "name": "core.allSpawnIneligible",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "outer.requiredActiveCapacityExists"
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "outer.allRegionsHave40Cities"
+        },
+        {
+          "passed": true,
+          "actual": 2,
+          "name": "outer.standbyRegionCount"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "outer.edgeContractsValid"
+        },
+        {
+          "name": "outer.clockwiseAllocationValid",
+          "actual": true,
+          "passed": true
+        },
+        {
+          "passed": true,
+          "name": "persistence.exactPlayerCountProcessed",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "actual": true,
+          "name": "persistence.flagsMatch"
+        },
+        {
+          "passed": true,
+          "name": "persistence.clansMatch",
+          "actual": true
+        },
+        {
+          "passed": true,
+          "name": "persistence.ownedCommonGearMatches",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "persistence.equippedCommonGearMatches"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "persistence.gearLevelsMatch"
+        },
+        {
+          "passed": true,
+          "name": "persistence.gearUpgradesMatch",
+          "actual": true
+        },
+        {
+          "actual": true,
+          "name": "persistence.gearDuplicateProgressionMatches",
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "name": "resetState.bagConsumablesMigrated",
+          "passed": true
+        },
+        {
+          "actual": 0,
+          "passed": true,
+          "name": "resetState.oldCityOwnershipMigrated"
+        },
+        {
+          "passed": true,
+          "name": "resetState.oldMarchesMigrated",
+          "actual": 0
+        },
+        {
+          "actual": 0,
+          "name": "resetState.oldRalliesMigrated",
+          "passed": true
+        },
+        {
+          "passed": true,
+          "actual": 0,
+          "name": "resetState.oldReinforcementsMigrated"
+        },
+        {
+          "passed": true,
+          "actual": 0,
+          "name": "resetState.oldObjectiveOwnershipMigrated"
+        },
+        {
+          "passed": true,
+          "actual": 0,
+          "name": "resetState.oldMainCityAssignmentsMigrated"
+        },
+        {
+          "actual": 0,
+          "passed": true,
+          "name": "resetState.prohibitedSeasonalStateRemaining"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "security.mainCityRestrictionActive"
+        },
+        {
+          "actual": true,
+          "passed": true,
+          "name": "security.environmentGuardActive"
+        },
+        {
+          "passed": true,
+          "name": "security.unauthorizedCutoverPaths",
+          "actual": 0
+        }
+      ],
+      "hardCheckCount": 39,
+      "passedCheckCount": 39,
+      "receiptHash": "e4337d9e1f005d51a379c96a537a77dfebb617c3ed7e0e243b8d7d2f46998228",
+      "failures": []
+    },
+    "pointerSeasonId": "season-2026-11",
+    "pointerWorldId": "auto-reset-1-staging-world-2026-11",
+    "priorWorldId": "auto-reset-1-staging-world-2026-10",
+    "automaticCutoverAllowed": true,
+    "zeroHumanInterventionBetweenScheduledPrebuildAndCutover": true
+  },
+  "archive": {
+    "replacedBySeasonId": "season-2026-11",
+    "mutationState": "READ_ONLY",
+    "archivedAt": "2026-08-20T10:27:02.022Z",
+    "sourceSeasonId": "season-2026-10",
+    "status": "RETIRED_READ_ONLY",
+    "deleted": false,
+    "retentionDays": 30,
+    "resetOperationId": "monthly-reset-12e3bf15fc8a4927e4cf07d4"
+  },
+  "controlsDisabledAfterRehearsal": true,
+  "schedulerJobsRestored": [
+    {
+      "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-prebuildNextMonthlySeason-us-central1",
+      "schedule": "0 * * * *",
+      "state": "ENABLED",
+      "timeZone": "Etc/UTC"
+    },
+    {
+      "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-runMonthlySeasonReset-us-central1",
+      "schedule": "0 0 1 * *",
+      "state": "ENABLED",
+      "timeZone": "Etc/UTC"
+    },
+    {
+      "name": "projects/crownlands-map-staging-2026/locations/us-central1/jobs/firebase-schedule-catchUpMonthlySeasonReset-us-central1",
+      "schedule": "*/15 * * * *",
+      "state": "ENABLED",
+      "timeZone": "Etc/UTC"
+    }
+  ],
+  "productionMutationPerformed": false,
+  "productionProjectTargeted": false,
+  "productionDeploymentPerformed": false,
+  "completedAt": "2026-08-20T10:27:10.323Z",
+  "receiptHash": "726ab25dae1ed576e7145f66b8764cdd3a9b30ef477e6696849bb850c7b528e2"
+}

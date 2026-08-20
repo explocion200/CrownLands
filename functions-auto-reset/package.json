@@ -1,0 +1,19 @@
+{
+  "name": "crownlands-auto-reset-functions",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "description": "Fail-safe monthly Crownlands season reset scheduler",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "node --check automatic-reset.js && node --check firebase-adapter.js && node --check index.js",
+    "test": "node ../tools/validate-core-v2-auto-reset-1.js"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^5.0.5",
+    "firebase-admin": "^14.2.0",
+    "firebase-functions": "^7.3.2"
+  }
+}

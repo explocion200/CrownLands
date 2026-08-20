@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "crownlands-auto-reset-controls-v1",
+  "environment": "PRODUCTION",
+  "monthlySeasonResetEnabled": false,
+  "automaticPrebuildEnabled": false,
+  "automaticCutoverEnabled": false,
+  "candidateVersion": "UNAUTHORIZED",
+  "prebuildHoursBeforeBoundary": 24,
+  "standbyRegionTarget": 2,
+  "oldSeasonRetentionDays": 30,
+  "recoveryProtection": {
+    "backupRequired": true,
+    "pitrRequired": true,
+    "deleteProtectionRequired": true,
+    "approved": false
+  },
+  "killSwitches": {
+    "prebuild": true,
+    "reset": true,
+    "migration": true,
+    "cutover": true,
+    "generation": true,
+    "publication": true,
+    "activation": true,
+    "expansion": true
+  }
+}
