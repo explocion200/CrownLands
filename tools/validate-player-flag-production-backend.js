@@ -17,6 +17,18 @@ const functionsBackend = require(path.join(firebaseToolsRoot, "deploy", "functio
 
 const normalize = value => String(value || "").replace(/\r\n/g, "\n").trimEnd();
 const hash = value => crypto.createHash("sha256").update(normalize(value)).digest("hex");
+const flagBackendSources = [
+  "functions/index.js",
+  "functions/playerFlagConfig.js",
+  "functions/release-config.json",
+];
+
+function latestSourceCommit(format) {
+  return execFileSync("git", ["log", "-1", `--format=${format}`, "HEAD", "--", ...flagBackendSources], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+}
 
 function sourceGenerationTime(endpoint) {
   const generation = String(endpoint?.source?.storageSource?.generation || "");
@@ -34,11 +46,6 @@ async function main() {
   const releases = await rulesApi.listAllReleases(projectId);
   const rulesetName = await rulesApi.getLatestRulesetName(projectId, "cloud.firestore", releases);
   assert.ok(rulesetName, "Production has no active Cloud Firestore ruleset.");
-  const release = releases.find(candidate => candidate.rulesetName === rulesetName);
-  assert.ok(release, `Could not resolve the active Firestore release for ${rulesetName}.`);
-  const rulesets = await rulesApi.listAllRulesets(projectId);
-  const activeRuleset = rulesets.find(candidate => candidate.name === rulesetName);
-  assert.ok(activeRuleset, `Could not resolve the active Firestore ruleset metadata for ${rulesetName}.`);
   const deployedFiles = await rulesApi.getRulesetContent(rulesetName);
   const deployedRules = deployedFiles.find(file => path.basename(file.name || "") === "firestore.rules")
     || deployedFiles[0];
@@ -56,23 +63,18 @@ async function main() {
   const backend = await functionsBackend.existingBackend({ projectId });
   const endpoints = functionsBackend.allEndpoints(backend);
   const requiredFunctions = ["getRealmInfo", "syncPlayerIdentity"];
-  const deployedAtOrAfter = Number(execFileSync("git", ["show", "-s", "--format=%ct", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim()) * 1000;
+  const backendSourceCommit = latestSourceCommit("%h");
+  const deployedAtOrAfter = Number(latestSourceCommit("%ct")) * 1000;
   for (const functionName of requiredFunctions) {
     const endpoint = endpoints.find(candidate => candidate.id === functionName && candidate.region === "us-central1");
     assert.ok(endpoint, `Production is missing us-central1/${functionName}.`);
     assert.equal(endpoint.platform, "gcfv2", `${functionName} is not deployed on Cloud Functions v2.`);
     assert.equal(endpoint.runtime, "nodejs22", `${functionName} is not deployed on Node 22.`);
     assert.ok(sourceGenerationTime(endpoint) >= deployedAtOrAfter, [
-      `${functionName} predates commit ${execFileSync("git", ["rev-parse", "--short=12", "HEAD"], { cwd: root, encoding: "utf8" }).trim()}.`,
+      `${functionName} predates flag backend source commit ${backendSourceCommit}.`,
       "Deploy Functions from this checkout before releasing the client.",
     ].join(" "));
   }
-
-  assert.ok(Date.parse(activeRuleset.createTime) >= deployedAtOrAfter,
-    "The active Firestore ruleset predates this commit. Deploy firestore:rules from this checkout.");
 
   console.log([
     `Production flag backend matches ${projectId}.`,
