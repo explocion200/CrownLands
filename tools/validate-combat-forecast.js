@@ -5,6 +5,7 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const clientUiSource = fs.readFileSync(path.join(root, "common-gear-ui.js"), "utf8");
 
 function readFunction(text, name) {
   const start = text.indexOf(`function ${name}(`);
@@ -44,18 +45,20 @@ const requiredClientSnippets = [
   "Forecast at scout time",
   "Protected raid — cannot capture",
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
+  "Attack sources: Swordmastery",
+  "War Captain gear",
   "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
   "defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0))",
 ];
 requiredClientSnippets.forEach(snippet => {
-  if (!clientSource.includes(snippet)) throw new Error(`Missing combat forecast UI behavior: ${snippet}`);
+  if (!`${clientSource}\n${clientUiSource}`.includes(snippet)) throw new Error(`Missing combat forecast UI behavior: ${snippet}`);
 });
 
 const attackModalSource = readFunction(clientSource, "updateTroopSliderModal");
 [
   '<div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
   '<div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
-  '<div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>',
+  '<div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>',
 ].forEach(snippet => {
   if (!attackModalSource.includes(snippet)) throw new Error(`Missing compact scouted forecast UI: ${snippet}`);
 });
@@ -139,7 +142,7 @@ const attackSnapshotSandbox = {
     return 1.6;
   },
   getCommonGearBonuses() {
-    return { attackStrength: 0 };
+    return { attackStrength: 1.5 };
   },
 };
 vm.createContext(attackSnapshotSandbox);
@@ -151,8 +154,10 @@ vm.runInContext(
   attackSnapshotSandbox
 );
 const newAttackSnapshot = attackSnapshotSandbox.createAttackCombatSnapshot(100, {});
-if (newAttackSnapshot.attackPowerPerTroop !== 2 || newAttackSnapshot.launchAttackPower !== 200) {
-  throw new Error("New max-Sword armies are not snapshotted at exactly 2 power per troop.");
+if (newAttackSnapshot.attackPowerPerTroop !== 2.01875
+  || newAttackSnapshot.launchAttackPower !== 201
+  || newAttackSnapshot.attackStrengthPercent !== 1.5) {
+  throw new Error("Swordmastery and equipped War Captain gear are not snapshotted as separate additive attack sources.");
 }
 const legacyAttackPower = attackSnapshotSandbox.getSnapshottedAttackPower({
   version: 1,
