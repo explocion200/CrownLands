@@ -5172,7 +5172,9 @@ function getItemPurchaseCooldownText(itemId, now = Date.now()) {
 function createDefaultItemEffects() {
   return {
     shieldExpiresAtMs: 0,
+    warDrumsStartedAtMs: 0,
     warDrumsExpiresAtMs: 0,
+    royalTaxDecreeStartedAtMs: 0,
     royalTaxDecreeExpiresAtMs: 0,
     veilOfSilenceExpiresAtMs: 0,
   };
@@ -5181,7 +5183,9 @@ function createDefaultItemEffects() {
 function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects?.shieldExpiresAtMs || effects?.shieldExpiresAt),
+    warDrumsStartedAtMs: timestampToMs(effects?.warDrumsStartedAtMs || effects?.warDrumsStartedAt),
     warDrumsExpiresAtMs: timestampToMs(effects?.warDrumsExpiresAtMs || effects?.warDrumsExpiresAt || effects?.troopBoostExpiresAtMs || effects?.troopBoostExpiresAt),
+    royalTaxDecreeStartedAtMs: timestampToMs(effects?.royalTaxDecreeStartedAtMs || effects?.royalTaxDecreeStartedAt),
     royalTaxDecreeExpiresAtMs: timestampToMs(effects?.royalTaxDecreeExpiresAtMs || effects?.royalTaxDecreeExpiresAt),
     veilOfSilenceExpiresAtMs: timestampToMs(effects?.veilOfSilenceExpiresAtMs || effects?.veilOfSilenceExpiresAt || effects?.antiScoutExpiresAtMs || effects?.antiScoutExpiresAt),
   };
@@ -7341,6 +7345,7 @@ function normalizeCombatForecast(raw = null) {
     attackPowerPerTroop: Math.max(0, Number(raw.attackPowerPerTroop) || BASE_TROOP_ATTACK_POWER),
     swordmasteryLevel: Math.max(0, Math.floor(Number(raw.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(raw.swordmasteryPercent) || 0),
+    attackStrengthPercent: Math.max(0, Number(raw.attackStrengthPercent) || 0),
   };
   if (status !== "scouted") return normalized;
   return {
@@ -7888,10 +7893,13 @@ function getCityStats(city, options = {}) {
   const gearTroopProductionPercent = stronghold || rewardCamp
     ? 0
     : Math.max(0, Number(gearBonuses.troopProductionAllCities) || 0);
-  const gearGoldProductionPercent = stronghold || rewardCamp
+  const gearGoldProductionAllCitiesPercent = stronghold || rewardCamp
     ? 0
-    : Math.max(0, Number(gearBonuses.goldProductionAllCities) || 0)
-      + (city?.id === state?.mainCityId ? Math.max(0, Number(gearBonuses.goldProductionMainCity) || 0) : 0);
+    : Math.max(0, Number(gearBonuses.goldProductionAllCities) || 0);
+  const gearGoldProductionMainCityPercent = stronghold || rewardCamp || city?.id !== state?.mainCityId
+    ? 0
+    : Math.max(0, Number(gearBonuses.goldProductionMainCity) || 0);
+  const gearGoldProductionPercent = gearGoldProductionAllCitiesPercent + gearGoldProductionMainCityPercent;
   const cityWalls = Math.floor(
     baseCityWalls + baseCityWalls * (stoneworksPercent + gearWallStrengthPercent) / 100
   );
@@ -7986,6 +7994,8 @@ function getCityStats(city, options = {}) {
     gearDefenderStrengthPercent,
     gearTroopProductionPercent,
     gearGoldProductionPercent,
+    gearGoldProductionAllCitiesPercent,
+    gearGoldProductionMainCityPercent,
     shieldwallDisciplineLevel: soldierDefenseEnabled && includeSkillBoosts && city?.owner === "player"
       ? getSkillLevel("shieldwallDiscipline")
       : 0,
@@ -27680,13 +27690,18 @@ function updateTroopSliderModal(source, target, route) {
         baseTravel * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER
       )
     : baseTravel;
+  const previewMarchKind = orderKind === "rally_create" ? "attack" : orderKind;
+  const marchSourceSummary = getMarchSpeedSourceSummary(previewMarchKind, {
+    swiftMarch: activeSwiftMarchOrderSelected,
+  });
+  const attackSourceSummary = getAttackBonusSourceSummary(activeCombatForecastPreview);
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (isRallyTroopOrderKind(orderKind)) {
     const isJoin = orderKind === "rally_join";
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
       <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
-      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
     `;
     return;
   }
@@ -27694,7 +27709,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small></div>
+      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
     `;
     return;
   }
@@ -27706,7 +27721,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce";
     previewEl.innerHTML = `
       <div><span>Your stationed support</span><strong>${formatNumber(afterArrival)} troops</strong><small>Owned by you and merged at this holding</small></div>
-      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
+      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
     `;
     return;
   }
@@ -27717,7 +27732,7 @@ function updateTroopSliderModal(source, target, route) {
       previewEl.className = "troop-slider-preview unknown";
       previewEl.innerHTML = `
         <div><span>Battle forecast</span><strong>Camp defenses hidden</strong><small>Scout report required</small></div>
-        <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small></div>
+        <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack is still available</small></div>
       `;
       return;
     }
@@ -27734,7 +27749,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
       <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
-      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong></div>
+      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
     `;
     return;
   }
@@ -27747,7 +27762,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack is still available</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
     `;
     return;
   }
@@ -27759,7 +27774,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>New scout required</strong><small>This report predates the current wall-and-garrison combat model.</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack remains available, but this older report cannot provide a reliable forecast.</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack remains available, but this older report cannot provide a reliable forecast.</small></div>
     `;
     return;
   }
@@ -27791,7 +27806,7 @@ function updateTroopSliderModal(source, target, route) {
   previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
     <div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
-    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>
+    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
   `;
 }
 
@@ -27956,6 +27971,7 @@ async function confirmTroopSliderOrder() {
       attackPowerPerTroop: activeCombatForecastPreview.attackPowerPerTroop,
       swordmasteryLevel: activeCombatForecastPreview.swordmasteryLevel,
       swordmasteryPercent: activeCombatForecastPreview.swordmasteryPercent,
+      attackStrengthPercent: activeCombatForecastPreview.attackStrengthPercent,
     });
     updateTroopSliderModal(source, target, cachedRoute);
     showToast("Scout intelligence expired or the owner changed. Review the unknown-defense warning before attacking.");
@@ -29119,7 +29135,7 @@ function showCityInfoModal(cityId) {
       ${renderCityFortificationStatus(city, stats)}
       <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · Shieldwall +${formatNumber(stats.shieldwallDisciplinePercent)}%${getObjectiveTroopDefenseBonusPercent(stats) ? ` · objective +${formatNumber(getObjectiveTroopDefenseBonusPercent(stats))}%` : ""}</small></div>
+      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · ${getCityStatBonusSources(stats, "defense")}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
@@ -31926,6 +31942,7 @@ async function useWarDrums(item) {
   const nowMs = Date.now();
   const expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS;
   const effects = ensureItemEffects();
+  if (currentExpiresAtMs <= nowMs) effects.warDrumsStartedAtMs = nowMs;
   effects.warDrumsExpiresAtMs = expiresAtMs;
 
   addLog(`${item.label} used. Added ${formatDuration(WAR_DRUMS_DURATION_MS / 1000)} to the +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% base city troop-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
@@ -31951,6 +31968,7 @@ async function useRoyalTaxDecree(item) {
   const nowMs = Date.now();
   const expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS;
   const effects = ensureItemEffects();
+  if (currentExpiresAtMs <= nowMs) effects.royalTaxDecreeStartedAtMs = nowMs;
   effects.royalTaxDecreeExpiresAtMs = expiresAtMs;
 
   addLog(`${item.label} used. Added ${formatDuration(ROYAL_TAX_DECREE_DURATION_MS / 1000)} to the +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% base city gold-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
@@ -32139,7 +32157,7 @@ function recruit(cityId) {
 function fortifyCity(cityId) {
   const city = cityById(cityId);
   if (!city) return;
-  showToast("City levels strengthen walls. Soldier defense comes from the 1.30 base, Shieldwall Discipline, and objective support.");
+  showToast("City levels strengthen walls. Soldier defense comes from the 1.30 base, Shieldwall Discipline, Gatehouse gear, and objective support.");
 }
 
 function getRecruitAmount(city) {
@@ -34747,7 +34765,13 @@ function renderBattleRewards(report = null) {
     : [
       report?.xpAwarded > 0 ? renderBattleMetric("XP", `+${formatNumber(report.xpAwarded)}`) : "",
       report?.goldAwarded > 0 ? renderBattleMetric("Gold", `+${formatNumber(report.goldAwarded)}`) : "",
-      report?.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
+      report?.fieldMedicsRecovered > 0
+        ? renderBattleMetric(
+            "Casualty recovery",
+            `+${formatNumber(report.fieldMedicsRecovered)}`,
+            "Field Medics + Barracks gear · 75% combined cap · returned to the main city"
+          )
+        : "",
       report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
     ].filter(Boolean).join("");
   return rewardMetrics ? `<section class="battle-visual-rewards"><div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("achievements")}</span><h3>Rewards</h3></div><div class="battle-viewer-rewards">${rewardMetrics}</div></section>` : "";
@@ -35232,13 +35256,32 @@ function getCityStatBonusSources(stats = {}, statType = "") {
     const numeric = Math.max(0, Number(value) || 0);
     return numeric.toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
   };
-  if (statType === "walls" || statType === "defense") {
+  const pushObjectiveProductionSources = (type, totalPercent) => {
+    const title = type === "gold" ? "Gold Stronghold" : "Training Stronghold";
+    const breakdown = getControlledObjectiveBonusBreakdown(type);
+    const { personalPercent: personal, sharedPercent: shared, otherPercent: other } = breakdown;
+    if (personal > 0) {
+      const label = getControlledCrownCitadel("player")
+        ? "Crown Citadel"
+        : `${title} / personal objective`;
+      sources.push(`${label} +${formatNumber(personal)}%`);
+    }
+    if (shared > 0) sources.push(`Shared clan objective +${formatNumber(shared)}%`);
+    if (other > 0) sources.push(`Other objective support +${formatNumber(other)}%`);
+    if (personal <= 0 && shared <= 0 && other <= 0 && totalPercent > 0) {
+      sources.push(`Objective support +${formatNumber(totalPercent)}%`);
+    }
+  };
+  if (statType === "walls") {
     if (stats.stoneworksPercent > 0) sources.push(`Stoneworks +${formatNumber(stats.stoneworksPercent)}%`);
   }
   if (statType === "walls" && stats.gearWallStrengthPercent > 0) {
     sources.push(`Gatehouse gear +${formatBonusPercent(stats.gearWallStrengthPercent)}%`);
   }
   const objectiveTroopDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
+  if (statType === "defense" && stats.shieldwallDisciplinePercent > 0) {
+    sources.push(`Shieldwall Discipline +${formatNumber(stats.shieldwallDisciplinePercent)}%`);
+  }
   if (statType === "defense" && objectiveTroopDefenseBonusPercent > 0) {
     sources.push(`Objective soldier defense +${formatNumber(objectiveTroopDefenseBonusPercent)}%`);
   }
@@ -35247,15 +35290,19 @@ function getCityStatBonusSources(stats = {}, statType = "") {
   }
   if (statType === "troops") {
     if (stats.royalGranariesPercent > 0) sources.push(`Royal Granaries +${formatNumber(stats.royalGranariesPercent)}%`);
-    if (stats.strongholdTroopBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdTroopBonusPercent)}%`);
-    if (stats.warDrumsTroopBonusPercent > 0) sources.push(`War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%`);
     if (stats.gearTroopProductionPercent > 0) sources.push(`Barracks gear +${formatBonusPercent(stats.gearTroopProductionPercent)}%`);
+    pushObjectiveProductionSources("troops", Math.max(0, Number(stats.strongholdTroopBonusPercent) || 0));
+    if (stats.warDrumsTroopBonusPercent > 0) sources.push(`War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%`);
   }
   if (statType === "gold") {
     if (stats.taxStewardshipPercent > 0) sources.push(`Tax Stewardship +${formatNumber(stats.taxStewardshipPercent)}%`);
-    if (stats.strongholdGoldBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdGoldBonusPercent)}%`);
+    if (stats.gearGoldProductionMainCityPercent > 0) sources.push(`Treasury main-city gear +${formatBonusPercent(stats.gearGoldProductionMainCityPercent)}%`);
+    if (stats.gearGoldProductionAllCitiesPercent > 0) sources.push(`Treasury all-city gear +${formatBonusPercent(stats.gearGoldProductionAllCitiesPercent)}%`);
+    if (stats.gearGoldProductionMainCityPercent === undefined && stats.gearGoldProductionAllCitiesPercent === undefined && stats.gearGoldProductionPercent > 0) {
+      sources.push(`Treasury gear +${formatBonusPercent(stats.gearGoldProductionPercent)}%`);
+    }
+    pushObjectiveProductionSources("gold", Math.max(0, Number(stats.strongholdGoldBonusPercent) || 0));
     if (stats.royalTaxDecreeGoldBonusPercent > 0) sources.push(`Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%`);
-    if (stats.gearGoldProductionPercent > 0) sources.push(`Treasury gear +${formatBonusPercent(stats.gearGoldProductionPercent)}%`);
   }
   return sources.length ? `Bonus sources: ${sources.join(" | ")}` : "No active stat bonuses";
 }

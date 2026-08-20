@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const clientUiSource = fs.readFileSync(path.join(root, "common-gear-ui.js"), "utf8");
 const commonGear = require(path.join(root, "common-gear.js"));
 
 function extractFunction(source, name) {
@@ -176,8 +177,13 @@ async function main() {
     pathLength: 2_000,
     troopCount,
     kind,
-    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.2),
+    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.2 * 1.08),
   });
+  assertClose(
+    movementContext.addCommonGearMarchSpeed(movementProfiles.weapon, "attack", 1.2 * 1.08),
+    1.2 * 1.08 + 0.015,
+    "Movement no longer preserves (skill × objective) + gear."
+  );
   assert.ok(serverTravel(movementProfiles.necklace, "scout", 1) < serverTravel(movementProfiles.none, "scout", 1));
   assert.equal(serverTravel(movementProfiles.weapon, "scout", 1), serverTravel(movementProfiles.none, "scout", 1));
   for (const kind of ["transfer", "reinforce"]) {
@@ -208,7 +214,7 @@ async function main() {
       return 1.2;
     },
     getStrongholdMarchSpeedMultiplier() {
-      return 1;
+      return 1.08;
     },
     normalizeDemoAttackSnapshot() {
       return null;
@@ -243,7 +249,7 @@ async function main() {
     source: { id: "source", name: "Source" },
     assembly: { id: "assembly", name: "Assembly" },
     profile: movementProfiles.weapon,
-    economy: { bonuses: { marchSpeedBonusPercent: 0 } },
+    economy: { bonuses: { marchSpeedBonusPercent: 8 } },
     validatedRoute: { pathLength: 2_000, path: [], pathSegments: [], routeRegionIds: ["region_test"] },
     nowMs: rallyNowMs,
   });
@@ -256,7 +262,7 @@ async function main() {
     source: { id: "source", name: "Source" },
     assembly: { id: "assembly", name: "Assembly" },
     profile: movementProfiles.armor,
-    economy: { bonuses: { marchSpeedBonusPercent: 0 } },
+    economy: { bonuses: { marchSpeedBonusPercent: 8 } },
     validatedRoute: { pathLength: 2_000, path: [], pathSegments: [], routeRegionIds: ["region_test"] },
     nowMs: rallyNowMs,
   });
@@ -305,7 +311,11 @@ async function main() {
     getStrongholdDefenseLevel() { return 1; },
     clampCityLevel(value) { return Math.max(1, Math.floor(Number(value) || 1)); },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
-    getSkillPercent() { return 0; },
+    getSkillPercent(profile, skill) {
+      if (skill === "royalGranaries") return Number(profile?.testRoyalGranariesPercent) || 0;
+      if (skill === "taxStewardship") return Number(profile?.testTaxStewardshipPercent) || 0;
+      return 0;
+    },
     getMillionLordsPassiveGoldPerHour() { return 1_000; },
   };
   vm.createContext(productionContext);
@@ -326,6 +336,43 @@ async function main() {
   assertClose(otherProduction.goldProductionPerHour, otherProduction.baseGoldProductionPerHour * 1.0025);
   assertClose(mainProduction.troopProductionPerSecond * 3_600, mainProduction.troopProductionPerHour);
   assertClose(mainProduction.goldProductionPerSecond * 3_600, mainProduction.goldProductionPerHour);
+
+  const combinedProductionProfile = {
+    ...productionProfile,
+    testRoyalGranariesPercent: 15,
+    testTaxStewardshipPercent: 12,
+    itemEffects: {
+      warDrumsExpiresAtMs: 10_000,
+      royalTaxDecreeExpiresAtMs: 10_000,
+    },
+  };
+  const combinedMainProduction = productionContext.getCityProductionStats(
+    { id: "main_city", level: 1 },
+    combinedProductionProfile,
+    { troopBonusPercent: 8, goldBonusPercent: 8 },
+    { nowMs: 1 }
+  );
+  const combinedOtherProduction = productionContext.getCityProductionStats(
+    { id: "other_city", level: 1 },
+    combinedProductionProfile,
+    { troopBonusPercent: 8, goldBonusPercent: 8 },
+    { nowMs: 1 }
+  );
+  assertClose(
+    combinedMainProduction.troopProductionPerHour,
+    combinedMainProduction.baseTroopProductionPerHour * (1 + (15 + 0.25 + 8 + 30) / 100),
+    "Royal Granaries, Barracks gear, objective support, and War Drums did not stack additively."
+  );
+  assertClose(
+    combinedMainProduction.goldProductionPerHour,
+    combinedMainProduction.baseGoldProductionPerHour * (1 + (12 + 0.75 + 8 + 50) / 100),
+    "Tax Stewardship, both Treasury scopes, objective support, and Royal Tax did not stack additively in the main city."
+  );
+  assertClose(
+    combinedOtherProduction.goldProductionPerHour,
+    combinedOtherProduction.baseGoldProductionPerHour * (1 + (12 + 0.25 + 8 + 50) / 100),
+    "A non-main city included Treasury main-city gear or lost an all-city source."
+  );
 
   const defenseProfile = createGearProfile([
     equipped("gatehouse", "weapon", 5),
@@ -349,8 +396,14 @@ async function main() {
     clampCityLevel(value) { return Math.max(1, Math.floor(Number(value) || 1)); },
     getBaseCityWalls() { return 1_000; },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
-    getSkillPercent() { return 0; },
-    getSkillLevel() { return 0; },
+    getSkillPercent(profile, skill) {
+      if (skill === "shieldwallDiscipline") return Number(profile?.testShieldwallPercent) || 0;
+      if (skill === "stoneworks") return Number(profile?.testStoneworksPercent) || 0;
+      return 0;
+    },
+    getSkillLevel(profile, skill) {
+      return skill === "shieldwallDiscipline" ? Math.floor((Number(profile?.testShieldwallPercent) || 0) / 2) : 0;
+    },
     getObjectiveTroopDefenseBonusPercent(value) { return Math.max(0, Number(value?.objectiveTroopDefenseBonusPercent) || 0); },
     usesSiegeCombat() { return true; },
     usesSoldierDefenseModel() { return true; },
@@ -395,6 +448,29 @@ async function main() {
   });
   assert.equal(noGearPackages.totalGarrisonDefense, 5_200);
 
+  const combinedDefenseProfile = {
+    ...defenseProfile,
+    testShieldwallPercent: 10,
+    testStoneworksPercent: 15,
+  };
+  const combinedDefensePackages = defenseContext.calculateDefenderArmyPackages({
+    target: defenseTarget,
+    ownerProfile: combinedDefenseProfile,
+    ownerBonuses: { objectiveTroopDefenseBonusPercent: 8, personalDefenseBonusPercent: 8 },
+    contributions: [{ id: "reinforcement", ownerUid: "ally", ownerName: "Ally", troops: 2_000 }],
+    contributorProfiles: new Map([["ally", { testShieldwallPercent: 20 }]]),
+    contributorStats: new Map([["ally", {
+      objectiveTroopDefenseBonusPercent: 4,
+      personalObjectiveTroopDefenseBonusPercent: 4,
+    }]]),
+    siegeCombatVersion: 1,
+    defenseCombatVersion: 1,
+  });
+  assert.equal(combinedDefensePackages.owner.effectivePower, 3_107, "Owner Shieldwall, objective support, and Gatehouse gear did not stack.");
+  assert.equal(combinedDefensePackages.reinforcements[0].effectivePower, 3_263, "Allied Shieldwall, objective support, and destination-owner Gatehouse gear did not stack.");
+  assert.equal(combinedDefensePackages.owner.cityWalls, 1_165, "Stoneworks and Gatehouse armor did not stack against base walls.");
+  assert.equal(combinedDefensePackages.totalGarrisonDefense, 6_370);
+
   let activeClientStatsProfile = defenseProfile;
   const clientStatsContext = {
     DEFENSE_COMBAT_VERSION: 1,
@@ -417,6 +493,9 @@ async function main() {
     getSkillLevel() { return 0; },
     getControlledStrongholdGoldBonusPercent() { return 0; },
     getControlledStrongholdTroopBonusPercent() { return 0; },
+    getControlledObjectiveBonusBreakdown() {
+      return { totalPercent: 0, personalPercent: 0, sharedPercent: 0, otherPercent: 0, source: "" };
+    },
     getControlledObjectiveTroopDefenseBonusPercentForCity() { return 0; },
     getWarDrumsTroopProductionBonusPercent() { return 0; },
     getActiveRoyalTaxDecreeExpiresAtMs() { return 0; },
@@ -475,13 +554,19 @@ async function main() {
   const attackContext = {
     BASE_TROOP_ATTACK_POWER: 1.25,
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
-    skillMultiplier() { return 1; },
+    skillMultiplier(profile) { return 1 + (Number(profile?.testSwordmasteryPercent) || 0) / 100; },
   };
   vm.createContext(attackContext);
   vm.runInContext(`${extractFunction(serverSource, "getAttackPower")}; this.getAttackPower = getAttackPower;`, attackContext, { filename: "functions/index.js" });
   const attackGearProfile = createGearProfile([equipped("barracks", "weapon", 5)]);
   assert.equal(attackContext.getAttackPower(1_000, createGearProfile([])), 1_250);
   assertClose(attackContext.getAttackPower(1_000, attackGearProfile), 1_268.75);
+  const combinedAttackProfile = { ...attackGearProfile, testSwordmasteryPercent: 60 };
+  assertClose(
+    attackContext.getAttackPower(1_000, combinedAttackProfile),
+    1_000 * 1.25 * (1 + (60 + 1.5) / 100),
+    "Swordmastery and Barracks weapon gear did not stack additively."
+  );
 
   const capContext = {
     COMMON_GEAR: commonGear,
@@ -529,13 +614,20 @@ async function main() {
   const citySourceContext = {
     formatNumber: value => String(Math.floor(Number(value) || 0)),
     getObjectiveTroopDefenseBonusPercent: stats => Math.max(0, Number(stats?.objectiveTroopDefenseBonusPercent) || 0),
+    getControlledObjectiveBonusBreakdown() {
+      return { totalPercent: 0, personalPercent: 0, sharedPercent: 0, otherPercent: 0 };
+    },
+    getControlledCrownCitadel() { return null; },
   };
   vm.createContext(citySourceContext);
   vm.runInContext(`${extractFunction(clientSource, "getCityStatBonusSources")}; this.getCityStatBonusSources = getCityStatBonusSources;`, citySourceContext, { filename: "game.js" });
   assert.match(citySourceContext.getCityStatBonusSources({ gearTroopProductionPercent: 0.25 }, "troops"), /Barracks gear \+0\.25%/);
-  assert.match(citySourceContext.getCityStatBonusSources({ gearGoldProductionPercent: 0.75 }, "gold"), /Treasury gear \+0\.75%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ gearGoldProductionMainCityPercent: 0.5, gearGoldProductionAllCitiesPercent: 0.25 }, "gold"), /Treasury main-city gear \+0\.5%[\s\S]*Treasury all-city gear \+0\.25%/);
   assert.match(citySourceContext.getCityStatBonusSources({ gearWallStrengthPercent: 1.5 }, "walls"), /Gatehouse gear \+1\.5%/);
-  assert.match(citySourceContext.getCityStatBonusSources({ gearDefenderStrengthPercent: 0.8 }, "defense"), /Gatehouse gear \+0\.8%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ shieldwallDisciplinePercent: 20, objectiveTroopDefenseBonusPercent: 8, gearDefenderStrengthPercent: 0.8 }, "defense"), /Shieldwall Discipline \+20%[\s\S]*Objective soldier defense \+8%[\s\S]*Gatehouse gear \+0\.8%/);
+  assert.match(clientUiSource, /Attack sources: Swordmastery[\s\S]*?War Captain gear/);
+  assert.match(clientUiSource, /March Orders[\s\S]*?Royal Stables gear[\s\S]*?combined speed/);
+  assert.match(clientSource, /Casualty recovery[\s\S]*?Field Medics \+ Barracks gear[\s\S]*?75% combined cap[\s\S]*?main city/);
 
   assert.match(commonGear.getDefinition(gearKeys["gatehouse:necklace"]).statLabel, /new wall damage/i);
   assert.match(commonGear.getDefinition(gearKeys["barracks:necklace"]).statLabel, /Field Medics.*75% combined cap.*main city/i);

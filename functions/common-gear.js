@@ -156,7 +156,7 @@
     }
     if (ARMOR_SLOTS.has(slot)) return ["wallStrength", "wall strength in all owned cities"];
     if (slot === "weapon") return ["defenderStrength", "defending soldier strength in all owned cities"];
-    return ["wallRepairSpeed", "reduced repair time added by new wall damage"];
+    return ["wallRepairSpeed", "reduction to repair time added by new wall damage"];
   }
 
   const DEFINITIONS = Object.freeze(Object.values(BUILDINGS).flatMap(building => (

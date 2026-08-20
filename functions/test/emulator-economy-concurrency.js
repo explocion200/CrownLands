@@ -22,6 +22,12 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function assertClose(actual, expected, tolerance, message) {
+  if (Math.abs(Number(actual) - Number(expected)) > tolerance) {
+    throw new Error(`${message}: ${actual} !== ${expected} (±${tolerance})`);
+  }
+}
+
 function formatEmulatorHost(host, port) {
   const normalizedHost = String(host || "127.0.0.1").trim();
   const formattedHost = normalizedHost.includes(":") && !normalizedHost.startsWith("[")
@@ -242,11 +248,17 @@ async function main() {
   const stackableTimedItems = [
     {
       itemId: "war_drums_30m",
+      startedField: "warDrumsStartedAtMs",
       effectField: "warDrumsExpiresAtMs",
+      bonusPercent: Number(economyConfig.shopItems?.war_drums_30m?.bonusPercent || 30),
+      productionType: "troops",
     },
     {
       itemId: "royal_tax_decree_30m",
+      startedField: "royalTaxDecreeStartedAtMs",
       effectField: "royalTaxDecreeExpiresAtMs",
+      bonusPercent: Number(economyConfig.shopItems?.royal_tax_decree_30m?.bonusPercent || 50),
+      productionType: "gold",
     },
   ];
   for (const stackable of stackableTimedItems) {
@@ -267,6 +279,11 @@ async function main() {
     const quantityProfile = (await profileRef.get()).data() || {};
     assert(Number(quantityProfile.shopItems?.[stackable.itemId] || 0) === 0, `${stackable.itemId} quantity activation did not consume exactly three.`);
     assert(Number(quantityProfile.itemEffects?.[stackable.effectField] || 0) >= quantityStartedAtMs + durationMs * 3, `${stackable.itemId} quantity activation did not stack all durations.`);
+    assert(
+      Number(quantityProfile.itemEffects?.[stackable.effectField] || 0)
+        - Number(quantityProfile.itemEffects?.[stackable.startedField] || 0) === durationMs * 3,
+      `${stackable.itemId} client-visible timer and authoritative active interval disagree.`
+    );
 
     await profileRef.set({
       shopItems: { [stackable.itemId]: 2 },
@@ -304,6 +321,69 @@ async function main() {
       responseExpiries[1] - responseExpiries[0] === durationMs,
       `${stackable.itemId} concurrent responses did not serialize into one stacked timer.`
     );
+  }
+
+  const levelOneBaseGoldPerHour = Math.floor(Number(cityEconomy.productionVpBase || 20))
+    * Number(cityEconomy.goldPerProductionVp || 15);
+  const levelOneBaseTroopsPerHour = levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 3);
+  for (const stackable of stackableTimedItems) {
+    const durationMs = Number(economyConfig.shopItems?.[stackable.itemId]?.effectDurationMinutes || 30) * 60 * 1000;
+    for (const quantity of [1, 2, 3]) {
+      const seededAtMs = Date.now();
+      const effectStartedAtMs = seededAtMs - durationMs * quantity - 60_000;
+      const effectExpiresAtMs = seededAtMs - 60_000;
+      const intervalStartedAtMs = effectStartedAtMs - 60_000;
+      const baselineGold = 1_000_000;
+      const baselineTroops = 1_000_000;
+      await profileRef.set({
+        gold: baselineGold,
+        goldFloat: baselineGold,
+        economyUpdatedAtMs: intervalStartedAtMs,
+        upgrades: {},
+        gear: commonGear.createDefaultState(),
+        itemEffects: {
+          shieldExpiresAtMs: 0,
+          warDrumsStartedAtMs: stackable.itemId === "war_drums_30m" ? effectStartedAtMs : 0,
+          warDrumsExpiresAtMs: stackable.itemId === "war_drums_30m" ? effectExpiresAtMs : 0,
+          royalTaxDecreeStartedAtMs: stackable.itemId === "royal_tax_decree_30m" ? effectStartedAtMs : 0,
+          royalTaxDecreeExpiresAtMs: stackable.itemId === "royal_tax_decree_30m" ? effectExpiresAtMs : 0,
+          veilOfSilenceExpiresAtMs: 0,
+        },
+      }, { merge: true });
+      await cityRef.set({
+        level: 1,
+        troops: baselineTroops,
+        troopFloat: baselineTroops,
+        productionUpdatedAtMs: intervalStartedAtMs,
+      }, { merge: true });
+      await callFunction("collectEconomy", user.token);
+      const [settledProfileSnap, settledCitySnap] = await Promise.all([profileRef.get(), cityRef.get()]);
+      const settledProfile = settledProfileSnap.data() || {};
+      const settledCity = settledCitySnap.data() || {};
+      const settledAtMs = Number(settledProfile.economyUpdatedAtMs || 0);
+      const elapsedHours = (settledAtMs - intervalStartedAtMs) / 3_600_000;
+      const boostedHours = durationMs * quantity / 3_600_000;
+      const expectedGold = baselineGold + levelOneBaseGoldPerHour * elapsedHours
+        + (stackable.productionType === "gold"
+          ? levelOneBaseGoldPerHour * boostedHours * stackable.bonusPercent / 100
+          : 0);
+      const expectedTroops = baselineTroops + levelOneBaseTroopsPerHour * elapsedHours
+        + (stackable.productionType === "troops"
+          ? levelOneBaseTroopsPerHour * boostedHours * stackable.bonusPercent / 100
+          : 0);
+      assertClose(
+        Number(settledProfile.goldFloat || settledProfile.gold || 0),
+        expectedGold,
+        0.05,
+        `${quantity} ${stackable.itemId} did not credit the full authoritative gold interval`
+      );
+      assertClose(
+        Number(settledCity.troopFloat || settledCity.troops || 0),
+        expectedTroops,
+        0.05,
+        `${quantity} ${stackable.itemId} did not credit the full authoritative troop interval`
+      );
+    }
   }
 
   const gearStatus = await callFunction("getCommonGearStatus", user.token);

@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
@@ -11,14 +12,105 @@ const activationSource = serverSource.slice(
   serverSource.indexOf("exports.useSwiftMarchOrder")
 );
 
+function readFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`Missing ${name}.`);
+  const bodyStart = source.indexOf(") {", start) + 2;
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
+}
+
+const overlapContext = {
+  Date,
+  Math,
+  Number,
+  safeNumber(value, fallback = 0) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  },
+  timestampToMs(value) {
+    return Math.max(0, Number(value) || 0);
+  },
+  clamp(value, minimum, maximum) {
+    return Math.max(minimum, Math.min(maximum, Number(value) || 0));
+  },
+};
+vm.createContext(overlapContext);
+vm.runInContext([
+  readFunction(serverSource, "getTimedProductionBoostOverlapSeconds"),
+  readFunction(serverSource, "resolveTimedProductionBoostStartedAtMs"),
+  "this.getTimedProductionBoostOverlapSeconds = getTimedProductionBoostOverlapSeconds;",
+  "this.resolveTimedProductionBoostStartedAtMs = resolveTimedProductionBoostStartedAtMs;",
+].join("\n"), overlapContext);
+
+const itemDurationMs = 30 * 60 * 1000;
+const effectStartedAtMs = 10_000_000;
+for (const quantity of [1, 2, 3]) {
+  const effectExpiresAtMs = effectStartedAtMs + itemDurationMs * quantity;
+  assert.equal(
+    overlapContext.getTimedProductionBoostOverlapSeconds(
+      effectStartedAtMs,
+      effectExpiresAtMs,
+      effectStartedAtMs,
+      effectExpiresAtMs
+    ),
+    itemDurationMs * quantity / 1000,
+    `${quantity} stacked timed items did not credit their complete active interval.`
+  );
+}
+const tripleExpiresAtMs = effectStartedAtMs + itemDurationMs * 3;
+for (let windowIndex = 0; windowIndex < 3; windowIndex += 1) {
+  const windowStartMs = effectStartedAtMs + itemDurationMs * windowIndex;
+  assert.equal(
+    overlapContext.getTimedProductionBoostOverlapSeconds(
+      windowStartMs,
+      windowStartMs + itemDurationMs,
+      effectStartedAtMs,
+      tripleExpiresAtMs
+    ),
+    itemDurationMs / 1000,
+    `Stacked timed items did not credit active window ${windowIndex + 1}.`
+  );
+}
+assert.equal(
+  overlapContext.getTimedProductionBoostOverlapSeconds(
+    effectStartedAtMs - itemDurationMs,
+    effectStartedAtMs,
+    effectStartedAtMs,
+    tripleExpiresAtMs
+  ),
+  0,
+  "Production before timed-item activation was boosted."
+);
+assert.equal(
+  overlapContext.getTimedProductionBoostOverlapSeconds(
+    tripleExpiresAtMs,
+    tripleExpiresAtMs + itemDurationMs,
+    effectStartedAtMs,
+    tripleExpiresAtMs
+  ),
+  0,
+  "Production after timed-item expiry was boosted."
+);
+assert.equal(
+  overlapContext.resolveTimedProductionBoostStartedAtMs(0, tripleExpiresAtMs, effectStartedAtMs),
+  effectStartedAtMs,
+  "A legacy active timer did not migrate from the safe economy checkpoint."
+);
+
 assert.match(
   activationSource,
-  /itemId === WAR_DRUMS_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS \* requestedQuantity;/,
+  /itemId === WAR_DRUMS_ITEM_ID[\s\S]*?itemEffects\.warDrumsStartedAtMs = nowMs;[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS \* requestedQuantity;/,
   "War Drums must extend the active server timer instead of replacing it."
 );
 assert.match(
   activationSource,
-  /itemId === ROYAL_TAX_DECREE_ITEM_ID[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS \* requestedQuantity;/,
+  /itemId === ROYAL_TAX_DECREE_ITEM_ID[\s\S]*?itemEffects\.royalTaxDecreeStartedAtMs = nowMs;[\s\S]*?expiresAtMs = Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS \* requestedQuantity;/,
   "Royal Tax Decrees must extend the active server timer instead of replacing it."
 );
 for (const label of ["War Drums", "Royal Tax Decree"]) {
@@ -65,12 +157,12 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /async function useWarDrums[\s\S]*?Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS/,
+  /async function useWarDrums[\s\S]*?Math\.max\(nowMs, currentExpiresAtMs\) \+ WAR_DRUMS_DURATION_MS[\s\S]*?effects\.warDrumsStartedAtMs = nowMs/,
   "The local War Drums fallback must stack duration."
 );
 assert.match(
   clientSource,
-  /async function useRoyalTaxDecree[\s\S]*?Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS/,
+  /async function useRoyalTaxDecree[\s\S]*?Math\.max\(nowMs, currentExpiresAtMs\) \+ ROYAL_TAX_DECREE_DURATION_MS[\s\S]*?effects\.royalTaxDecreeStartedAtMs = nowMs/,
   "The local Royal Tax Decree fallback must stack duration."
 );
 const serverUseSource = clientSource.slice(

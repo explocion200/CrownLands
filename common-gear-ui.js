@@ -1,6 +1,53 @@
 /* Crownlands officer equipment view model, renderer, and interaction flow. */
 let commonGearBagFilterOpen = false;
 
+function getControlledObjectiveBonusBreakdown(statType = "troops", owner = "player") {
+  const type = ["gold", "troops", "speed"].includes(statType) ? statType : "troops";
+  const totals = {
+    gold: getControlledStrongholdGoldBonusPercent,
+    troops: getControlledStrongholdTroopBonusPercent,
+    speed: getControlledStrongholdMarchSpeedPercent,
+  };
+  const totalPercent = totals[type](owner);
+  const stats = owner === "player" ? getGlobalStatsSnapshot() : null;
+  if (!stats?.strongholdBonusesAuthoritative) {
+    return { totalPercent, personalPercent: totalPercent, sharedPercent: 0, otherPercent: 0 };
+  }
+  const suffix = type === "troops" ? "Troop" : type === "speed" ? "MarchSpeed" : "Gold";
+  const personalPercent = Math.min(totalPercent, Math.max(0, Number(stats[`personalStronghold${suffix}BonusPercent`]) || 0));
+  const sharedPercent = Math.min(totalPercent - personalPercent, Math.max(0, Number(stats[`sharedClan${suffix}BonusPercent`]) || 0));
+  return { totalPercent, personalPercent, sharedPercent, otherPercent: Math.max(0, totalPercent - personalPercent - sharedPercent) };
+}
+
+function formatStackedBonusPercent(value) {
+  return Math.max(0, Number(value) || 0).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
+
+function getMarchSpeedSourceSummary(kind = "attack", options = {}) {
+  const gear = getCommonGearBonuses();
+  const gearPercent = kind === "scout"
+    ? Number(gear.scoutSpeed) || 0
+    : ["attack", "rally", "rally_join", "rally_create"].includes(kind)
+      ? Number(gear.enemyMarchSpeed) || 0
+      : Number(gear.ownedMarchSpeed) || 0;
+  const skillPercent = getSkillPercent("marchOrders");
+  const objective = getControlledObjectiveBonusBreakdown("speed");
+  const source = [
+    `March Orders +${formatStackedBonusPercent(skillPercent)}%`,
+    `Objective speed +${formatStackedBonusPercent(objective.totalPercent)}%`,
+    `Royal Stables gear +${formatStackedBonusPercent(gearPercent)}%`,
+    `combined speed ×${(skillMultiplier("marchOrders") * (1 + objective.totalPercent / 100) + gearPercent / 100).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`,
+  ];
+  if (options.swiftMarch === true) source.push("Swift March halves the calculated time");
+  return source.join(" · ");
+}
+
+function getAttackBonusSourceSummary(forecast = null) {
+  const skill = forecast?.swordmasteryPercent ?? getSkillPercent("swordmastery");
+  const gear = forecast?.attackStrengthPercent ?? getCommonGearBonuses().attackStrength;
+  return `Attack sources: Swordmastery +${formatStackedBonusPercent(skill)}% · War Captain gear +${formatStackedBonusPercent(gear)}%`;
+}
+
 function getCommonGearInstances(buildingId, slot = "") {
   return Object.values(state?.gear?.instances || {})
     .filter(instance => instance.buildingId === buildingId && (!slot || instance.slot === slot))

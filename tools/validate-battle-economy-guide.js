@@ -197,6 +197,11 @@ assert.match(page, /exactly 1\.00 defense power/);
 assert.match(page, /<details class="guide-math">/);
 assert.match(page, /<noscript>/);
 assert.match(page, /battle-guide-calculations\.js/);
+assert.match(
+  page,
+  /Simplified calculator[\s\S]*?do not include your live officer gear or every temporary item/i,
+  "The public guide must disclose that its calculators omit live gear and some timed items."
+);
 assert.match(page, /name="description" content="[^\"]{50,}"/);
 assert.doesNotMatch(page, /adsbygoogle|securepubads|googletag/);
 assert.doesNotMatch(runtime, /fetch\(|XMLHttpRequest|WebSocket|firebase|httpsCallable/, "The public guide must remain read-only and local.");

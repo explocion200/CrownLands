@@ -4046,13 +4046,28 @@ function getTotalMilitaryTroopsFromGlobalStats(stats = {}) {
   ), 0);
 }
 
-function getTimedProductionBoostOverlapSeconds(intervalStartMs, intervalEndMs, expiresAtMs, durationMs) {
+function getTimedProductionBoostOverlapSeconds(intervalStartMs, intervalEndMs, startedAtMs, expiresAtMs) {
   const endMs = Math.max(0, safeNumber(intervalEndMs, 0));
   const startMs = clamp(safeNumber(intervalStartMs, endMs), 0, endMs);
+  const effectStartMs = clamp(timestampToMs(startedAtMs), 0, endMs);
   const effectEndMs = Math.max(0, timestampToMs(expiresAtMs));
-  const effectStartMs = Math.max(0, effectEndMs - Math.max(0, safeNumber(durationMs, 0)));
-  if (!effectEndMs || effectEndMs <= startMs || effectStartMs >= endMs) return 0;
+  if (!effectStartMs || !effectEndMs || effectEndMs <= effectStartMs || effectEndMs <= startMs || effectStartMs >= endMs) return 0;
   return Math.max(0, (Math.min(endMs, effectEndMs) - Math.max(startMs, effectStartMs)) / 1000);
+}
+
+function resolveTimedProductionBoostStartedAtMs(startedAtMs, expiresAtMs, checkpointAtMs, nowMs = Date.now()) {
+  const effectEndMs = Math.max(0, timestampToMs(expiresAtMs));
+  if (!effectEndMs) return 0;
+  const recordedStartMs = Math.max(0, timestampToMs(startedAtMs));
+  if (recordedStartMs > 0 && recordedStartMs < effectEndMs) return recordedStartMs;
+  // Timed-item activation checkpoints the economy before extending the timer.
+  // Old profiles did not store a start, so migrate them from the latest safe
+  // checkpoint instead of inferring a single-item window or granting time
+  // before an activation that cannot be proven.
+  return Math.min(
+    effectEndMs,
+    Math.max(0, timestampToMs(checkpointAtMs) || Math.floor(safeNumber(nowMs, Date.now())))
+  );
 }
 
 function globalStatsForClient(stats = null) {
@@ -8517,7 +8532,9 @@ function addLegacyShopItemDeletes(patch = {}) {
 function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects.shieldExpiresAtMs || effects.shieldExpiresAt),
+    warDrumsStartedAtMs: timestampToMs(effects.warDrumsStartedAtMs || effects.warDrumsStartedAt),
     warDrumsExpiresAtMs: timestampToMs(effects.warDrumsExpiresAtMs || effects.warDrumsExpiresAt || effects.troopBoostExpiresAtMs || effects.troopBoostExpiresAt),
+    royalTaxDecreeStartedAtMs: timestampToMs(effects.royalTaxDecreeStartedAtMs || effects.royalTaxDecreeStartedAt),
     royalTaxDecreeExpiresAtMs: timestampToMs(effects.royalTaxDecreeExpiresAtMs || effects.royalTaxDecreeExpiresAt),
     veilOfSilenceExpiresAtMs: timestampToMs(effects.veilOfSilenceExpiresAtMs || effects.veilOfSilenceExpiresAt || effects.antiScoutExpiresAtMs || effects.antiScoutExpiresAt),
   };
@@ -11410,6 +11427,18 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     nowMs,
     timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
   );
+  itemEffects.warDrumsStartedAtMs = resolveTimedProductionBoostStartedAtMs(
+    itemEffects.warDrumsStartedAtMs,
+    itemEffects.warDrumsExpiresAtMs,
+    lastEconomyAtMs,
+    nowMs
+  );
+  itemEffects.royalTaxDecreeStartedAtMs = resolveTimedProductionBoostStartedAtMs(
+    itemEffects.royalTaxDecreeStartedAtMs,
+    itemEffects.royalTaxDecreeExpiresAtMs,
+    lastEconomyAtMs,
+    nowMs
+  );
   const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
   const pendingGoldStartedAtMs = Math.max(lastEconomyAtMs, productionObservedAtMs);
   const pendingGoldElapsedSeconds = clamp(
@@ -11459,14 +11488,14 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     const warDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       troopIntervalStartMs,
       nowMs,
-      itemEffects.warDrumsExpiresAtMs,
-      WAR_DRUMS_DURATION_MS
+      itemEffects.warDrumsStartedAtMs,
+      itemEffects.warDrumsExpiresAtMs
     );
     const taxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       nowMs - goldElapsedSeconds * 1000,
       nowMs,
-      itemEffects.royalTaxDecreeExpiresAtMs,
-      ROYAL_TAX_DECREE_DURATION_MS
+      itemEffects.royalTaxDecreeStartedAtMs,
+      itemEffects.royalTaxDecreeExpiresAtMs
     );
     const currentTroopFloat = Math.max(0, safeNumber(city.troopFloat, safeNumber(city.troops, 0)));
     const troopGainFloat = stats.troopProductionPerSecond * elapsedSeconds
@@ -11478,8 +11507,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     const collectionWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       collectionStartedAtMs,
       nowMs,
-      itemEffects.warDrumsExpiresAtMs,
-      WAR_DRUMS_DURATION_MS
+      itemEffects.warDrumsStartedAtMs,
+      itemEffects.warDrumsExpiresAtMs
     );
     const collectionTroopGainFloat = stats.troopProductionPerSecond * collectionElapsedSeconds
       + stats.baseTroopProductionPerHour / 3600
@@ -11492,8 +11521,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     const pendingWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       pendingCollectionStartedAtMs,
       nowMs,
-      itemEffects.warDrumsExpiresAtMs,
-      WAR_DRUMS_DURATION_MS
+      itemEffects.warDrumsStartedAtMs,
+      itemEffects.warDrumsExpiresAtMs
     );
     const pendingTroopGainFloat = stats.troopProductionPerSecond * pendingCollectionElapsedSeconds
       + stats.baseTroopProductionPerHour / 3600
@@ -11510,8 +11539,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     const pendingTaxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
       pendingGoldStartedAtMs,
       nowMs,
-      itemEffects.royalTaxDecreeExpiresAtMs,
-      ROYAL_TAX_DECREE_DURATION_MS
+      itemEffects.royalTaxDecreeStartedAtMs,
+      itemEffects.royalTaxDecreeExpiresAtMs
     );
     pendingGoldGainFloat += stats.goldProductionPerSecond * pendingGoldElapsedSeconds
       + stats.baseGoldProductionPerHour / 3600
@@ -15432,10 +15461,12 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       });
     } else if (itemId === WAR_DRUMS_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.warDrumsExpiresAtMs);
+      if (currentExpiresAtMs <= nowMs) itemEffects.warDrumsStartedAtMs = nowMs;
       expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS * requestedQuantity;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
     } else if (itemId === ROYAL_TAX_DECREE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.royalTaxDecreeExpiresAtMs);
+      if (currentExpiresAtMs <= nowMs) itemEffects.royalTaxDecreeStartedAtMs = nowMs;
       expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS * requestedQuantity;
       itemEffects.royalTaxDecreeExpiresAtMs = expiresAtMs;
     } else if (itemId === VEIL_OF_SILENCE_ITEM_ID) {
@@ -18967,6 +18998,7 @@ function normalizeCombatForecast(raw = null) {
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, BASE_TROOP_ATTACK_POWER)),
     swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
     swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
+    attackStrengthPercent: Math.max(0, safeNumber(raw.attackStrengthPercent, 0)),
   };
   if (status !== "scouted") return normalized;
   return {
@@ -19027,6 +19059,7 @@ function createCombatForecast({
     attackPowerPerTroop: snapshot?.attackPowerPerTroop || BASE_TROOP_ATTACK_POWER,
     swordmasteryLevel: snapshot?.swordmasteryLevel || 0,
     swordmasteryPercent: snapshot?.swordmasteryPercent || 0,
+    attackStrengthPercent: snapshot?.attackStrengthPercent || 0,
   };
   if (!intel.report) return normalizeCombatForecast(base);
   const effectiveTroops = Math.max(1, Math.floor(safeNumber(troops, 1)));
@@ -22586,8 +22619,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
         summary: result.success
-          ? `Your rally captured ${target.name || target.id}. Your ${leaderAllocation.survivors.toLocaleString()} surviving troops now hold the objective; allied survivors are returning home. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
-          : `Your rally was defeated at ${target.name || target.id}; ${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          ? `Your rally captured ${target.name || target.id}. Your ${leaderAllocation.survivors.toLocaleString()} surviving troops now hold the objective; allied survivors are returning home. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
+          : `Your rally was defeated at ${target.name || target.id}; ${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
@@ -22661,8 +22694,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
           summary: result.success
-            ? `${attackerName}'s clan rally captured ${target.name || target.id}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
-            : `${target.name || target.id} held against ${attackerName}'s clan rally with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+            ? `${attackerName}'s clan rally captured ${target.name || target.id}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
+            : `${target.name || target.id} held against ${attackerName}'s clan rally with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
@@ -22965,7 +22998,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         defenseStats: targetStats,
         summary: `${battle.success
           ? `Captured ${campTarget.name || campConfig.name} with ${battle.survivors.toLocaleString()} troops. Hold it for ${Math.floor(campConfig.holdDurationMs / 60000)} minutes to earn ${campConfig.rewardType}.`
-          : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         battleId: currentBattleId,
         launchCombatForecast: army.launchCombatForecast,
         fieldMedicsRecovered: attackerRecoveredTroops,
@@ -23054,7 +23087,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           defenseStats: targetStats,
           summary: `${battle.success
             ? `${attackerName} captured ${campTarget.name || campConfig.name}.`
-            : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+            : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
           nowMs,
@@ -23633,7 +23666,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `Walls breached. ${target.name || target.id} remains under ${defenderName}'s control; your follow-up protected assault can capture it.${returnedSummary} +0 XP.${protectedDefenseXpSummary}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops.` : ""}`,
+        summary: `Walls breached. ${target.name || target.id} remains under ${defenderName}'s control; your follow-up protected assault can capture it.${returnedSummary} +0 XP.${protectedDefenseXpSummary}${attackerRecoveredTroops > 0 ? ` Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
@@ -23670,7 +23703,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           result,
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
-          summary: `${attackerName} breached the walls at ${target.name || target.id}, but did not capture the city. A follow-up protected assault from that ruler can capture it. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${attackerName} breached the walls at ${target.name || target.id}, but did not capture the city. A follow-up protected assault from that ruler can capture it. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
@@ -23875,7 +23908,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         });
       }
       if (attackerRecoveredTroops > 0) {
-        attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
+        attackerReport.summary = `${attackerReport.summary} Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
       }
       attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
@@ -23902,7 +23935,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           result,
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
-          summary: `${target.name || target.id} was captured by ${attackerName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${target.name || target.id} was captured by ${attackerName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
@@ -24010,7 +24043,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
     });
     if (attackerRecoveredTroops > 0) {
-      attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
+      attackerReport.summary = `${attackerReport.summary} Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
     }
     attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
@@ -24036,7 +24069,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `${target.name || target.id} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+        summary: `${target.name || target.id} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: defenderProgress.xpAwarded,
         goldAwarded: defenderProgress.goldAwarded,
         troopsAwarded: defenderLevelTroopReward?.credited || 0,
@@ -24730,7 +24763,7 @@ async function settleReinforcementBattleReceipt(event) {
         defendersLeft: receipt.survivors,
         defenderLosses: receipt.losses,
       },
-      summary: `Your reinforcement committed ${Math.max(0, Math.floor(safeNumber(receipt.committedTroops, 0))).toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${Math.max(0, Math.floor(safeNumber(receipt.survivors, 0))).toLocaleString()} stationed. +${progress.xpAwarded.toLocaleString()} XP.${recovery ? ` Field Medics returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
+      summary: `Your reinforcement committed ${Math.max(0, Math.floor(safeNumber(receipt.committedTroops, 0))).toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${Math.max(0, Math.floor(safeNumber(receipt.survivors, 0))).toLocaleString()} stationed. +${progress.xpAwarded.toLocaleString()} XP.${recovery ? ` Casualty recovery returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
       xpAwarded: progress.xpAwarded,
       goldAwarded: progress.goldAwarded,
       troopsAwarded: levelTroopReward?.credited || 0,
@@ -24932,7 +24965,7 @@ async function settleRallyBattleReceipt(event) {
         attackerLosses: receipt.losses,
         survivors: participant.survivors,
       },
-      summary: `Your rally contribution committed ${participant.troops.toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${participant.survivors.toLocaleString()} survivors.${movement ? ` Survivors are returning to ${movement.toName}.` : ""} +${progress.xpAwarded.toLocaleString()} XP.${levelTroopReward ? ` Hero level reward: +${levelTroopReward.credited.toLocaleString()} troops to ${levelTroopReward.cityName}.` : ""}${recovery ? ` Field Medics returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
+      summary: `Your rally contribution committed ${participant.troops.toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${participant.survivors.toLocaleString()} survivors.${movement ? ` Survivors are returning to ${movement.toName}.` : ""} +${progress.xpAwarded.toLocaleString()} XP.${levelTroopReward ? ` Hero level reward: +${levelTroopReward.credited.toLocaleString()} troops to ${levelTroopReward.cityName}.` : ""}${recovery ? ` Casualty recovery returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
       xpAwarded: progress.xpAwarded,
       goldAwarded: progress.goldAwarded,
       troopsAwarded: levelTroopReward?.credited || 0,
@@ -26264,7 +26297,7 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
         ...getCityStats(producedTarget, defenderProfile, defenderEconomy.bonuses || {}),
         totalDefense: defensePackages.totalGarrisonDefense,
       },
-      summary: `${reportSummary}${fieldMedicsRecovered > 0 ? ` Field Medics returned ${fieldMedicsRecovered.toLocaleString()} troops to your main city.` : ""}`,
+      summary: `${reportSummary}${fieldMedicsRecovered > 0 ? ` Casualty recovery returned ${fieldMedicsRecovered.toLocaleString()} troops to your main city.` : ""}`,
       xpAwarded: 0,
       goldAwarded: 0,
       troopsAwarded: 0,
