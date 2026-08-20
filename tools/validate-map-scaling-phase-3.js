@@ -154,7 +154,8 @@ const resetFixture = createResetPersistenceFixture();
 const persistent = resetContract.extractPersistentPlayerProgression(resetFixture);
 assert.deepEqual(resetContract.validatePersistentPayload(persistent), []);
 assert.deepEqual(persistent.flag, resetFixture.flag);
-assert.deepEqual(persistent.gear, resetFixture.gear);
+assert.deepEqual(persistent.gear, resetContract.extractPersistentCommonGear(resetFixture.gear));
+assert.deepEqual(Object.keys(persistent.gear).sort(), [...resetContract.PERSISTENT_GEAR_FIELDS].sort());
 assert.equal(persistent.clanId, resetFixture.clanId);
 for (const field of [...resetContract.CONSUMABLE_FIELDS, ...resetContract.SEASONAL_WORLD_FIELDS]) {
   assert(!Object.prototype.hasOwnProperty.call(persistent, field), `${field} leaked into reset persistence.`);

@@ -62,6 +62,7 @@ async function setDocument(documentPath, data, options = {}) {
   const query = new URLSearchParams();
   if (options.mustNotExist) query.set("currentDocument.exists", "false");
   if (options.mustExist) query.set("currentDocument.exists", "true");
+  if (options.updateTime) query.set("currentDocument.updateTime", options.updateTime);
   const suffix = query.size ? `?${query}` : "";
   const response = await googleRequest(`${FIRESTORE_ROOT}/${documentPath}${suffix}`, {
     method: "PATCH",
@@ -75,6 +76,7 @@ async function setRawDocument(documentPath, rawFields, options = {}) {
   const query = new URLSearchParams();
   if (options.mustNotExist) query.set("currentDocument.exists", "false");
   if (options.mustExist) query.set("currentDocument.exists", "true");
+  if (options.updateTime) query.set("currentDocument.updateTime", options.updateTime);
   const suffix = query.size ? `?${query}` : "";
   const response = await googleRequest(`${FIRESTORE_ROOT}/${documentPath}${suffix}`, {
     method: "PATCH",

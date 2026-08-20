@@ -1,0 +1,378 @@
+{
+  "schemaVersion": "core-v2-reset-1-validation-v1",
+  "passed": true,
+  "localRehearsalReceiptHash": "427ae5b9db8c8b9b1d443632597bc5518c10bb4b2df4ef1884c273bf7ca2f04c",
+  "lifecycle": [
+    "PREPARING",
+    "INITIALIZING",
+    "VALIDATING",
+    "READY"
+  ],
+  "persistenceAllowlist": [
+    "flag",
+    "clanId",
+    "clanName",
+    "clanTag",
+    "clanRole",
+    "gear.schemaVersion",
+    "gear.instances",
+    "gear.equipped"
+  ],
+  "resetFields": [
+    "mainCityId",
+    "mainRegionId",
+    "mainIslandId",
+    "cities",
+    "attacks",
+    "marches",
+    "rallies",
+    "reinforcements",
+    "objectives",
+    "regionActivation",
+    "placement",
+    "seasonalAchievements",
+    "shopItems",
+    "itemEffects",
+    "itemPurchaseCooldowns",
+    "gold",
+    "goldFloat",
+    "daily",
+    "dailyLoginReward"
+  ],
+  "syntheticPlayers": [
+    {
+      "uid": "reset1-player-A",
+      "persistentHashMatches": true,
+      "mainRegionId": "phase6d_region_0001"
+    },
+    {
+      "uid": "reset1-player-B",
+      "persistentHashMatches": true,
+      "mainRegionId": "phase6d_region_0001"
+    },
+    {
+      "uid": "reset1-player-C",
+      "persistentHashMatches": true,
+      "mainRegionId": "phase6d_region_0001"
+    },
+    {
+      "uid": "reset1-player-D",
+      "persistentHashMatches": true,
+      "mainRegionId": "phase6d_region_0001"
+    }
+  ],
+  "mainCitySecurity": {
+    "policyVersion": "core-v2-main-city-policy-v1",
+    "restrictedRegionCount": 5,
+    "supportedPathCount": 5,
+    "rejectedAttempts": 30,
+    "normalCoreGameplayChecks": 20
+  },
+  "threshold": {
+    "successAt15": {
+      "ok": true,
+      "cityId": "npc_phase6d_region_0001_9edb7691fc8885",
+      "regionId": "phase6d_region_0001",
+      "npcBefore": 15,
+      "remainingNpcCityCount": 14
+    },
+    "rejectedAt14": {
+      "ok": false,
+      "rejected": true,
+      "reason": "npc_city_threshold",
+      "eligibility": {
+        "regionId": "phase6d_region_0001",
+        "spawnEligible": false,
+        "spawnReady": false,
+        "currentNpcCityCount": 14,
+        "minimumNpcCitiesForSpawn": 15,
+        "ownershipStateAuthoritative": true,
+        "topologyValid": true,
+        "reasons": [
+          "npc_city_threshold"
+        ]
+      }
+    },
+    "gameplayUnaffected": true
+  },
+  "expansion": {
+    "activatedRegionId": "phase6d_region_0002",
+    "replenishedRegionId": "phase6d_region_0004",
+    "standbyCount": 2,
+    "assignment": {
+      "ok": true,
+      "cityId": "npc_phase6d_region_0002_0045a146767a3f",
+      "regionId": "phase6d_region_0002",
+      "npcBefore": 40,
+      "remainingNpcCityCount": 39
+    },
+    "reciprocalOpenEdges": [
+      {
+        "side": "south",
+        "targetRegionId": "core-v2-warband-camp-m2-m2"
+      },
+      {
+        "side": "west",
+        "targetRegionId": "phase6d_region_0001"
+      }
+    ]
+  },
+  "postResetGameplay": {
+    "loginAndAccess": {
+      "passed": true,
+      "uid": "reset1-player-A",
+      "worldId": "crownlands_world_2026_september",
+      "seasonId": "season_2026_september",
+      "mainCityId": "npc_phase6d_region_0001_07cb109877ed9f"
+    },
+    "persistentSystems": {
+      "flagLoaded": true,
+      "clanLoaded": true,
+      "commonGearLoaded": true,
+      "equippedGearLoaded": true
+    },
+    "normalCityGameplay": [
+      {
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "cityId": "core_0ad9fe1742d9295b9a",
+        "captured": true,
+        "ownershipReadable": true,
+        "reinforced": true,
+        "attackCreated": true,
+        "mainCityRejected": true
+      },
+      {
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "cityId": "core_01159dcb900143e1ab",
+        "captured": true,
+        "ownershipReadable": true,
+        "reinforced": true,
+        "attackCreated": true,
+        "mainCityRejected": true
+      },
+      {
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "cityId": "core_02d2c2a82982ecb8ed",
+        "captured": true,
+        "ownershipReadable": true,
+        "reinforced": true,
+        "attackCreated": true,
+        "mainCityRejected": true
+      },
+      {
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "cityId": "core_0000ab85bbf3cc640d",
+        "captured": true,
+        "ownershipReadable": true,
+        "reinforced": true,
+        "attackCreated": true,
+        "mainCityRejected": true
+      },
+      {
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "cityId": "core_01ca4c06b73171be24",
+        "captured": true,
+        "ownershipReadable": true,
+        "reinforced": true,
+        "attackCreated": true,
+        "mainCityRejected": true
+      }
+    ],
+    "travel": {
+      "outerToOuter": "phase6d_region_0001->phase6d_region_0002",
+      "outerToCore": "phase6d_region_0002->core-v2-warband-camp-m2-m2",
+      "reciprocal": true
+    },
+    "objectiveInteractions": [
+      {
+        "objectiveId": "core-v2-warband-camp-m2-m2_troops_camp",
+        "regionId": "core-v2-warband-camp-m2-m2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-relic-camp-north-west-m1-m2_items_camp",
+        "regionId": "core-v2-relic-camp-north-west-m1-m2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-deed-camp-north-east-p1-m2_deed_camp",
+        "regionId": "core-v2-deed-camp-north-east-p1-m2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-gold-camp-north-east-p2-m2_gold_camp",
+        "regionId": "core-v2-gold-camp-north-east-p2-m2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-relic-camp-west-north-m2-m1_items_camp",
+        "regionId": "core-v2-relic-camp-west-north-m2-m1",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-greybanner-hold-p0-m1_training_stronghold",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "kind": "stronghold_or_citadel",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-deed-camp-east-north-p2-m1_deed_camp",
+        "regionId": "core-v2-deed-camp-east-north-p2-m1",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-aurum-keep-m1-p0_gold_stronghold",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "kind": "stronghold_or_citadel",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-crown-citadel-p0-p0_crown_stronghold",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "kind": "stronghold_or_citadel",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-swiftgate-p1-p0_speed_stronghold",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "kind": "stronghold_or_citadel",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-deed-camp-west-south-m2-p1_deed_camp",
+        "regionId": "core-v2-deed-camp-west-south-m2-p1",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-ironwatch-p0-p1_defense_stronghold",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "kind": "stronghold_or_citadel",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-relic-camp-east-south-p2-p1_items_camp",
+        "regionId": "core-v2-relic-camp-east-south-p2-p1",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-gold-camp-south-west-m2-p2_gold_camp",
+        "regionId": "core-v2-gold-camp-south-west-m2-p2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-deed-camp-south-west-m1-p2_deed_camp",
+        "regionId": "core-v2-deed-camp-south-west-m1-p2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-relic-camp-south-east-p1-p2_items_camp",
+        "regionId": "core-v2-relic-camp-south-east-p1-p2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      },
+      {
+        "objectiveId": "core-v2-warband-camp-south-east-p2-p2_troops_camp",
+        "regionId": "core-v2-warband-camp-south-east-p2-p2",
+        "kind": "camp",
+        "interactionAllowed": true,
+        "mainCityMutationAttempted": false
+      }
+    ],
+    "generatedExpansionAccess": [
+      "phase6d_region_0001",
+      "phase6d_region_0002"
+    ],
+    "allPassed": true
+  },
+  "rollback": {
+    "scenarios": [
+      {
+        "fault": "before_core_initialization",
+        "expectedPointer": "season_2026_summer",
+        "passed": true,
+        "oldSeasonRetained": true,
+        "newSeasonPartialDataDeleted": false,
+        "rollbackAction": "mark_new_aborted"
+      },
+      {
+        "fault": "during_player_migration",
+        "expectedPointer": "season_2026_summer",
+        "passed": true,
+        "oldSeasonRetained": true,
+        "newSeasonPartialDataDeleted": false,
+        "rollbackAction": "mark_new_aborted"
+      },
+      {
+        "fault": "after_pointer_switch",
+        "expectedPointer": "season_2026_summer",
+        "passed": true,
+        "oldSeasonRetained": true,
+        "newSeasonPartialDataDeleted": false,
+        "rollbackAction": "restore_old_pointer_and_mark_new_aborted"
+      }
+    ],
+    "allPassed": true
+  },
+  "idempotency": {
+    "passed": true,
+    "firstHash": "fc8fe144fd01ce5498fb164299bfa77f09c4444335545c9a7ce09e44b04693be",
+    "secondHash": "fc8fe144fd01ce5498fb164299bfa77f09c4444335545c9a7ce09e44b04693be",
+    "duplicateCityIds": 0
+  },
+  "productionBaseline": {
+    "maps": 15,
+    "cities": 1050,
+    "directedChains": 210,
+    "generatedActiveRegions": 0
+  },
+  "approvedGeneratorAssets": {
+    "count": 118,
+    "manifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+  },
+  "stagingRehearsal": {
+    "runId": "reset1-pre-september-2026-v8",
+    "freshDurationMs": 14419.057999999999,
+    "replayDurationMs": 6814.2814,
+    "receiptHash": "28071b5d7a745d79a7b4e0fe9cbd5b369da86ef78c8e13af6649529056e2de82",
+    "pointerCompareAndSet": {
+      "isolatedRunPointer": true,
+      "expectedPriorRevision": 7,
+      "committedRevision": 8,
+      "updateTimePreconditionUsed": false,
+      "initialCutoverUsedUpdateTimePrecondition": true,
+      "replaySkippedRedundantCutover": true
+    }
+  },
+  "sourceHashes": {
+    "resetContract": "32c2761434609d6fa0b2d6c1ce69edbcfb006927fb5d7a3ba3c315d954171c1f",
+    "mainCityPolicy": "e753c3fd01c04b8e8c97a34c9693de2fe0f2cf9e0a885a29fe2b9dde8dcf879f",
+    "architecture": "f222a56a37163b4a0d77255f286a0a0aa942dbafa917d1215c8ca9478bd91cb5"
+  },
+  "productionMutationPerformed": false
+}

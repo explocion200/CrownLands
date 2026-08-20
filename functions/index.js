@@ -10,6 +10,7 @@ const SERVER_REGION_CATALOG = require("./region-catalog.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
+const CORE_MAIN_CITY_POLICY = require("./core-main-city-policy.js");
 const {
   MINIMUM_NPC_CITIES_FOR_SPAWN,
   isStructurallyEligiblePlayerRegion,
@@ -11052,7 +11053,14 @@ function compareMainCityCandidates(a = {}, b = {}) {
 }
 
 function getCanonicalMainCityEntry(profile = {}, cityEntries = []) {
-  const regularEntries = cityEntries.filter(entry => entry?.city && !isStronghold(entry.city));
+  const regularEntries = cityEntries.filter(entry => (
+    entry?.city
+    && !isStronghold(entry.city)
+    && CORE_MAIN_CITY_POLICY.isEligibleMainCityLocation(
+      entry.city,
+      entry.city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry)),
+    )
+  ));
   if (!regularEntries.length) return null;
   const profileMainCityId = safeString(profile.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const profileIslandId = safeString(profile.mainIslandId, 160);
@@ -11121,11 +11129,9 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
 
   const profileFields = {
     mainCityAssignmentVersion: MAIN_CITY_ASSIGNMENT_VERSION,
-    ...(canonicalMainCityId ? {
-        mainCityId: canonicalMainCityId,
-        mainIslandId: canonicalMainIslandId,
-        mainRegionId: canonicalMainRegionId,
-      } : {}),
+    mainCityId: canonicalMainCityId,
+    mainIslandId: canonicalMainCityId ? canonicalMainIslandId : "",
+    mainRegionId: canonicalMainCityId ? canonicalMainRegionId : "",
   };
 
   return {
@@ -13408,6 +13414,15 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
       throw new HttpsError("failed-precondition", "Only one of your regular cities can become your main city.");
     }
 
+    const targetRegionId = normalizeRegionId(targetEntry.city.regionId || regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(targetEntry)));
+    const forbiddenMainCity = CORE_MAIN_CITY_POLICY.getForbiddenMainCityReason(targetEntry.city, targetRegionId);
+    if (forbiddenMainCity) {
+      throw new HttpsError("failed-precondition", forbiddenMainCity.message, {
+        reason: forbiddenMainCity.code,
+        regionId: forbiddenMainCity.regionId,
+      });
+    }
+
     const regularOwnedCount = economy.cityEntries.filter(entry => (
       entry?.city
       && getOwnerUid(entry.city) === uid
@@ -13417,7 +13432,6 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
       ? MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS
       : MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS;
 
-    const targetRegionId = normalizeRegionId(targetEntry.city.regionId || regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(targetEntry)));
     const targetIslandId = getCityEntryIslandId(targetEntry) || getOnlineIslandId(targetRegionId);
     const targetKey = getReinforcementTargetKey("city", targetRegionId, targetEntry.city.id);
     const stationedReinforcementsSnap = await transaction.get(stationedReinforcementsForTargetQuery(targetKey));
@@ -14476,6 +14490,13 @@ function createFreshResetPlayerProfile({
   regionId = "",
   nowMs = Date.now(),
 } = {}) {
+  const forbiddenMainCity = CORE_MAIN_CITY_POLICY.getForbiddenMainCityReason({ regionId }, regionId);
+  if (forbiddenMainCity) {
+    throw new HttpsError("failed-precondition", forbiddenMainCity.message, {
+      reason: forbiddenMainCity.code,
+      regionId: forbiddenMainCity.regionId,
+    });
+  }
   const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
   const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
   const flag = sanitizeJsonValue(previous.flag || createRandomPlayerFlag());
@@ -14649,6 +14670,13 @@ async function claimFreshStartingCity(request) {
     const chosenCityRef = chosenCity ? cityRefsById.get(chosenCity.id) : null;
     if (!chosenCityRef || !chosenCity) {
       throw new HttpsError("resource-exhausted", "No unclaimed starting city is available.");
+    }
+    const forbiddenStartingCity = CORE_MAIN_CITY_POLICY.getForbiddenMainCityReason(chosenCity, chosenIsland.regionId);
+    if (forbiddenStartingCity) {
+      throw new HttpsError("failed-precondition", forbiddenStartingCity.message, {
+        reason: forbiddenStartingCity.code,
+        regionId: forbiddenStartingCity.regionId,
+      });
     }
 
     const freshProfile = createFreshResetPlayerProfile({
