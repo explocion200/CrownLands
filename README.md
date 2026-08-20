@@ -104,7 +104,10 @@ Deploy Firebase rules and Functions after changing server multiplayer code:
 ```powershell
 firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only functions
+node tools/validate-player-flag-production-backend.js
 ```
+
+The final command is a read-only post-deploy check. It confirms that the active Firestore rules exactly match this checkout and that the flag identity callables were deployed from the current release before the client is published.
 
 ## Local Game Editor
 

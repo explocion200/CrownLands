@@ -30,6 +30,7 @@ const baseline = {
   symbol: "lion",
 };
 const draft = { ...baseline, pattern: "saltire" };
+const expectedStoredFlag = { ...draft, version: 2 };
 
 function createHarness(api) {
   const sandbox = {
@@ -85,27 +86,63 @@ function createHarness(api) {
 function createSuccessfulApi(calls, profileSave = async () => true) {
   return {
     isSignedIn: () => true,
-    savePlayerProfile: async value => { calls.profile += 1; return profileSave(value); },
-    syncPlayerIdentity: async () => { calls.identity += 1; return { ok: true }; },
-    saveGameSnapshot: async () => { calls.snapshot += 1; return true; },
-    savePresence: async () => { calls.presence += 1; return true; },
+    savePlayerProfile: async value => {
+      calls.profile.push(value);
+      return profileSave(value);
+    },
+    syncPlayerIdentity: async value => {
+      calls.identity.push(value);
+      return { ok: true };
+    },
+    saveGameSnapshot: async (value, slot) => {
+      calls.snapshot.push({ value, slot });
+      return true;
+    },
+    savePresence: async (islandId, value) => {
+      calls.presence.push({ islandId, value });
+      return true;
+    },
   };
 }
 
+function createCalls() {
+  return { profile: [], identity: [], snapshot: [], presence: [] };
+}
+
+function plain(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function assertExactDestinationFlags(calls, invocation = 0) {
+  assert.deepEqual(plain(calls.profile[invocation].flag), expectedStoredFlag, "Profile received a different flag payload.");
+  assert.deepEqual(plain(calls.identity[invocation].ownerFlag), expectedStoredFlag, "Identity sync received a different flag payload.");
+  assert.deepEqual(plain(calls.snapshot[invocation].value.flag), expectedStoredFlag, "Cloud save received a different flag payload.");
+  assert.equal(calls.snapshot[invocation].slot, "default-test", "Cloud save used the wrong slot.");
+  assert.deepEqual(plain(calls.presence[invocation].value.flag), expectedStoredFlag, "Presence received a different flag payload.");
+  assert.equal(calls.presence[invocation].islandId, "main-test-region", "Presence used the wrong island.");
+}
+
 async function testSuccessfulSave() {
-  const calls = { profile: 0, identity: 0, snapshot: 0, presence: 0 };
+  const calls = createCalls();
   const harness = createHarness(createSuccessfulApi(calls));
   await harness.invoke();
   const result = harness.read();
-  assert.deepEqual(calls, { profile: 1, identity: 1, snapshot: 1, presence: 1 });
+  assert.deepEqual(Object.fromEntries(Object.entries(calls).map(([key, values]) => [key, values.length])), {
+    profile: 1, identity: 1, snapshot: 1, presence: 1,
+  });
+  assertExactDestinationFlags(calls);
   assert.equal(result.commitCount, 1);
-  assert.equal(result.lastCommittedFlag.version, 2);
+  assert.deepEqual(plain(result.lastCommittedFlag), expectedStoredFlag);
+  assert.deepEqual(plain(result.baseline), expectedStoredFlag);
+  assert.deepEqual(plain(result.draft), expectedStoredFlag);
   assert.equal(result.status, "Saved everywhere");
   assert.equal(result.saveInFlight, false);
+  assert.equal(result.localSaveCount, 0, "An online save also wrote the local-only save path.");
+  assert.equal(result.renderCount, 2, "The editor did not render both saving and settled states.");
 }
 
 async function testFailureThenRetry() {
-  const calls = { profile: 0, identity: 0, snapshot: 0, presence: 0 };
+  const calls = createCalls();
   let fail = true;
   const harness = createHarness(createSuccessfulApi(calls, async () => {
     if (fail) throw new Error("offline");
@@ -115,23 +152,31 @@ async function testFailureThenRetry() {
   const failed = harness.read();
   assert.equal(failed.commitCount, 0, "A failed save committed local state.");
   assert.equal(failed.draft.pattern, draft.pattern, "A failed save discarded the draft.");
+  assert.deepEqual(plain(failed.baseline), baseline, "A failed save changed the saved baseline.");
   assert.equal(failed.status, "Save failed — retry");
+  assert.equal(failed.saveInFlight, false);
+  assertExactDestinationFlags(calls);
   fail = false;
   await harness.invoke();
   const retried = harness.read();
   assert.equal(retried.commitCount, 1);
+  assert.deepEqual(plain(retried.lastCommittedFlag), expectedStoredFlag);
   assert.equal(retried.status, "Saved everywhere");
+  assertExactDestinationFlags(calls, 1);
 }
 
 async function testRepeatedTapGuard() {
-  const calls = { profile: 0, identity: 0, snapshot: 0, presence: 0 };
+  const calls = createCalls();
   let resolveProfile;
   const profilePending = new Promise(resolve => { resolveProfile = resolve; });
   const harness = createHarness(createSuccessfulApi(calls, () => profilePending));
   const first = harness.invoke();
   const repeated = harness.invoke();
   assert.equal(harness.read().saveInFlight, true);
-  assert.deepEqual(calls, { profile: 1, identity: 1, snapshot: 1, presence: 1 }, "A repeated tap started duplicate writes.");
+  assert.deepEqual(Object.fromEntries(Object.entries(calls).map(([key, values]) => [key, values.length])), {
+    profile: 1, identity: 1, snapshot: 1, presence: 1,
+  }, "A repeated tap started duplicate writes.");
+  assertExactDestinationFlags(calls);
   resolveProfile(true);
   await Promise.all([first, repeated]);
   assert.equal(harness.read().commitCount, 1);
