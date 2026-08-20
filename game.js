@@ -13913,8 +13913,8 @@ function updateOnlineChatClan(clanId = "") {
   window.CrownlandsChat?.updateClan?.(String(clanId || ""));
 }
 
-function disposeOnlineChat() {
-  window.CrownlandsChat?.dispose?.();
+function disposeOnlineChat(options = {}) {
+  window.CrownlandsChat?.dispose?.(options);
 }
 
 function queueOnlineIdentityRepair() {
@@ -36294,7 +36294,7 @@ window.addEventListener("crownlands:auth", async () => {
     watchGameServerMembership();
     if (state) startOnlineChat();
   } else {
-    disposeOnlineChat();
+    disposeOnlineChat({ resetSession: true });
     stopGameServerMembershipWatcher({ clear: true });
     stopDailyMissionLifecycle({ clear: true });
     stopSeasonalAchievementLifecycle({ clear: true });

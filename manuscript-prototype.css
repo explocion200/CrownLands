@@ -437,7 +437,6 @@
 
 .daily-mission-row:nth-child(even) { background: rgba(210, 187, 143, .14); }
 .daily-mission-row.complete { border-left-color: var(--manuscript-moss); background: rgba(205, 214, 174, .34); }
-.daily-mission-row.claimed { opacity: .76; }
 
 .daily-mission-icon,
 .daily-mission-detail-icon {
