@@ -140,14 +140,14 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
   }
   const duplicateCount = instances.filter(candidate => candidate.instanceId !== instance.instanceId
     && candidate.gearKey === instance.gearKey
-    && candidate.level === 1
+    && candidate.level === instance.level
     && !candidate.isEquipped).length;
   const upgradeGold = Math.max(0, Math.floor(
     Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0) * requirement.baseGoldHours
   ));
   const issues = [];
   if (duplicateCount < requirement.duplicates) {
-    issues.push(`Need ${requirement.duplicates} unequipped Level 1 duplicate${requirement.duplicates === 1 ? "" : "s"}; ${duplicateCount} owned.`);
+    issues.push(`Requires ${requirement.duplicates} matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}; ${duplicateCount} available.`);
   }
   if (Math.max(0, Number(state?.gold) || 0) < upgradeGold) {
     issues.push(`Need ${formatNumber(upgradeGold)} gold; ${formatNumber(state?.gold)} available.`);
@@ -304,7 +304,7 @@ function renderCommonGearSelectedPanel(viewModel) {
   }
   const progressPercent = Math.max(0, Math.min(100, selected.level / COMMON_GEAR.MAX_LEVEL * 100));
   const mergeCopy = requirement
-    ? `${requirement.duplicates} Level 1 duplicate${requirement.duplicates === 1 ? "" : "s"} (${viewModel.duplicateCount} owned) + ${formatNumber(viewModel.upgradeGold)} gold`
+    ? `Requires ${requirement.duplicates} matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} (${viewModel.duplicateCount} available) + ${formatNumber(viewModel.upgradeGold)} gold`
     : "This item has reached its maximum level.";
   return `<section class="common-gear-detail-panel common-gear-selected-panel" data-gear-panel="details">
     <span class="common-gear-detail-eyebrow">${escapeHtml(viewModel.officerName)}'s</span>
@@ -334,7 +334,9 @@ function renderCommonGearBottomInfo(viewModel) {
   if (!selected || !definition) {
     return `<section class="common-gear-bottom-info empty"><div><strong>Select an equipment piece</strong><p>Its description, role, bonus, and upgrade requirements will appear here.</p></div></section>`;
   }
-  const nextEffect = viewModel.nextBonus !== null ? `Next +${viewModel.nextBonus.toFixed(2)}%` : "Maximum level";
+  const nextEffect = viewModel.nextBonus !== null
+    ? `Next +${viewModel.nextBonus.toFixed(2)}% · Requires ${viewModel.requirement.duplicates} matching Level ${selected.level} cop${viewModel.requirement.duplicates === 1 ? "y" : "ies"}`
+    : "Maximum level";
   return `<section class="common-gear-bottom-info">
     <img src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
     <div class="common-gear-bottom-copy">
@@ -360,7 +362,7 @@ function renderCommonGearMergeConfirmation(viewModel) {
     <section class="common-gear-confirm" role="alertdialog" aria-modal="true" aria-labelledby="commonGearMergeTitle" aria-describedby="commonGearMergeCopy">
       <span class="common-gear-confirm-icon" aria-hidden="true">⚒</span>
       <strong id="commonGearMergeTitle">Upgrade ${escapeHtml(definition.gearName)}?</strong>
-      <p id="commonGearMergeCopy">Upgrade Level ${selected.level} to Level ${selected.level + 1}. This consumes ${requirement.duplicates} unequipped Level 1 duplicate${requirement.duplicates === 1 ? "" : "s"} and ${formatNumber(viewModel.upgradeGold)} gold.</p>
+      <p id="commonGearMergeCopy">Upgrade Level ${selected.level} to Level ${selected.level + 1}. This consumes ${requirement.duplicates} unequipped matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} and ${formatNumber(viewModel.upgradeGold)} gold.</p>
       <small>This cannot be undone.</small>
       <div>
         <button class="safe-action" type="button" data-gear-merge-cancel>Cancel</button>

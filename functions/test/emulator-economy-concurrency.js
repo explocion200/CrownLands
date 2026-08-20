@@ -431,46 +431,158 @@ async function main() {
   );
 
   const upgradeDefinition = commonGear.DEFINITIONS.find(definition => definition.statType === "attackStrength");
-  const upgradeGear = commonGear.createDefaultState();
-  upgradeGear.instances.upgrade_target = commonGear.normalizeInstance({
-    instanceId: "upgrade_target",
-    gearKey: upgradeDefinition.gearKey,
-    level: 1,
-    acquiredAtMs: Date.now() - 1000,
+  const alternateSlotDefinition = commonGear.DEFINITIONS.find(definition => (
+    definition.buildingId === upgradeDefinition.buildingId && definition.slot !== upgradeDefinition.slot
+  ));
+  const alternateOfficerDefinition = commonGear.DEFINITIONS.find(definition => (
+    definition.buildingId !== upgradeDefinition.buildingId
+  ));
+  const upgradeGoldReserve = 1_000_000_000_000;
+  const createUpgradeInstance = (instanceId, definition, level, acquiredAtMs) => commonGear.normalizeInstance({
+    instanceId,
+    gearKey: definition.gearKey,
+    level,
+    acquiredAtMs,
   });
-  upgradeGear.instances.upgrade_material = commonGear.normalizeInstance({
-    instanceId: "upgrade_material",
-    gearKey: upgradeDefinition.gearKey,
-    level: 1,
-    acquiredAtMs: Date.now(),
-  });
-  upgradeGear.instances.upgrade_swap = commonGear.normalizeInstance({
-    instanceId: "upgrade_swap",
-    gearKey: upgradeDefinition.gearKey,
-    level: 2,
-    acquiredAtMs: Date.now() + 1000,
-  });
-  upgradeGear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
-  await profileRef.set({
-    gold: 1_000_000_000,
-    goldFloat: 1_000_000_000,
-    gear: upgradeGear,
-    economyUpdatedAtMs: Date.now(),
-  }, { merge: true });
+  const seedUpgradeState = async gear => {
+    const now = Date.now();
+    await profileRef.update({
+      gold: upgradeGoldReserve,
+      goldFloat: upgradeGoldReserve,
+      gear,
+      economyUpdatedAtMs: now,
+    });
+  };
+  const createSuccessUpgradeState = (level, { targetEquipped = false, includeEquippedMatch = false } = {}) => {
+    const gear = commonGear.createDefaultState();
+    const acquiredAtMs = Date.now() - 10_000;
+    gear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, level, acquiredAtMs);
+    gear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, level, acquiredAtMs + 1000);
+    gear.instances.upgrade_spare = createUpgradeInstance("upgrade_spare", upgradeDefinition, level, acquiredAtMs + 2000);
+    if (targetEquipped) {
+      gear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
+    } else if (includeEquippedMatch) {
+      gear.instances.upgrade_equipped_material = createUpgradeInstance(
+        "upgrade_equipped_material",
+        upgradeDefinition,
+        level,
+        acquiredAtMs + 3000
+      );
+      gear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_equipped_material";
+    }
+    return gear;
+  };
+  const assertSuccessfulUpgrade = async (level, options = {}) => {
+    const gear = createSuccessUpgradeState(level, options);
+    await seedUpgradeState(gear);
+    const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
+    const upgradedState = upgraded.currentUser?.gear || {};
+    const storedProfile = (await profileRef.get()).data() || {};
+    assert(
+      Number(upgradedState.instances?.upgrade_target?.level || 0) === level + 1,
+      `Common Gear did not upgrade from Level ${level} to Level ${level + 1}.`
+    );
+    assert(upgraded.upgradedInstanceId === "upgrade_target", `The Level ${level} upgrade did not preserve the target instanceId.`);
+    assert(!upgradedState.instances?.upgrade_material, `The Level ${level} upgrade did not consume the oldest matching same-level material.`);
+    assert(upgradedState.instances?.upgrade_spare, `The Level ${level} upgrade consumed more than one matching material.`);
+    assert(
+      upgradedState.instances?.upgrade_spare?.level === level,
+      `The Level ${level} upgrade changed the unconsumed matching material.`
+    );
+    assert(Number(upgraded.spentGold || 0) > 0, `The Level ${level} upgrade did not report its existing gold cost.`);
+    assert(
+      Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - Number(upgraded.spentGold || 0) - 1
+        && Number(storedProfile.goldFloat || 0) <= upgradeGoldReserve - Number(upgraded.spentGold || 0) + 10,
+      `The Level ${level} upgrade deducted an unexpected amount of gold.`
+    );
+    if (options.targetEquipped) {
+      assert(
+        upgradedState.equipped?.[upgradeDefinition.buildingId]?.[upgradeDefinition.slot] === "upgrade_target",
+        `Upgrading equipped Level ${level} gear unexpectedly unequipped it.`
+      );
+      assert(upgradedState.instances?.upgrade_target?.isEquipped === true, `The upgraded Level ${level} target lost equipped state.`);
+      assert(
+        Number(upgraded.bonuses?.attackStrength || 0) === commonGear.BONUS_BY_LEVEL[level + 1],
+        `The equipped Level ${level} upgrade did not recalculate its active bonus.`
+      );
+    } else {
+      assert(upgradedState.instances?.upgrade_target?.isEquipped === false, `The stored Level ${level} target became equipped.`);
+    }
+    if (options.includeEquippedMatch) {
+      assert(
+        upgradedState.instances?.upgrade_equipped_material?.isEquipped === true,
+        "The server consumed an equipped copy instead of a stored same-level material."
+      );
+    }
+  };
+  const assertRejectedUpgrade = async (label, gear, expectedTargetLevel) => {
+    await seedUpgradeState(gear);
+    const response = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
+    assert(
+      !response.ok && response.error?.status === "FAILED_PRECONDITION",
+      `${label} was not rejected: ${JSON.stringify(response)}`
+    );
+    const storedProfile = (await profileRef.get()).data() || {};
+    const storedGear = commonGear.normalizeState(storedProfile.gear);
+    assert(Number(storedGear.instances?.upgrade_target?.level || 0) === expectedTargetLevel, `${label} changed the target level.`);
+    assert(storedGear.instances?.upgrade_target, `${label} consumed the selected target instance.`);
+    assert(Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - 1, `${label} deducted gold on failure.`);
+    return storedGear;
+  };
+
+  const loadoutGear = commonGear.createDefaultState();
+  loadoutGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 1, Date.now() - 3000);
+  loadoutGear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, 1, Date.now() - 2000);
+  loadoutGear.instances.upgrade_swap = createUpgradeInstance("upgrade_swap", upgradeDefinition, 2, Date.now() - 1000);
+  loadoutGear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
+  await seedUpgradeState(loadoutGear);
   const swappedGear = await callFunction("equipCommonGear", user.token, { instanceId: "upgrade_swap" });
   assert(swappedGear.currentUser?.gear?.instances?.upgrade_target?.isEquipped === false, "Replacing equipped gear did not return the old piece to inventory.");
   assert(swappedGear.currentUser?.gear?.instances?.upgrade_swap?.isEquipped === true, "Replacing equipped gear did not equip the selected piece.");
   const reequippedGear = await callFunction("equipCommonGear", user.token, { instanceId: "upgrade_target" });
   assert(reequippedGear.currentUser?.gear?.instances?.upgrade_target?.isEquipped === true, "The original gear could not be re-equipped.");
-  const upgradedGear = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
-  const upgradedGearState = upgradedGear.currentUser?.gear || {};
-  assert(Number(upgradedGearState.instances?.upgrade_target?.level || 0) === 2, "Common Gear did not upgrade from Level 1 to Level 2.");
-  assert(!upgradedGearState.instances?.upgrade_material, "The gear upgrade did not consume its Level 1 duplicate.");
-  assert(
-    upgradedGearState.equipped?.[upgradeDefinition.buildingId]?.[upgradeDefinition.slot] === "upgrade_target",
-    "Upgrading equipped Common Gear unexpectedly unequipped it."
-  );
-  assert(Number(upgradedGear.bonuses?.attackStrength || 0) === 0.5, "The upgraded equipped gear bonus was not recalculated.");
+
+  await assertSuccessfulUpgrade(1, { targetEquipped: true });
+  await assertSuccessfulUpgrade(2, { includeEquippedMatch: true });
+  await assertSuccessfulUpgrade(3, { targetEquipped: true });
+  await assertSuccessfulUpgrade(4);
+
+  const maxLevelGear = commonGear.createDefaultState();
+  maxLevelGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 5, Date.now() - 2000);
+  maxLevelGear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, 5, Date.now() - 1000);
+  await assertRejectedUpgrade("A Level 5 upgrade", maxLevelGear, 5);
+
+  for (const level of [2, 3, 4]) {
+    const wrongLevelGear = commonGear.createDefaultState();
+    wrongLevelGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, level, Date.now() - 10_000);
+    for (let index = 0; index < 4; index += 1) {
+      const instanceId = `wrong_level_${level}_${index}`;
+      wrongLevelGear.instances[instanceId] = createUpgradeInstance(instanceId, upgradeDefinition, 1, Date.now() - 9000 + index);
+    }
+    const rejectedState = await assertRejectedUpgrade(
+      `A Level ${level} target using Level 1 copies`,
+      wrongLevelGear,
+      level
+    );
+    assert(
+      Object.keys(rejectedState.instances).filter(instanceId => instanceId.startsWith(`wrong_level_${level}_`)).length === 4,
+      `The rejected Level ${level} upgrade consumed a wrong-level material.`
+    );
+  }
+
+  const wrongGearState = commonGear.createDefaultState();
+  wrongGearState.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 1, Date.now() - 3000);
+  wrongGearState.instances.wrong_slot = createUpgradeInstance("wrong_slot", alternateSlotDefinition, 1, Date.now() - 2000);
+  wrongGearState.instances.wrong_officer = createUpgradeInstance("wrong_officer", alternateOfficerDefinition, 1, Date.now() - 1000);
+  const rejectedWrongGear = await assertRejectedUpgrade("Different gearKey/slot/officer materials", wrongGearState, 1);
+  assert(rejectedWrongGear.instances?.wrong_slot && rejectedWrongGear.instances?.wrong_officer, "A rejected upgrade consumed different gear.");
+
+  const equippedOnlyMaterialState = commonGear.createDefaultState();
+  equippedOnlyMaterialState.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 1, Date.now() - 2000);
+  equippedOnlyMaterialState.instances.equipped_only = createUpgradeInstance("equipped_only", upgradeDefinition, 1, Date.now() - 1000);
+  equippedOnlyMaterialState.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "equipped_only";
+  const rejectedEquippedMaterial = await assertRejectedUpgrade("An equipped-only material", equippedOnlyMaterialState, 1);
+  assert(rejectedEquippedMaterial.instances?.equipped_only?.isEquipped === true, "A rejected upgrade consumed its equipped-only copy.");
 
   const [statsSnap, leaderboardSnap] = await Promise.all([
     db.doc(`players/${user.uid}/stats/global`).get(),
