@@ -1,0 +1,806 @@
+/* Crownlands illuminated-manuscript UI prototype -------------------------
+   Scoped to Profile, Shop, Daily Missions, Attack Preparation, and Battle
+   Report. This layer intentionally contains no font-family declarations. */
+
+:root {
+  --manuscript-paper: #e8d8b5;
+  --manuscript-paper-light: #f0e2c3;
+  --manuscript-paper-deep: #d8c49a;
+  --manuscript-ink: #2b241c;
+  --manuscript-ink-muted: #5c4a3b;
+  --manuscript-burgundy: #6e2f35;
+  --manuscript-burgundy-deep: #4f2026;
+  --manuscript-rust: #855548;
+  --manuscript-ochre: #b98a38;
+  --manuscript-moss: #596643;
+  --manuscript-indigo: #4f5d6a;
+  --manuscript-rule: rgba(117, 71, 62, .56);
+  --manuscript-rule-soft: rgba(117, 71, 62, .27);
+  --manuscript-paper-surface:
+    linear-gradient(90deg, rgba(111, 74, 42, .09), transparent 10% 90%, rgba(111, 74, 42, .08)),
+    linear-gradient(180deg, var(--manuscript-paper-light), var(--manuscript-paper) 72%, var(--manuscript-paper-deep));
+  --manuscript-paper-raised:
+    linear-gradient(180deg, rgba(246, 233, 201, .96), rgba(224, 205, 162, .96));
+  --manuscript-button-face:
+    linear-gradient(180deg, #f4e8cd, #ddc79e 72%, #c7ab79);
+  --manuscript-button-primary:
+    linear-gradient(180deg, #7c3940, var(--manuscript-burgundy) 68%, var(--manuscript-burgundy-deep));
+  --manuscript-lift: 0 10px 24px rgba(36, 22, 12, .28);
+  --manuscript-button-depth: inset 0 1px 0 rgba(255, 250, 226, .7), inset 0 -3px 0 rgba(77, 48, 27, .24), 0 3px 0 rgba(62, 37, 22, .36);
+}
+
+/* Shared manuscript surfaces and chapter headers. */
+:is(
+  .profile-screen,
+  .shop-modal > .modal-card,
+  .daily-mission-modal > .modal-card,
+  .troop-slider-modal > .modal-card,
+  .battle-report-modal > .modal-card
+) {
+  color: var(--manuscript-ink);
+  border: 1px solid #62442c;
+  border-radius: 4px;
+  background: var(--manuscript-paper-surface);
+  box-shadow: 0 0 0 2px rgba(39, 24, 13, .5), var(--manuscript-lift), inset 0 0 0 1px rgba(255, 249, 223, .48);
+}
+
+:is(
+  .shop-modal,
+  .daily-mission-modal,
+  .troop-slider-modal,
+  .battle-report-modal
+) > .modal-card::before,
+.profile-screen::before {
+  opacity: .18;
+}
+
+:is(
+  .shop-modal,
+  .daily-mission-modal,
+  .troop-slider-modal,
+  .battle-report-modal
+) > .modal-card > h2 {
+  width: fit-content;
+  min-width: min(310px, calc(100% - 3rem));
+  max-width: calc(100% - 3rem);
+  min-height: 42px;
+  margin: -.15rem auto .65rem;
+  padding: .48rem 2.15rem .42rem;
+  display: grid;
+  place-items: center;
+  color: #f5e9cd !important;
+  text-align: center;
+  text-shadow: 0 1px 0 rgba(28, 8, 10, .72);
+  background: var(--manuscript-button-primary);
+  clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+  box-shadow: none;
+}
+
+:is(
+  .profile-screen,
+  .shop-modal .modal-card,
+  .daily-mission-modal .modal-card,
+  .troop-slider-modal .modal-card,
+  .battle-report-modal .modal-card
+) :is(p, li, label, span, small) {
+  color: var(--manuscript-ink-muted);
+  opacity: 1;
+}
+
+:is(
+  .profile-screen,
+  .shop-modal .modal-card,
+  .daily-mission-modal .modal-card,
+  .troop-slider-modal .modal-card,
+  .battle-report-modal .modal-card
+) :is(h2, h3, h4, strong, b) {
+  color: var(--manuscript-ink);
+  text-shadow: none;
+}
+
+:is(
+  .profile-section-heading,
+  .daily-missions-heading,
+  .shop-rewarded-heading,
+  .battle-visual-section-title
+) {
+  border: 0;
+  border-bottom: 1px solid var(--manuscript-rule);
+  background: transparent;
+}
+
+:is(
+  .profile-section-heading,
+  .daily-missions-heading,
+  .shop-rewarded-heading,
+  .battle-visual-section-title
+)::after {
+  content: "";
+  width: 42px;
+  height: 2px;
+  align-self: end;
+  background: var(--manuscript-burgundy);
+}
+
+/* Shared buttons and interaction states within the five prototypes. */
+:is(
+  .profile-screen,
+  .shop-modal,
+  .daily-mission-modal,
+  .troop-slider-modal,
+  .battle-report-modal
+) :is(
+  button,
+  .profile-primary-btn,
+  .profile-secondary-btn,
+  .shop-buy-btn,
+  .troop-slider-confirm,
+  .troop-slider-cancel,
+  .battle-report-back,
+  .battle-report-detail-btn,
+  .battle-report-locate-btn
+) {
+  border: 1px solid rgba(85, 58, 39, .82);
+  border-radius: 4px;
+  color: var(--manuscript-ink);
+  background: var(--manuscript-button-face);
+  box-shadow: var(--manuscript-button-depth);
+  text-shadow: none;
+  transition: filter 120ms ease, transform 80ms ease, border-color 120ms ease;
+}
+
+:is(
+  .profile-screen,
+  .shop-modal,
+  .daily-mission-modal,
+  .troop-slider-modal,
+  .battle-report-modal
+) :is(
+  .profile-primary-btn,
+  .shop-buy-btn:not(:disabled),
+  .daily-mission-action button:not(:disabled),
+  .troop-slider-confirm.attack:not(:disabled)
+) {
+  color: #fff7e5;
+  border-color: #481b21;
+  background: var(--manuscript-button-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 239, 205, .26), inset 0 -3px 0 rgba(28, 8, 10, .34), 0 3px 0 rgba(39, 17, 15, .48);
+}
+
+@media (hover: hover) {
+  :is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(:disabled):hover {
+    filter: brightness(1.045) saturate(.98);
+    border-color: var(--manuscript-burgundy);
+  }
+}
+
+:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:not(:disabled):active {
+  transform: translateY(2px);
+  filter: brightness(.95);
+  box-shadow: inset 0 2px 3px rgba(62, 37, 22, .18), 0 1px 0 rgba(62, 37, 22, .34);
+}
+
+:is(.profile-screen, .shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) button:disabled {
+  color: #6f6353;
+  border-color: rgba(92, 75, 55, .45);
+  background: linear-gradient(180deg, #d8cbb1, #bcae91);
+  box-shadow: inset 0 1px rgba(255,255,255,.28);
+  opacity: .72;
+}
+
+:is(.shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) .modal-close,
+.profile-screen-close {
+  min-width: 40px;
+  min-height: 40px;
+  color: #f5ead0;
+  border-color: #36171a;
+  background: var(--manuscript-button-primary);
+}
+
+/* Profile: illuminated ruler record. */
+.profile-screen-header {
+  min-height: 66px;
+  border-bottom: 1px solid #3f1b1f;
+  background:
+    linear-gradient(90deg, rgba(66, 18, 24, .2), transparent 14% 86%, rgba(66, 18, 24, .18)),
+    var(--manuscript-button-primary);
+  box-shadow: inset 0 -3px 0 rgba(50, 17, 20, .34);
+}
+
+.profile-screen-header :is(span, h2) {
+  color: #f5e9cd !important;
+  text-shadow: 0 1px 0 rgba(28, 8, 10, .65);
+}
+
+.profile-screen .profile-tabs {
+  gap: 0;
+  padding: 0;
+  border: 1px solid rgba(55, 23, 26, .75);
+  border-radius: 3px;
+  background: rgba(239, 221, 184, .16);
+  box-shadow: none;
+}
+
+.profile-screen .profile-tabs button {
+  min-height: 35px;
+  border: 0;
+  border-right: 1px solid rgba(54, 22, 25, .48);
+  border-radius: 0;
+  color: #f4e8cb;
+  background: rgba(54, 22, 25, .16);
+  box-shadow: none;
+}
+
+.profile-screen .profile-tabs button:last-child { border-right: 0; }
+
+.profile-screen .profile-tabs button.active {
+  color: var(--manuscript-burgundy-deep);
+  background: var(--manuscript-paper-light);
+  box-shadow: inset 0 -3px 0 var(--manuscript-ochre);
+}
+
+.profile-view {
+  gap: .55rem;
+  padding: .65rem;
+}
+
+.profile-identity,
+.kingdom-overview,
+.profile-achievement-summary {
+  border: 0;
+  border-bottom: 1px solid var(--manuscript-rule);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-identity {
+  padding: .58rem .7rem .66rem;
+  background: linear-gradient(90deg, rgba(110, 47, 53, .055), transparent 52%);
+}
+
+.profile-name-row h3 { color: var(--manuscript-burgundy-deep); }
+
+.profile-screen .profile-icon-btn:not(.profile-screen-close) {
+  color: var(--manuscript-ink);
+  border-color: rgba(85, 58, 39, .82);
+  background: var(--manuscript-button-face);
+  box-shadow: var(--manuscript-button-depth);
+}
+
+.profile-xp-track,
+.daily-mission-progress {
+  overflow: hidden;
+  border: 1px solid var(--manuscript-rust);
+  border-radius: 2px;
+  background: rgba(248, 236, 207, .72);
+  box-shadow: inset 0 1px 2px rgba(76, 49, 28, .2);
+}
+
+.profile-xp-track span,
+.daily-mission-progress i {
+  border-radius: 0;
+  background: linear-gradient(90deg, #9f6d2c, #c79539);
+  box-shadow: none;
+}
+
+.kingdom-overview,
+.profile-achievement-summary { padding: .5rem .65rem .65rem; }
+
+.kingdom-stat-grid,
+.profile-achievement-summary-grid {
+  gap: 0;
+  border-top: 1px solid var(--manuscript-rule-soft);
+  border-left: 1px solid var(--manuscript-rule-soft);
+}
+
+.profile-screen :is(.kingdom-stat, .profile-achievement-summary-grid > div) {
+  min-height: 58px;
+  border: 0;
+  border-right: 1px solid var(--manuscript-rule-soft);
+  border-bottom: 1px solid var(--manuscript-rule-soft);
+  border-radius: 0;
+  background: rgba(247, 233, 198, .34);
+  box-shadow: none;
+}
+
+.profile-screen :is(.kingdom-stat, .profile-achievement-summary-grid > div) span {
+  color: var(--manuscript-ink-muted);
+}
+
+.profile-screen :is(.kingdom-stat, .profile-achievement-summary-grid > div) strong {
+  color: var(--manuscript-ink);
+}
+
+.profile-view-achievements-btn { justify-self: end; min-height: 38px; margin-top: .45rem; }
+
+.profile-screen .profile-achievement-summary,
+.profile-screen .profile-achievement-summary :is(h3, strong) {
+  color: var(--manuscript-ink) !important;
+  text-shadow: none !important;
+}
+.profile-screen .profile-achievement-summary :is(span, small) {
+  color: var(--manuscript-ink-muted) !important;
+  text-shadow: none !important;
+}
+.profile-screen .profile-achievement-summary .profile-section-heading :is(span, h3),
+.profile-screen .profile-achievement-summary-grid :is(span, strong) {
+  color: var(--manuscript-ink) !important;
+  text-shadow: none !important;
+}
+
+/* Shop: royal quartermaster ledger. */
+.shop-modal > .modal-card { width: min(760px, calc(100% - 1rem)); }
+.shop-panel { gap: .55rem; }
+
+.shop-balance {
+  min-height: 44px;
+  padding: .45rem .72rem;
+  border: 0;
+  border-block: 1px solid var(--manuscript-rule);
+  border-radius: 0;
+  background: rgba(247, 234, 202, .45);
+  box-shadow: none;
+}
+
+.shop-balance span { color: var(--manuscript-burgundy); }
+.shop-balance strong { color: var(--manuscript-ink); }
+
+.shop-rewarded-section {
+  border: 1px solid var(--manuscript-rule-soft);
+  border-radius: 3px;
+  background: rgba(247, 234, 202, .34);
+  box-shadow: none;
+}
+
+.shop-rewarded-heading { padding: .48rem .62rem; }
+
+.shop-items { gap: 0; border-top: 1px solid var(--manuscript-rule); }
+
+.shop-modal .shop-item {
+  min-height: 86px;
+  gap: .7rem;
+  padding: .48rem .58rem;
+  border: 0;
+  border-bottom: 1px solid var(--manuscript-rule);
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  background: rgba(247, 234, 202, .22);
+  box-shadow: none;
+}
+
+.shop-modal .shop-item:nth-child(even) { background: rgba(210, 187, 143, .16); }
+.shop-modal .shop-item:hover { border-left-color: var(--manuscript-burgundy); }
+
+.shop-item-image-placeholder {
+  border: 0;
+  border-right: 1px solid var(--manuscript-rule-soft);
+  border-radius: 0;
+  color: var(--manuscript-burgundy);
+  background: transparent;
+  box-shadow: none;
+}
+
+.shop-item-image { object-fit: contain; }
+.shop-item-copy { gap: .08rem; }
+.shop-item-copy strong { color: var(--manuscript-burgundy-deep); }
+.shop-item-copy span { color: #5f431b; }
+.shop-item-copy small { color: var(--manuscript-ink-muted); }
+.shop-buy-btn { min-width: 92px; min-height: 42px; }
+
+/* Daily Missions: posted royal assignments. */
+.daily-missions-section {
+  gap: .36rem;
+  border: 1px solid var(--manuscript-rule);
+  border-radius: 3px;
+  color: var(--manuscript-ink);
+  background: var(--manuscript-paper-surface);
+  box-shadow: inset 0 0 0 1px rgba(255, 249, 223, .34);
+}
+
+.daily-missions-heading { padding: .35rem .5rem .45rem; }
+.daily-missions-heading .profile-section-heading { border: 0; padding: 0; }
+.daily-missions-section .daily-missions-heading :is(h3, strong) {
+  color: var(--manuscript-ink) !important;
+  text-shadow: none !important;
+}
+.daily-missions-section .daily-missions-heading :is(span, small) {
+  color: var(--manuscript-ink-muted) !important;
+  text-shadow: none !important;
+}
+.daily-missions-section .daily-missions-heading .profile-section-heading span {
+  color: var(--manuscript-ink-muted) !important;
+  text-shadow: none !important;
+}
+.daily-missions-section .daily-missions-heading .profile-section-heading h3 {
+  color: var(--manuscript-ink) !important;
+  text-shadow: none !important;
+}
+.daily-missions-section .daily-missions-meta span {
+  text-shadow: none !important;
+}
+.daily-missions-meta span:first-child { color: var(--manuscript-ink-muted); }
+.daily-missions-meta span:last-child { color: var(--manuscript-burgundy); }
+.daily-missions-list { gap: 0; border-top: 1px solid var(--manuscript-rule-soft); }
+
+.daily-mission-row {
+  min-height: 66px;
+  gap: .55rem;
+  padding: .4rem .48rem;
+  border: 0;
+  border-bottom: 1px solid var(--manuscript-rule-soft);
+  border-left: 3px solid var(--manuscript-ochre);
+  border-radius: 0;
+  background: rgba(247, 234, 202, .2);
+  box-shadow: none;
+}
+
+.daily-mission-row:nth-child(even) { background: rgba(210, 187, 143, .14); }
+.daily-mission-row.complete { border-left-color: var(--manuscript-moss); background: rgba(205, 214, 174, .34); }
+.daily-mission-row.claimed { opacity: .76; }
+
+.daily-mission-icon,
+.daily-mission-detail-icon {
+  color: var(--manuscript-burgundy);
+  border: 1px solid var(--manuscript-rule);
+  border-radius: 50%;
+  background: rgba(245, 230, 193, .72);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.daily-mission-copy strong { color: var(--manuscript-burgundy-deep); }
+.daily-mission-copy > div > span,
+.daily-mission-reward small,
+.daily-mission-difficulty { color: var(--manuscript-burgundy); }
+.daily-mission-copy small { color: var(--manuscript-ink-muted); }
+.daily-mission-reward strong { color: #5f431b; }
+.daily-mission-completed { color: #304526; }
+
+.daily-mission-detail {
+  gap: .65rem;
+  color: var(--manuscript-ink);
+}
+
+.daily-mission-detail-stat,
+.daily-mission-recommendation {
+  border: 0;
+  border-left: 3px solid var(--manuscript-rust);
+  border-radius: 0;
+  color: var(--manuscript-ink);
+  background: rgba(244, 229, 192, .52);
+  box-shadow: none;
+}
+
+/* Attack Preparation: dense military order. */
+.troop-slider-panel { gap: .55rem; color: var(--manuscript-ink); }
+
+.troop-route-summary {
+  gap: .4rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--manuscript-rule);
+}
+
+.troop-route-city {
+  min-height: 68px;
+  padding: .45rem .55rem;
+  border: 0;
+  border-left: 3px solid var(--manuscript-rust);
+  border-radius: 0;
+  color: var(--manuscript-ink) !important;
+  background: rgba(246, 232, 197, .45);
+  box-shadow: none;
+}
+
+.troop-slider-modal .troop-route-city {
+  color: var(--manuscript-ink) !important;
+  background: rgba(246, 232, 197, .55) !important;
+}
+
+.troop-route-city.destination { border-left-color: var(--manuscript-burgundy); }
+.troop-route-city :is(span, small, b) { color: var(--manuscript-ink-muted) !important; }
+.troop-route-city strong { color: var(--manuscript-burgundy-deep) !important; }
+
+.troop-slider-modal .troop-command-icon {
+  color: #f5e9cd;
+  border: 1px solid #3f1b1f;
+  border-radius: 50%;
+  background: var(--manuscript-button-primary);
+  box-shadow: 0 2px 0 rgba(49, 20, 22, .36);
+}
+
+.troop-slider-control {
+  padding: .55rem .65rem;
+  border: 1px solid var(--manuscript-rule-soft);
+  border-radius: 3px;
+  color: var(--manuscript-ink) !important;
+  background: rgba(247, 234, 202, .36);
+  box-shadow: none;
+}
+
+.troop-slider-modal .troop-slider-control {
+  color: var(--manuscript-ink) !important;
+  background: rgba(247, 234, 202, .44) !important;
+}
+
+.troop-slider-control :is(span, small) { color: var(--manuscript-ink-muted) !important; }
+.troop-slider-control strong { color: var(--manuscript-burgundy-deep) !important; }
+
+.troop-amount-slider {
+  height: 8px;
+  border: 1px solid var(--manuscript-rust);
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--manuscript-ochre) 0 var(--slider-progress, 0%), rgba(246, 234, 204, .78) var(--slider-progress, 0%) 100%);
+}
+
+.troop-amount-slider::-webkit-slider-thumb {
+  border-color: #553925;
+  background: var(--manuscript-button-face);
+  box-shadow: 0 2px 0 rgba(62, 37, 22, .34);
+}
+
+.swift-march-launch-option,
+.shield-drop-warning,
+.reinforcement-limit-note {
+  border: 0;
+  border-left: 3px solid var(--manuscript-indigo);
+  border-radius: 0;
+  color: var(--manuscript-ink);
+  background: rgba(221, 212, 190, .5);
+  box-shadow: none;
+}
+
+.shield-drop-warning { border-left-color: var(--manuscript-rust); background: rgba(218, 190, 161, .46); }
+
+.troop-slider-preview {
+  gap: 0;
+  border: 1px solid var(--manuscript-rule);
+  background: rgba(247, 234, 202, .3);
+}
+
+.troop-slider-preview > div {
+  min-height: 70px;
+  padding: .5rem .65rem;
+  border: 0;
+  border-right: 1px solid var(--manuscript-rule-soft);
+  border-radius: 0;
+  color: var(--manuscript-ink) !important;
+  background: transparent;
+  box-shadow: none;
+}
+
+.troop-slider-modal .troop-slider-preview > div {
+  color: var(--manuscript-ink) !important;
+  background: rgba(247, 234, 202, .4) !important;
+}
+
+.troop-slider-preview > div:last-child { border-right: 0; }
+.troop-slider-preview :is(span, small) { color: var(--manuscript-ink-muted) !important; }
+.troop-slider-preview strong { color: var(--manuscript-burgundy-deep) !important; }
+.troop-slider-actions { padding-top: .08rem; }
+.troop-slider-confirm,
+.troop-slider-cancel { min-height: 46px; }
+
+/* Battle Report: campaign chronicle. */
+.battle-report-modal > .modal-card { width: min(900px, calc(100% - 1rem)); }
+.battle-visual-report { gap: .55rem; color: var(--manuscript-ink); }
+
+.battle-visual-navigation {
+  padding-bottom: .45rem;
+  border-bottom: 1px solid var(--manuscript-rule);
+}
+
+.battle-visual-title :is(strong, small) { color: var(--manuscript-ink); }
+
+.battle-report-modal .battle-report-back,
+.battle-report-modal .battle-report-locate-btn,
+.battle-report-modal .battle-report-locate-detail {
+  color: var(--manuscript-ink) !important;
+  border-color: rgba(85, 58, 39, .82) !important;
+  background: var(--manuscript-button-face) !important;
+  box-shadow: var(--manuscript-button-depth) !important;
+}
+
+.battle-visual-rule,
+.battle-visual-target {
+  border: 0;
+  border-left: 3px solid var(--manuscript-burgundy);
+  border-radius: 0;
+  color: var(--manuscript-ink);
+  background: rgba(246, 232, 197, .48);
+  box-shadow: none;
+}
+
+.battle-visual-target :is(span, small),
+.battle-visual-rule { color: var(--manuscript-ink-muted); }
+.battle-visual-target strong { color: var(--manuscript-burgundy-deep); }
+
+.battle-visual-hero {
+  gap: 0;
+  border: 1px solid var(--manuscript-rule);
+  border-radius: 3px;
+  background: rgba(246, 232, 197, .26);
+  box-shadow: none;
+}
+
+.battle-visual-hero-side {
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.battle-visual-hero-side:first-child { border-right: 1px solid var(--manuscript-rule-soft); }
+.battle-visual-hero-side.attacker { box-shadow: inset 4px 0 0 var(--manuscript-rust); }
+.battle-visual-hero-side.defender { box-shadow: inset -4px 0 0 var(--manuscript-indigo); }
+
+.battle-visual-hero-side :is(.battle-visual-side-label, strong, span, small) { color: var(--manuscript-ink); }
+.battle-visual-ruler small,
+.battle-visual-power span,
+.battle-visual-losses { color: var(--manuscript-ink-muted) !important; }
+
+.battle-visual-power {
+  border: 0;
+  border-top: 1px solid var(--manuscript-rule-soft);
+  border-radius: 0;
+  background: rgba(255, 249, 224, .28);
+  box-shadow: none;
+}
+
+.battle-visual-outcome {
+  border: 0;
+  border-radius: 0;
+  color: #fff5df;
+  background: var(--manuscript-button-primary);
+  box-shadow: inset 0 1px rgba(255, 239, 205, .22), inset 0 -3px rgba(33, 9, 12, .24);
+}
+
+.battle-report-modal .battle-visual-outcome :is(span, strong) {
+  color: #fff5df !important;
+  text-shadow: 0 1px rgba(36, 8, 12, .78) !important;
+}
+
+.battle-report-modal .battle-visual-outcome > span {
+  color: #fff5df !important;
+}
+
+.battle-visual-section,
+.battle-visual-wall,
+.battle-visual-rewards {
+  padding: .52rem;
+  border: 1px solid var(--manuscript-rule-soft);
+  border-radius: 3px;
+  color: var(--manuscript-ink);
+  background: rgba(246, 232, 197, .28);
+  box-shadow: none;
+}
+
+.battle-visual-section-title { padding: 0 0 .38rem; color: var(--manuscript-burgundy-deep); }
+.battle-visual-section-title :is(span, h3) { color: var(--manuscript-burgundy-deep); }
+
+.battle-visual-detail-card,
+.battle-visual-bonus-card {
+  padding: .42rem;
+  border: 0;
+  border-top: 2px solid var(--manuscript-rust);
+  border-radius: 0;
+  color: var(--manuscript-ink);
+  background: rgba(255, 249, 224, .3);
+  box-shadow: none;
+}
+
+.battle-visual-detail-card.defender,
+.battle-visual-bonus-card.defender { border-top-color: var(--manuscript-indigo); }
+
+.battle-visual-detail-card :is(h4, strong, b, span),
+.battle-visual-bonus-card :is(h4, strong, b, span) { color: var(--manuscript-ink); }
+
+.battle-visual-detail-row,
+.battle-visual-bonus-row {
+  border-bottom: 1px solid var(--manuscript-rule-soft);
+}
+
+.battle-report-modal :is(.battle-visual-detail-row, .battle-visual-bonus-row) {
+  color: var(--manuscript-ink) !important;
+  background: transparent !important;
+}
+
+.battle-report-modal :is(.battle-visual-detail-row, .battle-visual-bonus-row) :is(span, strong, b) {
+  color: var(--manuscript-ink) !important;
+}
+
+.battle-report-modal .battle-visual-troop-flow {
+  color: var(--manuscript-ink) !important;
+  background: rgba(224, 205, 162, .58) !important;
+}
+
+.battle-report-modal .battle-visual-troop-flow :is(strong, span) {
+  color: var(--manuscript-ink) !important;
+}
+
+.battle-visual-detail-row small,
+.battle-visual-bonus-row small,
+.battle-visual-wall-grid :is(span, small),
+.battle-visual-no-bonus { color: var(--manuscript-ink-muted); }
+
+.battle-visual-wall-grid > div,
+.battle-viewer-rewards > div {
+  border: 0;
+  border-left: 3px solid var(--manuscript-rust);
+  border-radius: 0;
+  background: rgba(255, 249, 224, .32);
+  box-shadow: none;
+}
+
+.battle-visual-wall-grid strong,
+.battle-viewer-rewards strong { color: var(--manuscript-ink); }
+
+.battle-report-modal .battle-visual-wall-grid :is(span, small) { color: var(--manuscript-ink-muted) !important; }
+.battle-report-modal .battle-visual-wall-grid strong { color: var(--manuscript-ink) !important; }
+
+/* Compact landscape keeps strategy density without clipping. */
+@media (max-height: 560px) and (orientation: landscape) {
+  :is(.shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) > .modal-card {
+    width: min(960px, calc(100% - .7rem));
+    max-height: calc(100dvh - .5rem);
+    padding: .42rem .5rem .5rem;
+  }
+
+  :is(.shop-modal, .daily-mission-modal, .troop-slider-modal, .battle-report-modal) > .modal-card > h2 {
+    min-width: min(250px, calc(100% - 3rem));
+    min-height: 32px;
+    margin: -.08rem auto .38rem;
+    padding: .3rem 1.45rem .26rem;
+    font-size: .86rem;
+  }
+
+  .profile-screen {
+    width: calc(100% - .45rem);
+    height: calc(100% - .45rem);
+  }
+
+  .profile-screen-header { min-height: 53px; padding: .28rem .4rem; }
+  .profile-screen .profile-tabs button { min-height: 31px; font-size: .58rem; }
+  .profile-view { gap: .34rem; padding: .38rem; }
+  .profile-identity { padding: .36rem .48rem .42rem; }
+  .kingdom-overview,
+  .profile-achievement-summary { padding: .3rem .42rem .42rem; }
+  .profile-screen :is(.kingdom-stat, .profile-achievement-summary-grid > div) { min-height: 45px; }
+
+  .shop-panel { gap: .3rem; }
+  .shop-balance { min-height: 34px; padding: .28rem .5rem; }
+  .shop-rewarded-section { display: none; }
+  .shop-modal .shop-item { min-height: 62px; gap: .4rem; padding: .28rem .4rem; }
+  .shop-buy-btn { min-width: 74px; min-height: 36px; }
+
+  .daily-missions-section { padding: .25rem; }
+  .daily-mission-row { min-height: 52px; gap: .34rem; padding: .25rem .34rem; }
+
+  .troop-slider-panel { gap: .34rem; }
+  .troop-route-summary { padding-bottom: .3rem; }
+  .troop-route-city { min-height: 54px; padding: .3rem .42rem; }
+  .troop-slider-control { padding: .36rem .48rem; }
+  .swift-march-launch-option { padding: .32rem .46rem; }
+  .troop-slider-preview > div { min-height: 54px; padding: .34rem .48rem; }
+  .troop-slider-confirm,
+  .troop-slider-cancel { min-height: 38px; }
+  .troop-slider-modal .troop-slider-actions {
+    position: sticky;
+    z-index: 3;
+    bottom: 0;
+    padding: .32rem 0 .16rem;
+    background: linear-gradient(180deg, rgba(232, 216, 181, .25), var(--manuscript-paper) 32%);
+  }
+
+  .battle-visual-report { gap: .32rem; }
+  .battle-visual-navigation { padding-bottom: .28rem; }
+  .battle-visual-target { padding: .3rem .45rem; }
+  .battle-visual-hero { min-height: 112px; }
+  .battle-visual-section,
+  .battle-visual-wall,
+  .battle-visual-rewards { padding: .35rem; }
+  .battle-visual-section-title { padding-bottom: .25rem; }
+  .battle-visual-detail-card,
+  .battle-visual-bonus-card { padding: .28rem; }
+}

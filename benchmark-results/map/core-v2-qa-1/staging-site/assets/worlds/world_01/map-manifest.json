@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "description": "Immutable regional gameplay maps included in this production artifact.",
+  "maps": [
+    {
+      "id": "center",
+      "output": "assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp",
+      "bytes": 689488,
+      "sha256": "8ac9453f446beac73896477081689b2d12f1ef633d01dd3b3945f53dc19a1965"
+    },
+    {
+      "id": "west",
+      "output": "assets/worlds/world_01/maps/versioned/west-west-2-1783019399438-92a533147c7f.webp",
+      "bytes": 602764,
+      "sha256": "92a533147c7fb9f2a22d21dea9334833b0c056f89a22edfd51675314a5ecd442"
+    },
+    {
+      "id": "east",
+      "output": "assets/worlds/world_01/maps/versioned/east-east-4-1783020191215-19805a740a73.webp",
+      "bytes": 631142,
+      "sha256": "19805a740a73324df9aa983868c12943448fa775659d1315badccd328ece27be"
+    },
+    {
+      "id": "north",
+      "output": "assets/worlds/world_01/maps/versioned/north-north-1-1783019201680-0b6b6b19ea6e.webp",
+      "bytes": 668846,
+      "sha256": "0b6b6b19ea6e549cef4c3721bc93a96a04978813d33bbd7e33a7bdfec56f94d0"
+    },
+    {
+      "id": "south",
+      "output": "assets/worlds/world_01/maps/versioned/south-south-5-1783020401484-675929711e1c.webp",
+      "bytes": 565384,
+      "sha256": "675929711e1caf1e39e52de3d1efd43b8c5d845e4474a1f24262a96bf75b658c"
+    },
+    {
+      "id": "region_6",
+      "output": "assets/worlds/world_01/maps/versioned/region_6-6-1783021585258-632d8967e0db.webp",
+      "bytes": 454480,
+      "sha256": "632d8967e0db2eb94128151a045cb9d457d2497bb57b8695888eebcbb73ad2dc"
+    },
+    {
+      "id": "region_7",
+      "output": "assets/worlds/world_01/maps/versioned/region_7-7-1783022207943-5b92203f34be.webp",
+      "bytes": 479878,
+      "sha256": "5b92203f34be9134f3ffed25ae860a025efd9078f84f5ceff3f12b5529d92be6"
+    },
+    {
+      "id": "region_8",
+      "output": "assets/worlds/world_01/maps/versioned/region_8-8-1783022783978-38c33aabc85b.webp",
+      "bytes": 594816,
+      "sha256": "38c33aabc85b75e0c8aabc0a8563965f70a667bb4aad4d369631ad783a141493"
+    },
+    {
+      "id": "region_9",
+      "output": "assets/worlds/world_01/maps/versioned/region_9-9-1783023202200-b4dc635cf9d5.webp",
+      "bytes": 597594,
+      "sha256": "b4dc635cf9d5db600f7f9b3c5ae9b1a581ae92d774e4f3c58a60c8ebe96bdcd7"
+    },
+    {
+      "id": "region_10",
+      "output": "assets/worlds/world_01/maps/versioned/region_10-10-1783023599661-9b69758f632f.webp",
+      "bytes": 584854,
+      "sha256": "9b69758f632f74dc95cbed08cadbca703cd5bdb78233035a13470afec784b04f"
+    },
+    {
+      "id": "region_11",
+      "output": "assets/worlds/world_01/maps/versioned/region_11-11-1783024323781-58adc4a5d797.webp",
+      "bytes": 693084,
+      "sha256": "58adc4a5d797962b08bddd2b8d8a886204ab84963158dd3073014e997ea23968"
+    },
+    {
+      "id": "region_12",
+      "output": "assets/worlds/world_01/maps/versioned/region_12-12-1783024478267-f8ec8f7220b9.webp",
+      "bytes": 609534,
+      "sha256": "f8ec8f7220b9b15544c44b6f1c85558b5f4710a3ec9a755a3294b63d2f084ea3"
+    },
+    {
+      "id": "region_13",
+      "output": "assets/worlds/world_01/maps/versioned/region_13-13-1783024786859-2850b934a775.webp",
+      "bytes": 621750,
+      "sha256": "2850b934a775420ce9d465d12a2c446bc32f98633504d7b6dbab9746123ee85e"
+    },
+    {
+      "id": "region_14",
+      "output": "assets/worlds/world_01/maps/versioned/region_14-14-1783024960400-7c8c938749c6.webp",
+      "bytes": 483398,
+      "sha256": "7c8c938749c62bdea2429123784361cc4a5722b55ff9503ea62befb8ef7248a6"
+    },
+    {
+      "id": "region_15",
+      "output": "assets/worlds/world_01/maps/versioned/region_15-15-1783025218871-3743b6771813.webp",
+      "bytes": 650730,
+      "sha256": "3743b6771813113e762b39a06c66fb055e660446ba3c42fa298b743de59e8ecf"
+    }
+  ],
+  "editableSourcesExcluded": true
+}

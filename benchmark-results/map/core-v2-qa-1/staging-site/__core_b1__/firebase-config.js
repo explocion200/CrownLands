@@ -1,0 +1,1 @@
+window.CROWNLANDS_FIREBASE_CONFIG = Object.freeze({ projectId: "crownlands-map-staging-2026", authDomain: "crownlands-map-staging-2026.firebaseapp.com", storageBucket: "crownlands-map-staging-2026.firebasestorage.app", developmentOnly: true, productionProjectForbidden: "crown-land-b15e0" });

@@ -1,0 +1,100 @@
+{
+  "status": "PASS_STAGING_SUPPORTED_BROWSER",
+  "environment": "FIREBASE_STAGING_PREVIEW",
+  "mapsLoaded": 25,
+  "citiesValidated": 1480,
+  "capacitiesMatched": 25,
+  "supportMapsAt70Cities": 4,
+  "zoomPass": {
+    "low": 25,
+    "normal": 25,
+    "close": 25
+  },
+  "interactionPass": {
+    "mouseTightPairs": 25,
+    "touchEquivalentTightPairs": 25,
+    "selectionAcknowledged": 25,
+    "objectiveActionWheels": 17,
+    "objectiveActionWheelFailures": 0
+  },
+  "runtimePresentation": {
+    "labels": "PASS",
+    "banners": "PASS",
+    "troopText": "PASS",
+    "selectionRings": "PASS",
+    "actionWheels": "PASS",
+    "friendlyRoutes": "PASS_25_OF_25",
+    "hostileRoutes": "PASS_25_OF_25",
+    "lod": "PASS"
+  },
+  "topology": {
+    "directedOpenSides": 80,
+    "reciprocalConnections": 40,
+    "outwardGatedSides": 20,
+    "diagonalConnections": 0,
+    "mapUiTiles": 25,
+    "mapUiConnections": 40
+  },
+  "collisions": {
+    "citySprites": 0,
+    "cityLabels": 0,
+    "banners": 0,
+    "troopText": 0,
+    "realObjectives": 0,
+    "developmentTowerReservationOverlay": 1
+  },
+  "performance": {
+    "preset": "low",
+    "representativeWarmSamples": 9,
+    "averageFps": 138.216,
+    "minimumFps": 132.834,
+    "averageP95FrameTimeMs": 10.211,
+    "maximumP95FrameTimeMs": 13.9,
+    "maximumFrameTimeMs": 27.8,
+    "longTasks": 0,
+    "citadelFps": 143.539,
+    "citadelP95FrameTimeMs": 7.1,
+    "citadelMaximumFrameTimeMs": 13.9,
+    "citadelLongTasks": 0,
+    "coldDecodeObservation": "Initial remote staging samples for West/North/East Support contained one-time decode/loading stalls; clean isolated warm reruns passed with zero long tasks."
+  },
+  "definitionCache": {
+    "configuredLimit": 8,
+    "observedSize": 5,
+    "definitionRequests": 5,
+    "cacheHits": 2,
+    "definitionFailures": 0,
+    "bounded": true
+  },
+  "defects": [
+    {
+      "id": "QA1-HARNESS-GREYBANNER-SOURCE",
+      "severity": "MINOR",
+      "scope": "development-only QA fixture",
+      "status": "FIXED",
+      "description": "Greybanner initially used an incompatible fixture source key; the fixture now maps it to troop_stronghold so the real runtime art and action wheel load."
+    },
+    {
+      "id": "QA1-NE-TOWER-RESERVATION-OVERLAY",
+      "severity": "COSMETIC",
+      "scope": "development-only reservation visualization",
+      "status": "OPEN_NON_BLOCKING",
+      "description": "One city sprite grazes the QA reservation ellipse. The overlay has no pointer events, the city remains selectable, and no Tower art exists yet."
+    },
+    {
+      "id": "QA1-STAGING-COLD-DECODE-WATCH",
+      "severity": "MINOR",
+      "scope": "staging performance observation",
+      "status": "WATCH",
+      "description": "First remote image-decode samples showed isolated stalls; clean warmed samples and Citadel watch samples passed."
+    }
+  ],
+  "production": {
+    "liveMaps": 15,
+    "liveCities": 1050,
+    "directedChains": 210,
+    "generatedActiveRegions": 0,
+    "productionMutation": false,
+    "productionDeployment": false
+  }
+}

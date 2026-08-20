@@ -1,0 +1,293 @@
+const CACHE_VERSION = "47b2e81d1137";
+const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
+const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
+const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
+const WORLD_IMAGE_CACHE_NAME = `crownlands-world-images-${CACHE_VERSION}`;
+const MAX_RUNTIME_CACHE_ENTRIES = 72;
+const MAX_REGION_CACHE_ENTRIES = 8;
+const MAX_WORLD_IMAGE_CACHE_ENTRIES = 12;
+const APP_BASE_URL = new URL("./", self.location.href);
+
+function resolveAppUrl(path = "") {
+  const value = String(path || "").trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  return new URL(value.replace(/^\/+/, ""), APP_BASE_URL).href;
+}
+
+const STATIC_CACHE_URLS = [
+  "/index.html",
+  "/manifest.webmanifest",
+  "/styles.css?v=47b2e81d1137",
+  "/interface-theme.css?v=47b2e81d1137",
+  "/readability.css?v=47b2e81d1137",
+  "/manuscript-prototype.css?v=47b2e81d1137",
+  "/ui-contrast-correction.css?v=47b2e81d1137",
+  "/release-config.js",
+  "/world-config.js",
+  "/region-catalog.js?v=47b2e81d1137",
+  "/assets/worlds/world_01/region-catalog.js?v=47b2e81d1137",
+  "/economy-config.js?v=47b2e81d1137",
+  "/common-gear.js?v=47b2e81d1137",
+  "/functions/clanQuestPeriod.js?v=47b2e81d1137",
+  "/firebaseClient.js?v=47b2e81d1137",
+  "/animation-manager.js?v=47b2e81d1137",
+  "/instant-economy-actions.js?v=47b2e81d1137",
+  "/base-cities.js?v=47b2e81d1137",
+  "/ui-layout-config.js?v=47b2e81d1137",
+  "/game.js?v=47b2e81d1137",
+  "/ui-layout-runtime.js?v=47b2e81d1137",
+  "/route-worker.js?v=47b2e81d1137",
+  "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
+  "/assets/optimized/loading-ring-256x256-38fb3df7217c.webp",
+  "/assets/optimized/loading-crown-256x256-2038de353a91.webp"
+];
+
+const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#17110d"/></svg>`;
+
+try {
+  self.window = self;
+  importScripts(resolveAppUrl("firebase-config.js"));
+  importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
+  importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
+
+  const config = self.CROWNLANDS_FIREBASE_CONFIG || {};
+
+  if (config.apiKey && config.projectId && self.firebase?.apps?.length === 0) {
+    firebase.initializeApp(config);
+  }
+
+  if (self.firebase?.messaging) {
+    const messaging = firebase.messaging();
+
+    messaging.onBackgroundMessage(payload => {
+      const data = payload?.data || {};
+      const notification = payload?.notification || {};
+      const title = notification.title || data.title || "Crownlands alert";
+      const body = notification.body || data.body || "A new army is marching.";
+      const tag = data.armyId
+        ? `crownlands-${data.armyId}`
+        : "crownlands-incoming-army";
+
+      self.registration.showNotification(title, {
+        body,
+        tag,
+        renotify: true,
+        requireInteraction: data.kind === "attack",
+        icon: resolveAppUrl("assets/optimized/hud-report-192x192-21644b7390fb.webp"),
+        badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
+        data: {
+          ...data,
+          url: resolveAppUrl(data.url || ""),
+        },
+      });
+    });
+  }
+} catch (error) {
+  console.warn("[Crownlands] Firebase messaging worker setup skipped.", error);
+}
+
+function isCacheableResponse(response) {
+  return Boolean(
+    response
+    && response.status === 200
+    && (response.type === "basic" || response.type === "default")
+  );
+}
+
+function isApiOrServerRequest(url) {
+  return (
+    url.origin !== self.location.origin
+    || url.pathname.startsWith("/api/")
+    || url.pathname.startsWith("/.netlify/functions/")
+    || url.pathname.startsWith("/__/")
+    || url.pathname.includes("/google.firestore.")
+    || url.pathname.includes("/identitytoolkit/")
+  );
+}
+
+function isStaticAssetRequest(url) {
+  return (
+    url.origin === self.location.origin
+    && (
+      url.pathname.startsWith("/assets/")
+      || url.pathname.startsWith("/audio/")
+      || /\.(?:css|js|json|webmanifest|ogg|wav|mp3|png|jpe?g|webp|svg|ico|woff2?)$/i.test(url.pathname)
+    )
+  );
+}
+
+function isAudioMediaRequest(url) {
+  return (
+    url.origin === self.location.origin
+    && url.pathname.startsWith("/audio/")
+    && /\.(?:mp3|ogg|wav)$/i.test(url.pathname)
+  );
+}
+
+function isWorldMapImageRequest(url) {
+  return (
+    url.origin === self.location.origin
+    && (
+      url.pathname.includes("/assets/worlds/")
+      || /\/assets\/(?:center|north|south|east|west)-island\.webp$/i.test(url.pathname)
+    )
+    && !url.pathname.includes("/thumbnails/")
+  );
+}
+
+function isNetworkFirstAsset(url) {
+  return (
+    url.pathname === "/"
+    || url.pathname.endsWith(".html")
+    || url.pathname.endsWith(".js")
+    || url.pathname.endsWith(".css")
+    || url.pathname.endsWith(".json")
+    || url.pathname.endsWith(".webmanifest")
+  );
+}
+
+function getNavigationFallbackUrl(url) {
+  const pathname = String(url?.pathname || "").replace(/\/+$/, "") || "/";
+  return pathname === "/play" || pathname === "/index.html" ? resolveAppUrl("index.html") : null;
+}
+
+async function putInCache(request, response) {
+  if (!isCacheableResponse(response)) return false;
+  try {
+    const url = new URL(request.url);
+    const isRegionDefinition = /\/assets\/worlds\/[^/]+\/regions\/[^/]+\.json$/i.test(url.pathname);
+    const isWorldImage = url.pathname.includes("/assets/worlds/") && /\.(?:png|jpe?g|webp)$/i.test(url.pathname);
+    const cacheName = isRegionDefinition ? REGION_CACHE_NAME : isWorldImage ? WORLD_IMAGE_CACHE_NAME : RUNTIME_CACHE_NAME;
+    const maximumEntries = isRegionDefinition
+      ? MAX_REGION_CACHE_ENTRIES
+      : isWorldImage
+        ? MAX_WORLD_IMAGE_CACHE_ENTRIES
+        : MAX_RUNTIME_CACHE_ENTRIES;
+    const cache = await caches.open(cacheName);
+    await cache.put(request, response.clone());
+    if (typeof cache.keys === "function" && typeof cache.delete === "function") {
+      const keys = await cache.keys();
+      await Promise.all(keys.slice(0, Math.max(0, keys.length - maximumEntries)).map(key => cache.delete(key)));
+    }
+    return true;
+  } catch (error) {
+    console.warn("[Crownlands] Static cache write skipped.", error);
+    return false;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  await putInCache(request, response);
+  return response;
+}
+
+async function networkFirst(request, fallbackUrl = "/index.html") {
+  try {
+    const response = await fetch(request);
+    await putInCache(request, response);
+    return response;
+  } catch (error) {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const fallback = fallbackUrl ? await cache.match(fallbackUrl) : null;
+    if (fallback) return fallback;
+    throw error;
+  }
+}
+
+async function precacheStaticAssets() {
+  const cache = await caches.open(CACHE_NAME);
+  const requests = STATIC_CACHE_URLS.map(url => new Request(resolveAppUrl(url), { cache: "reload" }));
+  await Promise.allSettled(requests.map(async request => {
+    const response = await fetch(request);
+    if (isCacheableResponse(response)) await cache.put(request, response);
+  }));
+}
+
+self.addEventListener("install", event => {
+  event.waitUntil(precacheStaticAssets().then(() => self.skipWaiting()));
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    const activeCacheNames = new Set([CACHE_NAME, RUNTIME_CACHE_NAME, REGION_CACHE_NAME, WORLD_IMAGE_CACHE_NAME]);
+    await Promise.all(names.filter(name => name.startsWith("crownlands-") && !activeCacheNames.has(name)).map(name => caches.delete(name)));
+    await self.clients.claim();
+    const windowClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    windowClients.forEach(client => client.postMessage({
+      type: "CROWNLANDS_UPDATE_READY",
+      buildId: CACHE_VERSION,
+    }));
+  })());
+});
+
+self.addEventListener("fetch", event => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+  if (request.headers.has("range")) return;
+  const url = new URL(request.url);
+
+  if (isApiOrServerRequest(url)) return;
+  if (isAudioMediaRequest(url)) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(request, getNavigationFallbackUrl(url)));
+    return;
+  }
+
+  if (!isStaticAssetRequest(url)) return;
+
+  if (isNetworkFirstAsset(url)) {
+    event.respondWith(networkFirst(request, null));
+    return;
+  }
+
+  event.respondWith(
+    cacheFirst(request).catch(() => {
+      if (request.destination === "image") {
+        // A decoded 64x64 placeholder looks like a successfully loaded world map
+        // to the client. Surface map failures so the previous island stays visible
+        // and the normal retry state can take over.
+        if (isWorldMapImageRequest(url)) return Response.error();
+        return new Response(IMAGE_FALLBACK_SVG, {
+          headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" },
+        });
+      }
+      return Response.error();
+    })
+  );
+});
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+self.addEventListener("notificationclick", event => {
+  const notificationData = event.notification?.data || {};
+  event.notification.close();
+  const url = resolveAppUrl(notificationData.url || "play/");
+  event.waitUntil((async () => {
+    const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+    const sameOriginClient = windowClients.find(client => {
+      try {
+        return new URL(client.url).origin === self.location.origin;
+      } catch (_error) {
+        return false;
+      }
+    });
+    if (sameOriginClient) {
+      await sameOriginClient.focus();
+      sameOriginClient.postMessage({
+        type: "CROWNLANDS_NOTIFICATION_CLICK",
+        notification: notificationData,
+      });
+      return;
+    }
+    await clients.openWindow(url);
+  })());
+});

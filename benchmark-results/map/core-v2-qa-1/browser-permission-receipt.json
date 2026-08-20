@@ -1,0 +1,38 @@
+{
+  "status": "CODEX_BROWSER_PERMISSION_STATE_DEFECT",
+  "rootCauseLayer": "Codex Desktop Browser saved local-origin permission state",
+  "crownlandsFailure": false,
+  "localhost": {
+    "url": "http://127.0.0.1:8816/__core_b1__/",
+    "httpStatus": 200,
+    "manualBrowserAccess": true,
+    "titleRead": true,
+    "urlRead": true,
+    "domControl": "blocked intermittently by saved user permission setting",
+    "savedPermissionError": "Browser Use rejected this action due to browser security policy. Reason: A saved user permission setting blocks this action.",
+    "permissionVisiblyAllowed": true,
+    "cleared": false
+  },
+  "supportedRecovery": {
+    "fullCdpApprovalRequired": false,
+    "securityBypassAttempted": false,
+    "alternateBrowserUsed": false,
+    "externalCdpUsed": false
+  },
+  "fallback": {
+    "required": true,
+    "environment": "FIREBASE_STAGING_PREVIEW",
+    "stagingProjectId": "crownlands-map-staging-2026",
+    "productionProjectId": "crown-land-b15e0",
+    "projectsAreDistinct": true,
+    "productionGuardVerified": true,
+    "productionMutationPossible": false,
+    "previewChannel": "core-v2-qa1",
+    "url": "https://crownlands-map-staging-2026--core-v2-qa1-kw7w0110.web.app/__core_b1__/",
+    "httpStatus": 200,
+    "titleRead": true,
+    "urlRead": true,
+    "domInspection": true,
+    "harmlessControlAction": true
+  }
+}

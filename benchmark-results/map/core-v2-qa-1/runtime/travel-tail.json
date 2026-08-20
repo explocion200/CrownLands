@@ -1,0 +1,295 @@
+{
+  "validatedPrefix": 56,
+  "index": 80,
+  "total": 80,
+  "results": [
+    {
+      "from": "core-v2-warband-camp-south-east-p2-p2",
+      "to": "core-v2-relic-camp-east-south-p2-p1",
+      "dir": "north",
+      "aria": "Go to Relic Camp East-South — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "Relic Camp East-South — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-relic-camp-east-south-p2-p1",
+      "to": "core-v2-south-east-holding-tower-p1-p1",
+      "dir": "west",
+      "aria": "Go to South-East Holding Tower — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "South-East Holding Tower — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-east-holding-tower-p1-p1",
+      "to": "core-v2-relic-camp-south-east-p1-p2",
+      "dir": "south",
+      "aria": "Go to Relic Camp South-East — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 656.8937683105469
+      },
+      "frame": "Relic Camp South-East — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-relic-camp-south-east-p1-p2",
+      "to": "core-v2-south-east-holding-tower-p1-p1",
+      "dir": "north",
+      "aria": "Go to South-East Holding Tower — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "South-East Holding Tower — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-east-holding-tower-p1-p1",
+      "to": "core-v2-ironwatch-p0-p1",
+      "dir": "west",
+      "aria": "Go to Ironwatch — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "Ironwatch — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-ironwatch-p0-p1",
+      "to": "core-v2-south-support-p0-p2",
+      "dir": "south",
+      "aria": "Go to South Support — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 656.8937683105469
+      },
+      "frame": "South Support — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-support-p0-p2",
+      "to": "core-v2-ironwatch-p0-p1",
+      "dir": "north",
+      "aria": "Go to Ironwatch — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "Ironwatch — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-ironwatch-p0-p1",
+      "to": "core-v2-south-west-holding-tower-m1-p1",
+      "dir": "west",
+      "aria": "Go to South-West Holding Tower — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "South-West Holding Tower — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-west-holding-tower-m1-p1",
+      "to": "core-v2-deed-camp-south-west-m1-p2",
+      "dir": "south",
+      "aria": "Go to Deed Camp South-West — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 656.8937683105469
+      },
+      "frame": "Deed Camp South-West — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-deed-camp-south-west-m1-p2",
+      "to": "core-v2-south-west-holding-tower-m1-p1",
+      "dir": "north",
+      "aria": "Go to South-West Holding Tower — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "South-West Holding Tower — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-west-holding-tower-m1-p1",
+      "to": "core-v2-deed-camp-west-south-m2-p1",
+      "dir": "west",
+      "aria": "Go to Deed Camp West-South — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "Deed Camp West-South — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-deed-camp-west-south-m2-p1",
+      "to": "core-v2-gold-camp-south-west-m2-p2",
+      "dir": "south",
+      "aria": "Go to Gold Camp South-West — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 656.8937683105469
+      },
+      "frame": "Gold Camp South-West — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-gold-camp-south-west-m2-p2",
+      "to": "core-v2-deed-camp-south-west-m1-p2",
+      "dir": "east",
+      "aria": "Go to Deed Camp South-West — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "Deed Camp South-West — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-deed-camp-south-west-m1-p2",
+      "to": "core-v2-south-support-p0-p2",
+      "dir": "east",
+      "aria": "Go to South Support — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "South Support — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-support-p0-p2",
+      "to": "core-v2-relic-camp-south-east-p1-p2",
+      "dir": "east",
+      "aria": "Go to Relic Camp South-East — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "Relic Camp South-East — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-relic-camp-south-east-p1-p2",
+      "to": "core-v2-warband-camp-south-east-p2-p2",
+      "dir": "east",
+      "aria": "Go to Warband Camp South-East — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "Warband Camp South-East — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-warband-camp-south-east-p2-p2",
+      "to": "core-v2-relic-camp-south-east-p1-p2",
+      "dir": "west",
+      "aria": "Go to Relic Camp South-East — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "Relic Camp South-East — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-relic-camp-south-east-p1-p2",
+      "to": "core-v2-south-support-p0-p2",
+      "dir": "west",
+      "aria": "Go to South Support — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "South Support — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-south-support-p0-p2",
+      "to": "core-v2-deed-camp-south-west-m1-p2",
+      "dir": "west",
+      "aria": "Go to Deed Camp South-West — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "Deed Camp South-West — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-deed-camp-south-west-m1-p2",
+      "to": "core-v2-gold-camp-south-west-m2-p2",
+      "dir": "west",
+      "aria": "Go to Gold Camp South-West — Core v2 QA-1",
+      "rect": {
+        "x": 84.13125228881836,
+        "y": 360.00001525878906
+      },
+      "frame": "Gold Camp South-West — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-gold-camp-south-west-m2-p2",
+      "to": "core-v2-deed-camp-west-south-m2-p1",
+      "dir": "north",
+      "aria": "Go to Deed Camp West-South — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "Deed Camp West-South — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-deed-camp-west-south-m2-p1",
+      "to": "core-v2-west-support-m2-p0",
+      "dir": "north",
+      "aria": "Go to West Support — Core v2 QA-1",
+      "rect": {
+        "x": 498,
+        "y": 63.10000038146973
+      },
+      "frame": "West Support — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-west-support-m2-p0",
+      "to": "core-v2-aurum-keep-m1-p0",
+      "dir": "east",
+      "aria": "Go to Aurum Keep — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "Aurum Keep — Core v2 QA-1 map",
+      "pass": true
+    },
+    {
+      "from": "core-v2-aurum-keep-m1-p0",
+      "to": "core-v2-crown-citadel-p0-p0",
+      "dir": "east",
+      "aria": "Go to Crown Citadel — Core v2 QA-1",
+      "rect": {
+        "x": 911.8624877929688,
+        "y": 360.00001525878906
+      },
+      "frame": "Crown Citadel — Core v2 QA-1 map",
+      "pass": true
+    }
+  ]
+}

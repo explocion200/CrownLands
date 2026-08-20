@@ -1,0 +1,17 @@
+{
+  "environment": "FIREBASE_STAGING_PREVIEW",
+  "method": "supported in-app Browser CUA arrow interaction",
+  "maps": 25,
+  "uniqueDirectedOpenEdges": 80,
+  "reciprocalConnections": 40,
+  "passedDirectedEdges": 80,
+  "failedDirectedEdges": 0,
+  "outwardGatedSidesObserved": 20,
+  "diagonalConnections": 0,
+  "circuitStart": "core-v2-crown-citadel-p0-p0",
+  "circuitEnd": "core-v2-crown-citadel-p0-p0",
+  "returnedToStart": true,
+  "rawTailReceipt": "travel-tail.json",
+  "rawTailEdgeCount": 24,
+  "notes": "The first 56 edge interactions were verified before the Browser-control session was reattached; the final 24 are retained in travel-tail.json. Static topology independently validates the same 80 directed sides and 40 reciprocal pairs."
+}

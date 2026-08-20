@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "environment": "STAGING_QA_ONLY",
+  "stagingProjectId": "crownlands-map-staging-2026",
+  "productionProjectId": "crown-land-b15e0",
+  "projectsAreDistinct": true,
+  "productionMutationAllowed": false,
+  "productionRuntimeBundled": false,
+  "exactMapCount": 25,
+  "exactCityCount": 1480,
+  "maps": [
+    {
+      "key": "northwest-warband-camp",
+      "regionId": "core-v2-warband-camp-m2-m2",
+      "source": "benchmark-results/map/core-v2-phase-art-3/candidates/northwest-warband-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northwest-warband-camp.webp",
+      "sha256": "cb1b4fdd6e1baaa0a11ce2ac40bdcc22a8bb5aa161a263521f77ed6dfe178008",
+      "bytes": 744808
+    },
+    {
+      "key": "northwest-relic-camp",
+      "regionId": "core-v2-relic-camp-north-west-m1-m2",
+      "source": "benchmark-results/map/core-v2-phase-art-3/candidates/northwest-relic-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northwest-relic-camp.webp",
+      "sha256": "63e1dff9ea54badbeb5daeb95f4f26a2d80ac475f20e413f74e7e1bb15ced040",
+      "bytes": 696300
+    },
+    {
+      "key": "north-support",
+      "regionId": "core-v2-north-support-p0-m2",
+      "source": "benchmark-results/map/core-v2-phase-art-4/candidates/north-support/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/north-support.webp",
+      "sha256": "6d997fcf592762ce621584964120b657f950fdf7594d65f6925d03e730f30927",
+      "bytes": 723068
+    },
+    {
+      "key": "northeast-deed-camp",
+      "regionId": "core-v2-deed-camp-north-east-p1-m2",
+      "source": "benchmark-results/map/core-v2-phase-art-4/candidates/northeast-deed-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northeast-deed-camp.webp",
+      "sha256": "15c80b6aeeb702b7fec508a997114865e83063cf3d726cda0d55692d6a175ed2",
+      "bytes": 816098
+    },
+    {
+      "key": "northeast-gold-camp",
+      "regionId": "core-v2-gold-camp-north-east-p2-m2",
+      "source": "benchmark-results/map/core-v2-phase-art-4/candidates/northeast-gold-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northeast-gold-camp.webp",
+      "sha256": "91b5d719acd2d673c50fd2bb44c9251d70aa119c01313c20730bfae2c4e2d7c7",
+      "bytes": 641874
+    },
+    {
+      "key": "west-north-relic-camp",
+      "regionId": "core-v2-relic-camp-west-north-m2-m1",
+      "source": "benchmark-results/map/core-v2-phase-art-3/candidates/west-north-relic-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/west-north-relic-camp.webp",
+      "sha256": "e837a84d685f13e58631a9f3e27596153b3527d7290b023d975b9232a0bc9e89",
+      "bytes": 535650
+    },
+    {
+      "key": "northwest-holding-tower",
+      "regionId": "core-v2-north-west-holding-tower-m1-m1",
+      "source": "benchmark-results/map/core-v2-phase-art-3/candidates/northwest-holding-tower/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northwest-holding-tower.webp",
+      "sha256": "46eafe0a682239cb9cb9def37175be6f2e66ace8703e6c4436d26f360915fd6b",
+      "bytes": 570784
+    },
+    {
+      "key": "greybanner-hold",
+      "regionId": "core-v2-greybanner-hold-p0-m1",
+      "source": "benchmark-results/map/core-v2-phase-art-4/candidates/greybanner-hold/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/greybanner-hold.webp",
+      "sha256": "569cae5831f61550494009fbcd89abe04e5fbfd8cd0687fba6119caaa2a9dbd1",
+      "bytes": 621358
+    },
+    {
+      "key": "northeast-holding-tower",
+      "regionId": "core-v2-north-east-holding-tower-p1-m1",
+      "source": "benchmark-results/map/core-v2-phase-art-4/candidates/northeast-holding-tower/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/northeast-holding-tower.webp",
+      "sha256": "d66234cc3c2242fa7007010e405bb7bf53725d00f0136553c853cc5da4a0fdd4",
+      "bytes": 716554
+    },
+    {
+      "key": "east-deed-camp",
+      "regionId": "core-v2-deed-camp-east-north-p2-m1",
+      "source": "benchmark-results/map/core-v2-phase-art-5/candidates/east-deed-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/east-deed-camp.webp",
+      "sha256": "34d669e9312b09b8600a1018fdf9e85913b36f9755bed94fe54e234d38a13b73",
+      "bytes": 698616
+    },
+    {
+      "key": "west-support",
+      "regionId": "core-v2-west-support-m2-p0",
+      "source": "benchmark-results/map/core-v2-phase-art-2-v2/candidates/west-support/map-final-candidate-v2.webp",
+      "target": "/__core_b1__/maps/west-support.webp",
+      "sha256": "be5a31f89cd9da52c3b5b1708ab0da01d13a8f2150e7b2f48e5921d6f2853d80",
+      "bytes": 635552
+    },
+    {
+      "key": "aurum-keep",
+      "regionId": "core-v2-aurum-keep-m1-p0",
+      "source": "benchmark-results/map/core-v2-phase-art-3/candidates/aurum-keep/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/aurum-keep.webp",
+      "sha256": "04e5d6970a3eac0d3ab8614c1d7e477af38b88577c2a7e4a7e6a965c6e8e0f14",
+      "bytes": 735076
+    },
+    {
+      "key": "crown-citadel",
+      "regionId": "core-v2-crown-citadel-p0-p0",
+      "source": "benchmark-results/map/core-v2-phase-art-2-v2/candidates/crown-citadel/map-final-candidate-v2.webp",
+      "target": "/__core_b1__/maps/crown-citadel.webp",
+      "sha256": "d047f52f7fdafcb67146cca79ed8af8c9d1807a37b45a7031f07f78401c9b503",
+      "bytes": 492960
+    },
+    {
+      "key": "swiftgate",
+      "regionId": "core-v2-swiftgate-p1-p0",
+      "source": "benchmark-results/map/core-v2-phase-art-5/candidates/swiftgate/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/swiftgate.webp",
+      "sha256": "8d47039c22b500370cec586d35d4a6b804fb9050be00da3e9595d277caee44ed",
+      "bytes": 703558
+    },
+    {
+      "key": "east-support",
+      "regionId": "core-v2-east-support-p2-p0",
+      "source": "benchmark-results/map/core-v2-phase-art-5/candidates/east-support/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/east-support.webp",
+      "sha256": "440dc64e1af0655fe9c3b12658d4fcefcde317a2aac36fba53fe3928aa382744",
+      "bytes": 637808
+    },
+    {
+      "key": "west-south-deed-camp",
+      "regionId": "core-v2-deed-camp-west-south-m2-p1",
+      "source": "benchmark-results/map/core-v2-phase-art-2-v2/candidates/west-south-deed-camp/map-final-candidate-v2.webp",
+      "target": "/__core_b1__/maps/west-south-deed-camp.webp",
+      "sha256": "30bcdbd48f6e62adfd3daf678be36ceb17e53238c89de98905a57b0c661e3f21",
+      "bytes": 681748
+    },
+    {
+      "key": "southwest-holding-tower",
+      "regionId": "core-v2-south-west-holding-tower-m1-p1",
+      "source": "benchmark-results/map/core-v2-phase-art-2-v2/candidates/southwest-holding-tower/map-final-candidate-v2.webp",
+      "target": "/__core_b1__/maps/southwest-holding-tower.webp",
+      "sha256": "53bd6a27fe6e43313365473022e5d5083bf8397671f8c34ecc94efa7e66a3007",
+      "bytes": 673758
+    },
+    {
+      "key": "ironwatch",
+      "regionId": "core-v2-ironwatch-p0-p1",
+      "source": "benchmark-results/map/core-v2-phase-art-2-v2/candidates/ironwatch/map-final-candidate-v2.webp",
+      "target": "/__core_b1__/maps/ironwatch.webp",
+      "sha256": "40d1a0d40726166174f547e54f5e90bdff5eccf4ec00f74aacfc7f01100d3622",
+      "bytes": 604578
+    },
+    {
+      "key": "southeast-holding-tower",
+      "regionId": "core-v2-south-east-holding-tower-p1-p1",
+      "source": "benchmark-results/map/core-v2-phase-art-5/candidates/southeast-holding-tower/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/southeast-holding-tower.webp",
+      "sha256": "1ea409afce1718c84cc1135ebc01e657e566c96abf6b199bc751c1752c3df529",
+      "bytes": 680488
+    },
+    {
+      "key": "east-southeast-relic-camp",
+      "regionId": "core-v2-relic-camp-east-south-p2-p1",
+      "source": "benchmark-results/map/core-v2-phase-art-5/candidates/east-southeast-relic-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/east-southeast-relic-camp.webp",
+      "sha256": "a44b7e62176c617a8b8509aea520da6b4773a43b6e4259d21e2b959757c18aab",
+      "bytes": 608784
+    },
+    {
+      "key": "southwest-gold-camp",
+      "regionId": "core-v2-gold-camp-south-west-m2-p2",
+      "source": "benchmark-results/map/core-v2-phase-art-6/candidates/southwest-gold-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/southwest-gold-camp.webp",
+      "sha256": "a35136f89057f05ef5923b28139a0e7f14ccd61e4db540f9b85a66b6b278bc40",
+      "bytes": 643198
+    },
+    {
+      "key": "south-deed-camp",
+      "regionId": "core-v2-deed-camp-south-west-m1-p2",
+      "source": "benchmark-results/map/core-v2-phase-art-6/candidates/south-deed-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/south-deed-camp.webp",
+      "sha256": "af190ee12c108bcb51a027657a9d99f7b109720ca39b567385e9ac615e21924c",
+      "bytes": 715934
+    },
+    {
+      "key": "south-support",
+      "regionId": "core-v2-south-support-p0-p2",
+      "source": "benchmark-results/map/core-v2-phase-art-6/candidates/south-support/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/south-support.webp",
+      "sha256": "85e161689bc1146f616b7287bcc70ee6a67e87b984ae958766f4831748d0e99b",
+      "bytes": 700176
+    },
+    {
+      "key": "south-relic-camp",
+      "regionId": "core-v2-relic-camp-south-east-p1-p2",
+      "source": "benchmark-results/map/core-v2-phase-art-6/candidates/south-relic-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/south-relic-camp.webp",
+      "sha256": "07311f58843e5fdf5f7ecd50cd580c3935b5a2734e5a4f8cbbb5b6aab5a7b92b",
+      "bytes": 653056
+    },
+    {
+      "key": "southeast-warband-camp",
+      "regionId": "core-v2-warband-camp-south-east-p2-p2",
+      "source": "benchmark-results/map/core-v2-phase-art-6/candidates/southeast-warband-camp/map-final-candidate.webp",
+      "target": "/__core_b1__/maps/southeast-warband-camp.webp",
+      "sha256": "6041ba0aefca214d88db61ed235e4f9c406a0697fe11bdb39bb18aa4d472395e",
+      "bytes": 697400
+    }
+  ]
+}

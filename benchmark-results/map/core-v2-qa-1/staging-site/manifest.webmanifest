@@ -1,0 +1,37 @@
+{
+  "name": "Crownlands",
+  "short_name": "Crownlands",
+  "id": "/play/",
+  "description": "A medieval real-time browser strategy game.",
+  "start_url": "/play/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#17110d",
+  "theme_color": "#5a262b",
+  "categories": ["games", "strategy"],
+  "icons": [
+    {
+      "src": "/assets/icons/crownlands-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/crownlands-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/crownlands-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icons/crownlands-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

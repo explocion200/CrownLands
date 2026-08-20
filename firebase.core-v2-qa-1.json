@@ -1,0 +1,20 @@
+{
+  "hosting": {
+    "site": "crownlands-map-staging-2026",
+    "public": "benchmark-results/map/core-v2-qa-1/staging-site",
+    "ignore": [
+      "firebase.core-v2-qa-1.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-store" },
+          { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+        ]
+      }
+    ]
+  }
+}
