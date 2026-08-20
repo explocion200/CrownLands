@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "core-v2-reset-2-production-read-only-preflight-v1",
+  "mode": "READ_ONLY",
+  "projectId": "crown-land-b15e0",
+  "allowedExternalMethods": [
+    "GET",
+    "POST_RUN_QUERY"
+  ],
+  "mutationMethodsPresent": false,
+  "activeWorldIdentity": {
+    "releaseId": "crownlands-2026-08-02-single-active-skill-preset-v1",
+    "worldId": "main-fresh-2026-07-26-server-reset",
+    "resetGeneration": "fresh-2026-07-26-server-reset",
+    "source": "locked deployed-release configuration"
+  },
+  "productionBaseline": {
+    "mapCount": 15,
+    "cityDefinitionCount": 1050,
+    "directedMapChainCount": 210,
+    "generatedActiveRegionCount": 0,
+    "unexpectedCoreV2RecordCount": 0,
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+  },
+  "productionDataShape": {
+    "playerCount": 31,
+    "clanRecordCount": 4,
+    "playersWithGear": 11,
+    "commonGearInstanceCount": 303,
+    "source": "field-projected Firestore read-only queries; no player payload retained"
+  },
+  "firebase": {
+    "databaseReachable": true,
+    "databaseType": "FIRESTORE_NATIVE",
+    "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+    "deleteProtectionState": "DELETE_PROTECTION_DISABLED",
+    "deployedFunctionCount": 102,
+    "requiredIndexSpecificationCount": 49,
+    "requiredCollectionGroups": [
+      "activity",
+      "applications",
+      "armies",
+      "camps",
+      "cities",
+      "clans",
+      "entries",
+      "incomingArmies",
+      "members",
+      "ownershipChanges",
+      "presence",
+      "rallies",
+      "reinforcements",
+      "serverMembership",
+      "serverReports"
+    ],
+    "deployedIndexCountObserved": 750,
+    "deployedIndexStates": {
+      "READY": 750
+    },
+    "backupCapabilityObserved": true
+  },
+  "controls": {
+    "resetControls": "NOT_PROVISIONED_EFFECTIVELY_OFF",
+    "generatedWorldRolloutControls": "NOT_PROVISIONED_EFFECTIVELY_OFF",
+    "candidateDefaults": {
+      "schemaVersion": "crownlands-reset-runtime-guard-v1",
+      "resetEnabled": false,
+      "seasonCutoverEnabled": false,
+      "automaticResetEnabled": false,
+      "maintenanceMode": "OFF",
+      "killSwitches": {
+        "bootstrap": true,
+        "migration": true,
+        "cutover": true,
+        "generation": true,
+        "publication": true,
+        "activation": true,
+        "expansion": true
+      }
+    },
+    "candidateResetControlsOff": true,
+    "candidateKillSwitchesEngaged": true
+  },
+  "pass": true,
+  "productionMutationPerformed": false,
+  "checkedAt": "2026-08-20T12:36:04.076Z"
+}

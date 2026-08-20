@@ -1,0 +1,4455 @@
+{
+  "schemaVersion": "core-v2-reset-2-staging-dress-rehearsal-v1",
+  "passed": true,
+  "runId": "reset2-aug25-exact-candidate-v5",
+  "environment": {
+    "staging": {
+      "projectId": "crownlands-map-staging-2026",
+      "projectNumber": "292945299558"
+    },
+    "production": {
+      "projectId": "crown-land-b15e0",
+      "projectNumber": "542378516435"
+    },
+    "isolated": true
+  },
+  "candidate": {
+    "candidateId": "reset2-candidate-2e68667049a02b05",
+    "approvedBaseGitSha": "3ee9918dd43231eafffc0858649f4ae5a57b97b7",
+    "resetSchemaVersion": "core-v2-reset-2-v1",
+    "persistenceAllowlistVersion": "reset-persistence-contract-v2",
+    "corePackageVersion": "core-v2-qa1-approved-25-map-final-art-v1",
+    "corePackageHash": "4b7c6d8137c494f95b8eb3d8050af0be0224508d897293bb79e31ec8829b647a",
+    "generatedWorldVersion": "generated-worlds-v1-phase6f-road-decoupled",
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+    "firebaseFunctionsCandidate": "crownlands-functions-node22-reset2-disabled-v1",
+    "firebaseFunctionsSourceHash": "6c3e22664647e4a1d004b537403be11e4e354fcd2d23b6b158d1affdf38be0d4",
+    "firestoreSchemaExpectation": "98e4af0a78dbc4c4ebb3a23196fbb2698f2d3878fb820fa09b23c5528b9e6f47",
+    "requiredIndexCount": 49,
+    "requiredConfiguration": {
+      "schemaVersion": "crownlands-reset-runtime-controls-v1",
+      "resetEnabled": false,
+      "seasonCutoverEnabled": false,
+      "automaticResetEnabled": false,
+      "maintenanceMode": "OFF",
+      "killSwitches": {
+        "bootstrap": true,
+        "migration": true,
+        "cutover": true,
+        "generation": true,
+        "publication": true,
+        "activation": true,
+        "expansion": true
+      }
+    },
+    "sourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "sourceHashes": {
+      "reset-persistence-contract.js": "32c2761434609d6fa0b2d6c1ce69edbcfb006927fb5d7a3ba3c315d954171c1f",
+      "functions/core-main-city-policy.js": "e753c3fd01c04b8e8c97a34c9693de2fe0f2cf9e0a885a29fe2b9dde8dcf879f",
+      "functions/reset-runtime-config.json": "7d716206a9497e560ef07a299cc6d2af6f39d986c04bd6206cb77cb40debb315",
+      "functions/reset-runtime-guard.js": "f04755062f54779a99948bca4c4c4aedc2c314ccd5c1d56c5dd07314a6639e8d",
+      "functions/index.js": "06798d0ec82f4baca6bb7dcd98ff6e6c7c0e36c5788ef7d704e57324d35fbf98",
+      "firestore.rules": "bf9f8e440c81d516284e0b6f80fa73c7b2c63310890268f0dec3eaf2fc2e5870",
+      "firestore.indexes.json": "8c79cf8e679fb020b043774368dd9ab7154e939c9919b2a8df41fc78114ccb02",
+      "tools/core-v2-reset-1/architecture.js": "f222a56a37163b4a0d77255f286a0a0aa942dbafa917d1215c8ca9478bd91cb5",
+      "tools/core-v2-reset-2/architecture.js": "04324c19e48570954fbace429bb80e840c93bd59dcd4234f7f223fd093d6fcf5",
+      "tools/run-core-v2-reset-2-production-preflight.js": "7ea617fa017bf15f2e2c7165428da1321e77b70eee2e1a1fec62967ee7794e7b",
+      "tools/run-core-v2-reset-2-staging.js": "60ea85659056ce02a1470786af0ddba736d409f36d00cac9863dbc8460c0ea05",
+      "tools/validate-core-v2-reset-2.js": "a7ad0273898c3b4640b4a8856ca4d7d5bac55c250eb44a77722de23542f78546"
+    },
+    "invalidatedByChangesTo": [
+      "reset-persistence-contract.js",
+      "functions/core-main-city-policy.js",
+      "functions/reset-runtime-config.json",
+      "functions/reset-runtime-guard.js",
+      "functions/index.js",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "tools/core-v2-reset-1/architecture.js",
+      "tools/core-v2-reset-2/architecture.js",
+      "tools/run-core-v2-reset-2-production-preflight.js",
+      "tools/run-core-v2-reset-2-staging.js",
+      "tools/validate-core-v2-reset-2.js"
+    ]
+  },
+  "replayed": true,
+  "lifecycleHistory": [
+    "PREPARING",
+    "INITIALIZING",
+    "VALIDATING",
+    "READY"
+  ],
+  "dataset": {
+    "playerCount": 5000,
+    "clanCount": 125,
+    "clanlessPlayers": 715,
+    "sparseAccounts": 1000,
+    "heavyAccounts": 1000
+  },
+  "localPagination": [
+    {
+      "size": 299,
+      "pageCount": 1,
+      "uniqueProcessed": 299,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 300,
+      "pageCount": 1,
+      "uniqueProcessed": 300,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 301,
+      "pageCount": 2,
+      "uniqueProcessed": 301,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 500,
+      "pageCount": 2,
+      "uniqueProcessed": 500,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 1000,
+      "pageCount": 4,
+      "uniqueProcessed": 1000,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 2500,
+      "pageCount": 9,
+      "uniqueProcessed": 2500,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 5000,
+      "pageCount": 17,
+      "uniqueProcessed": 5000,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    }
+  ],
+  "remotePagination": {
+    "pageSize": 300,
+    "playerPages": 17,
+    "backupPlayerPages": 17,
+    "restoredPlayerPages": 17,
+    "uniquePlayers": 5000,
+    "duplicatePlayers": 0,
+    "skippedPlayers": 0
+  },
+  "persistence": {
+    "playerCount": 5000,
+    "ownedGearCount": 74000,
+    "equippedGearCount": 32500,
+    "duplicateGearCount": 8000,
+    "persistentHash": "477f03098cbfdf4106ed8d212200d65dbaac535329ee164e67f0766fac644e31",
+    "gearHash": "8fc9da7d3fd94225ba56e45895a030957e6e0db55da2a33c7912d986f759060a",
+    "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+    "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+    "seasonalResetHash": "80caa39d143121853219bbd5a9434951d4fb425604428ce4e09797a7e0ec0a8d"
+  },
+  "clans": {
+    "count": 125,
+    "membershipCount": 4285,
+    "hash": "3a36ea9462581b65f36e9971957cef44d44e5859bca750e7da592f2e8e4f55a4",
+    "orphanMemberships": 0,
+    "duplicateClans": 0
+  },
+  "flags": {
+    "count": 5000,
+    "hash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+    "mismatches": 0
+  },
+  "seasonalReset": {
+    "consumablesRemaining": 0,
+    "worldStateRemaining": 0,
+    "checksum": "80caa39d143121853219bbd5a9434951d4fb425604428ce4e09797a7e0ec0a8d"
+  },
+  "backup": {
+    "backupId": "reset2-backup-2e68667049a02b05",
+    "backupHash": "5a8b3cd102e01932a480db26468f3704ec3033ce78880c14a36a3f575183cb9d",
+    "startedAt": "2026-08-20T06:19:39.864Z",
+    "completedAt": "2026-08-20T06:20:13.889Z",
+    "status": "VALIDATED",
+    "playerCount": 5000,
+    "clanCount": 125
+  },
+  "restore": {
+    "backupPlayers": 5000,
+    "backupClans": 125,
+    "restoredPlayers": 5000,
+    "restoredClans": 125,
+    "backupPlayerPages": 17,
+    "restoredPlayerPages": 17,
+    "backupPersistentHash": "d99b7395cde88367f07c7ce6082352d2b61a46abc69424e15e8f4f5b91aefcea",
+    "restorePersistentHash": "d99b7395cde88367f07c7ce6082352d2b61a46abc69424e15e8f4f5b91aefcea",
+    "backupClanHash": "73d64998c413e6991a51c1e20bacbece7454de598b75b68a12825b0b935a391b",
+    "restoreClanHash": "73d64998c413e6991a51c1e20bacbece7454de598b75b68a12825b0b935a391b",
+    "publishedPackagesRegenerated": false,
+    "validated": true
+  },
+  "remoteValidation": {
+    "playerDocuments": 5000,
+    "playerPages": 17,
+    "uniquePlayerDocuments": 5000,
+    "duplicatePlayers": 0,
+    "skippedPlayers": 0,
+    "regionDocuments": 221,
+    "cityDocuments": 9320,
+    "objectiveDocuments": 17,
+    "coreRegionDocuments": 25,
+    "coreCityDocuments": 1480,
+    "consumablesRemaining": 0
+  },
+  "world": {
+    "valid": true,
+    "errors": [],
+    "coreRegionCount": 25,
+    "coreCityCount": 1480,
+    "objectiveCount": 17,
+    "totalRegionCount": 221,
+    "totalCityCount": 9320,
+    "activeOuterRegions": 194,
+    "standbyOuterRegions": 2,
+    "duplicateCityIds": 0,
+    "reciprocalTopologyErrors": 0
+  },
+  "placements": {
+    "count": 5000,
+    "uniqueStartingCities": 5000,
+    "allOutsideCore": true
+  },
+  "boundaryAndStandby": {
+    "successfulPlacement": {
+      "npcBefore": 15,
+      "npcAfter": 14,
+      "allowed": true,
+      "regionId": "phase6d_region_0001"
+    },
+    "rejectedPlacement": {
+      "npcBefore": 14,
+      "allowed": false,
+      "reason": "minimum-npc-threshold",
+      "regionRemainsActive": true,
+      "regionId": "phase6d_region_0001"
+    },
+    "clockwiseActivation": {
+      "activatedRegionId": "phase6d_region_0194",
+      "replenishedRegionId": "phase6d_region_0196",
+      "standbyCount": 2
+    },
+    "workerFailure": {
+      "injected": true,
+      "standbyCountUnaffected": 2,
+      "playerWaitRequired": false
+    },
+    "generationFailure": {
+      "injected": true,
+      "coordinateRetained": true,
+      "retrySucceeded": true
+    },
+    "queueRestart": {
+      "injected": true,
+      "deterministicResume": true,
+      "standbyCount": 2
+    }
+  },
+  "mainCity": {
+    "restrictedRegions": [
+      "core-v2-crown-citadel-p0-p0",
+      "core-v2-greybanner-hold-p0-m1",
+      "core-v2-aurum-keep-m1-p0",
+      "core-v2-swiftgate-p1-p0",
+      "core-v2-ironwatch-p0-p1"
+    ],
+    "paths": [
+      "normal_ui_request",
+      "changeMainCity_callable",
+      "reset_restoration",
+      "stale_request",
+      "malformed_request",
+      "unauthorized_direct_request",
+      "administrative_reassignment",
+      "relocateMainCity_callable"
+    ],
+    "attempts": [
+      {
+        "path": "normal_ui_request",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "normal_ui_request",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "normal_ui_request",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "normal_ui_request",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "normal_ui_request",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "changeMainCity_callable",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "changeMainCity_callable",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "changeMainCity_callable",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "changeMainCity_callable",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "changeMainCity_callable",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "reset_restoration",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "reset_restoration",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "reset_restoration",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "reset_restoration",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "reset_restoration",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "stale_request",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "stale_request",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "stale_request",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "stale_request",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "stale_request",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "malformed_request",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "malformed_request",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "malformed_request",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "malformed_request",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "malformed_request",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "unauthorized_direct_request",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "unauthorized_direct_request",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "unauthorized_direct_request",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "unauthorized_direct_request",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "unauthorized_direct_request",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "administrative_reassignment",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "administrative_reassignment",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "administrative_reassignment",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "administrative_reassignment",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "administrative_reassignment",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "relocateMainCity_callable",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "relocateMainCity_callable",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "relocateMainCity_callable",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "relocateMainCity_callable",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      },
+      {
+        "path": "relocateMainCity_callable",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "rejected": true,
+        "code": "forbidden-core-main-city-region"
+      }
+    ],
+    "rejectedAttempts": 40,
+    "validOuter": true,
+    "normalGameplay": [
+      {
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "action": "capture",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "action": "own",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "action": "reinforce",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "action": "attack",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "action": "capture",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "action": "own",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "action": "reinforce",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "action": "attack",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "action": "capture",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "action": "own",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "action": "reinforce",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "action": "attack",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "action": "capture",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "action": "own",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "action": "reinforce",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "action": "attack",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "action": "capture",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "action": "own",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "action": "reinforce",
+        "allowed": true
+      },
+      {
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "action": "attack",
+        "allowed": true
+      }
+    ]
+  },
+  "readyGating": {
+    "beforeReadyPlayerEntry": false,
+    "readyValidated": true,
+    "afterCutoverPlayerEntry": true
+  },
+  "pointerCompareAndSet": {
+    "isolatedRunPointer": true,
+    "expectedOldRevision": 12,
+    "committedRevision": 13,
+    "updateTimePreconditionUsed": false,
+    "initialCutoverUsedUpdateTimePrecondition": true,
+    "replaySkippedRedundantCutover": true,
+    "exactCandidateMatched": true
+  },
+  "activePointer": {
+    "environment": "STAGING",
+    "revision": 13,
+    "schemaVersion": "core-v2-reset-2-v1",
+    "priorSeasonId": "season_2026_august_dress",
+    "productionMutationPerformed": false,
+    "seasonId": "season_2026_september_candidate",
+    "candidateSourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "switchedBy": "reset2-aug25-exact-candidate-v5",
+    "synthetic": true,
+    "priorWorldId": "crownlands_world_2026_august_dress",
+    "worldId": "crownlands_world_2026_september_candidate",
+    "candidateId": "reset2-candidate-2e68667049a02b05"
+  },
+  "oldSeason": {
+    "worldId": "crownlands_world_2026_august_dress",
+    "newPlacementEnabled": false,
+    "seasonId": "season_2026_august_dress",
+    "schemaVersion": "core-v2-reset-2-v1",
+    "environment": "STAGING",
+    "mutationState": "READ_ONLY",
+    "archivedReadOnly": true,
+    "productionDataCopied": false,
+    "retentionDays": 30,
+    "status": "ARCHIVED",
+    "maintenanceMode": "ARCHIVED",
+    "synthetic": true,
+    "cleanupEligibleAfterReview": true,
+    "replacedBySeasonId": "season_2026_september_candidate",
+    "playerEntryEnabled": false,
+    "worldMutationsEnabled": false
+  },
+  "newSeason": {
+    "seasonId": "season_2026_september_candidate",
+    "exactCoreCityCount": 1480,
+    "candidateSourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "synthetic": true,
+    "lifecycleHistory": [
+      "PREPARING",
+      "INITIALIZING",
+      "VALIDATING",
+      "READY"
+    ],
+    "validationReceiptHash": "a3980725819c2d500b6e7931b2663a1ca11d1fdc5899e7e4eb919673fd90ecb1",
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+    "exactObjectiveCount": 17,
+    "worldId": "crownlands_world_2026_september_candidate",
+    "activePlayerRegionCount": 194,
+    "standbyPlayerRegionCount": 2,
+    "productionDataCopied": false,
+    "playerEntryEnabled": true,
+    "status": "READY",
+    "exactPlayerCount": 5000,
+    "candidateId": "reset2-candidate-2e68667049a02b05",
+    "schemaVersion": "core-v2-reset-2-v1",
+    "exactCoreMapCount": 25,
+    "activatedByPointerRevision": 13,
+    "environment": "STAGING"
+  },
+  "failureInjection": [
+    {
+      "stage": "backup_incomplete",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "remain in PREPARING and disable maintenance after audit"
+    },
+    {
+      "stage": "migration_page_failure",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "persistence_checksum_mismatch",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "gear_mismatch",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "clan_mismatch",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "core_city_count_mismatch",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "missing_objective",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "topology_mismatch",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "asset_hash_failure",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "outer_capacity_unavailable",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "ready_validation_failure",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    },
+    {
+      "stage": "pointer_transaction_failure",
+      "injected": true,
+      "oldSeasonRemainsAuthoritative": true,
+      "partialSeasonVisible": false,
+      "playerEntryEnabled": false,
+      "safeToRetry": true,
+      "rollbackAction": "mark candidate attempt ABORTED and retain old pointer"
+    }
+  ],
+  "priorAbortedAttempts": [
+    {
+      "runId": "reset2-aug25-exact-candidate-v1",
+      "status": "ABORTED",
+      "failedStage": "source_snapshot",
+      "errorCode": "firestore-transaction-too-big",
+      "oldSeasonRemainedAuthoritative": true,
+      "partialSeasonVisible": false,
+      "pointerCutoverPerformed": false,
+      "productionMutationPerformed": false
+    },
+    {
+      "runId": "reset2-aug25-exact-candidate-v2",
+      "status": "ABORTED",
+      "failedStage": "source_snapshot",
+      "errorCode": "firestore-indexed-transaction-too-big",
+      "oldSeasonRemainedAuthoritative": true,
+      "partialSeasonVisible": false,
+      "pointerCutoverPerformed": false,
+      "productionMutationPerformed": false
+    },
+    {
+      "runId": "reset2-aug25-exact-candidate-v3",
+      "status": "ABORTED",
+      "failedStage": "restore",
+      "errorCode": "invalid-firestore-restore-document-path",
+      "oldSeasonRemainedAuthoritative": true,
+      "partialSeasonVisible": false,
+      "pointerCutoverPerformed": false,
+      "productionMutationPerformed": false
+    },
+    {
+      "runId": "reset2-aug25-exact-candidate-v4",
+      "status": "ABORTED",
+      "failedStage": "backup_restore_validation",
+      "errorCode": "receipt-metadata-contaminated-clan-hash",
+      "oldSeasonRemainedAuthoritative": true,
+      "partialSeasonVisible": false,
+      "pointerCutoverPerformed": false,
+      "productionMutationPerformed": false
+    }
+  ],
+  "monitoring": {
+    "pollingSeconds": 30,
+    "metrics": [
+      {
+        "metric": "resetLifecycleAgeSeconds",
+        "warning": 900,
+        "critical": 1800
+      },
+      {
+        "metric": "migrationPageNoProgressSeconds",
+        "warning": 120,
+        "critical": 300
+      },
+      {
+        "metric": "persistentMismatchCount",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "gearMismatchCount",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "clanMismatchCount",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "flagMismatchCount",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "unexpectedConsumablePersistence",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "coreInitializationFailure",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "startingCityFailureRate",
+        "warning": 0.001,
+        "critical": 0.01
+      },
+      {
+        "metric": "pointerUpdateFailures",
+        "warning": 1,
+        "critical": 1
+      },
+      {
+        "metric": "firebaseTransactionErrorRate",
+        "warning": 0.01,
+        "critical": 0.05
+      },
+      {
+        "metric": "standbyRegionCount",
+        "warningBelow": 2,
+        "criticalBelow": 1
+      },
+      {
+        "metric": "generatedRegionQueueAgeSeconds",
+        "warning": 300,
+        "critical": 900
+      }
+    ]
+  },
+  "localIdempotency": {
+    "passed": true,
+    "firstHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+    "secondHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+    "duplicateCoreCities": 0,
+    "duplicateObjectives": 0,
+    "duplicateGear": 0,
+    "duplicateClanMemberships": 0,
+    "duplicateStartingCities": 0,
+    "duplicateGeneratedRegions": 0
+  },
+  "writeCounts": {
+    "source": 5125,
+    "backup": 5125,
+    "restore": 5125,
+    "migratedPlayers": 5000,
+    "world": 9558,
+    "newSeason": 14558,
+    "totalDataWrites": 29933
+  },
+  "batchTimings": {
+    "source": [
+      {
+        "startIndex": 0,
+        "writeCount": 350,
+        "estimatedBytes": 2410436,
+        "durationMs": 2654.029
+      },
+      {
+        "startIndex": 350,
+        "writeCount": 350,
+        "estimatedBytes": 2411728,
+        "durationMs": 2625.819
+      },
+      {
+        "startIndex": 700,
+        "writeCount": 350,
+        "estimatedBytes": 2412359,
+        "durationMs": 2679.903
+      },
+      {
+        "startIndex": 1050,
+        "writeCount": 350,
+        "estimatedBytes": 2415560,
+        "durationMs": 2675.991
+      },
+      {
+        "startIndex": 1400,
+        "writeCount": 350,
+        "estimatedBytes": 2415287,
+        "durationMs": 2866.438
+      },
+      {
+        "startIndex": 1750,
+        "writeCount": 350,
+        "estimatedBytes": 2415301,
+        "durationMs": 2642.614
+      },
+      {
+        "startIndex": 2100,
+        "writeCount": 350,
+        "estimatedBytes": 2415033,
+        "durationMs": 2578.055
+      },
+      {
+        "startIndex": 2450,
+        "writeCount": 350,
+        "estimatedBytes": 2415270,
+        "durationMs": 2644.228
+      },
+      {
+        "startIndex": 2800,
+        "writeCount": 350,
+        "estimatedBytes": 2415142,
+        "durationMs": 2645.718
+      },
+      {
+        "startIndex": 3150,
+        "writeCount": 350,
+        "estimatedBytes": 2415373,
+        "durationMs": 2648.584
+      },
+      {
+        "startIndex": 3500,
+        "writeCount": 350,
+        "estimatedBytes": 2415479,
+        "durationMs": 2693.706
+      },
+      {
+        "startIndex": 3850,
+        "writeCount": 350,
+        "estimatedBytes": 2415366,
+        "durationMs": 2702.8
+      },
+      {
+        "startIndex": 4200,
+        "writeCount": 350,
+        "estimatedBytes": 2414908,
+        "durationMs": 2641.702
+      },
+      {
+        "startIndex": 4550,
+        "writeCount": 350,
+        "estimatedBytes": 2415044,
+        "durationMs": 2788.979
+      },
+      {
+        "startIndex": 4900,
+        "writeCount": 225,
+        "estimatedBytes": 958049,
+        "durationMs": 1388.653
+      }
+    ],
+    "backup": [
+      {
+        "startIndex": 0,
+        "writeCount": 350,
+        "estimatedBytes": 1954037,
+        "durationMs": 2169.591
+      },
+      {
+        "startIndex": 350,
+        "writeCount": 350,
+        "estimatedBytes": 1954999,
+        "durationMs": 2203.547
+      },
+      {
+        "startIndex": 700,
+        "writeCount": 350,
+        "estimatedBytes": 1955469,
+        "durationMs": 2207.708
+      },
+      {
+        "startIndex": 1050,
+        "writeCount": 350,
+        "estimatedBytes": 1957781,
+        "durationMs": 2244.52
+      },
+      {
+        "startIndex": 1400,
+        "writeCount": 350,
+        "estimatedBytes": 1957508,
+        "durationMs": 2215.48
+      },
+      {
+        "startIndex": 1750,
+        "writeCount": 350,
+        "estimatedBytes": 1957723,
+        "durationMs": 2267.291
+      },
+      {
+        "startIndex": 2100,
+        "writeCount": 350,
+        "estimatedBytes": 1957605,
+        "durationMs": 2371.961
+      },
+      {
+        "startIndex": 2450,
+        "writeCount": 350,
+        "estimatedBytes": 1957841,
+        "durationMs": 2193.269
+      },
+      {
+        "startIndex": 2800,
+        "writeCount": 350,
+        "estimatedBytes": 1957553,
+        "durationMs": 2241.749
+      },
+      {
+        "startIndex": 3150,
+        "writeCount": 350,
+        "estimatedBytes": 1957594,
+        "durationMs": 2286.936
+      },
+      {
+        "startIndex": 3500,
+        "writeCount": 350,
+        "estimatedBytes": 1957700,
+        "durationMs": 2167.297
+      },
+      {
+        "startIndex": 3850,
+        "writeCount": 350,
+        "estimatedBytes": 1957889,
+        "durationMs": 2237.485
+      },
+      {
+        "startIndex": 4200,
+        "writeCount": 350,
+        "estimatedBytes": 1957479,
+        "durationMs": 2189.812
+      },
+      {
+        "startIndex": 4550,
+        "writeCount": 350,
+        "estimatedBytes": 1957615,
+        "durationMs": 2236.996
+      },
+      {
+        "startIndex": 4900,
+        "writeCount": 225,
+        "estimatedBytes": 875811,
+        "durationMs": 1067.852
+      }
+    ],
+    "restore": [
+      {
+        "startIndex": 0,
+        "writeCount": 350,
+        "estimatedBytes": 1952637,
+        "durationMs": 2173.949
+      },
+      {
+        "startIndex": 350,
+        "writeCount": 350,
+        "estimatedBytes": 1953599,
+        "durationMs": 2155.668
+      },
+      {
+        "startIndex": 700,
+        "writeCount": 350,
+        "estimatedBytes": 1954069,
+        "durationMs": 2201.912
+      },
+      {
+        "startIndex": 1050,
+        "writeCount": 350,
+        "estimatedBytes": 1956381,
+        "durationMs": 2169.492
+      },
+      {
+        "startIndex": 1400,
+        "writeCount": 350,
+        "estimatedBytes": 1956108,
+        "durationMs": 2213.667
+      },
+      {
+        "startIndex": 1750,
+        "writeCount": 350,
+        "estimatedBytes": 1956323,
+        "durationMs": 2144.562
+      },
+      {
+        "startIndex": 2100,
+        "writeCount": 350,
+        "estimatedBytes": 1956205,
+        "durationMs": 2187.292
+      },
+      {
+        "startIndex": 2450,
+        "writeCount": 350,
+        "estimatedBytes": 1956441,
+        "durationMs": 2144.224
+      },
+      {
+        "startIndex": 2800,
+        "writeCount": 350,
+        "estimatedBytes": 1956153,
+        "durationMs": 2182.957
+      },
+      {
+        "startIndex": 3150,
+        "writeCount": 350,
+        "estimatedBytes": 1956194,
+        "durationMs": 2279.751
+      },
+      {
+        "startIndex": 3500,
+        "writeCount": 350,
+        "estimatedBytes": 1956300,
+        "durationMs": 2202.799
+      },
+      {
+        "startIndex": 3850,
+        "writeCount": 350,
+        "estimatedBytes": 1956489,
+        "durationMs": 2174.985
+      },
+      {
+        "startIndex": 4200,
+        "writeCount": 350,
+        "estimatedBytes": 1956079,
+        "durationMs": 2207.265
+      },
+      {
+        "startIndex": 4550,
+        "writeCount": 350,
+        "estimatedBytes": 1956215,
+        "durationMs": 2235.623
+      },
+      {
+        "startIndex": 4900,
+        "writeCount": 225,
+        "estimatedBytes": 874911,
+        "durationMs": 1037.702
+      }
+    ],
+    "migratedPlayers": [
+      {
+        "startIndex": 0,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 281.315
+      },
+      {
+        "startIndex": 10,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 238.753
+      },
+      {
+        "startIndex": 20,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 229.93
+      },
+      {
+        "startIndex": 30,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 221.241
+      },
+      {
+        "startIndex": 40,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 213.581
+      },
+      {
+        "startIndex": 50,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 285.839
+      },
+      {
+        "startIndex": 60,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 221.014
+      },
+      {
+        "startIndex": 70,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 207.399
+      },
+      {
+        "startIndex": 80,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 240.8
+      },
+      {
+        "startIndex": 90,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 212.242
+      },
+      {
+        "startIndex": 100,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 213.499
+      },
+      {
+        "startIndex": 110,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 223.009
+      },
+      {
+        "startIndex": 120,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 237.364
+      },
+      {
+        "startIndex": 130,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 236.37
+      },
+      {
+        "startIndex": 140,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 228.744
+      },
+      {
+        "startIndex": 150,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 255.013
+      },
+      {
+        "startIndex": 160,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 222.58
+      },
+      {
+        "startIndex": 170,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 233.55
+      },
+      {
+        "startIndex": 180,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 240.568
+      },
+      {
+        "startIndex": 190,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 217.01
+      },
+      {
+        "startIndex": 200,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 244.061
+      },
+      {
+        "startIndex": 210,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 215.843
+      },
+      {
+        "startIndex": 220,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 236.491
+      },
+      {
+        "startIndex": 230,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 232.8
+      },
+      {
+        "startIndex": 240,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 215.606
+      },
+      {
+        "startIndex": 250,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 210.627
+      },
+      {
+        "startIndex": 260,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 265.153
+      },
+      {
+        "startIndex": 270,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 285.129
+      },
+      {
+        "startIndex": 280,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 220.657
+      },
+      {
+        "startIndex": 290,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 232.225
+      },
+      {
+        "startIndex": 300,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 224.624
+      },
+      {
+        "startIndex": 310,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 219.848
+      },
+      {
+        "startIndex": 320,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 206.535
+      },
+      {
+        "startIndex": 330,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 246.435
+      },
+      {
+        "startIndex": 340,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 221.193
+      },
+      {
+        "startIndex": 350,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 229.698
+      },
+      {
+        "startIndex": 360,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 201.738
+      },
+      {
+        "startIndex": 370,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 215.576
+      },
+      {
+        "startIndex": 380,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 235.238
+      },
+      {
+        "startIndex": 390,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 214.302
+      },
+      {
+        "startIndex": 400,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 201.992
+      },
+      {
+        "startIndex": 410,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 239.506
+      },
+      {
+        "startIndex": 420,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 226.279
+      },
+      {
+        "startIndex": 430,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 213.666
+      },
+      {
+        "startIndex": 440,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 209.395
+      },
+      {
+        "startIndex": 450,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 207.175
+      },
+      {
+        "startIndex": 460,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 221.401
+      },
+      {
+        "startIndex": 470,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 225.843
+      },
+      {
+        "startIndex": 480,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 219.213
+      },
+      {
+        "startIndex": 490,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 218.785
+      },
+      {
+        "startIndex": 500,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 196.344
+      },
+      {
+        "startIndex": 510,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 245.503
+      },
+      {
+        "startIndex": 520,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 233.87
+      },
+      {
+        "startIndex": 530,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 224.785
+      },
+      {
+        "startIndex": 540,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 214.278
+      },
+      {
+        "startIndex": 550,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 225.958
+      },
+      {
+        "startIndex": 560,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 206.111
+      },
+      {
+        "startIndex": 570,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 195.91
+      },
+      {
+        "startIndex": 580,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 214.899
+      },
+      {
+        "startIndex": 590,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 238.409
+      },
+      {
+        "startIndex": 600,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 223.545
+      },
+      {
+        "startIndex": 610,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 213.419
+      },
+      {
+        "startIndex": 620,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 231.285
+      },
+      {
+        "startIndex": 630,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 207.244
+      },
+      {
+        "startIndex": 640,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 280.653
+      },
+      {
+        "startIndex": 650,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 219.565
+      },
+      {
+        "startIndex": 660,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 200.126
+      },
+      {
+        "startIndex": 670,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 203.404
+      },
+      {
+        "startIndex": 680,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 209.565
+      },
+      {
+        "startIndex": 690,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 202.774
+      },
+      {
+        "startIndex": 700,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 210.351
+      },
+      {
+        "startIndex": 710,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 208.569
+      },
+      {
+        "startIndex": 720,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 225.127
+      },
+      {
+        "startIndex": 730,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 212.37
+      },
+      {
+        "startIndex": 740,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 214.542
+      },
+      {
+        "startIndex": 750,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 276.462
+      },
+      {
+        "startIndex": 760,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 216.225
+      },
+      {
+        "startIndex": 770,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 203.955
+      },
+      {
+        "startIndex": 780,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 228.638
+      },
+      {
+        "startIndex": 790,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 218.023
+      },
+      {
+        "startIndex": 800,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 223.713
+      },
+      {
+        "startIndex": 810,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 220.475
+      },
+      {
+        "startIndex": 820,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 195.738
+      },
+      {
+        "startIndex": 830,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 210.686
+      },
+      {
+        "startIndex": 840,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 342.965
+      },
+      {
+        "startIndex": 850,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 214.369
+      },
+      {
+        "startIndex": 860,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 209.426
+      },
+      {
+        "startIndex": 870,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 210.898
+      },
+      {
+        "startIndex": 880,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 231.971
+      },
+      {
+        "startIndex": 890,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 198.906
+      },
+      {
+        "startIndex": 900,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 220.59
+      },
+      {
+        "startIndex": 910,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 191.967
+      },
+      {
+        "startIndex": 920,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 211.208
+      },
+      {
+        "startIndex": 930,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 214.177
+      },
+      {
+        "startIndex": 940,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 198.981
+      },
+      {
+        "startIndex": 950,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 188.751
+      },
+      {
+        "startIndex": 960,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 210.452
+      },
+      {
+        "startIndex": 970,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 207.429
+      },
+      {
+        "startIndex": 980,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 208.55
+      },
+      {
+        "startIndex": 990,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 261.874
+      },
+      {
+        "startIndex": 1000,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 178.394
+      },
+      {
+        "startIndex": 1010,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 185.749
+      },
+      {
+        "startIndex": 1020,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 169.165
+      },
+      {
+        "startIndex": 1030,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 173.111
+      },
+      {
+        "startIndex": 1040,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 175.207
+      },
+      {
+        "startIndex": 1050,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 187.872
+      },
+      {
+        "startIndex": 1060,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 167.102
+      },
+      {
+        "startIndex": 1070,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 172.365
+      },
+      {
+        "startIndex": 1080,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 183.247
+      },
+      {
+        "startIndex": 1090,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 194.601
+      },
+      {
+        "startIndex": 1100,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 170.246
+      },
+      {
+        "startIndex": 1110,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 270.937
+      },
+      {
+        "startIndex": 1120,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 263.215
+      },
+      {
+        "startIndex": 1130,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 281.379
+      },
+      {
+        "startIndex": 1140,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 257.909
+      },
+      {
+        "startIndex": 1150,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 237.321
+      },
+      {
+        "startIndex": 1160,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 237.913
+      },
+      {
+        "startIndex": 1170,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 250.797
+      },
+      {
+        "startIndex": 1180,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 153.541
+      },
+      {
+        "startIndex": 1190,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 179.133
+      },
+      {
+        "startIndex": 1200,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 173.91
+      },
+      {
+        "startIndex": 1210,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 165.1
+      },
+      {
+        "startIndex": 1220,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 206.914
+      },
+      {
+        "startIndex": 1230,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 181.154
+      },
+      {
+        "startIndex": 1240,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 246.508
+      },
+      {
+        "startIndex": 1250,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 213.327
+      },
+      {
+        "startIndex": 1260,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 178.377
+      },
+      {
+        "startIndex": 1270,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 185.09
+      },
+      {
+        "startIndex": 1280,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 193.111
+      },
+      {
+        "startIndex": 1290,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 173.079
+      },
+      {
+        "startIndex": 1300,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 200.147
+      },
+      {
+        "startIndex": 1310,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 203.556
+      },
+      {
+        "startIndex": 1320,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 201.503
+      },
+      {
+        "startIndex": 1330,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 172.547
+      },
+      {
+        "startIndex": 1340,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 181.28
+      },
+      {
+        "startIndex": 1350,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 198.988
+      },
+      {
+        "startIndex": 1360,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 196.127
+      },
+      {
+        "startIndex": 1370,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 191.987
+      },
+      {
+        "startIndex": 1380,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 163.221
+      },
+      {
+        "startIndex": 1390,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 192.352
+      },
+      {
+        "startIndex": 1400,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 188.874
+      },
+      {
+        "startIndex": 1410,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 166.208
+      },
+      {
+        "startIndex": 1420,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 171.502
+      },
+      {
+        "startIndex": 1430,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 180.681
+      },
+      {
+        "startIndex": 1440,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 223.145
+      },
+      {
+        "startIndex": 1450,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 207.177
+      },
+      {
+        "startIndex": 1460,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 172.321
+      },
+      {
+        "startIndex": 1470,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 188.049
+      },
+      {
+        "startIndex": 1480,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 210.853
+      },
+      {
+        "startIndex": 1490,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 203.213
+      },
+      {
+        "startIndex": 1500,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 199.316
+      },
+      {
+        "startIndex": 1510,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 168.322
+      },
+      {
+        "startIndex": 1520,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 181.983
+      },
+      {
+        "startIndex": 1530,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 165.274
+      },
+      {
+        "startIndex": 1540,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 178.36
+      },
+      {
+        "startIndex": 1550,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 186.877
+      },
+      {
+        "startIndex": 1560,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 164.661
+      },
+      {
+        "startIndex": 1570,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 156.204
+      },
+      {
+        "startIndex": 1580,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 166.413
+      },
+      {
+        "startIndex": 1590,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 183.481
+      },
+      {
+        "startIndex": 1600,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 163.59
+      },
+      {
+        "startIndex": 1610,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 154.37
+      },
+      {
+        "startIndex": 1620,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 166.495
+      },
+      {
+        "startIndex": 1630,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 178.802
+      },
+      {
+        "startIndex": 1640,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 169.627
+      },
+      {
+        "startIndex": 1650,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 181.892
+      },
+      {
+        "startIndex": 1660,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 166.11
+      },
+      {
+        "startIndex": 1670,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 183.886
+      },
+      {
+        "startIndex": 1680,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 200.672
+      },
+      {
+        "startIndex": 1690,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 173.847
+      },
+      {
+        "startIndex": 1700,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 158.175
+      },
+      {
+        "startIndex": 1710,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 178.574
+      },
+      {
+        "startIndex": 1720,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 146.151
+      },
+      {
+        "startIndex": 1730,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 166.152
+      },
+      {
+        "startIndex": 1740,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 175.126
+      },
+      {
+        "startIndex": 1750,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 166.917
+      },
+      {
+        "startIndex": 1760,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 197.897
+      },
+      {
+        "startIndex": 1770,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 170.602
+      },
+      {
+        "startIndex": 1780,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 194.478
+      },
+      {
+        "startIndex": 1790,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 168.629
+      },
+      {
+        "startIndex": 1800,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 171.244
+      },
+      {
+        "startIndex": 1810,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 160.132
+      },
+      {
+        "startIndex": 1820,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 171.122
+      },
+      {
+        "startIndex": 1830,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 207.989
+      },
+      {
+        "startIndex": 1840,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 177.547
+      },
+      {
+        "startIndex": 1850,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 166.599
+      },
+      {
+        "startIndex": 1860,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 196.903
+      },
+      {
+        "startIndex": 1870,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 406.544
+      },
+      {
+        "startIndex": 1880,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 250.346
+      },
+      {
+        "startIndex": 1890,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 329.953
+      },
+      {
+        "startIndex": 1900,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 315.291
+      },
+      {
+        "startIndex": 1910,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 244.424
+      },
+      {
+        "startIndex": 1920,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 250.303
+      },
+      {
+        "startIndex": 1930,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 249.293
+      },
+      {
+        "startIndex": 1940,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 264.799
+      },
+      {
+        "startIndex": 1950,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 256.443
+      },
+      {
+        "startIndex": 1960,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 234.434
+      },
+      {
+        "startIndex": 1970,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 222.759
+      },
+      {
+        "startIndex": 1980,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 246.034
+      },
+      {
+        "startIndex": 1990,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 215.534
+      },
+      {
+        "startIndex": 2000,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 227.615
+      },
+      {
+        "startIndex": 2010,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 246.2
+      },
+      {
+        "startIndex": 2020,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 344.476
+      },
+      {
+        "startIndex": 2030,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 278.441
+      },
+      {
+        "startIndex": 2040,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 259.139
+      },
+      {
+        "startIndex": 2050,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 258.768
+      },
+      {
+        "startIndex": 2060,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 283.734
+      },
+      {
+        "startIndex": 2070,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 270.457
+      },
+      {
+        "startIndex": 2080,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 270.979
+      },
+      {
+        "startIndex": 2090,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 251.249
+      },
+      {
+        "startIndex": 2100,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 254.409
+      },
+      {
+        "startIndex": 2110,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 267.929
+      },
+      {
+        "startIndex": 2120,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 286.274
+      },
+      {
+        "startIndex": 2130,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 222.937
+      },
+      {
+        "startIndex": 2140,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 234.258
+      },
+      {
+        "startIndex": 2150,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 232.363
+      },
+      {
+        "startIndex": 2160,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 252.044
+      },
+      {
+        "startIndex": 2170,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 222.802
+      },
+      {
+        "startIndex": 2180,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 252.141
+      },
+      {
+        "startIndex": 2190,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 205.635
+      },
+      {
+        "startIndex": 2200,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 212.819
+      },
+      {
+        "startIndex": 2210,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 232.982
+      },
+      {
+        "startIndex": 2220,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 222.893
+      },
+      {
+        "startIndex": 2230,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 241.81
+      },
+      {
+        "startIndex": 2240,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 209.707
+      },
+      {
+        "startIndex": 2250,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 218.648
+      },
+      {
+        "startIndex": 2260,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 235.564
+      },
+      {
+        "startIndex": 2270,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 240.64
+      },
+      {
+        "startIndex": 2280,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 229.042
+      },
+      {
+        "startIndex": 2290,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 266.029
+      },
+      {
+        "startIndex": 2300,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 221.288
+      },
+      {
+        "startIndex": 2310,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 214.889
+      },
+      {
+        "startIndex": 2320,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 271.413
+      },
+      {
+        "startIndex": 2330,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 294.313
+      },
+      {
+        "startIndex": 2340,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 235.184
+      },
+      {
+        "startIndex": 2350,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 248.533
+      },
+      {
+        "startIndex": 2360,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 234.965
+      },
+      {
+        "startIndex": 2370,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 246.15
+      },
+      {
+        "startIndex": 2380,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 248.749
+      },
+      {
+        "startIndex": 2390,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 200.864
+      },
+      {
+        "startIndex": 2400,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 215.06
+      },
+      {
+        "startIndex": 2410,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 230.669
+      },
+      {
+        "startIndex": 2420,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 239.073
+      },
+      {
+        "startIndex": 2430,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 214.433
+      },
+      {
+        "startIndex": 2440,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 225.032
+      },
+      {
+        "startIndex": 2450,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 240.875
+      },
+      {
+        "startIndex": 2460,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 215.247
+      },
+      {
+        "startIndex": 2470,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 223.06
+      },
+      {
+        "startIndex": 2480,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 219.469
+      },
+      {
+        "startIndex": 2490,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 202.69
+      },
+      {
+        "startIndex": 2500,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 225.854
+      },
+      {
+        "startIndex": 2510,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 223.956
+      },
+      {
+        "startIndex": 2520,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 237.848
+      },
+      {
+        "startIndex": 2530,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 247.183
+      },
+      {
+        "startIndex": 2540,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 218.134
+      },
+      {
+        "startIndex": 2550,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 209.711
+      },
+      {
+        "startIndex": 2560,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 221.245
+      },
+      {
+        "startIndex": 2570,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 237.889
+      },
+      {
+        "startIndex": 2580,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 223.37
+      },
+      {
+        "startIndex": 2590,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 230.298
+      },
+      {
+        "startIndex": 2600,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 222.698
+      },
+      {
+        "startIndex": 2610,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 233.064
+      },
+      {
+        "startIndex": 2620,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 217.521
+      },
+      {
+        "startIndex": 2630,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 213.765
+      },
+      {
+        "startIndex": 2640,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 229.168
+      },
+      {
+        "startIndex": 2650,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 223.167
+      },
+      {
+        "startIndex": 2660,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 219.849
+      },
+      {
+        "startIndex": 2670,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 243.425
+      },
+      {
+        "startIndex": 2680,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 224.305
+      },
+      {
+        "startIndex": 2690,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 200.254
+      },
+      {
+        "startIndex": 2700,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 208.948
+      },
+      {
+        "startIndex": 2710,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 234.26
+      },
+      {
+        "startIndex": 2720,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 236.332
+      },
+      {
+        "startIndex": 2730,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 203.056
+      },
+      {
+        "startIndex": 2740,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 273.11
+      },
+      {
+        "startIndex": 2750,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 216.873
+      },
+      {
+        "startIndex": 2760,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 244.274
+      },
+      {
+        "startIndex": 2770,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 247.538
+      },
+      {
+        "startIndex": 2780,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 227.381
+      },
+      {
+        "startIndex": 2790,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 207.294
+      },
+      {
+        "startIndex": 2800,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 238.093
+      },
+      {
+        "startIndex": 2810,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 226.637
+      },
+      {
+        "startIndex": 2820,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 229.155
+      },
+      {
+        "startIndex": 2830,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 250.056
+      },
+      {
+        "startIndex": 2840,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 210.165
+      },
+      {
+        "startIndex": 2850,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 197.341
+      },
+      {
+        "startIndex": 2860,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 185.674
+      },
+      {
+        "startIndex": 2870,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 164.821
+      },
+      {
+        "startIndex": 2880,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 188.477
+      },
+      {
+        "startIndex": 2890,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 166.981
+      },
+      {
+        "startIndex": 2900,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 181.055
+      },
+      {
+        "startIndex": 2910,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 173.734
+      },
+      {
+        "startIndex": 2920,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 189.27
+      },
+      {
+        "startIndex": 2930,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 204.865
+      },
+      {
+        "startIndex": 2940,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 201.561
+      },
+      {
+        "startIndex": 2950,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 234.419
+      },
+      {
+        "startIndex": 2960,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 280.177
+      },
+      {
+        "startIndex": 2970,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 192.14
+      },
+      {
+        "startIndex": 2980,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 257.308
+      },
+      {
+        "startIndex": 2990,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 253.489
+      },
+      {
+        "startIndex": 3000,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 264.735
+      },
+      {
+        "startIndex": 3010,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 189.914
+      },
+      {
+        "startIndex": 3020,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 208.492
+      },
+      {
+        "startIndex": 3030,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 229.518
+      },
+      {
+        "startIndex": 3040,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 207.915
+      },
+      {
+        "startIndex": 3050,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 235.143
+      },
+      {
+        "startIndex": 3060,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 209.395
+      },
+      {
+        "startIndex": 3070,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 222.341
+      },
+      {
+        "startIndex": 3080,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 209.591
+      },
+      {
+        "startIndex": 3090,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 174.056
+      },
+      {
+        "startIndex": 3100,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 214.213
+      },
+      {
+        "startIndex": 3110,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 176.832
+      },
+      {
+        "startIndex": 3120,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 180.788
+      },
+      {
+        "startIndex": 3130,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 184.257
+      },
+      {
+        "startIndex": 3140,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 176.149
+      },
+      {
+        "startIndex": 3150,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 211.472
+      },
+      {
+        "startIndex": 3160,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 195.375
+      },
+      {
+        "startIndex": 3170,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 197.592
+      },
+      {
+        "startIndex": 3180,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 194.371
+      },
+      {
+        "startIndex": 3190,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 171.691
+      },
+      {
+        "startIndex": 3200,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 185.45
+      },
+      {
+        "startIndex": 3210,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 161.193
+      },
+      {
+        "startIndex": 3220,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 192.676
+      },
+      {
+        "startIndex": 3230,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 191.336
+      },
+      {
+        "startIndex": 3240,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 181.59
+      },
+      {
+        "startIndex": 3250,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 167.624
+      },
+      {
+        "startIndex": 3260,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 190.888
+      },
+      {
+        "startIndex": 3270,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 191.168
+      },
+      {
+        "startIndex": 3280,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 204.383
+      },
+      {
+        "startIndex": 3290,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 193.23
+      },
+      {
+        "startIndex": 3300,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 156.061
+      },
+      {
+        "startIndex": 3310,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 179.995
+      },
+      {
+        "startIndex": 3320,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 166.371
+      },
+      {
+        "startIndex": 3330,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 187.33
+      },
+      {
+        "startIndex": 3340,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 190.01
+      },
+      {
+        "startIndex": 3350,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 194.578
+      },
+      {
+        "startIndex": 3360,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 194.002
+      },
+      {
+        "startIndex": 3370,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 187.687
+      },
+      {
+        "startIndex": 3380,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 215.705
+      },
+      {
+        "startIndex": 3390,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 227.54
+      },
+      {
+        "startIndex": 3400,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 192.157
+      },
+      {
+        "startIndex": 3410,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 182.826
+      },
+      {
+        "startIndex": 3420,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 178.003
+      },
+      {
+        "startIndex": 3430,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 179.864
+      },
+      {
+        "startIndex": 3440,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 206.086
+      },
+      {
+        "startIndex": 3450,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 173.865
+      },
+      {
+        "startIndex": 3460,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 195.361
+      },
+      {
+        "startIndex": 3470,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 188.782
+      },
+      {
+        "startIndex": 3480,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 181.716
+      },
+      {
+        "startIndex": 3490,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 166.123
+      },
+      {
+        "startIndex": 3500,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 187.081
+      },
+      {
+        "startIndex": 3510,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 192.152
+      },
+      {
+        "startIndex": 3520,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 203.831
+      },
+      {
+        "startIndex": 3530,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 175.799
+      },
+      {
+        "startIndex": 3540,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 188.825
+      },
+      {
+        "startIndex": 3550,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 175.844
+      },
+      {
+        "startIndex": 3560,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 186.204
+      },
+      {
+        "startIndex": 3570,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 222.94
+      },
+      {
+        "startIndex": 3580,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 188.429
+      },
+      {
+        "startIndex": 3590,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 181.11
+      },
+      {
+        "startIndex": 3600,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 190.907
+      },
+      {
+        "startIndex": 3610,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 169.518
+      },
+      {
+        "startIndex": 3620,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 190.958
+      },
+      {
+        "startIndex": 3630,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 154.486
+      },
+      {
+        "startIndex": 3640,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 192.844
+      },
+      {
+        "startIndex": 3650,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 192.766
+      },
+      {
+        "startIndex": 3660,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 196.957
+      },
+      {
+        "startIndex": 3670,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 164.565
+      },
+      {
+        "startIndex": 3680,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 181.072
+      },
+      {
+        "startIndex": 3690,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 171.764
+      },
+      {
+        "startIndex": 3700,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 173.509
+      },
+      {
+        "startIndex": 3710,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 203.539
+      },
+      {
+        "startIndex": 3720,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 162.513
+      },
+      {
+        "startIndex": 3730,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 193.877
+      },
+      {
+        "startIndex": 3740,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 183.759
+      },
+      {
+        "startIndex": 3750,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 196.233
+      },
+      {
+        "startIndex": 3760,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 231.749
+      },
+      {
+        "startIndex": 3770,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 202.976
+      },
+      {
+        "startIndex": 3780,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 186.711
+      },
+      {
+        "startIndex": 3790,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 205.872
+      },
+      {
+        "startIndex": 3800,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 152.408
+      },
+      {
+        "startIndex": 3810,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 179.45
+      },
+      {
+        "startIndex": 3820,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 181.895
+      },
+      {
+        "startIndex": 3830,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 195.698
+      },
+      {
+        "startIndex": 3840,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 191.515
+      },
+      {
+        "startIndex": 3850,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 192.302
+      },
+      {
+        "startIndex": 3860,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 214.812
+      },
+      {
+        "startIndex": 3870,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 205.19
+      },
+      {
+        "startIndex": 3880,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 237.103
+      },
+      {
+        "startIndex": 3890,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 235.799
+      },
+      {
+        "startIndex": 3900,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 202.011
+      },
+      {
+        "startIndex": 3910,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 212.516
+      },
+      {
+        "startIndex": 3920,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 200.602
+      },
+      {
+        "startIndex": 3930,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 229.385
+      },
+      {
+        "startIndex": 3940,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 180.896
+      },
+      {
+        "startIndex": 3950,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 237.994
+      },
+      {
+        "startIndex": 3960,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 233.19
+      },
+      {
+        "startIndex": 3970,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 199.59
+      },
+      {
+        "startIndex": 3980,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 169.912
+      },
+      {
+        "startIndex": 3990,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 209.026
+      },
+      {
+        "startIndex": 4000,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 200.519
+      },
+      {
+        "startIndex": 4010,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 223.124
+      },
+      {
+        "startIndex": 4020,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 196.667
+      },
+      {
+        "startIndex": 4030,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 199.943
+      },
+      {
+        "startIndex": 4040,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 206.615
+      },
+      {
+        "startIndex": 4050,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 256.948
+      },
+      {
+        "startIndex": 4060,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 248.175
+      },
+      {
+        "startIndex": 4070,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 236.608
+      },
+      {
+        "startIndex": 4080,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 195.141
+      },
+      {
+        "startIndex": 4090,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 212.393
+      },
+      {
+        "startIndex": 4100,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 271.138
+      },
+      {
+        "startIndex": 4110,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 265.439
+      },
+      {
+        "startIndex": 4120,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 246.818
+      },
+      {
+        "startIndex": 4130,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 271.429
+      },
+      {
+        "startIndex": 4140,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 254.338
+      },
+      {
+        "startIndex": 4150,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 242.082
+      },
+      {
+        "startIndex": 4160,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 271.068
+      },
+      {
+        "startIndex": 4170,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 227.838
+      },
+      {
+        "startIndex": 4180,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 227.985
+      },
+      {
+        "startIndex": 4190,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 185.327
+      },
+      {
+        "startIndex": 4200,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 231.018
+      },
+      {
+        "startIndex": 4210,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 190.137
+      },
+      {
+        "startIndex": 4220,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 191.242
+      },
+      {
+        "startIndex": 4230,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 143.091
+      },
+      {
+        "startIndex": 4240,
+        "writeCount": 10,
+        "estimatedBytes": 49451,
+        "durationMs": 174.445
+      },
+      {
+        "startIndex": 4250,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 155.272
+      },
+      {
+        "startIndex": 4260,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 165.053
+      },
+      {
+        "startIndex": 4270,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 188.046
+      },
+      {
+        "startIndex": 4280,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 154.59
+      },
+      {
+        "startIndex": 4290,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 187.627
+      },
+      {
+        "startIndex": 4300,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 183.381
+      },
+      {
+        "startIndex": 4310,
+        "writeCount": 10,
+        "estimatedBytes": 49431,
+        "durationMs": 189.607
+      },
+      {
+        "startIndex": 4320,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 172.274
+      },
+      {
+        "startIndex": 4330,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 181.988
+      },
+      {
+        "startIndex": 4340,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 182.656
+      },
+      {
+        "startIndex": 4350,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 156.684
+      },
+      {
+        "startIndex": 4360,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 173.356
+      },
+      {
+        "startIndex": 4370,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 168.908
+      },
+      {
+        "startIndex": 4380,
+        "writeCount": 10,
+        "estimatedBytes": 49475,
+        "durationMs": 189.413
+      },
+      {
+        "startIndex": 4390,
+        "writeCount": 10,
+        "estimatedBytes": 49468,
+        "durationMs": 168.451
+      },
+      {
+        "startIndex": 4400,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 182.177
+      },
+      {
+        "startIndex": 4410,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 187.477
+      },
+      {
+        "startIndex": 4420,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 193.218
+      },
+      {
+        "startIndex": 4430,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 198.21
+      },
+      {
+        "startIndex": 4440,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 168.754
+      },
+      {
+        "startIndex": 4450,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 165.249
+      },
+      {
+        "startIndex": 4460,
+        "writeCount": 10,
+        "estimatedBytes": 49504,
+        "durationMs": 239.352
+      },
+      {
+        "startIndex": 4470,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 180.992
+      },
+      {
+        "startIndex": 4480,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 193.143
+      },
+      {
+        "startIndex": 4490,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 178.315
+      },
+      {
+        "startIndex": 4500,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 190.663
+      },
+      {
+        "startIndex": 4510,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 168.057
+      },
+      {
+        "startIndex": 4520,
+        "writeCount": 10,
+        "estimatedBytes": 49443,
+        "durationMs": 185.048
+      },
+      {
+        "startIndex": 4530,
+        "writeCount": 10,
+        "estimatedBytes": 49508,
+        "durationMs": 170.395
+      },
+      {
+        "startIndex": 4540,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 169.211
+      },
+      {
+        "startIndex": 4550,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 200.025
+      },
+      {
+        "startIndex": 4560,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 169.423
+      },
+      {
+        "startIndex": 4570,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 172.362
+      },
+      {
+        "startIndex": 4580,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 177.816
+      },
+      {
+        "startIndex": 4590,
+        "writeCount": 10,
+        "estimatedBytes": 49469,
+        "durationMs": 162.066
+      },
+      {
+        "startIndex": 4600,
+        "writeCount": 10,
+        "estimatedBytes": 49488,
+        "durationMs": 185.627
+      },
+      {
+        "startIndex": 4610,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 187.632
+      },
+      {
+        "startIndex": 4620,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 171.005
+      },
+      {
+        "startIndex": 4630,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 202.385
+      },
+      {
+        "startIndex": 4640,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 236.539
+      },
+      {
+        "startIndex": 4650,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 195.307
+      },
+      {
+        "startIndex": 4660,
+        "writeCount": 10,
+        "estimatedBytes": 49441,
+        "durationMs": 200.571
+      },
+      {
+        "startIndex": 4670,
+        "writeCount": 10,
+        "estimatedBytes": 49478,
+        "durationMs": 180.653
+      },
+      {
+        "startIndex": 4680,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 188.353
+      },
+      {
+        "startIndex": 4690,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 184.583
+      },
+      {
+        "startIndex": 4700,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 194.597
+      },
+      {
+        "startIndex": 4710,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 193.398
+      },
+      {
+        "startIndex": 4720,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 196.584
+      },
+      {
+        "startIndex": 4730,
+        "writeCount": 10,
+        "estimatedBytes": 49445,
+        "durationMs": 195.895
+      },
+      {
+        "startIndex": 4740,
+        "writeCount": 10,
+        "estimatedBytes": 49490,
+        "durationMs": 169.206
+      },
+      {
+        "startIndex": 4750,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 176.811
+      },
+      {
+        "startIndex": 4760,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 199.57
+      },
+      {
+        "startIndex": 4770,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 177.246
+      },
+      {
+        "startIndex": 4780,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 147.483
+      },
+      {
+        "startIndex": 4790,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 175.231
+      },
+      {
+        "startIndex": 4800,
+        "writeCount": 10,
+        "estimatedBytes": 49471,
+        "durationMs": 185.451
+      },
+      {
+        "startIndex": 4810,
+        "writeCount": 10,
+        "estimatedBytes": 49522,
+        "durationMs": 181.952
+      },
+      {
+        "startIndex": 4820,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 197.522
+      },
+      {
+        "startIndex": 4830,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 193.13
+      },
+      {
+        "startIndex": 4840,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 221.423
+      },
+      {
+        "startIndex": 4850,
+        "writeCount": 10,
+        "estimatedBytes": 49467,
+        "durationMs": 184.883
+      },
+      {
+        "startIndex": 4860,
+        "writeCount": 10,
+        "estimatedBytes": 49516,
+        "durationMs": 274.4
+      },
+      {
+        "startIndex": 4870,
+        "writeCount": 10,
+        "estimatedBytes": 49427,
+        "durationMs": 186.603
+      },
+      {
+        "startIndex": 4880,
+        "writeCount": 10,
+        "estimatedBytes": 49492,
+        "durationMs": 180.766
+      },
+      {
+        "startIndex": 4890,
+        "writeCount": 10,
+        "estimatedBytes": 49486,
+        "durationMs": 166.207
+      },
+      {
+        "startIndex": 4900,
+        "writeCount": 10,
+        "estimatedBytes": 49449,
+        "durationMs": 277.526
+      },
+      {
+        "startIndex": 4910,
+        "writeCount": 10,
+        "estimatedBytes": 49510,
+        "durationMs": 575.533
+      },
+      {
+        "startIndex": 4920,
+        "writeCount": 10,
+        "estimatedBytes": 49447,
+        "durationMs": 279.69
+      },
+      {
+        "startIndex": 4930,
+        "writeCount": 10,
+        "estimatedBytes": 49484,
+        "durationMs": 222.194
+      },
+      {
+        "startIndex": 4940,
+        "writeCount": 10,
+        "estimatedBytes": 49463,
+        "durationMs": 219.36
+      },
+      {
+        "startIndex": 4950,
+        "writeCount": 10,
+        "estimatedBytes": 49472,
+        "durationMs": 207.035
+      },
+      {
+        "startIndex": 4960,
+        "writeCount": 10,
+        "estimatedBytes": 49512,
+        "durationMs": 189.288
+      },
+      {
+        "startIndex": 4970,
+        "writeCount": 10,
+        "estimatedBytes": 49481,
+        "durationMs": 231.04
+      },
+      {
+        "startIndex": 4980,
+        "writeCount": 10,
+        "estimatedBytes": 49482,
+        "durationMs": 212.402
+      },
+      {
+        "startIndex": 4990,
+        "writeCount": 10,
+        "estimatedBytes": 49437,
+        "durationMs": 208.761
+      }
+    ],
+    "world": [
+      {
+        "startIndex": 0,
+        "writeCount": 350,
+        "estimatedBytes": 291429,
+        "durationMs": 978.768
+      },
+      {
+        "startIndex": 350,
+        "writeCount": 350,
+        "estimatedBytes": 213145,
+        "durationMs": 543.312
+      },
+      {
+        "startIndex": 700,
+        "writeCount": 350,
+        "estimatedBytes": 209652,
+        "durationMs": 610.371
+      },
+      {
+        "startIndex": 1050,
+        "writeCount": 350,
+        "estimatedBytes": 212318,
+        "durationMs": 619.128
+      },
+      {
+        "startIndex": 1400,
+        "writeCount": 350,
+        "estimatedBytes": 206679,
+        "durationMs": 739.288
+      },
+      {
+        "startIndex": 1750,
+        "writeCount": 350,
+        "estimatedBytes": 166169,
+        "durationMs": 431.095
+      },
+      {
+        "startIndex": 2100,
+        "writeCount": 350,
+        "estimatedBytes": 166362,
+        "durationMs": 485.148
+      },
+      {
+        "startIndex": 2450,
+        "writeCount": 350,
+        "estimatedBytes": 166223,
+        "durationMs": 548.11
+      },
+      {
+        "startIndex": 2800,
+        "writeCount": 350,
+        "estimatedBytes": 166148,
+        "durationMs": 456.528
+      },
+      {
+        "startIndex": 3150,
+        "writeCount": 350,
+        "estimatedBytes": 166172,
+        "durationMs": 479.153
+      },
+      {
+        "startIndex": 3500,
+        "writeCount": 350,
+        "estimatedBytes": 166361,
+        "durationMs": 473.587
+      },
+      {
+        "startIndex": 3850,
+        "writeCount": 350,
+        "estimatedBytes": 166213,
+        "durationMs": 457.344
+      },
+      {
+        "startIndex": 4200,
+        "writeCount": 350,
+        "estimatedBytes": 166149,
+        "durationMs": 482.488
+      },
+      {
+        "startIndex": 4550,
+        "writeCount": 350,
+        "estimatedBytes": 166165,
+        "durationMs": 449.421
+      },
+      {
+        "startIndex": 4900,
+        "writeCount": 350,
+        "estimatedBytes": 166365,
+        "durationMs": 457.19
+      },
+      {
+        "startIndex": 5250,
+        "writeCount": 350,
+        "estimatedBytes": 166218,
+        "durationMs": 446.831
+      },
+      {
+        "startIndex": 5600,
+        "writeCount": 350,
+        "estimatedBytes": 166155,
+        "durationMs": 437.943
+      },
+      {
+        "startIndex": 5950,
+        "writeCount": 350,
+        "estimatedBytes": 166171,
+        "durationMs": 440.967
+      },
+      {
+        "startIndex": 6300,
+        "writeCount": 350,
+        "estimatedBytes": 166363,
+        "durationMs": 453.376
+      },
+      {
+        "startIndex": 6650,
+        "writeCount": 350,
+        "estimatedBytes": 166217,
+        "durationMs": 446.648
+      },
+      {
+        "startIndex": 7000,
+        "writeCount": 350,
+        "estimatedBytes": 166155,
+        "durationMs": 430.022
+      },
+      {
+        "startIndex": 7350,
+        "writeCount": 350,
+        "estimatedBytes": 166166,
+        "durationMs": 423.282
+      },
+      {
+        "startIndex": 7700,
+        "writeCount": 350,
+        "estimatedBytes": 166356,
+        "durationMs": 517.027
+      },
+      {
+        "startIndex": 8050,
+        "writeCount": 350,
+        "estimatedBytes": 166207,
+        "durationMs": 471.105
+      },
+      {
+        "startIndex": 8400,
+        "writeCount": 350,
+        "estimatedBytes": 166160,
+        "durationMs": 510.936
+      },
+      {
+        "startIndex": 8750,
+        "writeCount": 350,
+        "estimatedBytes": 166167,
+        "durationMs": 459.164
+      },
+      {
+        "startIndex": 9100,
+        "writeCount": 350,
+        "estimatedBytes": 165429,
+        "durationMs": 444.252
+      },
+      {
+        "startIndex": 9450,
+        "writeCount": 108,
+        "estimatedBytes": 51423,
+        "durationMs": 179.378
+      }
+    ]
+  },
+  "timings": [
+    {
+      "stage": "local_exact_candidate",
+      "durationMs": 30670.527
+    },
+    {
+      "stage": "maintenance_freeze",
+      "durationMs": 198.957
+    },
+    {
+      "stage": "source_snapshot",
+      "durationMs": 38995.709
+    },
+    {
+      "stage": "backup",
+      "durationMs": 34025.097
+    },
+    {
+      "stage": "restore",
+      "durationMs": 33066.46
+    },
+    {
+      "stage": "backup_restore_validation",
+      "durationMs": 10191.148
+    },
+    {
+      "stage": "persistent_player_migration",
+      "durationMs": 105051.448
+    },
+    {
+      "stage": "world_initialization",
+      "durationMs": 13895.691
+    },
+    {
+      "stage": "remote_validation",
+      "durationMs": 13394.854
+    }
+  ],
+  "durationMs": 283263.876,
+  "freshDurationMs": 637607.275,
+  "replayDurationMs": 283263.876,
+  "productionMutationPerformed": false,
+  "productionProjectTargeted": false,
+  "convergenceHash": "e21e4413189e8c7f6a04869430c3e4d34628895e4af8d74e149fa9feff2ac736",
+  "receiptHash": "88068b02556aaadf27ca16e4db3df313712cd8431e1fb8f654fd6730b0519896"
+}

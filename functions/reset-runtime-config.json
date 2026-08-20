@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "crownlands-reset-runtime-controls-v1",
+  "resetEnabled": false,
+  "seasonCutoverEnabled": false,
+  "automaticResetEnabled": false,
+  "maintenanceMode": "OFF",
+  "killSwitches": {
+    "bootstrap": true,
+    "migration": true,
+    "cutover": true,
+    "generation": true,
+    "publication": true,
+    "activation": true,
+    "expansion": true
+  }
+}
