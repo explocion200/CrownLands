@@ -229,7 +229,7 @@ const rewardTabsSource = game.slice(
   game.indexOf("function bindDailyRewardModalTabs()")
 );
 const rewardModalSource = game.slice(
-  game.indexOf("function renderDailyLoginRewardModal()"),
+  game.indexOf("function renderDailyLoginRewardModal("),
   game.indexOf("async function showDailyLoginRewardsModal")
 );
 requireMatch(rewardTabsSource, /role="tablist"[\s\S]*aria-label="Daily rewards, quests, and achievements"[\s\S]*aria-selected[\s\S]*aria-controls/, "The reward modal is missing its accessible icon tabs.");

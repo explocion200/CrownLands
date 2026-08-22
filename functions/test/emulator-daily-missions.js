@@ -142,6 +142,7 @@ async function main() {
   ]);
   const regionId = String(claim.regionId || claim.islandId || "").replace(`${realm.worldId}-`, "");
   const region = worldLayout.maps.find(map => String(map.id) === regionId);
+  const profileRef = db.doc(`players/${player.uid}`);
   const cityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
   const sourceCity = (await cityRef.get()).data() || {};
   const routeModel = routePlanner.getModel(regionId);
@@ -163,6 +164,19 @@ async function main() {
   const strangerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${stranger.uid}`);
   const strangerGlobalStatsRef = db.doc(`players/${stranger.uid}/stats/global`);
   await Promise.all([
+    profileRef.set({
+      upgrades: {
+        swordmastery: 0,
+        shieldwallDiscipline: 0,
+        stoneworks: 0,
+        taxStewardship: 10,
+        royalGranaries: 10,
+        guildCharters: 0,
+        marchOrders: 0,
+        fieldMedics: 0,
+      },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
     cityRef.set({ troops: 1_000_000, troopFloat: 1_000_000 }, { merge: true }),
     safeTargetRef.set({
       ...safeTargetSeed,
@@ -198,6 +212,23 @@ async function main() {
   assert(first.missions.filter(mission => mission.activityGroup === "camps").length <= 1, "Camp missions did not remain in one separate slot.");
   assert(JSON.stringify(first.missions) === JSON.stringify(second.missions), "Daily Missions changed after reopening.");
   assert(Number(first.rerollsRemaining) === 1, "Daily Missions did not start with one reroll.");
+  const playerStats = (await db.doc(`players/${player.uid}/stats/global`).get()).data() || {};
+  assert(Number(playerStats.goldPerHour) > Number(playerStats.baseGoldPerHour), "Production skills did not increase normal Gold production in the Daily Mission fixture.");
+  assert(Number(playerStats.troopPerHour) > Number(playerStats.baseTroopPerHour), "Production skills did not increase normal troop production in the Daily Mission fixture.");
+  assert(first.capacitySnapshot?.rewardGoldPerHour === undefined, "The internal raw Gold reward rate leaked into persisted Daily Mission state.");
+  assert(first.capacitySnapshot?.rewardTroopPerHour === undefined, "The internal raw troop reward rate leaked into persisted Daily Mission state.");
+  const numericRewards = first.missions.filter(mission => ["gold", "troops"].includes(mission.reward?.type));
+  assert(numericRewards.length > 0, "The authoritative Daily Mission fixture did not generate a numeric reward.");
+  numericRewards.forEach(mission => {
+    const rawRate = mission.reward.type === "gold"
+      ? Number(playerStats.baseGoldPerHour)
+      : Number(playerStats.baseTroopPerHour);
+    const expected = Math.max(1, Math.floor(rawRate * Number(mission.reward.productionHours)));
+    assert(
+      Number(mission.reward.lockedAmount) === expected,
+      `${mission.reward.type} Daily Mission reward used boosted production (${mission.reward.lockedAmount}; expected raw ${expected}).`
+    );
+  });
   assert(
     first.capacitySnapshot?.safePvpTargets?.some(target => target.cityId === safeTargetSeed.id),
     `A reachable low-loss PvP target was not recommended: ${JSON.stringify(first.capacitySnapshot)}`
@@ -257,7 +288,6 @@ async function main() {
   });
   assert(!secondReroll.ok && secondReroll.error?.status === "FAILED_PRECONDITION", "A second daily reroll was accepted.");
 
-  const profileRef = db.doc(`players/${player.uid}`);
   const state = (await stateRef.get()).data() || {};
   const testMission = {
     ...state.missions[0],
