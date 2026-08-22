@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Crownlands Profile Inner Castle QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <link rel="stylesheet" href="../../../player-flag-editor.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #06131e; }
+    .qa-stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; padding: 12px; overflow: hidden; }
+    .qa-stage > .profile-screen { position: relative; inset: auto; width: min(1120px, calc(100% - 12px)); height: min(700px, calc(100% - 12px)); opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+    .qa-label { position: fixed; z-index: 30; left: 7px; bottom: 6px; padding: 3px 7px; border: 1px solid #997643; color: #f2e2bf; background: #542728; font: 800 10px/1.2 Cinzel, serif; letter-spacing: .08em; text-transform: uppercase; }
+    @media (max-height: 520px) and (orientation: landscape) {
+      .qa-stage { padding: 3px; }
+      .qa-stage > .profile-screen { width: calc(100% - 6px); height: calc(100% - 6px); }
+      .qa-label { left: 3px; bottom: 3px; font-size: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="cl-icon-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="cl-icon-edit" viewBox="0 0 32 32"><path d="M7 24l2-7L21 5l6 6-12 12z"/><path d="M18 8l6 6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="cl-icon-crown" viewBox="0 0 32 32"><path d="M4 24L5 11l5 6 3-10 3 8 3-8 3 10 5-6 1 13zM5 25h22v3H5z"/></symbol>
+  </svg>
+  <span id="qaLabel" class="qa-label"></span>
+  <main class="qa-stage">
+    <section class="profile-screen open" aria-label="Kingdom profile">
+      <header class="profile-screen-header">
+        <div class="profile-screen-heading"><span>Kingdom</span><h2>Profile</h2></div>
+        <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
+          <button class="active" type="button" aria-selected="true">Profile</button>
+          <button type="button">Clan</button><button type="button">Skills</button><button type="button">Settings</button>
+        </div>
+        <button class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile"><svg class="cl-icon"><use href="#cl-icon-close"></use></svg></button>
+      </header>
+      <div class="profile-view">
+        <section class="profile-identity" aria-label="Ruler identity">
+          <button class="profile-flag-button" type="button"><span class="kingdom-flag kingdom-flag-large pattern-chevron" style="--flag-primary:#315a8a;--flag-secondary:#c69a45;--flag-symbol:#f2e2bf"><span class="flag-symbol"><svg class="cl-icon"><use href="#cl-icon-crown"></use></svg></span></span><span class="profile-flag-edit">Edit flag</span></button>
+          <div class="profile-name-block">
+            <div class="profile-name-row"><h3>Explocion200</h3><button class="profile-icon-btn profile-edit-btn" type="button"><svg class="cl-icon"><use href="#cl-icon-edit"></use></svg></button></div>
+            <div class="profile-level-row"><strong>Level 68</strong><span>1.3M / 1.7M XP</span></div>
+            <div class="profile-xp-track"><span style="width:74%"></span></div>
+          </div>
+          <button class="profile-clan-affiliation" type="button"><span class="profile-clan-shield">♜</span><span><small>Clan</small><strong>[HAR] Hit and Run</strong></span></button>
+        </section>
+        <section class="kingdom-overview" aria-label="Kingdom totals">
+          <div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div>
+          <div class="kingdom-stat-grid">
+            <div class="kingdom-stat kingdom-stat-wide kingdom-stat-power"><span>King Power</span><strong>88M (+0)</strong><small>Army 65M · Replacement 3.3M · Defense 19M</small></div>
+            <div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong>28</strong></div>
+            <div class="kingdom-stat"><span>Gold</span><strong>11M</strong></div>
+            <div class="kingdom-stat"><span>Troops</span><strong>33M</strong></div>
+            <div class="kingdom-stat"><span>Gold production</span><strong>91M/h <span class="profile-production-bonus">(+58M/h)</span></strong></div>
+            <div class="kingdom-stat"><span>Troops production</span><strong>530K/h <span class="profile-production-bonus">(+260K/h)</span></strong></div>
+          </div>
+          <div class="profile-inner-castle-actions">
+            <button id="profileInnerCastleBtn" class="profile-inner-castle-btn" type="button">Inner Castle</button>
+          </div>
+        </section>
+        <section class="profile-achievement-summary" aria-label="Seasonal Achievements summary">
+          <div class="profile-section-heading"><span>Season</span><h3>Achievements</h3></div>
+          <div class="profile-achievement-summary-grid"><div><span>Complete</span><strong>19 / 40</strong></div><div><span>Claimed</span><strong>17 / 40</strong></div><div><span>Remaining</span><strong>9 days</strong></div></div>
+          <button class="profile-view-achievements-btn" type="button">View Achievements</button>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script>
+    const before = new URLSearchParams(location.search).get("variant") === "before";
+    if (before) document.querySelector(".profile-inner-castle-actions")?.remove();
+    document.querySelector("#qaLabel").textContent = `${before ? "Before" : "After"} · Profile Overview`;
+  </script>
+</body>
+</html>

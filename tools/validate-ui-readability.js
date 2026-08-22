@@ -7,7 +7,8 @@ const index = read("index.html");
 const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
-const buildId = "20260819-player-flags-v2-r1";
+const releaseId = "20260819-player-flags-v2-r1";
+const buildId = "20260822-profile-castle-r1";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -29,7 +30,7 @@ function contrast(foreground, background) {
 }
 
 const dailyIndex = index.indexOf("daily-rewards.css");
-const readabilityIndex = index.indexOf(`readability.css?v=${buildId}`);
+const readabilityIndex = index.indexOf(`readability.css?v=${releaseId}`);
 if (dailyIndex < 0 || readabilityIndex <= dailyIndex) {
   throw new Error("The readability contract must load after daily-rewards.css.");
 }
@@ -37,7 +38,7 @@ if (dailyIndex < 0 || readabilityIndex <= dailyIndex) {
 requireMatch(index, new RegExp(`crownlands-build\" content=\"${buildId}`), "The page build stamp is stale.");
 requireMatch(index, new RegExp(`game\\.js\\?v=${buildId}`), "The game script cache stamp is stale.");
 requireMatch(worker, new RegExp(`CACHE_VERSION = \"${buildId}\"`), "The service-worker cache version is stale.");
-requireMatch(worker, new RegExp(`readability\\.css\\?v=${buildId}`), "The service worker does not cache the readability contract.");
+requireMatch(worker, new RegExp(`readability\\.css\\?v=${releaseId}`), "The service worker does not cache the readability contract.");
 requireMatch(build, /"readability\.css"/, "The production client does not include readability.css.");
 
 const requiredCoverage = [

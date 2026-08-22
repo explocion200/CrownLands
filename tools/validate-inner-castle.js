@@ -13,6 +13,7 @@ const firebaseSource = read("firebaseClient.js");
 const browserEconomySource = read("economy-config.js");
 const serverEconomySource = read("functions/economy-config.json");
 const visualQaSource = read("docs/visual-qa/inner-castle-alert/index.html");
+const profileVisualQaSource = read("docs/visual-qa/profile-inner-castle/index.html");
 const functionsPackage = JSON.parse(read("functions/package.json"));
 const optimizedArtManifest = JSON.parse(read("assets/optimized/manifest.json"));
 
@@ -83,7 +84,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260819-player-flags-v2-r1";
+const BUILD_ID = "20260822-profile-castle-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
@@ -273,6 +274,25 @@ assert.match(guardSource, /city\.owner\s*===\s*["']player["']/, "Inner Castle en
 assert.match(guardSource, /!\s*isStronghold\(city\)/, "Strongholds must not expose the Inner Castle.");
 assert.match(guardSource, /isMainCityForList\(city\)/, "Inner Castle entry must use the canonical main-city helper.");
 
+const profileButtonMatch = indexSource.match(
+  /<section class="kingdom-overview"[\s\S]*?<div class="kingdom-stat-grid">([\s\S]*?)<\/div>\s*<div class="profile-inner-castle-actions">\s*<button id="profileInnerCastleBtn" class="profile-inner-castle-btn" type="button">Inner Castle<\/button>/
+);
+assert.ok(profileButtonMatch, "Profile Overview must place the Inner Castle button directly after the six-stat grid.");
+assert.equal((profileButtonMatch[1].match(/class="kingdom-stat(?:\s|\")/g) || []).length, 6, "Profile Overview must retain all six Kingdom statistics before the Inner Castle button.");
+assert.ok(indexSource.indexOf('id="profileInnerCastleBtn"') < indexSource.indexOf('class="profile-achievement-summary"'), "The Inner Castle button must remain above the Achievements section.");
+
+const profileOpenSource = extractFunction(gameSource, "openProfileInnerCastle");
+assert.match(profileOpenSource, /getMainCityReference\(\)/, "The Profile entry must use the canonical main-city reference.");
+assert.match(profileOpenSource, /closeProfileScreen\(\{\s*force:\s*true\s*\}\)/, "The Profile overlay must close before the Inner Castle opens.");
+assert.match(profileOpenSource, /openInnerCastle\(mainCity\.id\)/, "The Profile entry must reuse the existing Inner Castle opener.");
+assert.ok(profileOpenSource.indexOf("closeProfileScreen") < profileOpenSource.indexOf("openInnerCastle"), "Profile must close before opening the shared Inner Castle modal.");
+assert.match(gameSource, /profileInnerCastleBtn\.addEventListener\(["']click["'],\s*openProfileInnerCastle\)/, "The Profile Inner Castle button is not wired to its transition handler.");
+
+const cityResolverSource = extractFunction(gameSource, "getInnerCastleCity");
+assert.match(cityResolverSource, /cityById\(id\)/, "Inner Castle city resolution must prefer the loaded city.");
+assert.match(cityResolverSource, /getMainCityReference\(\)/, "Inner Castle city resolution must support an off-map cached main city.");
+assert.match(cityResolverSource, /mainCity\?\.id\s*===\s*id/, "The cached fallback must never resolve a city other than the main city.");
+
 const cityInfoSource = extractFunction(gameSource, "showCityInfoModal");
 assert.match(cityInfoSource, /canEnterInnerCastle\(city\)/, "City details must gate the Inner Castle CTA.");
 assert.match(cityInfoSource, /id=["']enterInnerCastleBtn["']/, "City details are missing the Inner Castle CTA.");
@@ -314,7 +334,7 @@ const renderedPlaqueStart = renderSource.indexOf('<span class="inner-castle-hots
 const renderedTitleStart = renderSource.indexOf('<span class="inner-castle-hotspot-title">', renderedPlaqueStart);
 const renderedTitleEnd = renderSource.indexOf("</span>", renderedTitleStart);
 const renderedAlertStart = renderSource.indexOf("inner-castle-hotspot-alert", renderedPlaqueStart);
-const renderedPlaqueEnd = renderSource.indexOf("</span>\n                </button>", renderedTitleEnd + 7);
+const renderedPlaqueEnd = renderSource.indexOf("</button>", renderedTitleEnd + 7);
 assert.ok(renderedPlaqueStart >= 0, "Inner Castle hotspots must render an unclipped plaque wrapper.");
 assert.ok(renderedTitleStart > renderedPlaqueStart, "The clipped title must be inside the plaque wrapper.");
 assert.ok(renderedTitleEnd > renderedTitleStart, "The Inner Castle title span is malformed.");
@@ -327,6 +347,18 @@ assert.doesNotMatch(
 );
 assert.match(previewSource, /data-manage-common-gear/, "Supported Inner Castle buildings must open their Common Gear screen.");
 assert.match(previewSource, /Not yet available/, "Great Hall and Alehouse must remain explicitly unavailable.");
+
+assert.match(stylesSource, /\.profile-inner-castle-actions\s*\{[\s\S]*?justify-content:\s*center;[\s\S]*?\}/, "The Profile Inner Castle action must be centered below the stats.");
+assert.match(stylesSource, /\.profile-inner-castle-btn\s*\{(?=[^}]*width:\s*min\(220px, 72%\))(?=[^}]*min-height:\s*40px)(?=[^}]*text-transform:\s*uppercase)[^}]*\}/s, "The Profile Inner Castle button must remain a compact medieval control.");
+assert.match(stylesSource, /@media \(max-width:\s*900px\) and \(orientation:\s*landscape\)[\s\S]*?\.profile-inner-castle-btn\s*\{[^}]*min-height:\s*34px;/, "Mobile landscape must compact the Inner Castle button without hiding it.");
+
+for (const label of ["King Power", "Cities", "Gold", "Troops", "Gold production", "Troops production"]) {
+  assert.ok(profileVisualQaSource.includes(`>${label}<`), `Profile visual QA is missing ${label}.`);
+}
+assert.match(profileVisualQaSource, /profile-inner-castle-actions[\s\S]*?>Inner Castle<\/button>/, "Profile visual QA is missing the centered Inner Castle action.");
+assert.ok(profileVisualQaSource.indexOf("profile-inner-castle-actions") < profileVisualQaSource.indexOf("profile-achievement-summary"), "Profile visual QA must keep Achievements below the Inner Castle action.");
+assert.match(profileVisualQaSource, /variant["']\)\s*===\s*["']before["']/, "Profile visual QA must retain a before-state comparison.");
+assert.ok(profileVisualQaSource.indexOf("profile-theme.css") < profileVisualQaSource.indexOf("crownlands-palette.css"), "Profile visual QA must exercise the production theme cascade.");
 
 const selectSource = extractFunction(gameSource, "selectInnerCastleBuilding");
 assert.match(selectSource, /getInnerCastleBuilding\(buildingKey\)/, "Building selection must resolve through the registry.");
@@ -464,6 +496,7 @@ assert.match(visualQaSource, />Royal Stables<\/span>/, "The long Royal Stables t
 assert.match(indexSource, /<dialog id="modal" class="modal" aria-labelledby="modalTitle">/, "The shared modal must be labelled by its title.");
 assert.match(indexSource, new RegExp(`name="crownlands-build" content="${BUILD_ID}"`), "The document build ID is stale.");
 assert.match(indexSource, new RegExp(`styles\\.css\\?v=${BUILD_ID}`), "The Inner Castle stylesheet cache tag is stale.");
+assert.match(indexSource, new RegExp(`common-gear-ui\\.js\\?v=${BUILD_ID}`), "The Inner Castle UI cache tag is stale.");
 assert.match(indexSource, new RegExp(`game\\.js\\?v=${BUILD_ID}`), "The Inner Castle game-script cache tag is stale.");
 assert.match(workerSource, new RegExp(`const CACHE_VERSION = "${BUILD_ID}";`), "The service-worker cache version is stale.");
 assert.match(workerSource, new RegExp(`/styles\\.css\\?v=${BUILD_ID}`), "The service worker has the wrong stylesheet version.");
@@ -484,4 +517,4 @@ assert.match(
   "The Inner Castle validator is not registered in the Functions test chain."
 );
 
-console.log("Validated the six-building Inner Castle hub, unclipped alert geometry at desktop and two landscape widths, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");
+console.log("Validated the six-building Inner Castle hub, Profile Overview entry, unclipped alert geometry at desktop and two landscape widths, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");

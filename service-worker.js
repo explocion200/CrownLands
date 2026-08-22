@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260819-player-flags-v2-r1";
+const CACHE_VERSION = "20260822-profile-castle-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,7 +11,7 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260819-player-flags-v2-r1",
+  "/styles.css?v=20260822-profile-castle-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
@@ -35,7 +35,7 @@ const STATIC_CACHE_URLS = [
   "/instant-economy-actions.js?v=20260810-instant-economy-actions-v1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260819-player-flags-v2-r1",
+  "/game.js?v=20260822-profile-castle-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
