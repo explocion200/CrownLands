@@ -43,6 +43,22 @@ test("serves Studio context and the seeded QA store", async t => {
   assert.ok(qa.issues.length >= 6);
   assert.ok(qa.issues.some(issue => /troop counter/i.test(issue.title)));
 
+  const uiResponse = await fetch(`${base}/api/ui-editor`);
+  assert.equal(uiResponse.status, 200);
+  const ui = await uiResponse.json();
+  assert.equal(ui.config.schemaVersion, 1);
+  assert.equal(ui.registry.components.length, 15);
+  assert.ok(ui.registry.screens.some(screen => screen.id === "clan-members"));
+  assert.ok(ui.registry.closeButton.usages.some(usage => usage.id === "shared-modal-close"));
+
+  const uiValidationResponse = await fetch(`${base}/api/ui-editor/validate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(ui.config),
+  });
+  assert.equal(uiValidationResponse.status, 200);
+  assert.equal((await uiValidationResponse.json()).ok, true);
+
   const editorResponse = await fetch(`${base}/editor/`);
   assert.equal(editorResponse.status, 200);
   assert.match(editorResponse.headers.get("content-security-policy") || "", /script-src 'self'/);
@@ -50,6 +66,10 @@ test("serves Studio context and the seeded QA store", async t => {
   const themeResponse = await fetch(`${base}/interface-theme.css`);
   assert.equal(themeResponse.status, 200);
   assert.match(themeResponse.headers.get("content-type") || "", /text\/css/);
+
+  const uiRuntimeResponse = await fetch(`${base}/ui-component-runtime.js`);
+  assert.equal(uiRuntimeResponse.status, 200);
+  assert.match(await uiRuntimeResponse.text(), /CrownlandsUIRuntime/);
 
   const traversalResponse = await fetch(`${base}/editor/%2e%2e%2fpackage.json`);
   assert.equal(traversalResponse.status, 403);

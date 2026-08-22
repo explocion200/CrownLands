@@ -3,18 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crownlands Screen Preview Foundation</title>
+  <title>Crownlands Screen Inspector</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/interface-theme.css" />
   <link rel="stylesheet" href="studio-preview.css" />
 </head>
-<body class="screen-foundation" data-ai-screen="Crownlands Game Shell" data-ai-files="index.html,styles.css,interface-theme.css">
-  <header class="screen-foundation-header"><div><small>Controlled preview route</small><strong>Crownlands Game Shell</strong></div><small>Read only · Phase 1</small></header>
-  <main class="screen-foundation-map">
-    <section class="screen-foundation-message"><h1>Screen Preview Foundation</h1><p>This isolated route loads the live game style sources without connecting to player data. Phase 2 can mount shared screen renderers here instead of copying complete game-screen HTML into Studio.</p></section>
+<body class="ui-screen-preview" data-ai-screen="Crownlands priority screens" data-ai-files="index.html,styles.css,interface-theme.css,ui-studio-config.json">
+  <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="preview-close" viewBox="0 0 32 32"><path d="M8 8l16 16M24 8L8 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="preview-crown" viewBox="0 0 32 32"><path d="M4 24L5 11l5 6 3-10 3 8 3-8 3 10 5-6 1 13zM5 25h22v3H5z"/></symbol>
+  </svg>
+
+  <main class="ui-preview-canvas">
+    <section class="ui-preview-screen profile-screen-preview" data-ui-screen="player-profile" data-ui-screen-name="Player Profile" data-ui-no-scroll="true">
+      <header class="ui-preview-header profile-screen-header" data-ui-inspectable data-ui-element-id="panel-header" data-ui-component="panel-header" data-ui-source="index.html" data-ui-local-source="styles.css" data-ui-breadcrumb="Player Profile > Panel Header">
+        <div class="profile-screen-heading" data-ui-inspectable data-ui-element-id="profile-heading" data-ui-component="header" data-ui-source="index.html" data-ui-breadcrumb="Player Profile > Header > Title"><span>Kingdom</span><h2>Player Profile</h2></div>
+        <div class="profile-tabs" role="tablist" data-ui-inspectable data-ui-element-id="profile-tabs" data-ui-component="tab" data-ui-source="index.html" data-ui-local-source="interface-theme.css" data-ui-breadcrumb="Player Profile > Tabs">
+          <button class="active" type="button" data-ui-inspectable data-ui-element-id="profile-tab" data-ui-component="selected-tab">Profile</button><button type="button" data-ui-inspectable data-ui-element-id="clan-tab" data-ui-component="tab">Clan</button><button type="button" data-ui-inspectable data-ui-element-id="skills-tab" data-ui-component="tab">Skills</button><button type="button" data-ui-inspectable data-ui-element-id="settings-tab" data-ui-component="tab">Settings</button>
+        </div>
+        <button class="profile-icon-btn profile-screen-close cl-shared-close" type="button" aria-label="Close profile" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-local-source="styles.css" data-ui-breadcrumb="Player Profile > Panel Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button>
+      </header>
+      <div class="ui-preview-content">
+        <section class="ui-preview-card profile-identity" data-ui-inspectable data-ui-element-id="identity-panel" data-ui-component="panel" data-ui-source="index.html" data-ui-breadcrumb="Player Profile > Identity Panel"><span class="ui-preview-avatar"><svg><use href="#preview-crown"></use></svg></span><div><small>Ruler</small><h3 data-ui-inspectable data-ui-element-id="ruler-name" data-ui-component="text" data-ui-source="index.html" data-ui-breadcrumb="Player Profile > Identity > Ruler Name">Ricky of Caer Leon</h3><p data-ui-inspectable data-ui-element-id="level-text" data-ui-component="label" data-ui-breadcrumb="Player Profile > Identity > Level">Level 38 · 84,200 XP</p></div></section>
+        <section class="ui-preview-card" data-ui-inspectable data-ui-element-id="overview-panel" data-ui-component="panel" data-ui-source="index.html" data-ui-breadcrumb="Player Profile > Kingdom Overview"><h3>Kingdom Overview</h3><div class="ui-preview-stat-grid"><span><small>King Power</small><strong>12.8M</strong></span><span><small>Cities</small><strong>14</strong></span><span><small>Gold</small><strong>1.4B</strong></span></div></section>
+      </div>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="clan-members" data-ui-screen-name="Clan · Members" data-ui-no-scroll="true" hidden>
+      <article class="ui-preview-modal">
+        <header class="ui-preview-header" data-ui-inspectable data-ui-element-id="panel-header" data-ui-component="panel-header" data-ui-source="game.js" data-ui-breadcrumb="Clan > Members > Panel Header"><div><small>House of Rowan</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Clan Members</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-local-source="styles.css" data-ui-breadcrumb="Clan > Members > Panel Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header>
+        <nav class="ui-preview-tabs" data-ui-inspectable data-ui-element-id="tabs" data-ui-component="tab"><button class="active" data-ui-inspectable data-ui-element-id="members-tab" data-ui-component="selected-tab">Members</button><button data-ui-inspectable data-ui-element-id="quests-tab" data-ui-component="tab">Quests</button><button data-ui-inspectable data-ui-element-id="diplomacy-tab" data-ui-component="tab">Diplomacy</button></nav>
+        <div class="ui-preview-list"><div><strong>Ricky Montalvan</strong><span>Leader · 12.8M power</span></div><div><strong>Lady Alys</strong><span>Officer · 8.4M power</span></div><div><strong>Ser Corwin</strong><span>Member · 4.9M power</span></div></div>
+      </article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="reports" data-ui-screen-name="Reports" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Realm intelligence</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text" data-ui-breadcrumb="Reports > Header > Title">Reports</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-local-source="styles.css" data-ui-breadcrumb="Reports > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><nav class="ui-preview-tabs"><button class="active" data-ui-inspectable data-ui-element-id="battle-tab" data-ui-component="selected-tab">Battles</button><button data-ui-inspectable data-ui-element-id="scout-tab" data-ui-component="tab">Scouts</button></nav><div class="ui-preview-list"><div><strong>Victory at Blackstone Hold</strong><span>4 minutes ago · 18,400 XP</span></div><div><strong>Reinforcements arrived</strong><span>12 minutes ago · Caer Leon</span></div></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="scout-report" data-ui-screen-name="Scout Report" hidden>
+      <article class="ui-preview-modal scout-report-modal"><header class="ui-preview-header"><div><small>Scouting intelligence</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Blackstone Hold</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-breadcrumb="Scout Report > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-content"><section class="ui-preview-card"><small>Garrison estimate</small><strong data-ui-inspectable data-ui-element-id="garrison-value" data-ui-component="text" data-ui-breadcrumb="Scout Report > Garrison > Value">128,400 troops</strong><p>Wall integrity: 100%</p></section><button class="primary-btn" data-ui-inspectable data-ui-element-id="locate-button" data-ui-component="primary-button">Locate City</button></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="daily-login" data-ui-screen-name="Daily Login" hidden>
+      <article class="ui-preview-modal daily-login-reward-modal"><header class="ui-preview-header"><div><small>Royal attendance</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Daily Login</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-local-source="daily-rewards.css" data-ui-breadcrumb="Daily Login > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-reward-grid"><div class="claimed">Day 1<strong>50K Gold</strong></div><div class="claimed">Day 2<strong>1K Troops</strong></div><div class="current" data-ui-inspectable data-ui-element-id="current-reward" data-ui-component="panel">Day 3<strong>War Drums</strong></div><div>Day 4<strong>100K Gold</strong></div></div><button class="claim-button" data-ui-inspectable data-ui-element-id="claim-button" data-ui-component="claim-button">Claim Reward</button></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="daily-missions" data-ui-screen-name="Daily Missions" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Royal assignments</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Daily Missions</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-breadcrumb="Daily Missions > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-list"><div><strong data-ui-inspectable data-ui-element-id="mission-title" data-ui-component="text">Raise the banners</strong><span>Launch two attacks · 2 / 2</span><button class="claim-button" data-ui-inspectable data-ui-element-id="mission-claim" data-ui-component="claim-button">Claim</button></div><div><strong>Strengthen the realm</strong><span>Add two city levels · 1 / 2</span></div></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="achievements" data-ui-screen-name="Achievements" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Season progress</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Achievements</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-breadcrumb="Achievements > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-card"><strong>Realm Builder IV</strong><p>Raise 20 total city levels</p><div class="ui-preview-progress" data-ui-inspectable data-ui-element-id="progress" data-ui-component="progress-bar"><span style="width:72%"></span></div></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="settings" data-ui-screen-name="Settings" data-ui-no-scroll="true" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Kingdom</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Settings</h2></div><button class="profile-icon-btn profile-screen-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-breadcrumb="Settings > Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-content"><label class="ui-preview-field" data-ui-inspectable data-ui-element-id="music-input" data-ui-component="input"><span>Music volume</span><input type="range" value="70" /></label><label class="ui-preview-field"><span>Animation intensity</span><select data-ui-inspectable data-ui-element-id="animation-input" data-ui-component="input"><option>Full</option><option>Reduced</option></select></label></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="notifications" data-ui-screen-name="Notifications" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Realm activity</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Notifications</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-position-screen="settings"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-list"><div><strong>March completed</strong><span>Troops arrived at Caer Leon</span><span class="ui-preview-badge" data-ui-inspectable data-ui-element-id="new-badge" data-ui-component="badge">New</span></div><div><strong>Daily missions reset</strong><span>Three new orders await</span></div></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="privacy" data-ui-screen-name="Privacy" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Legal</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Privacy</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-position-screen="settings"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-copy"><h3>Player information</h3><p data-ui-inspectable data-ui-element-id="privacy-copy" data-ui-component="text">Crownlands stores the account and gameplay information required to operate your realm. Review the complete policy before continuing.</p><button class="secondary-button" data-ui-inspectable data-ui-element-id="policy-button" data-ui-component="secondary-button">View Full Policy</button></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="shop" data-ui-screen-name="Shop" hidden>
+      <article class="ui-preview-modal shop-modal"><header class="ui-preview-header"><div><small>Royal market</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Shop</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-list"><div><strong>War Drums</strong><span>2,500,000 gold · 6 owned</span><button class="primary-btn" data-ui-inspectable data-ui-element-id="buy-war-drums" data-ui-component="primary-button">Buy</button></div><div><strong>Royal Peace Shield</strong><span>8,000,000 gold · 1 owned</span><button class="primary-btn">Buy</button></div></div></article>
+    </section>
+
+    <section class="ui-preview-screen" data-ui-screen="bag" data-ui-screen-name="Bag" hidden>
+      <article class="ui-preview-modal"><header class="ui-preview-header"><div><small>Royal inventory</small><h2 data-ui-inspectable data-ui-element-id="title" data-ui-component="text">Bag</h2></div><button class="modal-close cl-shared-close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></header><div class="ui-preview-item-grid"><div data-ui-inspectable data-ui-element-id="item-war-drums" data-ui-component="panel"><span class="ui-preview-item-icon">WD</span><strong>War Drums</strong><small>6 owned</small></div><div><span class="ui-preview-item-icon">PS</span><strong>Peace Shield</strong><small>1 owned</small></div><div><span class="ui-preview-item-icon">RT</span><strong>Tax Decree</strong><small>3 owned</small></div></div></article>
+    </section>
   </main>
-  <section class="commander-panel">
-    <div class="panel-header"><div><strong>Viewport inspection</strong><small>Switch Studio between desktop and landscape-phone sizes.</small></div></div>
-  </section>
 </body>
 </html>

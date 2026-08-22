@@ -3262,3 +3262,31 @@ input[type="range"] {
     height: 46px;
   }
 }
+
+/* Crownlands Studio Phase 2A: one semantic Close Button visual component.
+   Per-screen placement remains in ui-studio-config.json and is applied by
+   ui-component-runtime.js; IDs and click behavior stay owned by game.js. */
+.cl-shared-close {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  color: var(--cl-ivory);
+  border: 1px solid var(--cl-iron);
+  border-radius: var(--ui-radius-small);
+  background: var(--cl-iron-dark);
+  box-shadow: var(--ui-inset), 0 6px 14px rgba(0, 0, 0, .3);
+}
+
+.cl-shared-close .cl-icon {
+  width: 1rem;
+  height: 1rem;
+  color: inherit;
+}
+
+.cl-shared-close:hover { background: #59534a; }
+.cl-shared-close:active { background: var(--cl-soot); }

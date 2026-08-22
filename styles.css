@@ -9842,8 +9842,6 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 }
 
 .inner-castle-modal .modal-close {
-  width: 44px;
-  height: 44px;
   right: .5rem;
   top: .45rem;
 }

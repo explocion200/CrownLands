@@ -5,6 +5,7 @@ const { validateCrownlandsProject } = require("./project-file-service");
 const { AiWorkspaceService } = require("./ai/ai-workspace-service");
 const { validateRetry, validateTaskId } = require("./ai/ipc-schema");
 const { createReadOnlyPreviewServer } = require("./ai/preview-server");
+const { SourceControlService, UI_EDITABLE_FILES } = require("./source-control-service");
 
 const SETTINGS_FILE = "settings.json";
 const HOST = "127.0.0.1";
@@ -17,6 +18,7 @@ let dirty = false;
 let allowClose = false;
 let pendingAfterSave = "";
 let aiService = null;
+let sourceControl = null;
 const previewWindows = new Set();
 
 function settingsPath() {
@@ -52,6 +54,7 @@ async function stopAiWorkspace() {
   aiService?.dispose();
   aiService?.removeAllListeners();
   aiService = null;
+  sourceControl = null;
   for (const preview of previewWindows) preview.close();
   previewWindows.clear();
 }
@@ -142,6 +145,7 @@ async function openProject(root) {
   dirty = false;
   pendingAfterSave = "";
   aiService = await new AiWorkspaceService(root, { dirtyProvider: () => dirty }).init();
+  sourceControl = new SourceControlService(root);
   aiService.on("task-updated", task => mainWindow?.webContents.send("studio:ai-task-updated", task));
   await writeSettings({ schemaVersion: 1, lastProjectRoot: root });
   await mainWindow.loadURL(url);
@@ -151,6 +155,44 @@ async function openProject(root) {
 function requireAiWorkspace() {
   if (!aiService) throw new Error("The Codex AI workspace is not ready for the selected project.");
   return aiService;
+}
+
+function requireSourceControl() {
+  if (!sourceControl) throw new Error("Source control is not ready for the selected project.");
+  return sourceControl;
+}
+
+async function confirmSourceCommit(payload = {}) {
+  const message = String(payload.message || "").trim();
+  const files = Array.isArray(payload.files) ? payload.files : [...UI_EDITABLE_FILES];
+  const result = await dialog.showMessageBox(mainWindow || undefined, {
+    type: "question",
+    title: "Commit manual UI changes",
+    message: `Commit ${files.length} saved UI file${files.length === 1 ? "" : "s"}?`,
+    detail: `${message}\n\n${files.join("\n")}\n\nThis does not push, merge, or deploy.`,
+    buttons: ["Commit", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (result.response !== 0) return { cancelled: true };
+  return requireSourceControl().commit({ message, files });
+}
+
+async function confirmSourcePush() {
+  const plan = await requireSourceControl().pushPlan();
+  const result = await dialog.showMessageBox(mainWindow || undefined, {
+    type: "warning",
+    title: "Push Crownlands branch",
+    message: `Push ${plan.branch} to ${plan.remote}?`,
+    detail: `Commit: ${plan.head}\nDestination: ${plan.remoteUrl}\n\nThis pushes only. It does not merge or deploy.`,
+    buttons: ["Push Branch", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  });
+  if (result.response !== 0) return { cancelled: true, plan };
+  return requireSourceControl().push({ confirmed: true });
 }
 
 async function captureAiContext(payload) {
@@ -314,6 +356,10 @@ async function showFatalError(error) {
 
 ipcMain.on("studio:dirty-changed", (_event, value) => { dirty = Boolean(value); });
 ipcMain.handle("studio:open-project", () => requestOpenProject());
+ipcMain.handle("studio:source-status", () => requireSourceControl().status());
+ipcMain.handle("studio:source-diff", (_event, payload) => requireSourceControl().diff(payload?.files));
+ipcMain.handle("studio:source-commit", (_event, payload) => confirmSourceCommit(payload));
+ipcMain.handle("studio:source-push", () => confirmSourcePush());
 ipcMain.handle("studio:ai-capabilities", () => requireAiWorkspace().getCapabilities());
 ipcMain.handle("studio:ai-list-tasks", () => requireAiWorkspace().listTasks());
 ipcMain.handle("studio:ai-get-task", (_event, payload) => requireAiWorkspace().getTask(validateTaskId(payload)));

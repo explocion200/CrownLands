@@ -14,13 +14,23 @@ test("Studio shell has unique IDs and all required areas", async () => {
     "worldView", "regionView", "economyView", "themeView", "componentsView",
     "screensView", "gameUiView", "qaView", "codexAiView", "codexTaskForm",
     "codexTaskHistory", "codexActionMessage", "codexRoutingForm", "studioDirtyChip", "studioLogPanel",
+    "uiPropertyInspector", "uiBreadcrumb", "uiGlobalCloseSection", "uiLocalPositionSection",
+    "uiSaveChangesBtn", "uiReviewDiffBtn", "uiCommitBtn", "uiPushBtn",
   ]) {
     assert.ok(ids.includes(id), `Missing Studio element #${id}`);
   }
   const editorScript = html.indexOf('src="editor.js');
   assert.ok(html.indexOf('src="studio.js') < editorScript, "Studio controller must load before the editor orchestrator");
+  assert.ok(html.indexOf('src="ui-inspector.js') < editorScript, "Manual UI inspector must load before the editor orchestrator");
   assert.ok(html.indexOf('src="codex-ai.js') < editorScript, "Codex workspace controller must load before the editor orchestrator");
   assert.match(html, /data-ask-codex="(?:theme|component|screen|hud)"/);
+});
+
+test("manual UI saves do not rewrite gameplay or economy data", async () => {
+  const source = await fsp.readFile(path.join(ROOT, "tools", "map-editor", "editor.js"), "utf8");
+  assert.match(source, /if \(state\.dirty\) \{\s*operations\.push\(saveWorldData/);
+  assert.match(source, /CrownlandsUIInspector\?\.isDirty/);
+  assert.match(source, /operations\.push\(window\.CrownlandsUIInspector\.save\(\)\)/);
 });
 
 test("Codex task preflight failures stay visible in the task detail", async () => {

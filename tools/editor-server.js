@@ -8,6 +8,7 @@ const { promisify } = require("util");
 const { getCanonicalLayoutCityName } = require("./city-name-utils");
 const { buildRegionCatalog } = require("../region-catalog");
 const { createProjectFileService } = require("./crownlands-studio/project-file-service");
+const { createUiEditorService } = require("./crownlands-studio/ui-editor-service");
 const execFileAsync = promisify(execFile);
 const OPTIMIZED_ASSET_PATHS = new Map(
   require("../assets/optimized/manifest.json").assets.map(asset => [asset.source, asset.output]),
@@ -61,6 +62,11 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
     "functions/economy-config.json",
     "functions/world-layout.json",
     "ui-layout-config.js",
+    "ui-studio-config.json",
+    "index.html",
+    "styles.css",
+    "interface-theme.css",
+    "game.js",
     "assets/map-editor-data.js",
     "assets/worlds/world_01/world-layout.json",
     "tools/crownlands-studio/qa-seed.json",
@@ -72,6 +78,7 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
     "functions/economy-config.json",
     "functions/world-layout.json",
     "ui-layout-config.js",
+    "ui-studio-config.json",
     "assets/map-editor-data.js",
     "assets/worlds/world_01/world-layout.json",
     ".crownlands-studio/qa-issues.json",
@@ -85,6 +92,7 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
     "assets/worlds/world_01/maps",
   ],
 });
+const UI_EDITOR = createUiEditorService(PROJECT_FILES);
 const ROOT_STATIC_FILES = new Set([
   "/about.html",
   "/game-rules.html",
@@ -110,6 +118,8 @@ const ROOT_STATIC_FILES = new Set([
   "/economy-config.js",
   "/ui-layout-config.js",
   "/ui-layout-runtime.js",
+  "/ui-studio-config.json",
+  "/ui-component-runtime.js",
 ]);
 
 const MIME_TYPES = new Map([
@@ -1214,6 +1224,28 @@ async function readStudioContext() {
 async function handleApi(request, response, pathname) {
   if (pathname === "/api/studio-context" && request.method === "GET") {
     sendJson(response, 200, await readStudioContext());
+    return;
+  }
+
+  if (pathname === "/api/ui-editor" && request.method === "GET") {
+    sendJson(response, 200, await UI_EDITOR.getWorkspace());
+    return;
+  }
+
+  if (pathname === "/api/ui-editor/audit" && request.method === "GET") {
+    sendJson(response, 200, await UI_EDITOR.audit());
+    return;
+  }
+
+  if (pathname === "/api/ui-editor/validate" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    sendJson(response, 200, UI_EDITOR.validate(JSON.parse(rawBody || "{}")));
+    return;
+  }
+
+  if (pathname === "/api/ui-editor/save" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    sendJson(response, 200, await UI_EDITOR.save(JSON.parse(rawBody || "{}")));
     return;
   }
 

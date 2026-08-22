@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "globalComponents": {
+    "close-button": {
+      "version": 1,
+      "states": {
+        "default": {
+          "width": 40,
+          "height": 40,
+          "borderColor": "#45443E",
+          "borderWidth": 1,
+          "borderRadius": 3,
+          "iconSize": 16,
+          "iconStrokeWidth": 3,
+          "shadow": "0 6px 14px rgba(0, 0, 0, .30)",
+          "padding": 0,
+          "defaultTop": 10,
+          "defaultRight": 11,
+          "backgroundColor": "#2B2925",
+          "iconColor": "#E7DDC4",
+          "opacity": 1
+        },
+        "hover": {
+          "backgroundColor": "#59534A",
+          "iconColor": "#E7DDC4"
+        },
+        "pressed": {
+          "backgroundColor": "#17130F",
+          "iconColor": "#D6C6A2"
+        },
+        "disabled": {
+          "opacity": 0.5
+        }
+      },
+      "responsive": {}
+    }
+  },
+  "screenOverrides": {
+    "commander-panel": {
+      "close-button": {
+        "anchor": "top-right",
+        "top": 0,
+        "right": 0,
+        "x": 0,
+        "y": 0
+      }
+    },
+    "player-profile": {
+      "close-button": {
+        "anchor": "top-right",
+        "top": 0,
+        "right": 0,
+        "x": 0,
+        "y": 0
+      }
+    },
+    "shared-modal": {
+      "close-button": {
+        "anchor": "top-right",
+        "top": 10,
+        "right": 11,
+        "x": 0,
+        "y": 0
+      }
+    },
+    "inner-castle": {
+      "close-button": {
+        "anchor": "top-right",
+        "top": 7,
+        "right": 8,
+        "x": 0,
+        "y": 0
+      }
+    }
+  },
+  "elementOverrides": {},
+  "sharedMigrations": {
+    "commander-panel-close": true,
+    "player-profile-close": true,
+    "shared-modal-close": true,
+    "inner-castle-close": true
+  },
+  "noScrollScreens": [
+    "player-profile",
+    "clan-members",
+    "settings"
+  ]
+}

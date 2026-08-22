@@ -185,6 +185,7 @@
             <button type="button" data-preview-target="component" data-preview-preset="phone">Phone landscape <small>844×390</small></button>
             <button type="button" data-preview-target="component" data-preview-preset="smallPhone">Small phone <small>667×375</small></button>
             <span id="componentViewportLabel">1440 × 900</span>
+            <button type="button" data-ui-inspector-toggle="component">Inspect UI</button>
           </div>
           <div class="preview-stage" data-preview-stage="component">
             <iframe id="componentPreviewFrame" title="Crownlands component library preview" src="component-preview.html" sandbox="allow-same-origin"></iframe>
@@ -199,10 +200,18 @@
           <div class="screen-preview-controls">
             <label><span>Preview</span>
               <select id="screenPreviewSelect">
-                <option value="shell">Game shell foundation</option>
-                <option disabled>Profile (Phase 2)</option>
-                <option disabled>Scout Report (Phase 2)</option>
-                <option disabled>Inner Castle (Phase 2)</option>
+                <option value="player-profile">Player Profile</option>
+                <option value="clan-members">Clan · Members</option>
+                <option value="reports">Reports</option>
+                <option value="scout-report">Scout Report</option>
+                <option value="daily-login">Daily Login</option>
+                <option value="daily-missions">Daily Missions</option>
+                <option value="achievements">Achievements</option>
+                <option value="settings">Settings</option>
+                <option value="notifications">Notifications</option>
+                <option value="privacy">Privacy</option>
+                <option value="shop">Shop</option>
+                <option value="bag">Bag</option>
               </select>
             </label>
             <div class="preview-toolbar" role="group" aria-label="Screen preview viewport">
@@ -210,11 +219,18 @@
               <button type="button" data-preview-target="screen" data-preview-preset="phone">Phone landscape <small>844×390</small></button>
               <button type="button" data-preview-target="screen" data-preview-preset="smallPhone">Small phone <small>667×375</small></button>
               <span id="screenViewportLabel">1440 × 900</span>
+              <button type="button" data-ui-inspector-toggle="screen">Inspect UI</button>
+              <button id="compareViewportsBtn" type="button">Compare Viewports</button>
             </div>
           </div>
           <div class="preview-stage" data-preview-stage="screen">
             <iframe id="screenPreviewFrame" title="Crownlands screen preview foundation" src="screen-preview.html" sandbox="allow-same-origin"></iframe>
           </div>
+          <section id="viewportComparePanel" class="viewport-compare-panel hidden" aria-label="Compare responsive viewports">
+            <article><strong>Small Mobile · 667×375</strong><iframe title="Small mobile comparison" src="screen-preview.html" sandbox="allow-same-origin" data-compare-preset="smallPhone"></iframe></article>
+            <article><strong>Primary Mobile · 844×390</strong><iframe title="Primary mobile comparison" src="screen-preview.html" sandbox="allow-same-origin" data-compare-preset="phone"></iframe></article>
+            <article><strong>Desktop · 1440×900</strong><iframe title="Desktop comparison" src="screen-preview.html" sandbox="allow-same-origin" data-compare-preset="desktop"></iframe></article>
+          </section>
         </div>
 
         <div id="qaView" class="studio-view qa-view hidden">
@@ -394,6 +410,95 @@
           </div>
         </section>
       </aside>
+
+      <aside id="uiPropertyInspector" class="ui-property-inspector" aria-label="Manual UI property inspector">
+        <header class="ui-inspector-titlebar">
+          <div><span>Visual Inspector</span><strong id="uiSelectionTitle">Select an element</strong></div>
+          <span id="uiSelectionCount">0 selected</span>
+        </header>
+        <div class="ui-inspector-session-tools">
+          <button id="uiUndoBtn" type="button" title="Undo (Ctrl+Z)" disabled>Undo</button>
+          <button id="uiRedoBtn" type="button" title="Redo (Ctrl+Y)" disabled>Redo</button>
+          <button id="uiGuidesBtn" type="button" aria-pressed="false">Guides</button>
+          <label><input id="uiSnapToggle" type="checkbox" checked /> Snap</label>
+        </div>
+        <nav id="uiBreadcrumb" class="ui-breadcrumb" aria-label="Selected element breadcrumb">No element selected</nav>
+        <section class="ui-inspector-section ui-source-map">
+          <div class="ui-scope-heading"><span>Selected</span><b id="uiScopeBadge">THIS SCREEN</b></div>
+          <dl><div><dt>Component</dt><dd id="uiComponentName">—</dd></div><div><dt>Screen</dt><dd id="uiScreenName">—</dd></div><div><dt>Element</dt><dd id="uiElementId">—</dd></div><div><dt>Class</dt><dd id="uiClassName">—</dd></div><div><dt>Source</dt><dd id="uiSourceFile">—</dd></div><div><dt>Local layout</dt><dd id="uiLocalSource">—</dd></div><div><dt>Breakpoint</dt><dd id="uiBreakpointSource">Base style</dd></div></dl>
+        </section>
+
+        <section id="uiGlobalCloseSection" class="ui-inspector-section hidden">
+          <div class="ui-scope-heading"><span>Global Close Button Style</span><b>GLOBAL</b></div>
+          <p id="uiGlobalImpact">Affects every migrated Close Button.</p>
+          <label>State<select id="uiComponentState"><option value="default">Default</option><option value="hover">Hover</option><option value="pressed">Pressed</option><option value="disabled">Disabled</option></select></label>
+          <div id="uiCloseDefaultFields" class="ui-property-grid">
+            <label>Width <input type="number" data-ui-global-property="width" min="24" max="72" step="1" /></label>
+            <label>Height <input type="number" data-ui-global-property="height" min="24" max="72" step="1" /></label>
+            <label>Background <input type="color" data-ui-global-property="backgroundColor" /></label>
+            <label>Border <input type="color" data-ui-global-property="borderColor" /></label>
+            <label>Border width <input type="number" data-ui-global-property="borderWidth" min="0" max="6" step="1" /></label>
+            <label>Radius <input type="number" data-ui-global-property="borderRadius" min="0" max="999" step="1" /></label>
+            <label>X color <input type="color" data-ui-global-property="iconColor" /></label>
+            <label>Icon size <input type="number" data-ui-global-property="iconSize" min="8" max="40" step="1" /></label>
+            <label>Stroke <input type="number" data-ui-global-property="iconStrokeWidth" min="1" max="6" step=".25" /></label>
+            <label>Opacity <input type="number" data-ui-global-property="opacity" min=".1" max="1" step=".05" /></label>
+            <label>Padding <input type="number" data-ui-global-property="padding" min="0" max="20" step="1" /></label>
+            <label>Top default <input type="number" data-ui-global-property="defaultTop" min="-64" max="128" step="1" /></label>
+            <label>Right default <input type="number" data-ui-global-property="defaultRight" min="-64" max="128" step="1" /></label>
+            <label class="wide">Shadow <input type="text" data-ui-global-property="shadow" maxlength="140" /></label>
+          </div>
+          <div class="ui-inline-actions"><button id="uiRestoreSharedBtn" type="button">Restore Shared Default</button><button id="uiPreviewAffectedBtn" type="button">Preview All Affected Screens</button></div>
+        </section>
+
+        <section id="uiLocalPositionSection" class="ui-inspector-section hidden">
+          <div class="ui-scope-heading"><span id="uiPositionHeading">This Screen Position</span><b>THIS SCREEN</b></div>
+          <label>Anchor<select id="uiAnchorSelect"><option value="top-right">Top Right</option><option value="top-left">Top Left</option><option value="bottom-right">Bottom Right</option><option value="bottom-left">Bottom Left</option></select></label>
+          <div class="ui-property-grid"><label>Top <input id="uiPositionTop" type="number" step="1" /></label><label>Right <input id="uiPositionRight" type="number" step="1" /></label><label>X offset <input id="uiPositionX" type="number" step="1" /></label><label>Y offset <input id="uiPositionY" type="number" step="1" /></label></div>
+          <div class="ui-nudge-grid" aria-label="Nudge selected Close Button"><span></span><button type="button" data-ui-nudge="up">↑</button><span></span><button type="button" data-ui-nudge="left">←</button><button type="button" data-ui-nudge="down">↓</button><button type="button" data-ui-nudge="right">→</button></div>
+          <div class="ui-inline-actions"><button type="button" data-ui-align="top-right">Align Top Right</button><button type="button" data-ui-align="header">Align to Header</button><button id="uiResetPositionBtn" type="button">Restore Default Position</button></div>
+        </section>
+
+        <section id="uiGenericProperties" class="ui-inspector-section hidden">
+          <div class="ui-scope-heading"><span>Element Properties</span><b>THIS SCREEN</b></div>
+          <label>Responsive target<select id="uiBreakpointSelect"><option value="base">Base style</option><option value="smallPhone">Small Mobile override</option><option value="phone">Primary Mobile override</option><option value="desktop">Desktop override</option></select></label>
+          <details open><summary>Text &amp; readability</summary><div class="ui-property-grid"><label>Text color <input type="color" data-ui-property="color" /></label><label>Font size <input type="number" data-ui-property="fontSize" min="8" max="96" /></label><label>Weight <input type="number" data-ui-property="fontWeight" min="100" max="900" step="100" /></label><label>Line height <input type="number" data-ui-property="lineHeight" min=".5" max="4" step=".1" /></label><label>Letter spacing <input type="number" data-ui-property="letterSpacing" min="-10" max="30" step=".5" /></label><label>Alignment <select data-ui-property="textAlign"><option value="">Inherited</option><option>left</option><option>center</option><option>right</option><option>justify</option></select></label><label class="wide">Font family (project, read-only) <input id="uiFontFamilyReadOnly" type="text" readonly /></label><label class="wide">Text shadow <input type="text" data-ui-property="textShadow" maxlength="140" /></label></div><div id="uiContrastStatus" class="ui-contrast-status">Select text to measure contrast.</div></details>
+          <details><summary>Background &amp; border</summary><div class="ui-property-grid"><label>Background <input type="color" data-ui-property="backgroundColor" /></label><label>Opacity <input type="number" data-ui-property="opacity" min=".1" max="1" step=".05" /></label><label>Border color <input type="color" data-ui-property="borderColor" /></label><label>Border width <input type="number" data-ui-property="borderWidth" min="0" max="16" /></label><label>Radius <input type="number" data-ui-property="borderRadius" min="0" max="999" /></label><label>Border style <select data-ui-property="borderStyle"><option value="">Inherited</option><option>solid</option><option>dashed</option><option>dotted</option><option>double</option><option>none</option></select></label></div></details>
+          <details><summary>Size &amp; spacing</summary><div class="ui-property-grid"><label>Width <input type="number" data-ui-property="width" min="0" max="2400" /></label><label>Height <input type="number" data-ui-property="height" min="0" max="2400" /></label><label>Min width <input type="number" data-ui-property="minWidth" min="0" max="2400" /></label><label>Max width <input type="number" data-ui-property="maxWidth" min="0" max="2400" /></label><label>Min height <input type="number" data-ui-property="minHeight" min="0" max="2400" /></label><label>Max height <input type="number" data-ui-property="maxHeight" min="0" max="2400" /></label><label>Padding top <input type="number" data-ui-property="paddingTop" /></label><label>Padding right <input type="number" data-ui-property="paddingRight" /></label><label>Padding bottom <input type="number" data-ui-property="paddingBottom" /></label><label>Padding left <input type="number" data-ui-property="paddingLeft" /></label><label>Margin top <input type="number" data-ui-property="marginTop" /></label><label>Margin right <input type="number" data-ui-property="marginRight" /></label><label>Margin bottom <input type="number" data-ui-property="marginBottom" /></label><label>Margin left <input type="number" data-ui-property="marginLeft" /></label><label>Gap <input type="number" data-ui-property="gap" /></label><label>Icon size <input type="number" data-ui-property="iconSize" /></label></div></details>
+          <details><summary>Position &amp; alignment</summary><div class="ui-property-grid"><label>X <input type="number" data-ui-property="x" /></label><label>Y <input type="number" data-ui-property="y" /></label><label>Top <input type="number" data-ui-property="top" /></label><label>Right <input type="number" data-ui-property="right" /></label><label>Bottom <input type="number" data-ui-property="bottom" /></label><label>Left <input type="number" data-ui-property="left" /></label><label>Mode <select data-ui-property="position"><option value="">Inherited</option><option>relative</option><option>absolute</option><option>static</option></select></label></div><div class="ui-align-grid"><button data-ui-align="left">Align Left</button><button data-ui-align="center-x">Center Horizontal</button><button data-ui-align="right">Align Right</button><button data-ui-align="top">Align Top</button><button data-ui-align="center-y">Center Vertical</button><button data-ui-align="bottom">Align Bottom</button><button data-ui-align="center-both">Center Both</button><button data-ui-align="equal-x">Equal H Spacing</button><button data-ui-align="equal-y">Equal V Spacing</button></div></details>
+          <div class="ui-match-row"><label>Match Style From<select id="uiMatchSourceSelect"><option value="">Choose element…</option></select></label><button id="uiMatchStyleBtn" type="button">Match</button></div>
+          <div class="ui-inline-actions"><button id="uiResetPropertyBtn" type="button">Reset Property</button><button id="uiResetElementBtn" type="button">Reset Element</button></div>
+        </section>
+
+        <section class="ui-inspector-section">
+          <div class="ui-scope-heading"><span>Theme Colors</span><b>PROJECT</b></div>
+          <div id="uiThemeColorGrid" class="ui-theme-color-grid"></div>
+          <div id="uiRecentColors" class="ui-recent-colors" aria-label="Recent colors"></div>
+        </section>
+
+        <section class="ui-inspector-section">
+          <div class="ui-scope-heading"><span>Alignment &amp; Readability QA</span><b>LIVE</b></div>
+          <div class="ui-inline-actions"><button id="uiRunQaBtn" type="button">Run UI QA</button><button id="uiCloseAuditBtn" type="button">Close Button Audit</button></div>
+          <div id="uiQaResults" class="ui-qa-results">Run QA to check contrast, clipping, overflow, no-scroll screens, and Close Button alignment.</div>
+        </section>
+
+        <section class="ui-inspector-section">
+          <div class="ui-scope-heading"><span>Pending UI Changes</span><b id="uiPendingCount">0</b></div>
+          <ol id="uiChangeHistory" class="ui-change-history"><li>No manual changes in this session.</li></ol>
+          <div class="ui-inline-actions"><button id="uiSaveChangesBtn" class="primary" type="button" disabled>Save Changes</button><button id="uiDiscardChangesBtn" type="button" disabled>Discard Preview</button></div>
+          <div id="uiSaveStatus" class="ui-save-status" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="ui-inspector-section ui-source-control">
+          <div class="ui-scope-heading"><span>Source Control</span><b id="uiGitBranch">—</b></div>
+          <p id="uiGitDirtyNotice">Checking project status…</p>
+          <div class="ui-inline-actions"><button id="uiReviewDiffBtn" type="button">Review Changes</button><button id="uiRefreshGitBtn" type="button">Refresh</button></div>
+          <pre id="uiDiffReview" class="ui-diff-review hidden"></pre>
+          <label>Commit message<input id="uiCommitMessage" maxlength="180" placeholder="fix(ui): polish shared components" /></label>
+          <div class="ui-inline-actions"><button id="uiCommitBtn" type="button">Commit Changes</button><button id="uiPushBtn" class="danger" type="button">Push…</button></div>
+          <small>Save writes locally. Commit records only UI Studio config. Push is separate, confirms the branch and destination, and never deploys or merges.</small>
+        </section>
+      </aside>
     </section>
 
     <details id="studioLogPanel" class="studio-log-panel">
@@ -404,6 +509,7 @@
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
   <script src="studio.js?v=20260816-crownlands-studio-phase-2b"></script>
+  <script src="ui-inspector.js?v=20260816-crownlands-studio-phase-2a"></script>
   <script src="hud-editor.js?v=20260726-hud-layout-editor"></script>
   <script src="codex-ai.js?v=20260816-crownlands-studio-phase-2b"></script>
   <script src="editor.js?v=20260816-crownlands-studio-phase-2b"></script>

@@ -15,6 +15,7 @@
     qa: { schemaVersion: 1, issues: [] },
     selectedIssueId: "",
     dirty: false,
+    uiDirty: false,
     qaLoadError: "",
     globalDirty: false,
     logs: [],
@@ -60,7 +61,7 @@
   }
 
   function updateDirtyIndicator() {
-    const dirty = Boolean(state.globalDirty || state.dirty);
+    const dirty = Boolean(state.globalDirty || state.dirty || state.uiDirty);
     elements.dirtyChip.dataset.dirty = String(dirty);
     elements.dirtyValue.textContent = dirty ? "Yes" : "No";
     window.crownlandsDesktop?.updateDirty?.(dirty);
@@ -269,6 +270,8 @@
       return { area: "UI Studio / Theme", themeToken: state.selectedThemeToken || "Theme token registry", sourceFiles: ["interface-theme.css", "styles.css"], previewPreset: state.previewPresets.component };
     }
     if (kind === "component" || kind === "components") {
+      const inspector = window.CrownlandsUIInspector?.getSelectionContext?.();
+      if (inspector?.component) return inspector;
       return {
         area: "UI Studio / Components",
         component: state.selectedComponent?.name || "Component Library",
@@ -279,6 +282,8 @@
       };
     }
     if (kind === "screen" || kind === "screens") {
+      const inspector = window.CrownlandsUIInspector?.getSelectionContext?.();
+      if (inspector?.screen) return inspector;
       const option = elements.screenSelect?.selectedOptions?.[0];
       return { area: "UI Studio / Screens", screen: option?.textContent || "Crownlands Game Shell", sourceFiles: ["index.html", "styles.css", "interface-theme.css", "tools/map-editor/screen-preview.html"], previewPreset: state.previewPresets.screen };
     }
@@ -386,9 +391,11 @@
     save,
     log,
     modeChanged,
-    isDirty: () => state.dirty,
+    isDirty: () => Boolean(state.dirty || state.uiDirty),
+    isQaDirty: () => state.dirty,
     hasLoadError: () => Boolean(state.qaLoadError),
     setGlobalDirty(value) { state.globalDirty = Boolean(value); updateDirtyIndicator(); },
+    setUiDirty(value) { state.uiDirty = Boolean(value); updateDirtyIndicator(); },
     getQaStore: () => clone(state.qa),
     getSelectionContext,
     openCodex,

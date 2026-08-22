@@ -256,7 +256,7 @@
             <strong id="panelTitle">Select a blue city</strong>
             <small id="panelSubtitle">Tap a blue city, then tap any target.</small>
           </div>
-          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+          <button id="clearSelectBtn" class="clear-btn cl-shared-close" type="button" aria-label="Close panel" data-ui-component="close-button" data-ui-screen="commander-panel"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
         </div>
         <div id="selectedInfo" class="selected-info"></div>
         <div id="actionButtons" class="action-buttons"></div>
@@ -285,7 +285,7 @@
             <button id="skillsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="skillsView">Skills</button>
             <button id="settingsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="settingsView">Settings</button>
           </div>
-          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close cl-shared-close" type="button" aria-label="Close profile" data-ui-component="close-button" data-ui-screen="player-profile"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
         </header>
 
         <div id="profileView" class="profile-view" role="tabpanel" aria-labelledby="profileTabBtn">
@@ -450,7 +450,7 @@
 
   <dialog id="modal" class="modal" aria-labelledby="modalTitle">
     <article class="modal-card">
-      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+      <button id="closeModalBtn" class="modal-close cl-shared-close" type="button" aria-label="Close" data-ui-component="close-button" data-ui-screen="shared-modal"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
       <h2 id="modalTitle">Info</h2>
       <div id="modalBody"></div>
     </article>
@@ -490,6 +490,7 @@
   <script src="common-gear.js?v=20260812-visual-correction-pass-4a-r1"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
   <script src="ui-layout-config.js?v=20260813-editor-layout-r1"></script>
+  <script src="ui-component-runtime.js?v=20260816-studio-phase-2a"></script>
   <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
   <script src="functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2"></script>
   <script src="firebaseClient.js?v=20260812-local-session-login-fix-v2"></script>

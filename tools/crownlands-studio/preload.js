@@ -20,6 +20,12 @@ contextBridge.exposeInMainWorld("crownlandsDesktop", Object.freeze({
       message: String(result?.message || ""),
     });
   },
+  sourceControl: Object.freeze({
+    status: () => ipcRenderer.invoke("studio:source-status"),
+    diff: files => ipcRenderer.invoke("studio:source-diff", { files }),
+    commit: payload => ipcRenderer.invoke("studio:source-commit", payload),
+    push: () => ipcRenderer.invoke("studio:source-push"),
+  }),
   ai: Object.freeze({
     getCapabilities: () => ipcRenderer.invoke("studio:ai-capabilities"),
     listTasks: () => ipcRenderer.invoke("studio:ai-list-tasks"),

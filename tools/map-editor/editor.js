@@ -795,20 +795,24 @@
   async function saveAllData() {
     if (state.loadError) throw new Error(`${state.loadError} Reload or reopen the project before saving.`);
     elements.saveBtn.disabled = true;
-    setStatus("Saving map, economy, HUD layout, and QA records...", "busy");
+    setStatus("Saving changed Crownlands Studio data...", "busy");
     try {
-      const results = await Promise.allSettled([
-        saveWorldData({ renderAfter: false }),
-        saveEconomyData({ renderAfter: false }),
-        window.CrownlandsHudEditor.save(),
-        window.CrownlandsStudioUI.save(),
-      ]);
-      const labels = ["Map", "Economy", "HUD layout", "QA"];
+      const operations = [];
+      const labels = [];
+      if (state.dirty) {
+        operations.push(saveWorldData({ renderAfter: false }), saveEconomyData({ renderAfter: false }));
+        labels.push("Map", "Economy");
+      }
+      if (window.CrownlandsHudEditor?.isDirty?.()) { operations.push(window.CrownlandsHudEditor.save()); labels.push("HUD layout"); }
+      if (window.CrownlandsStudioUI?.isQaDirty?.()) { operations.push(window.CrownlandsStudioUI.save()); labels.push("QA"); }
+      if (window.CrownlandsUIInspector?.isDirty?.()) { operations.push(window.CrownlandsUIInspector.save()); labels.push("Manual UI config"); }
+      if (!operations.length) { setStatus("No unsaved Studio changes."); return; }
+      const results = await Promise.allSettled(operations);
       const failures = results.map((result, index) => result.status === "rejected" ? `${labels[index]}: ${result.reason?.message || result.reason}` : "").filter(Boolean);
       if (failures.length) throw new Error(`Some data did not save. ${failures.join(" | ")}`);
       state.dirty = false;
       window.CrownlandsStudioUI?.setGlobalDirty?.(false);
-      setStatus("Saved map, browser/Firebase economy, responsive HUD layouts, and QA records.", "success");
+      setStatus(`Saved and validated: ${labels.join(", ")}.`, "success");
       render();
     } finally {
       elements.saveBtn.disabled = Boolean(state.loadError);
@@ -940,6 +944,7 @@
     elements.editorBody.classList.toggle("economy-mode", state.editorMode === "economy");
     elements.editorBody.classList.toggle("game-ui-mode", state.editorMode === "gameui");
     elements.editorBody.classList.toggle("studio-wide-mode", wideMode);
+    elements.editorBody.classList.toggle("ui-inspector-mode", ["components", "screens"].includes(state.editorMode));
     elements.contextTools.classList.toggle("economy-mode", state.editorMode === "economy");
     document.querySelector(".editor-toolbar")?.classList.toggle("economy-mode", state.editorMode === "economy");
     const toolbar = document.querySelector(".editor-toolbar");
@@ -3557,22 +3562,24 @@
       loadWorldData(),
       loadEconomyData(),
       window.CrownlandsHudEditor.init({
-        onDirty: message => markDirty(message),
+        onDirty: message => { window.CrownlandsStudioUI?.setGlobalDirty?.(true); if (message) setStatus(message); },
         onStatus: setStatus,
         setMode: setEditorMode,
       }),
       window.CrownlandsStudioUI.init({
-        onDirty: message => markDirty(message),
+        onDirty: message => { if (message) setStatus(message); },
         onStatus: setStatus,
       }),
+      window.CrownlandsUIInspector.init({ onStatus: setStatus, log: (...args) => window.CrownlandsStudioUI?.log?.(...args) }),
       window.CrownlandsCodexAI.init(),
     ]);
     if (window.CrownlandsHudEditor?.hasLoadError?.()) recordLoadError("HUD layout could not be loaded.");
     if (window.CrownlandsStudioUI?.hasLoadError?.()) recordLoadError("QA issue store could not be loaded.");
+    if (window.CrownlandsUIInspector?.hasLoadError?.()) recordLoadError("Manual UI inspector could not be loaded.");
     render();
     window.CrownlandsEditor = {
       save: saveAllData,
-      isDirty: () => Boolean(state.dirty || window.CrownlandsHudEditor?.isDirty?.() || window.CrownlandsStudioUI?.isDirty?.()),
+      isDirty: () => Boolean(state.dirty || window.CrownlandsHudEditor?.isDirty?.() || window.CrownlandsStudioUI?.isDirty?.() || window.CrownlandsUIInspector?.isDirty?.()),
       setMode: setEditorMode,
     };
     window.crownlandsDesktop?.onSaveRequested?.(async () => {

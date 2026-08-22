@@ -8,11 +8,14 @@ const PROJECT_MARKERS = Object.freeze([
   "tools/crownlands-studio/project-file-service.js",
   "tools/map-editor/index.html",
   "tools/map-editor/studio.js",
+  "tools/map-editor/ui-inspector.js",
   "assets/optimized/manifest.json",
   "assets/worlds/world_01/world-layout.json",
   "economy-config.js",
   "functions/economy-config.json",
   "ui-layout-config.js",
+  "ui-studio-config.json",
+  "ui-component-runtime.js",
 ]);
 
 function normalizeRelativePath(value) {

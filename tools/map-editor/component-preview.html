@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/interface-theme.css" />
   <link rel="stylesheet" href="studio-preview.css" />
 </head>
-<body>
+<body data-ui-screen="component-library" data-ui-screen-name="Component Library">
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
     <symbol id="preview-information" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16 14v8M16 9v2" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
     <symbol id="preview-forward" viewBox="0 0 32 32"><path d="M13 7l9 9-9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -20,11 +20,11 @@
   </svg>
   <main class="preview-document">
     <header><span>Current game styles</span><h1>Component Library</h1><p>Representative components are isolated here but rendered with the same `styles.css` and `interface-theme.css` used by Crownlands.</p></header>
-    <section class="preview-section" data-ai-component="Hex Action Button" data-ai-files="styles.css,interface-theme.css">
+    <section class="preview-section" data-ai-component="Hex Action Button" data-ai-files="styles.css,interface-theme.css" data-ui-inspectable data-ui-component="action-button" data-ui-element-id="action-button-group" data-ui-source="styles.css" data-ui-breadcrumb="Component Library > Action Buttons">
       <h2>Hex Action Button</h2>
       <p>Current variants expose the fill conflicts tracked in QA; this preview becomes the acceptance surface for the shared 64×64 system.</p>
       <div class="preview-action-grid">
-        <div class="preview-action-item"><button class="city-wheel-action wheel-info" type="button"><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-information"></use></svg></span><span class="wheel-action-name">Info</span></button><span>Information</span></div>
+        <div class="preview-action-item"><button class="city-wheel-action wheel-info" type="button" data-ui-inspectable data-ui-component="action-button" data-ui-element-id="information-action"><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-information"></use></svg></span><span class="wheel-action-name">Info</span></button><span>Information</span></div>
         <div class="preview-action-item"><button class="city-wheel-action wheel-send" type="button"><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-forward"></use></svg></span><span class="wheel-action-name">Send</span></button><span>Send</span></div>
         <div class="preview-action-item"><button class="city-wheel-action preview-attack" type="button"><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-attack"></use></svg></span><span class="wheel-action-name">Attack</span></button><span>Attack</span></div>
         <div class="preview-action-item"><button class="city-wheel-action wheel-reinforce" type="button"><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-reinforcement"></use></svg></span><span class="wheel-action-name">Reinforce</span></button><span>Reinforce</span></div>
@@ -33,15 +33,31 @@
         <div class="preview-action-item"><button class="city-wheel-action wheel-send" type="button" disabled><span class="wheel-icon"><svg class="cl-icon"><use href="#preview-forward"></use></svg></span><span class="wheel-action-name">Send</span></button><span>Disabled</span></div>
       </div>
     </section>
-    <section class="preview-section" data-ai-component="Panel / Header / Close Button" data-ai-files="styles.css,interface-theme.css">
+    <section class="preview-section" data-ai-component="Panel / Header / Close Button" data-ai-files="styles.css,interface-theme.css" data-ui-inspectable data-ui-component="modal-frame" data-ui-element-id="panel-close-group" data-ui-source="styles.css">
       <h2>Panel, Header, and Close Button</h2>
       <p>The preview uses the existing commander panel, panel header, and shared close-button classes.</p>
       <div class="preview-panel-wrap">
         <section class="commander-panel">
-          <div class="panel-header"><div><strong>Selected City</strong><small>Representative parchment and burgundy treatment</small></div><button class="clear-btn" type="button" aria-label="Close panel"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></div>
+          <div class="panel-header" data-ui-inspectable data-ui-component="panel-header" data-ui-element-id="panel-header"><div><strong>Selected City</strong><small>Representative parchment and burgundy treatment</small></div><button class="clear-btn cl-shared-close" type="button" aria-label="Close panel" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="close-button" data-ui-source="index.html" data-ui-local-source="styles.css" data-ui-breadcrumb="Component Library > Panel Header > Close Button"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></div>
           <div class="preview-panel-copy">Shared Crownlands panels keep information dense, readable, and predictable while retaining the game’s restrained medieval identity.</div>
         </section>
-        <div class="preview-close-box"><button class="clear-btn" type="button" aria-label="Close"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></div>
+        <div class="preview-close-box"><button class="clear-btn cl-shared-close" type="button" aria-label="Close" data-ui-inspectable data-ui-component="close-button" data-ui-element-id="standalone-close-button" data-ui-source="ui-studio-config.json"><svg class="cl-icon"><use href="#preview-close"></use></svg></button></div>
+      </div>
+    </section>
+    <section class="preview-section" data-ai-component="Core UI Library" data-ai-files="styles.css,interface-theme.css" data-ui-inspectable data-ui-component="component-library" data-ui-element-id="core-library">
+      <h2>Core Shared Components</h2>
+      <p>Progressive normalization surface for button, tab, input, progress, badge, and state styling.</p>
+      <div class="preview-core-components">
+        <button class="primary-btn" type="button" data-ui-inspectable data-ui-component="primary-button" data-ui-element-id="primary-button">Primary Button</button>
+        <button class="ghost-btn" type="button" data-ui-inspectable data-ui-component="secondary-button" data-ui-element-id="secondary-button">Secondary Button</button>
+        <button class="danger-action" type="button" data-ui-inspectable data-ui-component="destructive-button" data-ui-element-id="destructive-button">Destructive</button>
+        <button class="safe-action" type="button" data-ui-inspectable data-ui-component="claim-button" data-ui-element-id="claim-button">Claim</button>
+        <button class="preview-tab" type="button" data-ui-inspectable data-ui-component="tab" data-ui-element-id="tab-default">Tab</button>
+        <button class="preview-tab selected" type="button" data-ui-inspectable data-ui-component="selected-tab" data-ui-element-id="tab-selected">Selected Tab</button>
+        <label data-ui-inspectable data-ui-component="text-input" data-ui-element-id="text-input"><span>Text Input</span><input value="Caer Leon" /></label>
+        <div class="preview-progress" data-ui-inspectable data-ui-component="progress-bar" data-ui-element-id="progress-bar"><span style="width:68%"></span></div>
+        <span class="preview-badge" data-ui-inspectable data-ui-component="badge" data-ui-element-id="badge">New</span>
+        <button class="profile-icon-btn" type="button" data-ui-inspectable data-ui-component="icon-button" data-ui-element-id="icon-button"><svg class="cl-icon"><use href="#preview-information"></use></svg></button>
       </div>
     </section>
   </main>
