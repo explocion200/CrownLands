@@ -202,9 +202,9 @@ assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-60317
 assert.doesNotMatch(indexSource, /adsbygoogle\.js/);
 assert.doesNotMatch(indexSource, /securepubads\.g\.doubleclick\.net/);
 assert.doesNotMatch(indexSource, /loginDisplayAd|login-display-ad/);
-assert.match(indexSource, /href="\/privacy\.html"/);
+assert.match(indexSource, /href="privacy\.html"/);
 assert.match(indexSource, /ads-config\.js/);
-assert.match(indexSource, /href="\/privacy\.html"/);
+assert.match(indexSource, /href="privacy\.html"/);
 assert.match(gameSource, /assets\/optimized\/pickup-gold-[^"']+\.webp/);
 assert.match(gameSource, /assets\/optimized\/pickup-troops-[^"']+\.webp/);
 assert.match(serviceWorkerSource, /url\.pathname\.startsWith\("\/assets\/"\)/);

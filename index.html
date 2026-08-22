@@ -8,7 +8,12 @@
   <meta name="robots" content="noindex, nofollow" />
   <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
   <link rel="canonical" href="https://playcrownlands.com/play/" />
-  <base href="/" />
+  <base id="crownlandsBase" href="./" />
+  <script>
+    if (/^\/play\/?(?:index\.html)?$/.test(window.location.pathname)) {
+      document.getElementById("crownlandsBase").href = "/";
+    }
+  </script>
   <meta name="application-name" content="Crownlands" />
   <meta name="theme-color" content="#5a262b" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -37,9 +42,9 @@
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-38fb3df7217c.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-2038de353a91.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp" fetchpriority="low" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/crownlands-favicon-32.png" />
-  <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
-  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/crownlands-favicon-32.png" />
+  <link rel="apple-touch-icon" href="assets/icons/crownlands-icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -106,7 +111,7 @@
           <li><strong>Shape your realm.</strong> Upgrade cities, develop skills, join a clan, and compete for Strongholds.</li>
           <li><strong>Rule together.</strong> Reinforce allies and contest the Crown Citadel in The Crown Marches.</li>
         </ul>
-        <a href="/about.html">Discover Crownlands</a>
+        <a href="about.html">Discover Crownlands</a>
       </aside>
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
@@ -138,13 +143,13 @@
             <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden><span class="install-app-icon" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-install"></use></svg></span><span>Install Crownlands</span></button>
           </div>
           <nav class="public-site-links" aria-label="Crownlands information">
-            <a href="/">Home</a>
-            <a href="/guides.html">Guides</a>
-            <a href="/updates.html">Patch Notes</a>
-            <a href="/roadmap.html">Roadmap</a>
-            <a href="/game-rules.html">Rules</a>
-            <a href="/support.html">Support</a>
-            <a href="/privacy.html">Privacy</a>
+            <a href="home.html">Home</a>
+            <a href="guides.html">Guides</a>
+            <a href="updates.html">Patch Notes</a>
+            <a href="roadmap.html">Roadmap</a>
+            <a href="game-rules.html">Rules</a>
+            <a href="support.html">Support</a>
+            <a href="privacy.html">Privacy</a>
           </nav>
         </div>
       </div>
@@ -432,7 +437,7 @@
             <section class="profile-settings-section settings-compact-section privacy-settings-section">
               <div class="profile-section-heading"><span>Legal</span><h3>Privacy</h3></div>
               <p class="settings-card-description">Review how account and gameplay information is handled.</p>
-              <a class="profile-secondary-btn privacy-settings-link" href="/privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
+              <a class="profile-secondary-btn privacy-settings-link" href="privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
             </section>
           </div>
         </div>

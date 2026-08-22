@@ -14,7 +14,7 @@ const deployStamp = read("tools/stamp-deploy-build.js");
 const patchNotes = read("patch-notes.js");
 
 assert.doesNotMatch(html, /patchNotesBtn|patchNotesBadge|src="patch-notes\.js/, "Patch notes must not remain on the game login screen.");
-assert.match(html, /href="\/updates\.html">Patch Notes<\/a>/, "The login information links must direct players to the website Patch Notes page.");
+assert.match(html, /href="updates\.html">Patch Notes<\/a>/, "The login information links must remain inside packaged subdirectory builds.");
 assert.ok(updates.indexOf('src="/patch-notes.js"') < updates.indexOf('src="/public-site.js'), "Patch-note data must load before the public website runtime.");
 assert.match(updates, /data-patch-notes-feed[\s\S]*?data-update-post="patch-notes"/, "The website must provide a resilient Patch Notes feed and fallback.");
 assert.doesNotMatch(worker, /"\/patch-notes\.js\?v=[^"]+"/, "Website Patch Notes must not inflate the game installation cache.");

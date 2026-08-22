@@ -79,7 +79,7 @@ assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-60317
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
 assert.match(indexSource, /class="login-game-info"/);
 assert.match(indexSource, /Build a kingdom across 15 connected regions/);
-assert.match(indexSource, /href="\/roadmap\.html"/);
+assert.match(indexSource, /href="roadmap\.html"/);
 assert.match(indexSource, /name="robots" content="noindex, nofollow"/);
 assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/play\/"/);
 assert.match(homeSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/"/);
