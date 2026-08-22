@@ -101,7 +101,8 @@
     elements.uiSubnav.hidden = area !== "ui";
     document.querySelectorAll("#worldSubnav .tool-btn, #uiStudioSubnav .tool-btn").forEach(button => {
       const buttonMode = button.id === "worldModeBtn" ? "world"
-        : button.id === "regionModeBtn" ? "region"
+        : button.id === "corePreviewModeBtn" ? "core-preview"
+          : button.id === "regionModeBtn" ? "region"
           : button.id === "themeModeBtn" ? "theme"
             : button.id === "componentsModeBtn" ? "components"
               : button.id === "screensModeBtn" ? "screens" : "gameui";

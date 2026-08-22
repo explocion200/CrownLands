@@ -16,6 +16,8 @@ const PROJECT_MARKERS = Object.freeze([
   "ui-layout-config.js",
   "ui-studio-config.json",
   "ui-component-runtime.js",
+  "objective-visual-config.js",
+  "benchmark-results/map/core-v2-qa-1/CORE_PREVIEW_INTEGRITY_MANIFEST.json",
 ]);
 
 function normalizeRelativePath(value) {

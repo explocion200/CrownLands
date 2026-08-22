@@ -59,6 +59,30 @@ test("serves Studio context and the seeded QA store", async t => {
   assert.equal(uiValidationResponse.status, 200);
   assert.equal((await uiValidationResponse.json()).ok, true);
 
+  const coreResponse = await fetch(`${base}/api/core-preview`);
+  assert.equal(coreResponse.status, 200);
+  const core = await coreResponse.json();
+  assert.equal(core.ok, true);
+  assert.equal(core.offlineOnly, true);
+  assert.equal(core.notLive, true);
+  assert.equal(core.integrity.counts.maps, 25);
+  assert.equal(core.integrity.counts.cities, 1480);
+  assert.equal(core.integrity.counts.objectives, 17);
+  assert.equal(core.integrity.counts.reciprocalConnections, 40);
+
+  const coreMapResponse = await fetch(`${base}${core.regions[0].map.url}`);
+  assert.equal(coreMapResponse.status, 200);
+  assert.match(coreMapResponse.headers.get("content-type") || "", /image\/webp/);
+  assert.equal((await coreMapResponse.arrayBuffer()).byteLength, core.regions[0].map.bytes);
+
+  const invalidCoreConfigResponse = await fetch(`${base}/api/core-preview/validate`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ camp: 1, stronghold: 154, crownCitadel: 260 }),
+  });
+  assert.equal(invalidCoreConfigResponse.status, 400);
+  assert.match((await invalidCoreConfigResponse.text()), /camp visual size/i);
+
   const editorResponse = await fetch(`${base}/editor/`);
   assert.equal(editorResponse.status, 200);
   assert.match(editorResponse.headers.get("content-security-policy") || "", /script-src 'self'/);

@@ -109,13 +109,13 @@ const editorStyles = read("tools/map-editor/styles.css");
 assert.match(game, /return readVisualSize\(city\?\.size, fallback\);/);
 assert.match(
   game,
-  /size: islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/,
-  "Live Camp markers do not convert editor-image pixels into live-map world pixels."
+  /const interactionSize = islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\);[\s\S]*?size: interactionSize,\s*interactionSize,\s*visualSize,/,
+  "Live Camp markers do not preserve converted interaction geometry separately from artwork size."
 );
 assert.match(
   game,
-  /size: islandImageVisualSizeToWorld\(\s*region\.id,\s*objective\?\.size,\s*config\.type === "crown" \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE\s*\)/,
-  "Live Stronghold markers do not convert editor-image pixels into live-map world pixels."
+  /const fallbackSize = config\.type === "crown" \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;\s*const interactionSize = islandImageVisualSizeToWorld\(region\.id, objective\?\.size, fallbackSize\);[\s\S]*?size: interactionSize,\s*visualSize,/,
+  "Live Stronghold markers do not preserve converted interaction geometry separately from artwork size."
 );
 assert.match(
   game,
@@ -123,6 +123,7 @@ assert.match(
   "The live map no longer preserves an editor object's size relative to its stretched map image."
 );
 assert.match(game, /map-art-flip-x/);
+assert.match(game, /function getExternalObjectiveImageVisualSize[\s\S]*startsWith\(prefix\)/);
 assert.match(editor, /data-field="flipX"/);
 assert.match(editor, /editor-art-flip-x/);
 assert.match(editorServer, /flipX: Boolean\(stronghold\.flipX\)/);

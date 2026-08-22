@@ -174,19 +174,31 @@ assert.match(optimizer, /FIXED_LAYOUT_CATEGORIES\s*=\s*\{[^}]*"stronghold-object
 assert.match(optimizer, /canvas = Image\.new\("RGBA", \(max_width, max_height\), \(0, 0, 0, 0\)\)/);
 
 const game = read("game.js");
+const objectiveVisualConfig = readWindowData("objective-visual-config.js", "CROWNLANDS_OBJECTIVE_VISUAL_CONFIG");
+assert.deepEqual(objectiveVisualConfig.pendingCore5x5.visualSizes, {
+  camp: DEFAULT_CAMP_RENDER_SIZE,
+  stronghold: DEFAULT_STRONGHOLD_RENDER_SIZE,
+  crownCitadel: DEFAULT_CROWN_CITADEL_RENDER_SIZE,
+});
+assert.equal(objectiveVisualConfig.pendingCore5x5.regionIdPrefix, "core-v2-");
 assert.match(game, /const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;/);
 assert.match(game, /const DEFAULT_CAMP_VISUAL_SIZE = 132;/);
 assert.match(game, /const CROWN_CITADEL_VISUAL_SIZE = 260;/);
 assert.match(game, /function getStrongholdVisualSize\(city\) \{\s*const fallback = isCrownCitadel\(city\) \? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;\s*return readVisualSize\(city\?\.size, fallback\);\s*\}/);
-assert.match(game, /size: islandImageVisualSizeToWorld\(\s*region\.id,\s*objective\?\.size,/);
-assert.match(game, /size: islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/);
-assert.match(game, /size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*payoutAtMs:/);
-assert.match(game, /artSrc,\s*size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*flipX: Boolean\(base\.flipX\),\s*activeArmyIds:/);
+assert.match(game, /const interactionSize = islandImageVisualSizeToWorld\(region\.id, objective\?\.size, fallbackSize\);/);
+assert.match(game, /getObjectiveImageVisualSize\(region\.id, objective, objective\?\.size, fallbackSize\)/);
+assert.match(game, /const interactionSize = islandImageVisualSizeToWorld\(region\.id, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\);/);
+assert.match(game, /getObjectiveImageVisualSize\(region\.id, camp, camp\?\.size, DEFAULT_CAMP_VISUAL_SIZE\)/);
+assert.match(game, /size: interactionSize,\s*interactionSize,\s*visualSize,/);
+assert.match(game, /size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*interactionSize: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*visualSize: getCampRenderSize\(base\),\s*flipX: Boolean\(base\.flipX\),\s*payoutAtMs:/);
+assert.match(game, /artSrc,\s*size: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*interactionSize: readVisualSize\(base\.size, DEFAULT_CAMP_VISUAL_SIZE\),\s*visualSize: getCampRenderSize\(base\),\s*flipX: Boolean\(base\.flipX\),\s*activeArmyIds:/);
+assert.match(game, /function getExternalObjectiveImageVisualSize[\s\S]*startsWith\(prefix\)[\s\S]*return Number\.isFinite\(configuredSize\)/);
 
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 assert.match(styles, /\.city-node\.stronghold-node \{[^}]*width: var\(--stronghold-size, 154px\);[^}]*height: var\(--stronghold-size, 154px\);/s);
-assert.match(styles, /\.stronghold-building \{[^}]*width: var\(--stronghold-size, 154px\);[^}]*height: var\(--stronghold-size, 154px\);/s);
+assert.match(styles, /\.stronghold-building \{[^}]*width: var\(--stronghold-visual-size, var\(--stronghold-size, 154px\)\);[^}]*height: var\(--stronghold-visual-size, var\(--stronghold-size, 154px\)\);/s);
 assert.match(styles, /\.camp-node \{[^}]*width: var\(--camp-size, 132px\);[^}]*height: var\(--camp-size, 132px\);/s);
+assert.match(styles, /\.camp-art \{[^}]*width: var\(--camp-visual-size, var\(--camp-size, 132px\)\);[^}]*height: var\(--camp-visual-size, var\(--camp-size, 132px\)\);/s);
 
 const editorServer = read("tools/editor-server.js");
 const mapEditor = read("tools/map-editor/editor.js");

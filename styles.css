@@ -1596,9 +1596,13 @@ input {
   -webkit-user-drag: none;
 }
 .camp-art {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: var(--camp-visual-size, var(--camp-size, 132px));
+  height: var(--camp-visual-size, var(--camp-size, 132px));
+  transform: translate(-50%, -50%);
   object-fit: contain;
   pointer-events: none;
   user-select: none;
@@ -2419,8 +2423,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 4px;
-  width: calc(var(--stronghold-size, 154px) * .818);
-  height: calc(var(--stronghold-size, 154px) * .273);
+  width: calc(var(--stronghold-visual-size, var(--stronghold-size, 154px)) * .818);
+  height: calc(var(--stronghold-visual-size, var(--stronghold-size, 154px)) * .273);
   transform: translateX(-50%);
   border: 2px solid rgba(255, 219, 116, .78);
   border-radius: 50%;
@@ -2432,8 +2436,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: var(--stronghold-size, 154px);
-  height: var(--stronghold-size, 154px);
+  width: var(--stronghold-visual-size, var(--stronghold-size, 154px));
+  height: var(--stronghold-visual-size, var(--stronghold-size, 154px));
   display: grid;
   place-items: center;
   transform: translateX(-50%);
@@ -2445,6 +2449,9 @@ input {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+.camp-art.map-art-flip-x {
+  transform: translate(-50%, -50%) scaleX(-1);
 }
 .city-node.stronghold-node.selected .stronghold-glow {
   border-color: rgba(255, 244, 184, .96);
@@ -2493,7 +2500,7 @@ input {
   animation: supportPulse .75s infinite alternate;
 }
 .city-node.stronghold-node .city-label {
-  bottom: calc(var(--stronghold-size, 154px) * .857);
+  bottom: calc(var(--stronghold-visual-size, var(--stronghold-size, 154px)) * .857);
 }
 .scout-nearby-radius {
   position: absolute;

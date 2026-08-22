@@ -35,7 +35,8 @@
 
     <header class="editor-toolbar studio-toolbar">
       <div id="worldSubnav" class="mode-tabs studio-subnav" role="group" aria-label="World tools">
-        <button id="worldModeBtn" class="tool-btn active" type="button">World Layout</button>
+        <button id="worldModeBtn" class="tool-btn active" type="button">Current / Live</button>
+        <button id="corePreviewModeBtn" class="tool-btn" type="button">Pending Core 5×5</button>
         <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
       </div>
       <div id="uiStudioSubnav" class="mode-tabs studio-subnav" role="group" aria-label="UI Studio tools" hidden>
@@ -134,6 +135,71 @@
               <div id="edgeLayer" class="edge-layer"></div>
               <div id="markerLayer" class="marker-layer"></div>
             </div>
+          </div>
+        </div>
+
+        <div id="corePreviewView" class="core-preview-view hidden">
+          <header class="core-preview-banner">
+            <div>
+              <span>Protected candidate workspace</span>
+              <strong>PENDING CORE 5×5 — LOCAL PREVIEW — NOT LIVE / NOT RESET-INTEGRATED</strong>
+            </div>
+            <b id="corePreviewIntegrityBadge">VERIFYING MANIFEST</b>
+          </header>
+          <section id="corePreviewBlocker" class="core-preview-blocker" role="alert" hidden></section>
+          <div id="corePreviewWorkspace" class="core-preview-workspace" hidden>
+            <section class="core-preview-summary">
+              <div><small>Package</small><strong id="corePreviewPackage">—</strong></div>
+              <div><small>Candidate</small><strong id="corePreviewCandidate">—</strong></div>
+              <div><small>Verified</small><strong id="corePreviewCounts">—</strong></div>
+              <div><small>Manifest digest</small><code id="corePreviewDigest">—</code></div>
+            </section>
+            <div class="core-preview-main">
+              <section class="core-preview-canvas-panel">
+                <div class="core-preview-section-heading">
+                  <div><span>Actual protected package</span><strong>5×5 Core World</strong></div>
+                  <p>Click any map to inspect it. Cities, objectives, and road exits come directly from the verified region files.</p>
+                </div>
+                <div id="corePreviewViewFilters" class="core-preview-view-filters" role="group" aria-label="Core objective comparison view">
+                  <button class="active" type="button" data-core-view="all">Full 5×5</button>
+                  <button type="button" data-core-view="camp">All Camp Maps</button>
+                  <button type="button" data-core-view="stronghold">All Strongholds</button>
+                  <button type="button" data-core-view="crownCitadel">Citadel Map</button>
+                </div>
+                <div id="corePreviewGrid" class="core-preview-grid" aria-label="Pending Core 5 by 5 world"></div>
+              </section>
+              <aside class="core-preview-controls">
+                <section>
+                  <div class="core-preview-section-heading"><div><span>Visual-only config</span><strong>Objective Artwork</strong></div></div>
+                  <p class="core-preview-safety-note">Artwork size only. Hitboxes, march clearance, coordinates, roads, serialized package data, and reset receipts stay unchanged.</p>
+                  <div class="core-preview-size-fields">
+                    <label>Camp artwork <span><input id="corePreviewCampSize" type="number" min="48" max="400" step="1" /> px</span></label>
+                    <label>Stronghold artwork <span><input id="corePreviewStrongholdSize" type="number" min="64" max="500" step="1" /> px</span></label>
+                    <label>Crown Citadel artwork <span><input id="corePreviewCitadelSize" type="number" min="100" max="700" step="1" /> px</span></label>
+                  </div>
+                  <div class="core-preview-session-actions">
+                    <button id="corePreviewUndoBtn" type="button" disabled>Undo</button>
+                    <button id="corePreviewRedoBtn" type="button" disabled>Redo</button>
+                    <button id="corePreviewResetBtn" type="button">Restore saved</button>
+                    <button id="corePreviewSaveBtn" class="primary" type="button" disabled>Save visual config</button>
+                  </div>
+                </section>
+                <section>
+                  <div class="core-preview-section-heading"><div><span>Global comparison</span><strong>Visual vs Interaction</strong></div></div>
+                  <div id="corePreviewComparison" class="core-preview-comparison"></div>
+                </section>
+                <section>
+                  <div class="core-preview-section-heading"><div><span>Visual-only diagnostic</span><strong>Collision Warnings</strong></div></div>
+                  <div id="corePreviewWarnings" class="core-preview-warnings"></div>
+                </section>
+                <section>
+                  <div class="core-preview-section-heading"><div><span>Atomic save receipt</span><strong>Protected Diff</strong></div></div>
+                  <pre id="corePreviewDiff">No unsaved visual changes.</pre>
+                  <p id="corePreviewStatus" class="core-preview-status" role="status" aria-live="polite">Manifest verification is required before preview or edit.</p>
+                </section>
+              </aside>
+            </div>
+            <section id="corePreviewDetail" class="core-preview-detail" aria-label="Selected Core region"></section>
           </div>
         </div>
 
@@ -509,6 +575,7 @@
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
   <script src="studio.js?v=20260816-crownlands-studio-phase-2b"></script>
+  <script src="core-preview.js?v=20260822-core-preview-remediation"></script>
   <script src="ui-inspector.js?v=20260816-crownlands-studio-phase-2a"></script>
   <script src="hud-editor.js?v=20260726-hud-layout-editor"></script>
   <script src="codex-ai.js?v=20260816-crownlands-studio-phase-2b"></script>

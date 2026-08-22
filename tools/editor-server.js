@@ -9,6 +9,7 @@ const { getCanonicalLayoutCityName } = require("./city-name-utils");
 const { buildRegionCatalog } = require("../region-catalog");
 const { createProjectFileService } = require("./crownlands-studio/project-file-service");
 const { createUiEditorService } = require("./crownlands-studio/ui-editor-service");
+const { createCorePreviewService } = require("./crownlands-studio/core-preview-service");
 const execFileAsync = promisify(execFile);
 const OPTIMIZED_ASSET_PATHS = new Map(
   require("../assets/optimized/manifest.json").assets.map(asset => [asset.source, asset.output]),
@@ -63,6 +64,8 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
     "functions/world-layout.json",
     "ui-layout-config.js",
     "ui-studio-config.json",
+    "objective-visual-config.js",
+    "benchmark-results/map/core-v2-qa-1/CORE_PREVIEW_INTEGRITY_MANIFEST.json",
     "index.html",
     "styles.css",
     "interface-theme.css",
@@ -79,6 +82,7 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
     "functions/world-layout.json",
     "ui-layout-config.js",
     "ui-studio-config.json",
+    "objective-visual-config.js",
     "assets/map-editor-data.js",
     "assets/worlds/world_01/world-layout.json",
     ".crownlands-studio/qa-issues.json",
@@ -86,6 +90,12 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
   readPrefixes: [
     "assets/worlds/world_01/regions",
     "assets/worlds/world_01/maps",
+    "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__",
+    "benchmark-results/map/core-v2-phase-a",
+    "benchmark-results/map/core-v2-reset-2",
+    "tools/core-v2-phase-a",
+    "tools/core-v2-qa-1",
+    "tools/core-v2-reset-2",
   ],
   writePrefixes: [
     "assets/worlds/world_01/regions",
@@ -93,6 +103,7 @@ const PROJECT_FILES = createProjectFileService(ROOT_DIR, {
   ],
 });
 const UI_EDITOR = createUiEditorService(PROJECT_FILES);
+const CORE_PREVIEW = createCorePreviewService(PROJECT_FILES, ROOT_DIR);
 const ROOT_STATIC_FILES = new Set([
   "/about.html",
   "/game-rules.html",
@@ -120,6 +131,7 @@ const ROOT_STATIC_FILES = new Set([
   "/ui-layout-runtime.js",
   "/ui-studio-config.json",
   "/ui-component-runtime.js",
+  "/objective-visual-config.js",
 ]);
 
 const MIME_TYPES = new Map([
@@ -1222,6 +1234,30 @@ async function readStudioContext() {
 }
 
 async function handleApi(request, response, pathname) {
+  if (pathname === "/api/core-preview" && request.method === "GET") {
+    sendJson(response, 200, await CORE_PREVIEW.getWorkspace());
+    return;
+  }
+
+  if (pathname === "/api/core-preview/validate" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const result = CORE_PREVIEW.validate(JSON.parse(rawBody || "{}"));
+    sendJson(response, result.ok ? 200 : 400, result);
+    return;
+  }
+
+  if (pathname === "/api/core-preview/save" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    sendJson(response, 200, await CORE_PREVIEW.save(JSON.parse(rawBody || "{}")));
+    return;
+  }
+
+  if (pathname.startsWith("/api/core-preview/maps/") && request.method === "GET") {
+    const key = decodeURIComponent(pathname.slice("/api/core-preview/maps/".length));
+    await serveFile(response, CORE_PREVIEW.resolveMap(key));
+    return;
+  }
+
   if (pathname === "/api/studio-context" && request.method === "GET") {
     sendJson(response, 200, await readStudioContext());
     return;

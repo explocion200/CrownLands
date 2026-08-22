@@ -8,7 +8,7 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check project-file-service.js && node --check ui-editor-service.js && node --check source-control-service.js && node --check packaged-ui-smoke.js && node --check ../map-editor/ui-inspector.js && node --check ../../ui-component-runtime.js && node --check ai/ai-workspace-service.js && node --check ai/codex-runner.js && node --check ai/git-worktree-service.js && node --test project-file-service.test.js editor-server-api.test.js studio-structure.test.js ui-editor-service.test.js source-control-service.test.js ui-inspector.test.js ai-workspace.test.js",
+    "check": "node --check main.js && node --check preload.js && node --check project-file-service.js && node --check ui-editor-service.js && node --check source-control-service.js && node --check core-preview-integrity.js && node --check core-preview-service.js && node --check packaged-ui-smoke.js && node --check ../map-editor/ui-inspector.js && node --check ../map-editor/core-preview.js && node --check ../../ui-component-runtime.js && node --check ai/ai-workspace-service.js && node --check ai/codex-runner.js && node --check ai/git-worktree-service.js && node --test project-file-service.test.js editor-server-api.test.js studio-structure.test.js ui-editor-service.test.js source-control-service.test.js ui-inspector.test.js ai-workspace.test.js core-preview-integrity.test.js core-preview-service.test.js objective-visual-geometry.test.js",
     "pack": "electron-builder --dir --win",
     "dist:win": "electron-builder --win nsis portable"
   },

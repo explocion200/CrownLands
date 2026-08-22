@@ -1,0 +1,635 @@
+{
+  "schemaVersion": "crownlands-core-preview-integrity-v1",
+  "scope": "LOCAL_DEVELOPMENT_PREVIEW_ONLY",
+  "authority": {
+    "supplemental": true,
+    "adoptedByProductionReset": false,
+    "note": "Supplemental local-development preview manifest only; not part of reset or production activation until separately reviewed and adopted."
+  },
+  "packageRoot": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__",
+  "expected": {
+    "packageVersion": "core-v2-qa1-approved-25-map-final-art-v1",
+    "candidateId": "reset2-candidate-2e68667049a02b05",
+    "mapCount": 25,
+    "regionCount": 25,
+    "cityCount": 1480,
+    "objectiveCount": 17,
+    "reciprocalConnectionCount": 40
+  },
+  "package": {
+    "version": "core-v2-qa1-approved-25-map-final-art-v1",
+    "candidateId": "reset2-candidate-2e68667049a02b05",
+    "resetCandidatePassed": true,
+    "productionMutationPerformed": false
+  },
+  "counts": {
+    "regions": 25,
+    "maps": 25,
+    "cities": 1480,
+    "objectives": 17,
+    "directedConnections": 80,
+    "reciprocalConnections": 40
+  },
+  "artifacts": {
+    "regions": [
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-aurum-keep-m1-p0.json",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "gridX": -1,
+        "gridY": 0,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "312ed43cece44bdb27ee95f09211d3ec31dd45a52639e2d4aa933a50026a96cd",
+        "geometrySha256": "6d17ad976f6d8cd27255742a6ec69456f88cd585e73211cdc4b1e913faa99ee6",
+        "objectivesSha256": "0f4d8ddeaa82763193d20078c9025a679cf19a225d275abb510c3fc7f5434293",
+        "topologySha256": "3a79e6bf790420e633cea8205679b303dc034bff8c7dcc2adbfa69fe93d9fb4f"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-crown-citadel-p0-p0.json",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "gridX": 0,
+        "gridY": 0,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "3b15c71a83c2dc12ae88b998f0425519418fa52fe33e376e35832e37fff632dd",
+        "geometrySha256": "2129aefc0abbc8cde3ce6d8e2524693abcc4c1fb0ccc723d4769ab2f7a207068",
+        "objectivesSha256": "ca7463e7f37929323510de19d5cb0a05a05bd2c887511b0231a9d40906eaa8f1",
+        "topologySha256": "f387a41111a25ae10b08ed4233a26fc52c8b50b7a202f3c7289150046910f04d"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-deed-camp-east-north-p2-m1.json",
+        "regionId": "core-v2-deed-camp-east-north-p2-m1",
+        "gridX": 2,
+        "gridY": -1,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "ff9ac26c085287fd94c34f1cc3c8aa04da6555809affbf1db15e7dca4aa4174b",
+        "geometrySha256": "47fe426abf5bfe4a257f601d1d6888351a20a572f3e0e5a30abecd46cdafb8ef",
+        "objectivesSha256": "7be9ffe1dfe68b57fa04030b17040e7edd40e9776248522bef57bfad18afb4ce",
+        "topologySha256": "e62c52c8f280b984aa1ada452cdb436ad25141cb36e7a7473cc6c8ac51784708"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-deed-camp-north-east-p1-m2.json",
+        "regionId": "core-v2-deed-camp-north-east-p1-m2",
+        "gridX": 1,
+        "gridY": -2,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "afe2c6adc4edcfe33d8f0c2bcfcc22f0cc7d3e31a3fed5c866ca4ac4390f0e12",
+        "geometrySha256": "3b43eb7c8f88299c767f5c2b5fe6d74fb020711f66d87dae43aad327e8c9023f",
+        "objectivesSha256": "9619805397a18cc7402ced6cb7bc4d191adf5f56439afbe7753124eb23ce66e3",
+        "topologySha256": "fd90b53db70774f4b43edbde0c16a23ff48124a35e7de786dccae8c56229ef66"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-deed-camp-south-west-m1-p2.json",
+        "regionId": "core-v2-deed-camp-south-west-m1-p2",
+        "gridX": -1,
+        "gridY": 2,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "342ac11c309dc1bd64087db6714f4b215804c9941ee5afda633a57aecd399ed0",
+        "geometrySha256": "73b2a307be8d0a309ea51fa79c66a67e4db47825f68b7038ce2445959b466b69",
+        "objectivesSha256": "ebf062f3fa2b5d72212ea633a522de062ee38d958a76af233d9e2bfb9130359d",
+        "topologySha256": "b605dbb75ac4e24fe0b655677c6a39a0783fbe31c828c7083a51eaf2d93676a0"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-deed-camp-west-south-m2-p1.json",
+        "regionId": "core-v2-deed-camp-west-south-m2-p1",
+        "gridX": -2,
+        "gridY": 1,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "677bdbec6f7c02f7804ed2a152a4b151a769e6dbcac6c4daa720c9df74f5379f",
+        "geometrySha256": "f5031ca1bae27ca93d5c7ff94f883d7925b4aa3116724e071de56b6d0b081165",
+        "objectivesSha256": "424968d9c77e08a445f1d3e88ae286079e08a3ffaaeeb8b615b172d3d9c1d5cc",
+        "topologySha256": "07c1099dfeae98725b27b42eb3542d926ea46b4bc71266e4d47c557c04d33b07"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-east-support-p2-p0.json",
+        "regionId": "core-v2-east-support-p2-p0",
+        "gridX": 2,
+        "gridY": 0,
+        "cityCount": 70,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "01d6e6bfd57987affd2101d8bda06eb44579105b77608d8f5e46390ad339d46f",
+        "geometrySha256": "98f97cbb5cb1d8adae6824674f406b0dd0e4db3e701a260d0bbc5e08d7708110",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "8c183a53f4934c4dc5e42f855d0ca0e6294ce7d063dcabfb962387f2ac38adf4"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-gold-camp-north-east-p2-m2.json",
+        "regionId": "core-v2-gold-camp-north-east-p2-m2",
+        "gridX": 2,
+        "gridY": -2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "072bade516f4964a367d5faef4b54f304577b7e0c715df63839c0664b12f9ea5",
+        "geometrySha256": "ab4cd08f4ec9f724e0a90f06448677b0f2a53c42fac5debe93ccf97283b37e75",
+        "objectivesSha256": "f52506b526d475da6f41c5591cc65453b5a8360001a64be9caa7a67dcd3d73f4",
+        "topologySha256": "1f4245c4260d3908888c377f988ff1260fcf811593b253bd56e0161d9588519f"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-gold-camp-south-west-m2-p2.json",
+        "regionId": "core-v2-gold-camp-south-west-m2-p2",
+        "gridX": -2,
+        "gridY": 2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "c47f0e56a39ddba189ac9664924fa3edf08742e429db63260358b8985e774817",
+        "geometrySha256": "bcab5b2dbd58df7b93629b69c267fa1a37194793ffc8418cba46668e99d4aad6",
+        "objectivesSha256": "ddbfb531130facd1f8dfd39620bb8d717fff8397ca3a614bd2200f8d8134fd2a",
+        "topologySha256": "d386337ba8701d8b4df0d47136b2203b6043366ee4eaecf65649f05985d1d21b"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-greybanner-hold-p0-m1.json",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "gridX": 0,
+        "gridY": -1,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "e02b15dcab34f30fd3b3a32997e2bb100858e75831e1e0a2aa7c01ba642c6ab6",
+        "geometrySha256": "1a97c86e5370c52632d2cc8ac64dabbefae51a6f5ccd11e653853a82a4ce9ee1",
+        "objectivesSha256": "d3fb48704c17f25341b159763158e0a019bc5b6256c15f9a4fa424684aa786e9",
+        "topologySha256": "c80bab91878f42d8d4270d5a2791a204dad0c662a08a9e8c607341ae2af91b2c"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-ironwatch-p0-p1.json",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "gridX": 0,
+        "gridY": 1,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "8565a62dd0e5d7de6cbddce576e92d3e418ce8539e37a253a2a47c168934b6c7",
+        "geometrySha256": "b76cd1a50793180acc00d243361a06ba5eb22f09ef5473e03501d9d03cce4c60",
+        "objectivesSha256": "aca87c5bc3c19076bff55badcbe2ab5b5af96409dd804e864368bcc4951de703",
+        "topologySha256": "cba5f643be1c7f05db5495d18a9d131aa1e753b523c2cfb6019cf587845b7e5c"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-north-east-holding-tower-p1-m1.json",
+        "regionId": "core-v2-north-east-holding-tower-p1-m1",
+        "gridX": 1,
+        "gridY": -1,
+        "cityCount": 55,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "bad70e439d20ea356ae7cedb8147e395be6d1a74208dccb5966ccc32b4344214",
+        "geometrySha256": "5dc75c7d543eca17f1898dd575459ade048aa6218ae40327c238ec535a2a9a5f",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "f01bdaf418809dfa27b9bb671311b0687361d3bd7758fa17e0a0e032a350fa7d"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-north-support-p0-m2.json",
+        "regionId": "core-v2-north-support-p0-m2",
+        "gridX": 0,
+        "gridY": -2,
+        "cityCount": 70,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "879a4171024f249fab308d4ebe5d02d2d1488090a6db0b4961f84a4bb41f609f",
+        "geometrySha256": "0253d2b992bd56bfca26def208121e29aaff659c8ca98b549a49eb777a0213f5",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "63fbbba8b1c81c072f9c9bd3e493926cb7d8640b0ca768de5df07dfe043cd610"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-north-west-holding-tower-m1-m1.json",
+        "regionId": "core-v2-north-west-holding-tower-m1-m1",
+        "gridX": -1,
+        "gridY": -1,
+        "cityCount": 55,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "e9736863ec06550383ae30b8df54877ea43a1f85eadc4b398cc3d7b7b5c9c70f",
+        "geometrySha256": "d810a35446eacb3edd59eced4922d4e5e843c536d29b64a86d9bdba2f9a01a12",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "30d1f0d4bac26b465ef33c8fe28d1afe3a4482e1e457a6b59e07572db7e66b20"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-relic-camp-east-south-p2-p1.json",
+        "regionId": "core-v2-relic-camp-east-south-p2-p1",
+        "gridX": 2,
+        "gridY": 1,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "ca9ccc6580ce87a8aba8106ae780134ce06abdb1cec00d6f55aa2b951467ac13",
+        "geometrySha256": "55aff2c170da0633566ca9be83bccbe0f4822a47c2a62099a8d7ba8a00e9cb5d",
+        "objectivesSha256": "c3ea8d11da0da42c46c26c20e14f7b6e7d7e59fd2803e8f76bc479bdd7fef126",
+        "topologySha256": "437b1d7b189d5ee71167ef48415e2060a8b833ebe9cf0efa6adc7ac636d027c1"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-relic-camp-north-west-m1-m2.json",
+        "regionId": "core-v2-relic-camp-north-west-m1-m2",
+        "gridX": -1,
+        "gridY": -2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "edcfcce20cf40f6d0ae23bfb73f41eef7b81b1f6e32133021bd1b71aab8d2a01",
+        "geometrySha256": "63becf0098a5152c298545a3a0c08ec35fc350da001f2e2ce7ec5a5ac7d44c44",
+        "objectivesSha256": "26ae46ddf951f556dc4da9b8b363792996e158ad2101c02b90ed9afca8daa62e",
+        "topologySha256": "cf563e6b2c2913b3440ddd658e08e2492ee5cc866a0e7c441adb82cb19b0d978"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-relic-camp-south-east-p1-p2.json",
+        "regionId": "core-v2-relic-camp-south-east-p1-p2",
+        "gridX": 1,
+        "gridY": 2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "d9d8368ce73d1f01fa22a9500aa1ec814d668ad024afd43c055668d5c2a37c79",
+        "geometrySha256": "6f9026b634aa67e998493f61f8c437811c90478212d306ddda1880b03a79c944",
+        "objectivesSha256": "3cc0a7f5dbbdb019adda006edd4dc0601b467e89212a069877f83353f8f8bffa",
+        "topologySha256": "c07eb9f55d20ba628626d71e1e9b975110e715aa10632a17dbcb8288e8f1807e"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-relic-camp-west-north-m2-m1.json",
+        "regionId": "core-v2-relic-camp-west-north-m2-m1",
+        "gridX": -2,
+        "gridY": -1,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "c9bbbac889e53a51f4dada70395e74ddf04575d72edaf57405aeab4ae65045b4",
+        "geometrySha256": "801a24cb9046d5b3b0f503ddabd32c1e55c11b121d37e4671ffc254af13c2bb4",
+        "objectivesSha256": "5e273c6a4aa93706b30b7b0631c8cea23c5598b5f93da8ad62e49b793314df11",
+        "topologySha256": "50b570fef8213cb306d946e76717efdcfdacea6973bb6010247c0f733345730f"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-south-east-holding-tower-p1-p1.json",
+        "regionId": "core-v2-south-east-holding-tower-p1-p1",
+        "gridX": 1,
+        "gridY": 1,
+        "cityCount": 55,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "4d9dcc057de5d0926d8c18957f41b9a6f4b81ecc07546abb8acdcb705252e0e3",
+        "geometrySha256": "49077e39b8cbcfc3310665252032ebf59dd314470bad33eaca6f398f2674e485",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "7ded84b3ac6d8b72c6d26e61270ffe3dc5d0210c10a5d6ac08d4523ab8ac4ffc"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-south-support-p0-p2.json",
+        "regionId": "core-v2-south-support-p0-p2",
+        "gridX": 0,
+        "gridY": 2,
+        "cityCount": 70,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "8cd966416d9ac73d0a2e14616e7e3b30873ff02b14436b127670447fb1b10047",
+        "geometrySha256": "3c6ef07d58af21d2e52abc5ec4671104ad67ea27ab1173bea4d9a1fefe86a2ab",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "1ba8fde1a93e2c9fe879662f29827c3277bdf0df6c49876878ebc244906b16b1"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-south-west-holding-tower-m1-p1.json",
+        "regionId": "core-v2-south-west-holding-tower-m1-p1",
+        "gridX": -1,
+        "gridY": 1,
+        "cityCount": 55,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "c1257029d3281e32f17a05698cb45b6394436e28d03f15a025a6b79701e217ba",
+        "geometrySha256": "48b65638f157aca32afb4c266375a5d152fd4b5d5572c4c55955af7e93a68f38",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "01eaa3e26cb54bc27022b6687109c84a55cccee4902351d10b4ba3bc2e9232f0"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-swiftgate-p1-p0.json",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "gridX": 1,
+        "gridY": 0,
+        "cityCount": 60,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "4ba37c6ccc396bab427ccd372102ab5221087dff486669704f79a851683d75aa",
+        "geometrySha256": "7242508e30ff9bd3538c6349030d15a7c2a6d193b4972c3e827f962b953d3878",
+        "objectivesSha256": "45acf701bdf95ffde87224bb4d6868a61ec952fa16a9f56b4412c079a48c5874",
+        "topologySha256": "51b004640c525291807c125f888e47d47749fb798d4397dd6f4d298c4d719c67"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-warband-camp-m2-m2.json",
+        "regionId": "core-v2-warband-camp-m2-m2",
+        "gridX": -2,
+        "gridY": -2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "4f64aca2d0b0dd373e631c7ed7040ee0594681d3e0debfcb52024422fa4622ea",
+        "geometrySha256": "a95a511fffa327d35319c707acb563605dc1bd78c2061b35576f28cb98407545",
+        "objectivesSha256": "122792ed6f1dbcb294ad87c3cc98c272fe0e2585665c940cb0547d836e2db825",
+        "topologySha256": "e99b124e7a71052d6b95b82580ab1fa351680653562cf40f4ae391d22ab80361"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-warband-camp-south-east-p2-p2.json",
+        "regionId": "core-v2-warband-camp-south-east-p2-p2",
+        "gridX": 2,
+        "gridY": 2,
+        "cityCount": 55,
+        "objectiveCount": 1,
+        "hashMode": "canonical-json",
+        "sha256": "8391dd35a51cb330f66221b3f1599e1769da871887b8ef3d6a858ca8aea379ab",
+        "geometrySha256": "6fb382071cc004178978b059e99acf315124850dedd1d5eae6a7fb3c4ce560e5",
+        "objectivesSha256": "3b3043bc94959cd02991d795c417d521aaf6d010d67bbdd3707f394a9fab4c0a",
+        "topologySha256": "763eb730f0012b2ce91b2a3aea2a3bed13f7b3e295d1d02cb2215ed0f1bf3b43"
+      },
+      {
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/regions/core-v2-west-support-m2-p0.json",
+        "regionId": "core-v2-west-support-m2-p0",
+        "gridX": -2,
+        "gridY": 0,
+        "cityCount": 70,
+        "objectiveCount": 0,
+        "hashMode": "canonical-json",
+        "sha256": "7531e9a209d624232fffa31b0d5d45001d65dea69bac8aabaddf41fdd0a0e809",
+        "geometrySha256": "fb316a3251642be4fe7fbddade10bd758f78864212e434f6befa6b5f2dbfc2fd",
+        "objectivesSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "topologySha256": "585771e2973f6cc00ac5c284faabebfb819c5649a6e18930b236d6c366eb0f02"
+      }
+    ],
+    "mapArt": [
+      {
+        "key": "aurum-keep",
+        "regionId": "core-v2-aurum-keep-m1-p0",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/aurum-keep.webp",
+        "hashMode": "raw-binary",
+        "sha256": "04e5d6970a3eac0d3ab8614c1d7e477af38b88577c2a7e4a7e6a965c6e8e0f14",
+        "bytes": 735076
+      },
+      {
+        "key": "crown-citadel",
+        "regionId": "core-v2-crown-citadel-p0-p0",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/crown-citadel.webp",
+        "hashMode": "raw-binary",
+        "sha256": "d047f52f7fdafcb67146cca79ed8af8c9d1807a37b45a7031f07f78401c9b503",
+        "bytes": 492960
+      },
+      {
+        "key": "east-deed-camp",
+        "regionId": "core-v2-deed-camp-east-north-p2-m1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/east-deed-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "34d669e9312b09b8600a1018fdf9e85913b36f9755bed94fe54e234d38a13b73",
+        "bytes": 698616
+      },
+      {
+        "key": "northeast-deed-camp",
+        "regionId": "core-v2-deed-camp-north-east-p1-m2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northeast-deed-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "15c80b6aeeb702b7fec508a997114865e83063cf3d726cda0d55692d6a175ed2",
+        "bytes": 816098
+      },
+      {
+        "key": "south-deed-camp",
+        "regionId": "core-v2-deed-camp-south-west-m1-p2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/south-deed-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "af190ee12c108bcb51a027657a9d99f7b109720ca39b567385e9ac615e21924c",
+        "bytes": 715934
+      },
+      {
+        "key": "west-south-deed-camp",
+        "regionId": "core-v2-deed-camp-west-south-m2-p1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/west-south-deed-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "30bcdbd48f6e62adfd3daf678be36ceb17e53238c89de98905a57b0c661e3f21",
+        "bytes": 681748
+      },
+      {
+        "key": "east-support",
+        "regionId": "core-v2-east-support-p2-p0",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/east-support.webp",
+        "hashMode": "raw-binary",
+        "sha256": "440dc64e1af0655fe9c3b12658d4fcefcde317a2aac36fba53fe3928aa382744",
+        "bytes": 637808
+      },
+      {
+        "key": "northeast-gold-camp",
+        "regionId": "core-v2-gold-camp-north-east-p2-m2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northeast-gold-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "91b5d719acd2d673c50fd2bb44c9251d70aa119c01313c20730bfae2c4e2d7c7",
+        "bytes": 641874
+      },
+      {
+        "key": "southwest-gold-camp",
+        "regionId": "core-v2-gold-camp-south-west-m2-p2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/southwest-gold-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "a35136f89057f05ef5923b28139a0e7f14ccd61e4db540f9b85a66b6b278bc40",
+        "bytes": 643198
+      },
+      {
+        "key": "greybanner-hold",
+        "regionId": "core-v2-greybanner-hold-p0-m1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/greybanner-hold.webp",
+        "hashMode": "raw-binary",
+        "sha256": "569cae5831f61550494009fbcd89abe04e5fbfd8cd0687fba6119caaa2a9dbd1",
+        "bytes": 621358
+      },
+      {
+        "key": "ironwatch",
+        "regionId": "core-v2-ironwatch-p0-p1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/ironwatch.webp",
+        "hashMode": "raw-binary",
+        "sha256": "40d1a0d40726166174f547e54f5e90bdff5eccf4ec00f74aacfc7f01100d3622",
+        "bytes": 604578
+      },
+      {
+        "key": "northeast-holding-tower",
+        "regionId": "core-v2-north-east-holding-tower-p1-m1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northeast-holding-tower.webp",
+        "hashMode": "raw-binary",
+        "sha256": "d66234cc3c2242fa7007010e405bb7bf53725d00f0136553c853cc5da4a0fdd4",
+        "bytes": 716554
+      },
+      {
+        "key": "north-support",
+        "regionId": "core-v2-north-support-p0-m2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/north-support.webp",
+        "hashMode": "raw-binary",
+        "sha256": "6d997fcf592762ce621584964120b657f950fdf7594d65f6925d03e730f30927",
+        "bytes": 723068
+      },
+      {
+        "key": "northwest-holding-tower",
+        "regionId": "core-v2-north-west-holding-tower-m1-m1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northwest-holding-tower.webp",
+        "hashMode": "raw-binary",
+        "sha256": "46eafe0a682239cb9cb9def37175be6f2e66ace8703e6c4436d26f360915fd6b",
+        "bytes": 570784
+      },
+      {
+        "key": "east-southeast-relic-camp",
+        "regionId": "core-v2-relic-camp-east-south-p2-p1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/east-southeast-relic-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "a44b7e62176c617a8b8509aea520da6b4773a43b6e4259d21e2b959757c18aab",
+        "bytes": 608784
+      },
+      {
+        "key": "northwest-relic-camp",
+        "regionId": "core-v2-relic-camp-north-west-m1-m2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northwest-relic-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "63e1dff9ea54badbeb5daeb95f4f26a2d80ac475f20e413f74e7e1bb15ced040",
+        "bytes": 696300
+      },
+      {
+        "key": "south-relic-camp",
+        "regionId": "core-v2-relic-camp-south-east-p1-p2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/south-relic-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "07311f58843e5fdf5f7ecd50cd580c3935b5a2734e5a4f8cbbb5b6aab5a7b92b",
+        "bytes": 653056
+      },
+      {
+        "key": "west-north-relic-camp",
+        "regionId": "core-v2-relic-camp-west-north-m2-m1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/west-north-relic-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "e837a84d685f13e58631a9f3e27596153b3527d7290b023d975b9232a0bc9e89",
+        "bytes": 535650
+      },
+      {
+        "key": "southeast-holding-tower",
+        "regionId": "core-v2-south-east-holding-tower-p1-p1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/southeast-holding-tower.webp",
+        "hashMode": "raw-binary",
+        "sha256": "1ea409afce1718c84cc1135ebc01e657e566c96abf6b199bc751c1752c3df529",
+        "bytes": 680488
+      },
+      {
+        "key": "south-support",
+        "regionId": "core-v2-south-support-p0-p2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/south-support.webp",
+        "hashMode": "raw-binary",
+        "sha256": "85e161689bc1146f616b7287bcc70ee6a67e87b984ae958766f4831748d0e99b",
+        "bytes": 700176
+      },
+      {
+        "key": "southwest-holding-tower",
+        "regionId": "core-v2-south-west-holding-tower-m1-p1",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/southwest-holding-tower.webp",
+        "hashMode": "raw-binary",
+        "sha256": "53bd6a27fe6e43313365473022e5d5083bf8397671f8c34ecc94efa7e66a3007",
+        "bytes": 673758
+      },
+      {
+        "key": "swiftgate",
+        "regionId": "core-v2-swiftgate-p1-p0",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/swiftgate.webp",
+        "hashMode": "raw-binary",
+        "sha256": "8d47039c22b500370cec586d35d4a6b804fb9050be00da3e9595d277caee44ed",
+        "bytes": 703558
+      },
+      {
+        "key": "northwest-warband-camp",
+        "regionId": "core-v2-warband-camp-m2-m2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/northwest-warband-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "cb1b4fdd6e1baaa0a11ce2ac40bdcc22a8bb5aa161a263521f77ed6dfe178008",
+        "bytes": 744808
+      },
+      {
+        "key": "southeast-warband-camp",
+        "regionId": "core-v2-warband-camp-south-east-p2-p2",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/southeast-warband-camp.webp",
+        "hashMode": "raw-binary",
+        "sha256": "6041ba0aefca214d88db61ed235e4f9c406a0697fe11bdb39bb18aa4d472395e",
+        "bytes": 697400
+      },
+      {
+        "key": "west-support",
+        "regionId": "core-v2-west-support-m2-p0",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/maps/west-support.webp",
+        "hashMode": "raw-binary",
+        "sha256": "be5a31f89cd9da52c3b5b1708ab0da01d13a8f2150e7b2f48e5921d6f2853d80",
+        "bytes": 635552
+      }
+    ],
+    "catalog": {
+      "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/region-catalog.js",
+      "hashMode": "normalized-lf-text",
+      "sha256": "e927b05af8bb3c6c3979660472db07d824b9c8d7c609c7b1ed94ecd6fa59f71b",
+      "bytes": 38187,
+      "regionCount": 25
+    },
+    "packageMetadata": [
+      {
+        "role": "staging-fixture",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/fixture.json",
+        "hashMode": "canonical-json",
+        "sha256": "e17e9164a9840650bb35598cc950bc372cd8088c3b7bd2c34de3e3174f177fda",
+        "bytes": 789677
+      },
+      {
+        "role": "phase-a-package-spec",
+        "path": "benchmark-results/map/core-v2-phase-a/core-v2-package-spec.json",
+        "hashMode": "canonical-json",
+        "sha256": "e49fbf67cbe329fc6ff105bcf6fc2c3a8fc995ab3833c50cfab39b15feb38228",
+        "bytes": 72373
+      }
+    ],
+    "receipts": [
+      {
+        "role": "staging-build-receipt",
+        "path": "benchmark-results/map/core-v2-qa-1/staging-site/__core_b1__/build-receipt.json",
+        "hashMode": "canonical-json",
+        "sha256": "664bb9d61a886ba54d0dd28bf5f97bc2953ca9a49eaf02d20501c31cfb48c129",
+        "bytes": 10129
+      },
+      {
+        "role": "reset-2-local-candidate",
+        "path": "benchmark-results/map/core-v2-reset-2/RESET_2_LOCAL_CANDIDATE.json",
+        "hashMode": "canonical-json",
+        "sha256": "9c02b25d305721878e9e42ae340c22b6d372a3c608f2ad8c8635332f19499ef4",
+        "bytes": 16775
+      }
+    ],
+    "sources": [
+      {
+        "role": "core-spec",
+        "path": "tools/core-v2-phase-a/spec.js",
+        "hashMode": "normalized-lf-text",
+        "sha256": "e1b0b4e859b0ee75d8d58d522d3c9f3eeb2d8c2415a02ed99e325480da02379d",
+        "bytes": 10592
+      },
+      {
+        "role": "core-fixture-generator",
+        "path": "tools/core-v2-qa-1/fixture.js",
+        "hashMode": "normalized-lf-text",
+        "sha256": "4be66dd80ffdb9c935fa361621c4c715cab750de7edc006fb67ae7cfb4ff72df",
+        "bytes": 13843
+      },
+      {
+        "role": "staging-package-builder",
+        "path": "tools/core-v2-qa-1/build-staging-site.js",
+        "hashMode": "normalized-lf-text",
+        "sha256": "3f273f0d46a5783760a1771d48c52b46de1548b9ae1597d26d9cf4904eefb22a",
+        "bytes": 9872
+      },
+      {
+        "role": "reset-candidate-architecture",
+        "path": "tools/core-v2-reset-2/architecture.js",
+        "hashMode": "normalized-lf-text",
+        "sha256": "04324c19e48570954fbace429bb80e840c93bd59dcd4234f7f223fd093d6fcf5",
+        "bytes": 37200
+      }
+    ]
+  },
+  "protectedFileCount": 59,
+  "overallSha256": "1cc14d9af4bc4ee90a76f6c8f69b09f41ee191339baec3980cb51ce316e1bcbc"
+}

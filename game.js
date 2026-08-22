@@ -3,6 +3,7 @@ const MAP_EDITOR_DATA = window.CROWNLANDS_MAP_EDITOR_DATA || {};
 const REGION_CATALOG = window.CROWNLANDS_REGION_CATALOG || {};
 const REGION_CATALOG_RUNTIME = window.CROWNLANDS_REGION_CATALOG_RUNTIME || {};
 const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
+const OBJECTIVE_VISUAL_CONFIG = window.CROWNLANDS_OBJECTIVE_VISUAL_CONFIG || {};
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(REGION_CATALOG.version) || Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
@@ -1288,6 +1289,43 @@ function getStrongholdVisualSize(city) {
   return readVisualSize(city?.size, fallback);
 }
 
+function getObjectiveVisualConfigKey(target) {
+  if (target?.campType || target?.targetType === "camp" || String(target?.id || "").includes("_camp")) return "camp";
+  return isCrownCitadel(target) ? "crownCitadel" : "stronghold";
+}
+
+function getExternalObjectiveImageVisualSize(regionId, target) {
+  const coreConfig = OBJECTIVE_VISUAL_CONFIG?.pendingCore5x5 || {};
+  const prefix = String(coreConfig.regionIdPrefix || "core-v2-");
+  if (!String(regionId || target?.regionId || "").startsWith(prefix)) return 0;
+  const configuredSize = Number(coreConfig.visualSizes?.[getObjectiveVisualConfigKey(target)]);
+  return Number.isFinite(configuredSize) && configuredSize > 0 ? Math.floor(configuredSize) : 0;
+}
+
+function getObjectiveImageVisualSize(regionId, target, serializedSize, fallback) {
+  const external = getExternalObjectiveImageVisualSize(regionId, target);
+  if (external > 0) return external;
+  return readVisualSize(serializedSize, fallback);
+}
+
+function getStrongholdRenderSize(city) {
+  const interactionSize = getStrongholdVisualSize(city);
+  if (Number(city?.visualSize) > 0) return readVisualSize(city.visualSize, interactionSize);
+  const external = getExternalObjectiveImageVisualSize(getCityRegionId(city), city);
+  return external > 0
+    ? islandImageVisualSizeToWorld(getCityRegionId(city), external, external)
+    : interactionSize;
+}
+
+function getCampRenderSize(camp) {
+  const interactionSize = readVisualSize(camp?.size, DEFAULT_CAMP_VISUAL_SIZE);
+  if (Number(camp?.visualSize) > 0) return readVisualSize(camp.visualSize, interactionSize);
+  const external = getExternalObjectiveImageVisualSize(camp?.regionId, camp);
+  return external > 0
+    ? islandImageVisualSizeToWorld(camp?.regionId, external, external)
+    : interactionSize;
+}
+
 function isGoldStronghold(city) {
   const type = String(city?.strongholdType || "").toLowerCase();
   return isStronghold(city) && (type === "gold" || type === "gold_stronghold" || city.id === GOLD_STRONGHOLD_ID);
@@ -1482,6 +1520,7 @@ function applyBaseCityMetadata(city, base) {
   city.bonusPercent = Number(base.bonusPercent) || 0;
   if (isStronghold(base)) {
     city.size = getStrongholdVisualSize(base);
+    city.visualSize = getStrongholdRenderSize(base);
     city.flipX = Boolean(base.flipX);
     city.name = getStrongholdDisplayName({ ...base, ...city });
     city.level = getStrongholdDefenseLevel(base);
@@ -1489,6 +1528,7 @@ function applyBaseCityMetadata(city, base) {
   } else {
     city.name = getCanonicalCityName(base, city);
     if ("size" in city) delete city.size;
+    if ("visualSize" in city) delete city.visualSize;
     if ("flipX" in city) delete city.flipX;
   }
 }
@@ -3521,6 +3561,13 @@ function generateEditorStrongholdSlots() {
     objectives.forEach((objective, index) => {
       const config = getStrongholdConfigForType(objective?.type || objective?.strongholdType);
       const point = islandImagePointToWorld(region.id, getEditorPoint(objective));
+      const fallbackSize = config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE;
+      const interactionSize = islandImageVisualSizeToWorld(region.id, objective?.size, fallbackSize);
+      const visualSize = islandImageVisualSizeToWorld(
+        region.id,
+        getObjectiveImageVisualSize(region.id, objective, objective?.size, fallbackSize),
+        fallbackSize,
+      );
       slots.push(createStrongholdSlot({
         id: String(objective?.id || `${region.id}_${config.type}_stronghold_${index + 1}`),
         name: String(objective?.name || config.name),
@@ -3532,11 +3579,8 @@ function generateEditorStrongholdSlots() {
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
         artSrc: String(objective?.artSrc || config.artSrc || ""),
-        size: islandImageVisualSizeToWorld(
-          region.id,
-          objective?.size,
-          config.type === "crown" ? CROWN_CITADEL_VISUAL_SIZE : DEFAULT_STRONGHOLD_VISUAL_SIZE
-        ),
+        size: interactionSize,
+        visualSize,
         flipX: Boolean(objective?.flipX),
       }));
     });
@@ -3551,6 +3595,12 @@ function generateWorldCampSlots() {
     camps.forEach((camp, index) => {
       const config = getCampConfigForType(camp?.campType || camp?.type);
       const point = islandImagePointToWorld(region.id, getEditorPoint(camp));
+      const interactionSize = islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE);
+      const visualSize = islandImageVisualSizeToWorld(
+        region.id,
+        getObjectiveImageVisualSize(region.id, camp, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
+        DEFAULT_CAMP_VISUAL_SIZE,
+      );
       slots.push({
         id: String(camp?.id || `${region.id}_${config.type}_camp_${index + 1}`),
         name: String(camp?.name || config.name),
@@ -3559,7 +3609,9 @@ function generateWorldCampSlots() {
         y: Math.round(point.y),
         campType: config.type,
         artSrc: String(camp?.artSrc || config.artSrc || ""),
-        size: islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
+        size: interactionSize,
+        interactionSize,
+        visualSize,
         flipX: Boolean(camp?.flipX),
         rewardSchedule: Array.isArray(camp?.rewardSchedule)
           ? camp.rewardSchedule.map(entry => ({
@@ -3645,8 +3697,9 @@ function generateStrongholdSlots() {
   ].filter(Boolean);
 }
 
-function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "", flipX = false }) {
-  const visualSize = getStrongholdVisualSize({ id, strongholdType: type, size });
+function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, visualSize = 0, artSrc = "", flipX = false }) {
+  const interactionSize = getStrongholdVisualSize({ id, strongholdType: type, size });
+  const renderSize = readVisualSize(visualSize, interactionSize);
   return {
     id,
     name,
@@ -3673,7 +3726,9 @@ function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPerce
     strongholdType: type,
     bonus,
     bonusPercent,
-    size: visualSize,
+    size: interactionSize,
+    interactionSize,
+    visualSize: renderSize,
     artSrc,
     flipX: Boolean(flipX),
     startTroops: troops,
@@ -15131,6 +15186,8 @@ function normalizeOnlineCampState(raw = {}) {
     maxDailyRewards: config.maxDailyRewards,
     artSrc,
     size: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    interactionSize: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    visualSize: getCampRenderSize(base),
     flipX: Boolean(base.flipX),
     activeArmyIds: Array.isArray(raw.activeArmyIds) ? raw.activeArmyIds.map(String) : [],
     state: ["neutral", "held", "contested"].includes(raw.state) ? raw.state : raw.holderUid ? "held" : "neutral",
@@ -15265,6 +15322,8 @@ function getCampTargetById(campId) {
     troopPower: config.troopPower,
     baseReward: config.baseReward,
     size: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    interactionSize: readVisualSize(base.size, DEFAULT_CAMP_VISUAL_SIZE),
+    visualSize: getCampRenderSize(base),
     flipX: Boolean(base.flipX),
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
     heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
@@ -24453,7 +24512,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       getStableEnemyCityPowerBand(city),
       city.kind || "",
       city.strongholdType || "",
-      isStronghold(city) ? getStrongholdVisualSize(city) : "",
+      isStronghold(city) ? getStrongholdRenderSize(city) : "",
       isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       city.level,
@@ -24474,6 +24533,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       camp.y,
       camp.artSrc,
       camp.size,
+      getCampRenderSize(camp),
       camp.flipX ? 1 : 0,
       camp.ownerUid || "",
       camp.ownerName || "",
@@ -24638,7 +24698,8 @@ function renderCitiesUncached(force = false) {
     if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" || clanAllyCamp ? "supportable" : "attackable");
     campNode.style.left = `${mapPoint.x}px`;
     campNode.style.top = `${mapPoint.y}px`;
-    campNode.style.setProperty("--camp-size", `${camp.size}px`);
+    campNode.style.setProperty("--camp-size", `${readVisualSize(camp.size, DEFAULT_CAMP_VISUAL_SIZE)}px`);
+    campNode.style.setProperty("--camp-visual-size", `${getCampRenderSize(camp)}px`);
     if (interactiveRewardCamp) {
       campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
       campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
@@ -24710,8 +24771,13 @@ function renderCitiesUncached(force = false) {
     }
     btn.style.left = `${mapPoint.x}px`;
     btn.style.top = `${mapPoint.y}px`;
-    if (stronghold) btn.style.setProperty("--stronghold-size", `${getStrongholdVisualSize(city)}px`);
-    else btn.style.removeProperty("--stronghold-size");
+    if (stronghold) {
+      btn.style.setProperty("--stronghold-size", `${getStrongholdVisualSize(city)}px`);
+      btn.style.setProperty("--stronghold-visual-size", `${getStrongholdRenderSize(city)}px`);
+    } else {
+      btn.style.removeProperty("--stronghold-size");
+      btn.style.removeProperty("--stronghold-visual-size");
+    }
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
@@ -25075,7 +25141,7 @@ function renderSelectedRewardCampWheel(camp) {
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
   const canRally = Boolean(canCurrentPlayerCreateClanRally() && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
-  const wheelSize = Math.max(112, Number(camp.size) || 132);
+  const wheelSize = Math.max(112, readVisualSize(camp?.size, DEFAULT_CAMP_VISUAL_SIZE));
   wheel.className = "gold-camp-action-wheel";
   if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   wheel.style.left = `${mapPoint.x}px`;
