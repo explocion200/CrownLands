@@ -13,6 +13,7 @@ const indexSource = read("index.html");
 const serviceWorkerSource = read("service-worker.js");
 const netlifySource = read("netlify.toml");
 const gameSource = read("game.js");
+const objectiveVisualConfigSource = read("objective-visual-config.js");
 const baseCitiesSource = read("base-cities.js");
 const instantEconomyActionsSource = read("instant-economy-actions.js");
 const commonGearSource = read("common-gear.js");
@@ -43,6 +44,7 @@ const categoryFileBudgets = {
   status: 24 * 1024,
   item: 16 * 1024,
   objective: 80 * 1024,
+  "holding-tower-object": 48 * 1024,
   "stronghold-object": 80 * 1024,
   "camp-object": 80 * 1024,
   "citadel-object": 80 * 1024,
@@ -56,7 +58,8 @@ const categoryFileBudgets = {
 };
 
 const entrypointBudgets = {
-  "game.js": 1600 * 1024,
+  // One bounded 16 KiB step for the Pending Core visual-only tower renderer.
+  "game.js": 1616 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   "styles.css": 400 * 1024,
@@ -227,7 +230,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, objectiveVisualConfigSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

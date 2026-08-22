@@ -17,7 +17,7 @@ const rootFiles = [
   "daily-rewards.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js", "base-cities.js", "instant-economy-actions.js",
-  "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
+  "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objective-visual-config.js", "objectives-guide.html", "patch-notes.js",
   "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "region-catalog.js",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
@@ -79,7 +79,9 @@ fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
 copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
-copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
+if (fs.existsSync(path.join(root, "promo-screenshots"))) {
+  copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
+}
 copy("assets/worlds/world_01/map-manifest.json");
 copy("assets/worlds/world_01/region-catalog.js");
 writeProductionRegionDefinitions();

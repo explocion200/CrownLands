@@ -69,6 +69,8 @@ test("serves Studio context and the seeded QA store", async t => {
   assert.equal(core.integrity.counts.cities, 1480);
   assert.equal(core.integrity.counts.objectives, 17);
   assert.equal(core.integrity.counts.reciprocalConnections, 40);
+  assert.deepEqual(core.visualCounts, { packagedObjectives: 17, holdingTowers: 4, totalObjectives: 21 });
+  assert.equal(core.regions.flatMap(region => region.objectives).filter(objective => objective.kind === "holdingTower").length, 4);
 
   const coreMapResponse = await fetch(`${base}${core.regions[0].map.url}`);
   assert.equal(coreMapResponse.status, 200);

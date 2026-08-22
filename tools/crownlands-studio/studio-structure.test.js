@@ -13,6 +13,7 @@ test("Studio shell has unique IDs and all required areas", async () => {
     "worldStudioBtn", "economyModeBtn", "uiStudioBtn", "qaStudioBtn", "codexAiBtn",
     "worldView", "regionView", "corePreviewModeBtn", "corePreviewView", "corePreviewGrid", "corePreviewDetail",
     "corePreviewCampSize", "corePreviewStrongholdSize", "corePreviewCitadelSize", "corePreviewSaveBtn",
+    "corePreviewTowerSelect", "corePreviewTowerWidth", "corePreviewTowerAnchorX", "corePreviewTowerAnchorY", "corePreviewTowerYOffset",
     "economyView", "themeView", "componentsView",
     "screensView", "gameUiView", "qaView", "codexAiView", "codexTaskForm",
     "codexTaskHistory", "codexActionMessage", "codexRoutingForm", "studioDirtyChip", "studioLogPanel",
@@ -30,7 +31,7 @@ test("Studio shell has unique IDs and all required areas", async () => {
   assert.match(html, /PENDING CORE 5×5 — LOCAL PREVIEW — NOT LIVE \/ NOT RESET-INTEGRATED/);
   assert.match(html, />Current World<\/button>/);
   assert.match(html, /Editing: Pending Core Visual Configuration/);
-  for (const label of ["Full 5×5", "All Camp Maps", "All Strongholds", "Citadel Map"]) assert.match(html, new RegExp(label));
+  for (const label of ["Full 5×5", "All Camp Maps", "All Strongholds", "Citadel Map", "Holding Towers"]) assert.match(html, new RegExp(label));
 });
 
 test("Core preview UI blocks render on integrity failure and saves only through its dedicated API", async () => {
@@ -45,6 +46,9 @@ test("Core preview UI blocks render on integrity failure and saves only through 
   assert.match(source, /fetch\(`\$\{API\}\/save`/);
   assert.match(source, /generated package files affected/);
   assert.match(source, /Gameplay geometry remains unchanged/);
+  assert.match(source, /data-objective-kind/);
+  assert.match(source, /kind !== "holdingTower"/);
+  assert.match(source, /The protected reservation coordinate is unchanged/);
   for (const forbidden of ["Activate World", "Publish Core", "Run Reset", "Seed World", "Promote Candidate", "Production Ready", "Deploy"]) {
     assert.doesNotMatch(source, new RegExp(forbidden, "i"));
   }

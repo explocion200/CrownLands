@@ -16,6 +16,7 @@
     cityLayer?.querySelectorAll("[data-core-a1-tower-reservation]").forEach(marker => marker.remove());
     const prototype = currentTower();
     if (!prototype || !cityLayer) return;
+    if (cityLayer.querySelector(".holding-tower-node[data-holding-tower-id]")) return;
     const objective = prototype.objective || {};
     const imageCenter = { x: Number(objective.x) || 724, y: Number(objective.y) || 543 };
     const worldCenter = islandImagePointToWorld(getActiveMapRegionId(), imageCenter);

@@ -1803,6 +1803,7 @@ const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const WORLD_CAMPS = generateWorldCampSlots();
 const WORLD_CAMPS_BY_ID = new Map(WORLD_CAMPS.map(camp => [camp.id, camp]));
+const WORLD_HOLDING_TOWERS = generatePendingCoreHoldingTowerSlots();
 const routeCache = new Map();
 const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
@@ -3626,6 +3627,41 @@ function generateWorldCampSlots() {
     });
   }
   return slots;
+}
+
+function generatePendingCoreHoldingTowerSlots() {
+  const coreConfig = OBJECTIVE_VISUAL_CONFIG?.pendingCore5x5 || {};
+  const prefix = String(coreConfig.regionIdPrefix || "core-v2-");
+  const configured = Array.isArray(coreConfig.holdingTowers) ? coreConfig.holdingTowers : [];
+  return configured.flatMap((tower, index) => {
+    const regionId = String(tower?.regionId || "");
+    const region = WORLD_REGIONS_BY_ID.get(regionId);
+    if (!region || !regionId.startsWith(prefix)) return [];
+    const reservedX = Number(tower?.reservedX);
+    const reservedY = Number(tower?.reservedY);
+    const width = Math.max(1, Math.floor(Number(tower?.width) || 184));
+    const visualYOffset = Math.floor(Number(tower?.visualYOffset) || 0);
+    const anchorX = Number(tower?.anchorX);
+    const anchorY = Number(tower?.anchorY);
+    if (!Number.isFinite(reservedX) || !Number.isFinite(reservedY)) return [];
+    const point = islandImagePointToWorld(regionId, { x: reservedX, y: reservedY });
+    const visualPoint = islandImagePointToWorld(regionId, { x: reservedX, y: reservedY + visualYOffset });
+    return [{
+      id: String(tower?.id || `${regionId}_holding_tower_${index + 1}`),
+      regionId,
+      kind: "holdingTower",
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+      visualX: Math.round(visualPoint.x),
+      visualY: Math.round(visualPoint.y),
+      artSrc: String(tower?.artSrc || ""),
+      width: islandImageVisualSizeToWorld(regionId, width, width),
+      anchorX: Number.isFinite(anchorX) ? Math.max(0, Math.min(1, anchorX)) : 0.5,
+      anchorY: Number.isFinite(anchorY) ? Math.max(0.5, Math.min(1.25, anchorY)) : 0.969,
+      visualYOffset,
+      visualOnly: true,
+    }];
+  });
 }
 
 function generateStrongholdSlots() {
@@ -24460,6 +24496,12 @@ function shouldRenderCampNode(camp, bounds) {
   return camp && isCampInActiveMap(camp) && (camp.id === selectedTargetId || isPointInBounds(camp.x, camp.y, bounds));
 }
 
+function shouldRenderHoldingTowerNode(tower, bounds) {
+  return tower
+    && normalizeRegionId(tower.regionId) === getActiveMapRegionId()
+    && isPointInBounds(tower.x, tower.y, bounds);
+}
+
 function getRewardCampCountdownSeconds(camp) {
   if (!camp?.payoutPending || !camp.payoutAtMs) return 0;
   return Math.max(0, Math.ceil((camp.payoutAtMs - Date.now()) / 1000));
@@ -24489,7 +24531,7 @@ function getFlagSignature(flag) {
   return `${normalized.primary}:${normalized.secondary}:${normalized.pattern}:${normalized.symbol}`;
 }
 
-function getCityRenderSignature(visibleCities, visibleCamps = []) {
+function getCityRenderSignature(visibleCities, visibleCamps = [], visibleHoldingTowers = []) {
   const playerFlag = getFlagSignature(state.flag);
   const crownHolderUid = getCrownCitadelHolderUid();
   const upgradeBlockedTargets = new Set(getRenderableArmies()
@@ -24546,6 +24588,18 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
     ].join(":");
   }).join("|");
+  const holdingTowerTokens = visibleHoldingTowers.map(tower => [
+    tower.id,
+    tower.regionId,
+    tower.x,
+    tower.y,
+    tower.visualX,
+    tower.visualY,
+    tower.artSrc,
+    tower.width,
+    tower.anchorX,
+    tower.anchorY,
+  ].join(":")).join("|");
 
   return [
     selectedSourceId || "",
@@ -24558,6 +24612,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
     state.playerName || "",
     playerFlag,
     crownHolderUid,
+    holdingTowerTokens,
     campTokens,
     cityTokens,
   ].join(";");
@@ -24663,9 +24718,11 @@ function renderCitiesUncached(force = false) {
   const visibleCamps = WORLD_CAMPS
     .map(camp => getCampTargetById(camp.id) || camp)
     .filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  const visibleHoldingTowers = WORLD_HOLDING_TOWERS
+    .filter(tower => shouldRenderHoldingTowerNode(tower, visibleBounds));
   pruneEnemyPowerBandCache(state.cities);
-  updateMapDensityMode(visibleCities.length + visibleCamps.length);
-  const signature = getCityRenderSignature(visibleCities, visibleCamps);
+  updateMapDensityMode(visibleCities.length + visibleCamps.length + visibleHoldingTowers.length);
+  const signature = getCityRenderSignature(visibleCities, visibleCamps, visibleHoldingTowers);
   if (!force && signature === cityRenderSignature) {
     updateVisibleCityDynamicText();
     return;
@@ -24676,12 +24733,34 @@ function renderCitiesUncached(force = false) {
     .forEach(node => node.remove());
   const existingCampNodes = new Map([...cityLayer.querySelectorAll(".camp-node[data-render-camp-id]")]
     .map(node => [node.dataset.renderCampId, node]));
+  const existingHoldingTowerNodes = new Map([...cityLayer.querySelectorAll(".holding-tower-node[data-holding-tower-id]")]
+    .map(node => [node.dataset.holdingTowerId, node]));
   const existingCityNodes = new Map([...cityLayer.querySelectorAll(".city-node[data-city-id]")]
     .map(node => [node.dataset.cityId, node]));
   if (scoutNearbySource) renderScoutNearbyRadius(scoutNearbySource);
   if (regroupSource) renderRegroupRadius(regroupSource);
 
   const cityFragment = document.createDocumentFragment();
+  visibleHoldingTowers.forEach(tower => {
+    const mapPoint = worldToMapPoint({ x: tower.visualX, y: tower.visualY });
+    const existingNode = existingHoldingTowerNodes.get(tower.id);
+    const node = existingNode || document.createElement("span");
+    existingHoldingTowerNodes.delete(tower.id);
+    node.className = "holding-tower-node";
+    node.dataset.holdingTowerId = tower.id;
+    node.setAttribute("aria-hidden", "true");
+    node.style.left = `${mapPoint.x}px`;
+    node.style.top = `${mapPoint.y}px`;
+    node.style.setProperty("--holding-tower-width", `${tower.width}px`);
+    node.style.setProperty("--holding-tower-translate-x", `${(-tower.anchorX * 100).toFixed(3)}%`);
+    node.style.setProperty("--holding-tower-translate-y", `${(-tower.anchorY * 100).toFixed(3)}%`);
+    const towerHtml = `<img class="holding-tower-art" src="${escapeHtml(tower.artSrc)}" alt="" draggable="false" decoding="async" loading="lazy" fetchpriority="low" />`;
+    if (node._renderContent !== towerHtml) {
+      node.innerHTML = towerHtml;
+      node._renderContent = towerHtml;
+    }
+    if (!existingNode) cityFragment.appendChild(node);
+  });
   visibleCamps.forEach(camp => {
     const mapPoint = worldToMapPoint(camp);
     const interactiveRewardCamp = Boolean(getRewardCampConfig(camp));
@@ -24862,6 +24941,7 @@ function renderCitiesUncached(force = false) {
     if (!existingCityNode) cityFragment.appendChild(btn);
   });
   existingCampNodes.forEach(node => node.remove());
+  existingHoldingTowerNodes.forEach(node => node.remove());
   existingCityNodes.forEach(node => node.remove());
   cityLayer.appendChild(cityFragment);
 
@@ -26724,6 +26804,7 @@ function updatePerformancePanel(_now = performance.now()) {
   const activeRegionId = getActiveMapRegionId();
   const visibleCityMarkers = cityLayer?.querySelectorAll(".city-node").length || 0;
   const visibleCampMarkers = cityLayer?.querySelectorAll(".camp-node").length || 0;
+  const visibleHoldingTowerMarkers = cityLayer?.querySelectorAll(".holding-tower-node").length || 0;
   const audioDebug = crownlandsAudio?.getDebugState?.() || null;
   const audioStateText = audioDebug
     ? `${audioDebug.requestedMusicState || "none"} → ${audioDebug.currentMusicState || "none"} · ${audioDebug.paused ? "paused" : "playing"}`
@@ -26794,6 +26875,7 @@ function updatePerformancePanel(_now = performance.now()) {
     <span>Region: ${escapeHtml(getRegionLabel(activeRegionId))}</span>
     <span>Cities: ${formatNumber(visibleCityMarkers)} visible</span>
     <span>Camps: ${formatNumber(visibleCampMarkers)} visible</span>
+    <span>Holding Towers: ${formatNumber(visibleHoldingTowerMarkers)} visible</span>
     <span>Army tokens: ${formatNumber(armyTokenCache.size)}</span>
     <span>Loaded images: ${formatNumber(loadedImageAssets.size)}</span>
     <span>Neighbors: ${escapeHtml(getNeighborPreloadDebugText(activeRegionId))}</span>

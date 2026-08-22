@@ -41,9 +41,18 @@ test("Core preview workspace exposes only manifest-verified package data", async
   assert.equal(workspace.notLive, true);
   assert.equal(workspace.regions.length, 25);
   assert.equal(workspace.regions.reduce((total, region) => total + region.cities.length, 0), 1480);
-  assert.equal(workspace.regions.reduce((total, region) => total + region.objectives.length, 0), 17);
+  assert.equal(workspace.regions.reduce((total, region) => total + region.objectives.length, 0), 21);
+  assert.deepEqual(workspace.visualCounts, { packagedObjectives: 17, holdingTowers: 4, totalObjectives: 21 });
   assert.ok(workspace.regions.every(region => region.map.url.startsWith("/api/core-preview/maps/")));
   assert.ok(workspace.regions.flatMap(region => region.objectives).every(objective => objective.interactionSize === objective.serializedSize));
+  const towers = workspace.regions.flatMap(region => region.objectives).filter(objective => objective.kind === "holdingTower");
+  assert.deepEqual(towers.map(tower => [tower.id, tower.regionId, tower.x, tower.y, tower.artSrc]), [
+    ["core-v2-holding-tower-1", "core-v2-north-west-holding-tower-m1-m1", 736, 552, "assets/optimized/holding-tower-1-384x384-4ecfb3a8b86d.webp"],
+    ["core-v2-holding-tower-2", "core-v2-north-east-holding-tower-p1-m1", 734, 555, "assets/optimized/holding-tower-2-384x384-65f5ac41f3ac.webp"],
+    ["core-v2-holding-tower-3", "core-v2-south-west-holding-tower-m1-p1", 724, 543, "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp"],
+    ["core-v2-holding-tower-4", "core-v2-south-east-holding-tower-p1-p1", 736, 555, "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp"],
+  ]);
+  assert.ok(towers.every(tower => tower.visualOnly && tower.interactionSize === 0 && tower.width === 184));
 });
 
 test("project without the optional Core package returns a clear unavailable workspace", async t => {
@@ -82,16 +91,26 @@ test("external visual config wins only for Core artwork, never interaction geome
 test("atomic Core preview save changes only external config and re-verifies protection", async () => {
   const projectFiles = createMemoryProjectFiles();
   const service = createCorePreviewService(projectFiles, ROOT);
-  const result = await service.save({ camp: 144, stronghold: 166, crownCitadel: 280 });
+  const config = projectFiles.readConfig();
+  config.pendingCore5x5.visualSizes = { camp: 144, stronghold: 166, crownCitadel: 280 };
+  config.pendingCore5x5.holdingTowers[0].width = 196;
+  config.pendingCore5x5.holdingTowers[0].anchorY = 0.98;
+  const result = await service.save(config);
   assert.deepEqual(result.changedFiles, [CONFIG_RELATIVE_PATH]);
   assert.equal(result.generatedFilesAffected, 0);
   assert.equal(result.packageIntegrityUnchanged, true);
   assert.equal(result.resetCandidateUnchanged, true);
   assert.equal(result.packageOverallSha256, "1cc14d9af4bc4ee90a76f6c8f69b09f41ee191339baec3980cb51ce316e1bcbc");
   assert.deepEqual(projectFiles.readConfig().pendingCore5x5.visualSizes, { camp: 144, stronghold: 166, crownCitadel: 280 });
+  assert.equal(projectFiles.readConfig().pendingCore5x5.holdingTowers[0].width, 196);
+  assert.equal(projectFiles.readConfig().pendingCore5x5.holdingTowers[0].anchorY, 0.98);
+  assert.ok(result.changes.some(change => change.field.endsWith("core-v2-holding-tower-1.width")));
 });
 
 test("invalid visual size is rejected before any save", () => {
   assert.throws(() => sanitizeConfig({ camp: 10, stronghold: 154, crownCitadel: 260 }), /camp visual size/i);
   assert.throws(() => sanitizeConfig({ camp: 132, stronghold: 154.5, crownCitadel: 260 }), /stronghold visual size/i);
+  const config = sanitizeConfig({ camp: 132, stronghold: 154, crownCitadel: 260 });
+  config.pendingCore5x5.holdingTowers[0].anchorY = 2;
+  assert.throws(() => sanitizeConfig(config), /anchorY must be a number from 0.5 to 1.25/i);
 });

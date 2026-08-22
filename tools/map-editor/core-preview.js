@@ -7,6 +7,12 @@
     stronghold: Object.freeze({ minimum: 64, maximum: 500, fallback: 154, label: "Stronghold" }),
     crownCitadel: Object.freeze({ minimum: 100, maximum: 700, fallback: 260, label: "Crown Citadel" }),
   });
+  const TOWER_RULES = Object.freeze({
+    width: Object.freeze({ minimum: 96, maximum: 320, label: "Width", integer: true }),
+    anchorX: Object.freeze({ minimum: 0, maximum: 1, label: "Anchor X" }),
+    anchorY: Object.freeze({ minimum: 0.5, maximum: 1.25, label: "Anchor Y" }),
+    visualYOffset: Object.freeze({ minimum: -80, maximum: 80, label: "Visual Y offset", integer: true }),
+  });
   const SIDE_ORDER = ["north", "east", "south", "west"];
 
   const state = {
@@ -31,6 +37,7 @@
       "corePreviewView", "corePreviewIntegrityBadge", "corePreviewBlocker", "corePreviewWorkspace",
       "corePreviewPackage", "corePreviewCandidate", "corePreviewCounts", "corePreviewDigest",
       "corePreviewGrid", "corePreviewViewFilters", "corePreviewCampSize", "corePreviewStrongholdSize", "corePreviewCitadelSize",
+      "corePreviewTowerSelect", "corePreviewTowerWidth", "corePreviewTowerAnchorX", "corePreviewTowerAnchorY", "corePreviewTowerYOffset",
       "corePreviewUndoBtn", "corePreviewRedoBtn", "corePreviewResetBtn", "corePreviewSaveBtn",
       "corePreviewComparison", "corePreviewWarnings", "corePreviewDiff", "corePreviewStatus",
       "corePreviewDetail",
@@ -58,7 +65,31 @@
     return config?.pendingCore5x5?.visualSizes || {};
   }
 
+  function towers(config = state.config) {
+    return config?.pendingCore5x5?.holdingTowers || [];
+  }
+
+  function towerById(id, config = state.config) {
+    return towers(config).find(tower => tower.id === id) || null;
+  }
+
+  function selectedTower() {
+    const selectedId = elements.corePreviewTowerSelect?.value;
+    return towerById(selectedId) || towers().find(tower => tower.regionId === state.selectedRegionId) || towers()[0] || null;
+  }
+
+  function syncTowerWorkspace() {
+    if (!state.workspace?.regions) return;
+    state.workspace.regions.flatMap(region => region.objectives).forEach(objective => {
+      if (objective.kind !== "holdingTower") return;
+      const tower = towerById(objective.id);
+      if (!tower) return;
+      Object.keys(TOWER_RULES).forEach(key => { objective[key] = tower[key]; });
+    });
+  }
+
   function objectiveSize(objective) {
+    if (objective.kind === "holdingTower") return Number(objective.width) || 184;
     const rule = SIZE_RULES[objective.kind] || SIZE_RULES.stronghold;
     const value = Number(sizes()?.[objective.kind]);
     return Number.isFinite(value) && value > 0 ? value : Number(objective.serializedSize) || rule.fallback;
@@ -66,7 +97,8 @@
 
   function objectivePosition(objective, region) {
     const left = Number.isFinite(Number(objective.xNorm)) ? Number(objective.xNorm) * 100 : Number(objective.x) / Number(region.width) * 100;
-    const top = Number.isFinite(Number(objective.yNorm)) ? Number(objective.yNorm) * 100 : Number(objective.y) / Number(region.height) * 100;
+    const logicalTop = Number.isFinite(Number(objective.yNorm)) ? Number(objective.yNorm) * 100 : Number(objective.y) / Number(region.height) * 100;
+    const top = logicalTop + (Number(objective.visualYOffset) || 0) / Number(region.height) * 100;
     return { left, top };
   }
 
@@ -89,7 +121,7 @@
   }
 
   function configSignature(config = state.config) {
-    return JSON.stringify(sizes(config));
+    return JSON.stringify(config?.pendingCore5x5 || {});
   }
 
   function isDirty() {
@@ -107,13 +139,20 @@
   }
 
   function configErrors() {
-    return Object.entries(SIZE_RULES).flatMap(([key, rule]) => {
+    const errors = Object.entries(SIZE_RULES).flatMap(([key, rule]) => {
       const value = Number(sizes()?.[key]);
       if (!Number.isInteger(value) || value < rule.minimum || value > rule.maximum) {
         return [`${rule.label} must be a whole number from ${rule.minimum} to ${rule.maximum} px.`];
       }
       return [];
     });
+    towers().forEach((tower, index) => Object.entries(TOWER_RULES).forEach(([key, rule]) => {
+      const value = Number(tower?.[key]);
+      if (!Number.isFinite(value) || value < rule.minimum || value > rule.maximum || (rule.integer && !Number.isInteger(value))) {
+        errors.push(`Tower ${index + 1} ${rule.label} must be ${rule.integer ? "a whole number" : "a number"} from ${rule.minimum} to ${rule.maximum}.`);
+      }
+    }));
+    return errors;
   }
 
   function pushUndo() {
@@ -126,6 +165,7 @@
 
   function setConfig(nextConfig, message) {
     state.config = clone(nextConfig);
+    syncTowerWorkspace();
     notifyDirty();
     render();
     if (message) setStatus(message, configErrors().length ? "error" : "busy");
@@ -149,9 +189,10 @@
   function renderSummary() {
     const workspace = state.workspace;
     const counts = workspace.integrity.counts;
+    const visualCounts = workspace.visualCounts || {};
     elements.corePreviewPackage.textContent = workspace.packageVersion;
     elements.corePreviewCandidate.textContent = workspace.candidateId;
-    elements.corePreviewCounts.textContent = `${counts.maps} maps · ${counts.cities} cities · ${counts.objectives} objectives · ${counts.reciprocalConnections} reciprocal roads`;
+    elements.corePreviewCounts.textContent = `${counts.maps} maps · ${counts.cities} cities · ${visualCounts.totalObjectives || counts.objectives} visual objectives (${visualCounts.holdingTowers || 0} towers) · ${counts.reciprocalConnections} reciprocal roads`;
     elements.corePreviewDigest.textContent = workspace.integrity.overallSha256;
     elements.corePreviewDigest.title = `${workspace.integrity.protectedFileCount} protected files · ${workspace.integrity.manifestPath}`;
   }
@@ -177,9 +218,13 @@
       const size = objectiveSize(objective);
       const width = size / Number(region.width) * 100;
       const art = assetUrl(objective.artSrc);
-      const title = `${objective.name || objective.id} · visual ${size}px · interaction ${objective.interactionSize}px`;
-      const content = art ? `<img src="${escapeHtml(art)}" alt="" draggable="false" />` : `<b>${escapeHtml(objective.kind)}</b>`;
-      return `<span class="core-objective-marker ${escapeHtml(objective.kind)}${detailed ? " detailed" : ""}" data-objective-kind="${escapeHtml(objective.kind)}" style="${pointStyle(position)};width:${Math.max(width, detailed ? 3 : 1.8).toFixed(4)}%" title="${escapeHtml(title)}"><i style="--interaction-ratio:${Math.max(0.15, Number(objective.interactionSize) / size).toFixed(4)}"></i>${content}</span>`;
+      const interactionSize = Math.max(0, Number(objective.interactionSize) || 0);
+      const anchorX = Number.isFinite(Number(objective.anchorX)) ? Number(objective.anchorX) : 0.5;
+      const anchorY = Number.isFinite(Number(objective.anchorY)) ? Number(objective.anchorY) : 0.5;
+      const title = `${objective.name || objective.id} · visual ${size}px${interactionSize ? ` · interaction ${interactionSize}px` : " · visual only"}`;
+      const content = art ? `<img src="${escapeHtml(art)}" alt="" draggable="false" decoding="async" loading="lazy" />` : `<b>${escapeHtml(objective.kind)}</b>`;
+      const interaction = interactionSize > 0 ? `<i style="--interaction-ratio:${Math.max(0.15, interactionSize / size).toFixed(4)}"></i>` : "";
+      return `<span class="core-objective-marker ${escapeHtml(objective.kind)}${detailed ? " detailed" : ""}" data-objective-id="${escapeHtml(objective.id)}" data-objective-kind="${escapeHtml(objective.kind)}" style="${pointStyle(position)};width:${Math.max(width, detailed ? 3 : 1.8).toFixed(4)}%;--objective-translate-x:${(-anchorX * 100).toFixed(3)}%;--objective-translate-y:${(-anchorY * 100).toFixed(3)}%" title="${escapeHtml(title)}">${interaction}${content}</span>`;
     }).join("");
   }
 
@@ -214,7 +259,7 @@
     elements.corePreviewDetail.innerHTML = `<div class="core-preview-detail-copy">
       <span>Selected verified region · grid ${region.gridX}, ${region.gridY}</span>
       <strong>${escapeHtml(region.name)}</strong>
-      <p>${region.cities.length} actual cities · ${region.objectives.length} objectives (${typeCounts.camp || 0} camp, ${typeCounts.stronghold || 0} stronghold, ${typeCounts.crownCitadel || 0} citadel) · ${neighbors.length} connected neighbors</p>
+      <p>${region.cities.length} actual cities · ${region.objectives.length} visual objectives (${typeCounts.camp || 0} camp, ${typeCounts.stronghold || 0} stronghold, ${typeCounts.crownCitadel || 0} citadel, ${typeCounts.holdingTower || 0} tower) · ${neighbors.length} connected neighbors</p>
       <nav aria-label="Connected Core regions">${neighbors.map(id => `<button type="button" data-core-neighbor="${escapeHtml(id)}">${escapeHtml(regionById(id)?.name?.replace(/\s+—.*$/, "") || id)}</button>`).join("") || "<small>Outer edge: no connected neighbor.</small>"}</nav>
     </div>
     <div class="core-preview-detail-map">
@@ -235,6 +280,17 @@
     if (document.activeElement !== elements.corePreviewCampSize) elements.corePreviewCampSize.value = current.camp;
     if (document.activeElement !== elements.corePreviewStrongholdSize) elements.corePreviewStrongholdSize.value = current.stronghold;
     if (document.activeElement !== elements.corePreviewCitadelSize) elements.corePreviewCitadelSize.value = current.crownCitadel;
+    const tower = selectedTower();
+    if (elements.corePreviewTowerSelect && elements.corePreviewTowerSelect.options.length !== towers().length) {
+      elements.corePreviewTowerSelect.innerHTML = towers().map((entry, index) => `<option value="${escapeHtml(entry.id)}">Tower ${index + 1} · ${escapeHtml(regionById(entry.regionId)?.name?.replace(/\s+—.*$/, "") || entry.regionId)}</option>`).join("");
+    }
+    if (tower && elements.corePreviewTowerSelect.value !== tower.id) elements.corePreviewTowerSelect.value = tower.id;
+    if (tower) {
+      if (document.activeElement !== elements.corePreviewTowerWidth) elements.corePreviewTowerWidth.value = tower.width;
+      if (document.activeElement !== elements.corePreviewTowerAnchorX) elements.corePreviewTowerAnchorX.value = tower.anchorX;
+      if (document.activeElement !== elements.corePreviewTowerAnchorY) elements.corePreviewTowerAnchorY.value = tower.anchorY;
+      if (document.activeElement !== elements.corePreviewTowerYOffset) elements.corePreviewTowerYOffset.value = tower.visualYOffset;
+    }
     const errors = configErrors();
     elements.corePreviewUndoBtn.disabled = !state.undo.length;
     elements.corePreviewRedoBtn.disabled = !state.redo.length;
@@ -246,6 +302,10 @@
       const interaction = interactionValues(key);
       const interactionLabel = interaction.length ? interaction.join(", ") : "n/a";
       return `<div data-changed="${baseline !== pending}"><strong>${rule.label}</strong><span>Saved visual <b>${baseline}px</b></span><span>Pending visual <b>${pending}px</b></span><span>Interaction remains <b>${interactionLabel}px</b></span></div>`;
+    }).join("") + towers().map((entry, index) => {
+      const baseline = towerById(entry.id, state.baseline) || entry;
+      const changed = Object.keys(TOWER_RULES).some(key => baseline[key] !== entry[key]);
+      return `<div data-changed="${changed}"><strong>Tower ${index + 1}</strong><span>Width <b>${entry.width}px</b></span><span>Anchor <b>${entry.anchorX}, ${entry.anchorY}</b></span><span>Y offset <b>${entry.visualYOffset}px</b></span></div>`;
     }).join("");
     renderDiff(errors);
   }
@@ -256,8 +316,22 @@
       region.objectives.forEach(objective => {
         const objectiveX = Number(objective.xNorm) * region.width || Number(objective.x);
         const objectiveY = Number(objective.yNorm) * region.height || Number(objective.y);
-        const visualRadius = objectiveSize(objective) / 2;
-        if (objectiveX - visualRadius < 0 || objectiveY - visualRadius < 0 || objectiveX + visualRadius > region.width || objectiveY + visualRadius > region.height) {
+        const visualSize = objectiveSize(objective);
+        const anchorX = Number.isFinite(Number(objective.anchorX)) ? Number(objective.anchorX) : 0.5;
+        const anchorY = Number.isFinite(Number(objective.anchorY)) ? Number(objective.anchorY) : 0.5;
+        const visualY = objectiveY + (Number(objective.visualYOffset) || 0);
+        const contentBounds = objective.kind === "holdingTower" && objective.contentBounds
+          ? objective.contentBounds
+          : { left: 0, top: 0, right: 1, bottom: 1 };
+        const canvasLeft = objectiveX - visualSize * anchorX;
+        const canvasTop = visualY - visualSize * anchorY;
+        const visualBounds = {
+          left: canvasLeft + visualSize * Number(contentBounds.left),
+          right: canvasLeft + visualSize * Number(contentBounds.right),
+          top: canvasTop + visualSize * Number(contentBounds.top),
+          bottom: canvasTop + visualSize * Number(contentBounds.bottom),
+        };
+        if (visualBounds.left < 0 || visualBounds.top < 0 || visualBounds.right > region.width || visualBounds.bottom > region.height) {
           warnings.push({ region, text: `${objective.name || objective.id} artwork extends outside the map bounds` });
         }
         SIDE_ORDER.forEach(side => (region.edgeConnections?.[side] || []).forEach(edge => {
@@ -265,14 +339,19 @@
           const roadYNorm = side === "south" ? Number(edge.arrowYNorm ?? .935) : side === "north" ? Number(edge.arrowYNorm ?? .065) : Number(edge.arrowYNorm ?? ((edge.start + edge.end) / 2));
           const roadX = roadXNorm * region.width;
           const roadY = roadYNorm * region.height;
-          if (Math.hypot(objectiveX - roadX, objectiveY - roadY) < visualRadius + 34) {
+          const nearestX = Math.max(visualBounds.left, Math.min(roadX, visualBounds.right));
+          const nearestY = Math.max(visualBounds.top, Math.min(roadY, visualBounds.bottom));
+          if (Math.hypot(nearestX - roadX, nearestY - roadY) < 34) {
             warnings.push({ region, text: `${objective.name || objective.id} artwork approaches the ${side} road exit` });
           }
         }));
         region.cities.forEach(city => {
           const cityX = Number(city.xNorm) * region.width || Number(city.x);
           const cityY = Number(city.yNorm) * region.height || Number(city.y);
-          if (Math.hypot(objectiveX - cityX, objectiveY - cityY) < visualRadius + 18) {
+          const nearestX = Math.max(visualBounds.left, Math.min(cityX, visualBounds.right));
+          const nearestY = Math.max(visualBounds.top, Math.min(cityY, visualBounds.bottom));
+          const cityClearance = objective.kind === "holdingTower" ? 4 : 18;
+          if (Math.hypot(nearestX - cityX, nearestY - cityY) < cityClearance) {
             warnings.push({ region, text: `${objective.name || objective.id} visually overlaps ${city.name || city.id}` });
           }
         });
@@ -302,7 +381,14 @@
       elements.corePreviewDiff.textContent = `SAVE BLOCKED\n${errors.join("\n")}`;
       return;
     }
-    const changes = Object.keys(SIZE_RULES).filter(key => sizes(state.baseline)?.[key] !== sizes()?.[key]);
+    const changes = Object.keys(SIZE_RULES).filter(key => sizes(state.baseline)?.[key] !== sizes()?.[key])
+      .map(key => `${key}: ${sizes(state.baseline)[key]} px -> ${sizes()[key]} px`);
+    towers().forEach(tower => {
+      const baseline = towerById(tower.id, state.baseline) || tower;
+      Object.keys(TOWER_RULES).forEach(key => {
+        if (baseline[key] !== tower[key]) changes.push(`${tower.id}.${key}: ${baseline[key]} -> ${tower[key]}`);
+      });
+    });
     if (!changes.length && !state.lastSave) {
       elements.corePreviewDiff.textContent = "No unsaved visual changes.";
       return;
@@ -310,7 +396,7 @@
     if (changes.length) {
       elements.corePreviewDiff.textContent = [
         "objective-visual-config.js",
-        ...changes.map(key => `- ${key}: ${sizes(state.baseline)[key]} px\n+ ${key}: ${sizes()[key]} px`),
+        ...changes.map(change => `- ${change}`),
         "generated package files affected: 0",
       ].join("\n");
       return;
@@ -352,6 +438,7 @@
       if (payload.ok) {
         state.config = clone(payload.config);
         state.baseline = clone(payload.config);
+        syncTowerWorkspace();
         state.selectedRegionId = payload.regions.find(region => region.gridX === 0 && region.gridY === 0)?.id || payload.regions[0]?.id || "";
         setStatus(`Verified ${payload.integrity.protectedFileCount} protected files. Offline preview is editable.`, "success");
       } else {
@@ -384,6 +471,29 @@
     render();
     const errors = configErrors();
     setStatus(errors[0] || `${SIZE_RULES[key].label} artwork preview updated. Gameplay geometry remains unchanged.`, errors.length ? "error" : "busy");
+  }
+
+  function handleTowerInput(event) {
+    const tower = selectedTower();
+    if (!tower) return;
+    const mapping = new Map([
+      [elements.corePreviewTowerWidth, "width"],
+      [elements.corePreviewTowerAnchorX, "anchorX"],
+      [elements.corePreviewTowerAnchorY, "anchorY"],
+      [elements.corePreviewTowerYOffset, "visualYOffset"],
+    ]);
+    const key = mapping.get(event.target);
+    if (!key) return;
+    const nextValue = Number(event.target.value);
+    if (tower[key] === nextValue) return;
+    pushUndo();
+    tower[key] = nextValue;
+    const workspaceTower = state.workspace.regions.flatMap(region => region.objectives).find(objective => objective.id === tower.id);
+    if (workspaceTower) workspaceTower[key] = nextValue;
+    notifyDirty();
+    render();
+    const errors = configErrors();
+    setStatus(errors[0] || `${tower.id} ${TOWER_RULES[key].label.toLowerCase()} updated. The protected reservation coordinate is unchanged.`, errors.length ? "error" : "busy");
   }
 
   function undo() {
@@ -431,6 +541,8 @@
   function selectRegion(id) {
     if (!regionById(id)) return;
     state.selectedRegionId = id;
+    const tower = towers().find(entry => entry.regionId === id);
+    if (tower && elements.corePreviewTowerSelect) elements.corePreviewTowerSelect.value = tower.id;
     renderGrid();
     renderDetail();
     elements.corePreviewDetail.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
@@ -451,6 +563,12 @@
     elements.corePreviewDetail.addEventListener("click", event => selectRegion(event.target.closest("[data-core-neighbor]")?.dataset.coreNeighbor));
     elements.corePreviewWarnings.addEventListener("click", event => selectRegion(event.target.closest("[data-core-warning-region]")?.dataset.coreWarningRegion));
     [elements.corePreviewCampSize, elements.corePreviewStrongholdSize, elements.corePreviewCitadelSize].forEach(input => input.addEventListener("input", handleSizeInput));
+    [elements.corePreviewTowerWidth, elements.corePreviewTowerAnchorX, elements.corePreviewTowerAnchorY, elements.corePreviewTowerYOffset].forEach(input => input.addEventListener("input", handleTowerInput));
+    elements.corePreviewTowerSelect.addEventListener("change", () => {
+      const tower = selectedTower();
+      if (tower) selectRegion(tower.regionId);
+      renderControls();
+    });
     elements.corePreviewUndoBtn.addEventListener("click", undo);
     elements.corePreviewRedoBtn.addEventListener("click", redo);
     elements.corePreviewResetBtn.addEventListener("click", reset);

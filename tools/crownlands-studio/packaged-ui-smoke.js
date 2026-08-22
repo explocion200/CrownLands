@@ -79,6 +79,11 @@ async function main() {
       camp: document.querySelector("#corePreviewCampSize").value,
       stronghold: document.querySelector("#corePreviewStrongholdSize").value,
       citadel: document.querySelector("#corePreviewCitadelSize").value,
+      holdingTowers: document.querySelectorAll('[data-objective-kind="holdingTower"]').length,
+      towerWidth: document.querySelector("#corePreviewTowerWidth").value,
+      towerAnchorX: document.querySelector("#corePreviewTowerAnchorX").value,
+      towerAnchorY: document.querySelector("#corePreviewTowerAnchorY").value,
+      towerYOffset: document.querySelector("#corePreviewTowerYOffset").value,
     };
     change(document.querySelector("#corePreviewCampSize"), "145");
     document.querySelector("#corePreviewUndoBtn").click();
@@ -196,12 +201,19 @@ async function main() {
   assert.equal(result.worldSources.pendingCore.integrity, "MANIFEST VERIFIED");
   assert.equal(result.worldSources.pendingCore.maps, 25);
   assert.equal(result.worldSources.pendingCore.loadedImages, 25);
-  assert.match(result.worldSources.pendingCore.counts, /25 maps.*1480 cities.*17 objectives.*40 reciprocal roads/);
+  assert.match(result.worldSources.pendingCore.counts, /25 maps.*1480 cities.*21 visual objectives.*4 towers.*40 reciprocal roads/);
+  assert.equal(result.worldSources.pendingCore.holdingTowers, 4);
   assert.deepEqual([
     result.worldSources.pendingCore.camp,
     result.worldSources.pendingCore.stronghold,
     result.worldSources.pendingCore.citadel,
   ], ["132", "154", "260"]);
+  assert.deepEqual([
+    result.worldSources.pendingCore.towerWidth,
+    result.worldSources.pendingCore.towerAnchorX,
+    result.worldSources.pendingCore.towerAnchorY,
+    result.worldSources.pendingCore.towerYOffset,
+  ], ["184", "0.5", "0.969", "0"]);
   assert.equal(result.worldSources.campAfterUndo, "132");
   assert.equal(result.worldSources.campAfterRedo, "145");
   assert.equal(result.worldSources.campAfterReset, "132");

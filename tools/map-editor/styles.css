@@ -2311,11 +2311,12 @@ label > span,
 
 .core-city-marker { position: absolute; z-index: 2; width: 3px; height: 3px; transform: translate(-50%,-50%); border: 1px solid rgba(255,245,211,.85); border-radius: 50%; background: #5e291f; box-shadow: 0 0 2px #fff0c9; }
 .core-city-marker.detailed { width: 6px; height: 6px; border-width: 1px; }
-.core-objective-marker { position: absolute; z-index: 4; aspect-ratio: 1; transform: translate(-50%,-50%); min-width: 7px; }
+.core-objective-marker { position: absolute; z-index: 4; aspect-ratio: 1; transform: translate(var(--objective-translate-x, -50%), var(--objective-translate-y, -50%)); min-width: 7px; }
 .core-objective-marker > img { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px #000); }
 .core-objective-marker > b { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #812f37; color: #fff; font-size: .35rem; }
 .core-objective-marker > i { position: absolute; left: 50%; top: 50%; z-index: 1; width: calc(100% * var(--interaction-ratio)); height: calc(100% * var(--interaction-ratio)); transform: translate(-50%,-50%); border: 1px dashed rgba(112,220,255,.95); border-radius: 50%; background: rgba(65,166,207,.12); }
 .core-objective-marker.crownCitadel { z-index: 5; }
+.core-objective-marker.holdingTower { z-index: 6; pointer-events: none; }
 .core-objective-marker.detailed { min-width: 18px; }
 
 .core-road-exit { position: absolute; z-index: 3; width: 10px; height: 4px; transform: translate(-50%,-50%); border: 1px solid #f5d36c; border-radius: 5px; background: #7c332c; box-shadow: 0 0 4px #fff0b0; }
@@ -2332,6 +2333,9 @@ label > span,
 .core-preview-size-fields label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #503b2b; font-size: .68rem; font-weight: 800; }
 .core-preview-size-fields label > span { display: flex; align-items: center; gap: 5px; font-weight: 600; }
 .core-preview-size-fields input { width: 88px; min-height: 32px; color: #34241b; border-color: #806546; background: #f5e8c8; }
+.core-preview-tower-fields { display: grid; gap: 7px; margin-top: 10px; padding-top: 9px; border-top: 1px solid rgba(128,101,70,.5); }
+.core-preview-tower-select { display: grid; gap: 4px; color: #503b2b; font-size: .68rem; font-weight: 800; }
+.core-preview-tower-select select { width: 100%; min-height: 34px; color: #34241b; border-color: #806546; background: #f5e8c8; }
 .core-preview-session-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
 .core-preview-session-actions button { min-height: 31px; padding: 0 8px; font-size: .63rem; }
 .core-preview-session-actions .primary { margin-left: auto; }

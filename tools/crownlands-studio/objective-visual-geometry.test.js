@@ -36,16 +36,25 @@ test("game loads scoped objective artwork config before runtime generation", () 
   assert.match(config, /camp:\s*132/);
   assert.match(config, /stronghold:\s*154/);
   assert.match(config, /crownCitadel:\s*260/);
+  for (const towerNumber of [1, 2, 3, 4]) {
+    assert.match(config, new RegExp(`id: "core-v2-holding-tower-${towerNumber}"`));
+    assert.match(config, new RegExp(`source: "${towerNumber}\\.png"`));
+  }
 });
 
 test("generated objectives keep serialized interaction size separate from artwork size", () => {
   const game = read("game.js");
   const strongholds = functionSource(game, "generateEditorStrongholdSlots");
   const camps = functionSource(game, "generateWorldCampSlots");
+  const towers = functionSource(game, "generatePendingCoreHoldingTowerSlots");
   assert.match(strongholds, /const interactionSize = islandImageVisualSizeToWorld[\s\S]*getObjectiveImageVisualSize/);
   assert.match(strongholds, /size:\s*interactionSize,[\s\S]*visualSize/);
   assert.match(camps, /size:\s*interactionSize,\s*interactionSize,\s*visualSize/);
   assert.match(functionSource(game, "getExternalObjectiveImageVisualSize"), /startsWith\(prefix\)/);
+  assert.match(towers, /WORLD_REGIONS_BY_ID\.get\(regionId\)/);
+  assert.match(towers, /kind:\s*"holdingTower"/);
+  assert.match(towers, /visualOnly:\s*true/);
+  assert.doesNotMatch(towers, /owner|defender|capture|bonus|troops|timer/i);
 });
 
 test("hitboxes, route clearance, harvest clearance, march endpoints, and action wheels ignore artwork size", () => {
@@ -72,4 +81,6 @@ test("CSS uses interaction dimensions on nodes and visual dimensions only on art
   assert.match(styles, /\.stronghold-node\s*\{[\s\S]*?width:\s*var\(--stronghold-size/);
   assert.match(styles, /\.stronghold-building\s*\{[\s\S]*?width:\s*var\(--stronghold-visual-size/);
   assert.match(styles, /\.camp-art\.map-art-flip-x\s*\{[\s\S]*translate\(-50%, -50%\) scaleX\(-1\)/);
+  assert.match(styles, /\.holding-tower-node\s*\{[\s\S]*pointer-events:\s*none/);
+  assert.match(styles, /\.holding-tower-art\s*\{[\s\S]*object-fit:\s*contain/);
 });

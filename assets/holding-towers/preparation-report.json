@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "method": "border-connected-near-black-matte-v1",
+  "backgroundThreshold": 12,
+  "fringeThreshold": 28,
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "preparedDimensions": [
+    640,
+    640
+  ],
+  "records": [
+    {
+      "towerNumber": 1,
+      "source": "assets/holding-towers/source/1.png",
+      "sourceSha256": "ca548783cec61d1bdef60d31f0dc9921a4500931a51cd930236f7332677ebea3",
+      "prepared": "assets/holding-towers/tower-1.png",
+      "preparedSha256": "8aac9cb65160b03525f31ff7bc4e4e2e9f7efb1fa10a491c770df0e3821e8178",
+      "preparedDimensions": [
+        640,
+        640
+      ],
+      "hasAlpha": true,
+      "sourceContentBounds": [
+        394,
+        40,
+        854,
+        1226
+      ],
+      "preparedContentSize": [
+        233,
+        600
+      ],
+      "preparedOffset": [
+        203,
+        20
+      ],
+      "transparentPixels": 1245510,
+      "softenedFringePixels": 1632
+    },
+    {
+      "towerNumber": 2,
+      "source": "assets/holding-towers/source/2.png",
+      "sourceSha256": "9481bb46be6ebf290e4b09da51818d35cc93c58a0d00d9a5635d705425768b30",
+      "prepared": "assets/holding-towers/tower-2.png",
+      "preparedSha256": "9ae3478c133e8061c49b5cf14a5232c8eb1816a71dc6eb1362485033f1e985ab",
+      "preparedDimensions": [
+        640,
+        640
+      ],
+      "hasAlpha": true,
+      "sourceContentBounds": [
+        383,
+        25,
+        872,
+        1241
+      ],
+      "preparedContentSize": [
+        241,
+        600
+      ],
+      "preparedOffset": [
+        199,
+        20
+      ],
+      "transparentPixels": 1235251,
+      "softenedFringePixels": 1737
+    },
+    {
+      "towerNumber": 3,
+      "source": "assets/holding-towers/source/3.png",
+      "sourceSha256": "4a2e7c2b989c01ca55e50f272616887f68d3c5b86e798710356594f94c397bda",
+      "prepared": "assets/holding-towers/tower-3.png",
+      "preparedSha256": "1c90aa5a39d8a351f9f109fac9ccb7bed457b35ef932f7e7a0d9f1c3daae2dff",
+      "preparedDimensions": [
+        640,
+        640
+      ],
+      "hasAlpha": true,
+      "sourceContentBounds": [
+        420,
+        32,
+        855,
+        1223
+      ],
+      "preparedContentSize": [
+        219,
+        600
+      ],
+      "preparedOffset": [
+        210,
+        20
+      ],
+      "transparentPixels": 1266085,
+      "softenedFringePixels": 1807
+    },
+    {
+      "towerNumber": 4,
+      "source": "assets/holding-towers/source/4.png",
+      "sourceSha256": "cf37d0b8bd51855cbc2090b5b5b4c2207fcd3d66048fd690a9f78d354b9861fc",
+      "prepared": "assets/holding-towers/tower-4.png",
+      "preparedSha256": "c8c1b426f6ef93b5c1fefda4526fa6a7368142724d2fd3b92c98132d299c1c05",
+      "preparedDimensions": [
+        640,
+        640
+      ],
+      "hasAlpha": true,
+      "sourceContentBounds": [
+        337,
+        39,
+        910,
+        1228
+      ],
+      "preparedContentSize": [
+        289,
+        600
+      ],
+      "preparedOffset": [
+        175,
+        20
+      ],
+      "transparentPixels": 1198290,
+      "softenedFringePixels": 2026
+    }
+  ]
+}

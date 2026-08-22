@@ -165,6 +165,7 @@
                   <button type="button" data-core-view="camp">All Camp Maps</button>
                   <button type="button" data-core-view="stronghold">All Strongholds</button>
                   <button type="button" data-core-view="crownCitadel">Citadel Map</button>
+                  <button type="button" data-core-view="holdingTower">Holding Towers</button>
                 </div>
                 <div id="corePreviewGrid" class="core-preview-grid" aria-label="Pending Core 5 by 5 world"></div>
               </section>
@@ -172,11 +173,22 @@
                 <section>
                   <div class="core-preview-section-heading"><div><span>Visual-only config</span><strong>Objective Artwork</strong></div></div>
                   <p class="core-preview-editing-label">Editing: Pending Core Visual Configuration</p>
-                  <p class="core-preview-safety-note">Artwork size only. Hitboxes, march clearance, coordinates, roads, serialized package data, and reset receipts stay unchanged.</p>
+                  <p class="core-preview-safety-note">Artwork width, base anchor, and visual Y offset only. Hitboxes, march clearance, reserved coordinates, roads, serialized package data, and reset receipts stay unchanged.</p>
                   <div class="core-preview-size-fields">
                     <label>Camp artwork <span><input id="corePreviewCampSize" type="number" min="48" max="400" step="1" /> px</span></label>
                     <label>Stronghold artwork <span><input id="corePreviewStrongholdSize" type="number" min="64" max="500" step="1" /> px</span></label>
                     <label>Crown Citadel artwork <span><input id="corePreviewCitadelSize" type="number" min="100" max="700" step="1" /> px</span></label>
+                  </div>
+                  <div class="core-preview-tower-fields">
+                    <label class="core-preview-tower-select">Holding Tower
+                      <select id="corePreviewTowerSelect" aria-label="Holding Tower visual configuration"></select>
+                    </label>
+                    <div class="core-preview-size-fields">
+                      <label>Artwork width <span><input id="corePreviewTowerWidth" type="number" min="96" max="320" step="1" /> px</span></label>
+                      <label>Anchor X <span><input id="corePreviewTowerAnchorX" type="number" min="0" max="1" step="0.001" /></span></label>
+                      <label>Anchor Y <span><input id="corePreviewTowerAnchorY" type="number" min="0.5" max="1.25" step="0.001" /></span></label>
+                      <label>Visual Y offset <span><input id="corePreviewTowerYOffset" type="number" min="-80" max="80" step="1" /> px</span></label>
+                    </div>
                   </div>
                   <div class="core-preview-session-actions">
                     <button id="corePreviewUndoBtn" type="button" disabled>Undo</button>

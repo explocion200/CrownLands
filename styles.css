@@ -2450,6 +2450,22 @@ input {
   height: 100%;
   object-fit: contain;
 }
+.holding-tower-node {
+  position: absolute;
+  z-index: 6;
+  width: var(--holding-tower-width, 184px);
+  height: var(--holding-tower-width, 184px);
+  transform: translate(var(--holding-tower-translate-x, -50%), var(--holding-tower-translate-y, -96.9%));
+  pointer-events: none;
+  contain: layout style paint;
+}
+.holding-tower-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 8px rgba(0,0,0,.44));
+}
 .camp-art.map-art-flip-x {
   transform: translate(-50%, -50%) scaleX(-1);
 }
@@ -2637,6 +2653,7 @@ input {
 .map-frame.camera-moving .city-shield-field,
 .map-frame.camera-moving .city-castle,
 .map-frame.camera-moving .stronghold-building,
+.map-frame.camera-moving .holding-tower-art,
 .map-frame.camera-moving .player-city-label,
 .map-frame.camera-moving .foreign-city-label,
 .map-frame.camera-moving .foreign-selected-banner,
@@ -2645,10 +2662,12 @@ input {
 .map-frame.zooming .city-shield-field,
 .map-frame.zooming .city-castle,
 .map-frame.zooming .stronghold-building,
+.map-frame.zooming .holding-tower-art,
 .map-frame.crowded-map .city-ring,
 .map-frame.crowded-map .city-shield-field,
 .map-frame.crowded-map .city-castle,
 .map-frame.crowded-map .stronghold-building,
+.map-frame.crowded-map .holding-tower-art,
 .map-frame.crowded-map .player-city-label,
 .map-frame.crowded-map .foreign-city-label,
 .map-frame.crowded-map .foreign-selected-banner,
@@ -2657,6 +2676,7 @@ input {
 .map-frame.low-zoom .city-shield-field,
 .map-frame.low-zoom .city-castle,
 .map-frame.low-zoom .stronghold-building,
+.map-frame.low-zoom .holding-tower-art,
 .map-frame.low-zoom .player-city-label,
 .map-frame.low-zoom .foreign-city-label,
 .map-frame.low-zoom .foreign-selected-banner,
