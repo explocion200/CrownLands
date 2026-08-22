@@ -8665,8 +8665,8 @@ function seasonalAchievementStateForClient(state = {}, nowMs = Date.now()) {
 
 function getSeasonalAchievementRewardCapacity(stats = {}) {
   return {
-    goldPerHour: Math.max(1, Math.floor(safeNumber(stats.untimedGoldPerHour, stats.goldPerHour || 1))),
-    troopPerHour: Math.max(1, Math.floor(safeNumber(stats.untimedTroopPerHour, stats.troopPerHour || 1))),
+    goldPerHour: Math.max(1, Math.floor(safeNumber(stats.baseGoldPerHour, 1))),
+    troopPerHour: Math.max(1, Math.floor(safeNumber(stats.baseTroopPerHour, 1))),
   };
 }
 
@@ -9169,6 +9169,9 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
   const qualifyingAttackTroops = Math.max(1, Math.ceil(launchableTroops * 0.05));
   const goldPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedGoldPerHour, 1)));
   const troopPerHour = Math.max(1, Math.floor(safeNumber(economy?.globalStats?.untimedTroopPerHour, 1)));
+  const rawProductionRates = getRewardedAdBaseRates(economy);
+  const rewardGoldPerHour = Math.max(1, Math.floor(safeNumber(rawProductionRates.goldPerHour, 1)));
+  const rewardTroopPerHour = Math.max(1, Math.floor(safeNumber(rawProductionRates.troopsPerHour, 1)));
   const projectedCombatTroops = Math.max(
     launchableTroops,
     Math.floor(launchableTroops + troopPerHour * Math.min(12, cycle.remainingHours))
@@ -9292,6 +9295,8 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     gold: Math.max(0, Math.floor(safeNumber(economy?.gold, 0))),
     goldPerHour,
     troopPerHour,
+    rewardGoldPerHour,
+    rewardTroopPerHour,
     launchableTroops,
     maxSourceTroops,
     qualifyingAttackTroops,

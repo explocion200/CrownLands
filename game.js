@@ -1968,6 +1968,9 @@ let seasonalAchievementError = "";
 let seasonalAchievementHydrated = false;
 let activeSeasonalAchievementFilter = "all";
 let expandedSeasonalAchievementId = "";
+let seasonalAchievementListInteractionUntilMs = 0;
+let seasonalAchievementRenderTimer = 0;
+let pendingSeasonalAchievementRenderOptions = null;
 const seasonalAchievementActionsInFlight = new Set();
 let activeDailyRewardModalTab = "rewards";
 let rewardedAdStatus = null;
@@ -30426,6 +30429,70 @@ function getSeasonalAchievementClaimableCount() {
   return Math.max(0, Math.floor(Number(seasonalAchievementState?.claimableCount) || 0));
 }
 
+function isSeasonalAchievementClaimable(entry = {}) {
+  const complete = Boolean(entry.completedAtMs || Number(entry.progress) >= Number(entry.target));
+  return complete && !entry.claimedAtMs;
+}
+
+function sortSeasonalAchievementsForDisplay(entries = []) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry, index) => ({ entry, index }))
+    .sort((left, right) => {
+      const priority = Number(isSeasonalAchievementClaimable(right.entry))
+        - Number(isSeasonalAchievementClaimable(left.entry));
+      if (priority) return priority;
+      const canonical = (Number(left.entry?.order) || 0) - (Number(right.entry?.order) || 0);
+      return canonical || left.index - right.index;
+    })
+    .map(({ entry }) => entry);
+}
+
+function captureSeasonalAchievementScrollAnchor() {
+  const list = modalBody?.querySelector(".seasonal-achievement-list");
+  if (!list) return null;
+  const listRect = list.getBoundingClientRect();
+  const rows = [...list.querySelectorAll("[data-seasonal-achievement-toggle]")];
+  const anchor = rows.find(row => row.getBoundingClientRect().bottom > listRect.top + 1) || rows[0] || null;
+  return {
+    scrollTop: list.scrollTop,
+    achievementId: String(anchor?.dataset?.seasonalAchievementToggle || ""),
+    offsetTop: anchor ? anchor.getBoundingClientRect().top - listRect.top : 0,
+  };
+}
+
+function restoreSeasonalAchievementScrollAnchor(snapshot = null) {
+  if (!snapshot) return;
+  const list = modalBody?.querySelector(".seasonal-achievement-list");
+  if (!list) return;
+  list.scrollTop = Math.max(0, Number(snapshot.scrollTop) || 0);
+  const anchor = [...list.querySelectorAll("[data-seasonal-achievement-toggle]")]
+    .find(row => row.dataset.seasonalAchievementToggle === snapshot.achievementId);
+  if (!anchor) return;
+  const currentOffset = anchor.getBoundingClientRect().top - list.getBoundingClientRect().top;
+  list.scrollTop += currentOffset - (Number(snapshot.offsetTop) || 0);
+}
+
+function clearSeasonalAchievementRenderTimer() {
+  if (seasonalAchievementRenderTimer) window.clearTimeout(seasonalAchievementRenderTimer);
+  seasonalAchievementRenderTimer = 0;
+  pendingSeasonalAchievementRenderOptions = null;
+}
+
+function queueSeasonalAchievementRender(options = {}) {
+  pendingSeasonalAchievementRenderOptions = {
+    ...(pendingSeasonalAchievementRenderOptions || {}),
+    ...options,
+  };
+  if (seasonalAchievementRenderTimer) window.clearTimeout(seasonalAchievementRenderTimer);
+  const delayMs = Math.max(16, seasonalAchievementListInteractionUntilMs - Date.now() + 16);
+  seasonalAchievementRenderTimer = window.setTimeout(() => {
+    seasonalAchievementRenderTimer = 0;
+    const queued = pendingSeasonalAchievementRenderOptions || {};
+    pendingSeasonalAchievementRenderOptions = null;
+    renderDailyLoginRewardModal({ ...queued, forceAchievementRender: true });
+  }, delayMs);
+}
+
 function getCollectibleRewardAlertSummary() {
   const rewards = getDailyLoginClaimableCount();
   const quests = getDailyMissionClaimableCount();
@@ -30441,6 +30508,7 @@ function clearSeasonalAchievementSubscription() {
 
 function stopSeasonalAchievementLifecycle({ clear = false } = {}) {
   clearSeasonalAchievementSubscription();
+  clearSeasonalAchievementRenderTimer();
   if (seasonalAchievementUtcTimer) window.clearTimeout(seasonalAchievementUtcTimer);
   seasonalAchievementUtcTimer = 0;
   seasonalAchievementStatusPromise = null;
@@ -30625,9 +30693,9 @@ function renderSeasonalAchievementTab() {
   if (!seasonalAchievementState) {
     return `<section class="seasonal-achievement-panel"><div class="daily-mission-empty"><strong>Achievements are reconnecting</strong><p>${escapeHtml(seasonalAchievementError || "Try again in a moment.")}</p><button type="button" data-seasonal-achievement-refresh>Try again</button></div></section>`;
   }
-  const filtered = seasonalAchievementState.achievements.filter(entry => (
+  const filtered = sortSeasonalAchievementsForDisplay(seasonalAchievementState.achievements.filter(entry => (
     activeSeasonalAchievementFilter === "all" || entry.category === activeSeasonalAchievementFilter
-  ));
+  )));
   const filters = SEASONAL_ACHIEVEMENT_FILTERS.map(([id, label]) => {
     const active = activeSeasonalAchievementFilter === id;
     return `<button type="button" class="${active ? "active" : ""}" data-seasonal-achievement-filter="${id}" aria-pressed="${active}">${label}</button>`;
@@ -30695,9 +30763,20 @@ function bindSeasonalAchievementControls() {
     button.addEventListener("click", () => {
       activeSeasonalAchievementFilter = button.dataset.seasonalAchievementFilter || "all";
       expandedSeasonalAchievementId = "";
-      renderDailyLoginRewardModal();
+      renderDailyLoginRewardModal({ forceAchievementRender: true, resetAchievementScroll: true });
     });
   });
+  const achievementList = modalBody?.querySelector(".seasonal-achievement-list");
+  const markListInteraction = () => {
+    seasonalAchievementListInteractionUntilMs = Date.now() + 180;
+  };
+  achievementList?.addEventListener("wheel", markListInteraction, { passive: true });
+  achievementList?.addEventListener("touchstart", markListInteraction, { passive: true });
+  achievementList?.addEventListener("touchmove", markListInteraction, { passive: true });
+  achievementList?.addEventListener("pointerdown", markListInteraction, { passive: true });
+  achievementList?.addEventListener("scroll", event => {
+    if (event.isTrusted) markListInteraction();
+  }, { passive: true });
   const rows = [...(modalBody?.querySelectorAll("[data-seasonal-achievement-toggle]") || [])];
   const toggleRow = row => {
     const achievementId = String(row?.dataset?.seasonalAchievementToggle || "");
@@ -30832,8 +30911,23 @@ function bindDailyQuestControls() {
   });
 }
 
-function renderDailyLoginRewardModal() {
+function renderDailyLoginRewardModal(options = {}) {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
+  const renderingAchievements = activeDailyRewardModalTab === "achievements";
+  if (!renderingAchievements) clearSeasonalAchievementRenderTimer();
+  if (
+    renderingAchievements
+    && !options.forceAchievementRender
+    && modalBody.querySelector(".seasonal-achievement-list")
+    && Date.now() < seasonalAchievementListInteractionUntilMs
+  ) {
+    queueSeasonalAchievementRender(options);
+    return;
+  }
+  if (renderingAchievements && options.forceAchievementRender) clearSeasonalAchievementRenderTimer();
+  const achievementScroll = renderingAchievements && !options.resetAchievementScroll
+    ? captureSeasonalAchievementScrollAnchor()
+    : null;
   if (modalTitle) modalTitle.textContent = activeDailyRewardModalTab === "quests"
     ? "Quests"
     : activeDailyRewardModalTab === "achievements"
@@ -30854,6 +30948,7 @@ function renderDailyLoginRewardModal() {
     modalBody.innerHTML = `<section id="dailyRewardPanelAchievements" class="seasonal-achievement-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabAchievements">${renderSeasonalAchievementTab()}</section>`;
     bindDailyRewardModalTabs();
     bindSeasonalAchievementControls();
+    restoreSeasonalAchievementScrollAnchor(achievementScroll);
     return;
   }
   const status = dailyLoginRewardStatus;
@@ -36661,6 +36756,8 @@ modal.addEventListener("close", () => {
       : "";
   publicPlayerProfileRequestId += 1;
   publicClanProfileRequestId += 1;
+  clearSeasonalAchievementRenderTimer();
+  seasonalAchievementListInteractionUntilMs = 0;
   if (modalHeaderNav) {
     modalHeaderNav.hidden = true;
     modalHeaderNav.replaceChildren();

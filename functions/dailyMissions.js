@@ -162,6 +162,8 @@ function normalizeCapacity(raw = {}) {
   const remainingHours = clamp(raw.remainingHours, 0, 24);
   const goldPerHour = Math.max(1, clampInt(raw.goldPerHour, 1));
   const troopPerHour = Math.max(1, clampInt(raw.troopPerHour, 1));
+  const rewardGoldPerHour = Math.max(1, clampInt(raw.rewardGoldPerHour ?? raw.baseGoldPerHour ?? goldPerHour, 1));
+  const rewardTroopPerHour = Math.max(1, clampInt(raw.rewardTroopPerHour ?? raw.baseTroopPerHour ?? troopPerHour, 1));
   const launchableTroops = Math.max(0, clampInt(raw.launchableTroops, 0));
   const maxSourceTroops = Math.max(0, clampInt(raw.maxSourceTroops, launchableTroops));
   const projectedCombatTroops = Math.max(
@@ -183,6 +185,8 @@ function normalizeCapacity(raw = {}) {
     gold: Math.max(0, clampInt(raw.gold, 0)),
     goldPerHour,
     troopPerHour,
+    rewardGoldPerHour,
+    rewardTroopPerHour,
     launchableTroops,
     maxSourceTroops,
     qualifyingAttackTroops: Math.max(1, clampInt(raw.qualifyingAttackTroops, Math.ceil(launchableTroops * 0.05))),
@@ -200,6 +204,11 @@ function normalizeCapacity(raw = {}) {
     upgradeTargets: raw.upgradeTargets && typeof raw.upgradeTargets === "object" ? raw.upgradeTargets : {},
     itemCosts,
   };
+}
+
+function getCapacitySnapshot(capacity = {}) {
+  const { rewardGoldPerHour, rewardTroopPerHour, ...snapshot } = capacity;
+  return snapshot;
 }
 
 function getCapacityBand(capacity = {}) {
@@ -334,7 +343,9 @@ function createReward(family = "", difficulty = "easy", capacity = {}, random = 
   const specialHalfHour = ["GOLD_CAMP_CAPTURE", "WARBAND_CAMP_CAPTURE", "RELIC_CAMP_CAPTURE", "DEED_CAMP_COMPLETE", "CLAN_GIFT"].includes(family);
   const effort = getScaledEffort(difficulty, capacity.remainingHours);
   const productionHours = specialHalfHour ? 0.5 : effort.rewardHours;
-  const intendedRate = definition.rewardType === "troops" ? capacity.troopPerHour : capacity.goldPerHour;
+  const intendedRate = definition.rewardType === "troops"
+    ? capacity.rewardTroopPerHour
+    : capacity.rewardGoldPerHour;
   const lockedAmount = Math.max(1, Math.floor(intendedRate * productionHours));
 
   if (difficulty === "hard" && !specialHalfHour && random() < 0.2) {
@@ -478,7 +489,7 @@ function createDailyMissionState({ uid = "", worldId = "", resetGeneration = "",
     rerollCount: 0,
     lastRerollRequestId: "",
     lastRerollReceipt: null,
-    capacitySnapshot: capacity,
+    capacitySnapshot: getCapacitySnapshot(capacity),
     missions,
     completedCount: 0,
     claimedCount: 0,
@@ -566,7 +577,7 @@ function migrateDailyMissionState(state = {}, rawCapacity = {}, nowMs = Date.now
   return {
     ...state,
     schemaVersion: DAILY_MISSION_SCHEMA_VERSION,
-    capacitySnapshot: capacity,
+    capacitySnapshot: getCapacitySnapshot(capacity),
     missions,
     completedCount: missions.filter(mission => mission?.completedAtMs || mission?.claimedAtMs).length,
     claimedCount: missions.filter(mission => mission?.claimedAtMs).length,
@@ -695,6 +706,7 @@ module.exports = {
   normalizeCapacity,
   getMissionTarget,
   getMissionSelectionGroup,
+  createReward,
   createDailyMissionState,
   createReplacementMission,
   migrateDailyMissionState,
