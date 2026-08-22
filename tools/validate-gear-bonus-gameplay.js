@@ -140,7 +140,7 @@ async function main() {
       return commonGear.getBonuses(profile);
     },
     skillMultiplier() {
-      return 1.2;
+      return 1.6;
     },
     normalizeDemoAttackSnapshot() {
       return null;
@@ -177,12 +177,12 @@ async function main() {
     pathLength: 2_000,
     troopCount,
     kind,
-    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.2 * 1.08),
+    speedMultiplier: movementContext.addCommonGearMarchSpeed(profile, kind, 1.6 * 1.08),
   });
   assertClose(
-    movementContext.addCommonGearMarchSpeed(movementProfiles.weapon, "attack", 1.2 * 1.08),
-    1.2 * 1.08 + 0.015,
-    "Movement no longer preserves (skill × objective) + gear."
+    movementContext.addCommonGearMarchSpeed(movementProfiles.weapon, "attack", 1.6 * 1.08),
+    1.6 * 1.08 + 0.015,
+    "Max March Orders no longer preserves (capped skill × objective) + gear."
   );
   assert.ok(serverTravel(movementProfiles.necklace, "scout", 1) < serverTravel(movementProfiles.none, "scout", 1));
   assert.equal(serverTravel(movementProfiles.weapon, "scout", 1), serverTravel(movementProfiles.none, "scout", 1));
@@ -211,7 +211,7 @@ async function main() {
       return commonGear.getBonuses(activeClientMovementProfile);
     },
     skillMultiplier() {
-      return 1.2;
+      return 1.6;
     },
     getStrongholdMarchSpeedMultiplier() {
       return 1.08;
@@ -374,6 +374,32 @@ async function main() {
     "A non-main city included Treasury main-city gear or lost an all-city source."
   );
 
+  const maxProductionProfile = createGearProfile([
+    ...["head", "chest", "pants", "boots", "gloves", "belt"].map(slot => equipped("barracks", slot, 5)),
+    ...["head", "chest", "pants", "boots", "gloves", "belt", "weapon", "necklace"].map(slot => equipped("treasury", slot, 5)),
+  ]);
+  maxProductionProfile.mainCityId = "main_city";
+  maxProductionProfile.testRoyalGranariesPercent = 75;
+  maxProductionProfile.testTaxStewardshipPercent = 75;
+  const maxMainProduction = productionContext.getCityProductionStats(
+    { id: "main_city", level: 1 },
+    maxProductionProfile,
+    {},
+    { includeWarDrums: false, includeRoyalTaxDecree: false, nowMs: 1 }
+  );
+  const maxOtherProduction = productionContext.getCityProductionStats(
+    { id: "other_city", level: 1 },
+    maxProductionProfile,
+    {},
+    { includeWarDrums: false, includeRoyalTaxDecree: false, nowMs: 1 }
+  );
+  assert.equal(maxMainProduction.gearTroopProductionPercent, 9);
+  assert.equal(maxMainProduction.gearGoldProductionPercent, 12);
+  assert.equal(maxOtherProduction.gearGoldProductionPercent, 1.5);
+  assertClose(maxMainProduction.troopProductionPerHour, maxMainProduction.baseTroopProductionPerHour * 1.84, "Barracks gear was clamped by max Royal Granaries.");
+  assertClose(maxMainProduction.goldProductionPerHour, maxMainProduction.baseGoldProductionPerHour * 1.87, "Treasury gear was clamped by max Tax Stewardship in the main city.");
+  assertClose(maxOtherProduction.goldProductionPerHour, maxOtherProduction.baseGoldProductionPerHour * 1.765, "All-city Treasury gear was clamped by max Tax Stewardship.");
+
   const defenseProfile = createGearProfile([
     equipped("gatehouse", "weapon", 5),
     equipped("gatehouse", "head", 5),
@@ -471,7 +497,29 @@ async function main() {
   assert.equal(combinedDefensePackages.owner.cityWalls, 1_165, "Stoneworks and Gatehouse armor did not stack against base walls.");
   assert.equal(combinedDefensePackages.totalGarrisonDefense, 6_370);
 
+  const maxDefenseProfile = createGearProfile([
+    ...["head", "chest", "pants", "boots", "gloves", "belt"].map(slot => equipped("gatehouse", slot, 5)),
+    equipped("gatehouse", "weapon", 5),
+  ]);
+  maxDefenseProfile.testShieldwallPercent = 60;
+  maxDefenseProfile.testStoneworksPercent = 75;
+  const maxDefensePackages = defenseContext.calculateDefenderArmyPackages({
+    target: defenseTarget,
+    ownerProfile: maxDefenseProfile,
+    contributions: [{ id: "reinforcement", ownerUid: "ally", ownerName: "Ally", troops: 2_000 }],
+    contributorProfiles: new Map([["ally", { testShieldwallPercent: 60 }]]),
+    contributorStats: new Map([["ally", {}]]),
+    siegeCombatVersion: 1,
+    defenseCombatVersion: 1,
+  });
+  assert.equal(maxDefensePackages.owner.gearDefenderStrengthPercent, 1.5);
+  assert.equal(maxDefensePackages.owner.effectivePower, 4_199, "Gatehouse defender gear was clamped by max Shieldwall Discipline.");
+  assert.equal(maxDefensePackages.reinforcements[0].effectivePower, 4_199, "Owner Gatehouse gear did not stack above max allied Shieldwall.");
+  assert.equal(maxDefensePackages.totalGarrisonDefense, 8_398);
+  assert.equal(maxDefensePackages.owner.cityWalls, 1_840, "Gatehouse wall gear was clamped by max Stoneworks.");
+
   let activeClientStatsProfile = defenseProfile;
+  let activeClientSkillPercents = {};
   const clientStatsContext = {
     DEFENSE_COMBAT_VERSION: 1,
     BASE_TROOP_DEFENSE_POWER: 1.3,
@@ -489,8 +537,11 @@ async function main() {
     supportsDefenseCombat() { return true; },
     getBaseCityWalls() { return 1_000; },
     getCommonGearBonuses() { return commonGear.getBonuses(activeClientStatsProfile); },
-    getSkillPercent() { return 0; },
-    getSkillLevel() { return 0; },
+    getSkillPercent(skill) { return Math.max(0, Number(activeClientSkillPercents[skill]) || 0); },
+    getSkillLevel(skill) {
+      const perLevel = ["stoneworks", "taxStewardship", "royalGranaries"].includes(skill) ? 3 : 2;
+      return Math.floor((Number(activeClientSkillPercents[skill]) || 0) / perLevel);
+    },
     getControlledStrongholdGoldBonusPercent() { return 0; },
     getControlledStrongholdTroopBonusPercent() { return 0; },
     getControlledObjectiveBonusBreakdown() {
@@ -525,6 +576,18 @@ async function main() {
   activeClientStatsProfile = defenseProfile;
   const enemyDestination = clientStatsContext.getCityStats({ id: "enemy", owner: "enemy", level: 1, troops: 2_000, alliedReinforcementTroops: 2_000 });
   assert.equal(enemyDestination.gearDefenderStrengthPercent, 0, "The local ruler's Gatehouse gear affected an enemy destination.");
+  activeClientStatsProfile = maxProductionProfile;
+  activeClientSkillPercents = { royalGranaries: 75, taxStewardship: 75 };
+  const clientMaxMainProduction = clientStatsContext.getCityStats({ id: "main_city", owner: "player", level: 1, troops: 0 });
+  const clientMaxOtherProduction = clientStatsContext.getCityStats({ id: "other_city", owner: "player", level: 1, troops: 0 });
+  assertClose(clientMaxMainProduction.troopProductionPerHour, maxMainProduction.troopProductionPerHour, "Max Royal Granaries + gear client/server drift");
+  assertClose(clientMaxMainProduction.goldProductionPerHour, maxMainProduction.goldProductionPerHour, "Max Tax Stewardship + main-city gear client/server drift");
+  assertClose(clientMaxOtherProduction.goldProductionPerHour, maxOtherProduction.goldProductionPerHour, "Max Tax Stewardship + all-city gear client/server drift");
+  activeClientStatsProfile = maxDefenseProfile;
+  activeClientSkillPercents = { shieldwallDiscipline: 60, stoneworks: 75 };
+  const clientMaxDefense = clientStatsContext.getCityStats({ id: "defended", owner: "player", level: 1, troops: 2_000, alliedReinforcementTroops: 2_000 });
+  assert.equal(clientMaxDefense.troopDefense, maxDefensePackages.totalGarrisonDefense, "Max Shieldwall + Gatehouse gear client/server drift");
+  assert.equal(clientMaxDefense.cityWalls, maxDefensePackages.owner.cityWalls, "Max Stoneworks + Gatehouse gear client/server drift");
 
   const wallBreakdownContext = {
     Math,
@@ -567,14 +630,29 @@ async function main() {
     1_000 * 1.25 * (1 + (60 + 1.5) / 100),
     "Swordmastery and Barracks weapon gear did not stack additively."
   );
+  const clientAttackContext = {
+    BASE_TROOP_ATTACK_POWER: 1.25,
+    getCommonGearBonuses() { return commonGear.getBonuses(combinedAttackProfile); },
+    skillMultiplier() { return 1.6; },
+  };
+  vm.createContext(clientAttackContext);
+  vm.runInContext(`${extractFunction(clientSource, "getAttackPower")}; this.getAttackPower = getAttackPower;`, clientAttackContext, { filename: "game.js" });
+  assertClose(
+    clientAttackContext.getAttackPower(1_000, "player"),
+    attackContext.getAttackPower(1_000, combinedAttackProfile),
+    "Max Swordmastery + attack gear client/server drift"
+  );
 
+  let casualtySkillPercent = 50;
   const capContext = {
     COMMON_GEAR: commonGear,
-    getSkillPercent() { return 74; },
+    getSkillPercent() { return casualtySkillPercent; },
     getCommonGearBonuses() { return { casualtyEfficiency: 1.5 }; },
   };
   vm.createContext(capContext);
   vm.runInContext(`${extractFunction(serverSource, "getCasualtyRecoveryPercent")}; this.getCasualtyRecoveryPercent = getCasualtyRecoveryPercent;`, capContext, { filename: "functions/index.js" });
+  assert.equal(capContext.getCasualtyRecoveryPercent({}), 51.5, "Barracks casualty gear did not stack above max Field Medics.");
+  casualtySkillPercent = 74;
   assert.equal(capContext.getCasualtyRecoveryPercent({}), 75, "Field Medics plus gear exceeded the 75% casualty cap.");
 
   const casualtySnapshotContext = {
@@ -625,6 +703,10 @@ async function main() {
   assert.match(citySourceContext.getCityStatBonusSources({ gearGoldProductionMainCityPercent: 0.5, gearGoldProductionAllCitiesPercent: 0.25 }, "gold"), /Treasury main-city gear \+0\.5%[\s\S]*Treasury all-city gear \+0\.25%/);
   assert.match(citySourceContext.getCityStatBonusSources({ gearWallStrengthPercent: 1.5 }, "walls"), /Gatehouse gear \+1\.5%/);
   assert.match(citySourceContext.getCityStatBonusSources({ shieldwallDisciplinePercent: 20, objectiveTroopDefenseBonusPercent: 8, gearDefenderStrengthPercent: 0.8 }, "defense"), /Shieldwall Discipline \+20%[\s\S]*Objective soldier defense \+8%[\s\S]*Gatehouse gear \+0\.8%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ stoneworksPercent: 75, gearWallStrengthPercent: 9 }, "walls"), /Stoneworks \+75%[\s\S]*Gatehouse gear \+9%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ shieldwallDisciplinePercent: 60, gearDefenderStrengthPercent: 1.5 }, "defense"), /Shieldwall Discipline \+60%[\s\S]*Gatehouse gear \+1\.5%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ royalGranariesPercent: 75, gearTroopProductionPercent: 9 }, "troops"), /Royal Granaries \+75%[\s\S]*Barracks gear \+9%/);
+  assert.match(citySourceContext.getCityStatBonusSources({ taxStewardshipPercent: 75, gearGoldProductionMainCityPercent: 10.5, gearGoldProductionAllCitiesPercent: 1.5 }, "gold"), /Tax Stewardship \+75%[\s\S]*Treasury main-city gear \+10\.5%[\s\S]*Treasury all-city gear \+1\.5%/);
   assert.match(clientUiSource, /Attack sources: Swordmastery[\s\S]*?War Captain gear/);
   assert.match(clientUiSource, /March Orders[\s\S]*?Royal Stables gear[\s\S]*?combined speed/);
   assert.match(clientSource, /Casualty recovery[\s\S]*?Field Medics \+ Barracks gear[\s\S]*?75% combined cap[\s\S]*?main city/);
