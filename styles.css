@@ -9360,6 +9360,23 @@ button.inventory-slot {
   line-height: 1.25;
 }
 
+.profile-inner-castle-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: .08rem;
+}
+
+.profile-inner-castle-btn {
+  width: min(220px, 72%);
+  min-height: 40px;
+  padding: .45rem 1rem;
+  border-radius: 8px;
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
 .profile-achievement-summary {
   grid-column: 1 / -1;
   min-width: 0;
@@ -9568,6 +9585,7 @@ button.inventory-slot {
   .kingdom-stat { min-height: 62px; padding: .42rem .5rem; }
   .kingdom-stat-power { min-height: 76px; }
   .kingdom-stat strong { font-size: .96rem; }
+  .profile-inner-castle-btn { min-height: 34px; padding-block: .3rem; }
   .flag-editor-view { padding-top: .5rem; }
   .kingdom-flag-editor { width: 132px; height: 92px; }
   .flag-editor-preview { padding: 0; }

@@ -2186,6 +2186,7 @@ const profileAchievementCompleted = document.getElementById("profileAchievementC
 const profileAchievementClaimed = document.getElementById("profileAchievementClaimed");
 const profileAchievementRemaining = document.getElementById("profileAchievementRemaining");
 const profileViewAchievementsBtn = document.getElementById("profileViewAchievementsBtn");
+const profileInnerCastleBtn = document.getElementById("profileInnerCastleBtn");
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
@@ -21651,6 +21652,16 @@ function closeProfileScreen(options = {}) {
   cancelProfileNameEdit();
 }
 
+function openProfileInnerCastle() {
+  const mainCity = getMainCityReference();
+  if (!mainCity) {
+    showToast("Your main city is not available yet.");
+    return;
+  }
+  closeProfileScreen({ force: true });
+  openInnerCastle(mainCity.id);
+}
+
 function animateUiTabPanel(panel) {
   if (!panel || getEffectiveAnimationMode() === "off") return;
   panel.classList.remove("ui-tab-entering");
@@ -36504,6 +36515,7 @@ if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (clanHudBtn) clanHudBtn.addEventListener("click", showClanHub);
 if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => showDailyLoginRewardsModal());
 if (profileViewAchievementsBtn) profileViewAchievementsBtn.addEventListener("click", () => showDailyLoginRewardsModal({ initialTab: "achievements" }));
+if (profileInnerCastleBtn) profileInnerCastleBtn.addEventListener("click", openProfileInnerCastle);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (clanTabBtn) clanTabBtn.addEventListener("click", showProfileClan);

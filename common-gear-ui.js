@@ -628,6 +628,14 @@ function canEnterInnerCastle(city) {
   );
 }
 
+function getInnerCastleCity(cityId) {
+  const id = String(cityId || "");
+  const loaded = cityById(id);
+  if (loaded) return loaded;
+  const mainCity = typeof getMainCityReference === "function" ? getMainCityReference() : null;
+  return mainCity?.id === id ? mainCity : null;
+}
+
 function getInnerCastleBuilding(buildingKey) {
   return INNER_CASTLE_BUILDINGS.find(building => building.key === buildingKey) || null;
 }
@@ -680,7 +688,7 @@ function selectInnerCastleBuilding(buildingKey) {
 /* Officer equipment rendering and actions live in common-gear-ui.js. */
 
 function renderInnerCastle(cityId) {
-  const city = cityById(cityId);
+  const city = getInnerCastleCity(cityId);
   if (!canEnterInnerCastle(city)) return false;
   const selectedBuilding = getInnerCastleBuilding(innerCastleSelectedBuildingKey)
     || getInnerCastleBuilding("great-hall")
@@ -741,7 +749,7 @@ function renderInnerCastle(cityId) {
 }
 
 function openInnerCastle(cityId) {
-  const city = cityById(cityId);
+  const city = getInnerCastleCity(cityId);
   if (!canEnterInnerCastle(city)) {
     showToast("The Inner Castle is available only in your main city.");
     return;
