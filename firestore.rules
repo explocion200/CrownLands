@@ -320,6 +320,24 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /treasury/{resetId} {
+        allow read: if clanMember(clanId)
+          && resetId == currentResetGeneration()
+          && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
+      match /treasuryUsage/{usageId} {
+        allow read: if clanMember(clanId)
+          && resource.data.uid == request.auth.uid
+          && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
+      match /treasuryReceipts/{receiptId} {
+        allow read, create, update, delete: if false;
+      }
+
       match /rallyState/{resetId} {
         allow read, create, update, delete: if false;
       }
@@ -409,6 +427,24 @@ service cloud.firestore {
           || (resource.data.participantUids is list
             && request.auth.uid in resource.data.participantUids));
       allow create, update, delete: if false;
+    }
+
+    match /holdingTowers/{towerId} {
+      allow read: if signedIn() && isCurrentGeneration(resource.data);
+      allow create, update, delete: if false;
+
+      match /garrison/{uid} {
+        allow read: if signedIn()
+          && isCurrentGeneration(resource.data)
+          && (
+            request.auth.uid == uid
+            || (
+              get(/databases/$(database)/documents/holdingTowers/$(towerId)).data.clanId != ''
+              && clanMember(get(/databases/$(database)/documents/holdingTowers/$(towerId)).data.clanId)
+            )
+          );
+        allow create, update, delete: if false;
+      }
     }
 
     match /reinforcements/{reinforcementId} {

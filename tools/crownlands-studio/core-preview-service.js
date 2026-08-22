@@ -24,10 +24,10 @@ const TOWER_RULES = Object.freeze({
   visualYOffset: Object.freeze({ minimum: -80, maximum: 80, fallback: 0, integer: true }),
 });
 const HOLDING_TOWER_SLOTS = Object.freeze([
-  Object.freeze({ id: "core-v2-holding-tower-1", regionId: "core-v2-north-west-holding-tower-m1-m1", source: "1.png", artSrc: "assets/optimized/holding-tower-1-384x384-4ecfb3a8b86d.webp", reservedX: 736, reservedY: 552, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3172, top: 0.0313, right: 0.6813, bottom: 0.9688 }) }),
-  Object.freeze({ id: "core-v2-holding-tower-2", regionId: "core-v2-north-east-holding-tower-p1-m1", source: "2.png", artSrc: "assets/optimized/holding-tower-2-384x384-65f5ac41f3ac.webp", reservedX: 734, reservedY: 555, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3109, top: 0.0313, right: 0.6875, bottom: 0.9688 }) }),
-  Object.freeze({ id: "core-v2-holding-tower-3", regionId: "core-v2-south-west-holding-tower-m1-p1", source: "3.png", artSrc: "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp", reservedX: 724, reservedY: 543, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3281, top: 0.0313, right: 0.6703, bottom: 0.9688 }) }),
-  Object.freeze({ id: "core-v2-holding-tower-4", regionId: "core-v2-south-east-holding-tower-p1-p1", source: "4.png", artSrc: "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp", reservedX: 736, reservedY: 555, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.2734, top: 0.0313, right: 0.725, bottom: 0.9688 }) }),
+  Object.freeze({ id: "core-v2-holding-tower-1", name: "Ravenwatch Tower", quadrant: "north-west", regionId: "core-v2-north-west-holding-tower-m1-m1", source: "1.png", artSrc: "assets/optimized/holding-tower-1-384x384-4ecfb3a8b86d.webp", reservedX: 736, reservedY: 552, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3172, top: 0.0313, right: 0.6813, bottom: 0.9688 }) }),
+  Object.freeze({ id: "core-v2-holding-tower-2", name: "Highguard Tower", quadrant: "north-east", regionId: "core-v2-north-east-holding-tower-p1-m1", source: "2.png", artSrc: "assets/optimized/holding-tower-2-384x384-65f5ac41f3ac.webp", reservedX: 734, reservedY: 555, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3109, top: 0.0313, right: 0.6875, bottom: 0.9688 }) }),
+  Object.freeze({ id: "core-v2-holding-tower-3", name: "Blackthorn Tower", quadrant: "south-west", regionId: "core-v2-south-west-holding-tower-m1-p1", source: "3.png", artSrc: "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp", reservedX: 724, reservedY: 543, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.3281, top: 0.0313, right: 0.6703, bottom: 0.9688 }) }),
+  Object.freeze({ id: "core-v2-holding-tower-4", name: "Stoneward Tower", quadrant: "south-east", regionId: "core-v2-south-east-holding-tower-p1-p1", source: "4.png", artSrc: "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp", reservedX: 736, reservedY: 555, reservationRadiusX: 142, reservationRadiusY: 126, contentBounds: Object.freeze({ left: 0.2734, top: 0.0313, right: 0.725, bottom: 0.9688 }) }),
 ]);
 
 function parseConfigSource(source) {
@@ -103,6 +103,8 @@ function serializeConfig(config) {
     + `    holdingTowers: Object.freeze([\n`
     + towers.map(tower => `      Object.freeze({\n`
       + `        id: ${JSON.stringify(tower.id)},\n`
+      + `        name: ${JSON.stringify(tower.name)},\n`
+      + `        quadrant: ${JSON.stringify(tower.quadrant)},\n`
       + `        regionId: ${JSON.stringify(tower.regionId)},\n`
       + `        source: ${JSON.stringify(tower.source)},\n`
       + `        artSrc: ${JSON.stringify(tower.artSrc)},\n`

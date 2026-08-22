@@ -58,11 +58,16 @@ const categoryFileBudgets = {
 };
 
 const entrypointBudgets = {
-  // One bounded 16 KiB step for the Pending Core visual-only tower renderer.
-  "game.js": 1616 * 1024,
+  // One additional bounded 16 KiB step for the interactive Tower gameplay
+  // orchestration; the larger markup/fixture renderer is split and separately capped.
+  "game.js": 1632 * 1024,
+  "holding-tower-ui.js": 32 * 1024,
+  "holding-tower-ui.css": 8 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
-  "styles.css": 400 * 1024,
+  // One bounded 16 KiB step for the complete Tower/Treasury component and its
+  // exact 844x390 landscape treatment.
+  "styles.css": 416 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
@@ -212,8 +217,10 @@ for (const requiredShellFile of [
   "interface-theme.css",
   "manuscript-prototype.css",
   "ui-contrast-correction.css",
+  "holding-tower-ui.css",
   "base-cities.js",
   "instant-economy-actions.js",
+  "holding-tower-ui.js",
   "game.js",
   "animation-manager.js",
   "firebaseClient.js",

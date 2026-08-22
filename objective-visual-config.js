@@ -10,6 +10,8 @@ window.CROWNLANDS_OBJECTIVE_VISUAL_CONFIG = Object.freeze({
     holdingTowers: Object.freeze([
       Object.freeze({
         id: "core-v2-holding-tower-1",
+        name: "Ravenwatch Tower",
+        quadrant: "north-west",
         regionId: "core-v2-north-west-holding-tower-m1-m1",
         source: "1.png",
         artSrc: "assets/optimized/holding-tower-1-384x384-4ecfb3a8b86d.webp",
@@ -25,6 +27,8 @@ window.CROWNLANDS_OBJECTIVE_VISUAL_CONFIG = Object.freeze({
       }),
       Object.freeze({
         id: "core-v2-holding-tower-2",
+        name: "Highguard Tower",
+        quadrant: "north-east",
         regionId: "core-v2-north-east-holding-tower-p1-m1",
         source: "2.png",
         artSrc: "assets/optimized/holding-tower-2-384x384-65f5ac41f3ac.webp",
@@ -40,6 +44,8 @@ window.CROWNLANDS_OBJECTIVE_VISUAL_CONFIG = Object.freeze({
       }),
       Object.freeze({
         id: "core-v2-holding-tower-3",
+        name: "Blackthorn Tower",
+        quadrant: "south-west",
         regionId: "core-v2-south-west-holding-tower-m1-p1",
         source: "3.png",
         artSrc: "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp",
@@ -55,6 +61,8 @@ window.CROWNLANDS_OBJECTIVE_VISUAL_CONFIG = Object.freeze({
       }),
       Object.freeze({
         id: "core-v2-holding-tower-4",
+        name: "Stoneward Tower",
+        quadrant: "south-east",
         regionId: "core-v2-south-east-holding-tower-p1-p1",
         source: "4.png",
         artSrc: "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp",

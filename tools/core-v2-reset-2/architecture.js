@@ -8,6 +8,7 @@ const { performance } = require("node:perf_hooks");
 const commonGear = require("../../functions/common-gear.js");
 const mainCityPolicy = require("../../functions/core-main-city-policy.js");
 const resetRuntime = require("../../functions/reset-runtime-guard.js");
+const holdingTowers = require("../../functions/holding-towers.js");
 const resetContract = require("../../reset-persistence-contract.js");
 const reset1 = require("../core-v2-reset-1/architecture.js");
 
@@ -58,6 +59,7 @@ const CANDIDATE_SOURCE_PATHS = Object.freeze([
   "functions/core-main-city-policy.js",
   "functions/reset-runtime-config.json",
   "functions/reset-runtime-guard.js",
+  "functions/holding-towers.js",
   "functions/index.js",
   "firestore.rules",
   "firestore.indexes.json",
@@ -423,6 +425,11 @@ function buildProductionShapedWorld(playerCount = DATASET_SIZE) {
   const outerCities = published.flatMap(makeOuterCities);
   const regions = [...clone(core.regions), ...outerRegions];
   refreshTopology(regions);
+  const holdingTowerState = holdingTowers.TOWERS.map(tower => holdingTowers.createNeutralTowerState(tower.id, {
+    worldId: NEW_WORLD_ID,
+    resetGeneration: NEW_SEASON_ID,
+    nowMs: Date.UTC(2026, 8, 1),
+  }));
   return {
     schemaVersion: SCHEMA_VERSION,
     worldId: NEW_WORLD_ID,
@@ -435,6 +442,8 @@ function buildProductionShapedWorld(playerCount = DATASET_SIZE) {
     regions,
     cities: [...clone(core.cities), ...outerCities],
     objectives: clone(core.objectives),
+    holdingTowers: holdingTowerState,
+    clanTreasuries: [],
     unpublishedOuterRecord: records.at(-1),
   };
 }
@@ -511,6 +520,7 @@ function validateWorld(world) {
   const coreCities = world.cities.filter(city => coreIds.has(city.regionId));
   const cityIds = world.cities.map(city => city.id);
   const objectiveIds = world.objectives.map(objective => objective.id);
+  const towerIds = (world.holdingTowers || []).map(tower => tower.id);
   const standby = world.regions.filter(region => region.kind === "player_region" && region.lifecycle === "STANDBY");
   const reciprocalErrors = [];
   world.regions.forEach(region => Object.entries(region.connections || {}).forEach(([side, connection]) => {
@@ -525,6 +535,19 @@ function validateWorld(world) {
   if (new Set(cityIds).size !== cityIds.length) errors.push("duplicate-city-id");
   if (new Set(objectiveIds).size !== objectiveIds.length) errors.push("duplicate-objective-id");
   if (world.objectives.length !== 17) errors.push("objective-count");
+  if (towerIds.length !== 4 || new Set(towerIds).size !== 4) errors.push("holding-tower-count");
+  if ((world.holdingTowers || []).some(tower => (
+    tower.ownerKind !== "neutral"
+    || tower.clanId
+    || tower.wallLevel !== 1
+    || tower.wallIntegrityBps !== 10_000
+    || tower.neutralDefenders !== 10_000_000
+    || tower.upgradeQueue?.length
+    || tower.repair
+    || tower.veil
+    || tower.veilUsage?.count !== 0
+  ))) errors.push("holding-tower-reset-state");
+  if ((world.clanTreasuries || []).length !== 0) errors.push("clan-treasury-reset-state");
   if (coreRegions.some(region => region.spawnEligible)) errors.push("core-spawn-eligible");
   if (standby.length !== STANDBY_TARGET) errors.push("standby-count");
   if (reciprocalErrors.length) errors.push("reciprocal-topology");
@@ -534,6 +557,8 @@ function validateWorld(world) {
     coreRegionCount: coreRegions.length,
     coreCityCount: coreCities.length,
     objectiveCount: world.objectives.length,
+    holdingTowerCount: towerIds.length,
+    clanTreasuryCount: (world.clanTreasuries || []).length,
     totalRegionCount: world.regions.length,
     totalCityCount: world.cities.length,
     activeOuterRegions: world.regions.filter(region => region.kind === "player_region" && region.lifecycle === "ACTIVE").length,

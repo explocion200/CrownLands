@@ -10,6 +10,7 @@ const SERVER_REGION_CATALOG = require("./region-catalog.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
+const HOLDING_TOWERS = require("./holding-towers.js");
 const CORE_MAIN_CITY_POLICY = require("./core-main-city-policy.js");
 const {
   MINIMUM_NPC_CITIES_FOR_SPAWN,
@@ -2409,6 +2410,13 @@ function normalizePlayerName(value, fallback = "Ruler") {
 const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
 const SERVER_WORLD_MAP_BY_ID = new Map(SERVER_WORLD_MAPS.map(map => [safeString(map?.id, 80), map]));
 const SERVER_WORLD_REGION_IDS = new Set(SERVER_WORLD_MAP_BY_ID.keys());
+// Holding Tower gameplay is compiled into the server before the Pending Core
+// cutover, but it is impossible to mutate until every reserved Tower region is
+// present in the authoritative server world catalog. This keeps the old live
+// realm at an intentional Tower count of zero.
+const SERVER_HOLDING_TOWER_WORLD_ACTIVE = HOLDING_TOWERS.TOWERS.every(tower => (
+  SERVER_WORLD_REGION_IDS.has(normalizeRegionId(tower.regionId))
+));
 const SERVER_WORLD_OBJECTIVE_TARGETS = SERVER_WORLD_MAPS.flatMap(map => (
   Array.isArray(map?.objectives) ? map.objectives : []
 ).map(objective => ({
@@ -2463,6 +2471,19 @@ function getServerWorldTargetIds(regionId = "") {
     ...(Array.isArray(map?.cities) ? map.cities : []),
     ...(Array.isArray(map?.objectives) ? map.objectives : []),
   ].map(target => safeString(target?.id, 96)).filter(Boolean));
+}
+
+function isHoldingTowerWorldActive() {
+  return SERVER_HOLDING_TOWER_WORLD_ACTIVE;
+}
+
+function assertHoldingTowerWorldActive() {
+  if (!isHoldingTowerWorldActive()) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Holding Towers remain sealed until the Pending Core reset world is activated."
+    );
+  }
 }
 
 function getServerWorldRegularCityIds(regionId = "") {
@@ -4955,7 +4976,11 @@ function normalizeArmyPayload(data = {}, uid = "") {
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     kind,
     launchKind: ARMY_ORDER_KINDS.includes(raw.launchKind) ? raw.launchKind : kind,
-    targetType: raw.targetType === "camp" || data.targetType === "camp" ? "camp" : "city",
+    targetType: raw.targetType === "tower" || data.targetType === "tower"
+      ? "tower"
+      : raw.targetType === "camp" || data.targetType === "camp"
+        ? "camp"
+        : "city",
     fromId,
     toId,
     fromName: safeString(raw.fromName, 40),
@@ -5089,8 +5114,74 @@ function cityRefForRegion(regionId, cityId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/cities/${cityId}`);
 }
 
+function holdingTowerRef(towerId = "") {
+  const tower = HOLDING_TOWERS.getTowerDefinition(towerId);
+  return tower ? db.doc(`holdingTowers/${tower.id}`) : null;
+}
+
+function holdingTowerGarrisonRef(towerId = "", uid = "") {
+  const tower = HOLDING_TOWERS.getTowerDefinition(towerId);
+  const playerUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return tower && playerUid ? db.doc(`holdingTowers/${tower.id}/garrison/${playerUid}`) : null;
+}
+
+function holdingTowerGarrisonQuery(towerId = "") {
+  const tower = HOLDING_TOWERS.getTowerDefinition(towerId);
+  return tower ? db.collection(`holdingTowers/${tower.id}/garrison`) : null;
+}
+
+function clanTreasuryRef(clanId = "") {
+  const id = safeString(clanId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return id ? db.doc(`clans/${id}/treasury/${RESET_GENERATION}`) : null;
+}
+
+function clanTreasuryUsageRef(clanId = "", uid = "", utcDate = "") {
+  const id = safeString(clanId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const playerUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const day = safeString(utcDate, 10).replace(/[^0-9-]/g, "");
+  return id && playerUid && day
+    ? db.doc(`clans/${id}/treasuryUsage/${RESET_GENERATION}_${day}_${playerUid}`)
+    : null;
+}
+
+function clanTreasuryReceiptRef(clanId = "", operationId = "") {
+  const id = safeString(clanId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const operation = safeString(operationId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return id && operation ? db.doc(`clans/${id}/treasuryReceipts/${operation}`) : null;
+}
+
+function normalizeClanTreasury(snapshot = null) {
+  const raw = snapshot?.exists ? snapshot.data() || {} : {};
+  if (
+    safeString(raw.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(raw.resetGeneration, 120) !== RESET_GENERATION
+  ) {
+    return { balance: 0, totalDonated: 0, totalSpent: 0, revision: 0 };
+  }
+  return {
+    balance: Math.max(0, Math.floor(safeNumber(raw.balance, 0))),
+    totalDonated: Math.max(0, Math.floor(safeNumber(raw.totalDonated, 0))),
+    totalSpent: Math.max(0, Math.floor(safeNumber(raw.totalSpent, 0))),
+    revision: Math.max(0, Math.floor(safeNumber(raw.revision, 0))),
+  };
+}
+
+function createHoldingTowerTreasuryPatch(treasury = {}, overrides = {}, nowMs = Date.now()) {
+  return {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    balance: Math.max(0, Math.floor(safeNumber(overrides.balance, treasury.balance))),
+    totalDonated: Math.max(0, Math.floor(safeNumber(overrides.totalDonated, treasury.totalDonated))),
+    totalSpent: Math.max(0, Math.floor(safeNumber(overrides.totalSpent, treasury.totalSpent))),
+    revision: Math.max(0, Math.floor(safeNumber(treasury.revision, 0))) + 1,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
 function getReinforcementTargetKey(targetType = "city", regionId = "", targetId = "") {
-  return `${targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(regionId)}:${safeString(targetId, 96)}`;
+  const normalizedType = targetType === "tower" ? "tower" : targetType === "camp" ? "camp" : "city";
+  return `${normalizedType}:${normalizeRegionId(regionId)}:${safeString(targetId, 96)}`;
 }
 
 function getReinforcementId(ownerUid = "", targetKey = "") {
@@ -5474,9 +5565,10 @@ function normalizeClanRally(snapshotOrData = null) {
     clanId: safeString(data.clanId, 128),
     leaderUid: safeString(data.leaderUid, 128),
     status: safeString(data.status, 24),
-    targetType: data.targetType === "camp" ? "camp" : "city",
+    targetType: data.targetType === "tower" ? "tower" : data.targetType === "camp" ? "camp" : "city",
     targetId: safeString(data.targetId, 96),
     targetRegionId: normalizeRegionId(data.targetRegionId),
+    assemblyType: data.assemblyType === "tower" ? "tower" : "city",
     assemblyCityId: safeString(data.assemblyCityId, 96),
     assemblyRegionId: normalizeRegionId(data.assemblyRegionId),
     participants: normalizeRallyParticipants(data.participants),
@@ -5489,19 +5581,24 @@ function normalizeClanRally(snapshotOrData = null) {
 }
 
 function isRallyObjectiveTarget(target = {}, targetType = "city") {
+  if (targetType === "tower") return Boolean(HOLDING_TOWERS.getTowerDefinition(target?.id));
   return targetType === "camp" ? Boolean(getRewardCampConfig(target)) : isStronghold(target);
 }
 
 function rallyTargetRef(rally = {}) {
   if (!rally.targetRegionId || !rally.targetId) return null;
-  return rally.targetType === "camp"
+  return rally.targetType === "tower"
+    ? holdingTowerRef(rally.targetId)
+    : rally.targetType === "camp"
     ? campRefForRegion(rally.targetRegionId, rally.targetId)
     : cityRefForRegion(rally.targetRegionId, rally.targetId);
 }
 
 function rallyAssemblyRef(rally = {}) {
   if (!rally.assemblyRegionId || !rally.assemblyCityId) return null;
-  return cityRefForRegion(rally.assemblyRegionId, rally.assemblyCityId);
+  return rally.assemblyType === "tower"
+    ? holdingTowerRef(rally.assemblyCityId)
+    : cityRefForRegion(rally.assemblyRegionId, rally.assemblyCityId);
 }
 
 function normalizeRallyState(raw = {}) {
@@ -5675,11 +5772,12 @@ function rallyForClient(rally = {}) {
     status: safeString(rally.status, 24),
     leaderUid: safeString(rally.leaderUid, 128),
     leaderName: normalizePlayerName(rally.leaderName, "Ruler"),
-    targetType: rally.targetType === "camp" ? "camp" : "city",
+    targetType: rally.targetType === "tower" ? "tower" : rally.targetType === "camp" ? "camp" : "city",
     targetId: safeString(rally.targetId, 96),
     targetName: safeString(rally.targetName || rally.targetId, 80),
     targetRegionId: normalizeRegionId(rally.targetRegionId),
     assemblyCityId: safeString(rally.assemblyCityId, 96),
+    assemblyType: rally.assemblyType === "tower" ? "tower" : "city",
     assemblyCityName: safeString(rally.assemblyCityName || rally.assemblyCityId, 80),
     assemblyRegionId: normalizeRegionId(rally.assemblyRegionId),
     participantUids: participants.map(participant => participant.uid),
@@ -5748,7 +5846,8 @@ function createRallyAssemblyMovement({
     rallyJoin: true,
     rallyId: normalizeRallyId(rally.id),
     rallyClanId: safeString(rally.clanId, 128),
-    targetType: "city",
+    targetType: rally.assemblyType === "tower" ? "tower" : "city",
+    holdingTowerMovement: rally.assemblyType === "tower",
     fromId: safeString(source.id, 96),
     toId: safeString(assembly.id, 96),
     sourceRegionId: normalizeRegionId(order.sourceRegionId),
@@ -10353,6 +10452,96 @@ function getCityUpgradeCost(city = {}, bonuses = {}) {
   return Math.max(10, Math.floor(totalCost * (1 - Math.min(85, reduction) / 100) + 0.000001));
 }
 
+function getEquivalentCityWallCost(level = 1) {
+  const cost = getCityUpgradeCost({ level }, {});
+  if (!Number.isSafeInteger(cost) || cost < 0) {
+    throw new HttpsError("out-of-range", "That Tower Wall Level exceeds the supported economy range.");
+  }
+  return cost;
+}
+
+function createInitialHoldingTowerState(towerId = "", nowMs = Date.now()) {
+  return HOLDING_TOWERS.createNeutralTowerState(towerId, {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    nowMs,
+  });
+}
+
+function normalizeCurrentHoldingTower(snapshot = null, towerId = "", nowMs = Date.now()) {
+  const tower = HOLDING_TOWERS.requireTowerDefinition(towerId || snapshot?.id);
+  const raw = snapshot?.exists ? { id: snapshot.id, ...snapshot.data() } : createInitialHoldingTowerState(tower.id, nowMs);
+  if (
+    safeString(raw.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(raw.resetGeneration, 120) !== RESET_GENERATION
+  ) {
+    return HOLDING_TOWERS.materializeTowerState(createInitialHoldingTowerState(tower.id, nowMs), nowMs);
+  }
+  return HOLDING_TOWERS.materializeTowerState(raw, nowMs);
+}
+
+function holdingTowerStateWritePatch(state = {}, nowMs = Date.now(), { create = false } = {}) {
+  return {
+    ...state,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+    ...(create ? { createdAt: FieldValue.serverTimestamp() } : {}),
+  };
+}
+
+function getHoldingTowerPublicState(state = {}, nowMs = Date.now()) {
+  const current = HOLDING_TOWERS.materializeTowerState(state, nowMs);
+  return {
+    id: current.id,
+    modelVersion: current.modelVersion,
+    worldId: current.worldId,
+    resetGeneration: current.resetGeneration,
+    name: current.name,
+    quadrant: current.quadrant,
+    regionId: current.regionId,
+    x: current.x,
+    y: current.y,
+    ownerKind: current.ownerKind,
+    clanId: current.clanId,
+    clanName: current.clanName,
+    clanTag: current.clanTag,
+    clanEmblem: current.clanEmblem || null,
+    wallLevel: current.wallLevel,
+    wallIntegrityBps: current.wallIntegrityBps,
+    repairActive: Boolean(current.repair),
+    repairCompleteAtMs: current.repair?.completeAtMs || 0,
+    upgradeActive: Boolean(current.upgradeQueue.length && current.upgradeQueue[0].progressStartedAtMs),
+    upgradeTargetLevel: current.upgradeQueue[0]?.targetLevel || 0,
+    upgradeCompleteAtMs: current.upgradeQueue[0]?.progressStartedAtMs
+      ? current.upgradeQueue[0].progressStartedAtMs + current.upgradeQueue[0].remainingMs
+      : 0,
+    queuedUpgradeCount: current.upgradeQueue.length,
+    attackBlocked: current.attackBlocked,
+    incomingRallyCount: current.incomingRallyIds.length,
+    veilActive: Boolean(current.veil),
+    veilExpiresAtMs: current.veil?.expiresAtMs || 0,
+    ownershipRevision: current.ownershipRevision,
+    updatedAtMs: current.updatedAtMs,
+  };
+}
+
+function assertHoldingTowerManager(member = {}) {
+  assertClanRole(member, HOLDING_TOWERS.MANAGER_ROLES);
+}
+
+function assertHoldingTowerMemberEligible(member = {}, nowMs = Date.now(), clanId = "") {
+  const eligibility = HOLDING_TOWERS.getEligibility(member, nowMs, clanId);
+  if (!eligibility.eligible) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Holding Tower access unlocks after 24 hours in this clan${eligibility.eligibleAtMs ? ` (${new Date(eligibility.eligibleAtMs).toISOString()})` : ""}.`
+    );
+  }
+  return eligibility;
+}
+
 function getEconomyCityByRef(economy = null, ref = null) {
   if (!economy || !ref) return null;
   return economy.cityEntries.find(entry => entry.ref.path === ref.path) || null;
@@ -12307,8 +12496,12 @@ async function sendIncomingArmyNotification(notification = {}) {
   return result.successCount > 0;
 }
 
-function queueIncomingArmyNotification(transaction, armyId = "", notification = null, nowMs = Date.now()) {
-  const notificationId = safeString(`incoming_${armyId}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+function queueIncomingArmyNotification(transaction, armyId = "", notification = null, nowMs = Date.now(), recipientKey = "") {
+  const recipientSuffix = safeString(recipientKey, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const notificationId = safeString(
+    `incoming_${armyId}${recipientSuffix ? `_${recipientSuffix}` : ""}`,
+    180
+  ).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!transaction || !notificationId || !notification?.defenderUid) return false;
   transaction.set(db.doc(`serverNotificationOutbox/${notificationId}`), {
     type: "incoming_army",
@@ -16515,6 +16708,112 @@ async function reconcileClanRalliesBeforeDisband(clanId = "") {
   }
 }
 
+async function returnDepartingHoldingTowerGarrisons(uid = "", clanId = "", reason = "clan_departure") {
+  const playerUid = safeString(uid, 128);
+  const currentClanId = safeString(clanId, 128);
+  if (!playerUid || !currentClanId || !isHoldingTowerWorldActive()) return { movements: [], troops: 0 };
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const profileRef = db.doc(`players/${playerUid}`);
+    const profileSnap = await transaction.get(profileRef);
+    if (!profileSnap.exists) return { movements: [], troops: 0 };
+    const towerReads = await Promise.all(HOLDING_TOWERS.TOWERS.flatMap(tower => [
+      transaction.get(holdingTowerRef(tower.id)),
+      transaction.get(holdingTowerGarrisonRef(tower.id, playerUid)),
+    ]));
+    const stationed = [];
+    for (let index = 0; index < HOLDING_TOWERS.TOWERS.length; index += 1) {
+      const tower = HOLDING_TOWERS.TOWERS[index];
+      const towerSnap = towerReads[index * 2];
+      const garrisonSnap = towerReads[index * 2 + 1];
+      if (!towerSnap.exists || !garrisonSnap.exists) continue;
+      const state = normalizeCurrentHoldingTower(towerSnap, tower.id, nowMs);
+      const troops = Math.max(0, Math.floor(safeNumber(garrisonSnap.data()?.troops, 0)));
+      if (state.clanId === currentClanId && troops > 0) stationed.push({ state, garrisonSnap, troops });
+    }
+    if (!stationed.length) return { movements: [], troops: 0 };
+    const economy = await prepareEconomyCollection(transaction, playerUid, nowMs, { profileRef, profileSnap });
+    const profile = economy.profileAfter || profileSnap.data() || {};
+    const destinationEntry = getOwnedMainCityDestination(economy, profile)
+      || economy.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === playerUid);
+    if (!destinationEntry?.city) throw new HttpsError("failed-precondition", "No safe Main City is available for Tower troop return.");
+    const movements = stationed.map(({ state, garrisonSnap, troops }) => {
+      const movement = createRallyReturnMovement({
+        rally: {
+          id: `tower_departure_${state.id}_${playerUid}`,
+          clanId: currentClanId,
+          targetId: state.id,
+          targetName: state.name,
+          targetRegionId: state.regionId,
+        },
+        participant: {
+          uid: playerUid,
+          ownerName: profile.playerName,
+          ownerFlag: profile.flag || null,
+          troops,
+          survivors: troops,
+        },
+        source: state,
+        destinationEntry,
+        economy,
+        profile,
+        nowMs,
+        reason,
+        movementId: `tower_departure_${RESET_GENERATION}_${state.id}_${playerUid}`,
+      });
+      transaction.delete(garrisonSnap.ref);
+      writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+      return movement;
+    });
+    const totalTroops = stationed.reduce((total, entry) => total + entry.troops, 0);
+    writePreparedEconomy(transaction, economy, {
+      towerGarrisonTroops: Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, totalTroops)) - totalTroops),
+      towerGarrisonResetGeneration: RESET_GENERATION,
+    }, [], { addActiveArmies: movements, nowMs });
+    writeClanAudit(transaction, currentClanId, playerUid, "holding_tower_garrison_returned", {
+      reason,
+      troops: totalTroops,
+      towerIds: stationed.map(entry => entry.state.id),
+    }, nowMs);
+    return { movements, troops: totalTroops };
+  }, "returnDepartingHoldingTowerGarrisons");
+}
+
+async function resetClanHoldingTowers(clanId = "", reason = "clan_disbanded") {
+  const currentClanId = safeString(clanId, 128);
+  if (!currentClanId || !isHoldingTowerWorldActive()) return { reset: 0 };
+  const nowMs = Date.now();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const towerSnaps = await Promise.all(HOLDING_TOWERS.TOWERS.map(tower => transaction.get(holdingTowerRef(tower.id))));
+    let reset = 0;
+    towerSnaps.forEach((towerSnap, index) => {
+      if (!towerSnap.exists) return;
+      const tower = normalizeCurrentHoldingTower(towerSnap, HOLDING_TOWERS.TOWERS[index].id, nowMs);
+      if (tower.clanId !== currentClanId) return;
+      const neutral = createInitialHoldingTowerState(tower.id, nowMs);
+      transaction.set(towerSnap.ref, holdingTowerStateWritePatch({
+        ...neutral,
+        ownershipRevision: tower.ownershipRevision + 1,
+        resetReason: reason,
+      }, nowMs), { merge: false });
+      reset += 1;
+    });
+    const treasuryRef = clanTreasuryRef(currentClanId);
+    if (treasuryRef) transaction.delete(treasuryRef);
+    return { reset };
+  }, "resetClanHoldingTowers");
+}
+
+async function reconcileHoldingTowersBeforeDisband(clanId = "") {
+  const currentClanId = safeString(clanId, 128);
+  if (!currentClanId || !isHoldingTowerWorldActive()) return;
+  const membersSnap = await db.collection(`clans/${currentClanId}/members`).get();
+  for (const memberSnap of membersSnap.docs) {
+    await returnDepartingHoldingTowerGarrisons(memberSnap.id, currentClanId, "clan_disbanded");
+  }
+  await resetClanHoldingTowers(currentClanId, "clan_disbanded");
+}
+
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
   const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
@@ -16539,6 +16838,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     throw new HttpsError("failed-precondition", "Transfer leadership before leaving.");
   }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
+  await returnDepartingHoldingTowerGarrisons(targetUid, clanId, reason);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -16610,6 +16910,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     writeClanAudit(transaction, clanId, actorUid, reason, { targetUid });
     return { ok: true, disbanded: nextCount === 0, cooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS };
   });
+  if (result.disbanded) await resetClanHoldingTowers(clanId, "clan_empty");
   return result;
 }
 
@@ -16765,6 +17066,7 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
   }
 
   await reconcileClanRalliesBeforeDisband(clanId);
+  await reconcileHoldingTowersBeforeDisband(clanId);
   const nowMs = Date.now();
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const clanRef = db.doc(`clans/${clanId}`);
@@ -16885,6 +17187,393 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
   await reconcileClanRalliesBeforeDisband(clanId);
   return result;
 });
+
+function requireHoldingTowerOperationId(request = {}, prefix = "tower") {
+  const operationId = safeString(
+    request.data?.operationId || request.data?.requestId,
+    128
+  ).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!operationId) throw new HttpsError("invalid-argument", `Missing ${prefix} operation id.`);
+  return operationId;
+}
+
+function holdingTowerReceiptResult(snapshot = null) {
+  if (!snapshot?.exists) return null;
+  const raw = snapshot.data() || {};
+  return raw.result && typeof raw.result === "object" ? raw.result : null;
+}
+
+exports.getHoldingTowerState = timedCallable(
+  "getHoldingTowerState",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const towerId = safeString(request.data?.towerId, 96);
+    const definitions = towerId
+      ? [HOLDING_TOWERS.requireTowerDefinition(towerId)]
+      : HOLDING_TOWERS.TOWERS;
+    if (!isHoldingTowerWorldActive()) {
+      return {
+        ok: true,
+        worldActive: false,
+        oldLiveWorldTowerCount: 0,
+        towers: definitions.map(tower => getHoldingTowerPublicState(
+          createInitialHoldingTowerState(tower.id, nowMs),
+          nowMs
+        )),
+        serverTimeMs: nowMs,
+      };
+    }
+
+    const [profileSnap, towerSnaps] = await Promise.all([
+      db.doc(`players/${uid}`).get(),
+      Promise.all(definitions.map(tower => holdingTowerRef(tower.id).get())),
+    ]);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const profileClanId = safeString(profile.clanId, 128);
+    const memberSnap = profileClanId
+      ? await db.doc(`clans/${profileClanId}/members/${uid}`).get()
+      : null;
+    const member = memberSnap?.exists ? memberSnap.data() || {} : null;
+    const eligibility = HOLDING_TOWERS.getEligibility(member || {}, nowMs, profileClanId);
+    const towers = [];
+    for (let index = 0; index < definitions.length; index += 1) {
+      const state = normalizeCurrentHoldingTower(towerSnaps[index], definitions[index].id, nowMs);
+      const ownerMember = Boolean(profileClanId && state.clanId === profileClanId && member);
+      let exactDefenders = null;
+      let ownStationedTroops = 0;
+      let garrison = [];
+      if (ownerMember) {
+        const garrisonSnap = await holdingTowerGarrisonQuery(state.id).get();
+        garrison = garrisonSnap.docs.map(doc => ({
+          uid: doc.id,
+          ownerName: normalizePlayerName(doc.data()?.ownerName, "Ruler"),
+          ownerFlag: normalizeServerFlag(doc.data()?.ownerFlag),
+          troops: Math.max(0, Math.floor(safeNumber(doc.data()?.troops, 0))),
+        })).filter(entry => entry.troops > 0);
+        exactDefenders = garrison.reduce((total, entry) => Math.min(
+          Number.MAX_SAFE_INTEGER,
+          total + entry.troops
+        ), 0);
+        ownStationedTroops = garrison.find(entry => entry.uid === uid)?.troops || 0;
+      } else {
+        const scoutReport = profile?.scoutReports?.[state.id];
+        if (
+          scoutReport
+          && timestampToMs(scoutReport.expiresAtMs) > nowMs
+          && safeString(scoutReport.towerOwnershipKey, 180) === `${state.clanId}:${state.ownershipRevision}`
+        ) {
+          exactDefenders = Math.max(0, Math.floor(safeNumber(scoutReport.troops, 0)));
+        }
+      }
+      towers.push({
+        ...getHoldingTowerPublicState(state, nowMs),
+        exactDefenders,
+        ownStationedTroops,
+        garrison: ownerMember ? garrison : [],
+        neutralDefenders: exactDefenders !== null && state.ownerKind === "neutral"
+          ? state.neutralDefenders
+          : null,
+        ownerMember,
+        eligibility,
+        permissions: {
+          inspect: true,
+          scout: true,
+          createRallyAttack: Boolean(profileClanId && eligibility.eligible),
+          reinforce: Boolean(ownerMember && eligibility.eligible),
+          withdrawOwn: Boolean(ownerMember && eligibility.eligible && ownStationedTroops > 0),
+          attackFrom: Boolean(ownerMember && eligibility.eligible && ownStationedTroops > 0),
+          rallyFrom: Boolean(ownerMember && eligibility.eligible && ownStationedTroops > 0),
+          manage: Boolean(ownerMember && HOLDING_TOWERS.MANAGER_ROLES.includes(member?.role)),
+        },
+        upgradeQueue: ownerMember ? state.upgradeQueue : [],
+        repair: ownerMember ? state.repair : null,
+        veilUsage: ownerMember ? state.veilUsage : null,
+        veilUsesRemaining: ownerMember
+          ? Math.max(0, HOLDING_TOWERS.TOWER_VEIL_DAILY_LIMIT - state.veilUsage.count)
+          : null,
+      });
+    }
+    return { ok: true, worldActive: true, towers, serverTimeMs: nowMs };
+  }
+);
+
+exports.getClanTreasuryStatus = timedCallable(
+  "getClanTreasuryStatus",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    assertHoldingTowerWorldActive();
+    const nowMs = Date.now();
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+      const clanId = safeString(profile.clanId, 128);
+      if (!clanId) throw new HttpsError("failed-precondition", "Join a clan to view its Treasury.");
+      const treasuryRef = clanTreasuryRef(clanId);
+      const usageRef = clanTreasuryUsageRef(clanId, uid, HOLDING_TOWERS.getUtcDateKey(nowMs));
+      const [clanSnap, memberSnap, treasurySnap, usageSnap] = await Promise.all([
+        transaction.get(db.doc(`clans/${clanId}`)),
+        transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+        transaction.get(treasuryRef),
+        transaction.get(usageRef),
+      ]);
+      if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
+        throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
+      }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const donatedToday = Math.max(0, Math.floor(safeNumber(usageSnap.data()?.donated, 0)));
+      const allowance = HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday);
+      return {
+        ok: true,
+        clanId,
+        role: safeString(memberSnap.data()?.role, 16),
+        treasury: normalizeClanTreasury(treasurySnap),
+        allowance,
+        utcDate: HOLDING_TOWERS.getUtcDateKey(nowMs),
+        resetsAtMs: HOLDING_TOWERS.getNextUtcDayStartMs(nowMs),
+        serverTimeMs: nowMs,
+      };
+    }, "getClanTreasuryStatus");
+  }
+);
+
+exports.donateClanTreasuryGold = timedCallable(
+  "donateClanTreasuryGold",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    assertHoldingTowerWorldActive();
+    const nowMs = Date.now();
+    const amount = Math.floor(safeNumber(request.data?.amount, 0));
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new HttpsError("invalid-argument", "Choose a positive whole-Gold donation.");
+    }
+    const operationId = requireHoldingTowerOperationId(request, "donation");
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+      const clanId = safeString(profile.clanId, 128);
+      if (!clanId) throw new HttpsError("failed-precondition", "Join a clan before donating Gold.");
+      const treasuryRef = clanTreasuryRef(clanId);
+      const utcDate = HOLDING_TOWERS.getUtcDateKey(nowMs);
+      const usageRef = clanTreasuryUsageRef(clanId, uid, utcDate);
+      const receiptRef = clanTreasuryReceiptRef(clanId, operationId);
+      const [clanSnap, memberSnap, treasurySnap, usageSnap, receiptSnap] = await Promise.all([
+        transaction.get(db.doc(`clans/${clanId}`)),
+        transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+        transaction.get(treasuryRef),
+        transaction.get(usageRef),
+        transaction.get(receiptRef),
+      ]);
+      const duplicate = holdingTowerReceiptResult(receiptSnap);
+      if (duplicate) return { ...duplicate, duplicate: true };
+      if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
+        throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
+      }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const donatedToday = Math.max(0, Math.floor(safeNumber(usageSnap.data()?.donated, 0)));
+      const allowance = HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday);
+      if (amount > allowance.remaining) {
+        throw new HttpsError("resource-exhausted", "That donation exceeds today's 12-hour raw-production allowance.");
+      }
+      if (economy.goldFloat < amount) {
+        throw new HttpsError("failed-precondition", "Not enough personal Gold for that donation.");
+      }
+      const treasury = normalizeClanTreasury(treasurySnap);
+      const balance = treasury.balance + amount;
+      const totalDonated = treasury.totalDonated + amount;
+      if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(totalDonated)) {
+        throw new HttpsError("out-of-range", "The Clan Treasury exceeds the supported economy range.");
+      }
+      const nextGoldFloat = economy.goldFloat - amount;
+      const result = {
+        ok: true,
+        clanId,
+        donated: amount,
+        balance,
+        totalDonated,
+        totalSpent: treasury.totalSpent,
+        allowance: HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday + amount),
+        utcDate,
+        serverTimeMs: nowMs,
+      };
+      writePreparedEconomy(transaction, economy, {
+        gold: Math.max(0, Math.floor(nextGoldFloat)),
+        goldFloat: nextGoldFloat,
+      }, [], { nowMs });
+      transaction.set(treasuryRef, createHoldingTowerTreasuryPatch(treasury, { balance, totalDonated }, nowMs), { merge: true });
+      transaction.set(usageRef, {
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        clanId,
+        uid,
+        utcDate,
+        donated: donatedToday + amount,
+        rawBaseGoldPerHour: allowance.rawBaseGoldPerHour,
+        dailyCap: allowance.dailyCap,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.create(receiptRef, {
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        type: "donation",
+        operationId,
+        clanId,
+        actorUid: uid,
+        amount,
+        result,
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      writeClanAudit(transaction, clanId, uid, "treasury_donation", { operationId, amount, balance }, nowMs);
+      return result;
+    }, "donateClanTreasuryGold");
+  }
+);
+
+async function applyHoldingTowerTreasurySpend(request, operationType, applySpend) {
+  const uid = requireAuth(request);
+  assertHoldingTowerWorldActive();
+  const nowMs = Date.now();
+  const towerId = safeString(request.data?.towerId, 96);
+  const towerDefinition = HOLDING_TOWERS.getTowerDefinition(towerId);
+  if (!towerDefinition) throw new HttpsError("invalid-argument", "Choose a Holding Tower.");
+  const operationId = requireHoldingTowerOperationId(request, operationType);
+  const towerRef = holdingTowerRef(towerId);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) throw new HttpsError("failed-precondition", "Join a clan before managing a Holding Tower.");
+    const treasuryRef = clanTreasuryRef(clanId);
+    const receiptRef = clanTreasuryReceiptRef(clanId, operationId);
+    const [towerSnap, clanSnap, memberSnap, treasurySnap, receiptSnap] = await Promise.all([
+      transaction.get(towerRef),
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(treasuryRef),
+      transaction.get(receiptRef),
+    ]);
+    const duplicate = holdingTowerReceiptResult(receiptSnap);
+    if (duplicate) return { ...duplicate, duplicate: true };
+    if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
+      throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
+    }
+    assertHoldingTowerManager(memberSnap.data() || {});
+    const tower = normalizeCurrentHoldingTower(towerSnap, towerId, nowMs);
+    if (tower.ownerKind !== "clan" || tower.clanId !== clanId) {
+      throw new HttpsError("permission-denied", "Your clan does not own that Holding Tower.");
+    }
+    const treasury = normalizeClanTreasury(treasurySnap);
+    let spend;
+    try {
+      spend = applySpend({ tower, treasury, member: memberSnap.data() || {}, clan: clanSnap.data() || {}, uid, nowMs, operationId });
+    } catch (error) {
+      const message = safeString(error?.message, 160);
+      const code = message === "insufficient-clan-treasury" ? "failed-precondition"
+        : message.includes("limit") || message.includes("queue-full") ? "resource-exhausted"
+          : message.includes("active") || message.includes("damaged") || message.includes("attack") || message.includes("full")
+            ? "failed-precondition"
+            : "invalid-argument";
+      throw new HttpsError(code, message.replace(/-/g, " ") || "The Holding Tower operation could not be completed.");
+    }
+    const totalSpent = treasury.totalSpent + spend.cost;
+    if (!Number.isSafeInteger(totalSpent)) throw new HttpsError("out-of-range", "Treasury spending exceeds the safe-integer range.");
+    const result = {
+      ok: true,
+      operationType,
+      tower: {
+        ...getHoldingTowerPublicState(spend.state, nowMs),
+        upgradeQueue: spend.state.upgradeQueue,
+        repair: spend.state.repair,
+        veilUsage: spend.state.veilUsage,
+        veilUsesRemaining: Math.max(0, HOLDING_TOWERS.TOWER_VEIL_DAILY_LIMIT - spend.state.veilUsage.count),
+      },
+      cost: spend.cost,
+      treasury: {
+        balance: spend.treasuryBalance,
+        totalDonated: treasury.totalDonated,
+        totalSpent,
+      },
+      serverTimeMs: nowMs,
+    };
+    transaction.set(towerRef, holdingTowerStateWritePatch(spend.state, nowMs, { create: !towerSnap.exists }), { merge: true });
+    transaction.set(treasuryRef, createHoldingTowerTreasuryPatch(treasury, {
+      balance: spend.treasuryBalance,
+      totalSpent,
+    }, nowMs), { merge: true });
+    transaction.create(receiptRef, {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      type: operationType,
+      operationId,
+      towerId,
+      clanId,
+      actorUid: uid,
+      amount: spend.cost,
+      result,
+      createdAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    writeClanAudit(transaction, clanId, uid, operationType, { operationId, towerId, cost: spend.cost }, nowMs);
+    return result;
+  }, operationType);
+}
+
+exports.queueHoldingTowerWallUpgrades = timedCallable(
+  "queueHoldingTowerWallUpgrades",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  request => applyHoldingTowerTreasurySpend(request, "tower_wall_upgrades_queued", ({ tower, treasury, nowMs, operationId }) => {
+    const queued = HOLDING_TOWERS.queueWallUpgrades(
+      tower,
+      request.data?.levels,
+      treasury.balance,
+      getEquivalentCityWallCost,
+      nowMs,
+      operationId
+    );
+    return { ...queued, cost: queued.totalCost };
+  })
+);
+
+exports.startHoldingTowerRepair = timedCallable(
+  "startHoldingTowerRepair",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  request => applyHoldingTowerTreasurySpend(request, "tower_repair_started", ({ tower, treasury, uid, nowMs, operationId }) => (
+    HOLDING_TOWERS.startPaidRepair(
+      tower,
+      treasury.balance,
+      getEquivalentCityWallCost,
+      getSiegeRepairWindowMinutes,
+      { uid },
+      nowMs,
+      operationId
+    )
+  ))
+);
+
+exports.activateHoldingTowerVeil = timedCallable(
+  "activateHoldingTowerVeil",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  request => applyHoldingTowerTreasurySpend(request, "tower_veil_activated", ({ tower, treasury, uid, nowMs, operationId }) => (
+    HOLDING_TOWERS.activateVeil(
+      tower,
+      treasury.balance,
+      getEquivalentCityWallCost,
+      { uid },
+      nowMs,
+      operationId
+    )
+  ))
+);
 
 exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -17398,6 +18087,8 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
+  const assemblyType = request.data?.sourceType === "tower" ? "tower" : "city";
+
   order.kind = "attack";
   order.launchKind = "attack";
   if (!order.fromId || !order.toId || order.fromId === order.toId) {
@@ -17405,10 +18096,19 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
   }
   order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
   order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
-  if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
+  if (order.targetType === "tower") assertHoldingTowerWorldActive();
+  if (assemblyType === "tower") assertHoldingTowerWorldActive();
+  if (assemblyType === "tower"
+    ? !HOLDING_TOWERS.getTowerDefinition(order.fromId)
+      || normalizeRegionId(HOLDING_TOWERS.getTowerDefinition(order.fromId).regionId) !== order.sourceRegionId
+    : !getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
     throw new HttpsError("invalid-argument", "The assembly city is not part of the current Crownlands map.");
   }
-  const allowedTargetIds = order.targetType === "camp"
+  const allowedTargetIds = order.targetType === "tower"
+    ? new Set(HOLDING_TOWERS.TOWERS
+      .filter(tower => normalizeRegionId(tower.regionId) === order.targetRegionId)
+      .map(tower => tower.id))
+    : order.targetType === "camp"
     ? getServerWorldCampIds(order.targetRegionId)
     : getServerWorldTargetIds(order.targetRegionId);
   if (!allowedTargetIds.has(order.toId)) {
@@ -17418,23 +18118,29 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     request.data?.rallyId || request.data?.requestId || order.id || `rally_${uid}_${nowMs.toString(36)}`
   );
   if (!requestedRallyId) throw new HttpsError("invalid-argument", "Missing rally id.");
-  const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
-  const targetRef = order.targetType === "camp"
+  const sourceRef = assemblyType === "tower"
+    ? holdingTowerRef(order.fromId)
+    : cityRefForRegion(order.sourceRegionId, order.fromId);
+  const sourceGarrisonRef = assemblyType === "tower" ? holdingTowerGarrisonRef(order.fromId, uid) : null;
+  const targetRef = order.targetType === "tower"
+    ? holdingTowerRef(order.toId)
+    : order.targetType === "camp"
     ? campRefForRegion(order.targetRegionId, order.toId)
     : cityRefForRegion(order.targetRegionId, order.toId);
   const playerRef = db.doc(`players/${uid}`);
 
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [sourceSnap, targetSnap, playerSnap] = await Promise.all([
+    const [sourceSnap, targetSnap, playerSnap, sourceGarrisonSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
       transaction.get(playerRef),
+      sourceGarrisonRef ? transaction.get(sourceGarrisonRef) : Promise.resolve(null),
     ]);
     if (!sourceSnap.exists) throw new HttpsError("not-found", "The assembly city was not found.");
     const missingTargetCamp = order.targetType === "camp" && !targetSnap.exists
       ? createNeutralRewardCampState(getAuthoritativeRewardCampSeed(order.targetRegionId, order.toId))
       : null;
-    if (!targetSnap.exists && !missingTargetCamp) {
+    if (!targetSnap.exists && !missingTargetCamp && order.targetType !== "tower") {
       throw new HttpsError("not-found", "The rally objective was not found.");
     }
     const profile = playerSnap.exists ? playerSnap.data() || {} : {};
@@ -17468,24 +18174,33 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       throw new HttpsError("resource-exhausted", `Your clan already has ${CLAN_FORMING_RALLY_LIMIT} forming rallies.`);
     }
 
-    let source = { id: sourceSnap.id, ...sourceSnap.data() };
+    let source = assemblyType === "tower"
+      ? normalizeCurrentHoldingTower(sourceSnap, order.fromId, nowMs)
+      : { id: sourceSnap.id, ...sourceSnap.data() };
     const rawTarget = targetSnap.exists
       ? { id: targetSnap.id, ...targetSnap.data() }
-      : missingTargetCamp;
-    const target = order.targetType === "camp"
+      : order.targetType === "tower"
+        ? createInitialHoldingTowerState(order.toId, nowMs)
+        : missingTargetCamp;
+    const target = order.targetType === "tower"
+      ? normalizeCurrentHoldingTower(targetSnap, order.toId, nowMs)
+      : order.targetType === "camp"
       ? getRewardCampCombatTarget(rawTarget)
       : rawTarget;
-    if (getOwnerUid(source) !== uid) {
+    if (assemblyType === "tower"
+      ? source.clanId !== clanId
+      : getOwnerUid(source) !== uid) {
       throw new HttpsError("permission-denied", "You can only assemble a rally in your own city or Stronghold.");
     }
+    if (assemblyType === "tower") assertHoldingTowerMemberEligible(memberSnap.data() || {}, nowMs, clanId);
     if (!target || !isRallyObjectiveTarget(target, order.targetType)) {
-      throw new HttpsError("failed-precondition", "Rallies may target only Strongholds, the Crown Citadel, or reward camps.");
+      throw new HttpsError("failed-precondition", "Rallies may target only Holding Towers, Strongholds, the Crown Citadel, or reward camps.");
     }
     const targetOwnerUid = getOwnerUid(target);
     const targetOwnerProfileSnap = targetOwnerUid
       ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
       : null;
-    if (isRallyTargetFriendly(
+    if (order.targetType === "tower" ? target.clanId === clanId : isRallyTargetFriendly(
       targetOwnerUid,
       targetOwnerProfileSnap?.exists ? targetOwnerProfileSnap.data() || {} : {},
       { leaderUid: uid, clanId }
@@ -17498,10 +18213,13 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       profileRef: playerRef,
       profileSnap: playerSnap,
     });
-    const producedSource = getEconomyCityByRef(economy, sourceRef);
+    const producedSource = assemblyType === "tower" ? null : getEconomyCityByRef(economy, sourceRef);
     if (producedSource?.city) source = producedSource.city;
     const currentProfile = economy.profileAfter || profile;
-    const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+    if (order.targetType === "tower") assertHoldingTowerMemberEligible(memberSnap.data() || {}, nowMs, clanId);
+    const sourceTroops = assemblyType === "tower"
+      ? Math.max(0, Math.floor(safeNumber(sourceGarrisonSnap?.data()?.troops, 0)))
+      : Math.max(0, Math.floor(safeNumber(source.troops, 0)));
     const troops = clampInt(order.requestedTroops || order.troops, 1, Math.max(1, sourceTroops));
     if (!sourceTroops || sourceTroops < troops) {
       throw new HttpsError("failed-precondition", "Not enough troops in the assembly city.");
@@ -17540,6 +18258,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       leaderKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0))),
       assemblyCityId: source.id,
       assemblyCityName: safeString(source.name || source.id, 80),
+      assemblyType,
       assemblyRegionId: order.sourceRegionId,
       assemblyX: safeNumber(source.x, 0),
       assemblyY: safeNumber(source.y, 0),
@@ -17569,13 +18288,34 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
+    if (order.targetType === "tower" && !targetSnap.exists) {
+      transaction.create(targetRef, holdingTowerStateWritePatch(target, nowMs, { create: true }));
+    }
+    const towerGarrisonTroops = assemblyType === "tower"
+      ? Math.max(0, Math.floor(safeNumber(currentProfile.towerGarrisonTroops, sourceTroops))) - troops
+      : undefined;
+    if (assemblyType === "tower") {
+      if (sourcePatch.troops > 0) {
+        transaction.set(sourceGarrisonRef, {
+          troops: sourcePatch.troops,
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } else {
+        transaction.delete(sourceGarrisonRef);
+      }
+    }
     writePreparedEconomy(transaction, economy, {
       ...shield.profileOverrides,
       committedRallyTroops,
       rallyResetGeneration: RESET_GENERATION,
+      ...(assemblyType === "tower" ? {
+        towerGarrisonTroops,
+        towerGarrisonResetGeneration: RESET_GENERATION,
+      } : {}),
     }, [
       ...shield.cityPatches,
-      { ref: sourceRef, city: source, patch: sourcePatch },
+      ...(assemblyType === "tower" ? [] : [{ ref: sourceRef, city: source, patch: sourcePatch }]),
     ], { nowMs });
     transaction.create(rallyRef, rally);
     transaction.set(stateRef, {
@@ -17597,15 +18337,19 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       ok: true,
       peaceShieldDeactivated: shield.deactivated,
       rally: rallyForClient(rally),
-      sourceCity: {
+      sourceCity: assemblyType === "tower" ? null : {
         id: source.id,
         regionId: order.sourceRegionId,
         troops: sourcePatch.troops,
         troopFloat: sourcePatch.troopFloat,
       },
+      sourceTower: assemblyType === "tower" ? {
+        id: source.id,
+        ownTroops: sourcePatch.troops,
+      } : null,
       cityUpdates: [
         ...shield.cityUpdates,
-        { id: source.id, regionId: order.sourceRegionId, ...sourcePatch },
+        ...(assemblyType === "tower" ? [] : [{ id: source.id, regionId: order.sourceRegionId, ...sourcePatch }]),
       ],
       currentUser: {
         committedRallyTroops,
@@ -17659,6 +18403,10 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
     ) {
       throw new HttpsError("permission-denied", "Only current clan members may join this rally.");
     }
+    if (rally.targetType === "tower") {
+      assertHoldingTowerWorldActive();
+      assertHoldingTowerMemberEligible(memberSnap.data() || {}, nowMs, clanId);
+    }
     const existingParticipant = getRallyParticipant(rally, uid);
     if (existingParticipant) {
       return {
@@ -17670,8 +18418,12 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
           : null,
       };
     }
-    if (activeRallyParticipants(rally).length >= RALLY_MAX_PARTICIPANTS) {
-      throw new HttpsError("resource-exhausted", "That rally already has three participants.");
+    const participantLimit = rally.targetType === "tower" ? CLAN_MEMBER_LIMIT : RALLY_MAX_PARTICIPANTS;
+    if (activeRallyParticipants(rally).length >= participantLimit) {
+      throw new HttpsError(
+        "resource-exhausted",
+        rally.targetType === "tower" ? "That Holding Tower rally already includes the full clan roster." : "That rally already has three participants."
+      );
     }
     if (joinArmySnap.exists) {
       throw new HttpsError("already-exists", "That rally contribution order already exists.");
@@ -17682,11 +18434,15 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
     const assemblySnap = await transaction.get(assemblyRef);
     if (!assemblySnap.exists) throw new HttpsError("failed-precondition", "The rally assembly city no longer exists.");
     let source = { id: sourceSnap.id, ...sourceSnap.data() };
-    const assembly = { id: assemblySnap.id, ...assemblySnap.data() };
+    const assembly = rally.assemblyType === "tower"
+      ? normalizeCurrentHoldingTower(assemblySnap, rally.assemblyCityId, nowMs)
+      : { id: assemblySnap.id, ...assemblySnap.data() };
     if (getOwnerUid(source) !== uid) {
       throw new HttpsError("permission-denied", "You can only contribute troops from your own city or Stronghold.");
     }
-    if (getOwnerUid(assembly) !== rally.leaderUid) {
+    if (rally.assemblyType === "tower"
+      ? assembly.clanId !== clanId
+      : getOwnerUid(assembly) !== rally.leaderUid) {
       throw new HttpsError("failed-precondition", "The leader no longer owns the rally assembly city.");
     }
     const joinOrder = {
@@ -17695,7 +18451,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
       kind: "rally_join",
       launchKind: "rally_join",
       toId: rally.assemblyCityId,
-      targetType: "city",
+      targetType: rally.assemblyType === "tower" ? "tower" : "city",
       targetRegionId: rally.assemblyRegionId,
     };
     // Rally contributions use the same canonical terrain and portal planner as direct marches.
@@ -18099,6 +18855,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
     ) {
       throw new HttpsError("failed-precondition", "The leader's clan membership is no longer active.");
     }
+    if (rally.targetType === "tower" || rally.assemblyType === "tower") {
+      assertHoldingTowerWorldActive();
+      assertHoldingTowerMemberEligible(leaderMemberSnap.data() || {}, nowMs, clanId);
+    }
     const assemblyRef = rallyAssemblyRef(rally);
     const targetRef = rallyTargetRef(rally);
     if (!assemblyRef || !targetRef) throw new HttpsError("failed-precondition", "The rally route is incomplete.");
@@ -18106,12 +18866,20 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       transaction.get(assemblyRef),
       transaction.get(targetRef),
     ]);
-    if (!assemblySnap.exists || getOwnerUid(assemblySnap.data() || {}) !== uid) {
+    const assembly = assemblySnap.exists
+      ? rally.assemblyType === "tower"
+        ? normalizeCurrentHoldingTower(assemblySnap, rally.assemblyCityId, nowMs)
+        : { id: assemblySnap.id, ...assemblySnap.data() }
+      : null;
+    if (!assemblySnap.exists || (rally.assemblyType === "tower"
+      ? assembly.clanId !== clanId
+      : getOwnerUid(assemblySnap.data() || {}) !== uid)) {
       throw new HttpsError("failed-precondition", "You no longer own the rally assembly city.");
     }
     if (!targetSnap.exists) throw new HttpsError("failed-precondition", "The rally objective no longer exists.");
-    const assembly = { id: assemblySnap.id, ...assemblySnap.data() };
-    const target = rally.targetType === "camp"
+    const target = rally.targetType === "tower"
+      ? normalizeCurrentHoldingTower(targetSnap, rally.targetId, nowMs)
+      : rally.targetType === "camp"
       ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
       : { id: targetSnap.id, ...targetSnap.data() };
     if (!target || !isRallyObjectiveTarget(target, rally.targetType)) {
@@ -18122,7 +18890,12 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
       : null;
     const targetOwnerProfile = targetOwnerProfileSnap?.exists ? targetOwnerProfileSnap.data() || {} : {};
-    if (isRallyTargetFriendly(targetOwnerUid, targetOwnerProfile, rally)) {
+    const towerDefenderMembersSnap = rally.targetType === "tower" && target.clanId
+      ? await transaction.get(db.collection(`clans/${target.clanId}/members`).limit(CLAN_MEMBER_LIMIT))
+      : null;
+    if (rally.targetType === "tower"
+      ? target.clanId === clanId
+      : isRallyTargetFriendly(targetOwnerUid, targetOwnerProfile, rally)) {
       throw new HttpsError("failed-precondition", "The objective is currently owned by you or a current clan ally.");
     }
     const antiFarmContext = targetOwnerUid && targetOwnerUid !== uid
@@ -18181,23 +18954,53 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       inboundSnaps.set(participant.uid, await transaction.get(canonicalArmyRef(participant.joinArmyId)));
     }
     const participantProfiles = new Map();
+    const participantMembers = new Map();
     for (const participant of assembledParticipants) {
-      const [profileSnap, globalStatsSnap] = await Promise.all([
+      const [profileSnap, globalStatsSnap, participantMemberSnap] = await Promise.all([
         participant.uid === uid
           ? Promise.resolve(leaderProfileSnap)
           : transaction.get(db.doc(`players/${participant.uid}`)),
         transaction.get(playerGlobalStatsRef(participant.uid)),
+        rally.targetType === "tower"
+          ? transaction.get(db.doc(`clans/${clanId}/members/${participant.uid}`))
+          : Promise.resolve(null),
       ]);
       participantProfiles.set(participant.uid, {
         profile: profileSnap.exists ? profileSnap.data() || {} : {},
         globalStats: globalStatsSnap.exists ? globalStatsSnap.data() || {} : {},
       });
+      if (participantMemberSnap?.exists) participantMembers.set(participant.uid, participantMemberSnap.data() || {});
     }
     const leaderEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: db.doc(`players/${uid}`),
       profileSnap: leaderProfileSnap,
     });
-    const snapshottedParticipants = assembledParticipants.map(participant => {
+    const towerRallyValidation = rally.targetType === "tower"
+      ? HOLDING_TOWERS.validateTowerRallyParticipants(
+        assembledParticipants,
+        participantMembers,
+        nowMs,
+        clanId
+      )
+      : null;
+    if (towerRallyValidation && !towerRallyValidation.valid) {
+      throw new HttpsError(
+        "failed-precondition",
+        `A Holding Tower rally needs 5 unique eligible current clan members with at least 1 troop each; ${towerRallyValidation.count} qualify.`
+      );
+    }
+    if (towerRallyValidation && towerRallyValidation.count !== assembledParticipants.length) {
+      throw new HttpsError(
+        "failed-precondition",
+        "One or more assembled contributors are no longer eligible clan members; withdraw or return those troops before launching."
+      );
+    }
+    const validTowerParticipantUids = towerRallyValidation
+      ? new Set(towerRallyValidation.contributors.map(entry => entry.uid))
+      : null;
+    const snapshottedParticipants = assembledParticipants
+      .filter(participant => !validTowerParticipantUids || validTowerParticipantUids.has(participant.uid))
+      .map(participant => {
       const entry = participantProfiles.get(participant.uid) || {};
       const profile = entry.profile || {};
       return createRallyParticipantSnapshot({
@@ -18259,6 +19062,8 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       rallyParticipantCount: attackPackages.length,
       participantUids: attackPackages.map(participant => participant.uid),
       targetType: rally.targetType,
+      sourceType: rally.assemblyType,
+      sourceTowerId: rally.assemblyType === "tower" ? rally.assemblyCityId : "",
       fromId: rally.assemblyCityId,
       toId: rally.targetId,
       sourceRegionId: rally.assemblyRegionId,
@@ -18310,7 +19115,15 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       });
     }
     writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
-    if (rally.targetType === "camp") {
+    if (rally.targetType === "tower") {
+      const towerAtLaunch = HOLDING_TOWERS.materializeTowerState(target, nowMs);
+      const blockedTower = HOLDING_TOWERS.materializeTowerState({
+        ...towerAtLaunch,
+        incomingRallyIds: [...new Set([...towerAtLaunch.incomingRallyIds, movement.id])],
+        attackBlocked: true,
+      }, nowMs);
+      transaction.set(targetRef, holdingTowerStateWritePatch(blockedTower, nowMs), { merge: true });
+    } else if (rally.targetType === "camp") {
       transaction.set(targetRef, {
         activeArmyIds: normalizeActiveArmyIds([...(target.activeArmyIds || []), movement.id]),
         state: "contested",
@@ -18343,14 +19156,34 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       assembledTroops: totalTroops,
       returnedInboundParticipants: returnedInbound.length,
     }, nowMs);
-    const incomingNotification = createIncomingArmyNotification({
-      defenderUid: targetOwnerUid,
-      attackerUid: uid,
-      movement,
-      source: assembly,
-      target,
-    });
-    queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
+    if (rally.targetType === "tower") {
+      towerDefenderMembersSnap?.docs
+        .filter(memberDoc => memberDoc.data()?.status !== "removed")
+        .forEach(memberDoc => {
+          const incomingNotification = createIncomingArmyNotification({
+            defenderUid: memberDoc.id,
+            attackerUid: uid,
+            movement,
+            source: assembly,
+            target,
+          });
+          if (!incomingNotification) return;
+          incomingNotification.title = "Holding Tower under Rally attack";
+          incomingNotification.body = `${incomingNotification.attackerName} has launched a clan Rally against ${incomingNotification.targetName}.`;
+          incomingNotification.towerId = target.id;
+          incomingNotification.clanId = target.clanId;
+          queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs, memberDoc.id);
+        });
+    } else {
+      const incomingNotification = createIncomingArmyNotification({
+        defenderUid: targetOwnerUid,
+        attackerUid: uid,
+        movement,
+        source: assembly,
+        target,
+      });
+      queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
+    }
     attackPackages.forEach(participant => {
       enqueueDailyMissionEvent(transaction, {
         uid: participant.uid,
@@ -20140,10 +20973,236 @@ exports.sendRegroupOrders = timedCallable(
   }
 );
 
+exports.sendHoldingTowerArmyOrder = timedCallable(
+  "sendHoldingTowerArmyOrder",
+  { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    assertHoldingTowerWorldActive();
+    const nowMs = Date.now();
+    const order = normalizeArmyPayload(request.data || {}, uid);
+    const sourceType = request.data?.sourceType === "tower" ? "tower" : "city";
+    const targetType = request.data?.targetType === "tower"
+      ? "tower"
+      : request.data?.targetType === "camp"
+        ? "camp"
+        : "city";
+    const kind = order.kind === "scout" ? "scout"
+      : order.kind === "reinforce" ? "reinforce"
+        : order.kind === "transfer" ? "transfer"
+          : "attack";
+    if (!order.fromId || !order.toId || (sourceType === targetType && order.fromId === order.toId)) {
+      throw new HttpsError("invalid-argument", "Choose a valid Holding Tower march route.");
+    }
+    if (targetType === "tower" && kind === "attack") {
+      throw new HttpsError("failed-precondition", "Holding Towers can only be attacked through a qualifying Clan Rally.");
+    }
+    if (targetType === "tower" && !["scout", "reinforce"].includes(kind)) {
+      throw new HttpsError("failed-precondition", "Only scouting and owned-clan reinforcement may target a Holding Tower directly.");
+    }
+    if (sourceType === "tower" && targetType === "tower" && kind !== "scout") {
+      throw new HttpsError("failed-precondition", "Tower-to-Tower attacks require a qualifying Clan Rally.");
+    }
+    order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
+    order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
+    const sourceTower = sourceType === "tower" ? HOLDING_TOWERS.getTowerDefinition(order.fromId) : null;
+    const targetTower = targetType === "tower" ? HOLDING_TOWERS.getTowerDefinition(order.toId) : null;
+    if (sourceType === "tower" && (!sourceTower || normalizeRegionId(sourceTower.regionId) !== order.sourceRegionId)) {
+      throw new HttpsError("invalid-argument", "That Holding Tower origin is not on the selected map.");
+    }
+    if (targetType === "tower" && (!targetTower || normalizeRegionId(targetTower.regionId) !== order.targetRegionId)) {
+      throw new HttpsError("invalid-argument", "That Holding Tower target is not on the selected map.");
+    }
+    if (sourceType === "city" && !getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
+      throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
+    }
+    if (targetType === "city" && !getServerWorldTargetIds(order.targetRegionId).has(order.toId)) {
+      throw new HttpsError("invalid-argument", "The destination city is not part of the current Crownlands map.");
+    }
+    if (targetType === "camp" && !getServerWorldCampIds(order.targetRegionId).has(order.toId)) {
+      throw new HttpsError("invalid-argument", "The destination camp is not part of the current Crownlands map.");
+    }
+    const sourceRef = sourceType === "tower"
+      ? holdingTowerRef(order.fromId)
+      : cityRefForRegion(order.sourceRegionId, order.fromId);
+    const targetRef = targetType === "tower"
+      ? holdingTowerRef(order.toId)
+      : targetType === "camp"
+        ? campRefForRegion(order.targetRegionId, order.toId)
+        : cityRefForRegion(order.targetRegionId, order.toId);
+    const garrisonRef = sourceType === "tower" ? holdingTowerGarrisonRef(order.fromId, uid) : null;
+    const armyRef = canonicalArmyRef(order.id);
+    const profileRef = db.doc(`players/${uid}`);
+
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const [sourceSnap, targetSnap, garrisonSnap, armySnap, profileSnap] = await Promise.all([
+        transaction.get(sourceRef),
+        transaction.get(targetRef),
+        garrisonRef ? transaction.get(garrisonRef) : Promise.resolve(null),
+        transaction.get(armyRef),
+        transaction.get(profileRef),
+      ]);
+      if (armySnap.exists) {
+        const existing = { id: armySnap.id, ...armySnap.data() };
+        if (existing.ownerUid === uid) return { ok: true, duplicate: true, movement: existing };
+        throw new HttpsError("already-exists", "That Holding Tower march id is already in use.");
+      }
+      if (!sourceSnap.exists || !targetSnap.exists) throw new HttpsError("not-found", "The march origin or target is unavailable.");
+      const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+      const clanId = safeString(profile.clanId, 128);
+      const memberSnap = clanId ? await transaction.get(db.doc(`clans/${clanId}/members/${uid}`)) : null;
+      const member = memberSnap?.exists ? memberSnap.data() || {} : null;
+      let source = sourceType === "tower"
+        ? normalizeCurrentHoldingTower(sourceSnap, order.fromId, nowMs)
+        : { id: sourceSnap.id, regionId: order.sourceRegionId, ...sourceSnap.data() };
+      const target = targetType === "tower"
+        ? normalizeCurrentHoldingTower(targetSnap, order.toId, nowMs)
+        : targetType === "camp"
+          ? getRewardCampCombatTarget({ id: targetSnap.id, regionId: order.targetRegionId, ...targetSnap.data() })
+          : { id: targetSnap.id, regionId: order.targetRegionId, ...targetSnap.data() };
+      if (!target) throw new HttpsError("failed-precondition", "That target is not currently active.");
+      if (sourceType === "tower") {
+        if (!clanId || source.clanId !== clanId || !member) {
+          throw new HttpsError("permission-denied", "Only current owner-clan members may march from that Holding Tower.");
+        }
+        assertHoldingTowerMemberEligible(member, nowMs, clanId);
+      } else if (getOwnerUid(source) !== uid) {
+        throw new HttpsError("permission-denied", "You can only use your own city as the march origin.");
+      }
+      if (targetType === "tower" && kind === "reinforce") {
+        if (!clanId || target.clanId !== clanId || !member) {
+          throw new HttpsError("permission-denied", "You may reinforce only a Holding Tower owned by your clan.");
+        }
+        assertHoldingTowerMemberEligible(member, nowMs, clanId);
+      }
+      if (sourceType === "tower" && kind === "transfer" && targetType === "city" && getOwnerUid(target) !== uid) {
+        throw new HttpsError("permission-denied", "Tower troops may transfer only to one of your own cities.");
+      }
+      const targetOwnerUid = targetType === "tower" ? "" : getOwnerUid(target);
+      if (sourceType === "tower" && kind === "attack" && targetOwnerUid === uid) {
+        throw new HttpsError("failed-precondition", "Use Transfer to move Tower troops to your own city.");
+      }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const producedSource = sourceType === "city" ? getEconomyCityByRef(economy, sourceRef) : null;
+      if (producedSource?.city) source = producedSource.city;
+      const profileAfter = economy.profileAfter || profile;
+      const availableTroops = sourceType === "tower"
+        ? Math.max(0, Math.floor(safeNumber(garrisonSnap?.data()?.troops, 0)))
+        : Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+      const troops = kind === "scout" ? 1 : clampInt(order.requestedTroops || order.troops, 1, Math.max(1, availableTroops));
+      if (!availableTroops || troops > availableTroops) {
+        throw new HttpsError("failed-precondition", "Not enough troops at the selected Holding Tower origin.");
+      }
+      const validatedRoute = buildServerGeneratedArmyRoute(
+        { ...source, regionId: order.sourceRegionId },
+        { ...target, regionId: order.targetRegionId }
+      );
+      const speedKind = kind === "scout" ? "scout" : kind === "attack" ? "attack" : "transfer";
+      const duration = calculateTravelTime({
+        pathLength: validatedRoute.pathLength,
+        troopCount: troops,
+        kind: speedKind,
+        speedMultiplier: addCommonGearMarchSpeed(
+          profileAfter,
+          speedKind,
+          skillMultiplier(profileAfter, "marchOrders") * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)
+        ),
+      });
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const movement = {
+        id: order.id,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        ownerKind: "player",
+        ownerUid: uid,
+        ownerName: normalizePlayerName(profileAfter.playerName, "Ruler"),
+        ownerFlag: profileAfter.flag || null,
+        ownerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0))),
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kind,
+        launchKind: kind,
+        holdingTowerMovement: true,
+        sourceType,
+        sourceTowerId: sourceType === "tower" ? source.id : "",
+        targetType,
+        fromId: source.id,
+        toId: target.id,
+        fromName: safeString(source.name || source.id, 40),
+        toName: safeString(target.name || target.id, 40),
+        sourceRegionId: order.sourceRegionId,
+        targetRegionId: order.targetRegionId,
+        troops,
+        requestedTroops: troops,
+        total: duration,
+        path: validatedRoute.path,
+        pathSegments: validatedRoute.pathSegments,
+        routeRegionIds: validatedRoute.routeRegionIds,
+        viewRegionIds: validatedRoute.routeRegionIds,
+        pathLength: validatedRoute.pathLength,
+        targetOwnerUid: targetOwnerUid,
+        originalTargetOwnerUid: targetOwnerUid,
+        targetTowerClanIdAtLaunch: targetType === "tower" ? target.clanId : "",
+        targetTowerOwnershipRevision: targetType === "tower" ? target.ownershipRevision : 0,
+        siegeCombatVersion: targetType === "city" ? SIEGE_COMBAT_VERSION : 0,
+        defenseCombatVersion: targetType === "city" ? DEFENSE_COMBAT_VERSION : 0,
+        launchedAtMs: nowMs,
+        arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+        status: "active",
+        createdByServer: true,
+        serverAuthorityVersion: 3,
+      };
+      const profilePatch = {};
+      const cityPatches = [];
+      if (sourceType === "tower") {
+        const remaining = availableTroops - troops;
+        const currentTowerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, availableTroops)));
+        profilePatch.towerGarrisonTroops = Math.max(0, currentTowerGarrisonTroops - troops);
+        profilePatch.towerGarrisonResetGeneration = RESET_GENERATION;
+        if (remaining > 0) transaction.set(garrisonRef, { troops: remaining, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        else transaction.delete(garrisonRef);
+      } else {
+        cityPatches.push({
+          ref: sourceRef,
+          city: source,
+          patch: {
+            troops: availableTroops - troops,
+            troopFloat: Math.max(0, safeNumber(source.troopFloat, availableTroops) - troops),
+          },
+        });
+      }
+      const shield = kind === "attack" ? getRallyShieldDeactivation(economy, nowMs) : { profileOverrides: {}, cityPatches: [], cityUpdates: [] };
+      writePreparedEconomy(transaction, economy, { ...profilePatch, ...shield.profileOverrides }, [
+        ...cityPatches,
+        ...shield.cityPatches,
+      ], { addActiveArmies: [movement], nowMs });
+      writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+      return {
+        ok: true,
+        movement,
+        sourceTower: sourceType === "tower" ? { id: source.id, ownTroops: availableTroops - troops } : null,
+        sourceCity: sourceType === "city" ? { id: source.id, regionId: order.sourceRegionId, troops: availableTroops - troops } : null,
+        currentUser: {
+          towerGarrisonTroops: profilePatch.towerGarrisonTroops,
+          globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+        },
+      };
+    }, "sendHoldingTowerArmyOrder");
+  }
+);
+
 exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
+
+  if (order.targetType === "tower") {
+    throw new HttpsError(
+      "failed-precondition",
+      order.kind === "attack"
+        ? "Holding Towers can only be attacked through a qualifying Clan Rally."
+        : "Use the Holding Tower movement endpoint for Tower scouting or reinforcement."
+    );
+  }
 
   if (!order.fromId || !order.toId || order.fromId === order.toId) {
     throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
@@ -20716,8 +21775,710 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
   return result;
 });
 
+function createHoldingTowerDefensePackages(tower = {}, garrisonDocs = [], nowMs = Date.now()) {
+  const current = HOLDING_TOWERS.materializeTowerState(tower, nowMs);
+  const contributions = (Array.isArray(garrisonDocs) ? garrisonDocs : [])
+    .map(doc => {
+      const raw = typeof doc?.data === "function" ? doc.data() || {} : doc || {};
+      const ownerUid = safeString(raw.uid || raw.ownerUid || doc?.id, 128);
+      const troops = Math.max(0, Math.floor(safeNumber(raw.troops, 0)));
+      return ownerUid && troops > 0 ? {
+        id: doc?.id || ownerUid,
+        ref: doc?.ref || null,
+        ownerUid,
+        ownerName: normalizePlayerName(raw.ownerName, "Ruler"),
+        ownerFlag: normalizeServerFlag(raw.ownerFlag),
+        troops,
+        basePower: Math.floor(troops * BASE_TROOP_DEFENSE_POWER),
+        effectivePower: Math.floor(troops * BASE_TROOP_DEFENSE_POWER),
+      } : null;
+    })
+    .filter(Boolean);
+  const neutralTroops = current.ownerKind === "neutral" ? current.neutralDefenders : 0;
+  const neutralDefensePower = Math.floor(neutralTroops * BASE_TROOP_DEFENSE_POWER);
+  const garrisonTroops = contributions.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.troops), 0);
+  const garrisonDefensePower = contributions.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.effectivePower), 0);
+  const fullWallPower = getBaseCityWalls(current.wallLevel);
+  const currentWallPower = Math.floor(fullWallPower * current.wallIntegrityBps / HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS);
+  return {
+    tower: current,
+    contributions,
+    neutralTroops,
+    garrisonTroops,
+    totalTroops: Math.min(Number.MAX_SAFE_INTEGER, neutralTroops + garrisonTroops),
+    totalGarrisonDefense: Math.min(Number.MAX_SAFE_INTEGER, neutralDefensePower + garrisonDefensePower),
+    fortification: {
+      modelVersion: SIEGE_COMBAT_VERSION,
+      stateVersion: FORTIFICATION_STATE_VERSION,
+      baseCityWalls: fullWallPower,
+      reinforcedCityWalls: fullWallPower,
+      stoneworksPercent: 0,
+      defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+      baseDefensePowerPerTroop: BASE_TROOP_DEFENSE_POWER,
+      shieldwallDisciplinePercent: 0,
+      objectiveDefenseBonusPercent: 0,
+      troopObjectiveDefenseBonusPercent: 0,
+      fullWallPower,
+      integrityBps: current.wallIntegrityBps,
+      currentWallPower,
+      repairAtMs: current.repair?.completeAtMs || 0,
+      repairWindowMinutes: getSiegeRepairWindowMinutes(current.wallLevel),
+      repairReductionPercent: 0,
+      lastDamagedAtMs: current.repair?.startedAtMs || 0,
+      garrisonDefensePower: Math.min(Number.MAX_SAFE_INTEGER, neutralDefensePower + garrisonDefensePower),
+      ownerGarrisonDefensePower: neutralDefensePower,
+      reinforcementGarrisonDefensePower: garrisonDefensePower,
+    },
+    totalDefense: Math.min(
+      Number.MAX_SAFE_INTEGER,
+      neutralDefensePower + garrisonDefensePower + currentWallPower
+    ),
+  };
+}
+
+function extendHoldingTowerPaidRepair(tower = {}, battleFortification = null, nowMs = Date.now()) {
+  const endingIntegrityBps = clampInt(
+    battleFortification?.endingIntegrityBps ?? tower.wallIntegrityBps,
+    0,
+    HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS
+  );
+  if (!tower.repair || endingIntegrityBps >= HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS) {
+    return { ...tower, wallIntegrityBps: endingIntegrityBps, repair: null };
+  }
+  const fullWallPower = Math.max(1, safeNumber(battleFortification?.fullWallPower, getBaseCityWalls(tower.wallLevel)));
+  const addedDamagePower = Math.max(0, safeNumber(battleFortification?.wallDamagePower, 0));
+  const addedMs = Math.round(
+    getSiegeRepairWindowMinutes(tower.wallLevel) * 60_000
+      * Math.min(1, addedDamagePower / fullWallPower)
+  );
+  return {
+    ...tower,
+    wallIntegrityBps: endingIntegrityBps,
+    repair: {
+      ...tower.repair,
+      startIntegrityBps: endingIntegrityBps,
+      startedAtMs: nowMs,
+      completeAtMs: Math.min(
+        Number.MAX_SAFE_INTEGER,
+        Math.max(nowMs, timestampToMs(tower.repair.completeAtMs)) + addedMs
+      ),
+    },
+  };
+}
+
+async function resolveHoldingTowerDirectMovementById({ armyId = "", callerUid = "", nowMs = Date.now() } = {}) {
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const armyRef = canonicalArmyRef(armyId);
+    const armySnap = await transaction.get(armyRef);
+    if (!armySnap.exists) return { ok: true, status: "missing" };
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active") return { ok: true, status: army.status || "resolved" };
+    if (!army.holdingTowerMovement || army.targetType !== "tower" || army.rallyAttack) {
+      throw new HttpsError("failed-precondition", "That movement is not a direct Holding Tower order.");
+    }
+    if (timestampToMs(army.arrivesAtMs) > nowMs) throw new HttpsError("failed-precondition", "Army has not arrived yet.");
+    const uid = safeString(army.ownerUid, 128);
+    const towerRef = holdingTowerRef(army.toId);
+    const profileRef = db.doc(`players/${uid}`);
+    const sourceRef = army.sourceType === "tower"
+      ? holdingTowerRef(army.sourceTowerId || army.fromId)
+      : cityRefForRegion(army.sourceRegionId, army.fromId);
+    const [towerSnap, towerGarrisonSnap, profileSnap, sourceSnap] = await Promise.all([
+      transaction.get(towerRef),
+      transaction.get(holdingTowerGarrisonQuery(army.toId)),
+      transaction.get(profileRef),
+      transaction.get(sourceRef),
+    ]);
+    if (!towerSnap.exists) throw new HttpsError("not-found", "The Holding Tower is unavailable.");
+    const tower = normalizeCurrentHoldingTower(towerSnap, army.toId, nowMs);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const clanId = safeString(profile.clanId, 128);
+    const memberSnap = clanId ? await transaction.get(db.doc(`clans/${clanId}/members/${uid}`)) : null;
+    const member = memberSnap?.exists ? memberSnap.data() || {} : null;
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+    const profileAfter = economy.profileAfter || profile;
+
+    const resolveArmyCopies = result => {
+      transaction.set(armyRef, {
+        status: "resolved",
+        resolvedAtMs: nowMs,
+        result,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      armyViewRefsForRegions(army.routeRegionIds, armyId).forEach(ref => transaction.set(ref, {
+        status: "resolved",
+        resolvedAtMs: nowMs,
+        result,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true }));
+    };
+
+    if (army.returning) {
+      const troops = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+      let destination = "main_city";
+      const profilePatch = {};
+      const cityPatches = [];
+      if (army.sourceType === "tower") {
+        const sourceTower = sourceSnap.exists
+          ? normalizeCurrentHoldingTower(sourceSnap, army.sourceTowerId || army.fromId, nowMs)
+          : null;
+        const canRestation = Boolean(
+          sourceTower
+          && sourceTower.clanId === clanId
+          && HOLDING_TOWERS.isEligibleMember(member || {}, nowMs, clanId)
+        );
+        if (canRestation) {
+          const sourceGarrisonRef = holdingTowerGarrisonRef(sourceTower.id, uid);
+          const sourceGarrisonSnap = await transaction.get(sourceGarrisonRef);
+          const current = Math.max(0, Math.floor(safeNumber(sourceGarrisonSnap.data()?.troops, 0)));
+          const next = current + troops;
+          if (!Number.isSafeInteger(next)) throw new HttpsError("out-of-range", "Tower garrison exceeds the safe-integer range.");
+          transaction.set(sourceGarrisonRef, {
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+            towerId: sourceTower.id,
+            clanId,
+            uid,
+            ownerUid: uid,
+            ownerName: normalizePlayerName(profileAfter.playerName, "Ruler"),
+            ownerFlag: profileAfter.flag || null,
+            troops: next,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+          profilePatch.towerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, 0))) + troops;
+          profilePatch.towerGarrisonResetGeneration = RESET_GENERATION;
+          destination = sourceTower.id;
+        } else {
+          const mainEntry = getOwnedMainCityDestination(economy, profileAfter)
+            || economy.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === uid);
+          if (!mainEntry?.city) throw new HttpsError("failed-precondition", "No safe owned return city is available.");
+          const current = Math.max(0, Math.floor(safeNumber(mainEntry.city.troops, 0)));
+          cityPatches.push({
+            ref: mainEntry.ref,
+            city: mainEntry.city,
+            patch: {
+              troops: current + troops,
+              troopFloat: Math.max(0, safeNumber(mainEntry.city.troopFloat, current)) + troops,
+            },
+          });
+          destination = mainEntry.city.id;
+        }
+      } else {
+        const sourceEntry = sourceSnap.exists && getOwnerUid(sourceSnap.data() || {}) === uid
+          ? getEconomyCityByRef(economy, sourceRef)
+          : null;
+        const destinationEntry = sourceEntry || getOwnedMainCityDestination(economy, profileAfter)
+          || economy.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === uid);
+        if (!destinationEntry?.city) throw new HttpsError("failed-precondition", "No safe owned return city is available.");
+        const current = Math.max(0, Math.floor(safeNumber(destinationEntry.city.troops, 0)));
+        cityPatches.push({
+          ref: destinationEntry.ref,
+          city: destinationEntry.city,
+          patch: {
+            troops: current + troops,
+            troopFloat: Math.max(0, safeNumber(destinationEntry.city.troopFloat, current)) + troops,
+          },
+        });
+        destination = destinationEntry.city.id;
+      }
+      writePreparedEconomy(transaction, economy, profilePatch, cityPatches, { excludeArmyIds: [armyId], nowMs });
+      const result = { kind: "transfer", targetType: "tower", returned: troops, destination };
+      resolveArmyCopies(result);
+      return { ok: true, status: "resolved", ...result };
+    }
+
+    if (army.kind === "rally_join") {
+      const rallyRef = clanRallyRef(army.rallyClanId, army.rallyId);
+      const rallySnap = await transaction.get(rallyRef);
+      const rally = normalizeClanRally(rallySnap);
+      const participant = rally ? getRallyParticipant(rally, uid) : null;
+      const canAssemble = Boolean(
+        rally
+        && rally.status === RALLY_STATUS_FORMING
+        && rally.assemblyType === "tower"
+        && rally.assemblyCityId === tower.id
+        && participant
+        && participant.status === RALLY_PARTICIPANT_INBOUND
+        && participant.joinArmyId === armyId
+        && tower.clanId === rally.clanId
+        && clanId === rally.clanId
+        && HOLDING_TOWERS.isEligibleMember(member || {}, nowMs, clanId)
+      );
+      if (!canAssemble) {
+        const returning = {
+          ...createAlliedTargetReturnMovement(army, nowMs),
+          returnReason: "tower_rally_unavailable",
+          holdingTowerMovement: true,
+        };
+        writePreparedEconomy(transaction, economy, {}, [], { addActiveArmies: [returning], excludeArmyIds: [armyId], nowMs });
+        writeArmyMovementCopies(transaction, returning);
+        return { ok: true, status: "returning", kind: "rally_join", movement: returning };
+      }
+      const participants = activeRallyParticipants(rally).map(entry => entry.uid === uid
+        ? { ...entry, status: RALLY_PARTICIPANT_ASSEMBLED, assembledAtMs: nowMs }
+        : entry);
+      const totals = rallyParticipantTotals(participants);
+      const committedRallyTroops = getProfileCommittedRallyTroops(profileAfter) + participant.troops;
+      writePreparedEconomy(transaction, economy, {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      }, [], { excludeArmyIds: [armyId], nowMs });
+      transaction.set(rallyRef, {
+        participants,
+        ...totals,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const result = { kind: "rally_join", targetType: "tower", rallyId: rally.id, assembled: participant.troops };
+      resolveArmyCopies(result);
+      return { ok: true, status: "resolved", ...result, rally: rallyForClient({ ...rally, participants, ...totals }) };
+    }
+
+    if (army.kind === "reinforce") {
+      const eligible = Boolean(
+        clanId
+        && tower.ownerKind === "clan"
+        && tower.clanId === clanId
+        && HOLDING_TOWERS.isEligibleMember(member || {}, nowMs, clanId)
+      );
+      if (!eligible) {
+        const returning = {
+          ...createAlliedTargetReturnMovement(army, nowMs),
+          returnReason: "tower_access_unavailable",
+          holdingTowerMovement: true,
+        };
+        writePreparedEconomy(transaction, economy, {}, [], { addActiveArmies: [returning], excludeArmyIds: [armyId], nowMs });
+        writeArmyMovementCopies(transaction, returning);
+        return { ok: true, status: "returning", kind: "reinforce", movement: returning };
+      }
+      const garrisonRef = holdingTowerGarrisonRef(tower.id, uid);
+      const ownSnap = towerGarrisonSnap.docs.find(doc => doc.id === uid);
+      const current = Math.max(0, Math.floor(safeNumber(ownSnap?.data()?.troops, 0)));
+      const troops = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+      const next = current + troops;
+      if (!Number.isSafeInteger(next)) throw new HttpsError("out-of-range", "Tower garrison exceeds the safe-integer range.");
+      transaction.set(garrisonRef, {
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        towerId: tower.id,
+        clanId,
+        uid,
+        ownerUid: uid,
+        ownerName: normalizePlayerName(profileAfter.playerName, "Ruler"),
+        ownerFlag: profileAfter.flag || null,
+        troops: next,
+        stationedAtMs: ownSnap?.data()?.stationedAtMs || nowMs,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const towerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profileAfter.towerGarrisonTroops, 0))) + troops;
+      writePreparedEconomy(transaction, economy, {
+        towerGarrisonTroops,
+        towerGarrisonResetGeneration: RESET_GENERATION,
+      }, [], { excludeArmyIds: [armyId], nowMs });
+      const result = { kind: "reinforce", targetType: "tower", towerId: tower.id, stationed: troops, ownTroops: next };
+      resolveArmyCopies(result);
+      return { ok: true, status: "resolved", ...result };
+    }
+
+    if (army.kind !== "scout") throw new HttpsError("failed-precondition", "That direct Tower order is not supported.");
+    const totalTroops = tower.ownerKind === "neutral"
+      ? tower.neutralDefenders
+      : towerGarrisonSnap.docs.reduce((total, doc) => Math.min(
+        Number.MAX_SAFE_INTEGER,
+        total + Math.max(0, Math.floor(safeNumber(doc.data()?.troops, 0)))
+      ), 0);
+    const veilBlocked = Boolean(tower.veil && tower.veil.expiresAtMs > nowMs && tower.clanId !== clanId);
+    let scoutReport = null;
+    const report = makeReport({
+      id: veilBlocked ? `${armyId}_scout_tower_veiled_${uid}` : getCurrentScoutReportId(uid, tower.id),
+      type: "scout",
+      outcome: "scout",
+      city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId },
+      troopCount: veilBlocked ? 0 : totalTroops,
+      totalDefense: 0,
+      summary: veilBlocked
+        ? `Veil of Silence — ${tower.name} intelligence could not be obtained.`
+        : `Scout revealed ${totalTroops.toLocaleString()} defenders at ${tower.name}.`,
+    });
+    if (!veilBlocked) {
+      const defense = createHoldingTowerDefensePackages(tower, towerGarrisonSnap.docs, nowMs);
+      scoutReport = {
+        targetType: "tower",
+        towerId: tower.id,
+        towerName: tower.name,
+        towerOwnershipKey: `${tower.clanId}:${tower.ownershipRevision}`,
+        troops: totalTroops,
+        wallLevel: tower.wallLevel,
+        wallIntegrityBps: tower.wallIntegrityBps,
+        fullWallPower: defense.fortification.fullWallPower,
+        currentWallPower: defense.fortification.currentWallPower,
+        ownerKind: tower.ownerKind,
+        clanId: tower.clanId,
+        clanName: tower.clanName,
+        scoutedAtMs: nowMs,
+        expiresAtMs: nowMs + SCOUT_REPORT_SECONDS * 1000,
+      };
+      report.scoutReport = scoutReport;
+      writeScoutReport(transaction, uid, tower.id, scoutReport, profileSnap);
+    }
+    writeReport(transaction, uid, report, profileSnap);
+    const returning = {
+      ...createAlliedTargetReturnMovement(army, nowMs),
+      returnReason: veilBlocked ? "tower_scout_veiled" : "tower_scout_complete",
+      holdingTowerMovement: true,
+    };
+    writePreparedEconomy(transaction, economy, {}, [], { addActiveArmies: [returning], excludeArmyIds: [armyId], nowMs });
+    writeArmyMovementCopies(transaction, returning);
+    return {
+      ok: true,
+      status: "returning",
+      kind: "scout",
+      targetType: "tower",
+      veilBlocked,
+      scoutReport: callerUid === uid ? scoutReport : null,
+      movement: returning,
+    };
+  }, "resolveHoldingTowerDirectMovement");
+}
+
+async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs = Date.now() } = {}) {
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const armyRef = canonicalArmyRef(armyId);
+    const armySnap = await transaction.get(armyRef);
+    if (!armySnap.exists) return { ok: true, status: "missing" };
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active") return { ok: true, status: army.status || "resolved" };
+    if (!army.rallyAttack || army.targetType !== "tower") {
+      throw new HttpsError("failed-precondition", "That army is not a Holding Tower rally.");
+    }
+    if (Math.max(0, timestampToMs(army.arrivesAtMs)) > nowMs) {
+      throw new HttpsError("failed-precondition", "Army has not arrived yet.");
+    }
+    const towerDefinition = HOLDING_TOWERS.getTowerDefinition(army.toId);
+    if (!towerDefinition) throw new HttpsError("not-found", "The Holding Tower no longer exists.");
+    const towerRef = holdingTowerRef(towerDefinition.id);
+    const rallyRef = clanRallyRef(army.rallyClanId, army.rallyId);
+    const [towerSnap, rallySnap, garrisonSnap, attackingClanSnap] = await Promise.all([
+      transaction.get(towerRef),
+      transaction.get(rallyRef),
+      transaction.get(holdingTowerGarrisonQuery(towerDefinition.id)),
+      transaction.get(db.doc(`clans/${safeString(army.rallyClanId, 128)}`)),
+    ]);
+    const rally = normalizeClanRally(rallySnap);
+    if (!rally || rally.armyId !== armyId || rally.status !== RALLY_STATUS_LAUNCHED) {
+      throw new HttpsError("failed-precondition", "The Holding Tower rally state is unavailable.");
+    }
+    if (!attackingClanSnap.exists || attackingClanSnap.data()?.status !== "active") {
+      throw new HttpsError("failed-precondition", "The attacking clan is no longer active.");
+    }
+    const tower = normalizeCurrentHoldingTower(towerSnap, towerDefinition.id, nowMs);
+    const packages = getRallyAttackPackages(rally);
+    const participantEntries = new Map();
+    for (const participant of packages) {
+      const [profileSnap, memberSnap] = await Promise.all([
+        transaction.get(db.doc(`players/${participant.uid}`)),
+        transaction.get(db.doc(`clans/${rally.clanId}/members/${participant.uid}`)),
+      ]);
+      participantEntries.set(participant.uid, {
+        profileSnap,
+        profile: profileSnap.exists ? profileSnap.data() || {} : {},
+        memberSnap,
+        member: memberSnap.exists ? memberSnap.data() || {} : null,
+      });
+    }
+    const defense = createHoldingTowerDefensePackages(tower, garrisonSnap.docs, nowMs);
+    const friendlyAtResolution = tower.ownerKind === "clan" && tower.clanId === rally.clanId;
+    const attackPower = packages.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.effectivePower), 0);
+    const result = friendlyAtResolution
+      ? {
+        success: false,
+        battleWon: false,
+        survivors: packages.reduce((total, entry) => total + entry.troops, 0),
+        attackerLosses: 0,
+        defenderLosses: 0,
+        defendersLeft: defense.totalTroops,
+        attackPower,
+        defensePower: defense.totalDefense,
+        fortification: { ...defense.fortification, endingIntegrityBps: tower.wallIntegrityBps, wallDamagePower: 0 },
+      }
+      : calculateCombatResult(
+        packages.reduce((total, entry) => Math.min(Number.MAX_SAFE_INTEGER, total + entry.troops), 0),
+        { ...tower, troops: defense.totalTroops, level: tower.wallLevel },
+        null,
+        null,
+        {
+          attackPower,
+          defensePower: defense.totalDefense,
+          siegeCombatVersion: SIEGE_COMBAT_VERSION,
+          targetType: "city",
+          fortification: defense.fortification,
+          garrisonDefensePower: defense.totalGarrisonDefense,
+          repairReductionPercent: 0,
+          nowMs,
+        }
+      );
+    const attackerAllocation = allocateRallyAttackerLosses(packages, result.attackerLosses);
+    const defenderAllocation = allocateDefenderLosses(
+      defense.neutralTroops,
+      defense.contributions,
+      result.defenderLosses
+    );
+
+    const participantEconomies = new Map();
+    for (const allocation of attackerAllocation) {
+      const entry = participantEntries.get(allocation.uid) || {};
+      const economy = await prepareEconomyCollection(transaction, allocation.uid, nowMs, {
+        profileRef: db.doc(`players/${allocation.uid}`),
+        profileSnap: entry.profileSnap,
+        checkpointWriteBudget: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+      });
+      participantEconomies.set(allocation.uid, economy);
+    }
+    const defenderEntries = new Map();
+    for (const contribution of defense.contributions) {
+      const profileRef = db.doc(`players/${contribution.ownerUid}`);
+      const profileSnap = await transaction.get(profileRef);
+      const economy = await prepareEconomyCollection(transaction, contribution.ownerUid, nowMs, {
+        profileRef,
+        profileSnap,
+        checkpointWriteBudget: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+      });
+      defenderEntries.set(contribution.ownerUid, {
+        profileRef,
+        profileSnap,
+        profile: economy.profileAfter || (profileSnap.exists ? profileSnap.data() || {} : {}),
+        economy,
+      });
+    }
+
+    const nextIncoming = tower.incomingRallyIds.filter(id => id !== armyId);
+    let settledTower;
+    if (result.success) {
+      settledTower = HOLDING_TOWERS.conquerTower(tower, {
+        id: rally.clanId,
+        name: attackingClanSnap.data()?.name,
+        tag: attackingClanSnap.data()?.tag,
+        emblem: attackingClanSnap.data()?.emblem || attackingClanSnap.data()?.shield || null,
+      }, nowMs);
+      settledTower.incomingRallyIds = nextIncoming;
+      settledTower.attackBlocked = nextIncoming.length > 0;
+    } else {
+      settledTower = extendHoldingTowerPaidRepair(tower, result.fortification, nowMs);
+      settledTower.incomingRallyIds = nextIncoming;
+      settledTower.attackBlocked = nextIncoming.length > 0;
+      if (tower.ownerKind === "neutral") settledTower.neutralDefenders = defenderAllocation.ownerRemaining;
+    }
+
+    const returningMovements = [];
+    for (const allocation of attackerAllocation) {
+      const entry = participantEntries.get(allocation.uid) || {};
+      const economy = participantEconomies.get(allocation.uid);
+      const profile = economy?.profileAfter || entry.profile || {};
+      const remainsEligible = HOLDING_TOWERS.isEligibleMember(entry.member || {}, nowMs, rally.clanId)
+        && safeString(profile.clanId, 128) === rally.clanId;
+      const shouldStation = result.success && remainsEligible && allocation.survivors > 0;
+      const committedRallyTroops = Math.max(0, getProfileCommittedRallyTroops(profile) - allocation.troops);
+      const towerGarrisonTroops = Math.max(0, Math.floor(safeNumber(profile.towerGarrisonTroops, 0)))
+        + (shouldStation ? allocation.survivors : 0);
+      const profilePatch = {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+        towerGarrisonTroops,
+        towerGarrisonResetGeneration: RESET_GENERATION,
+      };
+      const addActiveArmies = [];
+      if (allocation.survivors > 0 && !shouldStation) {
+        const destinationEntry = getOwnedMainCityDestination(economy, profile)
+          || economy.cityEntries.find(candidate => candidate?.city && getOwnerUid(candidate.city) === allocation.uid);
+        const movement = createRallyReturnMovement({
+          rally,
+          participant: { ...allocation, survivors: allocation.survivors },
+          source: { ...tower, id: tower.id, name: tower.name, regionId: tower.regionId },
+          destinationEntry,
+          economy,
+          profile,
+          nowMs,
+          reason: friendlyAtResolution ? "tower_became_friendly" : result.success ? "tower_access_revoked" : "tower_rally_return",
+          movementId: `${armyId}_${allocation.uid}_tower_return`,
+        });
+        addActiveArmies.push(movement);
+        returningMovements.push(movement);
+      }
+      writePreparedEconomy(transaction, economy, profilePatch, [], {
+        addActiveArmies,
+        excludeArmyIds: [armyId],
+        nowMs,
+      });
+      if (shouldStation) {
+        const garrisonRef = holdingTowerGarrisonRef(tower.id, allocation.uid);
+        transaction.set(garrisonRef, {
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          towerId: tower.id,
+          clanId: rally.clanId,
+          uid: allocation.uid,
+          ownerUid: allocation.uid,
+          ownerName: normalizePlayerName(profile.playerName || allocation.ownerName, "Ruler"),
+          ownerFlag: profile.flag || allocation.ownerFlag || null,
+          troops: allocation.survivors,
+          stationedAtMs: nowMs,
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: false });
+      }
+      const report = makeReport({
+        id: `${armyId}_tower_${allocation.uid}`,
+        type: "battle",
+        outcome: result.success ? "victory" : friendlyAtResolution ? "returned" : "defeat",
+        city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId },
+        troopCount: allocation.troops,
+        summary: result.success
+          ? `${tower.name} was conquered for ${safeString(attackingClanSnap.data()?.name, 40) || "your clan"}. ${allocation.survivors.toLocaleString()} survivors ${shouldStation ? "now hold the Tower" : "are returning safely"}.`
+          : friendlyAtResolution
+            ? `${tower.name} became clan-owned before arrival. ${allocation.survivors.toLocaleString()} troops are returning safely.`
+            : `The rally failed to conquer ${tower.name}.`,
+        battle: {
+          targetType: "tower",
+          towerId: tower.id,
+          towerName: tower.name,
+          wallLevel: tower.wallLevel,
+          startingIntegrityBps: defense.fortification.integrityBps,
+          endingIntegrityBps: result.fortification?.endingIntegrityBps ?? tower.wallIntegrityBps,
+          attackerTroops: allocation.troops,
+          attackerLosses: allocation.losses,
+          attackerSurvivors: allocation.survivors,
+          totalAttackerTroops: packages.reduce((total, row) => total + row.troops, 0),
+          totalDefenderTroops: defense.totalTroops,
+          defenderLosses: result.defenderLosses,
+        },
+      });
+      writeReport(transaction, allocation.uid, report, entry.profileSnap);
+    }
+
+    if (result.success) {
+      garrisonSnap.docs.forEach(doc => transaction.delete(doc.ref));
+    } else if (tower.ownerKind === "clan") {
+      defenderAllocation.contributions.forEach(entry => {
+        const ref = holdingTowerGarrisonRef(tower.id, entry.ownerUid);
+        if (entry.remaining > 0) transaction.set(ref, { troops: entry.remaining, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+        else transaction.delete(ref);
+      });
+    }
+    defenderAllocation.contributions.forEach(allocation => {
+      const defender = defenderEntries.get(allocation.ownerUid);
+      if (!defender?.economy) return;
+      const currentTowerTroops = Math.max(0, Math.floor(safeNumber(defender.profile.towerGarrisonTroops, allocation.troops)));
+      const towerGarrisonTroops = Math.max(0, currentTowerTroops - allocation.losses);
+      writePreparedEconomy(transaction, defender.economy, {
+        towerGarrisonTroops,
+        towerGarrisonResetGeneration: RESET_GENERATION,
+      }, [], { nowMs });
+      const report = makeReport({
+        id: `${armyId}_tower_defense_${allocation.ownerUid}`,
+        type: "battle",
+        outcome: result.success ? "defeat" : "victory",
+        city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId },
+        troopCount: allocation.troops,
+        summary: result.success
+          ? `${tower.name} was lost. ${allocation.losses.toLocaleString()} of your stationed defenders fell.`
+          : `${tower.name} held. ${allocation.remaining.toLocaleString()} of your stationed defenders remain.`,
+        battle: {
+          targetType: "tower",
+          towerId: tower.id,
+          towerName: tower.name,
+          wallLevel: tower.wallLevel,
+          startingIntegrityBps: defense.fortification.integrityBps,
+          endingIntegrityBps: result.fortification?.endingIntegrityBps ?? tower.wallIntegrityBps,
+          defenderTroops: allocation.troops,
+          defenderLosses: allocation.losses,
+          defenderSurvivors: allocation.remaining,
+        },
+      });
+      writeReport(transaction, allocation.ownerUid, report, defender.profileSnap);
+    });
+
+    returningMovements.forEach(movement => writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true }));
+    transaction.set(towerRef, holdingTowerStateWritePatch(settledTower, nowMs), { merge: true });
+    const terminalParticipants = attackerAllocation.map(allocation => ({
+      ...allocation,
+      status: result.success && allocation.survivors > 0
+        ? HOLDING_TOWERS.isEligibleMember(participantEntries.get(allocation.uid)?.member || {}, nowMs, rally.clanId)
+          ? "stationed"
+          : RALLY_PARTICIPANT_RETURNING
+        : allocation.survivors > 0
+          ? RALLY_PARTICIPANT_RETURNING
+          : RALLY_PARTICIPANT_RETURNED,
+      settledAtMs: nowMs,
+    }));
+    transaction.set(rallyRef, {
+      status: RALLY_STATUS_RESOLVED,
+      participants: terminalParticipants,
+      participantCount: 0,
+      assembledTroops: 0,
+      resolvedAtMs: nowMs,
+      outcome: result.success ? "tower_conquered" : friendlyAtResolution ? "tower_friendly_return" : "tower_held",
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    const armyResult = {
+      kind: "attack",
+      targetType: "tower",
+      towerId: tower.id,
+      towerName: tower.name,
+      success: result.success,
+      friendlyAtResolution,
+      attackerLosses: result.attackerLosses,
+      defenderLosses: result.defenderLosses,
+      wallLevelBefore: tower.wallLevel,
+      wallLevelAfter: settledTower.wallLevel,
+      wallIntegrityBps: settledTower.wallIntegrityBps,
+      clanId: settledTower.clanId,
+    };
+    transaction.set(armyRef, {
+      status: "resolved",
+      resolvedAtMs: nowMs,
+      result: armyResult,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    armyViewRefsForRegions(army.routeRegionIds, armyId).forEach(ref => transaction.set(ref, {
+      status: "resolved",
+      resolvedAtMs: nowMs,
+      result: armyResult,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }));
+    writeClanAudit(transaction, rally.clanId, rally.leaderUid, result.success ? "holding_tower_conquered" : "holding_tower_rally_resolved", {
+      towerId: tower.id,
+      towerName: tower.name,
+      armyId,
+      attackerLosses: result.attackerLosses,
+      defenderLosses: result.defenderLosses,
+    }, nowMs);
+    return {
+      ok: true,
+      status: "resolved",
+      kind: "attack",
+      targetType: "tower",
+      result: armyResult,
+      tower: getHoldingTowerPublicState(settledTower, nowMs),
+      reports: callerUid ? [] : undefined,
+    };
+  }, "resolveHoldingTowerRally");
+}
+
 async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
+  const canonicalMarkerSnap = await canonicalArmyRef(armyId).get();
+  if (canonicalMarkerSnap.exists) {
+    const marker = canonicalMarkerSnap.data() || {};
+    if (marker.rallyAttack === true && marker.targetType === "tower") {
+      return resolveHoldingTowerRallyById({ armyId, callerUid, nowMs });
+    }
+    if (marker.holdingTowerMovement === true && marker.targetType === "tower") {
+      return resolveHoldingTowerDirectMovementById({ armyId, callerUid, nowMs });
+    }
+  }
   const candidateRefs = [canonicalArmyRef(armyId), ...armyViewRefsForRegions(requestedRegions, armyId)];
 
   const resolution = await runTransactionWithInfrastructureRetry(async transaction => {
@@ -20736,11 +22497,19 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const sourceRegionId = normalizeRegionId(army.sourceRegionId || routeRegionIds[0]);
     const targetRegionId = normalizeRegionId(army.targetRegionId || routeRegionIds[routeRegionIds.length - 1] || sourceRegionId);
     const targetType = army.targetType === "camp" ? "camp" : "city";
-    const sourceRef = cityRefForRegion(sourceRegionId, army.fromId);
+    const towerSource = army.sourceType === "tower" && Boolean(HOLDING_TOWERS.getTowerDefinition(army.sourceTowerId || army.fromId));
+    const sourceRef = towerSource
+      ? holdingTowerRef(army.sourceTowerId || army.fromId)
+      : cityRefForRegion(sourceRegionId, army.fromId);
+    const sourceGarrisonRef = towerSource ? holdingTowerGarrisonRef(army.sourceTowerId || army.fromId, army.ownerUid) : null;
     const targetRef = targetType === "camp"
       ? campRefForRegion(targetRegionId, army.toId)
       : cityRefForRegion(targetRegionId, army.toId);
-    const [sourceSnap, targetSnap] = await Promise.all([transaction.get(sourceRef), transaction.get(targetRef)]);
+    const [sourceSnap, targetSnap, sourceGarrisonSnap] = await Promise.all([
+      transaction.get(sourceRef),
+      transaction.get(targetRef),
+      sourceGarrisonRef ? transaction.get(sourceGarrisonRef) : Promise.resolve(null),
+    ]);
     const isReturning = Boolean(army.returning);
     const isCampReturn = Boolean(army.campReturn);
     const isReinforcementReturn = Boolean(army.reinforcementReturn);
@@ -20748,7 +22517,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       throw new HttpsError("not-found", "Target city was not found.");
     }
 
-    let source = sourceSnap.exists ? { id: sourceSnap.id, ...sourceSnap.data() } : null;
+    let source = sourceSnap.exists
+      ? towerSource
+        ? normalizeCurrentHoldingTower(sourceSnap, army.sourceTowerId || army.fromId, nowMs)
+        : { id: sourceSnap.id, ...sourceSnap.data() }
+      : null;
     let target = targetSnap.exists
       ? targetType === "camp"
         ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
@@ -20960,11 +22733,14 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           checkpointPriorityRefs: [targetRef],
         })
       : null;
-    const producedSourceEntry = getEconomyCityByRef(attackerEconomy, sourceRef);
+    const producedSourceEntry = towerSource ? null : getEconomyCityByRef(attackerEconomy, sourceRef);
     const producedTargetEntry = getEconomyCityByRef(defenderEconomy, targetRef);
     if (producedSourceEntry?.city) source = producedSourceEntry.city;
     if (producedTargetEntry?.city) target = producedTargetEntry.city;
     const attackerProfile = attackerEconomy?.profileAfter || attackerProfileEntry.data || {};
+    const towerSourceMemberSnap = towerSource && safeString(attackerProfile.clanId, 128)
+      ? await transaction.get(db.doc(`clans/${safeString(attackerProfile.clanId, 128)}/members/${attackerUid}`))
+      : null;
     const defenderProfile = defenderUid ? defenderEconomy?.profileAfter || defenderProfileEntry?.data || {} : null;
     const reinforcementProfiles = new Map(targetReinforcements.map(entry => [
       entry.ownerUid,
@@ -21090,6 +22866,39 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const returnTroopsToSource = troops => {
       const returned = Math.max(0, Math.floor(safeNumber(troops, 0)));
       latestSourceReturnStatsPatch = null;
+      if (returned && towerSource && source && sourceGarrisonRef) {
+        const sourceClanId = safeString(source.clanId, 128);
+        const profileClanId = safeString(attackerProfile.clanId, 128);
+        if (
+          sourceClanId
+          && sourceClanId === profileClanId
+          && HOLDING_TOWERS.isEligibleMember(towerSourceMemberSnap?.exists ? towerSourceMemberSnap.data() || {} : {}, nowMs, profileClanId)
+        ) {
+          const current = Math.max(0, Math.floor(safeNumber(sourceGarrisonSnap?.data()?.troops, 0)));
+          const nextTroops = current + returned;
+          if (!Number.isSafeInteger(nextTroops)) throw new HttpsError("out-of-range", "Tower garrison exceeds the safe-integer range.");
+          transaction.set(sourceGarrisonRef, {
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+            towerId: source.id,
+            clanId: profileClanId,
+            uid: attackerUid,
+            ownerUid: attackerUid,
+            ownerName: normalizePlayerName(attackerProfile.playerName, "Ruler"),
+            ownerFlag: attackerProfile.flag || null,
+            troops: nextTroops,
+            updatedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+          const totalTowerTroops = Math.max(0, Math.floor(safeNumber(attackerProfile.towerGarrisonTroops, 0))) + returned;
+          transaction.set(attackerProfileEntry.ref, {
+            towerGarrisonTroops: totalTowerTroops,
+            towerGarrisonResetGeneration: RESET_GENERATION,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+          return returned;
+        }
+      }
       if (!returned || !source || getOwnerUid(source) !== attackerUid) return 0;
       const nextTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0))) + returned;
       const patch = {
@@ -26388,6 +28197,49 @@ exports.cleanupExpiredBulkOrderRequests = onSchedule({
     bulkOrders: result,
     notificationOutbox: notificationOutboxCleanup,
   });
+});
+
+exports.maintainHoldingTowers = onSchedule({
+  region: "us-central1",
+  schedule: "every 1 minutes",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 60,
+  memory: "256MiB",
+}, async () => {
+  if (!isHoldingTowerWorldActive()) {
+    console.log("Holding Tower maintenance skipped; Pending Core is not active.", {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      liveTowerCount: 0,
+    });
+    return;
+  }
+  const nowMs = Date.now();
+  let seeded = 0;
+  let advanced = 0;
+  for (const definition of HOLDING_TOWERS.TOWERS) {
+    await runTransactionWithInfrastructureRetry(async transaction => {
+      const ref = holdingTowerRef(definition.id);
+      const snap = await transaction.get(ref);
+      const before = snap.exists ? { id: snap.id, ...snap.data() } : createInitialHoldingTowerState(definition.id, nowMs);
+      const after = HOLDING_TOWERS.materializeTowerState(before, nowMs);
+      if (!snap.exists) seeded += 1;
+      if (
+        !snap.exists
+        || after.wallLevel !== before.wallLevel
+        || after.wallIntegrityBps !== before.wallIntegrityBps
+        || JSON.stringify(after.upgradeQueue || []) !== JSON.stringify(before.upgradeQueue || [])
+        || JSON.stringify(after.repair || null) !== JSON.stringify(before.repair || null)
+        || JSON.stringify(after.veil || null) !== JSON.stringify(before.veil || null)
+        || JSON.stringify(after.veilUsage || null) !== JSON.stringify(before.veilUsage || null)
+      ) {
+        transaction.set(ref, holdingTowerStateWritePatch(after, nowMs, { create: !snap.exists }), { merge: snap.exists });
+        advanced += 1;
+      }
+    }, "maintainHoldingTowers");
+  }
+  console.log("Holding Tower maintenance finished", { seeded, advanced, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION });
 });
 
 exports.resolveDueArmyOrders = onSchedule({

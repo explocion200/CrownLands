@@ -1,0 +1,50 @@
+/* Holding Tower modal colors load after the shared manuscript/contrast layers. */
+.holding-tower-modal .modal-card {
+  color: #eee3cb;
+  border: 1px solid rgba(221, 177, 82, .52);
+  background:
+    radial-gradient(circle at 8% 0, rgba(170, 94, 39, .22), transparent 30%),
+    radial-gradient(circle at 90% 12%, rgba(48, 108, 100, .2), transparent 30%),
+    linear-gradient(145deg, #201b18, #0b171b 58%, #15100f);
+  box-shadow: inset 0 0 0 1px rgba(255, 240, 192, .06), 0 28px 80px rgba(0,0,0,.68);
+}
+
+.holding-tower-modal .modal-card > h2 {
+  color: #f5d98e;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, .72);
+}
+
+.holding-tower-modal .modal-card #modalBody,
+.holding-tower-modal .modal-card p,
+.holding-tower-modal .modal-card li,
+.holding-tower-modal .modal-card small {
+  color: #eee3cb;
+}
+
+.holding-tower-modal .modal-card .holding-tower-hero h2,
+.holding-tower-modal .modal-card .holding-tower-section-heading h3,
+.holding-tower-modal .modal-card .holding-tower-order-composer h3 {
+  color: #fff0bd;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, .68);
+}
+
+.holding-tower-modal .modal-close {
+  color: #fff0bd;
+  border-color: rgba(234, 200, 119, .7);
+  background: linear-gradient(#413a30, #1b1c1a);
+}
+
+.clan-treasury-panel .clan-treasury-heading > span {
+  color: #d9b85f !important;
+}
+
+.clan-treasury-panel .clan-treasury-heading > h3 {
+  color: #fff0bd !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .92);
+}
+
+.clan-treasury-panel > p,
+.clan-treasury-panel label,
+.clan-treasury-panel small {
+  color: #d8cfbd !important;
+}

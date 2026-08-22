@@ -1,0 +1,606 @@
+{
+  "capturedAt": "2026-08-22",
+  "desktopViewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "desktopScenarios": [
+    {
+      "scenario": "neutral",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Scout Tower",
+          "width": 100
+        },
+        {
+          "height": 34,
+          "text": "Form Rally Attack",
+          "width": 135
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        317,
+        1210,
+        618
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "clan-owned",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Scout Tower",
+          "width": 100
+        },
+        {
+          "height": 34,
+          "text": "Form Rally Attack",
+          "width": 135
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        317,
+        1210,
+        618
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "owner",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        170,
+        1210,
+        765
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "enemy",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Scout Tower",
+          "width": 100
+        },
+        {
+          "height": 34,
+          "text": "Form Rally Attack",
+          "width": 135
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        317,
+        1210,
+        618
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "scout-success",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Scout Tower",
+          "width": 100
+        },
+        {
+          "height": 34,
+          "text": "Form Rally Attack",
+          "width": 135
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        293,
+        1210,
+        643
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "scout-veil",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Scout Tower",
+          "width": 100
+        },
+        {
+          "height": 34,
+          "text": "Form Rally Attack",
+          "width": 135
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        293,
+        1210,
+        643
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "damaged",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        170,
+        1210,
+        765
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "repair",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        170,
+        1210,
+        765
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "upgrading",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        149,
+        1210,
+        787
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "queue",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        149,
+        1210,
+        787
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "treasury",
+      "buttons": [
+        {
+          "height": 38,
+          "text": "Donate",
+          "width": 94
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        371,
+        338,
+        1051,
+        598
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "incoming",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        124,
+        1210,
+        811
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "scenario": "desktop",
+      "buttons": [
+        {
+          "height": 34,
+          "text": "Reinforce",
+          "width": 84
+        },
+        {
+          "height": 34,
+          "text": "Withdraw Mine",
+          "width": 114
+        },
+        {
+          "height": 34,
+          "text": "Attack from Tower",
+          "width": 138
+        },
+        {
+          "height": 34,
+          "text": "Scout from Tower",
+          "width": 134
+        },
+        {
+          "height": 34,
+          "text": "Rally from Tower",
+          "width": 130
+        },
+        {
+          "height": 34,
+          "text": "Queue Upgrade",
+          "width": 115
+        },
+        {
+          "height": 34,
+          "text": "Start Paid Repair",
+          "width": 126
+        },
+        {
+          "height": 34,
+          "text": "Veil of Silence",
+          "width": 111
+        }
+      ],
+      "cardOverflowX": false,
+      "cardOverflowY": false,
+      "documentOverflowX": false,
+      "panelRect": [
+        213,
+        170,
+        1210,
+        765
+      ],
+      "viewport": [
+        1440,
+        900
+      ]
+    }
+  ],
+  "mobile": {
+    "cardClient": [
+      836,
+      336
+    ],
+    "cardOverflowX": false,
+    "cardOverflowY": false,
+    "cardScroll": [
+      836,
+      336
+    ],
+    "documentOverflowX": false,
+    "minButton": 27,
+    "panelRect": [
+      10,
+      60,
+      819,
+      357
+    ],
+    "viewport": [
+      844,
+      390
+    ]
+  },
+  "notes": [
+    "No portrait/mobile QA was performed.",
+    "Clan Treasury heading contrast was corrected and recaptured after the full render."
+  ]
+}

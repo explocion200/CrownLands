@@ -549,6 +549,34 @@
     return callServerFunction("sendRegroupOrders", payload);
   }
 
+  async function getHoldingTowerState(payload = {}) {
+    return callServerFunction("getHoldingTowerState", payload);
+  }
+
+  async function getClanTreasuryStatus(payload = {}) {
+    return callServerFunction("getClanTreasuryStatus", payload);
+  }
+
+  async function donateClanTreasuryGold(payload = {}) {
+    return callServerFunction("donateClanTreasuryGold", payload);
+  }
+
+  async function queueHoldingTowerWallUpgrades(payload = {}) {
+    return callServerFunction("queueHoldingTowerWallUpgrades", payload);
+  }
+
+  async function startHoldingTowerRepair(payload = {}) {
+    return callServerFunction("startHoldingTowerRepair", payload);
+  }
+
+  async function activateHoldingTowerVeil(payload = {}) {
+    return callServerFunction("activateHoldingTowerVeil", payload);
+  }
+
+  async function sendHoldingTowerArmyOrder(payload = {}) {
+    return callServerFunction("sendHoldingTowerArmyOrder", payload);
+  }
+
   async function createClanRally(payload = {}) {
     return callServerFunction("createClanRally", payload);
   }
@@ -2488,6 +2516,28 @@
     );
   }
 
+  function subscribeHoldingTowerState(towerId = "", handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid || !towerId) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    if (!doc || !onSnapshot) return () => {};
+    return onSnapshot(
+      doc(client.db, "holdingTowers", String(towerId).slice(0, 96)),
+      snapshot => {
+        if (typeof handlers.onTower === "function") {
+          const tower = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+          handlers.onTower(
+            tower?.resetGeneration === RESET_GENERATION && tower?.worldId === ONLINE_WORLD_ID
+              ? tower
+              : null
+          );
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "holdingTower");
+      }
+    );
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const {
@@ -2675,6 +2725,13 @@
     previewArmyRoute,
     sendNearbyScouts,
     sendRegroupOrders,
+    getHoldingTowerState,
+    getClanTreasuryStatus,
+    donateClanTreasuryGold,
+    queueHoldingTowerWallUpgrades,
+    startHoldingTowerRepair,
+    activateHoldingTowerVeil,
+    sendHoldingTowerArmyOrder,
     createClanRally,
     joinClanRally,
     withdrawClanRallyContribution,
@@ -2709,6 +2766,7 @@
     subscribePlayerReinforcements,
     subscribePlayerCamps,
     subscribeCrownCitadel,
+    subscribeHoldingTowerState,
     subscribeRealmActivity,
     subscribeServerReports,
     isPushSupported,
