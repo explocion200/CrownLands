@@ -1,6 +1,6 @@
 {
   "name": "crownlands-studio-desktop",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "author": "Crownlands",
   "description": "Windows desktop shell for the Crownlands development workspace",

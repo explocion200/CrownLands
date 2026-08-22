@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 
 const port = Number(process.argv.find(argument => argument.startsWith("--port="))?.split("=")[1] || 9333);
 const save = process.argv.includes("--save");
+const expectedBranch = process.argv.find(argument => argument.startsWith("--branch="))?.slice("--branch=".length) || "";
 let nextId = 0;
 let activeSocket = null;
 const pending = new Map();
@@ -42,9 +43,62 @@ async function main() {
   await send("Runtime.enable");
   const result = await evaluate(`(async () => {
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const waitFor = async (predicate, label, timeoutMs = 12000) => {
+      const started = Date.now();
+      while (!predicate()) {
+        if (Date.now() - started > timeoutMs) throw new Error('Timed out waiting for ' + label);
+        await delay(50);
+      }
+    };
     const button = label => [...document.querySelectorAll("button")].find(node => node.textContent.trim() === label || node.textContent.trim().startsWith(label));
     const screenPreset = id => document.querySelector('[data-preview-target="screen"][data-preview-preset="' + id + '"]');
     const change = (node, value) => { node.value = value; node.dispatchEvent(new Event("input", { bubbles: true })); };
+    const currentWorldButton = button("Current World");
+    const pendingCoreButton = button("Pending Core 5×5");
+    currentWorldButton.click();
+    await waitFor(() => !document.querySelector("#worldView").classList.contains("hidden"), "initial Current World view");
+    const currentWorldRegionCount = document.querySelectorAll("#worldGrid [data-region-id]").length;
+    const currentWorldInitiallyVisible = !document.querySelector("#worldView").classList.contains("hidden");
+    pendingCoreButton.click();
+    await waitFor(() => document.querySelector("#corePreviewIntegrityBadge").textContent.includes("VERIFIED"), "Core manifest verification");
+    await waitFor(() => document.querySelectorAll("#corePreviewGrid [data-core-region]").length === 25, "25 Core map tiles");
+    try {
+      await waitFor(() => [...document.querySelectorAll("#corePreviewGrid > [data-core-region] > img")].filter(image => image.complete && image.naturalWidth > 0).length === 25, "25 Core map images", 30000);
+    } catch (error) {
+      const images = [...document.querySelectorAll("#corePreviewGrid > [data-core-region] > img")];
+      throw new Error(error.message + ': ' + JSON.stringify({ total: images.length, loaded: images.filter(image => image.complete && image.naturalWidth > 0).length, failed: images.filter(image => image.complete && image.naturalWidth === 0).map(image => image.src) }));
+    }
+    await delay(100);
+    const pendingCore = {
+      visible: !document.querySelector("#corePreviewView").classList.contains("hidden"),
+      banner: document.querySelector(".core-preview-banner strong").textContent.trim(),
+      integrity: document.querySelector("#corePreviewIntegrityBadge").textContent.trim(),
+      maps: document.querySelectorAll("#corePreviewGrid [data-core-region]").length,
+      loadedImages: [...document.querySelectorAll("#corePreviewGrid > [data-core-region] > img")].filter(image => image.complete && image.naturalWidth > 0).length,
+      counts: document.querySelector("#corePreviewCounts").textContent.trim(),
+      camp: document.querySelector("#corePreviewCampSize").value,
+      stronghold: document.querySelector("#corePreviewStrongholdSize").value,
+      citadel: document.querySelector("#corePreviewCitadelSize").value,
+    };
+    change(document.querySelector("#corePreviewCampSize"), "145");
+    document.querySelector("#corePreviewUndoBtn").click();
+    const campAfterUndo = document.querySelector("#corePreviewCampSize").value;
+    document.querySelector("#corePreviewRedoBtn").click();
+    const campAfterRedo = document.querySelector("#corePreviewCampSize").value;
+    document.querySelector("#corePreviewResetBtn").click();
+    const campAfterReset = document.querySelector("#corePreviewCampSize").value;
+    currentWorldButton.click();
+    await waitFor(() => !document.querySelector("#worldView").classList.contains("hidden"), "Current World view");
+    const currentWorldAfterSwitch = {
+      visible: !document.querySelector("#worldView").classList.contains("hidden"),
+      coreHidden: document.querySelector("#corePreviewView").classList.contains("hidden"),
+      regions: document.querySelectorAll("#worldGrid [data-region-id]").length,
+    };
+    pendingCoreButton.click();
+    await waitFor(() => window.CrownlandsCorePreview.getVerificationStatus().attempts >= 2 && document.querySelector("#corePreviewIntegrityBadge").textContent.includes("VERIFIED"), "Core manifest re-verification");
+    const manifestChecksOnEachOpen = window.CrownlandsCorePreview.getVerificationStatus().attempts;
+    currentWorldButton.click();
+    await waitFor(() => !document.querySelector("#worldView").classList.contains("hidden"), "return to Current World");
     button("UI Studio").click();
     await delay(80);
     button("Screens").click();
@@ -120,11 +174,43 @@ async function main() {
       changedFiles: saveResult?.changedFiles || [],
       diffHasConfig: diff.text.includes("ui-studio-config.json") || diff.text.includes('"width": 44'),
       sourceMessage: document.querySelector("#uiGitDirtyNotice").textContent,
+      worldSources: {
+        currentWorldInitiallyVisible,
+        currentWorldRegionCount,
+        pendingCore,
+        campAfterUndo,
+        campAfterRedo,
+        campAfterReset,
+        currentWorldAfterSwitch,
+        manifestChecksOnEachOpen,
+      },
     };
   })()`);
 
   assert.equal(result.desktopBridge, true);
-  assert.equal(result.branch, "codex/crownlands-studio-phase-2a");
+  if (expectedBranch) assert.equal(result.branch, expectedBranch);
+  assert.equal(result.worldSources.currentWorldInitiallyVisible, true);
+  assert.ok(result.worldSources.currentWorldRegionCount > 0);
+  assert.equal(result.worldSources.pendingCore.visible, true);
+  assert.match(result.worldSources.pendingCore.banner, /PENDING CORE 5×5.*LOCAL PREVIEW.*NOT LIVE/);
+  assert.equal(result.worldSources.pendingCore.integrity, "MANIFEST VERIFIED");
+  assert.equal(result.worldSources.pendingCore.maps, 25);
+  assert.equal(result.worldSources.pendingCore.loadedImages, 25);
+  assert.match(result.worldSources.pendingCore.counts, /25 maps.*1480 cities.*17 objectives.*40 reciprocal roads/);
+  assert.deepEqual([
+    result.worldSources.pendingCore.camp,
+    result.worldSources.pendingCore.stronghold,
+    result.worldSources.pendingCore.citadel,
+  ], ["132", "154", "260"]);
+  assert.equal(result.worldSources.campAfterUndo, "132");
+  assert.equal(result.worldSources.campAfterRedo, "145");
+  assert.equal(result.worldSources.campAfterReset, "132");
+  assert.deepEqual(result.worldSources.currentWorldAfterSwitch, {
+    visible: true,
+    coreHidden: true,
+    regions: result.worldSources.currentWorldRegionCount,
+  });
+  assert.ok(result.worldSources.manifestChecksOnEachOpen >= 2);
   assert.equal(result.pendingAfterCloseEdits, "2");
   assert.equal(result.liveCloseWidth, "44px");
   assert.ok(result.sharedCloseCount >= 12);

@@ -16,6 +16,9 @@ const PROJECT_MARKERS = Object.freeze([
   "ui-layout-config.js",
   "ui-studio-config.json",
   "ui-component-runtime.js",
+]);
+
+const CORE_PREVIEW_MARKERS = Object.freeze([
   "objective-visual-config.js",
   "benchmark-results/map/core-v2-qa-1/CORE_PREVIEW_INTEGRITY_MANIFEST.json",
 ]);
@@ -81,6 +84,17 @@ async function validateCrownlandsProject(candidateRoot) {
     }
   }
 
+  const corePreviewMissing = [];
+  for (const marker of CORE_PREVIEW_MARKERS) {
+    try {
+      const target = resolveInside(root, marker).resolved;
+      const stat = await fsp.stat(target);
+      if (!stat.isFile()) corePreviewMissing.push(marker);
+    } catch {
+      corePreviewMissing.push(marker);
+    }
+  }
+
   return {
     valid: missing.length === 0 && errors.length === 0,
     root,
@@ -88,6 +102,8 @@ async function validateCrownlandsProject(candidateRoot) {
     missing,
     errors,
     markers: [...PROJECT_MARKERS],
+    corePreviewAvailable: corePreviewMissing.length === 0,
+    corePreviewMissing,
   };
 }
 
@@ -202,6 +218,7 @@ function createProjectFileService(rootDir, options = {}) {
 }
 
 module.exports = {
+  CORE_PREVIEW_MARKERS,
   PROJECT_MARKERS,
   createProjectFileService,
   normalizeRelativePath,

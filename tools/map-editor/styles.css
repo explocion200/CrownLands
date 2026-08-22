@@ -2327,6 +2327,7 @@ label > span,
 .core-preview-controls { min-width: 0; display: grid; align-content: start; gap: 8px; }
 .core-preview-controls > section { padding: 10px; }
 .core-preview-safety-note { margin: 0 0 9px; padding: 7px 8px; border-left: 3px solid #8b403e; background: #f0dfbc; color: #5f4934; font-size: .63rem; line-height: 1.38; }
+.core-preview-editing-label { margin: 0 0 8px; padding: 7px 8px; border: 1px solid #aa874e; background: #382a1d; color: #f1d99f; font-size: .62rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }
 .core-preview-size-fields { display: grid; gap: 7px; }
 .core-preview-size-fields label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #503b2b; font-size: .68rem; font-weight: 800; }
 .core-preview-size-fields label > span { display: flex; align-items: center; gap: 5px; font-weight: 600; }

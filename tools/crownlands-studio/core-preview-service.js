@@ -133,12 +133,16 @@ function createCorePreviewService(projectFiles, rootDir) {
   async function getWorkspace() {
     const integrity = verifyManifest(rootDir);
     if (!integrity.ok) {
+      const unavailable = integrity.errors.some(error => /ENOENT|no such file or directory/i.test(error));
       return {
         ok: false,
         editable: false,
         offlineOnly: true,
         notLive: true,
-        errors: integrity.errors,
+        reason: unavailable ? "unavailable" : "integrity-failed",
+        errors: unavailable
+          ? ["Pending Core preview unavailable for this project.", ...integrity.errors]
+          : integrity.errors,
         regions: [],
         config: null,
         integrity: {
@@ -148,7 +152,30 @@ function createCorePreviewService(projectFiles, rootDir) {
         },
       };
     }
-    const config = await readConfig();
+    let config;
+    try {
+      config = await readConfig();
+    } catch (error) {
+      const unavailable = /ENOENT|no such file or directory/i.test(error.message || String(error));
+      return {
+        ok: false,
+        editable: false,
+        offlineOnly: true,
+        notLive: true,
+        reason: unavailable ? "unavailable" : "integrity-failed",
+        errors: [
+          unavailable ? "Pending Core preview unavailable for this project." : "Core Preview Integrity Check Failed.",
+          error.message || String(error),
+        ],
+        regions: [],
+        config: null,
+        integrity: {
+          ok: false,
+          overallSha256: integrity.overallSha256,
+          manifestPath: MANIFEST_RELATIVE_PATH,
+        },
+      };
+    }
     return {
       ok: true,
       editable: true,

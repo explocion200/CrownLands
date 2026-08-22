@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const {
@@ -43,6 +44,21 @@ test("Core preview workspace exposes only manifest-verified package data", async
   assert.equal(workspace.regions.reduce((total, region) => total + region.objectives.length, 0), 17);
   assert.ok(workspace.regions.every(region => region.map.url.startsWith("/api/core-preview/maps/")));
   assert.ok(workspace.regions.flatMap(region => region.objectives).every(objective => objective.interactionSize === objective.serializedSize));
+});
+
+test("project without the optional Core package returns a clear unavailable workspace", async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-core-preview-unavailable-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const service = createCorePreviewService({
+    async readText() { throw new Error("readText must not run before manifest verification"); },
+    resolveRead(relativePath) { return path.resolve(root, ...String(relativePath).split("/")); },
+  }, root);
+  const workspace = await service.getWorkspace();
+  assert.equal(workspace.ok, false);
+  assert.equal(workspace.editable, false);
+  assert.equal(workspace.reason, "unavailable");
+  assert.match(workspace.errors[0], /Pending Core preview unavailable for this project/);
+  assert.deepEqual(workspace.regions, []);
 });
 
 test("external visual config wins only for Core artwork, never interaction geometry", () => {

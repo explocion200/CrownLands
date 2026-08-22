@@ -28,6 +28,8 @@ test("Studio shell has unique IDs and all required areas", async () => {
   assert.ok(html.indexOf('src="core-preview.js') < editorScript, "Core preview controller must load before the editor orchestrator");
   assert.match(html, /data-ask-codex="(?:theme|component|screen|hud)"/);
   assert.match(html, /PENDING CORE 5×5 — LOCAL PREVIEW — NOT LIVE \/ NOT RESET-INTEGRATED/);
+  assert.match(html, />Current World<\/button>/);
+  assert.match(html, /Editing: Pending Core Visual Configuration/);
   for (const label of ["Full 5×5", "All Camp Maps", "All Strongholds", "Citadel Map"]) assert.match(html, new RegExp(label));
 });
 
@@ -35,9 +37,17 @@ test("Core preview UI blocks render on integrity failure and saves only through 
   const source = await fsp.readFile(path.join(ROOT, "tools", "map-editor", "core-preview.js"), "utf8");
   assert.match(source, /corePreviewWorkspace\.hidden = !verified/);
   assert.match(source, /No map was rendered and editing is disabled/);
+  assert.match(source, /Core Preview Integrity Check Failed/);
+  assert.match(source, /Pending Core preview unavailable for this project/);
+  assert.match(source, /if \(state\.active && !wasActive\) load\(\)/);
+  assert.match(source, /verificationAttempts:\s*0/);
+  assert.match(source, /getVerificationStatus/);
   assert.match(source, /fetch\(`\$\{API\}\/save`/);
   assert.match(source, /generated package files affected/);
   assert.match(source, /Gameplay geometry remains unchanged/);
+  for (const forbidden of ["Activate World", "Publish Core", "Run Reset", "Seed World", "Promote Candidate", "Production Ready", "Deploy"]) {
+    assert.doesNotMatch(source, new RegExp(forbidden, "i"));
+  }
 });
 
 test("manual UI saves do not rewrite gameplay or economy data", async () => {

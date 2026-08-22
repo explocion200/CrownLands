@@ -4,6 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const {
+  CORE_PREVIEW_MARKERS,
   PROJECT_MARKERS,
   createProjectFileService,
   normalizeRelativePath,
@@ -35,6 +36,17 @@ test("validates required Crownlands Studio project markers", async t => {
   }
   const valid = await validateCrownlandsProject(root);
   assert.equal(valid.valid, true);
+  assert.equal(valid.corePreviewAvailable, false);
+  assert.deepEqual(valid.corePreviewMissing, [...CORE_PREVIEW_MARKERS]);
+  for (const marker of CORE_PREVIEW_MARKERS) {
+    const target = path.join(root, ...marker.split("/"));
+    await fsp.mkdir(path.dirname(target), { recursive: true });
+    await fsp.writeFile(target, marker.endsWith(".json") ? "{}" : "// optional Core preview marker\n", "utf8");
+  }
+  const withCorePreview = await validateCrownlandsProject(root);
+  assert.equal(withCorePreview.valid, true);
+  assert.equal(withCorePreview.corePreviewAvailable, true);
+  assert.deepEqual(withCorePreview.corePreviewMissing, []);
   await fsp.unlink(path.join(root, "ui-layout-config.js"));
   const invalid = await validateCrownlandsProject(root);
   assert.equal(invalid.valid, false);

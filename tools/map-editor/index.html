@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crownlands Studio</title>
-  <link rel="stylesheet" href="styles.css?v=20260816-crownlands-studio-phase-2b" />
+  <link rel="stylesheet" href="styles.css?v=20260822-core-preview-portable-0.3.1" />
 </head>
 <body>
   <main class="editor-shell studio-shell">
@@ -35,7 +35,7 @@
 
     <header class="editor-toolbar studio-toolbar">
       <div id="worldSubnav" class="mode-tabs studio-subnav" role="group" aria-label="World tools">
-        <button id="worldModeBtn" class="tool-btn active" type="button">Current / Live</button>
+        <button id="worldModeBtn" class="tool-btn active" type="button">Current World</button>
         <button id="corePreviewModeBtn" class="tool-btn" type="button">Pending Core 5×5</button>
         <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
       </div>
@@ -171,6 +171,7 @@
               <aside class="core-preview-controls">
                 <section>
                   <div class="core-preview-section-heading"><div><span>Visual-only config</span><strong>Objective Artwork</strong></div></div>
+                  <p class="core-preview-editing-label">Editing: Pending Core Visual Configuration</p>
                   <p class="core-preview-safety-note">Artwork size only. Hitboxes, march clearance, coordinates, roads, serialized package data, and reset receipts stay unchanged.</p>
                   <div class="core-preview-size-fields">
                     <label>Camp artwork <span><input id="corePreviewCampSize" type="number" min="48" max="400" step="1" /> px</span></label>
@@ -574,11 +575,11 @@
     </details>
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
-  <script src="studio.js?v=20260816-crownlands-studio-phase-2b"></script>
-  <script src="core-preview.js?v=20260822-core-preview-remediation"></script>
+  <script src="studio.js?v=20260822-core-preview-portable-0.3.1"></script>
+  <script src="core-preview.js?v=20260822-core-preview-portable-0.3.1"></script>
   <script src="ui-inspector.js?v=20260816-crownlands-studio-phase-2a"></script>
   <script src="hud-editor.js?v=20260726-hud-layout-editor"></script>
   <script src="codex-ai.js?v=20260816-crownlands-studio-phase-2b"></script>
-  <script src="editor.js?v=20260816-crownlands-studio-phase-2b"></script>
+  <script src="editor.js?v=20260822-core-preview-portable-0.3.1"></script>
 </body>
 </html>

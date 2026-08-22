@@ -13,6 +13,7 @@
     active: false,
     loaded: false,
     loading: false,
+    verificationAttempts: 0,
     workspace: null,
     config: null,
     baseline: null,
@@ -139,7 +140,9 @@
     elements.corePreviewWorkspace.hidden = !verified;
     if (!verified) {
       const errors = state.workspace?.errors || ["The supplemental Core preview manifest could not be verified."];
-      elements.corePreviewBlocker.innerHTML = `<strong>Protected Core package mismatch</strong><p>No map was rendered and editing is disabled.</p><ul>${errors.map(error => `<li>${escapeHtml(error)}</li>`).join("")}</ul>`;
+      const unavailable = state.workspace?.reason === "unavailable";
+      const title = unavailable ? "Pending Core preview unavailable for this project" : "Core Preview Integrity Check Failed";
+      elements.corePreviewBlocker.innerHTML = `<strong>${title}</strong><p>No map was rendered and editing is disabled.</p><ul>${errors.map(error => `<li>${escapeHtml(error)}</li>`).join("")}</ul>`;
     }
   }
 
@@ -337,6 +340,7 @@
   async function load() {
     if (state.loading) return;
     state.loading = true;
+    state.verificationAttempts += 1;
     elements.corePreviewIntegrityBadge.textContent = "VERIFYING MANIFEST";
     setStatus("Verifying every protected Core preview artifact before rendering…", "busy");
     try {
@@ -459,14 +463,24 @@
   async function init() {
     cacheElements();
     bindEvents();
-    await load();
+    render();
   }
 
   function setActive(value) {
+    const wasActive = state.active;
     state.active = Boolean(value);
-    if (state.active && !state.loaded) load();
+    if (state.active && !wasActive) load();
     if (state.active) render();
   }
 
-  global.CrownlandsCorePreview = Object.freeze({ init, isDirty, load, save, setActive });
+  function getVerificationStatus() {
+    return Object.freeze({
+      active: state.active,
+      loading: state.loading,
+      attempts: state.verificationAttempts,
+      verified: Boolean(state.workspace?.ok && state.workspace?.integrity?.ok),
+    });
+  }
+
+  global.CrownlandsCorePreview = Object.freeze({ getVerificationStatus, init, isDirty, load, save, setActive });
 })(window);
