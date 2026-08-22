@@ -101,27 +101,29 @@
 }
 
 :is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) {
-  color: #fff8e8 !important;
   border-color: #557d94 !important;
   border-left: 4px solid #315f78;
   background: linear-gradient(180deg, #173f5e, #0b263d) !important;
   box-shadow: inset 0 1px 0 rgba(223, 242, 252, .12), 0 4px 9px rgba(0, 0, 0, .2);
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > span {
-  color: #b9d8e8 !important;
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .modal-city-stats :is(.stat-wide, .stat-chip) > span {
+  color: #e7d6b4 !important;
   opacity: 1;
   text-shadow: none !important;
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > strong {
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .modal-city-stats :is(.stat-wide, .stat-chip) > strong {
   color: #fff8e8 !important;
   opacity: 1;
   text-shadow: none !important;
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.stat-wide, .stat-chip) > small {
-  color: #d4e7f0 !important;
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .modal-city-stats :is(.stat-wide, .stat-chip) > small {
+  color: #f2e2bf !important;
   opacity: 1;
   text-shadow: none !important;
 }
@@ -132,18 +134,24 @@
   background: linear-gradient(180deg, #244f6b, #112f46) !important;
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats .stronghold-status > strong {
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .modal-city-stats .stronghold-status > strong {
   color: #ffe39a !important;
 }
 
 :is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .modal-city-stats :is(.player-name-link, .clan-name-link, .city-clan-profile-link) {
-  color: #ffe39a !important;
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
   text-shadow: none !important;
   text-decoration: underline;
   text-underline-offset: .12em;
+}
+
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .modal-city-stats :is(.stat-wide, .stat-chip)
+  > :is(.player-name-link, .clan-name-link, .city-clan-profile-link) {
+  color: #ffe39a !important;
 }
 
 :is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .objective-clan-link {
@@ -188,19 +196,30 @@
   box-shadow: inset 4px 0 0 #d9a83e, inset 0 1px 0 rgba(255, 242, 202, .16), 0 0 12px rgba(61, 137, 179, .18);
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-rank {
-  color: #ffe39a !important;
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .citadel-reign-row.current {
+  color: #fff8e8 !important;
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-ruler strong,
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-time {
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .citadel-reign-row.current .citadel-reign-rank {
+  color: #ffe39a !important;
+  text-shadow: none !important;
+}
+
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .citadel-reign-row.current .citadel-reign-ruler :is(.player-name-link, strong),
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .citadel-reign-row.current .citadel-reign-time {
   color: #fff8e8 !important;
   text-shadow: none !important;
 }
 
-:is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) .citadel-reign-ruler small {
-  color: #c6ddea !important;
+:is(.gold-camp-info-panel.stronghold-legacy-info-panel, .gold-camp-info-panel.crown-citadel-info-panel)
+  .citadel-reign-row.current .citadel-reign-ruler small {
+  color: #e7d6b4 !important;
   opacity: 1;
+  text-shadow: none !important;
 }
 
 :is(.stronghold-legacy-info-panel, .crown-citadel-info-panel) :is(.citadel-reign-note, .citadel-reign-empty) {

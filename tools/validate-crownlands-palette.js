@@ -14,8 +14,8 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260819-player-flags-v2-r1";
-const cacheVersion = "20260822-profile-castle-r1";
+const releaseId = "20260822-citadel-stronghold-contrast-r1";
+const cacheVersion = "20260822-citadel-stronghold-contrast-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 32 * 1024, "The Crownlands palette exceeds its 32 KiB delivery budget.");
@@ -103,6 +103,9 @@ assert.match(styles, /\.city-army-count\s*\{[\s\S]*?text-shadow:\s*none;/, "Owne
 assert.match(css, /\.city-node\.player \.city-army-count\s*\{[\s\S]*?filter:\s*none !important;[\s\S]*?text-shadow:\s*none !important;/, "The final palette does not guarantee one crisp owned-city troop text layer.");
 assert.match(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[\s\S]*?background:\s*#667a4a;/, "Clan-city labels do not use moss green.");
 assert.match(styles, /\.city-node\.neutral \.foreign-city-shield\s*\{\s*background:\s*#77736a;/, "Neutral city labels do not use stone gray.");
+assert.match(styles, /:is\(\.gold-camp-info-panel\.stronghold-legacy-info-panel, \.gold-camp-info-panel\.crown-citadel-info-panel\)[\s\S]*?\.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > span\s*\{[\s\S]*?color:\s*#e7d6b4 !important;/, "Shared Stronghold/Citadel labels are not protected from generic parchment typography.");
+assert.match(styles, /\.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > small\s*\{[\s\S]*?color:\s*#f2e2bf !important;/, "Shared Stronghold/Citadel supporting copy is not readable on blue cards.");
+assert.match(styles, /\.citadel-reign-row\.current \.citadel-reign-ruler :is\(\.player-name-link, strong\),[\s\S]*?\.citadel-reign-row\.current \.citadel-reign-time\s*\{[\s\S]*?color:\s*#fff8e8 !important;/, "The highlighted Stronghold/Citadel ruler row does not retain light foreground text.");
 assert.match(styles, /\.island-map-picker \.island-map-name\s*\{[\s\S]*?color:\s*#fff8e8;[\s\S]*?text-shadow:/, "The 15-map selector does not keep map names readable over map thumbnails.");
 assert.match(styles, /\.island-map-owned\s*\{[\s\S]*?color:\s*#d3e3eb;[\s\S]*?text-shadow:/, "The 15-map selector does not keep owned-city counts readable over map thumbnails.");
 for (const themeCss of [read("profile-theme.css"), css]) {
@@ -165,6 +168,10 @@ for (const [foreground, background, label] of [
   ["fff8e8", "31566d", "leaderboard names"],
   ["d3e3eb", "31566d", "leaderboard metadata"],
   ["fff0bc", "31566d", "leaderboard power"],
+  ["e7d6b4", "173f5e", "Stronghold/Citadel blue-card labels"],
+  ["f2e2bf", "173f5e", "Stronghold/Citadel blue-card descriptions"],
+  ["fff8e8", "285c79", "current ruler name and time"],
+  ["ffe39a", "285c79", "current ruler rank"],
 ]) assert.ok(contrast(foreground, background) >= 4.5, `${label} does not meet 4.5:1 contrast.`);
 
 console.log("Validated the centralized Crownlands palette, game-wide UI coverage, exact map semantics, persistent hex actions, release delivery, and readable contrast.");
