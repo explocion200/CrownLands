@@ -124,6 +124,8 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
       requirement: null,
       duplicateCount: 0,
       upgradeGold: 0,
+      hasMatchingMaterial: false,
+      hasEnoughGold: false,
       canUpgrade: false,
       reason: "Select an item to upgrade.",
     };
@@ -134,29 +136,40 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
       requirement: null,
       duplicateCount: 0,
       upgradeGold: 0,
+      hasMatchingMaterial: false,
+      hasEnoughGold: false,
       canUpgrade: false,
-      reason: "Maximum level reached.",
+      reason: "Max level.",
     };
   }
-  const duplicateCount = instances.filter(candidate => candidate.instanceId !== instance.instanceId
+  const materials = COMMON_GEAR.getUpgradeMaterialInstances(instance, instances);
+  const duplicateCount = materials.length;
+  const matchingEquippedCount = instances.filter(candidate => candidate.instanceId !== instance.instanceId
     && candidate.gearKey === instance.gearKey
     && candidate.level === instance.level
-    && !candidate.isEquipped).length;
+    && candidate.isEquipped).length;
   const upgradeGold = Math.max(0, Math.floor(
     Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0) * requirement.baseGoldHours
   ));
+  const hasMatchingMaterial = duplicateCount >= requirement.duplicates;
+  const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= upgradeGold;
   const issues = [];
-  if (duplicateCount < requirement.duplicates) {
-    issues.push(`Requires ${requirement.duplicates} matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}; ${duplicateCount} available.`);
+  if (!hasMatchingMaterial) {
+    issues.push(`No matching material. Requires ${requirement.duplicates} matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}; ${duplicateCount} available.`);
+    if (!instance.isEquipped && matchingEquippedCount > 0) {
+      issues.push(`Select the equipped Level ${instance.level} copy as the upgrade target; equipped gear cannot be used as material.`);
+    }
   }
-  if (Math.max(0, Number(state?.gold) || 0) < upgradeGold) {
-    issues.push(`Need ${formatNumber(upgradeGold)} gold; ${formatNumber(state?.gold)} available.`);
+  if (!hasEnoughGold) {
+    issues.push(`Insufficient gold. Requires ${formatNumber(upgradeGold)} gold; ${formatNumber(state?.gold)} available.`);
   }
   return {
     requirement,
     duplicateCount,
     upgradeGold,
-    canUpgrade: issues.length === 0,
+    hasMatchingMaterial,
+    hasEnoughGold,
+    canUpgrade: hasMatchingMaterial && hasEnoughGold,
     reason: issues.join(" "),
   };
 }
@@ -182,7 +195,7 @@ function createCommonGearViewModel(buildingId) {
   const bagGroups = createCommonGearBagGroups(instances, selectedCommonGearSlot, selectedCommonGearInstanceId);
   bagGroups.forEach(group => {
     group.isUpgradeReady = !group.isEquipped
-      && getCommonGearUpgradePreview(group.representative, instances).canUpgrade;
+      && getCommonGearUpgradePreview(group.representative, instances).hasMatchingMaterial;
   });
   const filteredBagGroups = selectedCommonGearBagFilter === "all"
     ? bagGroups
@@ -196,7 +209,7 @@ function createCommonGearViewModel(buildingId) {
       equipped,
       equippedDefinition: equipped ? COMMON_GEAR.getDefinition(equipped.gearKey) : null,
       isSelected: slot === selectedCommonGearSlot,
-      isUpgradeReady: Boolean(equipped && getCommonGearUpgradePreview(equipped, instances).canUpgrade),
+      isUpgradeReady: Boolean(equipped && getCommonGearUpgradePreview(equipped, instances).hasMatchingMaterial),
     };
   });
   return {
@@ -231,11 +244,11 @@ function createCommonGearViewModel(buildingId) {
 
 function renderCommonGearSlot(slotModel) {
   const { slot, label, equipped, equippedDefinition, isSelected, isUpgradeReady } = slotModel;
-  const accessibleLabel = `${label}${equipped ? `, ${equippedDefinition.gearName}, Level ${equipped.level}` : ", empty"}${isUpgradeReady ? ", upgrade ready" : ""}`;
+  const accessibleLabel = `${label}${equipped ? `, ${equippedDefinition.gearName}, Level ${equipped.level}` : ", empty"}${isUpgradeReady ? ", upgrade material ready" : ""}`;
   return `<button class="common-gear-slot${isSelected ? " selected" : ""}${equipped ? " filled" : " empty"}${isUpgradeReady ? " upgrade-ready" : ""}" type="button" data-gear-slot="${escapeHtml(slot)}" aria-pressed="${isSelected ? "true" : "false"}" aria-label="${escapeHtml(accessibleLabel)}">
     <span class="common-gear-slot-art" aria-hidden="true">${equippedDefinition ? `<img src="${escapeHtml(equippedDefinition.art)}" alt="" draggable="false" onerror="this.hidden=true" />` : "+"}</span>
     <span class="common-gear-slot-copy"><b>${escapeHtml(label)}</b><small>${equipped ? `Level ${equipped.level}` : "Empty"}</small></span>
-    ${isUpgradeReady ? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready" aria-label="Upgrade ready">!</span>` : ""}
+    ${isUpgradeReady ? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
   </button>`;
 }
 
@@ -244,11 +257,11 @@ function renderCommonGearBagTile(group) {
   const def = group.definition;
   if (!item || !def) return "";
   const rarity = String(def.rarity || "common").toLowerCase().replace(/[^a-z0-9_-]/g, "");
-  return `<button class="common-gear-mini-card common-gear-bag-tile rarity-${rarity}${group.isSelected ? " selected" : ""}${group.isCompatible ? " compatible" : ""}${group.isEquipped ? " equipped" : ""}${group.isUpgradeReady ? " upgrade-ready" : ""}" type="button" data-gear-instance="${escapeHtml(group.representativeInstanceId)}" data-gear-stack-key="${escapeHtml(group.key)}" aria-pressed="${group.isSelected ? "true" : "false"}" title="${escapeHtml(`${def.gearName} · Level ${item.level} · ${group.count} owned${group.isUpgradeReady ? " · Upgrade ready" : ""}`)}">
+  return `<button class="common-gear-mini-card common-gear-bag-tile rarity-${rarity}${group.isSelected ? " selected" : ""}${group.isCompatible ? " compatible" : ""}${group.isEquipped ? " equipped" : ""}${group.isUpgradeReady ? " upgrade-ready" : ""}" type="button" data-gear-instance="${escapeHtml(group.representativeInstanceId)}" data-gear-stack-key="${escapeHtml(group.key)}" aria-pressed="${group.isSelected ? "true" : "false"}" title="${escapeHtml(`${def.gearName} · Level ${item.level} · ${group.count} owned${group.isUpgradeReady ? " · Upgrade material ready" : ""}`)}">
     <span class="common-gear-bag-slot" aria-hidden="true">${escapeHtml(item.slot.charAt(0).toUpperCase())}</span>
     ${group.isNew ? `<span class="common-gear-bag-new">New</span>` : ""}
     ${group.isEquipped ? `<span class="common-gear-bag-equipped" aria-label="Equipped">E</span>` : ""}
-    ${group.isUpgradeReady && !group.isEquipped ? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready" aria-label="Upgrade ready">!</span>` : ""}
+    ${group.isUpgradeReady && !group.isEquipped ? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
     <img src="${escapeHtml(def.art)}" alt="" loading="lazy" decoding="async" draggable="false" onerror="this.hidden=true" />
     <span class="common-gear-bag-level">L${item.level}</span>
     ${group.count > 1 ? `<span class="common-gear-bag-count">×${group.count}</span>` : ""}

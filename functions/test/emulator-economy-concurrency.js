@@ -453,12 +453,14 @@ async function main() {
       economyUpdatedAtMs: now,
     });
   };
-  const createSuccessUpgradeState = (level, { targetEquipped = false, includeEquippedMatch = false } = {}) => {
+  const createSuccessUpgradeState = (level, { targetEquipped = false, includeEquippedMatch = false, includeSpare = true } = {}) => {
     const gear = commonGear.createDefaultState();
     const acquiredAtMs = Date.now() - 10_000;
     gear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, level, acquiredAtMs);
     gear.instances.upgrade_material = createUpgradeInstance("upgrade_material", upgradeDefinition, level, acquiredAtMs + 1000);
-    gear.instances.upgrade_spare = createUpgradeInstance("upgrade_spare", upgradeDefinition, level, acquiredAtMs + 2000);
+    if (includeSpare) {
+      gear.instances.upgrade_spare = createUpgradeInstance("upgrade_spare", upgradeDefinition, level, acquiredAtMs + 2000);
+    }
     if (targetEquipped) {
       gear.equipped[upgradeDefinition.buildingId][upgradeDefinition.slot] = "upgrade_target";
     } else if (includeEquippedMatch) {
@@ -484,11 +486,18 @@ async function main() {
     );
     assert(upgraded.upgradedInstanceId === "upgrade_target", `The Level ${level} upgrade did not preserve the target instanceId.`);
     assert(!upgradedState.instances?.upgrade_material, `The Level ${level} upgrade did not consume the oldest matching same-level material.`);
-    assert(upgradedState.instances?.upgrade_spare, `The Level ${level} upgrade consumed more than one matching material.`);
-    assert(
-      upgradedState.instances?.upgrade_spare?.level === level,
-      `The Level ${level} upgrade changed the unconsumed matching material.`
-    );
+    if (options.includeSpare === false) {
+      assert(
+        Object.keys(upgradedState.instances || {}).length === 1 && upgradedState.instances?.upgrade_target,
+        `The exact-two-copy Level ${level} upgrade did not consume exactly one material and preserve only the target.`
+      );
+    } else {
+      assert(upgradedState.instances?.upgrade_spare, `The Level ${level} upgrade consumed more than one matching material.`);
+      assert(
+        upgradedState.instances?.upgrade_spare?.level === level,
+        `The Level ${level} upgrade changed the unconsumed matching material.`
+      );
+    }
     assert(Number(upgraded.spentGold || 0) > 0, `The Level ${level} upgrade did not report its existing gold cost.`);
     assert(
       Number(storedProfile.goldFloat || 0) >= upgradeGoldReserve - Number(upgraded.spentGold || 0) - 1
@@ -542,7 +551,10 @@ async function main() {
   const reequippedGear = await callFunction("equipCommonGear", user.token, { instanceId: "upgrade_target" });
   assert(reequippedGear.currentUser?.gear?.instances?.upgrade_target?.isEquipped === true, "The original gear could not be re-equipped.");
 
-  await assertSuccessfulUpgrade(1, { targetEquipped: true });
+  await assertSuccessfulUpgrade(1, { includeSpare: false });
+  await assertSuccessfulUpgrade(1, { targetEquipped: true, includeSpare: false });
+  await assertSuccessfulUpgrade(2, { includeSpare: false });
+  await assertSuccessfulUpgrade(2, { targetEquipped: true, includeSpare: false });
   await assertSuccessfulUpgrade(2, { includeEquippedMatch: true });
   await assertSuccessfulUpgrade(3, { targetEquipped: true });
   await assertSuccessfulUpgrade(4);

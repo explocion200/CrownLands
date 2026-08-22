@@ -314,6 +314,20 @@
     return UPGRADE_BY_LEVEL[normalizedLevel] || null;
   }
 
+  function getUpgradeMaterialInstances(target, instances = []) {
+    if (!target || typeof target !== "object") return [];
+    const candidates = Array.isArray(instances)
+      ? instances
+      : Object.values(instances && typeof instances === "object" ? instances : {});
+    return candidates
+      .filter(candidate => candidate
+        && candidate.instanceId !== target.instanceId
+        && candidate.gearKey === target.gearKey
+        && candidate.level === target.level
+        && !candidate.isEquipped)
+      .sort((a, b) => a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
+  }
+
   return Object.freeze({
     SCHEMA_VERSION,
     RARITY,
@@ -336,5 +350,6 @@
     getBonusPercent,
     getBonuses,
     getUpgradeRequirement,
+    getUpgradeMaterialInstances,
   });
 });

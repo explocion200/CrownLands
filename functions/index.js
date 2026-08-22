@@ -12650,12 +12650,7 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
     const instance = requireCommonGearInstance(gear, request.data?.instanceId);
     const requirement = COMMON_GEAR.getUpgradeRequirement(instance.level);
     if (!requirement) throw new HttpsError("failed-precondition", "Max Level Reached.");
-    const materials = Object.values(gear.instances)
-      .filter(candidate => candidate.instanceId !== instance.instanceId
-        && candidate.gearKey === instance.gearKey
-        && candidate.level === instance.level
-        && !candidate.isEquipped)
-      .sort((a, b) => a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
+    const materials = COMMON_GEAR.getUpgradeMaterialInstances(instance, gear.instances);
     if (materials.length < requirement.duplicates) {
       throw new HttpsError(
         "failed-precondition",
