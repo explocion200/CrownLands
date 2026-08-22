@@ -73,6 +73,11 @@ const visualDetails = functionBody(client, "renderBattleSideDetails");
 assert.match(visualDetails, /Starting troops[\s\S]*?Base troop power[\s\S]*?Wall power at battle[\s\S]*?Final resolved power[\s\S]*?Troops lost[\s\S]*?Troops surviving/, "The visual comparison omits required battle-time values.");
 const visualBonuses = functionBody(client, "getBattleSideBonusEntries");
 assert.match(visualBonuses, /skillBonusPower[\s\S]*?Personal objective support[\s\S]*?Clan objective support[\s\S]*?Stoneworks[\s\S]*?wall power/, "The visual bonus cards do not separate troop, objective, and wall bonuses.");
+assert.match(visualBonuses, /if \(side\.gearOnly\)[\s\S]*?gearBonusPower[\s\S]*?wallGearPower[\s\S]*?return entries;[\s\S]*?skillBonusPower/, "Gear is not isolated from the generic skill/objective bonus-card path.");
+const gearSection = functionBody(client, "renderBattleGearEffectsSection");
+assert.match(gearSection, /\[attacker, defender\][\s\S]*?gearOnly: true[\s\S]*?renderBattleBonusCard[\s\S]*?Gear Effects[\s\S]*?battle-visual-two-column/, "The dedicated report section does not cover attacker and defender gear with the shared readable card layout.");
+assert.match(functionBody(client, "renderDetailedBattleReport"), /renderBattleGearEffectsSection\(attacker, defender, report, viewerRole\)/, "Detailed reports do not render authoritative gear power from their presentation models.");
+assert.match(functionBody(client, "renderLegacyBattleComparison"), /renderBattleGearEffectsSection\(attacker, defender, report, viewerRole\)/, "Historical battle reports do not render safely through the optional gear path.");
 const sideModel = functionBody(client, "getBattleSidePresentationModel");
 assert.match(sideModel, /getDetailedBattleSideParticipants[\s\S]*?sumDetailedBattleParticipantPower/, "Battle participant power is not aggregated into visual side totals.");
 assert.match(sideModel, /reinforcementCount[\s\S]*?reinforcementTroops/, "The visual defender summary omits reinforcement counts or troops.");
@@ -84,6 +89,7 @@ assert.match(functionBody(client, "getLegacyBattleSides"), /Not recorded/, "Hist
 assert.match(functionBody(client, "showBattleReportDetail"), /!report\.battleId[\s\S]*?applyLegacyBattleFlags[\s\S]*?catch[\s\S]*?applyLegacyBattleFlags/, "Legacy and unavailable snapshot reports do not hydrate their side flags.");
 assert.match(styles, /\.battle-visual-hero\s*\{[\s\S]*?grid-template-columns:[\s\S]*?\.battle-visual-two-column\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Visual battle sides are not presented in aligned columns.");
 assert.match(styles, /\.battle-report-hero-flag\.kingdom-flag-large[\s\S]*?width:\s*116px[\s\S]*?@media \(max-width: 760px\)[\s\S]*?\.battle-visual-hero/, "Large flags or the responsive visual report layout are missing.");
+assert.match(styles, /\.battle-visual-bonus-row small,[\s\S]*?color:\s*#d8c8a8;[\s\S]*?\.battle-visual-bonus-card h4,[\s\S]*?\.battle-visual-bonus-row > div > strong,[\s\S]*?\.battle-visual-bonus-row > b,[\s\S]*?color:\s*#f1e6cc;/, "The shared gear-effect cards do not keep their text readable on dark panels.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?\.battle-report-modal \.battle-visual-outcome > span[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Detailed Victory remains unreadable or retains the full red center block.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome\.defeat > span[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Detailed Defeat does not use the restrained outcome badge.");
 assert.match(functionBody(client, "renderBattleReportHero"), /battle-visual-outcome[\s\S]*?<span>\$\{escapeHtml\(badge\.label/, "The detailed report outcome label is missing from the semantic result badge.");
@@ -91,6 +97,7 @@ for (const themeSource of [read("profile-theme.css"), finalPalette]) {
   assert.match(themeSource, /\.modal:where\(:not\(\.leaderboard-modal, \.island-switcher-modal, \.battle-report-modal\)\) \.modal-card/, "Generic modal typography can still recolor the dedicated detailed-report outcome badge.");
 }
 assert.match(visualQa, /data-qa-outcome="victory"[\s\S]*?data-qa-outcome="defeat"/, "The report readability QA page does not exercise both detailed outcome badges.");
+assert.match(visualQa, /data-qa-gear-effects[\s\S]*?Attacker Gear[\s\S]*?War Captain gear[\s\S]*?Defender Gear[\s\S]*?Gatehouse wall gear/, "The report readability QA page does not exercise the dedicated attacker/defender gear section.");
 
 const battleSandbox = {
   DEFENSE_COMBAT_VERSION: 1,
@@ -195,6 +202,11 @@ assert.equal(battleSandbox.getDetailedBattleViewerRole(battleSnapshot, { type: "
 assert.equal(battleSandbox.formatBattleWallAfterStatus({ endingIntegrityBps: 10_000 }), "Intact — 100%");
 assert.equal(battleSandbox.formatBattleWallAfterStatus({ endingIntegrityBps: 0 }), "Breached — 0%");
 assert.match(server, /attackPowerBreakdown/, "Battle snapshots do not preserve named attack-power components.");
+assert.match(server, /BATTLE_SNAPSHOT_MODEL_VERSION\s*=\s*7/, "New battle reports are not versioned for explicit gear-effects snapshots.");
+const detailedSnapshotServer = functionBody(server, "createDetailedBattleSnapshot");
+assert.match(detailedSnapshotServer, /createBattleGearEffectsSnapshot[\s\S]*?gearEffects:\s*battleGearEffects/, "Detailed battle snapshots do not persist explicit gear-effect fields.");
+assert.match(detailedSnapshotServer, /attackerParticipants:\s*rallyAttackers\.length\s*\?\s*rallyAttackers\s*:\s*\[attackerSnapshot\]/, "Rally and ordinary attacker gear are not snapshotted from their authoritative battle participants.");
+assert.match(server, /fieldMedicsSkillPercent:[\s\S]*?casualtyGearPercent:/, "Battle casualty receipts do not separate Field Medics from Barracks casualty gear.");
 const getBattleAttackerBasePower = new Function(
   "safeNumber",
   `${functionBody(server, "getBattleAttackerBasePower")}; return getBattleAttackerBasePower;`
@@ -212,6 +224,125 @@ assert.equal(
 assert.match(server, /defensePowerBreakdown[\s\S]*?otherDefensePower/, "Battle snapshots do not preserve named defense-power components.");
 assert.match(server, /reinforcements:\s*reinforcementRows[\s\S]*?occurredAtMs:\s*nowMs/, "Battle snapshots do not preserve reinforcements and occurrence time.");
 assert.match(client, /historicalWallDetailsAvailable:\s*hasHistoricalWallSnapshot/, "Older battle snapshots do not safely normalize wall details.");
+
+const serverGearSandbox = {
+  Math,
+  Number,
+  COMMON_GEAR: { CASUALTY_RECOVERY_CAP_PERCENT: 75 },
+  safeNumber(value, fallback = 0) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  },
+  safeString(value, maximum = 200) {
+    return String(value || "").slice(0, maximum);
+  },
+  getSkillPercent(profile, key) {
+    return key === "fieldMedics" ? Number(profile?.fieldMedicsPercent) || 0 : 0;
+  },
+  getCommonGearBonuses(profile) {
+    return { casualtyEfficiency: Number(profile?.casualtyGearPercent) || 0 };
+  },
+};
+vm.createContext(serverGearSandbox);
+[
+  "createBattleCasualtyRecoverySnapshot",
+  "createBattlePowerGearEffect",
+  "createBattleGearEffectsSnapshot",
+].forEach(name => vm.runInContext(`${functionBody(server, name)}; this.${name} = ${name};`, serverGearSandbox));
+const casualtySnapshot = serverGearSandbox.createBattleCasualtyRecoverySnapshot({
+  profile: { fieldMedicsPercent: 10, casualtyGearPercent: 1.5 },
+  losses: 100,
+  recoveredTroops: 11,
+});
+assert.equal(casualtySnapshot.fieldMedicsPercent, 10);
+assert.equal(casualtySnapshot.gearPercent, 1.5);
+assert.equal(casualtySnapshot.combinedPercent, 11.5);
+assert.equal(casualtySnapshot.gearRecoveredTroops, 1, "Casualty gear recovery is not isolated from Field Medics.");
+const cappedCasualtySnapshot = serverGearSandbox.createBattleCasualtyRecoverySnapshot({
+  profile: { fieldMedicsPercent: 74, casualtyGearPercent: 1.5 },
+  losses: 200,
+  recoveredTroops: 150,
+});
+assert.equal(cappedCasualtySnapshot.appliedGearPercent, 1, "The report does not expose gear's applied share after the 75% cap.");
+assert.equal(cappedCasualtySnapshot.gearRecoveredTroops, 2);
+const authoritativeBreakdowns = {
+  attackPowerBreakdown: { gearAttackStrengthBonusPower: 15, totalAttackPower: 1_265 },
+  defensePowerBreakdown: { gearDefenderStrengthBonusPower: 20, gearWallStrengthBonusPower: 9, totalDefensePower: 2_029 },
+};
+const authoritativeBreakdownsBefore = JSON.stringify(authoritativeBreakdowns);
+const gearEffectsSnapshot = serverGearSandbox.createBattleGearEffectsSnapshot({
+  attackerParticipants: [{
+    gearAttackStrengthPercent: 1.5,
+    powerBreakdown: { gearAttackStrengthBonusPower: 15 },
+  }],
+  defenderParticipants: [
+    { gearDefenderStrengthPercent: 1.5, powerBreakdown: { gearDefenderStrengthBonusPower: 12 } },
+    { gearDefenderStrengthPercent: 1.5, powerBreakdown: { gearDefenderStrengthBonusPower: 8 } },
+  ],
+  ...authoritativeBreakdowns,
+  wallGearPercent: 1.5,
+  attackerCasualtyRecovery: casualtySnapshot,
+});
+assert.equal(gearEffectsSnapshot.attacker.attackStrength.bonusPower, 15, "Attacker gear report power differs from the authoritative breakdown.");
+assert.equal(gearEffectsSnapshot.defender.defenderStrength.bonusPower, 20, "Allied defender gear power is not included in the defender report section.");
+assert.equal(gearEffectsSnapshot.defender.wallStrength.bonusPower, 9, "Wall gear report power differs from the authoritative wall calculation.");
+assert.equal(JSON.stringify(authoritativeBreakdowns), authoritativeBreakdownsBefore, "Report attribution mutated authoritative battle totals.");
+
+const gearRenderSandbox = {
+  Math,
+  Number,
+  escapeHtml(value) { return String(value ?? ""); },
+  formatNumber(value) { return String(Math.max(0, Math.floor(Number(value) || 0))); },
+  renderCrownlandsIcon(name) { return `<i>${name}</i>`; },
+};
+vm.createContext(gearRenderSandbox);
+[
+  "getBattleSideBonusEntries",
+  "renderBattleBonusCard",
+  "renderBattleGearEffectsSection",
+].forEach(name => vm.runInContext(`${functionBody(client, name)}; this.${name} = ${name};`, gearRenderSandbox));
+const attackerGearModel = {
+  role: "attacker",
+  gearLabel: gearEffectsSnapshot.attacker.attackStrength.sourceLabel,
+  gearBonusPower: gearEffectsSnapshot.attacker.attackStrength.bonusPower,
+  gearPercentText: "+1.5%",
+  wallGearPower: 0,
+};
+const defenderGearModel = {
+  role: "defender",
+  gearLabel: gearEffectsSnapshot.defender.defenderStrength.sourceLabel,
+  gearBonusPower: gearEffectsSnapshot.defender.defenderStrength.bonusPower,
+  gearPercentText: "+1.5%",
+  wallGearPower: gearEffectsSnapshot.defender.wallStrength.bonusPower,
+  wallGearPercent: 1.5,
+};
+const renderedGearEffects = gearRenderSandbox.renderBattleGearEffectsSection(
+  attackerGearModel,
+  defenderGearModel,
+  { casualtyRecovery: casualtySnapshot },
+  "attacker"
+);
+assert.match(renderedGearEffects, /Gear Effects[\s\S]*?Attacker Gear[\s\S]*?War Captain gear[\s\S]*?\+1\.5%[\s\S]*?\+15 power/, "Attack reports do not show authoritative War Captain gear effects.");
+assert.match(renderedGearEffects, /Defender Gear[\s\S]*?Gatehouse gear[\s\S]*?\+20 power[\s\S]*?Gatehouse wall gear[\s\S]*?\+1\.5% · separate from Stoneworks[\s\S]*?\+9 wall power/, "Defense and wall gear are not separated in the dedicated section.");
+assert.match(renderedGearEffects, /Barracks casualty gear[\s\S]*?\+1\.5% gear · main city[\s\S]*?\+1 recovered/, "Casualty gear recovery is not attributed in the dedicated section.");
+assert.equal(gearRenderSandbox.renderBattleGearEffectsSection({ role: "attacker" }, { role: "defender" }, {}, "attacker"), "", "Reports without gear render an empty or broken gear section.");
+assert.doesNotThrow(() => gearRenderSandbox.renderBattleGearEffectsSection(
+  { role: "attacker", gearLabel: "", gearBonusPower: 0 },
+  { role: "defender", wallGearPower: 0 },
+  {},
+  "defender"
+), "Optional or partial gear fields crash report rendering.");
+const rallyGearModel = {
+  role: "attacker",
+  gearLabel: "War Captain gear",
+  gearBonusPower: 42,
+  gearPercentText: "Mixed equipped-gear rates",
+};
+assert.match(
+  gearRenderSandbox.renderBattleGearEffectsSection(rallyGearModel, { role: "defender" }, {}, "attacker"),
+  /Mixed equipped-gear rates[\s\S]*?\+42 power/,
+  "Rally gear effects are not summarized cleanly across mixed participant rates."
+);
 
 assert.match(client, /function showBattleReportDetail[\s\S]*?showScoutReportModal\(report\.cityId\)/, "Successful Scout entries do not open the detailed scout presentation.");
 assert.doesNotMatch(client, /fixed intelligence snapshot from when the scout arrived/i, "Scout details still show the removed fixed-snapshot warning.");
