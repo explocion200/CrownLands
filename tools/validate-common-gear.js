@@ -99,7 +99,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-inner-castle-labels-r1/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260822-profile-castle-r1[\s\S]*game\.js\?v=20260822-profile-castle-r1/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260822-citadel-stronghold-contrast-r1[\s\S]*game\.js\?v=20260822-citadel-stronghold-contrast-r1/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);

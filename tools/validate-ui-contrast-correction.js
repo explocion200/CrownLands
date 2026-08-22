@@ -19,6 +19,8 @@ const productionValidator = read("tools/validate-production-artifact.js");
 const assetBudget = read("tools/validate-asset-performance-budgets.js");
 const gallery = read("docs/visual-qa/ui-contrast-correction/index.html");
 const notes = read("docs/visual-qa/ui-contrast-correction/QA_NOTES.md");
+const objectiveGallery = read("docs/visual-qa/citadel-stronghold-contrast/index.html");
+const objectiveNotes = read("docs/visual-qa/citadel-stronghold-contrast/QA_NOTES.md");
 const readBytes = relativePath => fs.readFileSync(path.join(root, relativePath));
 
 function jpegDimensions(bytes) {
@@ -131,12 +133,17 @@ assert.match(css, /\.gold-camp-info-panel \.deed-history-locate\s*\{[\s\S]*?colo
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description\s*\{[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?linear-gradient\(180deg, #f7edda, #e2cda4\) !important;/, "Camp help cards still combine brown text with a brown surface.");
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description > strong\s*\{[\s\S]*?color:\s*#52232a !important;[\s\S]*?text-shadow:\s*none !important;/, "Camp help headings are not clearly readable.");
 assert.match(css, /\.gold-camp-info-panel #campRulesPanel \.gold-camp-description p\s*\{[\s\S]*?color:\s*#352b21 !important;[\s\S]*?opacity:\s*1;[\s\S]*?text-shadow:\s*none !important;/, "Camp help paragraphs can still blend into their background.");
-assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\)\s*\{[\s\S]*?color:\s*#fff8e8 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "Stronghold and Citadel stat cards still combine brown text with brown surfaces.");
-assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > span\s*\{[\s\S]*?color:\s*#b9d8e8 !important;/, "Stronghold and Citadel stat labels are not readable on the new objective surface.");
-assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > strong\s*\{[\s\S]*?color:\s*#fff8e8 !important;/, "Stronghold and Citadel values are not explicitly readable.");
+assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats :is\(\.stat-wide, \.stat-chip\)\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "Stronghold and Citadel stat cards lost their approved blue surface.");
+assert.match(baseCss, /:is\(\.gold-camp-info-panel\.stronghold-legacy-info-panel, \.gold-camp-info-panel\.crown-citadel-info-panel\)[\s\S]*?\.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > span\s*\{[\s\S]*?color:\s*#e7d6b4 !important;[\s\S]*?opacity:\s*1;[\s\S]*?text-shadow:\s*none !important;/, "Stronghold and Citadel stat labels are not protected from later generic modal typography.");
+assert.match(baseCss, /:is\(\.gold-camp-info-panel\.stronghold-legacy-info-panel, \.gold-camp-info-panel\.crown-citadel-info-panel\)[\s\S]*?\.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > strong\s*\{[\s\S]*?color:\s*#fff8e8 !important;/, "Stronghold and Citadel values are not explicitly readable.");
+assert.match(baseCss, /:is\(\.gold-camp-info-panel\.stronghold-legacy-info-panel, \.gold-camp-info-panel\.crown-citadel-info-panel\)[\s\S]*?\.modal-city-stats :is\(\.stat-wide, \.stat-chip\) > small\s*\{[\s\S]*?color:\s*#f2e2bf !important;/, "Stronghold and Citadel supporting copy is not explicitly readable.");
+assert.match(baseCss, /\.modal-city-stats \.stronghold-status > strong\s*\{[\s\S]*?color:\s*#ffe39a !important;/, "The controlled bonus value lost its existing muted-gold treatment.");
 assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-info-tabs \.camp-info-tab:not\(\.active\):not\(\[aria-selected="true"\]\)[\s\S]*?color:\s*#eef8fd !important;[\s\S]*?background:\s*linear-gradient\(180deg, #315f78, #183b50\) !important;/, "Stronghold and Citadel inactive tabs still use low-contrast brown styling.");
 assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-reign-heading\s*\{[\s\S]*?color:\s*#c6ddea !important;[\s\S]*?background:\s*linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "The Citadel and Stronghold ledger header is not readable on its surrounding paper surface.");
 assert.match(baseCss, /:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.citadel-reign-row\.current[\s\S]*?background:\s*linear-gradient\(180deg, #285c79, #153a53\) !important;/, "The current Citadel or Stronghold ledger entry still uses a brown surface.");
+assert.match(baseCss, /:is\(\.gold-camp-info-panel\.stronghold-legacy-info-panel, \.gold-camp-info-panel\.crown-citadel-info-panel\)[\s\S]*?\.citadel-reign-row\.current \.citadel-reign-rank\s*\{[\s\S]*?color:\s*#ffe39a !important;/, "The current-ruler rank is not readable on the highlighted row.");
+assert.match(baseCss, /\.citadel-reign-row\.current \.citadel-reign-ruler :is\(\.player-name-link, strong\),[\s\S]*?\.citadel-reign-row\.current \.citadel-reign-time\s*\{[\s\S]*?color:\s*#fff8e8 !important;/, "The current ruler name or held time is not readable on the highlighted row.");
+assert.match(baseCss, /\.citadel-reign-row\.current \.citadel-reign-ruler small\s*\{[\s\S]*?color:\s*#e7d6b4 !important;[\s\S]*?opacity:\s*1;/, "The current-ruler status is not readable on the highlighted row.");
 assert.match(baseCss, /@media \(max-width: 540px\)[\s\S]*?:is\(\.stronghold-legacy-info-panel, \.crown-citadel-info-panel\) \.modal-city-stats \.stat-wide[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\);/, "Wide Stronghold and Citadel stats do not stack on narrow mobile screens.");
 assert.match(css, /\.realm-activity-card,[\s\S]*?\.realm-activity-card\.citadel[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?linear-gradient\(180deg, #f5e8ca, #dcc391\) !important;/, "Realm Activity still uses a dark surface behind brown text.");
 assert.match(css, /\.realm-activity-card \.realm-activity-proclamation p,[\s\S]*?\.realm-activity-card\.citadel \.realm-activity-proclamation p[\s\S]*?color:\s*var\(--cl-contrast-ink\) !important;[\s\S]*?text-shadow:\s*none !important;/, "Realm Activity proclamation copy is not readable on its parchment surface.");
@@ -242,8 +249,12 @@ for (const [label, foreground, background] of [
   ["camp rules paragraph", "#352b21", "#e2cda4"],
   ["camp map label", "#ffe29a", "#071b30"],
   ["camp active timer", "#fff4c7", "#691f1b"],
-  ["Stronghold and Citadel label", "#b9d8e8", "#0b263d"],
+  ["Stronghold and Citadel label", "#e7d6b4", "#0b263d"],
   ["Stronghold and Citadel value", "#fff8e8", "#0b263d"],
+  ["Stronghold and Citadel supporting copy", "#f2e2bf", "#173f5e"],
+  ["current ruler rank", "#ffe39a", "#285c79"],
+  ["current ruler name and time", "#fff8e8", "#285c79"],
+  ["current ruler status", "#e7d6b4", "#285c79"],
   ["Stronghold and Citadel inactive tab", "#eef8fd", "#183b50"],
   ["Stronghold and Citadel active tab", "#261a0d", "#d9a83e"],
   ["scout report primary text", "#fff8e8", "#071b2a"],
@@ -281,6 +292,40 @@ for (const [file, width, height] of [
   assert.equal(dimensions.width, width, `${file} has the wrong width.`);
   assert.equal(dimensions.height, height, `${file} has the wrong height.`);
   assert.ok(gallery.includes(`screenshots/${file}`), `${file} is not embedded in the QA gallery.`);
+}
+
+for (const expected of [
+  "gold-camp-info-panel",
+  "crown-citadel-info-panel",
+  "stronghold-legacy-info-panel",
+  "stat-wide stronghold-status",
+  "stat-wide objective-clan-affiliation",
+  "citadel-reign-row current",
+  "Current Citadel ruler",
+  "Current holder",
+]) assert.ok(objectiveGallery.includes(expected), `The objective contrast fixture is missing ${expected}.`);
+for (const viewport of ["1200×800", "844×390", "540×320"]) {
+  assert.ok(objectiveNotes.includes(viewport), `The objective contrast QA notes are missing ${viewport}.`);
+}
+for (const [file, width, height] of [
+  ["before-crown-citadel-overview-1200x800.jpg", 1200, 800],
+  ["after-crown-citadel-overview-1200x800.jpg", 1200, 800],
+  ["before-crown-citadel-ledger-1200x800.jpg", 1200, 800],
+  ["after-crown-citadel-ledger-1200x800.jpg", 1200, 800],
+  ["before-stronghold-overview-1200x800.jpg", 1200, 800],
+  ["after-stronghold-overview-1200x800.jpg", 1200, 800],
+  ["before-stronghold-ledger-1200x800.jpg", 1200, 800],
+  ["after-stronghold-ledger-1200x800.jpg", 1200, 800],
+  ["before-crown-citadel-overview-844x390.jpg", 844, 390],
+  ["after-crown-citadel-overview-844x390.jpg", 844, 390],
+  ["before-crown-citadel-ledger-844x390.jpg", 844, 390],
+  ["after-crown-citadel-ledger-844x390.jpg", 844, 390],
+  ["after-crown-citadel-overview-540x320.jpg", 540, 320],
+  ["after-crown-citadel-ledger-540x320.jpg", 540, 320],
+]) {
+  const dimensions = jpegDimensions(readBytes(`docs/visual-qa/citadel-stronghold-contrast/screenshots/${file}`));
+  assert.equal(dimensions.width, width, `${file} has the wrong width.`);
+  assert.equal(dimensions.height, height, `${file} has the wrong height.`);
 }
 
 console.log("UI contrast correction validated: centralized states, complete screen coverage, release delivery, QA fixture, and WCAG contrast pairs.");

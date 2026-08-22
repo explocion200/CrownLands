@@ -84,7 +84,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260822-profile-castle-r1";
+const BUILD_ID = "20260822-citadel-stronghold-contrast-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Citadel and Stronghold Contrast QA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../../styles.css?v=20260822-citadel-stronghold-contrast-r1" />
+  <link rel="stylesheet" href="../../../interface-theme.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../daily-rewards.css?v=20260819-targeted-ui-contrast-r2" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css?v=20260817-inner-castle-labels-r1" />
+  <link rel="stylesheet" href="../../../readability.css?v=20260819-player-flags-v2-r1" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260819-player-flags-v2-r1" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260819-player-flags-v2-r1" />
+  <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-player-flags-v2-r1" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260822-citadel-stronghold-contrast-r1" />
+  <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-readability-r38" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260814-readability-r38" />
+  <style>
+    html, body { min-height: 100%; }
+    body { margin: 0; overflow: hidden; background: #14100d; }
+    .qa-backdrop { position: fixed; inset: 0; background: radial-gradient(circle at 50% 38%, #394c37, #151b17 72%); }
+    .qa-backdrop::after { content: ""; position: absolute; inset: 0; background: rgba(4, 8, 7, .42); }
+    .qa-modal.modal { display: grid; }
+    .qa-modal .modal-card { max-width: min(1120px, calc(100vw - 28px)); }
+    .qa-shield { width: 34px; height: 40px; display: grid; place-items: center; color: #f2e2bf; border: 2px solid #c69a45; background: linear-gradient(135deg, #722f37 0 48%, #c69a45 49% 60%, #243447 61%); clip-path: polygon(8% 0, 92% 0, 86% 74%, 50% 100%, 14% 74%); font-weight: 900; }
+    @media (max-height: 430px) {
+      .qa-modal .modal-card { max-height: calc(100dvh - 10px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="qa-backdrop" aria-hidden="true"></div>
+  <dialog id="modal" class="modal qa-modal" open aria-labelledby="modalTitle">
+    <article class="modal-card">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">×</button>
+      <h2 id="modalTitle">Crown Citadel - Stronghold</h2>
+      <div id="modalBody"></div>
+    </article>
+  </dialog>
+
+  <template id="overviewTemplate">
+    <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
+      <div class="stat-wide stronghold-status">
+        <span>Controlled bonus</span>
+        <strong data-bonus>+10% BASE GOLD, +10% BASE TROOPS, +10% SPEED, +10% SOLDIER DEFENSE, -10% UPGRADE COST</strong>
+        <small data-description>The defense portion adds +10% for the controller or +5% for clanmates against each defending soldier's 1.30 base. It never increases walls, Stoneworks, city level, or repair time.</small>
+      </div>
+      <div class="stat-wide objective-clan-affiliation" data-objective-clan-affiliation="qa-objective">
+        <span>Holding clan</span>
+        <button class="objective-clan-link" type="button" aria-label="Open Knights of the Codebrown clan profile">
+          <span class="qa-shield" aria-hidden="true">K</span>
+          <span><strong>[CODE] Knights of the Codebrown</strong><small>View clan profile</small></span>
+        </button>
+      </div>
+      <div class="stat-wide"><span>Your active objective benefit</span><strong data-benefit>+10% base Gold and Troops</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>
+      <div class="stat-chip"><span data-controller-label>Controller</span><strong>Sir Render of the Western Marches</strong></div>
+      <div class="stat-chip"><span data-reign-label>Current reign</span><strong>6h 23m 41s</strong></div>
+      <div class="stat-chip"><span>Troops stationed</span><strong>500M</strong></div>
+      <div class="stat-chip"><span>Estimated live defense</span><strong>712M</strong><small>Current wall power plus locally estimated garrison defense</small></div>
+      <div class="stat-chip"><span>Defense level</span><strong>100</strong><small>matches a level 100 city</small></div>
+      <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
+    </div>
+  </template>
+
+  <template id="ledgerTemplate">
+    <div class="citadel-reign-heading"><span>Rank</span><span>Ruler</span><span>Time held</span></div>
+    <div class="citadel-reign-list">
+      <article class="citadel-reign-row current">
+        <strong class="citadel-reign-rank">#1</strong>
+        <span class="citadel-reign-ruler"><button class="player-name-link" type="button">Sir Render of the Western Marches</button><small data-current-status>Current Citadel ruler</small></span>
+        <strong class="citadel-reign-time">2d 11h 8m</strong>
+      </article>
+      <article class="citadel-reign-row">
+        <strong class="citadel-reign-rank">#2</strong>
+        <span class="citadel-reign-ruler"><button class="player-name-link" type="button">Lady Ashenbanner</button></span>
+        <strong class="citadel-reign-time">1d 3h 17m</strong>
+      </article>
+      <article class="citadel-reign-row">
+        <strong class="citadel-reign-rank">#3</strong>
+        <span class="citadel-reign-ruler"><button class="player-name-link" type="button">Sir Cumsized</button></span>
+        <strong class="citadel-reign-time">19h 42m</strong>
+      </article>
+    </div>
+    <p class="citadel-reign-note" data-ledger-note>Scores are cumulative. The current ruler's score continues rising until the Citadel changes hands.</p>
+  </template>
+
+  <script>
+    window.__qaRuntimeErrors = [];
+    addEventListener("error", event => window.__qaRuntimeErrors.push(String(event.error || event.message || "Unknown error")));
+    addEventListener("unhandledrejection", event => window.__qaRuntimeErrors.push(String(event.reason || "Unhandled rejection")));
+    const params = new URLSearchParams(location.search);
+    const kind = params.get("kind") === "stronghold" ? "stronghold" : "citadel";
+    const view = params.get("view") === "ledger" ? "ledger" : "overview";
+    const body = document.getElementById("modalBody");
+    const title = document.getElementById("modalTitle");
+    const isCitadel = kind === "citadel";
+    title.textContent = isCitadel ? "Crown Citadel - Stronghold" : "Ironwatch - Stronghold";
+    body.innerHTML = `
+      <div class="gold-camp-info-panel ${isCitadel ? "crown-citadel-info-panel" : "stronghold-legacy-info-panel"}">
+        <div class="camp-info-tabs citadel-info-tabs" role="tablist" aria-label="${isCitadel ? "Crown Citadel" : "Ironwatch"} information">
+          <button class="camp-info-tab ${view === "overview" ? "active" : ""}" type="button" role="tab" aria-selected="${view === "overview"}" data-view="overview">Overview</button>
+          <button class="camp-info-tab ${view === "ledger" ? "active" : ""}" type="button" role="tab" aria-selected="${view === "ledger"}" data-view="ledger">${isCitadel ? "Reign Ledger" : "Stronghold Legacy"}</button>
+        </div>
+        <section class="camp-info-tab-panel" role="tabpanel" data-panel="overview"></section>
+        <section class="camp-info-tab-panel" role="tabpanel" data-panel="ledger"><div class="citadel-reign-ledger ${isCitadel ? "" : "stronghold-legacy-ledger"}"></div></section>
+      </div>`;
+    const overview = body.querySelector('[data-panel="overview"]');
+    const ledger = body.querySelector('[data-panel="ledger"] .citadel-reign-ledger');
+    overview.append(document.getElementById("overviewTemplate").content.cloneNode(true));
+    ledger.append(document.getElementById("ledgerTemplate").content.cloneNode(true));
+    if (!isCitadel) {
+      overview.querySelector("[data-bonus]").textContent = "+8% SOLDIER DEFENSE";
+      overview.querySelector("[data-description]").textContent = "Your clanmates receive half of this benefit while your clan controls it.";
+      overview.querySelector("[data-benefit]").textContent = "+8% soldier defense";
+      overview.querySelector("[data-controller-label]").textContent = "Owner";
+      overview.querySelector("[data-reign-label]").textContent = "Current hold";
+      ledger.querySelector("[data-current-status]").textContent = "Current holder";
+      ledger.querySelector("[data-ledger-note]").textContent = "Scores are cumulative for this Stronghold. The current holder's time continues rising until control changes.";
+    }
+    const setView = next => {
+      body.querySelectorAll("[data-view]").forEach(tab => {
+        const selected = tab.dataset.view === next;
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+      });
+      body.querySelectorAll("[data-panel]").forEach(panel => { panel.hidden = panel.dataset.panel !== next; });
+    };
+    body.querySelectorAll("[data-view]").forEach(tab => tab.addEventListener("click", () => setView(tab.dataset.view)));
+    setView(view);
+  </script>
+</body>
+</html>
