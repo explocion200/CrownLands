@@ -136,6 +136,16 @@ async function main() {
   });
   assert(clientWrite.status === 403, "A client directly changed Seasonal Achievement state.");
 
+  const globalStatsRef = db.doc(`players/${player.uid}/stats/global`);
+  await globalStatsRef.set({
+    baseGoldPerHour: 12_000,
+    baseTroopPerHour: 10_000,
+    untimedGoldPerHour: 14_000,
+    untimedTroopPerHour: 13_000,
+    goldPerHour: 19_000,
+    troopPerHour: 16_000,
+  }, { merge: true });
+
   const strongholdEventId = `seasonal-stronghold-${crypto.randomUUID()}`;
   await db.doc(`realmEvents/${realm.resetGeneration}/activity/${strongholdEventId}`).create({
     schemaVersion: 1,
@@ -156,7 +166,10 @@ async function main() {
     "A validated Stronghold capture did not complete Stronghold Raider."
   );
   const lockedReward = achievement(completedState, "stronghold_raider")?.lockedReward;
-  assert(lockedReward?.type === "troops" && Number(lockedReward.lockedAmount) > 0, "Completion did not lock a production-scaled troop reward.");
+  assert(
+    lockedReward?.type === "troops" && Number(lockedReward.lockedAmount) === 10_000,
+    `Achievement troop reward used boosted production (${lockedReward?.lockedAmount}; expected raw 10000).`
+  );
 
   const mainCityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
   const troopsBefore = Number((await mainCityRef.get()).data()?.troops || 0);
@@ -175,6 +188,56 @@ async function main() {
   });
   assert(replay.replayed === true, "A duplicate achievement claim was not treated as an idempotent replay.");
   assert(Number((await mainCityRef.get()).data()?.troops || 0) === troopsAfter, "A duplicate claim credited troops twice.");
+
+  const beforeGoldCompletion = (await stateRef.get()).data() || {};
+  await db.doc(`players/${player.uid}`).set({
+    upgrades: {
+      swordmastery: 0,
+      shieldwallDiscipline: 0,
+      stoneworks: 0,
+      taxStewardship: 10,
+      royalGranaries: 10,
+      guildCharters: 0,
+      marchOrders: 0,
+      fieldMedics: 0,
+    },
+    economyUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  await mainCityRef.set({ productionUpdatedAtMs: Date.now() }, { merge: true });
+  const economyWithSkills = await callFunction("collectEconomy", player.token);
+  const skillStats = economyWithSkills.globalStats || (await globalStatsRef.get()).data() || {};
+  assert(Number(skillStats.goldPerHour) > Number(skillStats.baseGoldPerHour), "Tax Stewardship did not increase normal Gold production in the Achievement fixture.");
+  assert(Number(skillStats.troopPerHour) > Number(skillStats.baseTroopPerHour), "Royal Granaries did not increase normal troop production in the Achievement fixture.");
+  await stateRef.set({
+    achievements: beforeGoldCompletion.achievements.map(entry => entry.id === "camp_raider_i"
+      ? { ...entry, progress: entry.target - 1, completedAtMs: 0, claimedAtMs: 0, lockedReward: null }
+      : entry),
+  }, { merge: true });
+  const goldEventId = `seasonal-gold-${crypto.randomUUID()}`;
+  await db.doc(`dailyMissionEvents/${goldEventId}`).create({
+    eventId: goldEventId,
+    uid: player.uid,
+    worldId: realm.worldId,
+    resetGeneration: realm.resetGeneration,
+    type: "CAMP_CAPTURED",
+    occurredAtMs: Date.now(),
+    targetCategory: "camp",
+    campCaptured: true,
+    success: true,
+    processedAtMs: 1,
+    expiresAtMs: Date.now() + 86_400_000,
+  });
+  const goldCompletedState = await pollUntil(
+    async () => (await stateRef.get()).data() || {},
+    current => Boolean(achievement(current, "camp_raider_i")?.completedAtMs),
+    "A validated Camp capture did not complete the prepared Gold Achievement."
+  );
+  const goldReward = achievement(goldCompletedState, "camp_raider_i")?.lockedReward;
+  const expectedRawGoldReward = Math.max(1, Math.floor(Number(skillStats.baseGoldPerHour) * 0.5));
+  assert(
+    goldReward?.type === "gold" && Number(goldReward.lockedAmount) === expectedRawGoldReward,
+    `Achievement Gold reward used boosted production (${goldReward?.lockedAmount}; expected raw ${expectedRawGoldReward}).`
+  );
 
   const citadelEventId = `seasonal-citadel-${crypto.randomUUID()}`;
   await db.doc(`realmEvents/${realm.resetGeneration}/activity/${citadelEventId}`).create({

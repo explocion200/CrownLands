@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Crownlands Achievement Scroll QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #07131f; }
+    body { display: grid; place-items: center; }
+    .qa-controls { position: fixed; z-index: 20; left: .5rem; bottom: .35rem; display: flex; gap: .35rem; }
+    .qa-controls button { min-height: 30px; border: 1px solid #997643; color: #f2e2bf; background: #72363a; font: 700 12px/1 sans-serif; }
+  </style>
+</head>
+<body>
+  <dialog id="modal" class="modal daily-login-reward-modal" open aria-labelledby="modalTitle">
+    <article class="modal-card">
+      <button class="modal-close" type="button" aria-label="Close">×</button>
+      <h2 id="modalTitle">Achievements</h2>
+      <div class="modal-header-nav">
+        <div class="daily-reward-tabs" role="tablist"><button type="button">R</button><button type="button">Q</button><button type="button" class="active">A</button></div>
+      </div>
+      <div id="modalBody"><section class="seasonal-achievement-tab-panel"><section class="seasonal-achievement-panel">
+        <header class="seasonal-achievement-hero"><div><span>Monthly Campaign</span><h3>Seasonal Achievements</h3><p>2026-08 · 10d remaining</p></div><div class="seasonal-achievement-totals"><strong id="completeTotal">2 / 40</strong><span>Complete</span><strong id="claimedTotal">0 / 40</strong><span>Claimed</span></div></header>
+        <nav class="seasonal-achievement-filters" aria-label="Achievement categories"><button class="active">All</button><button>Conquest</button><button>Combat</button><button>Camps</button><button>Growth</button></nav>
+        <div id="achievementList" class="seasonal-achievement-list"></div>
+      </section></section></div>
+    </article>
+  </dialog>
+  <div class="qa-controls"><button id="refreshBtn">Progress refresh</button><button id="completeBtn">Complete #28</button><button id="claimBtn">Claim first ready</button></div>
+  <script>
+    const list = document.querySelector("#achievementList");
+    const entries = Array.from({ length: 40 }, (_, order) => ({
+      id: `achievement-${order + 1}`,
+      order,
+      title: order === 27 ? "Architect of the Realm" : `Campaign Achievement ${order + 1}`,
+      category: ["Conquest", "Combat", "Camps", "Growth"][order % 4],
+      progress: order === 8 || order === 20 ? 10 : order % 7,
+      target: 10,
+      completedAtMs: order === 8 || order === 20 ? 1 : 0,
+      claimedAtMs: 0,
+    }));
+    const claimable = entry => (entry.completedAtMs || entry.progress >= entry.target) && !entry.claimedAtMs;
+    const sorted = () => entries.slice().sort((a, b) => Number(claimable(b)) - Number(claimable(a)) || a.order - b.order);
+    const capture = () => {
+      const rect = list.getBoundingClientRect();
+      const rows = [...list.querySelectorAll("[data-id]")];
+      const row = rows.find(candidate => candidate.getBoundingClientRect().bottom > rect.top + 1) || rows[0];
+      return row ? { id: row.dataset.id, offset: row.getBoundingClientRect().top - rect.top, scrollTop: list.scrollTop } : null;
+    };
+    const restore = snapshot => {
+      if (!snapshot) return;
+      list.scrollTop = snapshot.scrollTop;
+      const row = [...list.querySelectorAll("[data-id]")].find(candidate => candidate.dataset.id === snapshot.id);
+      if (row) list.scrollTop += row.getBoundingClientRect().top - list.getBoundingClientRect().top - snapshot.offset;
+    };
+    function render() {
+      const anchor = capture();
+      list.innerHTML = sorted().map(entry => {
+        const ready = claimable(entry);
+        const complete = Boolean(entry.completedAtMs || entry.progress >= entry.target);
+        return `<article class="seasonal-achievement-row ${complete ? "complete" : ""} ${entry.claimedAtMs ? "claimed" : ""}" data-id="${entry.id}"><span class="seasonal-achievement-row-icon">♜</span><div class="seasonal-achievement-row-copy"><span>${entry.category}</span><strong>${entry.title}</strong><p>Complete the monthly campaign requirement.</p><div class="seasonal-achievement-progress"><span style="width:${Math.min(100, entry.progress / entry.target * 100)}%"></span></div><small>${entry.progress} / ${entry.target}</small></div><div class="seasonal-achievement-reward"><span>Reward</span><strong>0.5h Gold Production</strong>${ready ? `<button type="button" data-claim="${entry.id}">Claim</button>` : entry.claimedAtMs ? "<b>COMPLETED</b>" : "<small>In progress</small>"}</div></article>`;
+      }).join("");
+      restore(anchor);
+      document.querySelector("#completeTotal").textContent = `${entries.filter(entry => entry.completedAtMs || entry.claimedAtMs).length} / 40`;
+      document.querySelector("#claimedTotal").textContent = `${entries.filter(entry => entry.claimedAtMs).length} / 40`;
+    }
+    document.querySelector("#refreshBtn").addEventListener("click", render);
+    document.querySelector("#completeBtn").addEventListener("click", () => { entries[27].progress = 10; entries[27].completedAtMs = Date.now(); render(); });
+    document.querySelector("#claimBtn").addEventListener("click", () => { const entry = sorted().find(claimable); if (entry) { entry.claimedAtMs = Date.now(); render(); } });
+    list.addEventListener("click", event => { const entry = entries.find(candidate => candidate.id === event.target.dataset.claim); if (entry) { entry.claimedAtMs = Date.now(); render(); } });
+    render();
+    window.__achievementQa = { entries, list, render, sorted, claimable, capture };
+  </script>
+</body>
+</html>

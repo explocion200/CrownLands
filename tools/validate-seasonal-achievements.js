@@ -77,7 +77,7 @@ assert.equal(getProgress(state, "stronghold_veteran").progress, 1, "Stronghold b
 state = progress(state, { type: "BATTLE_RESOLVED", targetCategory: "player_city", success: true, cityCaptured: true, committedTroops: 100, occurredAtMs: context.nowMs + 2 });
 assert.equal(getProgress(state, "first_blood").progress, 1);
 assert.equal(getProgress(state, "battle_tested").progress, 1);
-assert.equal(getProgress(state, "first_blood").lockedReward.lockedAmount, 400, "Troop reward must lock the completion-time production snapshot.");
+assert.equal(getProgress(state, "first_blood").lockedReward.lockedAmount, 400, "Troop reward must lock the completion-time raw production snapshot.");
 const firstBloodCompletion = getProgress(state, "first_blood").completedAtMs;
 state = progress(state, { type: "BATTLE_RESOLVED", targetCategory: "player_city", success: true, cityCaptured: true, committedTroops: 100, occurredAtMs: context.nowMs + 3 });
 assert.equal(getProgress(state, "first_blood").progress, 1, "Completed achievements must not accumulate or relock.");

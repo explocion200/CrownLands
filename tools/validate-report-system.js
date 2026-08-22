@@ -73,11 +73,11 @@ const visualDetails = functionBody(client, "renderBattleSideDetails");
 assert.match(visualDetails, /Starting troops[\s\S]*?Base troop power[\s\S]*?Wall power at battle[\s\S]*?Final resolved power[\s\S]*?Troops lost[\s\S]*?Troops surviving/, "The visual comparison omits required battle-time values.");
 const visualBonuses = functionBody(client, "getBattleSideBonusEntries");
 assert.match(visualBonuses, /skillBonusPower[\s\S]*?Personal objective support[\s\S]*?Clan objective support[\s\S]*?Stoneworks[\s\S]*?wall power/, "The visual bonus cards do not separate troop, objective, and wall bonuses.");
-assert.doesNotMatch(visualBonuses, /gearBonusPower|wallGearPower/, "Gear is still mixed into the generic skill/objective bonus cards.");
+assert.match(visualBonuses, /if \(side\.gearOnly\)[\s\S]*?gearBonusPower[\s\S]*?wallGearPower[\s\S]*?return entries;[\s\S]*?skillBonusPower/, "Gear is not isolated from the generic skill/objective bonus-card path.");
 const gearSection = functionBody(client, "renderBattleGearEffectsSection");
-assert.match(gearSection, /\["attacker", "defender"\][\s\S]*?Gear Effects/, "The dedicated report section does not cover neutral attacker and defender gear perspectives.");
-assert.match(functionBody(client, "renderDetailedBattleReport"), /renderBattleGearEffectsSection\(snapshot\.gearEffects, report, viewerRole\)/, "Detailed reports do not render the authoritative gear-effects snapshot.");
-assert.match(functionBody(client, "renderLegacyBattleComparison"), /renderBattleGearEffectsSection\(report\?\.gearEffects, report, viewerRole\)/, "Server-authored legacy battle reports cannot render their gear effects safely.");
+assert.match(gearSection, /\[attacker, defender\][\s\S]*?gearOnly: true[\s\S]*?renderBattleBonusCard[\s\S]*?Gear Effects[\s\S]*?battle-visual-two-column/, "The dedicated report section does not cover attacker and defender gear with the shared readable card layout.");
+assert.match(functionBody(client, "renderDetailedBattleReport"), /renderBattleGearEffectsSection\(attacker, defender, report, viewerRole\)/, "Detailed reports do not render authoritative gear power from their presentation models.");
+assert.match(functionBody(client, "renderLegacyBattleComparison"), /renderBattleGearEffectsSection\(attacker, defender, report, viewerRole\)/, "Historical battle reports do not render safely through the optional gear path.");
 const sideModel = functionBody(client, "getBattleSidePresentationModel");
 assert.match(sideModel, /getDetailedBattleSideParticipants[\s\S]*?sumDetailedBattleParticipantPower/, "Battle participant power is not aggregated into visual side totals.");
 assert.match(sideModel, /reinforcementCount[\s\S]*?reinforcementTroops/, "The visual defender summary omits reinforcement counts or troops.");
@@ -89,9 +89,7 @@ assert.match(functionBody(client, "getLegacyBattleSides"), /Not recorded/, "Hist
 assert.match(functionBody(client, "showBattleReportDetail"), /!report\.battleId[\s\S]*?applyLegacyBattleFlags[\s\S]*?catch[\s\S]*?applyLegacyBattleFlags/, "Legacy and unavailable snapshot reports do not hydrate their side flags.");
 assert.match(styles, /\.battle-visual-hero\s*\{[\s\S]*?grid-template-columns:[\s\S]*?\.battle-visual-two-column\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Visual battle sides are not presented in aligned columns.");
 assert.match(styles, /\.battle-report-hero-flag\.kingdom-flag-large[\s\S]*?width:\s*116px[\s\S]*?@media \(max-width: 760px\)[\s\S]*?\.battle-visual-hero/, "Large flags or the responsive visual report layout are missing.");
-assert.match(styles, /\.battle-visual-gear-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,[\s\S]*?\.battle-visual-gear-card[\s\S]*?background:[\s\S]*?linear-gradient/, "The gear-effects section lacks a readable responsive medieval treatment.");
-assert.match(styles, /\.battle-visual-gear-row :is\(strong, span, small, b\)[\s\S]*?color:\s*#fff3d2 !important;/, "The gear-effects section does not keep all row text readable on its dark panel.");
-assert.match(styles, /\.battle-visual-gear-grid[\s\S]*?repeat\(auto-fit,\s*minmax\(min\(17rem,\s*100%\),\s*1fr\)\)[\s\S]*?@media \(max-width: 680px\) and \(orientation: portrait\)/, "The gear-effects section does not stack safely in portrait while preserving landscape columns.");
+assert.match(styles, /\.battle-visual-bonus-row small,[\s\S]*?color:\s*#d8c8a8;[\s\S]*?\.battle-visual-bonus-card h4,[\s\S]*?\.battle-visual-bonus-row > div > strong,[\s\S]*?\.battle-visual-bonus-row > b,[\s\S]*?color:\s*#f1e6cc;/, "The shared gear-effect cards do not keep their text readable on dark panels.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome,[\s\S]*?background:\s*transparent !important;[\s\S]*?\.battle-report-modal \.battle-visual-outcome > span[\s\S]*?color:\s*#fffdf5 !important;[\s\S]*?background:\s*linear-gradient\(180deg, #58735f, #2f4939\) !important;/, "Detailed Victory remains unreadable or retains the full red center block.");
 assert.match(styles, /\.battle-report-modal \.battle-visual-outcome\.defeat > span[\s\S]*?background:\s*linear-gradient\(180deg, #62504d, #382d2c\) !important;/, "Detailed Defeat does not use the restrained outcome badge.");
 assert.match(functionBody(client, "renderBattleReportHero"), /battle-visual-outcome[\s\S]*?<span>\$\{escapeHtml\(badge\.label/, "The detailed report outcome label is missing from the semantic result badge.");
@@ -299,44 +297,50 @@ const gearRenderSandbox = {
 };
 vm.createContext(gearRenderSandbox);
 [
-  "normalizeBattlePowerGearEffect",
-  "normalizeBattleCasualtyRecovery",
-  "normalizeBattleGearEffects",
-  "formatBattleGearPercent",
-  "formatBattleGearEffectPercent",
-  "getBattleGearEffectEntries",
-  "renderBattleGearEffectCard",
+  "getBattleSideBonusEntries",
+  "renderBattleBonusCard",
   "renderBattleGearEffectsSection",
 ].forEach(name => vm.runInContext(`${functionBody(client, name)}; this.${name} = ${name};`, gearRenderSandbox));
-const normalizedGearEffects = gearRenderSandbox.normalizeBattleGearEffects(gearEffectsSnapshot);
+const attackerGearModel = {
+  role: "attacker",
+  gearLabel: gearEffectsSnapshot.attacker.attackStrength.sourceLabel,
+  gearBonusPower: gearEffectsSnapshot.attacker.attackStrength.bonusPower,
+  gearPercentText: "+1.5%",
+  wallGearPower: 0,
+};
+const defenderGearModel = {
+  role: "defender",
+  gearLabel: gearEffectsSnapshot.defender.defenderStrength.sourceLabel,
+  gearBonusPower: gearEffectsSnapshot.defender.defenderStrength.bonusPower,
+  gearPercentText: "+1.5%",
+  wallGearPower: gearEffectsSnapshot.defender.wallStrength.bonusPower,
+  wallGearPercent: 1.5,
+};
 const renderedGearEffects = gearRenderSandbox.renderBattleGearEffectsSection(
-  normalizedGearEffects,
+  attackerGearModel,
+  defenderGearModel,
   { casualtyRecovery: casualtySnapshot },
   "attacker"
 );
-assert.match(renderedGearEffects, /Gear Effects[\s\S]*?Attacker Gear[\s\S]*?War Captain gear[\s\S]*?Attack Strength: \+1\.5%[\s\S]*?\+15 power/, "Attack reports do not show authoritative War Captain gear effects.");
-assert.match(renderedGearEffects, /Defender Gear[\s\S]*?Gatehouse gear[\s\S]*?\+20 power[\s\S]*?Gatehouse wall gear[\s\S]*?\+9 power/, "Defense and wall gear are not separated in the dedicated section.");
-assert.match(renderedGearEffects, /Barracks casualty gear[\s\S]*?Field Medics \+10%[\s\S]*?cap 75%/, "Casualty gear is not separated from Field Medics in reports.");
-assert.equal(gearRenderSandbox.renderBattleGearEffectsSection(null, {}, "attacker"), "", "Reports without gear render an empty or broken gear section.");
-assert.equal(gearRenderSandbox.normalizeBattleGearEffects(undefined), null, "Historical reports without gear fields are not normalized safely.");
+assert.match(renderedGearEffects, /Gear Effects[\s\S]*?Attacker Gear[\s\S]*?War Captain gear[\s\S]*?\+1\.5%[\s\S]*?\+15 power/, "Attack reports do not show authoritative War Captain gear effects.");
+assert.match(renderedGearEffects, /Defender Gear[\s\S]*?Gatehouse gear[\s\S]*?\+20 power[\s\S]*?Gatehouse wall gear[\s\S]*?\+1\.5% · separate from Stoneworks[\s\S]*?\+9 wall power/, "Defense and wall gear are not separated in the dedicated section.");
+assert.match(renderedGearEffects, /Barracks casualty gear[\s\S]*?\+1\.5% gear · main city[\s\S]*?\+1 recovered/, "Casualty gear recovery is not attributed in the dedicated section.");
+assert.equal(gearRenderSandbox.renderBattleGearEffectsSection({ role: "attacker" }, { role: "defender" }, {}, "attacker"), "", "Reports without gear render an empty or broken gear section.");
 assert.doesNotThrow(() => gearRenderSandbox.renderBattleGearEffectsSection(
-  gearRenderSandbox.normalizeBattleGearEffects({ attacker: { attackStrength: {} } }),
+  { role: "attacker", gearLabel: "", gearBonusPower: 0 },
+  { role: "defender", wallGearPower: 0 },
   {},
   "defender"
 ), "Optional or partial gear fields crash report rendering.");
-const rallyGearEffects = gearRenderSandbox.normalizeBattleGearEffects({
-  attacker: {
-    attackStrength: {
-      sourceLabel: "War Captain gear",
-      statLabel: "Attack Strength",
-      bonusPercents: [0.25, 1.5],
-      bonusPower: 42,
-    },
-  },
-});
+const rallyGearModel = {
+  role: "attacker",
+  gearLabel: "War Captain gear",
+  gearBonusPower: 42,
+  gearPercentText: "Mixed equipped-gear rates",
+};
 assert.match(
-  gearRenderSandbox.renderBattleGearEffectsSection(rallyGearEffects, {}, "attacker"),
-  /Mixed rates \+0\.25%–1\.5%[\s\S]*?\+42 power/,
+  gearRenderSandbox.renderBattleGearEffectsSection(rallyGearModel, { role: "defender" }, {}, "attacker"),
+  /Mixed equipped-gear rates[\s\S]*?\+42 power/,
   "Rally gear effects are not summarized cleanly across mixed participant rates."
 );
 

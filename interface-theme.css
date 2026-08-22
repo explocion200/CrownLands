@@ -3150,26 +3150,6 @@ input[type="range"] {
   color: #f1e6cc;
 }
 
-.battle-visual-gear-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(17rem,100%),1fr));gap:.65rem}
-
-.battle-visual-gear-card{padding:.68rem;border:1px solid #a98545;border-top:3px solid #d7b76a;border-radius:10px;background:linear-gradient(180deg,#513a22f5,#1f1915fa)}
-.modal-card .battle-visual-gear-card h4{margin:0 0 .5rem;color:#ffe7a8!important}
-.battle-visual-gear-row{display:grid;grid-template-columns:2rem minmax(0,1fr) auto;align-items:center;gap:.52rem;min-width:0;padding:.58rem;border:1px solid rgba(222,187,105,.34);border-radius:8px;background:rgba(12,10,9,.43)}
-.battle-visual-gear-row + .battle-visual-gear-row{margin-top:.45rem}
-.battle-visual-gear-icon{display:grid;width:2rem;height:2rem;place-items:center;border:1px solid rgba(232,199,119,.48);border-radius:50%;color:#f2cf78;background:rgba(0,0,0,.25)}
-.battle-visual-gear-row > div{display:grid;min-width:0;gap:.12rem}
-
-.battle-visual-gear-row :is(strong, span, small, b) { color: #fff3d2 !important; opacity: 1 !important; }
-
-.battle-visual-gear-row > div > span{color:#f1d58e!important;font-weight:700}
-.battle-visual-gear-row small{color:#e5dcc8!important;line-height:1.35}
-.battle-visual-gear-row > b{color:#ffe29a!important;text-align:right;white-space:nowrap}
-
-@media (max-width: 680px) and (orientation: portrait) {
-  .battle-visual-gear-row{grid-template-columns:1.8rem minmax(0,1fr)}
-  .battle-visual-gear-row > b{grid-column:2;text-align:left}
-}
-
 .modal-card p,
 .modal-card li,
 .profile-screen p,
