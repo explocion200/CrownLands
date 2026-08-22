@@ -64,7 +64,8 @@ const categoryFileBudgets = {
 
 const entrypointBudgets = {
   // Shared semantic action tokens add less than 1 KiB to the runtime markup.
-  "game.js": 1604 * 1024,
+  // Battle-time gear report normalization and rendering add under 16 KiB.
+  "game.js": 1620 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,

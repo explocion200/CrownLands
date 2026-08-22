@@ -8819,6 +8819,19 @@ function normalizeCampReportReward(value = null) {
   return { rewardType, amount };
 }
 
+function normalizeBattlePowerGearEffect(value = null) {
+  return value && typeof value === "object" ? value : null;
+}
+
+function normalizeBattleCasualtyRecovery(value = null) {
+  return value && typeof value === "object" ? value : null;
+}
+
+function normalizeBattleGearEffects(value = null) {
+  if (!value || typeof value !== "object") return null;
+  return { attacker: value.attacker || {}, defender: value.defender || {} };
+}
+
 function normalizeBattleReports(reports) {
   if (!Array.isArray(reports)) return [];
   const nowMs = Date.now();
@@ -8883,6 +8896,8 @@ function normalizeBattleReports(reports) {
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
+        casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
+        gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
@@ -34266,6 +34281,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
     attackers,
     defender,
     reinforcements,
+    gearEffects: normalizeBattleGearEffects(value.gearEffects),
     totals: {
       attackers: Math.max(0, Math.floor(Number(totals.attackers) || 0)),
       defenders: Math.max(0, Math.floor(Number(totals.defenders) || 0)),
@@ -34582,14 +34598,6 @@ function getBattleSideBonusEntries(side = {}) {
       help: side.skillPercentText,
     });
   }
-  if (Number(side.gearBonusPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
-      label: side.gearLabel || "Officer gear",
-      value: `+${formatNumber(side.gearBonusPower)} power`,
-      help: side.gearPercentText || "Equipped gear",
-    });
-  }
   if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
     entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
   }
@@ -34602,14 +34610,6 @@ function getBattleSideBonusEntries(side = {}) {
       label: "Stoneworks",
       value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
       help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
-    });
-  }
-  if (side.role === "defender" && Number(side.wallGearPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon("city"),
-      label: "Gatehouse wall gear",
-      value: `+${formatNumber(side.wallGearPower)} wall power`,
-      help: side.wallGearPercent > 0 ? `+${Number(side.wallGearPercent).toFixed(2).replace(/\.00$/, "")}% wall strength` : "Wall only",
     });
   }
   if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
@@ -34634,6 +34634,61 @@ function renderBattleBonusCard(side = {}) {
     </article>`;
 }
 
+function formatBattleGearPercent(value = 0) {
+  return String(Number(Math.max(0, Number(value) || 0).toFixed(2)));
+}
+
+function formatBattleGearEffectPercent(effect = null) {
+  const percentages = Array.isArray(effect?.bonusPercents) ? effect.bonusPercents : [];
+  if (!percentages.length) return "";
+  if (percentages.length === 1) return `+${formatBattleGearPercent(percentages[0])}%`;
+  return `Mixed rates +${formatBattleGearPercent(percentages[0])}%–${formatBattleGearPercent(percentages.at(-1))}%`;
+}
+
+function getBattleGearEffectEntries(gearEffects = null, role = "attacker", casualtyOverride = null) {
+  const side = role === "defender" ? gearEffects?.defender : gearEffects?.attacker;
+  if (!side) return [];
+  const entries = [];
+  const addPower = (effect, icon, help) => effect?.bonusPower > 0 && entries.push([
+    renderCrownlandsIcon(icon), effect.sourceLabel,
+    `${effect.statLabel}: ${formatBattleGearEffectPercent(effect)}`,
+    `+${formatNumber(effect.bonusPower)} power`, help,
+  ]);
+  if (role === "attacker") addPower(side.attackStrength, "attack", "Added attack power in this battle");
+  else {
+    addPower(side.defenderStrength, "shield", "Added defending-soldier power in this battle");
+    addPower(side.wallStrength, "city", "Added wall power in this battle · separate from Stoneworks");
+  }
+  const casualty = casualtyOverride?.gearPercent > 0 ? casualtyOverride : side.casualtyRecovery;
+  if (casualty?.gearPercent > 0 && casualty.gearRecoveredTroops > 0) {
+    const capCopy = casualty.appliedGearPercent < casualty.gearPercent
+      ? ` · ${formatBattleGearPercent(casualty.appliedGearPercent)}% applied after cap`
+      : "";
+    entries.push([
+      renderCrownlandsIcon("troops"), casualty.sourceLabel,
+      `Recovery Bonus: +${formatBattleGearPercent(casualty.gearPercent)}%${capCopy}`,
+      `+${formatNumber(casualty.gearRecoveredTroops)} recovered`,
+      `${casualty.skillLabel} +${formatBattleGearPercent(casualty.fieldMedicsPercent)}% · combined ${formatBattleGearPercent(casualty.combinedPercent)}% · cap ${formatBattleGearPercent(casualty.capPercent)}% · returned to main city`,
+    ]);
+  }
+  return entries;
+}
+
+function renderBattleGearEffectCard(role = "attacker", entries = []) {
+  if (!entries.length) return "";
+  return `<article class="battle-visual-gear-card ${role}"><h4>${role === "attacker" ? "Attacker Gear" : "Defender Gear"}</h4>${entries.map(([icon, label, stat, value, help]) => `<div class="battle-visual-gear-row"><span class="battle-visual-gear-icon" aria-hidden="true">${icon}</span><div><strong>${escapeHtml(label)}</strong><span>${escapeHtml(stat)}</span><small>${escapeHtml(help)}</small></div><b>${escapeHtml(value)}</b></div>`).join("")}</article>`;
+}
+
+function renderBattleGearEffectsSection(gearEffects = null, report = null, viewerRole = "attacker") {
+  if (!gearEffects) return "";
+  const reportCasualty = normalizeBattleCasualtyRecovery(report?.casualtyRecovery);
+  const cards = ["attacker", "defender"].map(role => renderBattleGearEffectCard(
+    role, getBattleGearEffectEntries(gearEffects, role, viewerRole === role ? reportCasualty : null)
+  )).filter(Boolean);
+  if (!cards.length) return "";
+  return `<section class="battle-visual-section battle-visual-gear-effects"><div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("crown")}</span><h3>Gear Effects</h3></div><div class="battle-visual-gear-grid">${cards.join("")}</div></section>`;
+}
+
 function renderBattleWallResult(defender = {}, siege = null) {
   if (!siege) return "";
   const startingIntegrityBps = clamp(Math.floor(Number(siege.startingIntegrityBps) || 0), 0, 10_000);
@@ -34649,7 +34704,7 @@ function renderBattleWallResult(defender = {}, siege = null) {
     </section>`;
 }
 
-function renderBattleComparisonSections(left = {}, right = {}, defender = {}, siege = null) {
+function renderBattleComparisonSections(left = {}, right = {}, defender = {}, siege = null, gearEffectsMarkup = "") {
   return `
     <section class="battle-visual-section battle-visual-details">
       <div class="battle-visual-section-title"><span aria-hidden="true">${renderCrownlandsIcon("attack")}</span><h3>Battle Details</h3></div>
@@ -34665,6 +34720,7 @@ function renderBattleComparisonSections(left = {}, right = {}, defender = {}, si
         ${renderBattleBonusCard(right)}
       </div>
     </section>
+    ${gearEffectsMarkup}
     ${renderBattleWallResult(defender, siege)}`;
 }
 
@@ -34761,6 +34817,17 @@ function renderCampReportRewardMetrics(reward = null) {
   return "";
 }
 
+function getBattleCasualtyRecoveryHelp(report = null) {
+  const recovery = normalizeBattleCasualtyRecovery(report?.casualtyRecovery);
+  if (!recovery) return "Casualty recovery · 75% combined cap · returned to the main city";
+  return [
+    recovery.fieldMedicsPercent > 0 ? `${recovery.skillLabel} +${formatBattleGearPercent(recovery.fieldMedicsPercent)}%` : "",
+    recovery.gearPercent > 0 ? `${recovery.sourceLabel} +${formatBattleGearPercent(recovery.gearPercent)}%` : "",
+    `combined ${formatBattleGearPercent(recovery.combinedPercent)}%`, `${formatBattleGearPercent(recovery.capPercent)}% cap`,
+    "returned to the main city",
+  ].filter(Boolean).join(" · ");
+}
+
 function renderBattleRewards(report = null) {
   const campReward = getBattleReportCampReward(report);
   const rewardMetrics = campReward
@@ -34772,7 +34839,7 @@ function renderBattleRewards(report = null) {
         ? renderBattleMetric(
             "Casualty recovery",
             `+${formatNumber(report.fieldMedicsRecovered)}`,
-            "Field Medics + Barracks gear · 75% combined cap · returned to the main city"
+            getBattleCasualtyRecoveryHelp(report)
           )
         : "",
       report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
@@ -34884,7 +34951,13 @@ function renderLegacyBattleComparison(report = null, siege = null) {
   const viewerRole = report?.type === "defense" ? "defender" : "attacker";
   const left = viewerRole === "defender" ? defender : attacker;
   const right = viewerRole === "defender" ? attacker : defender;
-  return renderBattleComparisonSections(left, right, defender, siege);
+  return renderBattleComparisonSections(
+    left,
+    right,
+    defender,
+    siege,
+    renderBattleGearEffectsSection(report?.gearEffects, report, viewerRole)
+  );
 }
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
@@ -34922,7 +34995,13 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       ${renderBattleReportNavigation(report, snapshot.target)}
       ${ruleLabel ? `<div class="battle-visual-rule">${escapeHtml(ruleLabel)}</div>` : ""}
       ${renderBattleReportHero(left, right, badge, getViewerBattleResultLabel(snapshot, viewerRole, report))}
-      ${renderBattleComparisonSections(left, right, defender, snapshot.siege)}
+      ${renderBattleComparisonSections(
+        left,
+        right,
+        defender,
+        snapshot.siege,
+        renderBattleGearEffectsSection(snapshot.gearEffects, report, viewerRole)
+      )}
       ${renderBattleRewards(report)}
     </div>`;
 }

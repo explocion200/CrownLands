@@ -639,7 +639,7 @@ const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION = 1;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const REINFORCEMENT_CITY_WALL_SHARE = 0.25;
-const BATTLE_SNAPSHOT_MODEL_VERSION = 6;
+const BATTLE_SNAPSHOT_MODEL_VERSION = 7;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -5387,6 +5387,8 @@ function normalizeRallyParticipant(raw = {}) {
     attackGearPercent: Math.max(0, safeNumber(raw.attackGearPercent, 0)),
     attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, 0)),
     fieldMedicsPercent: Math.max(0, safeNumber(raw.fieldMedicsPercent, 0)),
+    fieldMedicsSkillPercent: Math.max(0, safeNumber(raw.fieldMedicsSkillPercent, 0)),
+    casualtyGearPercent: Math.max(0, safeNumber(raw.casualtyGearPercent, 0)),
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     losses: Math.max(0, Math.floor(safeNumber(raw.losses, 0))),
     survivors: Math.max(0, Math.floor(safeNumber(raw.survivors, troops))),
@@ -5627,6 +5629,8 @@ function createRallyParticipantSnapshot({
       skillMultiplier(profile, "swordmastery") + getCommonGearBonuses(profile).attackStrength / 100
     ),
     fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
+    fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
+    casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
     ownerKingPower,
   });
 }
@@ -7524,6 +7528,8 @@ function makeReport({
   firstProtectedDefenseBonus = false,
   battleId = "",
   fieldMedicsRecovered = 0,
+  casualtyRecovery = null,
+  gearEffects = null,
   bulkOrderKind = "",
   bulkRequestId = "",
   bulkArrivalCue = "",
@@ -7613,6 +7619,12 @@ function makeReport({
     battleId: safeString(battleId, 160),
     battleSnapshotVersion: battleId ? BATTLE_SNAPSHOT_MODEL_VERSION : 0,
     fieldMedicsRecovered: Math.max(0, Math.floor(safeNumber(fieldMedicsRecovered, 0))),
+    casualtyRecovery: casualtyRecovery && typeof casualtyRecovery === "object"
+      ? casualtyRecovery
+      : null,
+    gearEffects: gearEffects && typeof gearEffects === "object"
+      ? gearEffects
+      : null,
     ...(bulkRequestId ? {
       bulkOrderKind: safeString(bulkOrderKind, 32),
       bulkRequestId: safeString(bulkRequestId, 96),
@@ -7891,6 +7903,127 @@ function createBattleWallPowerBreakdown(siege = null, owner = {}, defenderBonuse
   };
 }
 
+function createBattleCasualtyRecoverySnapshot({
+  profile = {},
+  losses = 0,
+  recoveredTroops = 0,
+  fieldMedicsPercent = undefined,
+  casualtyGearPercent = undefined,
+  combinedRecoveryPercent = undefined,
+} = {}) {
+  const normalizedLosses = Math.max(0, Math.floor(safeNumber(losses, 0)));
+  const skillPercent = Math.max(0, safeNumber(
+    fieldMedicsPercent,
+    getSkillPercent(profile, "fieldMedics")
+  ));
+  const gearPercent = Math.max(0, safeNumber(
+    casualtyGearPercent,
+    getCommonGearBonuses(profile).casualtyEfficiency
+  ));
+  const capPercent = COMMON_GEAR.CASUALTY_RECOVERY_CAP_PERCENT;
+  const combinedPercent = Math.min(
+    capPercent,
+    Math.max(0, safeNumber(combinedRecoveryPercent, skillPercent + gearPercent))
+  );
+  const skillOnlyPercent = Math.min(capPercent, skillPercent);
+  const appliedGearPercent = Math.max(0, combinedPercent - skillOnlyPercent);
+  const creditedTroops = Math.max(0, Math.floor(safeNumber(recoveredTroops, 0)));
+  const calculatedGearRecoveredTroops = Math.max(
+    0,
+    Math.floor(normalizedLosses * combinedPercent / 100)
+      - Math.floor(normalizedLosses * skillOnlyPercent / 100)
+  );
+  return {
+    sourceLabel: "Barracks casualty gear",
+    skillLabel: "Field Medics",
+    fieldMedicsPercent: skillPercent,
+    gearPercent,
+    appliedGearPercent,
+    combinedPercent,
+    capPercent,
+    losses: normalizedLosses,
+    recoveredTroops: creditedTroops,
+    gearRecoveredTroops: Math.min(creditedTroops, calculatedGearRecoveredTroops),
+    returnsToMainCity: true,
+  };
+}
+
+function createBattlePowerGearEffect({
+  sourceLabel = "Officer gear",
+  statLabel = "Gear bonus",
+  bonusPower = 0,
+  bonusPercents = [],
+} = {}) {
+  const power = Math.max(0, Math.floor(safeNumber(bonusPower, 0)));
+  const percentages = [...new Set((Array.isArray(bonusPercents) ? bonusPercents : [bonusPercents])
+    .map(value => Math.max(0, safeNumber(value, 0)))
+    .filter(value => value > 0))]
+    .sort((left, right) => left - right)
+    .slice(0, 16);
+  if (!power || !percentages.length) return null;
+  return {
+    sourceLabel: safeString(sourceLabel, 64),
+    statLabel: safeString(statLabel, 64),
+    bonusPercent: percentages.length === 1 ? percentages[0] : 0,
+    bonusPercents: percentages,
+    mixedParticipantRates: percentages.length > 1,
+    bonusPower: power,
+  };
+}
+
+function createBattleGearEffectsSnapshot({
+  attackerParticipants = [],
+  defenderParticipants = [],
+  attackPowerBreakdown = {},
+  defensePowerBreakdown = {},
+  wallGearPercent = 0,
+  attackerCasualtyRecovery = null,
+  defenderCasualtyRecovery = null,
+} = {}) {
+  const attackers = Array.isArray(attackerParticipants) ? attackerParticipants : [];
+  const defenders = Array.isArray(defenderParticipants) ? defenderParticipants : [];
+  return {
+    attacker: {
+      attackStrength: createBattlePowerGearEffect({
+        sourceLabel: "War Captain gear",
+        statLabel: "Attack Strength",
+        bonusPower: attackers.reduce((total, participant) => (
+          total + Math.max(0, Math.floor(safeNumber(
+            participant?.powerBreakdown?.gearAttackStrengthBonusPower,
+            0
+          )))
+        ), 0) || attackPowerBreakdown.gearAttackStrengthBonusPower,
+        bonusPercents: attackers.map(participant => participant?.gearAttackStrengthPercent),
+      }),
+      casualtyRecovery: attackerCasualtyRecovery?.gearPercent > 0
+        ? attackerCasualtyRecovery
+        : null,
+    },
+    defender: {
+      defenderStrength: createBattlePowerGearEffect({
+        sourceLabel: "Gatehouse gear",
+        statLabel: "Defender Strength",
+        bonusPower: defenders.reduce((total, participant) => (
+          total + Math.max(0, Math.floor(safeNumber(
+            participant?.powerBreakdown?.gearDefenderStrengthBonusPower,
+            0
+          )))
+        ), 0) || defensePowerBreakdown.gearDefenderStrengthBonusPower,
+        bonusPercents: defenders.map(participant => participant?.gearDefenderStrengthPercent),
+      }),
+      wallStrength: createBattlePowerGearEffect({
+        sourceLabel: "Gatehouse wall gear",
+        statLabel: "Wall Strength",
+        bonusPower: defensePowerBreakdown.gearWallStrengthBonusPower,
+        bonusPercents: [wallGearPercent],
+      }),
+      casualtyRecovery: defenderCasualtyRecovery?.gearPercent > 0
+        ? defenderCasualtyRecovery
+        : null,
+    },
+  };
+}
+
 function createDetailedBattleSnapshot({
   battleId = "",
   armyId = "",
@@ -7909,6 +8042,8 @@ function createDetailedBattleSnapshot({
   outcome = "",
   attackProtection = null,
   attackCombatSnapshot = null,
+  attackerCasualtyRecovery = null,
+  defenderCasualtyRecovery = null,
   nowMs = Date.now(),
 } = {}) {
   if (!battleId || !defensePackages) return null;
@@ -8007,6 +8142,27 @@ function createDetailedBattleSnapshot({
     bonusPercent: attackerSwordmasteryPercent + attackerGearStrengthPercent,
     attackPowerPerTroop: combatSnapshot?.attackPowerPerTroop,
   });
+  const attackerPowerBreakdown = createBattleAttackPowerBreakdown(
+    attackerBasePower,
+    result.attackPower,
+    attackerSwordmasteryPercent,
+    attackerGearStrengthPercent
+  );
+  const attackerSnapshot = {
+    ownerUid: safeString(attackerUid, 128),
+    ownerName: normalizePlayerName(attackerProfile.playerName || attackerProfile.displayName, "Rival ruler"),
+    ownerFlag: attackerProfile.flag || null,
+    clan: battleClanIdentity(attackerProfile),
+    startingTroops: attackerStartingTroops,
+    basePower: attackerBasePower,
+    swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
+    swordmasteryPercent: attackerSwordmasteryPercent,
+    gearAttackStrengthPercent: attackerGearStrengthPercent,
+    effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
+    powerBreakdown: attackerPowerBreakdown,
+    losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
+    survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+  };
   const normalizedProtection = normalizeAttackProtectionSnapshot(attackProtection);
   const defenderSnapshot = {
     ownerUid: safeString(defenderUid, 128),
@@ -8080,6 +8236,15 @@ function createDetailedBattleSnapshot({
     0,
     defensePowerBreakdown.totalDefensePower - attributedDefensePower
   );
+  const battleGearEffects = createBattleGearEffectsSnapshot({
+    attackerParticipants: rallyAttackers.length ? rallyAttackers : [attackerSnapshot],
+    defenderParticipants: [defenderSnapshot, ...reinforcementRows],
+    attackPowerBreakdown: attackerPowerBreakdown,
+    defensePowerBreakdown,
+    wallGearPercent: defensePackages.owner.gearWallStrengthPercent,
+    attackerCasualtyRecovery,
+    defenderCasualtyRecovery,
+  });
   const protectedRaid = normalizedProtection?.mode === "raid" && result.convertedReinforcementCapture !== true;
   const protectedBreach = normalizedProtection?.mode === "assault"
     && normalizedProtection.captureAllowed !== true
@@ -8143,29 +8308,11 @@ function createDetailedBattleSnapshot({
         repairAddedMs: siege?.repairAddedMs || 0,
       },
     },
-    attacker: {
-      ownerUid: safeString(attackerUid, 128),
-      ownerName: normalizePlayerName(attackerProfile.playerName || attackerProfile.displayName, "Rival ruler"),
-      ownerFlag: attackerProfile.flag || null,
-      clan: battleClanIdentity(attackerProfile),
-      startingTroops: attackerStartingTroops,
-      basePower: attackerBasePower,
-      swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
-      swordmasteryPercent: attackerSwordmasteryPercent,
-      gearAttackStrengthPercent: attackerGearStrengthPercent,
-      effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
-      powerBreakdown: createBattleAttackPowerBreakdown(
-        attackerBasePower,
-        result.attackPower,
-        attackerSwordmasteryPercent,
-        attackerGearStrengthPercent
-      ),
-      losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
-      survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
-    },
+    attacker: attackerSnapshot,
     attackers: rallyAttackers,
     defender: defenderSnapshot,
     reinforcements: reinforcementRows,
+    gearEffects: battleGearEffects,
     siege,
     totals: {
       attackers: attackerStartingTroops,
@@ -8176,12 +8323,7 @@ function createDetailedBattleSnapshot({
       defenderLosses,
       attackerSurvivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
       defenderSurvivors: Math.max(0, defendersAtStart - defenderLosses),
-      attackPowerBreakdown: createBattleAttackPowerBreakdown(
-        attackerBasePower,
-        result.attackPower,
-        attackerSwordmasteryPercent,
-        attackerGearStrengthPercent
-      ),
+      attackPowerBreakdown: attackerPowerBreakdown,
       defensePowerBreakdown,
     },
     formula: {
@@ -21905,6 +22047,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           survivors: entry.remaining,
           xpAwarded,
           fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
+          fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
+          casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
           createdAtMs: nowMs,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -22400,24 +22544,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         });
       }
       currentBattleId = safeString(armyId, 160);
-      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
-        battleId: currentBattleId,
-        armyId,
-        target,
-        targetType,
-        attackerUid,
-        attackerProfile,
-        defenderUid,
-        defenderProfile: defenderProfile || {},
-        defenderBonuses,
-        defensePackages,
-        allocation: defenseAllocation,
-        attackerPackages: attackPackages,
-        attackerAllocation,
-        result,
-        outcome: battleOutcome,
-        nowMs,
-      }));
       const rawAttackWinXp = getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile, {
         nowMs,
         attackerProfile,
@@ -22526,6 +22652,39 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: defenseAllocation.ownerLosses,
         })
         : 0;
+      const attackerCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: attackerProfile,
+        losses: leaderAllocation.losses,
+        recoveredTroops: attackerRecoveredTroops,
+        fieldMedicsPercent: leaderAllocation.fieldMedicsSkillPercent,
+        casualtyGearPercent: leaderAllocation.casualtyGearPercent,
+        combinedRecoveryPercent: leaderAllocation.fieldMedicsPercent,
+      });
+      const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: defenderProfile || {},
+        losses: defenseAllocation.ownerLosses,
+        recoveredTroops: defenderRecoveredTroops,
+      });
+      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+        battleId: currentBattleId,
+        armyId,
+        target,
+        targetType,
+        attackerUid,
+        attackerProfile,
+        defenderUid,
+        defenderProfile: defenderProfile || {},
+        defenderBonuses,
+        defensePackages,
+        allocation: defenseAllocation,
+        attackerPackages: attackPackages,
+        attackerAllocation,
+        result,
+        outcome: battleOutcome,
+        attackerCasualtyRecovery,
+        defenderCasualtyRecovery,
+        nowMs,
+      }));
       const remainingActiveArmyIds = targetType === "camp"
         ? removeActiveCampArmyId(target, armyId)
         : [];
@@ -22629,6 +22788,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldAfter: attackerProgress.gold,
         battleId: currentBattleId,
         fieldMedicsRecovered: attackerRecoveredTroops,
+        casualtyRecovery: attackerCasualtyRecovery,
         nowMs,
       });
       const alliedReceiptIds = [];
@@ -22671,6 +22831,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             survivors: entry.survivors,
             xpAwarded: Math.max(0, Math.floor(safeNumber(attackXpAllocation.get(entry.uid), 0))),
             fieldMedicsPercent: entry.fieldMedicsPercent,
+            fieldMedicsSkillPercent: entry.fieldMedicsSkillPercent,
+            casualtyGearPercent: entry.casualtyGearPercent,
             returnReason: "rally_battle_survivors",
             createdAtMs: nowMs,
             createdAt: FieldValue.serverTimestamp(),
@@ -22704,6 +22866,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           goldAfter: defenderProgress.gold,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
+          casualtyRecovery: defenderCasualtyRecovery,
           nowMs,
         })
         : null;
@@ -22945,24 +23108,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         battle.defenderLosses
       );
       currentBattleId = safeString(armyId, 160);
-      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
-        battleId: currentBattleId,
-        armyId,
-        target: campTarget,
-        targetType: "camp",
-        attackerUid,
-        attackerProfile,
-        defenderUid,
-        defenderProfile: defenderProfile || {},
-        defenderBonuses,
-        defensePackages,
-        allocation: defenseAllocation,
-        result: battle,
-        outcome: battle.success ? "victory" : "held",
-        attackProtection: army.attackProtection,
-        attackCombatSnapshot: army.attackCombatSnapshot,
-        nowMs,
-      }));
       applyReinforcementDefenseSettlement({
         allocation: defenseAllocation,
         defenseXpPool: 0,
@@ -22982,6 +23127,36 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: defenseAllocation.ownerLosses,
         })
         : 0;
+      const attackerCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: attackerProfile,
+        losses: battle.attackerLosses,
+        recoveredTroops: attackerRecoveredTroops,
+      });
+      const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: defenderProfile || {},
+        losses: defenseAllocation.ownerLosses,
+        recoveredTroops: defenderRecoveredTroops,
+      });
+      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+        battleId: currentBattleId,
+        armyId,
+        target: campTarget,
+        targetType: "camp",
+        attackerUid,
+        attackerProfile,
+        defenderUid,
+        defenderProfile: defenderProfile || {},
+        defenderBonuses,
+        defensePackages,
+        allocation: defenseAllocation,
+        result: battle,
+        outcome: battle.success ? "victory" : "held",
+        attackProtection: army.attackProtection,
+        attackCombatSnapshot: army.attackCombatSnapshot,
+        attackerCasualtyRecovery,
+        defenderCasualtyRecovery,
+        nowMs,
+      }));
       const attackerReport = makeReport({
         id: `${armyId}_${campTarget.campType}_camp_attack_${attackerUid}`,
         uid: attackerUid,
@@ -23002,6 +23177,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         battleId: currentBattleId,
         launchCombatForecast: army.launchCombatForecast,
         fieldMedicsRecovered: attackerRecoveredTroops,
+        casualtyRecovery: attackerCasualtyRecovery,
         nowMs,
       });
 
@@ -23090,6 +23266,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Casualty recovery returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
+          casualtyRecovery: defenderCasualtyRecovery,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
@@ -23512,24 +23689,36 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       captured: result.success,
     });
     currentBattleId = safeString(armyId, 160);
-    writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
-      battleId: currentBattleId,
-      armyId,
-      target,
-      targetType: "city",
-      attackerUid,
-      attackerProfile,
-      defenderUid,
-      defenderProfile: defenderProfile || {},
-      defenderBonuses,
-      defensePackages,
-      allocation: defenseAllocation,
-      result,
-      outcome: result.success ? "victory" : result.breachCompleted ? "breach" : "held",
-      attackProtection,
-      attackCombatSnapshot: army.attackCombatSnapshot,
-      nowMs,
-    }));
+    const createResolvedBattleSnapshot = ({ attackerRecoveredTroops = 0, defenderRecoveredTroops = 0 } = {}) => (
+      createDetailedBattleSnapshot({
+        battleId: currentBattleId,
+        armyId,
+        target,
+        targetType: "city",
+        attackerUid,
+        attackerProfile,
+        defenderUid,
+        defenderProfile: defenderProfile || {},
+        defenderBonuses,
+        defensePackages,
+        allocation: defenseAllocation,
+        result,
+        outcome: result.success ? "victory" : result.breachCompleted ? "breach" : "held",
+        attackProtection,
+        attackCombatSnapshot: army.attackCombatSnapshot,
+        attackerCasualtyRecovery: createBattleCasualtyRecoverySnapshot({
+          profile: attackerProfile,
+          losses: result.attackerLosses,
+          recoveredTroops: attackerRecoveredTroops,
+        }),
+        defenderCasualtyRecovery: createBattleCasualtyRecoverySnapshot({
+          profile: defenderProfile || {},
+          losses: defenseAllocation.ownerLosses,
+          recoveredTroops: defenderRecoveredTroops,
+        }),
+        nowMs,
+      })
+    );
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
       ? 0
@@ -23618,6 +23807,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: defenseAllocation.ownerLosses,
         })
         : 0;
+      const attackerCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: attackerProfile,
+        losses: result.attackerLosses,
+        recoveredTroops: attackerRecoveredTroops,
+      });
+      const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: defenderProfile || {},
+        losses: defenseAllocation.ownerLosses,
+        recoveredTroops: defenderRecoveredTroops,
+      });
+      writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+        attackerRecoveredTroops,
+        defenderRecoveredTroops,
+      }));
       if (protectedAssaultBreachDocumentRef) {
         transaction.set(protectedAssaultBreachDocumentRef, {
           version: PROTECTED_ASSAULT_BREACH_VERSION,
@@ -23679,6 +23882,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         firstProtectedDefenseBonus,
         battleId: currentBattleId,
         fieldMedicsRecovered: attackerRecoveredTroops,
+        casualtyRecovery: attackerCasualtyRecovery,
         nowMs,
       });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
@@ -23715,6 +23919,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           firstProtectedDefenseBonus,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
+          casualtyRecovery: defenderCasualtyRecovery,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -23887,6 +24092,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: defenseAllocation.ownerLosses,
         })
         : 0;
+      const attackerCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: attackerProfile,
+        losses: result.attackerLosses,
+        recoveredTroops: attackerRecoveredTroops,
+      });
+      const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+        profile: defenderProfile || {},
+        losses: defenseAllocation.ownerLosses,
+        recoveredTroops: defenderRecoveredTroops,
+      });
+      writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+        attackerRecoveredTroops,
+        defenderRecoveredTroops,
+      }));
       const participantStats = writeParticipantEconomies({
         character: attackerProgress.character,
         gold: attackerProgress.gold,
@@ -23911,6 +24130,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackerReport.summary = `${attackerReport.summary} Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
       }
       attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
+      attackerReport.casualtyRecovery = attackerCasualtyRecovery;
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
         character: attackerProgress.character,
@@ -23947,6 +24167,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           firstProtectedDefenseBonus,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
+          casualtyRecovery: defenderCasualtyRecovery,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -24031,6 +24252,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: defenseAllocation.ownerLosses,
       })
       : 0;
+    const attackerCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+      profile: attackerProfile,
+      losses: result.attackerLosses,
+      recoveredTroops: attackerRecoveredTroops,
+    });
+    const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+      profile: defenderProfile || {},
+      losses: defenseAllocation.ownerLosses,
+      recoveredTroops: defenderRecoveredTroops,
+    });
+    writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+      attackerRecoveredTroops,
+      defenderRecoveredTroops,
+    }));
     writeParticipantEconomies({
       character: attackerProgress.character,
       gold: attackerProgress.gold,
@@ -24046,6 +24281,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       attackerReport.summary = `${attackerReport.summary} Casualty recovery returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
     }
     attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
+    attackerReport.casualtyRecovery = attackerCasualtyRecovery;
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
     writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
       character: attackerProgress.character,
@@ -24081,6 +24317,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         firstProtectedDefenseBonus,
         battleId: currentBattleId,
         fieldMedicsRecovered: defenderRecoveredTroops,
+        casualtyRecovery: defenderCasualtyRecovery,
         nowMs,
       });
       writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -24744,6 +24981,18 @@ async function settleReinforcementBattleReceipt(event) {
         };
       }
     }
+    const hasCasualtySourceSnapshot = Object.prototype.hasOwnProperty.call(receipt, "fieldMedicsSkillPercent")
+      && Object.prototype.hasOwnProperty.call(receipt, "casualtyGearPercent");
+    const casualtyRecovery = hasCasualtySourceSnapshot
+      ? createBattleCasualtyRecoverySnapshot({
+        profile,
+        losses: receipt.losses,
+        recoveredTroops: recovery?.credited || 0,
+        fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
+        casualtyGearPercent: receipt.casualtyGearPercent,
+        combinedRecoveryPercent: receipt.fieldMedicsPercent,
+      })
+      : null;
     const report = makeReport({
       id: `${safeString(receipt.armyId, 96)}_reinforcement_${contributorUid}`,
       uid: contributorUid,
@@ -24772,6 +25021,7 @@ async function settleReinforcementBattleReceipt(event) {
       goldAfter: progress.gold,
       battleId: safeString(receipt.battleId, 160),
       fieldMedicsRecovered: recovery?.credited || 0,
+      casualtyRecovery,
       nowMs,
     });
     writePreparedEconomy(transaction, economy, {
@@ -24879,6 +25129,18 @@ async function settleRallyBattleReceipt(event) {
         };
       }
     }
+    const hasCasualtySourceSnapshot = Object.prototype.hasOwnProperty.call(receipt, "fieldMedicsSkillPercent")
+      && Object.prototype.hasOwnProperty.call(receipt, "casualtyGearPercent");
+    const casualtyRecovery = hasCasualtySourceSnapshot
+      ? createBattleCasualtyRecoverySnapshot({
+        profile,
+        losses: receipt.losses,
+        recoveredTroops: recovery?.credited || 0,
+        fieldMedicsPercent: receipt.fieldMedicsSkillPercent,
+        casualtyGearPercent: receipt.casualtyGearPercent,
+        combinedRecoveryPercent: receipt.fieldMedicsPercent,
+      })
+      : null;
     const participant = {
       uid: contributorUid,
       ownerName: receipt.contributorName,
@@ -24974,6 +25236,7 @@ async function settleRallyBattleReceipt(event) {
       goldAfter: progress.gold,
       battleId: safeString(receipt.battleId, 160),
       fieldMedicsRecovered: recovery?.credited || 0,
+      casualtyRecovery,
       nowMs,
     });
     writeReport(transaction, contributorUid, report, economy.profileSnap, {
@@ -26212,6 +26475,31 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
     };
 
     const fieldMedicsRecovered = recoverCitadelAssaultLosses(defenderEconomy, defenderProfile, allocation.ownerLosses, nowMs);
+    const defenderCasualtyRecovery = createBattleCasualtyRecoverySnapshot({
+      profile: defenderProfile,
+      losses: allocation.ownerLosses,
+      recoveredTroops: fieldMedicsRecovered,
+    });
+    const citadelDefenderParticipants = [defensePackages.owner, ...(defensePackages.reinforcements || [])]
+      .map(participant => ({
+        gearDefenderStrengthPercent: participant.gearDefenderStrengthPercent,
+        powerBreakdown: {
+          gearDefenderStrengthBonusPower: participant.gearDefenderStrengthBonusPower,
+        },
+      }));
+    const gearEffects = createBattleGearEffectsSnapshot({
+      defenderParticipants: citadelDefenderParticipants,
+      defensePowerBreakdown: {
+        gearDefenderStrengthBonusPower: citadelDefenderParticipants.reduce((total, participant) => (
+          total + Math.max(0, Math.floor(safeNumber(
+            participant.powerBreakdown.gearDefenderStrengthBonusPower,
+            0
+          )))
+        ), 0),
+        gearWallStrengthBonusPower: 0,
+      },
+      defenderCasualtyRecovery,
+    });
     allocation.contributions.forEach(entry => {
       const profileEntry = participantProfiles.get(entry.ownerUid) || {};
       const profile = profileEntry.data || {};
@@ -26264,6 +26552,8 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
         survivors: entry.remaining,
         xpAwarded: 0,
         fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
+        fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
+        casualtyGearPercent: getCommonGearBonuses(profile).casualtyEfficiency,
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -26301,6 +26591,8 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
       goldAwarded: 0,
       troopsAwarded: 0,
       fieldMedicsRecovered,
+      casualtyRecovery: defenderCasualtyRecovery,
+      gearEffects,
       nowMs,
     });
     writeReport(transaction, defenderUid, report, defenderEntry.snap);
