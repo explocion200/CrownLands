@@ -3,6 +3,8 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
+const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
+const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
@@ -65,4 +67,72 @@ for (const absolutePath of files.filter(filePath => /\.(?:html|css|js|json)$/i.t
   }
 }
 
-console.log(`Production artifact validation passed (${files.length} files, ${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
+const productionIndex = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+const rootBaseTag = productionIndex.match(/<base\b[^>]*\bhref\s*=\s*(["'])\/\1[^>]*>/i);
+if (rootBaseTag) {
+  throw new Error("Production index must not set <base href=\"/\">; itch serves the game from an upload subdirectory.");
+}
+
+const baseHrefMatch = productionIndex.match(/<base\b[^>]*\bhref\s*=\s*(["'])([^"']+)\1[^>]*>/i);
+if (!baseHrefMatch || baseHrefMatch[2] !== "./") {
+  throw new Error("Production index must use a directory-relative <base href=\"./\"> for itch uploads.");
+}
+if (!/document\.getElementById\(["']crownlandsBase["']\)\.href\s*=\s*["']\/["']/.test(productionIndex)) {
+  throw new Error("Production index must preserve the Netlify /play/ rewrite by switching its base to the site root.");
+}
+const effectiveDocumentUrl = baseHrefMatch
+  ? new URL(baseHrefMatch[2], ITCH_DOCUMENT_URL)
+  : ITCH_DOCUMENT_URL;
+const indexedRuntimeFiles = new Set();
+const resourceAttributes = [
+  ["link", "href"],
+  ["script", "src"],
+  ["img", "src"],
+  ["source", "src"],
+];
+
+for (const [tagName, attributeName] of resourceAttributes) {
+  const attributePattern = new RegExp(
+    `<${tagName}\\b[^>]*\\b${attributeName}\\s*=\\s*(["'])([^"']+)\\1`,
+    "gi",
+  );
+  for (const match of productionIndex.matchAll(attributePattern)) {
+    const requestedUrl = match[2].trim();
+    if (
+      !requestedUrl
+      || requestedUrl.startsWith("#")
+      || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(requestedUrl)
+    ) {
+      continue;
+    }
+
+    const resolvedUrl = new URL(requestedUrl, effectiveDocumentUrl);
+    if (
+      resolvedUrl.origin !== ITCH_DOCUMENT_URL.origin
+      || !resolvedUrl.pathname.startsWith(ITCH_DIRECTORY_PATH)
+    ) {
+      throw new Error(
+        `Production index ${tagName}[${attributeName}] ${requestedUrl} escapes the itch upload directory (${resolvedUrl.href}).`,
+      );
+    }
+
+    const relativePath = decodeURIComponent(resolvedUrl.pathname.slice(ITCH_DIRECTORY_PATH.length));
+    const localPath = path.resolve(dist, relativePath.replace(/\//g, path.sep));
+    if (!localPath.startsWith(`${dist}${path.sep}`) || !fs.existsSync(localPath) || !fs.statSync(localPath).isFile()) {
+      throw new Error(
+        `Production index ${tagName}[${attributeName}] ${requestedUrl} does not resolve to a packaged file from an itch upload subdirectory.`,
+      );
+    }
+    indexedRuntimeFiles.add(relativePath);
+  }
+}
+
+for (const coreFile of ["styles.css", "firebaseClient.js", "game.js", "assets/map-editor-data.js"]) {
+  if (!indexedRuntimeFiles.has(coreFile)) {
+    throw new Error(`Production index did not expose required itch-relative runtime file ${coreFile}.`);
+  }
+}
+
+console.log(
+  `Production artifact validation passed (${files.length} files, ${(totalBytes / 1024 / 1024).toFixed(2)} MiB; ${indexedRuntimeFiles.size} itch-relative index resources).`,
+);
