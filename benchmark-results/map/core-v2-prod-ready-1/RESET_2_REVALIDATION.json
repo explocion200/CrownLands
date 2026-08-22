@@ -1,0 +1,164 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-reset2-revalidation-v1",
+  "status": "PASS",
+  "checkpointScopeGuardPreserved": true,
+  "lockedCandidateId": "reset2-candidate-2e68667049a02b05",
+  "sourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+  "dataset": {
+    "playerCount": 5000,
+    "clanCount": 125,
+    "clanlessPlayers": 715,
+    "sparseAccounts": 1000,
+    "heavyAccounts": 1000
+  },
+  "pagination": [
+    {
+      "size": 299,
+      "pageCount": 1,
+      "uniqueProcessed": 299,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 300,
+      "pageCount": 1,
+      "uniqueProcessed": 300,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 301,
+      "pageCount": 2,
+      "uniqueProcessed": 301,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 500,
+      "pageCount": 2,
+      "uniqueProcessed": 500,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 1000,
+      "pageCount": 4,
+      "uniqueProcessed": 1000,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 2500,
+      "pageCount": 9,
+      "uniqueProcessed": 2500,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    },
+    {
+      "size": 5000,
+      "pageCount": 17,
+      "uniqueProcessed": 5000,
+      "duplicateCount": 0,
+      "skippedCount": 0,
+      "staleCursorCount": 0,
+      "original300BoundaryProtected": true
+    }
+  ],
+  "persistence": {
+    "playerCount": 5000,
+    "ownedGearCount": 74000,
+    "equippedGearCount": 32500,
+    "duplicateGearCount": 8000,
+    "persistentHash": "477f03098cbfdf4106ed8d212200d65dbaac535329ee164e67f0766fac644e31",
+    "gearHash": "8fc9da7d3fd94225ba56e45895a030957e6e0db55da2a33c7912d986f759060a",
+    "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+    "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+    "seasonalResetHash": "80caa39d143121853219bbd5a9434951d4fb425604428ce4e09797a7e0ec0a8d"
+  },
+  "world": {
+    "valid": true,
+    "errors": [],
+    "coreRegionCount": 25,
+    "coreCityCount": 1480,
+    "objectiveCount": 17,
+    "totalRegionCount": 221,
+    "totalCityCount": 9320,
+    "activeOuterRegions": 194,
+    "standbyOuterRegions": 2,
+    "duplicateCityIds": 0,
+    "reciprocalTopologyErrors": 0
+  },
+  "placements": {
+    "count": 5000,
+    "uniqueStartingCities": 5000,
+    "allOutsideCore": true
+  },
+  "npcBoundary": {
+    "successfulPlacement": {
+      "npcBefore": 15,
+      "npcAfter": 14,
+      "allowed": true,
+      "regionId": "phase6d_region_0001"
+    },
+    "rejectedPlacement": {
+      "npcBefore": 14,
+      "allowed": false,
+      "reason": "minimum-npc-threshold",
+      "regionRemainsActive": true,
+      "regionId": "phase6d_region_0001"
+    },
+    "clockwiseActivation": {
+      "activatedRegionId": "phase6d_region_0194",
+      "replenishedRegionId": "phase6d_region_0196",
+      "standbyCount": 2
+    },
+    "workerFailure": {
+      "injected": true,
+      "standbyCountUnaffected": 2,
+      "playerWaitRequired": false
+    },
+    "generationFailure": {
+      "injected": true,
+      "coordinateRetained": true,
+      "retrySucceeded": true
+    },
+    "queueRestart": {
+      "injected": true,
+      "deterministicResume": true,
+      "standbyCount": 2
+    }
+  },
+  "mainCity": {
+    "paths": 8,
+    "restrictedRegions": 5,
+    "rejectedAttempts": 40
+  },
+  "failureInjectionCount": 12,
+  "idempotency": {
+    "passed": true,
+    "firstHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+    "secondHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+    "duplicateCoreCities": 0,
+    "duplicateObjectives": 0,
+    "duplicateGear": 0,
+    "duplicateClanMemberships": 0,
+    "duplicateStartingCities": 0,
+    "duplicateGeneratedRegions": 0
+  },
+  "runDurationMs": 36811.668,
+  "productionMutationPerformed": false,
+  "validatedAt": "2026-08-22T03:31:15.996Z",
+  "receiptHash": "c327c2110455d5f9a003ab2479dd9823550407215d899720bfe19c321e1c9429"
+}

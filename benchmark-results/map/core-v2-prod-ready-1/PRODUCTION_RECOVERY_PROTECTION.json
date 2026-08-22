@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-protection-receipt-v1",
+  "status": "NOT_YET_CONFIGURED",
+  "mode": "DRY_RUN",
+  "authorizationRequired": "AUTHORIZE_PRODUCTION_RECOVERY_PROTECTION:crown-land-b15e0:(default):PITR+DELETE_PROTECTION+DAILY_BACKUP_35D",
+  "before": {
+    "targetProject": "crown-land-b15e0",
+    "targetDatabase": "(default)",
+    "current": {
+      "pitr": "POINT_IN_TIME_RECOVERY_DISABLED",
+      "versionRetentionPeriod": "3600s",
+      "deleteProtection": "DELETE_PROTECTION_DISABLED",
+      "backupSchedules": []
+    },
+    "intended": {
+      "pitr": "POINT_IN_TIME_RECOVERY_ENABLED",
+      "recoveryWindow": "7 days after the retention window matures; approximately one hour immediately after enablement",
+      "deleteProtection": "DELETE_PROTECTION_ENABLED",
+      "backup": {
+        "recurrence": "DAILY",
+        "retentionDays": 35,
+        "exactRunTime": "service-managed; Firestore does not expose a selectable daily run time"
+      }
+    },
+    "cost": {
+      "pitr": "Billed PITR storage, generally comparable to one additional database copy; no free tier.",
+      "backups": "Billed backup storage for each retained daily copy (up to 35 days here).",
+      "restore": "Billed by restored backup size; the isolated named database also incurs normal usage/storage charges while retained.",
+      "exactDollarEstimate": "Requires measured production database/backup GiB; do not invent a size estimate."
+    },
+    "operationalImplications": {
+      "pitr": "Enables minute-granularity recovery across the retained window without changing gameplay documents.",
+      "deleteProtection": "Blocks deleting the database resource; it does not prevent normal document deletes.",
+      "backups": "Creates service-managed daily backups; it does not affect live read/write performance."
+    },
+    "rollback": {
+      "pitr": "firebase firestore:databases:update \"(default)\" --project crown-land-b15e0 --point-in-time-recovery DISABLED",
+      "deleteProtection": "firebase firestore:databases:update \"(default)\" --project crown-land-b15e0 --delete-protection DISABLED",
+      "backup": "Delete the schedule by its verified ID; existing backups remain until expiry or a separate explicitly authorized deletion."
+    }
+  },
+  "mutationPerformed": false,
+  "gameplayDocumentMutationPerformed": false,
+  "checkedAt": "2026-08-22T03:28:50.694Z"
+}

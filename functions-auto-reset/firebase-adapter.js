@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 const automaticReset = require("./automatic-reset.js");
+const productionAdapters = require("./production-adapters.js");
 
 const PRODUCTION_PROJECT_ID = "crown-land-b15e0";
 const CONFIG_PATH = "automaticSeasonReset/config";
@@ -330,6 +331,41 @@ function createFirebaseAutomaticResetAdapter(db, options = {}) {
   });
 }
 
+function createFirebaseProductionAdapters(db, options = {}) {
+  assert(db && typeof db.runTransaction === "function");
+  const shared = {
+    projectId: options.projectId,
+    environment: options.environment,
+    serverAuthority: options.serverAuthority,
+    candidateVersion: options.candidateVersion,
+  };
+  return Object.freeze({
+    generation: productionAdapters.createProductionGenerationAdapter(db, {
+      ...shared,
+      productionAuthorization: options.productionAuthorizations?.generation,
+      controls: options.controls?.generation,
+      worldId: options.worldId,
+      seasonId: options.seasonId,
+      assetManifestHash: options.assetManifestHash,
+    }),
+    migration: productionAdapters.createProductionMigrationAdapter(db, {
+      ...shared,
+      productionAuthorization: options.productionAuthorizations?.migration,
+      controls: options.controls?.migration,
+      operationId: options.operationId,
+      targetSeasonId: options.seasonId,
+      pageSize: options.pageSize,
+    }),
+    placement: productionAdapters.createProductionPlacementAdapter(db, {
+      ...shared,
+      productionAuthorization: options.productionAuthorizations?.placement,
+      controls: options.controls?.placement,
+      worldId: options.worldId,
+      seasonId: options.seasonId,
+    }),
+  });
+}
+
 module.exports = Object.freeze({
   PRODUCTION_PROJECT_ID,
   CONFIG_PATH,
@@ -342,4 +378,5 @@ module.exports = Object.freeze({
   projectEnvironment,
   assertEnvironment,
   createFirebaseAutomaticResetAdapter,
+  createFirebaseProductionAdapters,
 });

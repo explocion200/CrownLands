@@ -8,7 +8,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "lint": "node --check automatic-reset.js && node --check firebase-adapter.js && node --check index.js",
+    "lint": "node --check automatic-reset.js && node --check firebase-adapter.js && node --check production-adapters.js && node --check index.js",
     "test": "node ../tools/validate-core-v2-auto-reset-1.js"
   },
   "dependencies": {

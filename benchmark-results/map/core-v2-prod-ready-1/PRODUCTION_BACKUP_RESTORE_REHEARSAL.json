@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-backup-restore-v1",
+  "status": "NOT_YET_CONFIGURED",
+  "mode": "DRY_RUN",
+  "projectId": "crown-land-b15e0",
+  "sourceDatabase": "(default)",
+  "readyProductionBackups": [],
+  "selectedBackup": null,
+  "isolatedDestinationDatabase": "prod-ready-restore-20260822",
+  "destinationIsLiveDefaultDatabase": false,
+  "authorizationRequired": "UNAVAILABLE_UNTIL_A_READY_PRODUCTION_BACKUP_EXISTS",
+  "cleanupPolicy": "Retain the isolated named database through review, then delete only under a separate destructive-cleanup authorization. Never delete the source backup.",
+  "sourceBackupDeletionAllowed": false,
+  "liveDatabaseMutationPerformed": false,
+  "checkedAt": "2026-08-22T03:28:52.340Z"
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-production-scheduler-plan-v1",
+  "environment": "PRODUCTION",
+  "projectId": "crown-land-b15e0",
+  "active": false,
+  "createJobsNow": false,
+  "enableJobsNow": false,
+  "candidateVersion": "prod-ready-1-18657e710a7ea5c9",
+  "timeZone": "Etc/UTC",
+  "seasonIdFormat": "season-YYYY-MM",
+  "jobs": [
+    {
+      "name": "prebuildNextMonthlySeason",
+      "schedule": "0 * * * *",
+      "purpose": "T-24h hourly coordinator",
+      "enabled": false
+    },
+    {
+      "name": "runMonthlySeasonReset",
+      "schedule": "0 0 1 * *",
+      "purpose": "monthly boundary reset",
+      "enabled": false
+    },
+    {
+      "name": "catchUpMonthlySeasonReset",
+      "schedule": "*/15 * * * *",
+      "purpose": "watchdog/catch-up",
+      "enabled": false
+    }
+  ],
+  "controls": {
+    "monthlySeasonResetEnabled": false,
+    "automaticPrebuildEnabled": false,
+    "automaticCutoverEnabled": false
+  },
+  "requiresSeparateAuthorization": true
+}

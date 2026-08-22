@@ -1,0 +1,656 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-validation-v1",
+  "validatorPassed": true,
+  "productionReady": false,
+  "candidate": {
+    "candidateId": "prod-ready-1-18657e710a7ea5c9",
+    "schemaVersion": "crownlands-prod-ready-1-v1",
+    "approvedAutoResetGitSha": "0482029c30c8efd456c689aa93d9326ebc48d6b3",
+    "workingGitSha": "0482029c30c8efd456c689aa93d9326ebc48d6b3",
+    "reset2CandidateId": "reset2-candidate-2e68667049a02b05",
+    "reset2SchemaVersion": "core-v2-reset-2-v1",
+    "reset2SourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "automaticResetSchemaVersion": "crownlands-auto-reset-v1",
+    "automaticResetCandidateVersion": "core-v2-auto-reset-1-reset2-candidate-v1",
+    "schedulerVersion": "crownlands-auto-reset-scheduler-v1",
+    "scheduler": {
+      "monthly": "0 0 1 * *",
+      "prebuildCoordinator": "0 * * * *",
+      "watchdog": "*/15 * * * *",
+      "timeZone": "Etc/UTC"
+    },
+    "resetStateMachineVersion": "crownlands-auto-reset-v1",
+    "corePackageVersion": "core-v2-qa1-approved-25-map-final-art-v1",
+    "corePackageHash": "4b7c6d8137c494f95b8eb3d8050af0be0224508d897293bb79e31ec8829b647a",
+    "persistenceAllowlistVersion": "reset-persistence-contract-v2",
+    "generatedWorldVersion": "generated-worlds-v1-phase6f-road-decoupled",
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f",
+    "productionAdapterVersion": "crownlands-prod-ready-1-adapters-v1",
+    "requiredIndexCount": 49,
+    "requiredIndexHash": "8c79cf8e679fb020b043774368dd9ab7154e939c9919b2a8df41fc78114ccb02",
+    "functionsRuntime": "22",
+    "functionsPackageManager": "pnpm@11.9.0",
+    "sourceBundleHash": "18657e710a7ea5c99d3c9915bcfc69dd554bc95aa724000a4865c436a774a7e3",
+    "sourceHashes": {
+      "functions-auto-reset/automatic-reset.js": "0da5b85f8daeb4382a8ca2c60b8e063870d77e9180442be5f032429f970c8311",
+      "functions-auto-reset/firebase-adapter.js": "5928018f91d5a4ec499cc0c701f8f21a44ece7d38a160081d02a0fa268b8fc71",
+      "functions-auto-reset/index.js": "1e20655bec41d8c6629e2b6259e21c40506e765085366573f21bb7f1fc39aff9",
+      "functions-auto-reset/production-adapters.js": "f1cd44c5f7e79d10dc107a0c8007c71b0023bbcd3967e2fafbfea77e46bb56d7",
+      "functions-auto-reset/runtime-config.json": "74c997498b030b0daf5d8eedc4f583d56a1559929e64a64f6e072b7fc0838963",
+      "functions-auto-reset/package.json": "3fe00618b2b3f55649eff4c46f46d13cf6a292f4c94aab0f23b42b915063a2a4",
+      "firebase.auto-reset.json": "5757ecb1bd634dfc9ed87655dd1f4ed387890b24b801141d01eb47d6c550ae41",
+      "reset-persistence-contract.js": "32c2761434609d6fa0b2d6c1ce69edbcfb006927fb5d7a3ba3c315d954171c1f",
+      "functions/core-main-city-policy.js": "e753c3fd01c04b8e8c97a34c9693de2fe0f2cf9e0a885a29fe2b9dde8dcf879f",
+      "firestore.indexes.json": "8c79cf8e679fb020b043774368dd9ab7154e939c9919b2a8df41fc78114ccb02",
+      "tools/core-v2-prod-ready-1/architecture.js": "8529b153dc38992aeda5e65b9062c94581b3d256c707f79a5753854685409f5c"
+    },
+    "invalidatedByChangesTo": [
+      "functions-auto-reset/automatic-reset.js",
+      "functions-auto-reset/firebase-adapter.js",
+      "functions-auto-reset/index.js",
+      "functions-auto-reset/production-adapters.js",
+      "functions-auto-reset/runtime-config.json",
+      "functions-auto-reset/package.json",
+      "firebase.auto-reset.json",
+      "reset-persistence-contract.js",
+      "functions/core-main-city-policy.js",
+      "firestore.indexes.json",
+      "tools/core-v2-prod-ready-1/architecture.js"
+    ]
+  },
+  "productionPreflight": {
+    "checkedAt": "2026-08-22T03:28:44.387Z",
+    "players": {
+      "exactCount": 32,
+      "withFlag": 30,
+      "withClanMembership": 11,
+      "commonGearInstances": 360,
+      "equippedCommonGearReferences": 189,
+      "schemaCompatible": true,
+      "payloadRetained": false
+    },
+    "clans": {
+      "exactRecordCount": 4,
+      "exactMembershipDocumentCount": 13,
+      "projectedPlayerMembershipCount": 11,
+      "membershipCountsMatch": false,
+      "membershipShapeCompatible": true,
+      "integrity": {
+        "sourceMemberDocumentCount": 13,
+        "authoritativePlayerMembershipCount": 11,
+        "staleOrphanMemberDocumentCount": 0,
+        "playerMissingMemberDocumentCount": 0,
+        "staleConflictingMemberDocumentCount": 2,
+        "roleMismatchCount": 0,
+        "duplicateAuthoritativeMembershipCount": 0,
+        "staleOrphansExcludedFromMigration": true,
+        "migrationSafe": true,
+        "mismatchReceiptHash": "4d820d2f868e0a83b390fb051dd878d785d74f74eec42fb7a96f226ed61104b3"
+      },
+      "payloadRetained": false
+    },
+    "world": {
+      "maps": 15,
+      "cities": 1050,
+      "directedChains": 210,
+      "generatedActive": 0,
+      "coreV2Records": 0,
+      "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+    },
+    "infrastructure": {
+      "databaseReachable": true,
+      "locationId": "nam5",
+      "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+      "versionRetentionPeriod": "3600s",
+      "earliestVersionTime": "2026-08-22T02:28:45.486278Z",
+      "deleteProtectionState": "DELETE_PROTECTION_DISABLED",
+      "backupSchedules": [],
+      "readyBackups": [],
+      "requiredIndexSpecificationCount": 49,
+      "requiredCollectionGroups": [
+        "activity",
+        "applications",
+        "armies",
+        "camps",
+        "cities",
+        "clans",
+        "entries",
+        "incomingArmies",
+        "members",
+        "ownershipChanges",
+        "presence",
+        "rallies",
+        "reinforcements",
+        "serverMembership",
+        "serverReports"
+      ],
+      "deployedIndexCountObserved": 750,
+      "deployedIndexesReady": true,
+      "deployedIndexStateCounts": {
+        "READY": 750
+      }
+    },
+    "automation": {
+      "allResetFlagsOff": true,
+      "automaticResetFunctions": [],
+      "schedulerJobs": [],
+      "productionSchedulersSafe": true
+    }
+  },
+  "recoveryProtection": {
+    "status": "NOT_YET_CONFIGURED",
+    "pitr": "POINT_IN_TIME_RECOVERY_DISABLED",
+    "deleteProtection": "DELETE_PROTECTION_DISABLED",
+    "backupScheduleCount": 0,
+    "completedBackupCount": 0,
+    "restoreStatus": "NOT_YET_CONFIGURED"
+  },
+  "adapters": {
+    "schemaVersion": "crownlands-prod-ready-1-production-adapter-emulator-v1",
+    "environment": "FIRESTORE_EMULATOR",
+    "projectId": "demo-crownlands-prod-ready",
+    "productionProjectId": "crown-land-b15e0",
+    "candidateId": "prod-ready-1-18657e710a7ea5c9",
+    "version": "crownlands-prod-ready-1-adapters-v1",
+    "firebaseAdapterFactoryPassed": true,
+    "generatorVersion": "generated-worlds-v1-phase6f-road-decoupled",
+    "persistenceAllowlistVersion": "reset-persistence-contract-v2",
+    "generationPassed": true,
+    "phase7PackageSchemaPassed": true,
+    "exactGeneratorAndAssetLockPassed": true,
+    "immutableMetadataOnlyPassed": true,
+    "cityInitializationPassed": true,
+    "publishedNeighborContractInheritancePassed": true,
+    "fortressReservationSchedulePassed": true,
+    "generationDuplicateGuard": true,
+    "generationCoreGuard": true,
+    "generationActivationOff": true,
+    "migrationPassed": true,
+    "clanMigrationPassed": true,
+    "clanPaginationPassed": true,
+    "clanMembershipCount": 400,
+    "paginationPassed": true,
+    "pagination": {
+      "playerCount": 601,
+      "pageSize": 300,
+      "pageCounts": [
+        300,
+        300,
+        1
+      ],
+      "deterministicCursors": true
+    },
+    "allowlistPassed": true,
+    "checksumsPassed": true,
+    "migrationIdempotencyPassed": true,
+    "placementPassed": true,
+    "placementOutsideCore": true,
+    "placementCapacity40": true,
+    "npcThresholdPassed": true,
+    "concurrencyPassed": true,
+    "mainCityRestrictionsPassed": true,
+    "productionMutationPerformed": false,
+    "completedAt": "2026-08-22T03:29:52.889Z",
+    "receiptHash": "5222ec41e9c9221b494d5147a71e5ad43a7582710ac25e32de2bd37f209164d9"
+  },
+  "reset2Revalidation": {
+    "schemaVersion": "crownlands-prod-ready-1-reset2-revalidation-v1",
+    "status": "PASS",
+    "checkpointScopeGuardPreserved": true,
+    "lockedCandidateId": "reset2-candidate-2e68667049a02b05",
+    "sourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "dataset": {
+      "playerCount": 5000,
+      "clanCount": 125,
+      "clanlessPlayers": 715,
+      "sparseAccounts": 1000,
+      "heavyAccounts": 1000
+    },
+    "pagination": [
+      {
+        "size": 299,
+        "pageCount": 1,
+        "uniqueProcessed": 299,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 300,
+        "pageCount": 1,
+        "uniqueProcessed": 300,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 301,
+        "pageCount": 2,
+        "uniqueProcessed": 301,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 500,
+        "pageCount": 2,
+        "uniqueProcessed": 500,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 1000,
+        "pageCount": 4,
+        "uniqueProcessed": 1000,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 2500,
+        "pageCount": 9,
+        "uniqueProcessed": 2500,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      },
+      {
+        "size": 5000,
+        "pageCount": 17,
+        "uniqueProcessed": 5000,
+        "duplicateCount": 0,
+        "skippedCount": 0,
+        "staleCursorCount": 0,
+        "original300BoundaryProtected": true
+      }
+    ],
+    "persistence": {
+      "playerCount": 5000,
+      "ownedGearCount": 74000,
+      "equippedGearCount": 32500,
+      "duplicateGearCount": 8000,
+      "persistentHash": "477f03098cbfdf4106ed8d212200d65dbaac535329ee164e67f0766fac644e31",
+      "gearHash": "8fc9da7d3fd94225ba56e45895a030957e6e0db55da2a33c7912d986f759060a",
+      "clanHash": "fb2e63ef631eca3eeba9966c7c2aa15d6e69b3910ce4c1ad349b80f40ec7e51a",
+      "flagHash": "d3c407a08444f5a53b02aa6f768d7ed3f300bff8d01582427ab678edd9cb8e83",
+      "seasonalResetHash": "80caa39d143121853219bbd5a9434951d4fb425604428ce4e09797a7e0ec0a8d"
+    },
+    "world": {
+      "valid": true,
+      "errors": [],
+      "coreRegionCount": 25,
+      "coreCityCount": 1480,
+      "objectiveCount": 17,
+      "totalRegionCount": 221,
+      "totalCityCount": 9320,
+      "activeOuterRegions": 194,
+      "standbyOuterRegions": 2,
+      "duplicateCityIds": 0,
+      "reciprocalTopologyErrors": 0
+    },
+    "placements": {
+      "count": 5000,
+      "uniqueStartingCities": 5000,
+      "allOutsideCore": true
+    },
+    "npcBoundary": {
+      "successfulPlacement": {
+        "npcBefore": 15,
+        "npcAfter": 14,
+        "allowed": true,
+        "regionId": "phase6d_region_0001"
+      },
+      "rejectedPlacement": {
+        "npcBefore": 14,
+        "allowed": false,
+        "reason": "minimum-npc-threshold",
+        "regionRemainsActive": true,
+        "regionId": "phase6d_region_0001"
+      },
+      "clockwiseActivation": {
+        "activatedRegionId": "phase6d_region_0194",
+        "replenishedRegionId": "phase6d_region_0196",
+        "standbyCount": 2
+      },
+      "workerFailure": {
+        "injected": true,
+        "standbyCountUnaffected": 2,
+        "playerWaitRequired": false
+      },
+      "generationFailure": {
+        "injected": true,
+        "coordinateRetained": true,
+        "retrySucceeded": true
+      },
+      "queueRestart": {
+        "injected": true,
+        "deterministicResume": true,
+        "standbyCount": 2
+      }
+    },
+    "mainCity": {
+      "paths": 8,
+      "restrictedRegions": 5,
+      "rejectedAttempts": 40
+    },
+    "failureInjectionCount": 12,
+    "idempotency": {
+      "passed": true,
+      "firstHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+      "secondHash": "e67fcd0e091815d3562036c862497b2cefdf806203c46303d8ff519b240a3255",
+      "duplicateCoreCities": 0,
+      "duplicateObjectives": 0,
+      "duplicateGear": 0,
+      "duplicateClanMemberships": 0,
+      "duplicateStartingCities": 0,
+      "duplicateGeneratedRegions": 0
+    },
+    "runDurationMs": 36811.668,
+    "productionMutationPerformed": false,
+    "validatedAt": "2026-08-22T03:31:15.996Z",
+    "receiptHash": "c327c2110455d5f9a003ab2479dd9823550407215d899720bfe19c321e1c9429"
+  },
+  "goNoGo": {
+    "schemaVersion": "crownlands-prod-ready-1-v1-go-no-go",
+    "candidateId": "prod-ready-1-18657e710a7ea5c9",
+    "checks": {
+      "expected_project": {
+        "status": "PASS",
+        "detail": "crown-land-b15e0"
+      },
+      "baseline_maps": {
+        "status": "PASS",
+        "detail": "15"
+      },
+      "baseline_cities": {
+        "status": "PASS",
+        "detail": "1050"
+      },
+      "baseline_chains": {
+        "status": "PASS",
+        "detail": "210"
+      },
+      "no_active_generated": {
+        "status": "PASS",
+        "detail": "0"
+      },
+      "no_core_v2_records": {
+        "status": "PASS",
+        "detail": "0"
+      },
+      "asset_manifest": {
+        "status": "PASS",
+        "detail": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+      },
+      "exact_candidate": {
+        "status": "PASS",
+        "detail": "prod-ready-1-18657e710a7ea5c9"
+      },
+      "core_package": {
+        "status": "PASS",
+        "detail": "4b7c6d8137c494f95b8eb3d8050af0be0224508d897293bb79e31ec8829b647a"
+      },
+      "generator_version": {
+        "status": "PASS",
+        "detail": "generated-worlds-v1-phase6f-road-decoupled"
+      },
+      "persistence_contract": {
+        "status": "PASS",
+        "detail": "reset-persistence-contract-v2"
+      },
+      "node22_runtime": {
+        "status": "PASS",
+        "detail": "Node 22"
+      },
+      "indexes_ready": {
+        "status": "PASS",
+        "detail": "750/49 required specifications"
+      },
+      "pitr_enabled": {
+        "status": "NOT_YET_CONFIGURED",
+        "detail": "disabled"
+      },
+      "delete_protection_enabled": {
+        "status": "NOT_YET_CONFIGURED",
+        "detail": "disabled"
+      },
+      "daily_backup_schedule": {
+        "status": "NOT_YET_CONFIGURED",
+        "detail": "missing"
+      },
+      "completed_backup": {
+        "status": "NOT_YET_CONFIGURED",
+        "detail": "missing"
+      },
+      "restore_rehearsal": {
+        "status": "NOT_YET_CONFIGURED",
+        "detail": "NOT_YET_CONFIGURED"
+      },
+      "generation_adapter": {
+        "status": "PASS",
+        "detail": "crownlands-prod-ready-1-adapters-v1"
+      },
+      "generation_duplicate_guard": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "generation_core_guard": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "generation_activation_off": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "migration_adapter": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "migration_pagination": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "migration_allowlist": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "migration_checksums": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "migration_idempotency": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "placement_adapter": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "placement_outside_core": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "placement_capacity_40": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "placement_npc_threshold": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "placement_concurrency": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "main_city_restrictions": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "reset_flags_off": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "kill_switches_engaged": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "production_scheduler_safe": {
+        "status": "PASS",
+        "detail": ""
+      },
+      "staging_scheduled_success": {
+        "status": "PASS",
+        "detail": "e73177e7aef3e29b5a4d96c9dc0037390d69a22371af32a07b8950014681dea1"
+      },
+      "staging_scheduled_failure": {
+        "status": "PASS",
+        "detail": "6b0f21071b40af83c34b6b00e140e3e1abd2ca6a59276a3677267164c5212935"
+      },
+      "no_production_world_mutation": {
+        "status": "PASS",
+        "detail": ""
+      }
+    },
+    "counts": {
+      "PASS": 34,
+      "FAIL": 0,
+      "NOT_YET_CONFIGURED": 5
+    },
+    "allPass": false
+  },
+  "septemberScale": {
+    "playerCount": 32,
+    "clanCount": 4,
+    "commonGearCount": 360,
+    "expectedStartingCities": 32,
+    "placementsPerRegion": 26,
+    "initiallyActiveRegions": 2,
+    "standbyRegions": 2,
+    "generatedMapCount": 4,
+    "expectedMigrationVolume": {
+      "players": 32,
+      "clans": 4,
+      "clanMemberships": 11,
+      "commonGearInstances": 360
+    },
+    "approximateFirestoreWrites": 2029,
+    "estimatedFreezeMinutes": "5-10",
+    "modelBasis": "26 placements per 40-city region: placement at 15 NPC succeeds, subsequent placement at 14 rejects; two additional STANDBY regions; each generated region writes one coordinate lock, package, region, 40 city records, and 40 global city-ID locks; migration includes player/Clan/member records and page receipts."
+  },
+  "changeFreeze": {
+    "policyVersion": "prod-ready-1-reset-sensitive-freeze-v1",
+    "categories": {
+      "persistenceMigration": [
+        "migration adapter",
+        "allowlist",
+        "pagination",
+        "checksums",
+        "staging success/failure"
+      ],
+      "playerClanFlagGearSchema": [
+        "migration adapter",
+        "persistence",
+        "pagination",
+        "staging success/failure"
+      ],
+      "corePackage": [
+        "Core validators",
+        "world bootstrap",
+        "staging success/failure"
+      ],
+      "generatedRegionGenerator": [
+        "generation adapter",
+        "package hashes",
+        "road/edge contracts",
+        "staging success/failure"
+      ],
+      "playerPlacement": [
+        "concurrency",
+        "15-NPC boundary",
+        "main-city restrictions",
+        "staging success/failure"
+      ],
+      "readyAndGoNoGo": [
+        "39 checks",
+        "failure injection",
+        "staging success/failure"
+      ],
+      "seasonPointerAndSchedulerLock": [
+        "duplicate invocation",
+        "atomic pointer",
+        "scheduled success/failure"
+      ]
+    },
+    "changeRule": "Any reset-sensitive source change creates a new candidate identity and repeats every listed affected gate before production authorization."
+  },
+  "oldWorldRetention": {
+    "status": "RETIRED_READ_ONLY",
+    "retentionDays": 30,
+    "automaticDeletionConfigured": false
+  },
+  "deploymentPlan": [
+    {
+      "stage": 0,
+      "action": "Deploy production-capable generation/reset code with all automation flags OFF and all kill switches engaged.",
+      "executeNow": false
+    },
+    {
+      "stage": 1,
+      "action": "Run and archive a fresh read-only production baseline.",
+      "executeNow": false
+    },
+    {
+      "stage": 2,
+      "action": "Verify PITR, delete protection, daily backup, completed backup, and restore receipt.",
+      "executeNow": false
+    },
+    {
+      "stage": 3,
+      "action": "Verify candidate hashes, production adapters, indexes, IAM, and disabled controls.",
+      "executeNow": false
+    },
+    {
+      "stage": 4,
+      "action": "Explicitly authorize and enable only the T-24h prebuild coordinator.",
+      "executeNow": false
+    },
+    {
+      "stage": 5,
+      "action": "Explicitly authorize and enable the monthly UTC scheduler and 15-minute watchdog.",
+      "executeNow": false
+    },
+    {
+      "stage": 6,
+      "action": "Explicitly authorize automatic cutover only after final GO evidence and a fresh completed backup.",
+      "executeNow": false
+    }
+  ],
+  "stagingScheduledRehearsal": {
+    "passed": true,
+    "successStatus": "OLD_SEASON_ARCHIVED",
+    "failureStatus": "VALIDATION_FAILED",
+    "exactCandidate": true,
+    "controlsDisabledAfter": true
+  },
+  "decisions": {
+    "august25FinalStagingDressRehearsal": "GO",
+    "september1AutomaticProductionReset": "NO-GO"
+  },
+  "remainingAuthorizationGates": [
+    "production recovery-protection mutation",
+    "first completed daily production backup",
+    "isolated restore of production backup",
+    "production code deployment",
+    "production scheduler/config enablement"
+  ],
+  "productionMutationPerformed": false,
+  "validatedAt": "2026-08-22T03:50:26.528Z",
+  "receiptHash": "29a561cc9f2b54291fc313dc9695138d80c5c70c343a60794b1a28f7ad8fa4d4"
+}

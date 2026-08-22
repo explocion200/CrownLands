@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "crownlands-prod-ready-1-production-read-only-preflight-v1",
+  "mode": "READ_ONLY",
+  "projectId": "crown-land-b15e0",
+  "database": "(default)",
+  "allowedMethods": [
+    "GET",
+    "POST_RUN_QUERY"
+  ],
+  "mutationMethodsPresent": false,
+  "candidate": {
+    "candidateId": "prod-ready-1-18657e710a7ea5c9",
+    "approvedAutoResetGitSha": "0482029c30c8efd456c689aa93d9326ebc48d6b3",
+    "reset2CandidateId": "reset2-candidate-2e68667049a02b05",
+    "reset2SourceBundleHash": "2e68667049a02b05fef2e1d5d706de26b7075b32b13c42af4c0f5f6ee5811ebd",
+    "corePackageHash": "4b7c6d8137c494f95b8eb3d8050af0be0224508d897293bb79e31ec8829b647a",
+    "sourceBundleHash": "18657e710a7ea5c99d3c9915bcfc69dd554bc95aa724000a4865c436a774a7e3"
+  },
+  "world": {
+    "maps": 15,
+    "cities": 1050,
+    "directedChains": 210,
+    "generatedActive": 0,
+    "coreV2Records": 0,
+    "assetManifestHash": "701068cd92127df1790c2759bcd4e9ed6f088896d3ee3a8e767fd30667085c6f"
+  },
+  "players": {
+    "exactCount": 32,
+    "withFlag": 30,
+    "withClanMembership": 11,
+    "commonGearInstances": 360,
+    "equippedCommonGearReferences": 189,
+    "schemaCompatible": true,
+    "payloadRetained": false
+  },
+  "clans": {
+    "exactRecordCount": 4,
+    "exactMembershipDocumentCount": 13,
+    "projectedPlayerMembershipCount": 11,
+    "membershipCountsMatch": false,
+    "membershipShapeCompatible": true,
+    "integrity": {
+      "sourceMemberDocumentCount": 13,
+      "authoritativePlayerMembershipCount": 11,
+      "staleOrphanMemberDocumentCount": 0,
+      "playerMissingMemberDocumentCount": 0,
+      "staleConflictingMemberDocumentCount": 2,
+      "roleMismatchCount": 0,
+      "duplicateAuthoritativeMembershipCount": 0,
+      "staleOrphansExcludedFromMigration": true,
+      "migrationSafe": true,
+      "mismatchReceiptHash": "4d820d2f868e0a83b390fb051dd878d785d74f74eec42fb7a96f226ed61104b3"
+    },
+    "payloadRetained": false
+  },
+  "infrastructure": {
+    "databaseReachable": true,
+    "locationId": "nam5",
+    "pointInTimeRecoveryEnablement": "POINT_IN_TIME_RECOVERY_DISABLED",
+    "versionRetentionPeriod": "3600s",
+    "earliestVersionTime": "2026-08-22T02:28:45.486278Z",
+    "deleteProtectionState": "DELETE_PROTECTION_DISABLED",
+    "backupSchedules": [],
+    "readyBackups": [],
+    "requiredIndexSpecificationCount": 49,
+    "requiredCollectionGroups": [
+      "activity",
+      "applications",
+      "armies",
+      "camps",
+      "cities",
+      "clans",
+      "entries",
+      "incomingArmies",
+      "members",
+      "ownershipChanges",
+      "presence",
+      "rallies",
+      "reinforcements",
+      "serverMembership",
+      "serverReports"
+    ],
+    "deployedIndexCountObserved": 750,
+    "deployedIndexesReady": true,
+    "deployedIndexStateCounts": {
+      "READY": 750
+    }
+  },
+  "automation": {
+    "allResetFlagsOff": true,
+    "automaticResetFunctions": [],
+    "schedulerJobs": [],
+    "productionSchedulersSafe": true
+  },
+  "pass": true,
+  "productionGameplayDataWritePerformed": false,
+  "productionWorldMutationPerformed": false,
+  "checkedAt": "2026-08-22T03:28:44.387Z"
+}
