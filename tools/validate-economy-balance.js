@@ -18,6 +18,30 @@ function requireMatch(source, pattern, message) {
   assert.match(source, pattern, message);
 }
 
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing function ${name}.`);
+  const parametersStart = source.indexOf("(", start);
+  let parameterDepth = 0;
+  let bodyStart = -1;
+  for (let index = parametersStart; index < source.length; index += 1) {
+    if (source[index] === "(") parameterDepth += 1;
+    if (source[index] === ")") parameterDepth -= 1;
+    if (parameterDepth === 0) {
+      bodyStart = source.indexOf("{", index + 1);
+      break;
+    }
+  }
+  assert.ok(bodyStart >= 0, `Missing body for function ${name}.`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not extract function ${name}.`);
+}
+
 assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy configurations differ.");
 assert.equal(serverConfig.shopItems.war_drums_30m.bonusPercent, 30);
 assert.equal(serverConfig.camps.items.maxDailyRewards, 5);
@@ -87,6 +111,60 @@ for (const [campName, schedule] of [["Gold Camp", goldSchedule], ["Warband Camp"
   }
 }
 requireMatch(serverSource, /function getRewardCampDailyReward[\s\S]*?Math\.max\(minimumReward,\s*Math\.floor\(hourlyRate \* rewardHours\)\)/, "Camp rewards are not production-scaled with a minimum.");
+const campRewardSource = extractFunction(serverSource, "getRewardCampDailyReward");
+assert.doesNotMatch(
+  campRewardSource,
+  /productionRates\.(?:untimedGoldPerHour|untimedTroopPerHour|goldPerHour|troopPerHour)/,
+  "Camp rewards can still fall back to a boosted production rate."
+);
+const campRewardContext = {
+  safeNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : Number(fallback) || 0;
+  },
+};
+vm.createContext(campRewardContext);
+vm.runInContext(campRewardSource, campRewardContext);
+const rawGoldRates = {
+  baseGoldPerHour: 10_000,
+  baseTroopPerHour: 7_200,
+  untimedGoldPerHour: 14_000,
+  untimedTroopPerHour: 11_000,
+  goldPerHour: 19_000,
+  troopPerHour: 15_000,
+};
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "gold", dailyRewards: [250], rewardHours: [2] }, 0, rawGoldRates),
+  20_000,
+  "Gold Camp rewards must use raw Gold production only."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "troops", dailyRewards: [250], rewardHours: [2] }, 0, rawGoldRates),
+  14_400,
+  "Warband Camp rewards must use raw troop production only."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "gold", dailyRewards: [20_000], rewardHours: [0.5] }, 0, { baseGoldPerHour: 100 }),
+  20_000,
+  "Gold Camp minimum rewards must remain intact."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "troops", dailyRewards: [10_000], rewardHours: [0.5] }, 0, { baseTroopPerHour: 100 }),
+  10_000,
+  "Warband Camp minimum rewards must remain intact."
+);
+const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
+const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);
+const payoutSource = serverSource.slice(payoutStart, payoutEnd);
+requireMatch(payoutSource, /productionCitiesQuery[\s\S]*?collectionGroup\("cities"\)[\s\S]*?ownerUid[\s\S]*?resetGeneration[\s\S]*?worldId/, "Camp payout does not query the holder's current owned cities.");
+requireMatch(payoutSource, /getRewardedAdBaseRates\(\{[\s\S]*?uid:\s*holderUid[\s\S]*?createOwnedCityEntriesFromSnapshot/, "Camp payout does not reuse the canonical raw kingdom-rate helper.");
+requireMatch(payoutSource, /baseGoldPerHour:\s*baseProductionRates\.goldPerHour[\s\S]*?baseTroopPerHour:\s*baseProductionRates\.troopsPerHour/, "Camp payout does not pass raw Gold and troop rates to the reward helper.");
+assert.doesNotMatch(payoutSource, /untimedGoldPerHour|untimedTroopPerHour/, "Camp payout still reads permanently boosted production.");
+const clientCampEstimateSource = extractFunction(clientSource, "getRewardCampEstimatedRewards");
+requireMatch(clientCampEstimateSource, /globalStats\?\.baseTroopPerHour/, "Online Warband Camp estimates do not use raw troop production.");
+requireMatch(clientCampEstimateSource, /globalStats\?\.baseGoldPerHour/, "Online Gold Camp estimates do not use raw Gold production.");
+requireMatch(clientCampEstimateSource, /getHarvestBonusBaseRates\(\)/, "Local Camp estimates do not share the raw regular-city production helper.");
+assert.doesNotMatch(clientCampEstimateSource, /untimedGoldPerHour|untimedTroopPerHour/, "Client Camp estimates still use permanently boosted production.");
 requireMatch(serverSource, /const resolvedCamp = authoritativeSeed \? \{ \.\.\.camp, \.\.\.authoritativeSeed \} : camp;/, "Stored camp schedules can override the authoritative world reward schedule.");
 requireMatch(clientSource, /getRewardCampConfig\(\{ \.\.\.raw, \.\.\.base, campType \}\)/, "Online camp state can override the client world's authoritative reward schedule.");
 requireMatch(serverSource, /baseGoldPerHour:[\s\S]*?baseTroopPerHour:/, "Permanent production rates are missing from global stats.");

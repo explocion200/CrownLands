@@ -25049,8 +25049,8 @@ function getRewardCampDailyReward(config, claimIndex = 0, productionRates = {}) 
   const rewardHours = Math.max(0, safeNumber(config?.rewardHours?.[index], 0));
   if (!minimumReward || !rewardHours) return minimumReward;
   const hourlyRate = config.rewardType === "troops"
-    ? Math.max(0, safeNumber(productionRates.baseTroopPerHour, productionRates.troopPerHour))
-    : Math.max(0, safeNumber(productionRates.baseGoldPerHour, productionRates.goldPerHour));
+    ? Math.max(0, safeNumber(productionRates.baseTroopPerHour, 0))
+    : Math.max(0, safeNumber(productionRates.baseGoldPerHour, 0));
   return Math.max(minimumReward, Math.floor(hourlyRate * rewardHours));
 }
 
@@ -25162,14 +25162,25 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const claimsRef = config.objectiveStatsId
       ? db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`)
       : null;
-    const playerStatsRef = playerGlobalStatsRef(holderUid);
+    const productionCitiesQuery = !isDeedCamp && !isRelicCamp
+      ? db.collectionGroup("cities")
+        .where("ownerUid", "==", holderUid)
+        .where("resetGeneration", "==", RESET_GENERATION)
+        .where("worldId", "==", ONLINE_WORLD_ID)
+      : null;
     const playerSnap = await transaction.get(playerRef);
     const claimsSnap = claimsRef ? await transaction.get(claimsRef) : null;
-    const playerStatsSnap = await transaction.get(playerStatsRef);
+    const productionCitiesSnap = productionCitiesQuery ? await transaction.get(productionCitiesQuery) : null;
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
     const rawClaimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
     const claimData = safeString(rawClaimData.resetGeneration, 120) === RESET_GENERATION ? rawClaimData : {};
-    const playerStats = playerStatsSnap.exists ? playerStatsSnap.data() || {} : {};
+    const baseProductionRates = productionCitiesSnap
+      ? getRewardedAdBaseRates({
+        uid: holderUid,
+        profileAfter: player,
+        cityEntries: createOwnedCityEntriesFromSnapshot(holderUid, productionCitiesSnap),
+      })
+      : { goldPerHour: 0, troopsPerHour: 0 };
     const today = getUtcDateKey(nowMs);
     const priorClaims = claimData.date === today
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
@@ -25191,20 +25202,8 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       : isRelicCamp
         ? relicRewardItem ? 1 : 0
         : getRewardCampDailyReward(config, priorClaims, {
-            baseGoldPerHour: safeNumber(
-              playerStats.untimedGoldPerHour,
-              safeNumber(
-                player.globalStats?.untimedGoldPerHour,
-                safeNumber(playerStats.baseGoldPerHour, playerStats.goldPerHour)
-              )
-            ),
-            baseTroopPerHour: safeNumber(
-              playerStats.untimedTroopPerHour,
-              safeNumber(
-                player.globalStats?.untimedTroopPerHour,
-                safeNumber(playerStats.baseTroopPerHour, playerStats.troopPerHour)
-              )
-            ),
+            baseGoldPerHour: baseProductionRates.goldPerHour,
+            baseTroopPerHour: baseProductionRates.troopsPerHour,
           });
     let nextClaims = isDeedCamp || isRelicCamp
       ? priorClaims

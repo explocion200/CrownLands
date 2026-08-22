@@ -25561,9 +25561,12 @@ function getRewardCampEstimatedRewards(config) {
   const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
   const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
   const globalStats = normalizeGlobalStatsSnapshot(state?.globalStats);
+  const localBaseRates = usesServerEconomyAuthority()
+    ? null
+    : getHarvestBonusBaseRates();
   const hourlyRate = config?.rewardType === "troops"
-    ? Math.max(0, Number(globalStats?.untimedTroopPerHour) || 0)
-    : Math.max(0, Number(globalStats?.untimedGoldPerHour) || 0);
+    ? Math.max(0, Number(localBaseRates?.troopsPerHour ?? globalStats?.baseTroopPerHour) || 0)
+    : Math.max(0, Number(localBaseRates?.goldPerHour ?? globalStats?.baseGoldPerHour) || 0);
   return minimums.map((minimum, index) => Math.max(
     0,
     Math.floor(Number(minimum) || 0),
