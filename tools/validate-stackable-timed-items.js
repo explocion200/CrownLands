@@ -147,13 +147,13 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /if \(selectedInventoryItemId === item\.id\) \{\s*selectedInventoryItemId = "";\s*selectedInventoryEntryKey = "";/,
-  "Each consumed presentation copy must clear its selection so another copy can be chosen."
+  /function reconcileInventorySelectionAfterCountChange[\s\S]*?getProjectedBagItemCount\(normalizedItemId\) > 0[\s\S]*?selectedInventoryEntryKey = normalizedItemId;[\s\S]*?ownedGroups\.find[\s\S]*?\|\| \[\.\.\.ownedGroups\]\.reverse\(\)\.find/,
+  "A consumed stacked item must preserve selection while copies remain, then choose the next or previous stack at zero."
 );
 assert.match(
   clientSource,
-  /let selectedEntry = model\.entries\.find\([\s\S]*?selectedInventoryEntryKey\)[\s\S]*?if \(selectedEntry\)[\s\S]*?selectedInventoryEntryKey = selectedEntry\.entryKey;[\s\S]*?else \{\s*selectedInventoryItemId = "";\s*selectedInventoryEntryKey = "";/,
-  "The paged Bag must clear an item and presentation-key selection once that copy is no longer visible."
+  /if \(selectedInventoryItemId\) reconcileInventorySelectionAfterCountChange\(selectedInventoryItemId\);[\s\S]*?let selectedEntry = model\.entries\.find\([\s\S]*?selectedInventoryEntryKey\)/,
+  "The paged Bag must reconcile a zero-count stack before resolving its visible selection."
 );
 assert.match(
   clientSource,

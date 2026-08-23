@@ -214,27 +214,25 @@ function patchInventoryProjectedUi() {
   modalBody?.querySelectorAll("[data-inventory-select]").forEach(slot => {
     const itemId = slot.dataset.inventoryItem || "";
     const count = getProjectedBagItemCount(itemId);
-    const copyIndex = Math.max(0, Math.floor(Number(slot.dataset.inventoryCopyIndex) || 0));
-    const reserved = count <= copyIndex;
-    slot.disabled = reserved;
-    slot.classList.toggle("pending", reserved);
+    const pending = getInstantPendingItemDelta(itemId) < 0;
+    setTextIfChanged(slot.querySelector("[data-inventory-quantity]"), `x${formatNumber(count)}`);
+    slot.disabled = count < 1;
+    slot.classList.toggle("pending", pending);
+    slot.setAttribute("aria-label", `${slot.dataset.inventoryLabel || itemId}, ${formatNumber(count)} owned`);
   });
   const useButton = modalBody?.querySelector("[data-inventory-use]");
   if (!useButton) return;
   const itemId = useButton.dataset.inventoryUse || "";
   const item = getShopItemById(itemId);
   const count = getProjectedBagItemCount(itemId);
-  const selectedSlot = modalBody.querySelector('.inventory-slot[aria-pressed="true"]');
-  const selectedCopyIndex = Math.max(0, Math.floor(Number(selectedSlot?.dataset.inventoryCopyIndex) || 0));
-  const reserved = Boolean(selectedSlot) && count <= selectedCopyIndex;
   setTextIfChanged(modalBody.querySelector("[data-inventory-owned]"), `Owned: ${formatNumber(count)}`);
   const projectedExpiresAtMs = getProjectedItemEffectExpiresAtMs(item);
   const effectLine = modalBody.querySelector("[data-inventory-active]");
   if (effectLine && projectedExpiresAtMs > Date.now()) {
     setTextIfChanged(effectLine, `Active: ${formatDuration(Math.ceil((projectedExpiresAtMs - Date.now()) / 1000))}`);
   }
-  useButton.disabled = count < 1 || reserved || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
-  useButton.classList.toggle("pending", reserved);
+  useButton.disabled = count < 1 || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
+  useButton.classList.toggle("pending", getInstantPendingItemDelta(itemId) < 0);
 }
 
 // The projected Bag renderer lives with its queued item-action reconciliation.
@@ -254,28 +252,40 @@ function getInventoryGroups(category = selectedInventoryCategory) {
 
 function getInventoryPageModel(category = selectedInventoryCategory, requestedPage = selectedInventoryPage) {
   const groups = getInventoryGroups(category);
-  const totalEntries = groups.reduce((total, group) => Math.min(Number.MAX_SAFE_INTEGER, total + group.count), 0);
+  const totalEntries = groups.length;
   const pageCount = Math.max(1, Math.ceil(totalEntries / INVENTORY_SLOT_COUNT));
   const page = Math.max(0, Math.min(pageCount - 1, Math.floor(Number(requestedPage) || 0)));
   const start = page * INVENTORY_SLOT_COUNT;
-  const end = Math.min(totalEntries, start + INVENTORY_SLOT_COUNT);
-  const entries = [];
-  let cursor = 0;
-  groups.forEach(group => {
-    const groupEnd = cursor + group.count;
-    for (let index = Math.max(start, cursor); index < Math.min(end, groupEnd); index += 1) {
-      const copyOrdinal = index - cursor + 1;
-      entries.push({
-        ...group,
-        count: 1,
-        ownedCount: group.count,
-        copyOrdinal,
-        entryKey: `${group.id}:copy-${copyOrdinal}`,
-      });
-    }
-    cursor = groupEnd;
-  });
+  const entries = groups.slice(start, start + INVENTORY_SLOT_COUNT).map(group => ({
+    ...group,
+    ownedCount: group.count,
+    entryKey: group.id,
+  }));
   return { category, entries, totalEntries, page, pageCount };
+}
+
+function reconcileInventorySelectionAfterCountChange(itemId = selectedInventoryItemId) {
+  const normalizedItemId = String(itemId || "");
+  if (!normalizedItemId || selectedInventoryItemId !== normalizedItemId) return false;
+  if (getProjectedBagItemCount(normalizedItemId) > 0) {
+    selectedInventoryEntryKey = normalizedItemId;
+    return false;
+  }
+  const orderedDefinitions = [
+    ...(COMMON_GEAR ? [COMMON_GEAR_BOX_ITEM] : []),
+    ...SHOP_ITEMS,
+  ].filter(item => selectedInventoryCategory === "all" || item.bagCategory === selectedInventoryCategory);
+  const removedIndex = orderedDefinitions.findIndex(item => item.id === normalizedItemId);
+  const ownedGroups = getInventoryGroups(selectedInventoryCategory);
+  const fallback = ownedGroups.find(group => orderedDefinitions.findIndex(item => item.id === group.id) > removedIndex)
+    || [...ownedGroups].reverse().find(group => orderedDefinitions.findIndex(item => item.id === group.id) < removedIndex)
+    || null;
+  selectedInventoryItemId = fallback?.id || "";
+  selectedInventoryEntryKey = fallback?.id || "";
+  selectedInventoryPage = fallback
+    ? Math.floor(ownedGroups.findIndex(group => group.id === fallback.id) / INVENTORY_SLOT_COUNT)
+    : 0;
+  return true;
 }
 
 function bindInventoryCategoryControls() {
@@ -305,9 +315,9 @@ function bindInventoryCategoryControls() {
 
 function renderInventorySlot(entry, selectedEntryKey = "") {
   const selected = entry.entryKey === selectedEntryKey;
-  const copyText = entry.ownedCount > 1 ? `, copy ${formatNumber(entry.copyOrdinal)} of ${formatNumber(entry.ownedCount)}` : "";
   return `
-    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.entryKey)}" data-inventory-item="${escapeHtml(entry.id)}" data-inventory-copy-index="${entry.copyOrdinal - 1}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(entry.label + copyText)}">
+    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.entryKey)}" data-inventory-item="${escapeHtml(entry.id)}" data-inventory-label="${escapeHtml(entry.label)}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(`${entry.label}, ${formatNumber(entry.ownedCount)} owned`)}">
+      <span class="inventory-slot-count" data-inventory-quantity aria-hidden="true">x${formatNumber(entry.ownedCount)}</span>
       <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
     </button>
@@ -723,9 +733,8 @@ function useInventoryItem(itemId) {
   if (usesServerEconomyAuthority()) {
     const queued = enqueueInstantEconomyAction({ type: "item", key: item.id, itemId: item.id, quantity: 1 });
     if (queued && modal?.open && modal.classList.contains("inventory-modal")) {
-      selectedInventoryItemId = "";
-      selectedInventoryEntryKey = "";
-      showInventoryModal();
+      if (reconcileInventorySelectionAfterCountChange(item.id)) showInventoryModal();
+      else patchInventoryProjectedUi();
     }
     return queued;
   }

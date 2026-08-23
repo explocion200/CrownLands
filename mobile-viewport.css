@@ -264,6 +264,14 @@
     padding: .16rem .12rem .12rem;
   }
 
+  .modal.inventory-modal .inventory-slot-count {
+    top: .12rem;
+    right: .12rem;
+    max-width: calc(100% - .24rem);
+    padding: .1rem .26rem .08rem;
+    font-size: clamp(.52rem, 1.4vw, .62rem);
+  }
+
   .modal.inventory-modal .inventory-slot-icon {
     width: clamp(32px, 11vh, 46px);
     height: clamp(32px, 11vh, 46px);

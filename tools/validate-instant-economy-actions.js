@@ -107,7 +107,12 @@ setImmediate(() => {
     state: { gold: 0, shopItems: { shield: 1 } },
     selectedSourceId: "",
     selectedInventoryItemId: "shield",
-    selectedInventoryEntryKey: "shield:copy-1",
+    selectedInventoryEntryKey: "shield",
+    selectedInventoryCategory: "all",
+    selectedInventoryPage: 0,
+    COMMON_GEAR: null,
+    COMMON_GEAR_BOX_ITEM: { id: "common_gear_box", bagCategory: "utility" },
+    INVENTORY_SLOT_COUNT: 8,
     verifiedRealmInfo: { capabilities: { instantEconomyActionsVersion: 1 } },
     skillPresetMarkupSignature: "",
     window: {
@@ -152,12 +157,47 @@ setImmediate(() => {
   vm.createContext(failedItemSandbox);
   vm.runInContext(controller, failedItemSandbox, { filename: "instant-economy-actions.js" });
   assert.equal(vm.runInContext('useInventoryItem("shield")', failedItemSandbox), true);
-  assert.equal(failedItemSandbox.selectedInventoryEntryKey, "", "An accepted item action must clear its individual presentation key immediately.");
+  assert.equal(failedItemSandbox.selectedInventoryEntryKey, "", "Using the final projected copy must clear its now-empty stack selection immediately.");
   assert.equal(failedItemBagRebuilds, 1, "An accepted item action must rebuild the projected Bag once.");
   failedItemTimers.shift()();
   setImmediate(() => {
     assert.equal(failedItemBagRebuilds, 2, "A rejected item action must rebuild the Bag and restore its authoritative card count.");
     assert.equal(vm.runInContext('getProjectedInventoryCount("shield")', failedItemSandbox), 1, "Rejected item inventory did not roll back to its authoritative count.");
+
+    const rapidTimers = [];
+    let rapidBagRebuilds = 0;
+    const rapidSandbox = {
+      ...failedItemSandbox,
+      state: { gold: 0, shopItems: { drums: 5 } },
+      selectedInventoryItemId: "drums",
+      selectedInventoryEntryKey: "drums",
+      selectedInventoryCategory: "all",
+      selectedInventoryPage: 0,
+      SHOP_ITEMS: [{ id: "drums", label: "War Drums", cost: 0, bagCategory: "boosts" }],
+      window: {
+        setTimeout(callback) { rapidTimers.push(callback); return rapidTimers.length; },
+        clearTimeout() {},
+      },
+      getShopItemById: id => id === "drums" ? { id, label: "War Drums", cost: 0, bagCategory: "boosts" } : null,
+      ensureShopItems() { return rapidSandbox.state.shopItems; },
+      isStackableTimedInventoryItem: item => item?.id === "drums",
+      rejectGameAction() {},
+      showInventoryModal() { rapidBagRebuilds += 1; },
+    };
+    vm.createContext(rapidSandbox);
+    vm.runInContext(controller, rapidSandbox, { filename: "instant-economy-actions.js" });
+    for (let index = 0; index < 5; index += 1) {
+      assert.equal(vm.runInContext('useInventoryItem("drums")', rapidSandbox), true, `Rapid projected use ${index + 1} was not accepted.`);
+      assert.equal(vm.runInContext('getProjectedInventoryCount("drums")', rapidSandbox), 4 - index, "Each rapid use must decrement the visible stack by exactly one.");
+    }
+    assert.equal(vm.runInContext('useInventoryItem("drums")', rapidSandbox), false, "A rapid use beyond the projected stack must be rejected.");
+    assert.equal(vm.runInContext("instantEconomyActions.length", rapidSandbox), 1, "Adjacent rapid uses must remain one serialized queue entry.");
+    assert.equal(vm.runInContext("instantEconomyActions[0].quantity", rapidSandbox), 5, "The rapid-use queue lost or duplicated a tap.");
+    assert.equal(rapidBagRebuilds, 1, "Only the x1 to x0 transition should rebuild the Bag and move selection.");
+    vm.runInContext("clearInstantEconomyActions()", rapidSandbox);
+    assert.equal(vm.runInContext('getProjectedInventoryCount("drums")', rapidSandbox), 5, "Clearing an unconfirmed queue must roll the stack back to x5.");
+    rapidSandbox.state.shopItems.drums = 4;
+    assert.equal(vm.runInContext('getProjectedInventoryCount("drums")', rapidSandbox), 4, "A confirmed one-item settlement must remain at x4.");
     console.log("Instant economy action validation passed.");
   });
 });
