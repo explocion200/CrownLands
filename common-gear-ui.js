@@ -773,23 +773,23 @@ function getCommonGearBoxShopPrice() {
   return Math.max(0, Math.floor(Number(COMMON_GEAR?.SHOP_PRICE_GOLD) || 1_000_000_000));
 }
 
-function renderCommonGearShopItem() {
+function renderCommonGearShopItem(selectedItemId = "") {
   if (!COMMON_GEAR) return "";
   const purchase = state?.gear?.shopPurchase || {};
   const purchasedToday = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
   const price = getCommonGearBoxShopPrice();
-  return `<article class="shop-item common-gear-shop-item" data-shop-item="common_gear_box">
+  const selected = selectedItemId === COMMON_GEAR_BOX_ITEM.id;
+  return `<button class="shop-item common-gear-shop-item ${selected ? "selected" : ""}" data-shop-item="common_gear_box" data-shop-select="common_gear_box" type="button" role="option" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
     <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
-    <div class="shop-item-copy"><strong>Common Gear Box</strong><span>${formatNumber(price)} gold</span>
-      <small>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>Limit: 1 per UTC day · fixed price</small></div>
-    <button class="shop-buy-btn" data-buy-common-gear-box type="button" ${purchasedToday || getProjectedGold() < price ? "disabled" : ""}>${purchasedToday ? "Purchased" : "Buy"}</button>
-  </article>`;
+    <div class="shop-item-copy"><strong>Common Gear Box</strong><span data-shop-card-price>${formatNumber(price)} gold</span>
+      <small data-shop-owned>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>${purchasedToday ? "Purchased today · resets at 00:00 UTC" : "Limit: 1 per UTC day · fixed price"}</small></div>
+  </button>`;
 }
 
 async function buyCommonGearBox() {
   const api = getOnlineApi();
   if (!api?.purchaseCommonGearBox) return showToast("Connect to the realm to purchase server-secured Gear Boxes.");
-  const button = modalBody.querySelector("[data-buy-common-gear-box]");
+  const button = modalBody.querySelector('[data-shop-purchase-selected="common_gear_box"]');
   if (button) button.disabled = true;
   try {
     const result = await api.purchaseCommonGearBox();

@@ -300,6 +300,15 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const SHOP_MINIMUM_PRICE_GOLD = 50;
+const SHOP_PRICE_HOURS = Object.freeze({
+  [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
+  [RECALL_HORN_ITEM_ID]: 1.25,
+  [WAR_DRUMS_ITEM_ID]: 1.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 2,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+});
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const ALLIED_TARGET_RETURN_REASON = "target_became_clan_ally";
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
@@ -9454,7 +9463,7 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     clanGiftEligible,
     remainingHours: cycle.remainingHours,
     upgradeTargets: simulateDailyMissionUpgradeTargets(economy, cycle.remainingHours),
-    itemCosts: Object.fromEntries(Object.entries(SHOP_ITEMS).map(([itemId, item]) => [itemId, item.cost])),
+    itemCosts: Object.fromEntries(Object.keys(SHOP_ITEMS).map(itemId => [itemId, getShopItemPriceForEconomy(economy, itemId)])),
   };
 }
 
@@ -12254,9 +12263,13 @@ function createEconomyResponse(economy = null, overrides = {}) {
     harvestNextSpawnAtMs,
     harvestNextBonusType,
     cityUpdates,
+    shopPricing: shopPricingOverride,
     globalStats: _globalStats,
     ...meta
   } = overrides;
+  const shopPricing = shopPricingOverride && typeof shopPricingOverride === "object"
+    ? shopPricingOverride
+    : getShopPricingContext(economy);
   const resolvedHarvestBonuses = harvestBonuses !== undefined
     ? harvestBonuses
     : economy.profileAfter.harvestBonuses;
@@ -12289,6 +12302,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
     mainCityChangedAtMs: timestampToMs(economy.profileAfter.mainCityChangedAtMs),
     lastCityRelinquishedAtMs: timestampToMs(economy.profileAfter.lastCityRelinquishedAtMs),
+    shopPricing,
   };
   if (globalStats) currentUser.globalStats = globalStats;
   if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
@@ -12314,6 +12328,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     ok: true,
     currentUser,
     ...(globalStats ? { globalStats } : {}),
+    shopPricing,
     cityUpdates: cityUpdates || economy.cityUpdates,
     production: economy.production,
     ...meta,
@@ -12421,6 +12436,53 @@ function getRewardedAdBaseRates(economy = null) {
     totals.troopsPerHour += Math.max(0, safeNumber(stats.baseTroopProductionPerHour, 0));
     return totals;
   }, { goldPerHour: 0, troopsPerHour: 0 });
+}
+
+function roundToNiceShopPrice(value = 0) {
+  const amount = Math.max(0, safeNumber(value, 0));
+  if (amount <= 0) return SHOP_MINIMUM_PRICE_GOLD;
+  const magnitude = Math.floor(Math.log10(amount));
+  const step = 10 ** Math.max(1, magnitude - 1);
+  return Math.max(SHOP_MINIMUM_PRICE_GOLD, Math.round(amount / step) * step);
+}
+
+function getShopCityPremium(cityCount = 0) {
+  return 1 + Math.min(Math.max(0, Math.floor(safeNumber(cityCount, 0))) / 500, 0.35);
+}
+
+function calculateScalableShopPrice(itemId = "", rawBaseGoldPerHour = 0, cityCount = 0) {
+  const priceHours = SHOP_PRICE_HOURS[safeString(itemId, 64)];
+  if (!Number.isFinite(priceHours)) return 0;
+  return roundToNiceShopPrice(
+    Math.max(0, safeNumber(rawBaseGoldPerHour, 0)) * priceHours * getShopCityPremium(cityCount)
+  );
+}
+
+function getShopPricingContext(economy = null) {
+  const rates = getRewardedAdBaseRates(economy);
+  const cityCount = (economy?.cityEntries || []).reduce((count, entry) => {
+    const city = entry?.city || {};
+    if (isStronghold(city) || getOwnerUid(city) !== economy?.uid) return count;
+    return count + 1;
+  }, 0);
+  const rawBaseGoldPerHour = Math.max(0, Math.floor(safeNumber(rates.goldPerHour, 0)));
+  return {
+    rawBaseGoldPerHour,
+    cityCount,
+    cityPremium: getShopCityPremium(cityCount),
+  };
+}
+
+function getShopItemPriceForEconomy(economy = null, itemId = "") {
+  const normalizedItemId = safeString(itemId, 64);
+  const item = SHOP_ITEMS[normalizedItemId];
+  if (!item) return 0;
+  const context = getShopPricingContext(economy);
+  return calculateScalableShopPrice(
+    normalizedItemId,
+    context.rawBaseGoldPerHour,
+    context.cityCount
+  ) || item.cost;
 }
 
 function getRewardedAdRewardAmount(baseRatePerHour = 0) {
@@ -15481,16 +15543,16 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
   if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1 || requestedQuantity > MAX_ITEM_DAILY_PURCHASE_LIMIT) {
     throw new HttpsError("invalid-argument", `Purchase quantity must be a whole number from 1 to ${MAX_ITEM_DAILY_PURCHASE_LIMIT}.`);
   }
-  if (Number.isFinite(Number(data.cost)) && Math.floor(safeNumber(data.cost, 0)) !== item.cost) {
-    throw new HttpsError("failed-precondition", "Shop item price changed. Reload Crownlands and try again.");
-  }
-
   return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold));
     let gold = Math.max(0, Math.floor(goldFloat));
-    const totalCost = item.cost * requestedQuantity;
+    const unitPrice = getShopItemPriceForEconomy(economy, itemId);
+    if (Number.isFinite(Number(data.cost)) && Math.floor(safeNumber(data.cost, 0)) !== unitPrice) {
+      throw new HttpsError("failed-precondition", "Shop item price changed. Refresh the Shop and try again.");
+    }
+    const totalCost = unitPrice * requestedQuantity;
     if (!Number.isSafeInteger(totalCost) || gold < totalCost) {
       throw new HttpsError("failed-precondition", `${requestedQuantity.toLocaleString()} ${item.label} cost ${totalCost.toLocaleString()} gold.`);
     }
@@ -15532,7 +15594,9 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
       shopItems,
       itemPurchaseCooldowns,
       purchasedQuantity: requestedQuantity,
+      unitPrice,
       spentGold: totalCost,
+      shopPricing: getShopPricingContext(economy),
     });
   });
 });

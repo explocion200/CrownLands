@@ -8,7 +8,7 @@ const gameSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
+const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}\n${fs.readFileSync(path.join(root, "crownlands-palette.css"), "utf8")}`;
 const serviceWorkerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const adsConfigSource = fs.readFileSync(path.join(root, "ads-config.js"), "utf8");
 const privacySource = fs.readFileSync(path.join(root, "privacy.html"), "utf8");
@@ -165,9 +165,11 @@ assert.doesNotMatch(rewardRenderer, /City levels only/);
 assert.doesNotMatch(gameSource, /Ad Manager setup required/);
 
 const paidRenderer = extractFunction(gameSource, "renderShopItem");
-assert.match(paidRenderer, /data-shop-buy/);
-assert.match(paidRenderer, /item\.cost[\s\S]*gold/);
+assert.match(paidRenderer, /data-shop-select/);
+assert.match(paidRenderer, /getShopItemPrice\(item\)[\s\S]*data-shop-card-price/);
+assert.doesNotMatch(paidRenderer, /data-shop-buy|<button[\s\S]*?>Buy<\/button>/);
 assert.doesNotMatch(paidRenderer, /data-rewarded-ad-watch/);
+assert.match(gameSource, /function renderShopPurchaseBar[\s\S]*data-shop-selected-price[\s\S]*data-shop-selected-owned[\s\S]*data-shop-purchase-selected/);
 
 const rewardedFlow = extractFunction(gameSource, "requestGoogleRewardedAd");
 assert.match(rewardedFlow, /OutOfPageFormat\.REWARDED/);

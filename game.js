@@ -230,6 +230,15 @@ const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
 const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
+const SHOP_MINIMUM_PRICE_GOLD = 50;
+const SHOP_PRICE_HOURS = Object.freeze({
+  [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
+  [RECALL_HORN_ITEM_ID]: 1.25,
+  [WAR_DRUMS_ITEM_ID]: 1.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 2,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+});
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
 const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 3;
@@ -1987,6 +1996,8 @@ let serverCityRelinquishInFlightIds = new Set();
 let cityRelinquishCountdownTimer = 0;
 let pendingHarvestBonusIds = new Set();
 let selectedInventoryItemId = "";
+let selectedShopItemId = "";
+let authoritativeShopPricing = null;
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let deployedUpdateAvailableBuildId = "";
@@ -10823,6 +10834,13 @@ function applyServerArmyResult(result = null, options = {}) {
 
 function applyServerEconomyResult(result = null, options = {}) {
   if (!result || typeof result !== "object") return false;
+  const nextShopPricing = result.shopPricing || result.currentUser?.shopPricing;
+  if (nextShopPricing && typeof nextShopPricing === "object") {
+    authoritativeShopPricing = {
+      rawBaseGoldPerHour: Math.max(0, Math.floor(Number(nextShopPricing.rawBaseGoldPerHour) || 0)),
+      cityCount: Math.max(0, Math.floor(Number(nextShopPricing.cityCount) || 0)),
+    };
+  }
   let changed = false;
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (result.currentUser) {
@@ -19166,6 +19184,64 @@ function getHarvestBonusBaseRates() {
     rates.troopsPerHour += Math.max(0, Number(stats.baseTroopProductionPerHour) || 0);
     return rates;
   }, { goldPerHour: 0, troopsPerHour: 0 });
+}
+
+function roundToNiceShopPrice(value = 0) {
+  const amount = Math.max(0, Number(value) || 0);
+  if (amount <= 0) return 0;
+  const magnitude = Math.pow(10, Math.max(1, Math.floor(Math.log10(amount)) - 1));
+  return Math.max(0, Math.round(amount / magnitude) * magnitude);
+}
+
+function getShopCityPremium(cityCount = 0) {
+  return 1 + Math.min(Math.max(0, Math.floor(Number(cityCount) || 0)) / 500, 0.35);
+}
+
+function calculateScalableShopPrice(itemId = "", rawBaseGoldPerHour = 0, cityCount = 0, fallbackCost = 0) {
+  const priceHours = SHOP_PRICE_HOURS[String(itemId || "")];
+  if (!Number.isFinite(priceHours)) return Math.max(0, Math.floor(Number(fallbackCost) || 0));
+  const rawRate = Math.max(0, Number(rawBaseGoldPerHour) || 0);
+  const price = roundToNiceShopPrice(rawRate * priceHours * getShopCityPremium(cityCount));
+  return Math.max(SHOP_MINIMUM_PRICE_GOLD, price);
+}
+
+function getShopPricingContext() {
+  if (usesServerEconomyAuthority() && authoritativeShopPricing && typeof authoritativeShopPricing === "object") {
+    return {
+      rawBaseGoldPerHour: Math.max(0, Math.floor(Number(authoritativeShopPricing.rawBaseGoldPerHour) || 0)),
+      cityCount: Math.max(0, Math.floor(Number(authoritativeShopPricing.cityCount) || 0)),
+    };
+  }
+  const stats = getGlobalStatsSnapshot();
+  if (usesServerEconomyAuthority() && hasUsableGlobalStats(stats)) {
+    return {
+      rawBaseGoldPerHour: Math.max(0, Math.floor(Number(stats.baseGoldPerHour) || 0)),
+      cityCount: Math.max(0, Math.floor(Number(stats.totalCities) || 0)),
+    };
+  }
+  const baseRates = getHarvestBonusBaseRates();
+  return {
+    rawBaseGoldPerHour: Math.max(0, Math.floor(Number(baseRates.goldPerHour) || 0)),
+    cityCount: playerRegularCities().length,
+  };
+}
+
+function getShopItemPrice(itemOrId = "") {
+  const item = typeof itemOrId === "object" && itemOrId
+    ? itemOrId
+    : getShopItemById(itemOrId);
+  if (!item) return 0;
+  const pricing = getShopPricingContext();
+  return calculateScalableShopPrice(item.id, pricing.rawBaseGoldPerHour, pricing.cityCount, item.cost);
+}
+
+function getRoyalTaxDecreeBoostValue() {
+  const { rawBaseGoldPerHour } = getShopPricingContext();
+  return Math.max(0, Math.floor(
+    rawBaseGoldPerHour
+      * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
+      * ROYAL_TAX_DECREE_DURATION_MS / 3_600_000
+  ));
 }
 
 function getHarvestBonusGoldReward() {
@@ -31617,35 +31693,154 @@ function renderItemIcon(item, imageClass = "") {
   return `<span>${escapeHtml(label.slice(0, 1))}</span>`;
 }
 
-function renderShopItem(item) {
+function renderShopItem(item, selectedItemId = "") {
   const owned = getProjectedInventoryCount(item.id);
+  const price = getShopItemPrice(item);
   const cooldownText = getItemPurchaseCooldownText(item.id);
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
   const purchaseCount = getProjectedItemPurchaseCount(item.id);
-  const canBuy = state && !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit) && getProjectedGold() >= item.cost;
-  const buyLabel = cooldownText ? "Cooldown" : "Buy";
+  const selected = selectedItemId === item.id;
+  const taxValue = item.id === ROYAL_TAX_DECREE_ITEM_ID
+    ? `<small class="shop-item-value">30m value: ${formatNumber(getRoyalTaxDecreeBoostValue())} extra gold</small>`
+    : "";
   return `
-    <article class="shop-item" data-shop-item="${escapeHtml(item.id)}">
+    <button class="shop-item ${selected ? "selected" : ""}" data-shop-item="${escapeHtml(item.id)}" data-shop-select="${escapeHtml(item.id)}" type="button" role="option" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
         ${renderItemIcon(item, "shop-item-image")}
       </div>
       <div class="shop-item-copy">
         <strong>${escapeHtml(item.label)}</strong>
-        <span>${formatNumber(item.cost)} gold</span>
+        <span data-shop-card-price>${formatNumber(price)} gold</span>
         <small data-shop-owned>Owned: ${formatNumber(owned)}</small>
         ${purchaseLimit > 0 ? `<small class="shop-item-purchase-limit" data-shop-purchase-count>Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)</small>` : ""}
         ${cooldownText ? `<small class="shop-item-cooldown">UTC reset in ${escapeHtml(cooldownText)}</small>` : ""}
+        ${taxValue}
         <small>${escapeHtml(item.description)}</small>
       </div>
-      <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>${buyLabel}</button>
-    </article>
+    </button>
   `;
+}
+
+function getSelectableShopItemIds() {
+  return [
+    ...(COMMON_GEAR ? [COMMON_GEAR_BOX_ITEM.id] : []),
+    ...SHOP_ITEMS.map(item => item.id),
+  ];
+}
+
+function getShopPurchaseState(itemId = selectedShopItemId) {
+  const id = String(itemId || "");
+  if (id === COMMON_GEAR_BOX_ITEM.id && COMMON_GEAR) {
+    const purchase = state?.gear?.shopPurchase || {};
+    const unavailable = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
+    const price = getCommonGearBoxShopPrice();
+    const affordable = getProjectedGold() >= price;
+    return {
+      id,
+      label: COMMON_GEAR_BOX_ITEM.label,
+      price,
+      owned: Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)),
+      canBuy: !unavailable && affordable,
+      buttonLabel: unavailable ? "Purchased" : affordable ? "Buy" : "Not Enough Gold",
+      status: unavailable ? "Available again after the 00:00 UTC reset." : "Fixed price · one purchase per UTC day.",
+    };
+  }
+
+  const item = getShopItemById(id) || SHOP_ITEMS[0];
+  if (!item) return null;
+  const price = getShopItemPrice(item);
+  const owned = getProjectedInventoryCount(item.id);
+  const purchaseLimit = getItemDailyPurchaseLimit(item.id);
+  const purchaseCount = getProjectedItemPurchaseCount(item.id);
+  const cooldownText = getItemPurchaseCooldownText(item.id);
+  const pending = getInstantPendingItemDelta(item.id) > 0;
+  const affordable = getProjectedGold() >= price;
+  const available = !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit);
+  return {
+    id: item.id,
+    label: item.label,
+    price,
+    owned,
+    canBuy: !pending && available && affordable,
+    buttonLabel: pending ? "Queued" : !available ? "Unavailable" : affordable ? "Buy" : "Not Enough Gold",
+    status: cooldownText
+      ? `UTC purchase limit reached · resets in ${cooldownText}.`
+      : `Scales from raw base gold production and ${formatNumber(getShopPricingContext().cityCount)} regular ${getShopPricingContext().cityCount === 1 ? "city" : "cities"}.`,
+  };
+}
+
+function renderShopPurchaseBar(itemId = selectedShopItemId) {
+  const purchase = getShopPurchaseState(itemId);
+  if (!purchase) return "";
+  return `
+    <section class="shop-purchase-bar" data-shop-purchase-bar data-selected-shop-item="${escapeHtml(purchase.id)}" aria-live="polite">
+      <div class="shop-purchase-selected"><span>Selected item</span><strong>${escapeHtml(purchase.label)}</strong><small>${escapeHtml(purchase.status)}</small></div>
+      <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
+      <div class="shop-purchase-stat"><span>Owned</span><strong data-shop-selected-owned>${formatNumber(purchase.owned)}</strong></div>
+      <button class="shop-buy-btn shop-purchase-buy" data-shop-purchase-selected="${escapeHtml(purchase.id)}" type="button" ${purchase.canBuy ? "" : "disabled"}>${escapeHtml(purchase.buttonLabel)}</button>
+    </section>`;
+}
+
+function bindShopPurchaseBar() {
+  modalBody.querySelector("[data-shop-purchase-selected]")?.addEventListener("click", event => {
+    const itemId = event.currentTarget.dataset.shopPurchaseSelected || "";
+    if (itemId === COMMON_GEAR_BOX_ITEM.id) void buyCommonGearBox();
+    else buyShopItem(itemId);
+  });
+}
+
+function patchShopPurchaseBar() {
+  const current = modalBody?.querySelector("[data-shop-purchase-bar]");
+  if (!current) return;
+  const holder = document.createElement("div");
+  holder.innerHTML = renderShopPurchaseBar(selectedShopItemId).trim();
+  const replacement = holder.firstElementChild;
+  if (!replacement) return;
+  current.replaceWith(replacement);
+  bindShopPurchaseBar();
+}
+
+function selectShopItem(itemId = "", { focus = false } = {}) {
+  const ids = getSelectableShopItemIds();
+  if (!ids.includes(itemId)) return;
+  selectedShopItemId = itemId;
+  modalBody.querySelectorAll("[data-shop-select]").forEach(card => {
+    const selected = card.dataset.shopSelect === itemId;
+    card.classList.toggle("selected", selected);
+    card.setAttribute("aria-selected", String(selected));
+    card.tabIndex = selected ? 0 : -1;
+    if (selected) {
+      if (focus) card.focus({ preventScroll: true });
+      card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  });
+  patchShopPurchaseBar();
+}
+
+function bindShopItemSelection() {
+  const cards = [...modalBody.querySelectorAll("[data-shop-select]")];
+  cards.forEach((card, index) => {
+    card.addEventListener("click", () => selectShopItem(card.dataset.shopSelect || ""));
+    card.addEventListener("keydown", event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? cards.length - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + cards.length) % cards.length;
+      const next = cards[nextIndex];
+      if (next) selectShopItem(next.dataset.shopSelect || "", { focus: true });
+    });
+  });
 }
 
 /* Common Gear shop actions lives in common-gear-ui.js. */
 
 function renderShopModal() {
   if (!state) return;
+  const selectableIds = getSelectableShopItemIds();
+  if (!selectableIds.includes(selectedShopItemId)) selectedShopItemId = selectableIds[0] || "";
   modal.classList.remove("rewarded-ad-confirmation-modal");
   modalTitle.textContent = "Shop";
   modalBody.innerHTML = `
@@ -31666,19 +31861,18 @@ function renderShopModal() {
           ${REWARDED_AD_ITEMS.map(renderRewardedAdShopItem).join("")}
         </div>
       </section>
-      <div class="shop-items">
-        ${renderCommonGearShopItem()}
-        ${SHOP_ITEMS.map(renderShopItem).join("")}
+      <div class="shop-items" role="listbox" aria-label="Shop items" tabindex="-1">
+        ${renderCommonGearShopItem(selectedShopItemId)}
+        ${SHOP_ITEMS.map(item => renderShopItem(item, selectedShopItemId)).join("")}
       </div>
+      ${renderShopPurchaseBar(selectedShopItemId)}
     </div>
   `;
   modalBody.querySelectorAll("[data-rewarded-ad-watch]").forEach(button => {
     button.addEventListener("click", event => startRewardedAdBoost(button.dataset.rewardedAdWatch, event.currentTarget));
   });
-  modalBody.querySelectorAll("[data-shop-buy]").forEach(button => {
-    button.addEventListener("click", () => buyShopItem(button.dataset.shopBuy));
-  });
-  modalBody.querySelector("[data-buy-common-gear-box]")?.addEventListener("click", buyCommonGearBox);
+  bindShopItemSelection();
+  bindShopPurchaseBar();
 }
 
 function showShopModal() {
