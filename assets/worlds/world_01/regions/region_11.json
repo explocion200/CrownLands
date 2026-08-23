@@ -898,7 +898,20 @@
         "notes": "Connects to Graywood Hollow"
       }
     ],
-    "south": [],
+    "south": [
+      {
+        "id": "south_road",
+        "side": "south",
+        "start": 0.569,
+        "end": 0.729,
+        "type": "road",
+        "connectsToRegionId": "region_16",
+        "arrowXNorm": 0.649,
+        "arrowYNorm": 0.88,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 16"
+      }
+    ],
     "east": [
       {
         "id": "east_road",

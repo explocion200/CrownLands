@@ -21,7 +21,7 @@
   const items = [
     {
       id: "connected-regions",
-      title: "15 Connected Regions",
+      title: "20 Connected Regions",
       status: "Live",
       category: "World",
       phase: "playable",
@@ -257,7 +257,7 @@
       category: "World",
       phase: "development",
       shortDescription: "New maps will be able to spawn or be added as the connected realm grows.",
-      longDescription: "Crownlands currently has 15 connected regions. Dynamic world expansion is being built so new maps can spawn or be added when player population, world growth, or gameplay demand requires more space.",
+      longDescription: "Crownlands currently has 20 connected regions. Dynamic world expansion is being built so new maps can spawn or be added when player population, world growth, or gameplay demand requires more space.",
       icon: "&#10021;",
       sortOrder: 305,
     },

@@ -78,7 +78,7 @@ const supportSource = read("support.html");
 assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-6031755025291372"/);
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
 assert.match(indexSource, /class="login-game-info"/);
-assert.match(indexSource, /Build a kingdom across 15 connected regions/);
+assert.match(indexSource, /Build a kingdom across 20 connected regions/);
 assert.match(indexSource, /href="roadmap\.html"/);
 assert.match(indexSource, /name="robots" content="noindex, nofollow"/);
 assert.match(indexSource, /rel="canonical" href="https:\/\/playcrownlands\.com\/play\/"/);
@@ -87,14 +87,14 @@ assert.match(homeSource, /application\/ld\+json/);
 assert.match(homeSource, /data-kingdom-planner/);
 assert.match(homeSource, /<title>Crownlands — Medieval Browser Strategy Game<\/title>/);
 assert.match(homeSource, /Conquer cities\. March armies\. Rule the realm\./);
-for (const phrase of ["15", "Persistent", "Real-time", "City", "Clan", "Daily", "Achievements", "Gear"]) {
+for (const phrase of ["20", "Persistent", "Real-time", "City", "Clan", "Daily", "Achievements", "Gear"]) {
   assert.match(homeSource, new RegExp(`>${phrase}<`), `Homepage is missing the ${phrase} feature chip.`);
 }
 for (const pillar of ["Build cities", "Produce resources", "Scout rivals", "March armies", "Capture territory", "Join clans", "Contest objectives", "Develop a ruler"]) {
   assert.match(homeSource, new RegExp(pillar), `Homepage is missing the ${pillar} gameplay pillar.`);
 }
 assert.match(homeSource, /class="power-path"/);
-assert.match(homeSource, /Explore all 15 regions/);
+assert.match(homeSource, /Explore all 20 regions/);
 assert.match(homeSource, /Live foundations, active polish, and visible next steps/);
 assert.ok((homeSource.match(/Read the note -&gt;/g) || []).length >= 3, "Homepage needs three linked development notes.");
 assert.match(updatesSource, /data-patch-notes-feed/);
@@ -124,11 +124,11 @@ for (const page of publicPages) {
   }
 }
 
-assert.match(worldSource, /<title>Crownlands World — 15 Connected Regions<\/title>/);
+assert.match(worldSource, /<title>Crownlands World — 20 Connected Regions<\/title>/);
 assert.match(worldSource, /Capacity belongs to each region/);
 assert.match(worldSource, /Dynamic realm expansion/);
-assert.match(worldSource, /currently has 15 connected regions/);
-for (const region of ["Crownlands Heart", "West Marches", "East Reach", "North Frontier", "Southfields", "Graywood Hollow", "Greenrook Vale", "Lowroad Vale", "Stonebrook Farms", "Goldmere Plains", "Bandit Wastes", "Ironfall Hills", "Redbanner Fields", "Ashenfen March", "Relic Vale"]) {
+assert.match(worldSource, /currently has 20 connected regions/);
+for (const region of ["Crownlands Heart", "West Marches", "East Reach", "North Frontier", "Southfields", "Graywood Hollow", "Greenrook Vale", "Lowroad Vale", "Stonebrook Farms", "Goldmere Plains", "Bandit Wastes", "Ironfall Hills", "Redbanner Fields", "Ashenfen March", "Relic Vale", "Region 16", "Region 17", "Region 19", "Region 21", "Region 22"]) {
   assert.match(worldSource, new RegExp(region), `World page is missing ${region}.`);
 }
 assert.ok(visibleWordCount(worldSource) >= 650, "World page needs substantial original regional content.");
@@ -169,7 +169,7 @@ assert.match(roadmapSource, /Crownlands is in active development\. Roadmap items
 assert.match(roadmapSource, /id="roadmapSearch"[^>]*type="search"/);
 assert.match(roadmapSource, /id="statusFilters"/);
 assert.match(roadmapSource, /id="categoryFilters"/);
-assert.match(roadmapSource, /15 Regions Live/);
+assert.match(roadmapSource, /20 Regions Live/);
 assert.match(roadmapSource, /Dynamic Expansion In Development/);
 assert.doesNotMatch(roadmapSource, /Five Island|island game|island map|portal system/i);
 assert.ok((roadmapDataSource.match(/\bid:\s*"[a-z0-9-]+"/g) || []).length >= 32, "Roadmap data needs every approved public feature card.");

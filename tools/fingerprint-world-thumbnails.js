@@ -98,7 +98,7 @@ function removeStaleVersionedThumbnails(entries, { write }) {
 function fingerprintWorldThumbnails({ checkOnly = false } = {}) {
   const options = { write: !checkOnly };
   const entries = createThumbnailEntries(options);
-  if (entries.length !== 15) throw new Error(`Expected 15 source thumbnails, found ${entries.length}.`);
+  if (entries.length !== 20) throw new Error(`Expected 20 source thumbnails, found ${entries.length}.`);
   updateReferences(entries, options);
   writeManifest(entries, options);
   removeStaleVersionedThumbnails(entries, options);

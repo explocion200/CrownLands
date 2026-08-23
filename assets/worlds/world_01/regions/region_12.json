@@ -843,7 +843,20 @@
         "notes": "Connects to Greenrook Vale"
       }
     ],
-    "south": [],
+    "south": [
+      {
+        "id": "south_road",
+        "side": "south",
+        "start": 0.438,
+        "end": 0.598,
+        "type": "road",
+        "connectsToRegionId": "region_17",
+        "arrowXNorm": 0.518,
+        "arrowYNorm": 0.88,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 17"
+      }
+    ],
     "east": [
       {
         "id": "east_road",

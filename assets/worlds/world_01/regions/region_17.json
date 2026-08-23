@@ -1,0 +1,283 @@
+{
+  "id": "region_17",
+  "name": "Region 17",
+  "type": "midgame",
+  "gridX": -1,
+  "gridY": 4,
+  "width": 1448,
+  "height": 1086,
+  "imagePath": "assets/worlds/world_01/maps/versioned/region_17-2-1787455126756-ccf51fbd6d49.webp",
+  "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_17-thumb-5488cca486a1.webp",
+  "cityCapacity": 50,
+  "regionPath": "assets/worlds/world_01/regions/region_17.json",
+  "cities": [
+    {
+      "id": "region_17_city_001",
+      "name": "Emberden Cross",
+      "regionId": "region_17",
+      "xNorm": 0.597,
+      "yNorm": 0.804,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_002",
+      "name": "Blackmere",
+      "regionId": "region_17",
+      "xNorm": 0.666,
+      "yNorm": 0.69,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_003",
+      "name": "Valereach",
+      "regionId": "region_17",
+      "xNorm": 0.753,
+      "yNorm": 0.637,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_004",
+      "name": "Kingsfall",
+      "regionId": "region_17",
+      "xNorm": 0.809,
+      "yNorm": 0.464,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_005",
+      "name": "Fairbury",
+      "regionId": "region_17",
+      "xNorm": 0.536,
+      "yNorm": 0.662,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_006",
+      "name": "Briarworth Moor",
+      "regionId": "region_17",
+      "xNorm": 0.215,
+      "yNorm": 0.618,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_007",
+      "name": "Whitebrook",
+      "regionId": "region_17",
+      "xNorm": 0.309,
+      "yNorm": 0.571,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_008",
+      "name": "Lowhurst",
+      "regionId": "region_17",
+      "xNorm": 0.201,
+      "yNorm": 0.419,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_009",
+      "name": "Fenmarket",
+      "regionId": "region_17",
+      "xNorm": 0.283,
+      "yNorm": 0.38,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_010",
+      "name": "Brindlewick",
+      "regionId": "region_17",
+      "xNorm": 0.486,
+      "yNorm": 0.389,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_011",
+      "name": "Wolfcross Cross",
+      "regionId": "region_17",
+      "xNorm": 0.742,
+      "yNorm": 0.348,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_012",
+      "name": "Oakwatch",
+      "regionId": "region_17",
+      "xNorm": 0.784,
+      "yNorm": 0.191,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_013",
+      "name": "Flintham",
+      "regionId": "region_17",
+      "xNorm": 0.634,
+      "yNorm": 0.414,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_014",
+      "name": "Brookden",
+      "regionId": "region_17",
+      "xNorm": 0.552,
+      "yNorm": 0.476,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_015",
+      "name": "Wyvernstead",
+      "regionId": "region_17",
+      "xNorm": 0.427,
+      "yNorm": 0.559,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_016",
+      "name": "Ravenreach Moor",
+      "regionId": "region_17",
+      "xNorm": 0.386,
+      "yNorm": 0.295,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_017",
+      "name": "Greenfall",
+      "regionId": "region_17",
+      "xNorm": 0.284,
+      "yNorm": 0.194,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_018",
+      "name": "Cedarbury",
+      "regionId": "region_17",
+      "xNorm": 0.476,
+      "yNorm": 0.209,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_019",
+      "name": "Alderworth",
+      "regionId": "region_17",
+      "xNorm": 0.649,
+      "yNorm": 0.241,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_17_city_020",
+      "name": "Redbrook",
+      "regionId": "region_17",
+      "xNorm": 0.188,
+      "yNorm": 0.121,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    }
+  ],
+  "strongholds": [],
+  "camps": [],
+  "edgeConnections": {
+    "north": [
+      {
+        "id": "north_road",
+        "side": "north",
+        "start": 0.494,
+        "end": 0.654,
+        "type": "road",
+        "connectsToRegionId": "region_12",
+        "arrowXNorm": 0.574,
+        "arrowYNorm": 0.12,
+        "intentionalOuter": false,
+        "notes": "Connects to Ironfall Hills"
+      }
+    ],
+    "south": [],
+    "east": [
+      {
+        "id": "east_road",
+        "side": "east",
+        "start": 0.39,
+        "end": 0.55,
+        "type": "road",
+        "connectsToRegionId": "region_19",
+        "arrowXNorm": 0.912,
+        "arrowYNorm": 0.469,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 19"
+      }
+    ],
+    "west": [
+      {
+        "id": "west_road",
+        "side": "west",
+        "start": 0.333,
+        "end": 0.493,
+        "type": "road",
+        "connectsToRegionId": "region_16",
+        "arrowXNorm": 0.084,
+        "arrowYNorm": 0.425,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 16"
+      }
+    ]
+  },
+  "notes": ""
+}

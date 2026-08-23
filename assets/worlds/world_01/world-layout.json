@@ -2,13 +2,13 @@
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "schemaVersion": 1,
-  "updatedAt": "2026-08-13T15:39:28.240Z",
+  "updatedAt": "2026-08-23T03:28:34.527Z",
   "globalSettings": {
     "defaultMapWidth": 2048,
     "defaultMapHeight": 1536,
     "minimumCitySpacing": 0.045,
     "worldWidth": 13000,
-    "worldHeight": 17000,
+    "worldHeight": 21000,
     "gridCellWorldSize": 2300
   },
   "regions": [
@@ -206,6 +206,71 @@
       "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_15-thumb-8a2499737d59.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_15.json"
+    },
+    {
+      "id": "region_16",
+      "name": "Region 16",
+      "type": "midgame",
+      "gridX": -2,
+      "gridY": 4,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/worlds/world_01/maps/versioned/region_16-1-1787455007403-57a6635d1c8d.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_16-thumb-8e24a812e206.webp",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/region_16.json"
+    },
+    {
+      "id": "region_17",
+      "name": "Region 17",
+      "type": "midgame",
+      "gridX": -1,
+      "gridY": 4,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/worlds/world_01/maps/versioned/region_17-2-1787455126756-ccf51fbd6d49.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_17-thumb-5488cca486a1.webp",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/region_17.json"
+    },
+    {
+      "id": "region_19",
+      "name": "Region 19",
+      "type": "midgame",
+      "gridX": 0,
+      "gridY": 4,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/worlds/world_01/maps/versioned/region_19-3-1787455288271-9dfd20912983.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_19-thumb-dd38037b0228.webp",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/region_19.json"
+    },
+    {
+      "id": "region_21",
+      "name": "Region 21",
+      "type": "midgame",
+      "gridX": 1,
+      "gridY": 4,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/worlds/world_01/maps/versioned/region_21-4-1787455410569-8cab37528df5.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_21-thumb-0a14a4fb8ab2.webp",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/region_21.json"
+    },
+    {
+      "id": "region_22",
+      "name": "Region 22",
+      "type": "midgame",
+      "gridX": 2,
+      "gridY": 4,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/worlds/world_01/maps/versioned/region_22-5-1787455503862-1c5e806cc006.webp",
+      "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_22-thumb-15b0a101210c.webp",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/region_22.json"
     }
   ]
 }

@@ -236,7 +236,7 @@ for (const map of layout.maps || []) {
   fullMapBytes += fs.statSync(fullMapPath).size;
   thumbnailBytes += fs.statSync(thumbnailPath).size;
 }
-assert(mapManifest.maps?.length === 15, "The immutable gameplay-map manifest must contain all 15 regions.");
+assert(mapManifest.maps?.length === 20, "The immutable gameplay-map manifest must contain all 20 regions.");
 assert(thumbnailBytes < fullMapBytes * 0.1, "Map-picker thumbnails should stay below 10% of full map art size.");
 
 console.log(`Map image loading validation passed (${thumbnailBytes} thumbnail bytes vs ${fullMapBytes} full-map bytes).`);

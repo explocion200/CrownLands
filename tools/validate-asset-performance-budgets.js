@@ -36,8 +36,10 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // contrast layer to grow by no more than one tightly bounded 64 KiB step.
 // The shared flag renderer and Main's layout runtime add under 16 KiB to the
 // offline shell while keeping the installation cache below 3.18 MiB.
-// The Profile Inner Castle entry adds less than 2 KiB to that shell.
-const MAX_INSTALL_PRECACHE_BYTES = 3250 * 1024;
+// The Profile Inner Castle entry adds less than 2 KiB to that shell. The
+// current-world expansion from 15 to 20 regions adds about 50 KiB of canonical
+// map metadata while the map rasters themselves remain lazy loaded.
+const MAX_INSTALL_PRECACHE_BYTES = 3290 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -287,7 +289,7 @@ assert(optimizedBytes <= sourceBytes * 0.1, "Optimized derivatives must remain a
 let fullMapBytes = 0;
 let thumbnailBytes = 0;
 const thumbnailEntries = new Map(thumbnailManifest.thumbnails.map(entry => [entry.output, entry]));
-assert.equal(thumbnailEntries.size, 15, "The fingerprinted thumbnail manifest must cover all 15 maps.");
+assert.equal(thumbnailEntries.size, 20, "The fingerprinted thumbnail manifest must cover all 20 maps.");
 for (const map of layout.maps || []) {
   const fullMapPath = String(map.imageSrc || "");
   const thumbnailPath = String(map.thumbnailSrc || "");

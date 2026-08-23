@@ -44,8 +44,8 @@ const productionMapManifest = JSON.parse(fs.readFileSync(
   path.join(dist, "assets", "worlds", "world_01", "map-manifest.json"),
   "utf8",
 ));
-if (productionMapManifest.maps?.length !== 15 || productionMapManifest.editableSourcesExcluded !== true) {
-  throw new Error("Production map manifest must contain 15 immutable runtime entries without editable sources.");
+if (productionMapManifest.maps?.length !== 20 || productionMapManifest.editableSourcesExcluded !== true) {
+  throw new Error("Production map manifest must contain 20 immutable runtime entries without editable sources.");
 }
 for (const entry of productionMapManifest.maps) {
   if (entry.source || !/^assets\/worlds\/world_01\/maps\/versioned\/[\w-]+-[0-9a-f]{12}\.webp$/.test(entry.output || "")) {
