@@ -1,5 +1,5 @@
 "use strict";
-/* exported buyShopItem, buySkill, clearInstantEconomyActions, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
+/* exported bindInventoryCarousel, buyShopItem, buySkill, clearInstantEconomyActions, getInventoryEffectLabel, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
 
 const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;
 const INSTANT_ECONOMY_ITEM_BATCH_LIMIT = 25;
@@ -205,26 +205,147 @@ function patchShopProjectedUi() {
 
 function patchInventoryProjectedUi() {
   modalBody?.querySelectorAll("[data-inventory-select]").forEach(slot => {
-    const itemId = slot.dataset.inventorySelect || "";
-    const count = getProjectedInventoryCount(itemId);
-    setTextIfChanged(slot.querySelector(".inventory-slot-count"), `x${formatNumber(count)}`);
-    slot.disabled = count < 1;
-    slot.classList.toggle("pending", getInstantPendingItemDelta(itemId) < 0);
+    const itemId = slot.dataset.inventoryItem || "";
+    const count = getProjectedBagItemCount(itemId);
+    const copyIndex = Math.max(0, Math.floor(Number(slot.dataset.inventoryCopyIndex) || 0));
+    const reserved = count <= copyIndex;
+    slot.disabled = reserved;
+    slot.classList.toggle("pending", reserved);
   });
   const useButton = modalBody?.querySelector("[data-inventory-use]");
   if (!useButton) return;
   const itemId = useButton.dataset.inventoryUse || "";
   const item = getShopItemById(itemId);
-  const count = getProjectedInventoryCount(itemId);
+  const count = getProjectedBagItemCount(itemId);
+  const selectedSlot = modalBody.querySelector('.inventory-slot[aria-pressed="true"]');
+  const selectedCopyIndex = Math.max(0, Math.floor(Number(selectedSlot?.dataset.inventoryCopyIndex) || 0));
+  const reserved = Boolean(selectedSlot) && count <= selectedCopyIndex;
   setTextIfChanged(modalBody.querySelector("[data-inventory-owned]"), `Owned: ${formatNumber(count)}`);
   const projectedExpiresAtMs = getProjectedItemEffectExpiresAtMs(item);
   const effectLine = modalBody.querySelector("[data-inventory-active]");
   if (effectLine && projectedExpiresAtMs > Date.now()) {
     setTextIfChanged(effectLine, `Active: ${formatDuration(Math.ceil((projectedExpiresAtMs - Date.now()) / 1000))}`);
   }
-  useButton.disabled = count < 1 || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
-  useButton.classList.toggle("pending", getInstantPendingItemDelta(itemId) < 0);
+  useButton.disabled = count < 1 || reserved || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
+  useButton.classList.toggle("pending", reserved);
 }
+
+// The projected Bag renderer lives with its queued item-action reconciliation.
+function getProjectedBagItemCount(itemId) {
+  return itemId === COMMON_GEAR_BOX_ITEM.id
+    ? Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0))
+    : getProjectedInventoryCount(itemId);
+}
+
+function getInventoryGroups(category = selectedInventoryCategory) {
+  const gearBoxCount = getProjectedBagItemCount(COMMON_GEAR_BOX_ITEM.id);
+  return [
+    ...(gearBoxCount ? [{ ...COMMON_GEAR_BOX_ITEM, count: gearBoxCount }] : []),
+    ...SHOP_ITEMS.map(item => ({ ...item, count: getProjectedBagItemCount(item.id) })),
+  ].filter(item => item.count > 0 && (category === "all" || item.bagCategory === category));
+}
+
+function getInventoryPageModel(category = selectedInventoryCategory, requestedPage = selectedInventoryPage) {
+  const groups = getInventoryGroups(category);
+  const totalEntries = groups.reduce((total, group) => Math.min(Number.MAX_SAFE_INTEGER, total + group.count), 0);
+  const pageCount = Math.max(1, Math.ceil(totalEntries / INVENTORY_SLOT_COUNT));
+  const page = Math.max(0, Math.min(pageCount - 1, Math.floor(Number(requestedPage) || 0)));
+  const start = page * INVENTORY_SLOT_COUNT;
+  const end = Math.min(totalEntries, start + INVENTORY_SLOT_COUNT);
+  const entries = [];
+  let cursor = 0;
+  groups.forEach(group => {
+    const groupEnd = cursor + group.count;
+    for (let index = Math.max(start, cursor); index < Math.min(end, groupEnd); index += 1) {
+      const copyOrdinal = index - cursor + 1;
+      entries.push({
+        ...group,
+        count: 1,
+        ownedCount: group.count,
+        copyOrdinal,
+        entryKey: `${group.id}:copy-${copyOrdinal}`,
+      });
+    }
+    cursor = groupEnd;
+  });
+  return { category, entries, totalEntries, page, pageCount };
+}
+
+function renderInventorySlot(entry, selectedEntryKey = "") {
+  const selected = entry.entryKey === selectedEntryKey;
+  const copyText = entry.ownedCount > 1 ? `, copy ${formatNumber(entry.copyOrdinal)} of ${formatNumber(entry.ownedCount)}` : "";
+  return `
+    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.entryKey)}" data-inventory-item="${escapeHtml(entry.id)}" data-inventory-copy-index="${entry.copyOrdinal - 1}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(entry.label + copyText)}">
+      <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
+      <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
+    </button>
+  `;
+}
+
+function getInventoryEffectLabel(item) {
+  if (item?.id === ROYAL_PEACE_SHIELD_ITEM_ID) return `Duration: ${formatDuration(ROYAL_PEACE_SHIELD_DURATION_MS / 1000)}`;
+  if (item?.id === WAR_DRUMS_ITEM_ID) return `Adds: ${formatDuration(WAR_DRUMS_DURATION_MS / 1000)} per use`;
+  if (item?.id === ROYAL_TAX_DECREE_ITEM_ID) return `Adds: ${formatDuration(ROYAL_TAX_DECREE_DURATION_MS / 1000)} per use`;
+  if (item?.id === VEIL_OF_SILENCE_ITEM_ID) return `Duration: ${formatDuration(VEIL_OF_SILENCE_DURATION_MS / 1000)}`;
+  if (item?.id === SWIFT_MARCH_ORDER_ITEM_ID) return "Effect: one eligible march";
+  if (item?.id === RECALL_HORN_ITEM_ID) return "Effect: one active march";
+  if (item?.id === COMMON_GEAR_BOX_ITEM.id) return "Contains: 3 Common gear pieces";
+  return "";
+}
+
+function setInventoryPage(nextPage, restoreFocus = false) {
+  const model = getInventoryPageModel(selectedInventoryCategory, nextPage);
+  if (model.page === selectedInventoryPage) return;
+  inventoryPageDirection = model.page > selectedInventoryPage ? 1 : -1;
+  selectedInventoryPage = model.page;
+  selectedInventoryItemId = "";
+  selectedInventoryEntryKey = "";
+  showInventoryModal();
+  if (restoreFocus) modalBody.querySelector(".inventory-carousel-viewport")?.focus();
+}
+
+function bindInventoryCarousel(viewport) {
+  if (!viewport) return;
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  viewport.addEventListener("pointerdown", event => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+  });
+  const releasePointer = event => {
+    if (pointerId === null || event.pointerId !== pointerId) return;
+    const deltaX = event.clientX - startX;
+    const deltaY = event.clientY - startY;
+    pointerId = null;
+    if (Math.abs(deltaX) < 42 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.15) return;
+    event.preventDefault();
+    inventorySuppressSelectionUntilMs = Date.now() + 350;
+    setInventoryPage(selectedInventoryPage + (deltaX < 0 ? 1 : -1));
+  };
+  viewport.addEventListener("pointerup", releasePointer);
+  viewport.addEventListener("pointercancel", () => { pointerId = null; });
+  viewport.addEventListener("wheel", event => {
+    const horizontalDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      ? event.deltaX
+      : event.shiftKey ? event.deltaY : 0;
+    if (Math.abs(horizontalDelta) < 20) return;
+    event.preventDefault();
+    if (Date.now() < inventoryHorizontalInputUntilMs) return;
+    inventoryHorizontalInputUntilMs = Date.now() + 280;
+    setInventoryPage(selectedInventoryPage + (horizontalDelta > 0 ? 1 : -1));
+  }, { passive: false });
+  viewport.addEventListener("keydown", event => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    setInventoryPage(selectedInventoryPage + (event.key === "ArrowRight" ? 1 : -1), true);
+  });
+}
+
+/* Common Gear Box reveal flow lives in common-gear-ui.js. */
+
 
 function patchCityUpgradeUi() {
   const selectedCity = cityById(selectedSourceId || "");
@@ -271,6 +392,7 @@ async function refreshInstantEconomyAfterFailure(action) {
   await Promise.resolve(refreshServerEconomy(true, { renderCities: action.type === "city" }));
   if (action.type === "city") await Promise.resolve(refreshAllOwnedCities(true));
   revalidateInstantEconomyActions();
+  if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
 }
 
 function revalidateInstantEconomyActions() {
@@ -401,6 +523,7 @@ async function executeInstantShopPurchase(action) {
   action.reservedGold = Math.max(0, action.reservedGold - confirmedUnitPrice * confirmed);
   applyServerEconomyResult(result);
   selectedInventoryItemId = item.id;
+  selectedInventoryEntryKey = "";
   addLog(`Bought ${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} for ${formatNumber(Number(result?.spentGold) || confirmedUnitPrice * confirmed)} gold.`);
   showToast(`${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} added to Bag.`);
   saveGame();
@@ -481,6 +604,7 @@ function buyShopItem(itemId) {
   inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
   recordItemPurchase(item.id);
   selectedInventoryItemId = item.id;
+  selectedInventoryEntryKey = "";
   addLog(`Bought ${item.label} for ${formatNumber(price)} gold.`);
   saveGame();
   renderHud();
@@ -565,7 +689,13 @@ function useInventoryItem(itemId) {
     return false;
   }
   if (usesServerEconomyAuthority()) {
-    return enqueueInstantEconomyAction({ type: "item", key: item.id, itemId: item.id, quantity: 1 });
+    const queued = enqueueInstantEconomyAction({ type: "item", key: item.id, itemId: item.id, quantity: 1 });
+    if (queued && modal?.open && modal.classList.contains("inventory-modal")) {
+      selectedInventoryItemId = "";
+      selectedInventoryEntryKey = "";
+      showInventoryModal();
+    }
+    return queued;
   }
   const localAction = item.id === ROYAL_PEACE_SHIELD_ITEM_ID
     ? useRoyalPeaceShield
