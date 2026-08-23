@@ -14,6 +14,12 @@ const assets = require(path.join(root, "functions", "clanHeraldryAssets.js"));
 const legacy = require(path.join(root, "functions", "clanHeraldryLegacyV1.js"));
 const renderer = require(path.join(root, "functions", "clanHeraldryRenderer.js")).create({ config, assets, legacyRenderer: legacy });
 const proof = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-v2", "index.html"), "utf8");
+const indexHtml = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const gameSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
+const serviceWorkerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const editorCss = fs.readFileSync(path.join(root, "clan-heraldry-v2.css"), "utf8");
+const scrollProof = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-scroll", "index.html"), "utf8");
 
 const expectedIds = [
   "none", "crown", "lion", "eagle", "dragon", "wolf", "stag", "bear",
@@ -23,6 +29,11 @@ const expectedIds = [
 const removedV2Ids = ["double-eagle", "griffin", "raven", "helm", "castle"];
 const ids = config.CHARGES.map(option => option.key);
 assert.deepEqual(ids, expectedIds, "Expected exactly 16 approved artwork charges plus none.");
+assert.deepEqual(config.SELECTABLE_CHARGES.map(option => option.label), [
+  "None", "Crown", "Lion Rampant", "Eagle Displayed", "Dragon / Wyvern", "Wolf Head",
+  "Stag", "Bear", "Crossed Swords", "Armored Fist", "Fleur-de-lis", "Oak Tree",
+  "War Horn", "Battering Ram", "Fortress Keep", "Watchtower", "Portcullis Gate",
+], "The live v2 selector labels changed.");
 assert.equal(new Set(ids).size, ids.length, "Configured charge IDs must be unique.");
 assert.equal(config.COLORS.length, 16, "Expected the approved 16-color palette.");
 assert.equal(config.SHAPES.length, 4);
@@ -116,8 +127,30 @@ for (const id of availableIds) {
 }
 assert.doesNotMatch(assets.FULL_SPRITE_URL, /^https?:/);
 assert.doesNotMatch(assets.MICRO_SPRITE_URL, /^https?:/);
+assert.doesNotMatch(assets.FULL_SPRITE_URL, /^\//, "Full sprite must remain base-path compatible for itch and /play/.");
+assert.doesNotMatch(assets.MICRO_SPRITE_URL, /^\//, "Micro sprite must remain base-path compatible for itch and /play/.");
 assert.match(proof, /568|landscape/);
 assert.doesNotMatch(proof, /orientation\s*:\s*portrait/i);
+for (const runtimeFile of ["clanHeraldryConfig.js", "clanHeraldryAssets.js", "clanHeraldryLegacyV1.js", "clanHeraldryRenderer.js"]) {
+  assert.match(indexHtml, new RegExp(`functions/${runtimeFile.replace(".", "\\.")}`), `${runtimeFile} is not loaded by production index.html.`);
+  assert.match(serviceWorkerSource, new RegExp(`functions/${runtimeFile.replace(".", "\\.")}`), `${runtimeFile} is not precached by the service worker.`);
+}
+assert.match(indexHtml, /clan-heraldry-v2\.css/);
+assert.ok(indexHtml.indexOf("clanHeraldryRenderer.js") < indexHtml.indexOf("game.js"), "The heraldry renderer must load before game.js.");
+assert.match(serviceWorkerSource, /charges-full\.svg[\s\S]*?charges-micro\.svg/);
+assert.match(gameSource, /CLAN_HERALDRY_CHARGES\s*=\s*CLAN_HERALDRY_CONFIG\.SELECTABLE_CHARGES/);
+assert.match(gameSource, /function renderClanHeraldry[\s\S]*?ClanHeraldryRenderer\.renderMarkup/);
+assert.match(gameSource, /function renderClanShieldChoiceIcon[\s\S]*?CLAN_HERALDRY_ASSETS\.symbolHref[\s\S]*?<use href=/);
+assert.match(gameSource, /function renderClanShieldEditor[\s\S]*?Clan Heraldry[\s\S]*?Save Clan Heraldry/);
+assert.match(gameSource, /createV2DraftFromV1[\s\S]*?clanShieldMigrationNotice/);
+assert.match(gameSource, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{ shield \}\)[\s\S]*?heraldryRevision/);
+assert.match(serverSource, /exports\.updateClanProfile[\s\S]*?CLAN_HERALDRY_CONFIG\.validateV2Write[\s\S]*?heraldryRevision/);
+assert.match(editorCss, /data-heraldry-editor-version="2"[\s\S]*?overflow-y:auto[\s\S]*?touch-action:pan-y/);
+assert.doesNotMatch(editorCss, /orientation\s*:\s*portrait/i, "No portrait Clan Heraldry CSS is allowed.");
+assert.match(scrollProof, /data-options="charge"/);
+assert.match(scrollProof, /symbolHref/);
+assert.match(scrollProof, /Save Clan Heraldry/);
+assert.doesNotMatch(scrollProof, />◆</, "The runtime proof still contains placeholder charge diamonds.");
 
 function loadProductionV1Renderer() {
   const game = fs.readFileSync(path.join(root, "game.js"), "utf8");

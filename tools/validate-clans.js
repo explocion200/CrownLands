@@ -7,7 +7,7 @@ const server = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8")
 const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}\n${fs.readFileSync(path.join(root, "ui-contrast-correction.css"), "utf8")}`;
+const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}\n${fs.readFileSync(path.join(root, "ui-contrast-correction.css"), "utf8")}\n${fs.readFileSync(path.join(root, "clan-heraldry-v2.css"), "utf8")}`;
 const mobileViewportStyles = fs.readFileSync(path.join(root, "mobile-viewport.css"), "utf8");
 const heraldryScrollFixture = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-scroll", "index.html"), "utf8");
 const heraldryScrollQa = fs.readFileSync(path.join(root, "tools", "qa-clan-heraldry-scroll.js"), "utf8");
@@ -102,8 +102,8 @@ requires(disbandClanSource, /status:\s*"disbanded"[\s\S]*?memberCount:\s*0[\s\S]
 requires(server, /async function reconcileClanRalliesBeforeDisband[\s\S]*?where\("status",\s*"==",\s*RALLY_STATUS_FORMING\)[\s\S]*?cancelClanRallyRequest[\s\S]*?await reconcileClanRalliesBeforeDisband\(clanId\)[\s\S]*?runTransactionWithInfrastructureRetry[\s\S]*?await reconcileClanRalliesBeforeDisband\(clanId\)/, "Clan disbanding must safely cancel forming rallies before and after membership removal.");
 assert.doesNotMatch(disbandClanSource, /Remove all other members before disbanding/, "Leaders are still forced to remove every member manually before disbanding.");
 assert.doesNotMatch(server, /exports\.(?:sendClanMessage|reportClanMessage|cleanupClanMessages)\s*=/, "Retired clan chat Functions are still exported.");
-requires(server, /function normalizeClanShield[\s\S]*?CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES/, "Clan shield schema is not validated server-side.");
-requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?const shield = normalizeClanShield/, "Clan shield edits are not leader-only.");
+requires(server, /CLAN_HERALDRY_CONFIG\s*=\s*require\("\.\/clanHeraldryConfig\.js"\)[\s\S]*?function normalizeClanShield[\s\S]*?CLAN_HERALDRY_CONFIG\.normalizeForRead/, "Clan Heraldry schema is not validated server-side.");
+requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?CLAN_HERALDRY_CONFIG\.validateV2Write[\s\S]*?heraldryRevision/, "Clan Heraldry edits are not leader-only, strict, and revisioned.");
 requires(server, /exports\.updateClanProfile[\s\S]*?nameChanged[\s\S]*?getClanNameChangeCooldownUntilMs\(clan\)[\s\S]*?prepareEconomyCollection[\s\S]*?CLAN_NAME_CHANGE_GOLD_COST[\s\S]*?writePreparedEconomy/, "Clan renaming is not charging authoritative gold behind the weekly leader gate.");
 requires(server, /exports\.updateClanProfile[\s\S]*?clanNameReservationRef\(requestedName\.normalized\)[\s\S]*?already in use[\s\S]*?clanNameReservationRef\(clan\.normalizedName\)[\s\S]*?CLAN_RESERVATION_RELEASE_MS/, "Clan renaming does not transactionally reserve the new name and release the previous one.");
 requires(server, /exports\.updateClanProfile[\s\S]*?membersSnap\.docs\.forEach[\s\S]*?clanName:\s*requestedName\.display[\s\S]*?clanIdentityRevisionPatch\(nowMs\)[\s\S]*?writeClanLeaderboard/, "Clan renaming does not propagate the canonical identity to members and leaderboard snapshots.");
@@ -177,10 +177,10 @@ requires(client, /function handleClanNavigationKeydown[\s\S]*?ArrowLeft[\s\S]*?A
 requires(client, /function startClanApplicationSubscription[\s\S]*?onApplications[\s\S]*?clanApplications\s*=[\s\S]*?renderClanView/, "Clan applications do not appear live for leaders and officers.");
 requires(client, /data-clan-action="cancel-application"[\s\S]*?"cancel-application":\s*"cancelClanApplication"/, "Applicants cannot cancel a pending clan application.");
 requires(showProfileSkillsSource, /clanView\.hidden\s*=\s*true;/, "Switching from Clan to Skills does not hide the Clan panel.");
-requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanShield/, "Player profiles do not render a separate clan shield affiliation.");
-requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
+requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanHeraldry/, "Player profiles do not render a separate clan shield affiliation.");
+requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanHeraldry\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
 requires(server, /exports\.getCombatPlayerIdentity[\s\S]*?clanPublicSnapshot\(profileClanId,\s*clanData\)[\s\S]*?clanShield:\s*clan\?\.shield[\s\S]*?\bclan,/, "Public player identities do not include the shield from the player's canonical clan.");
-requires(client, /function normalizePublicPlayerProfile[\s\S]*?const clan = raw\.clan[\s\S]*?clanShield:\s*clan\?\.shield[\s\S]*?function renderPublicPlayerProfile[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner \|\| profile\.clanShield/, "Public player profiles do not display the shield returned for that player's clan.");
+requires(client, /function normalizePublicPlayerProfile[\s\S]*?const clan = raw\.clan[\s\S]*?clanShield:\s*clan\?\.shield[\s\S]*?function renderPublicPlayerProfile[\s\S]*?renderClanHeraldry\(clan\.shield \|\| clan\.banner \|\| profile\.clanShield/, "Public player profiles do not display the shield returned for that player's clan.");
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanIdentityLink\(\{\s*clanId:\s*clan\.id,\s*clanName:\s*clan\.name,\s*clanTag:\s*clan\.tag/, "Clan names in discovery do not open their public clan profile.");
 requires(client, /function showPublicClanDetails[\s\S]*?Promise\.all\(\[api\.loadClan\(id\), api\.loadClanMembers\(id\)\]\)[\s\S]*?class="public-clan-roster"[\s\S]*?renderPlayerNameLink[\s\S]*?member\.kingPower/, "Public clan profiles do not list clickable member names with King Power.");
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
@@ -207,7 +207,7 @@ requires(client, /function renderClanRenameEditor[\s\S]*?500,000 gold[\s\S]*?dat
 requires(client, /data-clan-action="rename-clan"/, "Leader clan rename entry point is missing.");
 requires(client, /function getClanNameChangeCooldownMs[\s\S]*?CLAN_NAME_CHANGE_COOLDOWN_MS[\s\S]*?function updateClanNameChangeCountdown[\s\S]*?data-clan-name-cooldown[\s\S]*?data-clan-rename-submit/, "Clan rename cooldown feedback is incomplete.");
 requires(client, /kind === "rename"[\s\S]*?updateClanProfile\(\{\s*name:\s*requestedName\s*\}\)[\s\S]*?state\.gold\s*=\s*Number\(result\.gold\)[\s\S]*?state\.clanName\s*=\s*result\.clan\.name/, "Clan rename submissions do not retain the authoritative name and gold balance.");
-requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*shield\s*\}\)[\s\S]*?result\?\.clan\?\.shield[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?savedShield/, "Clan shield editor does not retain the server-confirmed saved shield.");
+requires(client, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{\s*shield\s*\}\)[\s\S]*?heraldryRevision[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?savedShield/, "Clan Heraldry editor does not retain a strict, revisioned server-confirmed v2 shield.");
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.city-node\.clan-ally \.foreign-city-shield/, "Green accessible allied-city styling is missing.");
@@ -245,7 +245,7 @@ requires(client, /\? `\$\{clanTagMarkup\}<span class="city-ruler-row">[\s\S]*?<s
 requires(styles, /\.map-city-clan-tag\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Map clan tags must use the same type size as city names.");
 requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
-requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
+requires(styles, /\.clan-heraldry-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan Heraldry editor styling is missing.");
 requires(styles, /\.clan-rename-card[\s\S]*?\.clan-rename-form[\s\S]*?\.clan-rename-actions/, "Clan rename management UI is not styled.");
 requires(
   styles,

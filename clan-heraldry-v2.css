@@ -1,6 +1,10 @@
 .clan-heraldry-shared-defs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
 .clan-heraldry-v2{display:inline-grid;place-items:center;isolation:isolate;width:100%;height:100%;aspect-ratio:100/106;max-width:100%;overflow:hidden;vertical-align:middle}
 .clan-heraldry-v2>svg{display:block;width:100%;height:100%;overflow:hidden}
+.clan-heraldry-size-mini{width:27px;height:29px}
+.clan-heraldry-size-small{width:40px;height:43px}
+.clan-heraldry-size-large{width:96px;height:102px}
+.clan-heraldry-size-editor{width:100%;height:100%}
 .clan-heraldry-backplate{fill:#241811;stroke:#110d0a;stroke-width:7;stroke-linejoin:round}
 .clan-heraldry-field{fill:var(--clan-heraldry-primary)}
 .clan-heraldry-charge{fill:currentColor}
@@ -11,4 +15,191 @@
 .clan-heraldry-micro .clan-heraldry-border{stroke-width:6}
 .clan-heraldry-micro .clan-heraldry-inner-trim{stroke-width:2.4}
 .clan-heraldry-micro .clan-heraldry-rivets{stroke-width:0}
+
+/* The Heraldry editor owns its contrast and scroll cascade. */
+.clan-view.shield-editor-active{min-height:0;overflow:hidden}
+.clan-content.shield-editor-open{width:100%;height:100%;min-height:0}
+.clan-shield-editor[data-heraldry-editor-version="2"]{
+  width:100%;
+  height:100%;
+  max-height:720px;
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(230px,.78fr) minmax(360px,1.22fr);
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:.65rem;
+  overflow:hidden;
+  color:#f8e9c4;
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-preview{
+  min-width:0;
+  min-height:0;
+  grid-column:1;
+  grid-row:1 / 3;
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(0,1fr) auto;
+  gap:.55rem;
+  overflow:hidden;
+  color:#342415;
+  border-color:#7f6037;
+  background:linear-gradient(180deg,#e3d4b3,#bfa575);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-preview-stage{
+  position:relative;
+  min-width:0;
+  min-height:0;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  color:#f8e9c4;
+  background:radial-gradient(circle at 50% 36%,#356d87,#12344a 68%,#09283d);
+}
+.clan-shield-preview-full{width:min(90%,270px);height:min(100%,300px);display:grid;place-items:center;overflow:hidden}
+.clan-shield-micro-preview{position:absolute;right:.55rem;bottom:.45rem;display:grid;grid-template-columns:auto 34px;align-items:center;gap:.35rem;padding:.24rem .35rem;color:#fff2cc;border:1px solid rgba(255,232,172,.6);border-radius:6px;background:rgba(8,27,39,.9);box-shadow:0 3px 9px rgba(0,0,0,.35)}
+.clan-shield-micro-preview>span{color:inherit;font-size:.56rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase}
+.clan-shield-micro-preview>.clan-heraldry-v2{width:30px;height:32px}
+.clan-shield-editor-intro{min-width:0}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-intro>span{color:#6d2d35}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-intro h3{color:#342415;text-shadow:none}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-intro :is(p,small){color:#4b3825}
+.clan-heraldry-migration-note,.clan-heraldry-version-note{margin:.42rem 0 0;padding:.42rem .5rem;color:#3b2716;border:1px solid rgba(109,45,53,.42);border-radius:5px;background:rgba(255,244,210,.5);font-size:.68rem;line-height:1.35}
+.clan-heraldry-migration-note strong{color:#6d2d35}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-workspace{
+  min-width:0;
+  min-height:0;
+  grid-column:2;
+  grid-row:1;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:.4rem;
+  overflow:hidden;
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:.35rem;
+  overflow:visible;
+  padding:.15rem;
+  border:1px solid rgba(216,179,98,.45);
+  border-radius:8px;
+  background:#0d2b3c;
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button{
+  min-width:0;
+  min-height:40px;
+  padding:.36rem .45rem;
+  color:#fff0c8;
+  border:1px solid rgba(255,234,180,.28);
+  border-radius:6px;
+  background:#173e57;
+  font-size:.72rem;
+  font-weight:950;
+  text-shadow:0 1px 1px rgba(0,0,0,.75);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button:hover{border-color:#f0cf83;background:#24546d}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button.active,
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button[aria-selected="true"]{
+  color:#fff4d7;
+  border-color:#ffe3a0;
+  background:linear-gradient(180deg,#7a373b,#512129);
+  box-shadow:inset 0 0 0 2px rgba(255,226,154,.22),0 2px 7px rgba(0,0,0,.28);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-controls{
+  min-width:0;
+  min-height:0;
+  display:block;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  padding:.05rem .3rem .35rem .05rem;
+  scrollbar-width:thin;
+  scrollbar-color:#b48b45 #0d2b3c;
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-panel{display:none}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-panel.active{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] :is(.clan-shield-control,.clan-shield-color-group){min-width:0;color:#fff0c8;border-color:#8e6b39;background:linear-gradient(180deg,#173e57,#09283d);box-shadow:inset 0 1px 0 rgba(255,244,211,.12),0 4px 9px rgba(34,20,9,.2)}
+.clan-shield-editor[data-heraldry-editor-version="2"] :is(.clan-shield-control,.clan-shield-color-group)>legend{color:#ffe4a0;background:#123248;text-shadow:0 1px 1px rgba(0,0,0,.72)}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-control-wide{grid-column:1 / -1}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-colors{grid-column:1 / -1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.38rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button{
+  min-width:0;
+  min-height:48px;
+  display:grid;
+  grid-template-columns:36px minmax(0,1fr);
+  align-items:center;
+  justify-items:start;
+  gap:.5rem;
+  padding:.3rem .55rem;
+  overflow:hidden;
+  color:#f8e9c4;
+  border-color:rgba(219,180,99,.56);
+  background:linear-gradient(180deg,#315f78,#12344a);
+  box-shadow:inset 0 1px 0 rgba(255,248,219,.12);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button :is(span,small){color:inherit;opacity:1}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button small{min-width:0;color:inherit;font-size:.7rem;line-height:1.14;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button:hover{border-color:#f0cf83;background:linear-gradient(180deg,#3e718a,#19445c)}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button.active{
+  color:#2b2118;
+  border-color:#fff0bd;
+  background:linear-gradient(180deg,#f6df9b,#c9953c);
+  box-shadow:0 0 0 2px rgba(109,45,53,.42),inset 0 1px 0 rgba(255,251,229,.5);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button:disabled{color:#eee3c9;border-color:#6f706d;background:#3c4e56;opacity:.68}
+.clan-shield-choice-icon{width:36px;height:36px;display:grid;place-items:center;overflow:hidden;color:inherit}
+.clan-shield-choice-icon>svg{width:34px;height:34px;display:block;overflow:visible;fill:currentColor;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.clan-shield-choice-icon>svg use{fill:currentColor}
+.clan-shield-choice-mini>.clan-heraldry-v2{width:31px;height:33px}
+.clan-shield-choice-none{font-size:1.35rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid{grid-template-columns:repeat(8,24px);justify-content:start;gap:.38rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button{width:24px;height:24px}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button:focus-visible,
+.clan-shield-editor[data-heraldry-editor-version="2"] button:focus-visible{outline:3px solid #fff0a8;outline-offset:2px}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions{min-width:0;grid-column:2;grid-row:2;display:grid;grid-template-columns:minmax(100px,.7fr) minmax(100px,.7fr) minmax(170px,1.3fr);gap:.45rem}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions button{min-width:0;min-height:42px}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions button:disabled{color:#e4dac1;border-color:#696259;background:#4b4b48;opacity:.72}
+
+@media (min-width:901px){
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid-charge{grid-template-columns:1fr}
+}
+
+@media (max-width:900px) and (orientation:landscape){
+  .clan-shield-editor[data-heraldry-editor-version="2"]{height:100%;max-height:none;min-height:0;grid-template-columns:minmax(112px,.78fr) minmax(0,1.22fr);grid-template-rows:minmax(0,1fr) auto;gap:.38rem;padding:.38rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-preview{gap:.25rem;padding:.3rem}
+  .clan-shield-preview-full{width:min(94%,150px);height:100%}
+  .clan-shield-micro-preview{right:.25rem;bottom:.22rem;grid-template-columns:26px;padding:.16rem}
+  .clan-shield-micro-preview>span{display:none}
+  .clan-shield-micro-preview>.clan-heraldry-v2{width:24px;height:26px}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs{gap:.22rem;padding:.12rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button{min-height:34px;padding:.2rem .25rem;font-size:.63rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-panel.active{grid-template-columns:1fr;gap:.42rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-control-wide,
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-colors{grid-column:auto}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-colors{grid-template-columns:1fr}
+  .clan-shield-editor[data-heraldry-editor-version="2"] :is(.clan-shield-control,.clan-shield-color-group){padding:.42rem .34rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button{min-height:44px;grid-template-columns:32px minmax(0,1fr);gap:.38rem;padding:.24rem .4rem}
+  .clan-shield-choice-icon{width:32px;height:32px}
+  .clan-shield-choice-icon>svg{width:31px;height:31px}
+  .clan-shield-choice-mini>.clan-heraldry-v2{width:28px;height:30px}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button small{font-size:.65rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:.28rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions .clan-shield-save{grid-column:auto;min-height:38px}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions button{min-height:38px;padding:.2rem .25rem;font-size:.58rem;line-height:1.05;white-space:normal}
+}
+
+@media (max-width:640px) and (orientation:landscape){
+  .clan-shield-editor[data-heraldry-editor-version="2"]{grid-template-columns:minmax(108px,.72fr) minmax(0,1.28fr)}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid{grid-template-columns:1fr}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button{min-height:42px;grid-template-columns:29px minmax(0,1fr)}
+  .clan-shield-choice-icon{width:29px;height:29px}
+  .clan-shield-choice-icon>svg{width:28px;height:28px}
+  .clan-shield-choice-mini>.clan-heraldry-v2{width:26px;height:28px}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid{grid-template-columns:repeat(8,21px);gap:.28rem}
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button{width:21px;height:21px}
+}
+
 @media (prefers-contrast:more){.clan-heraldry-border{stroke-width:6}.clan-heraldry-charge{filter:drop-shadow(0 0 .5px #000)}}

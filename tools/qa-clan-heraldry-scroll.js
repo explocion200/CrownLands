@@ -49,6 +49,35 @@ async function measure(page) {
     const previewRect = preview.getBoundingClientRect();
     const actionsRect = actions.getBoundingClientRect();
     const finalRect = finalControl?.getBoundingClientRect();
+    const styleEvidence = selector => {
+      const element = document.querySelector(selector);
+      const style = getComputedStyle(element);
+      const rgb = value => {
+        const match = String(value || "").match(/rgba?\(\s*(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/i);
+        return match ? match.slice(1, 4).map(Number) : null;
+      };
+      const luminance = color => color.map(channel => {
+        const value = channel / 255;
+        return value <= .03928 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+      }).reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0);
+      const contrast = (foreground, background) => {
+        const first = luminance(foreground);
+        const second = luminance(background);
+        return (Math.max(first, second) + .05) / (Math.min(first, second) + .05);
+      };
+      const foreground = rgb(style.color);
+      const backgrounds = [];
+      let surface = element;
+      while (surface && !backgrounds.length) {
+        const surfaceStyle = getComputedStyle(surface);
+        backgrounds.push(...[...String(surfaceStyle.backgroundImage || "").matchAll(/rgba?\([^)]*\)/gi)].map(match => rgb(match[0])).filter(Boolean));
+        const solidBackground = rgb(surfaceStyle.backgroundColor);
+        if (solidBackground && surfaceStyle.backgroundColor !== "rgba(0, 0, 0, 0)") backgrounds.push(solidBackground);
+        surface = surface.parentElement;
+      }
+      const minContrast = foreground && backgrounds.length ? Math.min(...backgrounds.map(background => contrast(foreground, background))) : null;
+      return { color: style.color, backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage, borderColor: style.borderColor, opacity: style.opacity, minContrast };
+    };
     return {
       actionsVisible: actionsRect.top >= 0 && actionsRect.bottom <= innerHeight,
       clanViewClientHeight: clanView.clientHeight,
@@ -65,8 +94,60 @@ async function measure(page) {
       scrollHeight: controls.scrollHeight,
       scrollTop: controls.scrollTop,
       touchAction: controlsStyle.touchAction,
+      readability: {
+        fieldTab: styleEvidence('[data-qa-tab="field"]'),
+        colorsTab: styleEvidence('[data-qa-tab="colors"]'),
+        activeTab: styleEvidence('[data-qa-tab="charges"]'),
+        detailsTab: styleEvidence('[data-qa-tab="details"]'),
+        sectionLabel: styleEvidence('.clan-shield-panel.active legend'),
+        chargeName: styleEvidence('.clan-shield-panel.active .clan-shield-choice-grid button:not(.active) small'),
+        selectedChoice: styleEvidence('.clan-shield-panel.active .clan-shield-choice-grid button.active'),
+        save: styleEvidence('.clan-shield-save'),
+        cancel: styleEvidence('.clan-shield-editor-actions .profile-secondary-btn'),
+        inspire: styleEvidence('.clan-shield-editor-actions .profile-secondary-btn:first-child'),
+      },
     };
   });
+}
+
+async function verifySpriteRuntime(page, viewportName) {
+  const spriteProof = await page.evaluate(async () => {
+    const useHrefs = [...document.querySelectorAll('use[href*="clan-heraldry"]')].map(element => element.getAttribute("href"));
+    const hrefs = [...new Set(useHrefs.map(href => href.split("#")[0]))];
+    const results = [];
+    const spriteMarkup = new Map();
+    for (const href of hrefs) {
+      const response = await fetch(href, { cache: "no-store" });
+      spriteMarkup.set(new URL(href, location.href).href, await response.text());
+      results.push({ href, status: response.status, contentType: response.headers.get("content-type") || "" });
+    }
+    const chargeGrids = [...document.querySelectorAll('[data-options="charge"]')];
+    const selectorCatalogs = chargeGrids.map(grid => [...grid.querySelectorAll(":scope > button")].map(button => ({
+      label: button.querySelector("small")?.textContent.trim() || button.textContent.trim(),
+      iconCount: button.querySelectorAll("use").length,
+    })));
+    const unresolvedUseCount = useHrefs.filter(href => {
+      const [file, fragment] = href.split("#");
+      const markup = spriteMarkup.get(new URL(file, location.href).href) || "";
+      return !fragment || !markup.includes(`id="${fragment}"`);
+    }).length;
+    return { hrefs, results, selectorCatalogs, unresolvedUseCount };
+  });
+  assert.ok(spriteProof.hrefs.some(href => href.endsWith("charges-full.svg")), `${viewportName}: full sprite is not referenced.`);
+  assert.ok(spriteProof.hrefs.some(href => href.endsWith("charges-micro.svg")), `${viewportName}: micro sprite is not referenced.`);
+  for (const result of spriteProof.results) {
+    assert.equal(result.status, 200, `${viewportName}: ${result.href} returned ${result.status}.`);
+    assert.match(result.contentType, /image\/svg\+xml/i, `${viewportName}: ${result.href} has MIME ${result.contentType}.`);
+  }
+  assert.equal(spriteProof.unresolvedUseCount, 0, `${viewportName}: sprite <use> elements did not resolve.`);
+  assert.equal(spriteProof.selectorCatalogs.length, 2, `${viewportName}: expected primary and secondary charge catalogs.`);
+  for (const catalog of spriteProof.selectorCatalogs) {
+    assert.equal(catalog.length, 17, `${viewportName}: the v2 selector must expose exactly 17 choices.`);
+    assert.equal(catalog.filter(entry => entry.iconCount === 1).length, 16, `${viewportName}: every artwork charge must render one icon.`);
+    assert.equal(catalog[0].label, "None", `${viewportName}: None must remain the only icon-free choice.`);
+    assert.equal(catalog[0].iconCount, 0, `${viewportName}: None must not emit an unresolved sprite use.`);
+  }
+  return spriteProof;
 }
 
 async function swipeControls(context, page) {
@@ -106,21 +187,35 @@ async function main() {
         viewport: { width: viewport.width, height: viewport.height },
       });
       const page = await context.newPage();
+      const consoleErrors = [];
+      const requestFailures = [];
+      page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+      page.on("requestfailed", request => requestFailures.push(`${request.url()} :: ${request.failure()?.errorText || "failed"}`));
       await page.goto(`http://127.0.0.1:${port}${fixturePath}`, { waitUntil: "load" });
+      await page.waitForTimeout(120);
       const controls = page.locator("[data-qa-controls]");
       const top = await measure(page);
+      const spriteProof = await verifySpriteRuntime(page, viewport.name);
+      assert.deepEqual(consoleErrors, [], `${viewport.name}: console errors: ${consoleErrors.join(" | ")}`);
+      assert.deepEqual(requestFailures, [], `${viewport.name}: failed requests: ${requestFailures.join(" | ")}`);
       assert.notEqual(top.touchAction, "none", `${viewport.name}: controls block native touch scrolling.`);
       assert.notEqual(top.pointerEvents, "none", `${viewport.name}: controls block pointer input.`);
       assert.equal(top.horizontalOverflow, false, `${viewport.name}: page overflows horizontally.`);
       assert.equal(top.previewVisible, true, `${viewport.name}: preview is not visible at the top.`);
+      for (const [label, evidence] of Object.entries(top.readability)) {
+        assert.ok(Number(evidence.minContrast) >= 4.5, `${viewport.name}: ${label} contrast is ${evidence.minContrast ?? "unresolved"}.`);
+      }
+      assert.notEqual(top.readability.activeTab.backgroundImage, top.readability.fieldTab.backgroundImage, `${viewport.name}: selected tab has no non-color state distinction.`);
+      assert.notEqual(top.readability.activeTab.borderColor, top.readability.fieldTab.borderColor, `${viewport.name}: selected tab border is indistinguishable.`);
       if (!viewport.compact) {
-        assert.ok(top.clanViewScrollHeight > top.clanViewClientHeight, `${viewport.name}: overflowing desktop editor has no scroll range.`);
-        await page.screenshot({ path: path.join(outputDir, `${viewport.name}.png`) });
-        await page.locator(".clan-view").evaluate(element => { element.scrollTop = element.scrollHeight; });
+        assert.ok(top.scrollHeight > top.clientHeight, `${viewport.name}: desktop Charges panel has no scroll range.`);
+        assert.equal(top.actionsVisible, true, `${viewport.name}: desktop actions are not visible.`);
+        await page.screenshot({ path: path.join(outputDir, `${viewport.name}-charges.png`) });
+        await controls.evaluate(element => { element.scrollTop = element.scrollHeight; });
         const desktopBottom = await measure(page);
-        assert.ok(desktopBottom.clanViewScrollTop > 0, `${viewport.name}: desktop editor did not scroll.`);
+        assert.ok(desktopBottom.scrollTop > 0, `${viewport.name}: desktop Charges panel did not scroll.`);
         assert.equal(desktopBottom.actionsVisible, true, `${viewport.name}: desktop actions cannot be reached.`);
-        results[viewport.name] = { top, bottom: desktopBottom };
+        results[viewport.name] = { top, bottom: desktopBottom, spriteProof, consoleErrors, requestFailures };
         await context.close();
         continue;
       }
@@ -130,7 +225,11 @@ async function main() {
       assert.equal(top.overflowY, "auto", `${viewport.name}: controls are not the vertical scroller.`);
       assert.equal(top.minHeight, "0px", `${viewport.name}: controls retain the grid min-height:auto trap.`);
       assert.equal(top.clanViewOverflowY, "hidden", `${viewport.name}: outer Clan view still owns scrolling.`);
-      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-top.png`) });
+      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-charges-top.png`) });
+
+      await page.getByRole("tab", { name: "Field" }).click();
+      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-field.png`) });
+      await page.getByRole("tab", { name: "Charges" }).click();
 
       await controls.hover();
       await page.mouse.wheel(0, 420);
@@ -157,10 +256,11 @@ async function main() {
       assert.equal(bottom.finalControlReachable, true, `${viewport.name}: final control is unreachable.`);
       assert.equal(bottom.previewVisible, true, `${viewport.name}: preview moved off-screen at the bottom.`);
       assert.equal(bottom.actionsVisible, true, `${viewport.name}: actions moved off-screen at the bottom.`);
-      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-bottom.png`) });
+      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-charges-bottom.png`) });
 
       await page.getByRole("tab", { name: "Details" }).click();
       assert.equal(await page.getByRole("tab", { name: "Details" }).getAttribute("aria-selected"), "true", `${viewport.name}: Details tab is unusable.`);
+      await page.screenshot({ path: path.join(outputDir, `${viewport.name}-details.png`) });
       results[viewport.name] = {
         top,
         wheelScrollTop: wheel.scrollTop,
@@ -169,6 +269,9 @@ async function main() {
         previewStayedFixed: bottom.previewVisible,
         actionsStayedFixed: bottom.actionsVisible,
         bottom,
+        spriteProof,
+        consoleErrors,
+        requestFailures,
       };
       await context.close();
     }

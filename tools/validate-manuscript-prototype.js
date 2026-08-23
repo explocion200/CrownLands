@@ -96,7 +96,9 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 }, 0);
 // Keep this aligned with validate-asset-performance-budgets.js. The 20-region
 // current world adds canonical map metadata, while map rasters remain lazy.
-assert.ok(staticCacheBytes <= 3290 * 1024, "The service-worker installation cache exceeds 3.213 MiB.");
+// Heraldry v2 adds four small runtime modules, its stylesheet, and the two
+// optimized charge sprites so the editor remains usable after installation.
+assert.ok(staticCacheBytes <= 3440 * 1024, "The service-worker installation cache exceeds 3.36 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);
