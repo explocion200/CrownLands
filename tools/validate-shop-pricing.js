@@ -88,6 +88,7 @@ const commonGearRenderer = commonGear.match(/function renderCommonGearShopItem[\
 assert.match(commonGearRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
 assert.doesNotMatch(commonGearRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|data-common-gear-buy|>Buy</);
 assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/);
+assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*scroll-snap-type:\s*x proximity;/);
 assert.match(palette, /\.shop-modal \.shop-purchase-bar\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;[^}]*grid-template-columns:/);
 assert.match(palette, /\.shop-modal \.shop-items \.shop-item\.selected/);
 assert.match(palette, /--shop-paid-tile-size:\s*clamp\(104px,\s*12vw,\s*132px\);/);
@@ -98,6 +99,14 @@ assert.match(palette, /@media \(max-width:\s*620px\)[\s\S]*?--shop-paid-tile-siz
 assert.doesNotMatch(palette, /\.shop-modal \.shop-items \.shop-item-copy/);
 assert.match(palette, /@media \(max-height:\s*560px\) and \(orientation:\s*landscape\)/);
 assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?\.shop-modal \.shop-rewarded-section\s*\{[^}]*display:\s*grid;/, "Mobile landscape must keep the desktop Shop section hierarchy.");
+assert.match(client, /function rememberShopCarouselScroll\(\)[\s\S]*?shopCarouselScrollLeft\s*=\s*Math\.max\(0,\s*carousel\.scrollLeft\)/);
+assert.match(client, /function restoreShopCarouselScroll\(\)[\s\S]*?carousel\.scrollLeft\s*=\s*targetScrollLeft/);
+assert.match(client, /function renderShopModal\(\)[\s\S]*?rememberShopCarouselScroll\(\)[\s\S]*?restoreShopCarouselScroll\(\)/);
+assert.match(client, /function bindShopItemSelection\(\)[\s\S]*?addEventListener\("scroll",\s*rememberShopCarouselScroll/);
+const selectShopItemSource = client.match(/function selectShopItem[\s\S]*?\n}/)?.[0] || "";
+assert.match(selectShopItemSource, /reveal\s*=\s*focus/);
+assert.match(selectShopItemSource, /if\s*\(reveal\)[\s\S]*?scrollIntoView/);
+assert.equal((selectShopItemSource.match(/scrollIntoView/g) || []).length, 1, "Only explicit keyboard reveal may move the carousel.");
 assert.equal((visualQa.match(/class="shop-item(?: common-gear-shop-item)?(?: selected)?"/g) || []).length, 7, "The visual QA fixture must include all seven paid image tiles.");
 assert.doesNotMatch(visualQa.match(/<div class="shop-items"[\s\S]*?<\/div>\s*<section class="shop-purchase-bar"/)?.[0] || "", /shop-item-copy|data-shop-card-price/, "The visual QA carousel contains duplicated card details.");
 

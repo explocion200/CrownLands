@@ -1,8 +1,8 @@
-# Scalable Shop pricing UI QA — square-tile revision
+# Scalable Shop pricing UI QA — rewarded-row and stable-carousel revision
 
 Fixture: `docs/visual-qa/scalable-shop-pricing/index.html`
 
-Validated with the production stylesheet cascade on 2026-08-22.
+Validated with the production stylesheet cascade on 2026-08-23.
 
 ## Desktop — 1200×800
 
@@ -12,7 +12,8 @@ Validated with the production stylesheet cascade on 2026-08-22.
 - Exactly one item has the selected state.
 - Selecting Royal Tax Decree centers its card and updates the concise description, price, and owned count.
 - The shared purchase bar stays at the bottom of the Shop panel.
-- Rewarded-ad controls remain separate and unchanged.
+- Each rewarded-ad card uses one horizontal row: 72×72 image, concise information, and the Watch Advertisement button.
+- Paid-card selection does not move the carousel unless keyboard navigation explicitly reveals a new selection.
 - The selected price appears once in the visible Shop UI.
 - No document-level horizontal overflow.
 
@@ -22,6 +23,7 @@ Screenshot: `screenshots/desktop-square-1200x800.png`
 
 - Paid item cards scroll horizontally.
 - The layout retains the desktop section order and two-column optional rewards area at a smaller scale.
+- Each rewarded-ad card remains horizontal with a 50×50 image, concise copy, and right-aligned action.
 - Every paid card remains an image-only square tile.
 - All seven paid tiles resolve to the same 108×108 square, and the artwork remains centered and square.
 - The selected card is fully visible after selection.
@@ -35,6 +37,7 @@ Screenshot: `screenshots/mobile-square-844x390.png`
 
 - Paid item cards scroll horizontally.
 - The same desktop section order remains visible, including optional rewards.
+- Each rewarded-ad card remains horizontal with a 38×38 image and a right-aligned action; the old stacked image/button layout does not return.
 - The selected Royal Tax Decree image tile is fully visible.
 - All seven paid tiles resolve to the same 64×64 square, with 52×52 square artwork inside the shared inset.
 - Selected name, concise description, price, owned count, and Buy control remain visible.
@@ -45,6 +48,8 @@ Screenshot: `screenshots/narrow-square-540x320.png`
 ## Interaction checks
 
 - Click selection updates exactly one selected tile and refreshes the shared detail area.
+- A manually scrolled carousel retained the same `scrollLeft` after pointer selection instead of returning to the first item.
+- Shop rerenders capture and restore the carousel offset after the replacement layout settles.
 - Left/right keyboard selection retains the same behavior and updates the concise description.
 - Selecting an unaffordable Royal Peace Shield disables the shared button and shows `Not Enough Gold`.
 - Browser console: no errors or warnings.

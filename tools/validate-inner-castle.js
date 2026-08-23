@@ -84,7 +84,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260822-square-shop-tiles-r3";
+const BUILD_ID = "20260823-shop-carousel-stability-r4";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
