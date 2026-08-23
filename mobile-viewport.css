@@ -115,7 +115,7 @@
     .profile-view,
     .profile-skills-view,
     .profile-settings-view,
-    .clan-view,
+    .clan-view:not(.shield-editor-active),
     .flag-editor-view
   ) {
     min-height: 0;
@@ -131,7 +131,7 @@
     .profile-view,
     .profile-skills-view,
     .profile-settings-view,
-    .clan-view,
+    .clan-view:not(.shield-editor-active),
     .flag-editor-view
   ) > :last-child {
     scroll-margin-bottom: max(.75rem, env(safe-area-inset-bottom, 0px));
