@@ -8849,6 +8849,7 @@ button.inventory-slot {
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding-right: .18rem;
     scrollbar-width: thin;
   }
