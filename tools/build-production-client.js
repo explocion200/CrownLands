@@ -18,7 +18,7 @@ const rootFiles = [
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
-  "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
+  "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
   "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
@@ -47,6 +47,23 @@ fs.mkdirSync(output, { recursive: true });
 rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
 copy("assets/flag-symbols/runtime.svg");
+copyDirectoryFiles("assets/clan-heraldry", relativePath => /(?:manifest\.json|charges-(?:full|micro)\.svg)$/i.test(relativePath));
+const productionHeraldryManifestPath = path.join(output, "assets", "clan-heraldry", "art-set-v1", "manifest.json");
+const sourceHeraldryManifest = JSON.parse(fs.readFileSync(productionHeraldryManifestPath, "utf8"));
+const productionHeraldryManifest = {
+  schemaVersion: sourceHeraldryManifest.schemaVersion,
+  artSetVersion: sourceHeraldryManifest.artSetVersion,
+  name: sourceHeraldryManifest.name,
+  stableChargeIds: sourceHeraldryManifest.stableChargeIds,
+  sprites: {
+    full: "assets/clan-heraldry/art-set-v1/charges-full.svg",
+    micro: "assets/clan-heraldry/art-set-v1/charges-micro.svg",
+  },
+  entries: sourceHeraldryManifest.entries.map(({ id, label, available, selectable, provenance }) => ({
+    id, label, available, selectable, provenance,
+  })),
+};
+fs.writeFileSync(productionHeraldryManifestPath, `${JSON.stringify(productionHeraldryManifest, null, 2)}\n`, "utf8");
 copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
 copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
@@ -69,6 +86,10 @@ copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath)
 copy("functions/clanQuestPeriod.js");
 copy("functions/playerFlagConfig.js");
 copy("functions/flagRenderer.js");
+copy("functions/clanHeraldryConfig.js");
+copy("functions/clanHeraldryAssets.js");
+copy("functions/clanHeraldryLegacyV1.js");
+copy("functions/clanHeraldryRenderer.js");
 
 const stamp = spawnSync(process.execPath, [path.join(__dirname, "stamp-deploy-build.js"), "--root", "dist"], {
   cwd: root,
