@@ -414,6 +414,10 @@ assert.doesNotMatch(client, /scout-from|Scout from Tower/, "A manual Tower scout
 assert.doesNotMatch(holdingTowerUi, /scout-from|Scout from Tower/, "The dedicated Scout From Tower button remains in the Tower panel.");
 requires(holdingTowerUi, /function createQaSnapshot[\s\S]*?Wall Upgrades/, "The split Holding Tower QA/queue renderer is incomplete.");
 requires(holdingTowerUi, /function renderPanel[\s\S]*?Veil of Silence/, "The split Holding Tower panel renderer is incomplete.");
-requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?var\(--cl-ink\)[\s\S]*?var\(--cl-ivory\)/, "The final Tower layer does not reuse the Crownlands parchment and ivory palette.");
+requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?var\(--manuscript-ink\)[\s\S]*?var\(--manuscript-paper-surface\)[\s\S]*?var\(--manuscript-button-primary\)[\s\S]*?var\(--cl-ivory\)/, "The final Tower layer does not reuse the Profile manuscript palette and ivory action labels.");
+assert.doesNotMatch(holdingTowerStyles, /\.holding-tower-(?:modal|vitals|veil-card|upgrade-copy|queued-levels):is\(/, "A Holding Tower descendant :is() selector was compacted into a non-matching compound selector.");
+requires(holdingTowerUi, /data-tower-action="repair"[^>]*class="[^"]*move-action|class="[^"]*move-action[^>]*data-tower-action="repair"/, "Start Repair does not preserve the existing green move-action treatment.");
+requires(holdingTowerUi, /data-tower-action="veil"[^>]*class="[^"]*secondary|class="[^"]*secondary[^>]*data-tower-action="veil"/, "Veil of Silence does not preserve the existing blue secondary treatment.");
+requires(client, /Treasury Balance[\s\S]*?Daily Donation Allowance[\s\S]*?Remaining Today[\s\S]*?Total Donated[\s\S]*?Total Spent/, "The Clan Treasury does not present the five required readable metrics.");
 
 console.log("Validated Holding Tower automatic scout origins, neutral/reset state, probation, Rally gate, attributed garrisons, Treasury formulas, walls, repairs, conquest, Veil, security, and client integration.");

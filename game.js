@@ -23375,14 +23375,16 @@ function renderClanTreasuryPanel() {
         <h3 id="clanTreasuryTitle">Clan Treasury</h3>
         <b>${clanTreasuryLoading ? "Syncing…" : `${formatNumber(balance)} Gold`}</b>
       </div>
-      <div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury season totals">
-        <div><span>Available</span><strong>${formatNumber(balance)}</strong></div>
+      <div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury overview">
+        <div><span>Treasury Balance</span><strong>${formatNumber(balance)}</strong></div>
+        <div><span>Daily Donation Allowance</span><strong>${formatNumber(dailyCap)}</strong></div>
+        <div><span>Remaining Today</span><strong>${formatNumber(remaining)}</strong></div>
         <div><span>Total Donated</span><strong>${formatNumber(treasury.totalDonated || 0)}</strong></div>
         <div><span>Total Spent</span><strong>${formatNumber(treasury.totalSpent || 0)}</strong></div>
       </div>
       ${worldUnavailable ? "" : `
         <div class="clan-quest-progress clan-treasury-allowance ${allowanceLocked ? "locked" : "preview"}">
-          <div><strong>${allowanceLocked ? "Daily allowance locked" : "Allowance preview"}</strong><span>${formatNumber(remaining)} / ${formatNumber(dailyCap)} Gold remaining</span></div>
+          <div><strong>${allowanceLocked ? "Daily allowance locked" : "Allowance preview"}</strong><span>${formatNumber(donatedToday)} Gold donated today</span></div>
           <span class="clan-quest-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${allowanceUsedPercent}"><i style="width:${allowanceUsedPercent}%"></i></span>
           <small>${allowanceLocked
             ? `Locked from the first successful donation at ${formatNumber(allowanceRate)} raw Gold/hour × 12 until 00:00 UTC.`

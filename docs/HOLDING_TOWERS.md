@@ -139,9 +139,9 @@ Local visual fixtures are available only on localhost with `?towerQa=<scenario>`
 
 `neutral`, `clan-owned`, `owner`, `enemy`, `scout-success`, `scout-veil`, `damaged`, `repair`, `upgrading`, `queue`, `veil-active`, `treasury-preview`, `treasury-locked`, `treasury`, and `incoming`.
 
-The Tower modal reuses the production Clan hero/shield treatment, city stat panels, Clan section headings, roster rows, quest progress tracks, action buttons, and city level-up controls. Treasury reuses the production Clan gift/form/quest hierarchy. Parchment and ivory carry the content surfaces; dark blue is reserved for the compact hero and title bands, with burgundy/green/charcoal action framing and the existing typography, borders, shadows, and spacing.
+The Tower modal reuses the production Clan shield treatment, Profile manuscript header and stat hierarchy, City stat panels, Clan roster rows, quest progress tracks, action buttons, and City level-up controls. Treasury reuses the production Clan gift/form/quest hierarchy. The final readability layer uses the Profile screen's burgundy headers, warm parchment surface, darker parchment information boxes, dark manuscript ink, and restrained gold rules. Existing burgundy military, green repair/reinforcement, blue utility, and gold progression/economy button treatments identify actions without making static information look clickable.
 
-Fresh final-correction captures and machine-readable dimensions live in `docs/visual-qa/holding-towers-final-corrections/`. Desktop was checked at `1440×900`; mobile was checked at exactly `844×390` landscape. No portrait-specific layout was added. These fixtures do not activate or write live gameplay state.
+Fresh final-readability captures and machine-readable dimensions live in `docs/visual-qa/holding-towers-final-readability/`. The current Profile screen is captured first as the comparison reference, followed by all eight requested Tower/Treasury states. Desktop was checked at `1440×900`; mobile was checked at exactly `844×390` landscape. No portrait-specific layout was added. These fixtures do not activate or write live gameplay state.
 
 For the full Pending Core preview, use the existing Crownlands Studio/Core preview workflow against the Pending Core 5×5 candidate. The Studio serializer preserves the permanent Tower names/quadrants along with the approved immutable reservation/art fields. Do not switch the live season pointer, deploy Functions, or run reset activation as part of preview QA.
 
@@ -151,5 +151,5 @@ For the full Pending Core preview, use the existing Crownlands Studio/Core previ
 - `node tools/validate-holding-tower-visuals.js`: approved art/reservations/assets plus interactive/accessibility integration
 - `functions/test/emulator-holding-tower-rules.js`: public state, clan Treasury privacy, own usage privacy, garrison secrecy, hidden receipts, and server-only writes
 - `functions/test/emulator-holding-tower-donation-concurrency.js`: simultaneous first donations, locked-snapshot stability, allowance-boundary contention, idempotent accounting, and no Gold/Treasury double mutation
-- `node tools/qa-holding-tower-fixes.js`: seven fresh visual captures, horizontal-overflow assertions, browser-console checks, desktop, and exact `844×390` landscape metrics
+- `node tools/qa-holding-tower-fixes.js`: a fresh Profile reference followed by eight Tower/Treasury captures, horizontal-overflow and clipped-text assertions, browser-console checks, desktop, and exact `844×390` landscape metrics
 - the existing Crownlands static and emulator regression suites cover economy transaction retries, normal combat, city Walls, rallies, routes, reports, clan lifecycle, and reset invariants

@@ -180,8 +180,8 @@
             <label>Wall Levels <input data-tower-upgrade-count type="number" min="1" max="${Math.max(1, 10 - (tower.upgradeQueue?.length || 0))}" value="1" /></label>
             <div class="city-level-up-actions holding-tower-command-actions">
               <button type="button" class="city-level-up-btn" data-tower-action="upgrade" ${actionBusy || tower.attackBlocked || tower.wallIntegrityBps < 10_000 || (tower.upgradeQueue?.length || 0) >= 10 ? "disabled" : ""}><span>Queue Upgrade</span><small>${number(tower.nextWallUpgradeCost || 0)} Gold</small></button>
-              <button type="button" class="city-level-up-btn" data-tower-action="repair" ${actionBusy || tower.attackBlocked || tower.wallIntegrityBps >= 10_000 || tower.repairActive ? "disabled" : ""}><span>Start Repair</span><small>${number(tower.repairCost || tower.repair?.paidCost || 0)} Gold</small></button>
-              <button type="button" class="city-level-up-btn" data-tower-action="veil" ${actionBusy || tower.veilActive || tower.veilUsesRemaining < 1 ? "disabled" : ""}><span>Veil of Silence</span><small>${number(tower.veilCost || 0)} Gold</small></button>
+              <button type="button" class="city-level-up-btn move-action" data-tower-action="repair" ${actionBusy || tower.attackBlocked || tower.wallIntegrityBps >= 10_000 || tower.repairActive ? "disabled" : ""}><span>Start Repair</span><small>${number(tower.repairCost || tower.repair?.paidCost || 0)} Gold</small></button>
+              <button type="button" class="city-level-up-btn secondary" data-tower-action="veil" ${actionBusy || tower.veilActive || tower.veilUsesRemaining < 1 ? "disabled" : ""}><span>Veil of Silence</span><small>${number(tower.veilCost || 0)} Gold</small></button>
             </div>
           </div>` : ""}
       </section>`;
