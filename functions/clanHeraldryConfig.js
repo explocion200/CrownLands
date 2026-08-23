@@ -49,17 +49,12 @@
     charge("crown", "Crown", { provenance: "player-source" }),
     charge("lion", "Lion Rampant", { provenance: "player-source" }),
     charge("eagle", "Heraldic Eagle", { provenance: "player-source" }),
-    charge("double-eagle", "Double Eagle", { artworkPending: true }),
-    charge("griffin", "Griffin", { artworkPending: true }),
     charge("dragon", "Dragon", { provenance: "player-source" }),
     charge("wolf", "Wolf", { provenance: "player-source" }),
     charge("stag", "Stag", { provenance: "player-source" }),
     charge("bear", "Bear", { provenance: "player-source" }),
-    charge("raven", "Raven", { artworkPending: true }),
     charge("crossed-swords", "Crossed Swords", { provenance: "player-source" }),
-    charge("helm", "Great Helm", { artworkPending: true }),
     charge("gauntlet", "Gauntlet", { provenance: "player-source" }),
-    charge("castle", "Castle", { artworkPending: true }),
     charge("fleur-de-lis", "Fleur-de-lis", { provenance: "player-source" }),
     charge("oak-tree", "Oak Tree", { provenance: "player-source" }),
     charge("war-horn", "War Horn", { provenance: "clan-exclusive" }),
@@ -78,7 +73,6 @@
   const CHARGE_KEYS = keys(CHARGES);
   const SELECTABLE_CHARGES = Object.freeze(CHARGES.filter(option => option.selectable));
   const SELECTABLE_CHARGE_KEYS = keys(SELECTABLE_CHARGES);
-  const PENDING_CHARGE_KEYS = Object.freeze(CHARGES.filter(option => option.artworkPending).map(option => option.key));
   const SHAPE_BY_KEY = new Map(SHAPES.map(option => [option.key, option]));
   const CHARGE_BY_KEY = new Map(CHARGES.map(option => [option.key, option]));
 
@@ -98,7 +92,7 @@
   const V2_SCHEMA_EXAMPLE = Object.freeze({
     version: 2, artSetVersion: 1, shape: "castilian", division: "quartered",
     primary: "#7a2638", secondary: "#d8bd78", borderColor: "#d8bd78",
-    charge: "castle", secondaryCharge: "lion", chargeColor: "#19201d",
+    charge: "fortress-keep", secondaryCharge: "lion", chargeColor: "#19201d",
     secondaryChargeColor: "#7a2638", chargeLayout: "center", trim: "double",
     finish: "weathered",
   });
@@ -107,12 +101,10 @@
   function freezeOptions(rows, mapper) { return Object.freeze(rows.map(row => Object.freeze(mapper(row)))); }
   function keys(options) { return Object.freeze(options.map(option => option.key)); }
   function charge(key, label, metadata = {}) {
-    const artworkPending = metadata.artworkPending === true;
-    const available = key === "none" || !artworkPending;
     return Object.freeze({
-      key, label, artworkPending, available,
-      selectable: metadata.selectable !== false && available,
-      provenance: metadata.provenance || "pending",
+      key, label, available: true,
+      selectable: metadata.selectable !== false,
+      provenance: metadata.provenance || "system",
       fullSymbolId: key === "none" ? "" : `clan-charge-v1-full-${key}`,
       microSymbolId: key === "none" ? "" : `clan-charge-v1-micro-${key}`,
     });
@@ -125,6 +117,12 @@
   function normalizeChoice(value, allowed, fallback) {
     const key = String(value || "").trim().toLowerCase();
     return allowed.includes(key) ? key : fallback;
+  }
+  function normalizeChargeForRead(value, fallback) {
+    const key = String(value || "").trim().toLowerCase();
+    if (!key) return fallback;
+    if (CHARGE_KEYS.includes(key)) return key;
+    return /^[a-z0-9-]{1,40}$/.test(key) ? key : fallback;
   }
   function getVersion(value) {
     if (!isRecord(value)) return LEGACY_VERSION;
@@ -157,8 +155,8 @@
   }
   function normalizeV2ForRead(value = null) {
     const source = isRecord(value) ? value : {};
-    const chargeValue = normalizeChoice(source.charge, CHARGE_KEYS, DEFAULT_V2.charge);
-    const secondaryValue = normalizeChoice(source.secondaryCharge, CHARGE_KEYS, DEFAULT_V2.secondaryCharge);
+    const chargeValue = normalizeChargeForRead(source.charge, DEFAULT_V2.charge);
+    const secondaryValue = normalizeChargeForRead(source.secondaryCharge, DEFAULT_V2.secondaryCharge);
     return {
       version: CURRENT_VERSION,
       artSetVersion: normalizeChoice(Number(source.artSetVersion), SUPPORTED_ART_SET_VERSIONS, CURRENT_ART_SET_VERSION),
@@ -208,8 +206,32 @@
   function validateId(field, value, allowed, errors) { if (!allowed.includes(value)) errors.push(`Invalid ${field}.`); }
   function createV2DraftFromV1(value = null, legacyBanner = null) {
     const v1 = normalizeV1(value, legacyBanner);
-    const mapping = { swords: "crossed-swords", fleur: "fleur-de-lis", castle: "none", sun: "none" };
-    return normalizeV2ForRead({ ...v1, version: 2, artSetVersion: 1, charge: mapping[v1.charge] || v1.charge, secondaryCharge: mapping[v1.secondaryCharge] || v1.secondaryCharge });
+    const mapping = Object.freeze({ none: "none", lion: "lion", eagle: "eagle", crown: "crown", swords: "crossed-swords", fleur: "fleur-de-lis" });
+    const unresolvedFields = [];
+    const convert = (field, legacyCharge) => {
+      if (Object.prototype.hasOwnProperty.call(mapping, legacyCharge)) return mapping[legacyCharge];
+      unresolvedFields.push(field);
+      return "none";
+    };
+    const shield = normalizeV2ForRead({
+      ...v1,
+      version: CURRENT_VERSION,
+      artSetVersion: CURRENT_ART_SET_VERSION,
+      charge: convert("charge", v1.charge),
+      secondaryCharge: convert("secondaryCharge", v1.secondaryCharge),
+    });
+    return Object.freeze({
+      shield: Object.freeze(shield),
+      requiresLeaderSelection: unresolvedFields.length > 0,
+      unresolvedFields: Object.freeze(unresolvedFields),
+      legacyCharges: Object.freeze({ charge: v1.charge, secondaryCharge: v1.secondaryCharge }),
+    });
+  }
+  function pickRandomV2Charge(random = Math.random, options = {}) {
+    const pool = options.includeNone === true ? SELECTABLE_CHARGES : SELECTABLE_CHARGES.filter(option => option.key !== "none");
+    const sample = Number(random());
+    const normalized = Number.isFinite(sample) ? Math.min(Math.max(sample, 0), 0.999999999999) : 0;
+    return pool[Math.floor(normalized * pool.length)].key;
   }
   function colorLuminance(value) {
     const color = normalizeHex(value, DEFAULT_V2.primary);
@@ -238,16 +260,16 @@
   }
   function getRenderVariant(width) { return Number(width) < 45 ? "micro" : "full"; }
   function getShape(value) { return SHAPE_BY_KEY.get(value) || SHAPE_BY_KEY.get(DEFAULT_V2.shape); }
-  function getCharge(value) { return CHARGE_BY_KEY.get(value) || CHARGE_BY_KEY.get(DEFAULT_V2.charge); }
+  function getCharge(value) { return CHARGE_BY_KEY.get(value) || null; }
 
   return Object.freeze({
     LEGACY_VERSION, CURRENT_VERSION, CURRENT_ART_SET_VERSION, SUPPORTED_VERSIONS,
     SUPPORTED_ART_SET_VERSIONS, COLORS, COLOR_VALUES, SHAPES, SHAPE_KEYS, DIVISIONS,
     DIVISION_KEYS, CHARGE_LAYOUTS, CHARGE_LAYOUT_KEYS, TRIMS, TRIM_KEYS, FINISHES,
     FINISH_KEYS, CHARGES, CHARGE_KEYS, SELECTABLE_CHARGES, SELECTABLE_CHARGE_KEYS,
-    PENDING_CHARGE_KEYS, DEFAULT_V1, DEFAULT_V2, V2_SCHEMA_EXAMPLE, V2_KEYS, getVersion,
+    DEFAULT_V1, DEFAULT_V2, V2_SCHEMA_EXAMPLE, V2_KEYS, getVersion,
     normalizeHeraldryRevision, normalizeV1, normalizeV2ForRead, normalizeForRead,
-    validateV2Write, createV2DraftFromV1, colorLuminance, getContrastRatio,
+    validateV2Write, createV2DraftFromV1, pickRandomV2Charge, colorLuminance, getContrastRatio,
     getContrastWarnings, getRenderVariant, getShape, getCharge,
   });
 });

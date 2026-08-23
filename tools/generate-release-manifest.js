@@ -70,7 +70,9 @@ function createManifest() {
     "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "common-gear.js", "common-gear-ui.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
-    "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js",
+    "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
+    "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
+    "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg",
   ].map(relativePath => path.join(root, relativePath));
 
   const indexSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");

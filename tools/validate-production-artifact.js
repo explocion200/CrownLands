@@ -6,10 +6,10 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
-  "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
+  "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
   "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
-  "assets/map-editor-data.js", "assets/flag-symbols/runtime.svg", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js", "functions/flagRenderer.js",
+  "assets/map-editor-data.js", "assets/flag-symbols/runtime.svg", "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js", "functions/flagRenderer.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
   "artifact-manifest.json",
 ];
 const forbidden = [
@@ -23,6 +23,21 @@ for (const relativePath of required) {
 }
 for (const relativePath of forbidden) {
   if (fs.existsSync(path.join(dist, relativePath))) throw new Error(`Production artifact includes forbidden source data ${relativePath}.`);
+}
+
+const heraldryManifest = JSON.parse(fs.readFileSync(
+  path.join(dist, "assets", "clan-heraldry", "art-set-v1", "manifest.json"),
+  "utf8",
+));
+const expectedHeraldryCharges = [
+  "none", "crown", "lion", "eagle", "dragon", "wolf", "stag", "bear", "crossed-swords",
+  "gauntlet", "fleur-de-lis", "oak-tree", "war-horn", "battering-ram", "fortress-keep", "watchtower", "portcullis",
+];
+if (JSON.stringify(heraldryManifest.stableChargeIds) !== JSON.stringify(expectedHeraldryCharges)) {
+  throw new Error("Production clan heraldry manifest must contain the final 16-charge catalog plus none.");
+}
+if (JSON.stringify(heraldryManifest).includes("artworkPending")) {
+  throw new Error("Production clan heraldry manifest must not contain pending artwork state.");
 }
 
 const productionMapManifest = JSON.parse(fs.readFileSync(

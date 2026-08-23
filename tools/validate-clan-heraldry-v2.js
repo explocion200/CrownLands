@@ -15,8 +15,14 @@ const legacy = require(path.join(root, "functions", "clanHeraldryLegacyV1.js"));
 const renderer = require(path.join(root, "functions", "clanHeraldryRenderer.js")).create({ config, assets, legacyRenderer: legacy });
 const proof = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-v2", "index.html"), "utf8");
 
+const expectedIds = [
+  "none", "crown", "lion", "eagle", "dragon", "wolf", "stag", "bear",
+  "crossed-swords", "gauntlet", "fleur-de-lis", "oak-tree", "war-horn",
+  "battering-ram", "fortress-keep", "watchtower", "portcullis",
+];
+const removedV2Ids = ["double-eagle", "griffin", "raven", "helm", "castle"];
 const ids = config.CHARGES.map(option => option.key);
-assert.equal(ids.length, 22, "Expected 21 artwork charges plus none.");
+assert.deepEqual(ids, expectedIds, "Expected exactly 16 approved artwork charges plus none.");
 assert.equal(new Set(ids).size, ids.length, "Configured charge IDs must be unique.");
 assert.equal(config.COLORS.length, 16, "Expected the approved 16-color palette.");
 assert.equal(config.SHAPES.length, 4);
@@ -24,22 +30,38 @@ assert.equal(config.DIVISIONS.length, 8);
 assert.equal(config.CHARGE_LAYOUTS.length, 4);
 assert.equal(config.TRIMS.length, 3);
 assert.equal(config.FINISHES.length, 3);
-assert.deepEqual(config.PENDING_CHARGE_KEYS, ["double-eagle", "griffin", "raven", "helm", "castle"]);
+assert.equal(Object.prototype.hasOwnProperty.call(config, "PENDING_CHARGE_KEYS"), false, "Pending catalog metadata must be retired.");
 assert.equal(config.normalizeHeraldryRevision(undefined), 0);
 assert.equal(config.normalizeHeraldryRevision(-1), 0);
 assert.equal(config.normalizeHeraldryRevision(7), 7);
-assert.equal(config.V2_SCHEMA_EXAMPLE.charge, "castle");
-assert.equal(config.normalizeV2ForRead(config.V2_SCHEMA_EXAMPLE).charge, "castle", "Lenient reads must preserve stable pending IDs.");
-assert.equal(config.createV2DraftFromV1({ charge: "castle" }).charge, "none", "Legacy Castle must not be silently remapped to clan-exclusive Fortress Keep.");
+assert.equal(config.V2_SCHEMA_EXAMPLE.charge, "fortress-keep");
+for (const removedId of removedV2Ids) {
+  assert.equal(config.normalizeV2ForRead({ ...config.DEFAULT_V2, charge: removedId }).charge, removedId, `${removedId} must not silently map to another v2 identity on read.`);
+  assert.equal(config.validateV2Write({ ...config.DEFAULT_V2, charge: removedId }).ok, false, `${removedId} must be rejected for v2 writes.`);
+}
+const unresolvedConversion = config.createV2DraftFromV1({ charge: "castle" });
+assert.equal(unresolvedConversion.shield.charge, "none", "Legacy Castle must not be remapped to clan-exclusive Fortress Keep.");
+assert.equal(unresolvedConversion.requiresLeaderSelection, true, "Unsupported legacy charges require deliberate Leader selection.");
+assert.deepEqual(unresolvedConversion.unresolvedFields, ["charge"]);
+for (const [legacyCharge, v2Charge] of Object.entries({ none: "none", lion: "lion", eagle: "eagle", crown: "crown", swords: "crossed-swords", fleur: "fleur-de-lis" })) {
+  const conversion = config.createV2DraftFromV1({ charge: legacyCharge, secondaryCharge: "lion" });
+  assert.equal(conversion.shield.charge, v2Charge);
+  assert.equal(conversion.requiresLeaderSelection, false);
+}
+assert.equal(config.pickRandomV2Charge(() => 0), "crown");
+assert.equal(config.pickRandomV2Charge(() => 0.999999), "portcullis");
+assert.ok(expectedIds.includes(config.pickRandomV2Charge(() => 0, { includeNone: true })));
 
 const manifestIds = manifest.entries.map(entry => entry.id);
 assert.equal(new Set(manifestIds).size, manifestIds.length, "Manifest IDs must be unique.");
 assert.deepEqual(manifestIds, ids.filter(id => id !== "none"), "Manifest/config charge ordering changed.");
+assert.deepEqual(manifest.stableChargeIds, expectedIds, "Manifest stableChargeIds must match the final selectable v2 catalog.");
 const availableIds = manifest.entries.filter(entry => entry.available).map(entry => entry.id);
 assert.deepEqual(availableIds, config.SELECTABLE_CHARGE_KEYS.filter(id => id !== "none"));
-for (const entry of manifest.entries.filter(entry => entry.artworkPending)) {
-  assert.equal(entry.available, false); assert.equal(entry.selectable, false);
-  assert.ok(!entry.sourcePath, `${entry.id} must not receive fallback artwork.`);
+for (const entry of manifest.entries) {
+  assert.equal(entry.available, true, `${entry.id} must have approved artwork.`);
+  assert.equal(entry.selectable, true, `${entry.id} must be selectable.`);
+  assert.equal(Object.prototype.hasOwnProperty.call(entry, "artworkPending"), false, `${entry.id} retains pending metadata.`);
 }
 
 function pngDimensions(bytes) {
@@ -87,6 +109,7 @@ assert.ok(spriteData.micro.raw <= 45 * 1024, `Micro sprite exceeds 45KB: ${sprit
 assert.ok(spriteData.micro.gzip <= 18 * 1024, `Micro sprite exceeds 18KB gzip: ${spriteData.micro.gzip}`);
 
 assert.match(proof, /symbolHref/);
+assert.doesNotMatch(proof, /artwork\s+pending|pending-grid|data-proof-pending/i, "Proof page still exposes pending artwork.");
 for (const id of availableIds) {
   assert.ok(spriteData.full.svg.includes(`id="clan-charge-v1-full-${id}"`));
   assert.ok(spriteData.micro.svg.includes(`id="clan-charge-v1-micro-${id}"`));
@@ -118,8 +141,9 @@ for (const [index, fixture] of fixtures.entries()) {
 
 const strictDefault = config.validateV2Write({ ...config.DEFAULT_V2 });
 assert.equal(strictDefault.ok, true, strictDefault.errors.join(" "));
-assert.equal(config.validateV2Write({ ...config.DEFAULT_V2, charge: "griffin" }).ok, false, "Pending artwork must be rejected for writes.");
-assert.doesNotMatch(renderer.renderMarkup(config.V2_SCHEMA_EXAMPLE, { width: 96 }), /clan-charge-v1-full-castle/, "Pending charges must not emit unresolved sprite references.");
+for (const removedId of removedV2Ids) {
+  assert.doesNotMatch(renderer.renderMarkup({ ...config.DEFAULT_V2, charge: removedId }, { width: 96 }), new RegExp(`clan-charge-v1-full-${removedId}`), "Removed charges must not emit sprite references.");
+}
 assert.equal(config.validateV2Write({ ...config.DEFAULT_V2, surprise: true }).ok, false, "Unknown fields must be rejected.");
 assert.equal(config.validateV2Write({ ...config.DEFAULT_V2, primary: "#123456" }).ok, false, "New off-palette values must be rejected.");
 assert.equal(config.validateV2Write({ ...config.DEFAULT_V2, primary: "#123456" }, { existing: { ...config.DEFAULT_V2, primary: "#123456" } }).ok, true, "Existing off-palette values must remain valid.");
@@ -156,6 +180,6 @@ for (const charge of config.SELECTABLE_CHARGES.filter(option => option.key !== "
   const markup = renderer.renderMarkup({ ...config.DEFAULT_V2, charge: charge.key }, { width: 27 });
   assert.match(markup, new RegExp(`clan-charge-v1-micro-${charge.key}`));
 }
-for (const token of ["exclusive-grid", "charge-grid", "reuse-grid", "pending-grid", "shapes", "divisions", "layouts", "materials", "version-proof"]) assert.ok(proof.includes(token), `Proof section ${token} missing.`);
+for (const token of ["exclusive-grid", "charge-grid", "reuse-grid", "shapes", "divisions", "layouts", "materials", "version-proof"]) assert.ok(proof.includes(token), `Proof section ${token} missing.`);
 
-console.log(JSON.stringify({ charges: availableIds.length, pending: config.PENDING_CHARGE_KEYS.length, spriteBytes: { full: spriteData.full.raw, fullGzip: spriteData.full.gzip, micro: spriteData.micro.raw, microGzip: spriteData.micro.gzip }, nodes: { micro: nodeCount(microMarkup), fullCenter: nodeCount(fullMarkup), fullPaired: nodeCount(pairedMarkup), complex: nodeCount(complexMarkup), leaderboard100: nodeCount(microMarkup) * 100 }, v1Fixtures: fixtures.length }, null, 2));
+console.log(JSON.stringify({ charges: availableIds.length, spriteBytes: { full: spriteData.full.raw, fullGzip: spriteData.full.gzip, micro: spriteData.micro.raw, microGzip: spriteData.micro.gzip }, nodes: { micro: nodeCount(microMarkup), fullCenter: nodeCount(fullMarkup), fullPaired: nodeCount(pairedMarkup), complex: nodeCount(complexMarkup), leaderboard100: nodeCount(microMarkup) * 100 }, v1Fixtures: fixtures.length }, null, 2));
