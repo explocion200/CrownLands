@@ -3761,8 +3761,8 @@ async function openHoldingTower(towerId = "") {
   if (!modal.open) modal.showModal();
   try {
     const qaScenario = getHoldingTowerQaScenario();
-    if (qaScenario === "treasury") {
-      renderHoldingTowerTreasuryQa();
+    if (qaScenario.startsWith("treasury")) {
+      renderHoldingTowerTreasuryQa(qaScenario);
       return;
     }
     await Promise.all([
@@ -3785,10 +3785,31 @@ async function openHoldingTower(towerId = "") {
   }, { once: true });
 }
 
-function renderHoldingTowerTreasuryQa() {
+function renderHoldingTowerTreasuryQa(scenario = "treasury-locked") {
+  const locked = scenario !== "treasury-preview";
   clanTreasuryStatus = {
     treasury: { balance: 48_750_000, totalDonated: 92_400_000, totalSpent: 43_650_000 },
-    allowance: { dailyCap: 2_400_000, donatedToday: 850_000, remaining: 1_550_000 },
+    allowance: locked
+      ? {
+          donationDayUtc: "2026-08-22",
+          rawGoldPerHourSnapshot: 200_000,
+          previewRawGoldPerHour: null,
+          dailyCap: 2_400_000,
+          donatedToday: 850_000,
+          remaining: 1_550_000,
+          locked: true,
+          preview: false,
+        }
+      : {
+          donationDayUtc: "2026-08-22",
+          rawGoldPerHourSnapshot: null,
+          previewRawGoldPerHour: 200_000,
+          dailyCap: 2_400_000,
+          donatedToday: 0,
+          remaining: 2_400_000,
+          locked: false,
+          preview: true,
+        },
   };
   modal.classList.add("holding-tower-treasury-qa-modal");
   modalTitle.textContent = "Clan Treasury";
@@ -23297,29 +23318,44 @@ function renderClanTreasuryPanel() {
   const allowance = clanTreasuryStatus?.allowance || {};
   const worldUnavailable = !clanTreasuryStatus && !clanTreasuryLoading;
   const remaining = Math.max(0, Math.floor(Number(allowance.remaining) || 0));
+  const dailyCap = Math.max(0, Math.floor(Number(allowance.dailyCap) || 0));
+  const donatedToday = Math.max(0, Math.floor(Number(allowance.donatedToday) || 0));
+  const allowanceUsedPercent = dailyCap ? Math.min(100, Math.floor(donatedToday * 100 / dailyCap)) : 0;
+  const allowanceLocked = allowance.locked === true;
+  const allowanceRate = Math.max(0, Math.floor(Number(
+    allowanceLocked ? allowance.rawGoldPerHourSnapshot : allowance.previewRawGoldPerHour
+  ) || 0));
   const balance = Math.max(0, Math.floor(Number(treasury.balance) || 0));
   const defaultDonation = Math.max(0, Math.min(remaining, Math.floor(Number(state?.gold) || 0)));
   return `
-    <section class="clan-treasury-panel" aria-labelledby="clanTreasuryTitle">
-      <div class="profile-section-heading clan-treasury-heading">
+    <section class="clan-gift-panel clan-treasury-panel" aria-labelledby="clanTreasuryTitle">
+      <div class="profile-section-heading clan-quest-heading clan-treasury-heading">
         <span>War Chest · Current Season</span>
         <h3 id="clanTreasuryTitle">Clan Treasury</h3>
         <b>${clanTreasuryLoading ? "Syncing…" : `${formatNumber(balance)} Gold`}</b>
       </div>
-      <div class="clan-treasury-ledger" aria-label="Clan Treasury season totals">
+      <div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury season totals">
         <div><span>Available</span><strong>${formatNumber(balance)}</strong></div>
         <div><span>Total Donated</span><strong>${formatNumber(treasury.totalDonated || 0)}</strong></div>
         <div><span>Total Spent</span><strong>${formatNumber(treasury.totalSpent || 0)}</strong></div>
       </div>
-      <form class="clan-treasury-donate" data-clan-treasury-form>
+      ${worldUnavailable ? "" : `
+        <div class="clan-quest-progress clan-treasury-allowance ${allowanceLocked ? "locked" : "preview"}">
+          <div><strong>${allowanceLocked ? "Daily allowance locked" : "Allowance preview"}</strong><span>${formatNumber(remaining)} / ${formatNumber(dailyCap)} Gold remaining</span></div>
+          <span class="clan-quest-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${allowanceUsedPercent}"><i style="width:${allowanceUsedPercent}%"></i></span>
+          <small>${allowanceLocked
+            ? `Locked from the first successful donation at ${formatNumber(allowanceRate)} raw Gold/hour × 12 until 00:00 UTC.`
+            : `Preview based on ${formatNumber(allowanceRate)} current raw Gold/hour. Your first successful donation locks today's cap.`}</small>
+        </div>`}
+      <form class="clan-form clan-treasury-donate" data-clan-treasury-form>
         <label for="clanTreasuryDonation">Donate personal Gold</label>
         <div>
           <input id="clanTreasuryDonation" data-clan-treasury-donation type="number" min="1" max="${remaining}" step="1" value="${defaultDonation || ""}" placeholder="Gold amount" ${worldUnavailable || !remaining ? "disabled" : ""} />
-          <button type="submit" data-clan-action="donate-treasury" ${worldUnavailable || !remaining || clanTreasuryActionInFlight ? "disabled" : ""}>${clanTreasuryActionInFlight ? "Donating…" : "Donate"}</button>
+          <button type="submit" class="profile-primary-btn" data-clan-action="donate-treasury" ${worldUnavailable || !remaining || clanTreasuryActionInFlight ? "disabled" : ""}>${clanTreasuryActionInFlight ? "Donating…" : "Donate"}</button>
         </div>
         <small>${worldUnavailable
           ? "Available when the Pending Core Tower world is activated."
-          : `${formatNumber(remaining)} of ${formatNumber(allowance.dailyCap || 0)} Gold remaining today · resets 00:00 UTC`}</small>
+          : `${formatNumber(remaining)} Gold available to donate today · resets 00:00 UTC`}</small>
       </form>
       <p>Donations are final. Leaders and Officers spend Treasury Gold from an owned Holding Tower.</p>
     </section>`;

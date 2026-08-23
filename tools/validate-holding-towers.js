@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -24,6 +25,30 @@ const baseRepairMinutes = () => 60;
 
 function expectError(callback, pattern, message) {
   assert.throws(callback, pattern, message);
+}
+
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing ${name}.`);
+  const parametersStart = source.indexOf("(", start);
+  let parameterDepth = 0;
+  let parametersEnd = -1;
+  for (let index = parametersStart; index < source.length; index += 1) {
+    if (source[index] === "(") parameterDepth += 1;
+    if (source[index] === ")") parameterDepth -= 1;
+    if (parameterDepth === 0) {
+      parametersEnd = index;
+      break;
+    }
+  }
+  const bodyStart = source.indexOf("{", parametersEnd);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
 }
 
 function ownedTower(towerId = towers.TOWERS[0].id, patch = {}) {
@@ -99,15 +124,106 @@ const hugeGarrison = towers.addGarrisonTroops({}, "whale", Number.MAX_SAFE_INTEG
 assert.equal(hugeGarrison.whale.troops, Number.MAX_SAFE_INTEGER - 10, "Tower garrisons must not impose an artificial gameplay cap.");
 expectError(() => towers.addGarrisonTroops(hugeGarrison, "whale", 11), /safe-integer range/);
 
-// Treasury allowance uses only the authoritative raw base rate and resets by UTC date.
-assert.deepEqual(towers.getDonationAllowance(20_000, 0), {
-  rawBaseGoldPerHour: 20_000,
-  dailyCap: 240_000,
-  donatedToday: 0,
-  remaining: 240_000,
+// The first successful Treasury donation locks the raw rate for that UTC day.
+const firstDay = "2026-08-22";
+const secondDay = "2026-08-23";
+const previewAllowance = towers.getDonationAllowanceForUsage({}, 20_000, firstDay);
+assert.equal(previewAllowance.locked, false);
+assert.equal(previewAllowance.preview, true);
+assert.equal(previewAllowance.rawGoldPerHourSnapshot, null);
+assert.equal(previewAllowance.previewRawGoldPerHour, 20_000);
+assert.equal(previewAllowance.dailyCap, 240_000);
+const firstDonation = towers.applyTreasuryDonation({
+  usage: {},
+  currentRawBaseGoldPerHour: 20_000,
+  donationDayUtc: firstDay,
+  amount: 100_000,
+  personalGold: 500_000,
+  treasury: { balance: 700_000, totalDonated: 900_000, totalSpent: 200_000 },
 });
-assert.equal(towers.getDonationAllowance(20_000, 250_000).remaining, 0);
-assert.equal(towers.getDonationAllowance(20_000, 0).dailyCap, 240_000, "Boost-like extra arguments must not alter the raw cap.");
+assert.deepEqual(firstDonation.usage, {
+  donationDayUtc: firstDay,
+  rawGoldPerHourSnapshot: 20_000,
+  dailyDonationCap: 240_000,
+  donatedToday: 100_000,
+});
+assert.equal(firstDonation.allowance.locked, true);
+assert.equal(firstDonation.personalGold, 400_000);
+assert.equal(firstDonation.treasury.balance, 800_000);
+
+const afterProductionIncrease = towers.applyTreasuryDonation({
+  usage: firstDonation.usage,
+  currentRawBaseGoldPerHour: 30_000,
+  donationDayUtc: firstDay,
+  amount: 20_000,
+  personalGold: firstDonation.personalGold,
+  treasury: firstDonation.treasury,
+});
+assert.equal(afterProductionIncrease.usage.rawGoldPerHourSnapshot, 20_000);
+assert.equal(afterProductionIncrease.usage.dailyDonationCap, 240_000, "A production increase changed the locked daily cap.");
+const afterProductionDecrease = towers.applyTreasuryDonation({
+  usage: afterProductionIncrease.usage,
+  currentRawBaseGoldPerHour: 10_000,
+  donationDayUtc: firstDay,
+  amount: 20_000,
+  personalGold: afterProductionIncrease.personalGold,
+  treasury: afterProductionIncrease.treasury,
+});
+assert.equal(afterProductionDecrease.usage.rawGoldPerHourSnapshot, 20_000);
+assert.equal(afterProductionDecrease.usage.dailyDonationCap, 240_000, "A production decrease changed the locked daily cap.");
+
+const nextDayPreview = towers.getDonationAllowanceForUsage(firstDonation.usage, 32_000, secondDay);
+assert.equal(nextDayPreview.locked, false);
+assert.equal(nextDayPreview.dailyCap, 384_000, "The prior UTC day's snapshot did not expire.");
+const nextDayDonation = towers.applyTreasuryDonation({
+  usage: firstDonation.usage,
+  currentRawBaseGoldPerHour: 32_000,
+  donationDayUtc: secondDay,
+  amount: 1,
+  personalGold: 500_000,
+  treasury: firstDonation.treasury,
+});
+assert.equal(nextDayDonation.usage.rawGoldPerHourSnapshot, 32_000);
+assert.equal(nextDayDonation.usage.dailyDonationCap, 384_000);
+
+const failedUsage = {};
+expectError(() => towers.applyTreasuryDonation({
+  usage: failedUsage,
+  currentRawBaseGoldPerHour: 20_000,
+  donationDayUtc: firstDay,
+  amount: 240_001,
+  personalGold: 500_000,
+  treasury: {},
+}), /daily-donation-cap-exceeded/);
+expectError(() => towers.applyTreasuryDonation({
+  usage: failedUsage,
+  currentRawBaseGoldPerHour: 20_000,
+  donationDayUtc: firstDay,
+  amount: 1,
+  personalGold: 0,
+  treasury: {},
+}), /insufficient-personal-gold/);
+assert.deepEqual(failedUsage, {}, "A failed donation mutated or established the daily snapshot.");
+
+// Existing economy math keeps every multiplier outside the authoritative raw baseline.
+const goldProductionContext = {};
+vm.createContext(goldProductionContext);
+vm.runInContext(extractFunction(server, "calculateGoldProductionRates"), goldProductionContext);
+for (const [label, skillOrGear, strongholdOrCitadel, timedBoost] of [
+  ["Gear", 75, 0, 0],
+  ["Skills", 35, 0, 0],
+  ["Stronghold", 0, 25, 0],
+  ["Crown Citadel", 0, 40, 0],
+  ["timed boost", 0, 0, 50],
+]) {
+  assert.equal(
+    goldProductionContext.calculateGoldProductionRates(100, skillOrGear, strongholdOrCitadel, timedBoost).baseGoldProductionPerHour,
+    100,
+    `${label} altered the raw Gold/hour snapshot input.`
+  );
+}
+assert.match(server, /const rawGoldProductionPerHour = stronghold \? 0 : getMillionLordsPassiveGoldPerHour\(level\)/);
+assert.match(server, /baseGoldPerHour \+= Math\.max\(0, safeNumber\(stats\.baseGoldProductionPerHour, 0\)\)/);
 assert.notEqual(towers.getUtcDateKey(NOW), towers.getUtcDateKey(towers.getNextUtcDayStartMs(NOW)));
 assert.deepEqual(towers.MANAGER_ROLES, ["leader", "officer"]);
 
@@ -193,7 +309,9 @@ assert.match(resetArchitecture, /clan-treasury-reset-state/);
 const requires = (source, pattern, message) => assert.match(source, pattern, message);
 requires(server, /SERVER_HOLDING_TOWER_WORLD_ACTIVE\s*=\s*HOLDING_TOWERS\.TOWERS\.every[\s\S]*?SERVER_WORLD_REGION_IDS\.has/, "The old/current live world is not hard-gated by the authoritative Pending Core region catalog.");
 requires(server, /exports\.donateClanTreasuryGold[\s\S]*?runTransactionWithInfrastructureRetry[\s\S]*?gold:[\s\S]*?balance:[\s\S]*?totalDonated/, "Donation is not an atomic personal-Gold-to-Treasury transaction.");
-requires(server, /createPreparedEconomyStatsSnapshot\(economy[\s\S]*?getDonationAllowance\(stats\.baseGoldPerHour/, "Donation cap is not computed from an authoritative raw-base economy snapshot.");
+requires(server, /createPreparedEconomyStatsSnapshot\(economy[\s\S]*?currentRawBaseGoldPerHour = stats\.baseGoldPerHour[\s\S]*?applyTreasuryDonation/, "The first successful donation does not use the authoritative raw-base economy snapshot.");
+requires(server, /rawGoldPerHourSnapshot:[\s\S]*?dailyDonationCap:[\s\S]*?donatedToday:/, "The locked UTC donation snapshot is not persisted with its derived cap and usage.");
+requires(server, /transaction\.set\(usageRef[\s\S]*?transaction\.set\(treasuryRef|transaction\.set\(treasuryRef[\s\S]*?transaction\.set\(usageRef/, "Treasury usage and balance are not written in the same transaction.");
 requires(server, /exports\.sendArmyOrder[\s\S]*?order\.targetType === "tower"[\s\S]*?only be attacked through a qualifying Clan Rally/, "Solo attacks can target a Holding Tower.");
 requires(server, /exports\.launchClanRally[\s\S]*?validateTowerRallyParticipants[\s\S]*?immediately|exports\.launchClanRally[\s\S]*?validateTowerRallyParticipants/, "Tower Rally eligibility is not revalidated at launch.");
 requires(server, /towerDefenderMembersSnap[\s\S]*?Holding Tower under Rally attack[\s\S]*?queueIncomingArmyNotification/, "Owning-clan members are not notified when a Rally launches against their Tower.");
@@ -208,6 +326,7 @@ requires(server, /resetClanHoldingTowers[\s\S]*?createInitialHoldingTowerState[\
 requires(rules, /match \/holdingTowers\/\{towerId\}[\s\S]*?allow create, update, delete: if false[\s\S]*?match \/garrison\/\{uid\}/, "Tower documents are not server-owned in Firestore Rules.");
 requires(rules, /match \/treasury\/\{resetId\}[\s\S]*?allow create, update, delete: if false[\s\S]*?match \/treasuryReceipts\/\{receiptId\}[\s\S]*?allow read, create, update, delete: if false/, "Clan Treasury or receipt documents are not server-owned in Firestore Rules.");
 requires(read("functions/test/emulator-holding-tower-rules.js"), /Treasury privacy[\s\S]*?garrison secrecy[\s\S]*?server-only writes/, "Holding Tower Firestore security is not exercised by the emulator suite.");
+requires(read("functions/test/emulator-holding-tower-donation-concurrency.js"), /simultaneous first donations[\s\S]*?allowance race[\s\S]*?Gold race/i, "Holding Tower donation races are not exercised by the emulator suite.");
 
 for (const tower of towers.TOWERS) {
   requires(visualConfig, new RegExp(`${tower.id}[\\s\\S]*?${tower.name}`), `${tower.name} is missing from the immutable visual config.`);
@@ -215,8 +334,8 @@ for (const tower of towers.TOWERS) {
 assert.doesNotMatch(server, /holdingTower[\s\S]{0,80}(productionBonus|attackBonus|marchBonus|xpBonus|territoryBonus)/i, "A forbidden passive Holding Tower bonus was introduced.");
 requires(firebaseClient, /getHoldingTowerState[\s\S]*?getClanTreasuryStatus[\s\S]*?donateClanTreasuryGold/, "Holding Tower client callable wrappers are incomplete.");
 requires(client, /holding-tower-node[\s\S]*?openHoldingTower/, "The approved Tower art is not interactive.");
-requires(holdingTowerUi, /function createQaSnapshot[\s\S]*?Wall Upgrade Queue/, "The split Holding Tower QA/queue renderer is incomplete.");
+requires(holdingTowerUi, /function createQaSnapshot[\s\S]*?Wall Upgrades/, "The split Holding Tower QA/queue renderer is incomplete.");
 requires(holdingTowerUi, /function renderPanel[\s\S]*?Veil of Silence/, "The split Holding Tower panel renderer is incomplete.");
-requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?#eee3cb[\s\S]*?#fff0bd/, "The final Tower contrast layer is missing.");
+requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?var\(--cl-ink\)[\s\S]*?var\(--cl-ivory\)/, "The final Tower layer does not reuse the Crownlands parchment and ivory palette.");
 
 console.log("Validated Holding Tower neutral/reset state, probation, Rally gate, attributed garrisons, Treasury formulas, walls, repairs, conquest, Veil, security, and client integration.");

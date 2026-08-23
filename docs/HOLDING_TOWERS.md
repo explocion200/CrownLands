@@ -64,7 +64,7 @@ One server-owned attribution record per player: `uid`, `clanId`, `troops`, displ
 ### Clan Treasury
 
 - `clans/{clanId}/treasury/{resetGeneration}`: `balance`, seasonal `totalDonated`, seasonal `totalSpent`, and `revision`
-- `clans/{clanId}/treasuryUsage/{resetGeneration}_{utcDate}_{uid}`: private per-player UTC donation usage and the raw-rate/cap snapshot used for audit
+- `clans/{clanId}/treasuryUsage/{resetGeneration}_{utcDate}_{uid}`: private per-player UTC donation usage with canonical `donationDayUtc`, `rawGoldPerHourSnapshot`, `dailyDonationCap`, `donatedToday`, and `snapshotEstablishedAtMs` fields
 - `clans/{clanId}/treasuryReceipts/{operationId}`: server-only idempotency and troubleshooting receipt containing the operation result
 - existing clan audit records receive concise donation/spend/Rally events
 
@@ -99,6 +99,8 @@ Existing paths extended:
 
 Every money or troop mutation executes in a Firestore transaction. Operation IDs produce immutable server-only receipts so retries return the prior result rather than charging twice. Ownership, clan membership, membership age, role, Gold rate/balance, Treasury, queue, wall, Veil use, garrison, route, and target legality are read from authoritative documents inside the transaction.
 
+For a Treasury donation, that one transaction reads the operation receipt, member/profile, Treasury, and current UTC usage; rejects invalid or unaffordable donations before creating a snapshot; reuses an existing locked snapshot when present; otherwise derives the raw rate from the existing prepared economy snapshot; validates the amount against the resulting allowance; writes personal Gold, Treasury totals, canonical usage, receipt, and audit atomically. Concurrent first-donation attempts therefore serialize on the same usage document. A retry with the same operation ID returns the receipt instead of charging or crediting twice.
+
 ## Exact rules and formulas
 
 Let `C(L)` be the existing canonical normal-city upgrade cost returned by `getCityUpgradeCost({ level: L }, {})` for the current completed Tower Wall Level `L`.
@@ -111,10 +113,12 @@ Let `C(L)` be the existing canonical normal-city upgrade cost returned by `getCi
 - Veil: exactly `600,000 ms`, no overlap, at most three activations per Tower per UTC date
 - Membership probation: eligible when `serverNow - authoritativeJoinedAt >= 86,400,000 ms`
 - Tower-target Rally: at least five unique, current, eligible clan members, each with at least one assembled troop, revalidated immediately before launch
-- Donation cap: `authoritativeCurrentRawBaseGoldPerHour × 12`; remaining is `max(0, cap - donatedToday)` and the usage key changes at `00:00 UTC`
+- Donation cap: the first successful donation of the UTC day locks `rawGoldPerHourSnapshot = authoritativeCurrentRawBaseGoldPerHour` and `dailyDonationCap = rawGoldPerHourSnapshot × 12`; subsequent production changes do not change the cap. Before that success, status is an unlocked preview only. Invalid, rejected, and unaffordable attempts create no snapshot. A new UTC day starts with no lock until its first successful donation.
 - Neutral reset: Level 1, 10,000 integrity basis points, 10,000,000 NPC troops, no clan/garrison/queue/repair/Veil, zero daily Veil use
 
 Tower Wall Levels have no gameplay cap. Requests and derived costs must remain positive safe integers; overflow, `NaN`, `Infinity`, malformed transitions, and negative values are rejected.
+
+The raw donation rate is the existing base Gold/hour aggregation. It excludes Skill and Gear tax, Stronghold and Citadel output, objective/item/timed boosts, and every other production modifier. No Tower-only economy formula is duplicated.
 
 ## Gameplay behavior
 
@@ -132,9 +136,11 @@ Tower Wall Levels have no gameplay cap. Requests and derived costs must remain p
 
 Local visual fixtures are available only on localhost with `?towerQa=<scenario>`:
 
-`neutral`, `clan-owned`, `owner`, `enemy`, `scout-success`, `scout-veil`, `damaged`, `repair`, `upgrading`, `queue`, `treasury`, and `incoming`.
+`neutral`, `clan-owned`, `owner`, `enemy`, `scout-success`, `scout-veil`, `damaged`, `repair`, `upgrading`, `queue`, `veil-active`, `treasury-preview`, `treasury-locked`, `treasury`, and `incoming`.
 
-Use a desktop viewport for the first thirteen captures and exactly `844×390` for landscape mobile. These fixtures do not activate or write live gameplay state.
+The Tower modal reuses the production Clan hero/shield treatment, city stat panels, Clan section headings, roster rows, quest progress tracks, action buttons, and city level-up controls. Treasury reuses the production Clan gift/form/quest hierarchy. The final layer keeps the existing manuscript parchment, dark-blue Clan surfaces, burgundy actions, ivory text, restrained gold, Cinzel family, borders, shadows, and spacing instead of introducing a separate dashboard vocabulary.
+
+Fresh fix captures and machine-readable dimensions live in `docs/visual-qa/holding-towers-gameplay-fixes/`. Desktop was checked at `1440×900`; mobile was checked at exactly `844×390` landscape. No portrait-specific layout was added. These fixtures do not activate or write live gameplay state.
 
 For the full Pending Core preview, use the existing Crownlands Studio/Core preview workflow against the Pending Core 5×5 candidate. The Studio serializer preserves the permanent Tower names/quadrants along with the approved immutable reservation/art fields. Do not switch the live season pointer, deploy Functions, or run reset activation as part of preview QA.
 
@@ -143,4 +149,6 @@ For the full Pending Core preview, use the existing Crownlands Studio/Core previ
 - `node tools/validate-holding-towers.js`: neutral/reset, probation, Rally gate, garrison attribution and safe integer handling, Treasury formulas/roles, Wall queue/pause/resume, repairs, conquest, Veil, server contracts, reset integration, and client/rules integration
 - `node tools/validate-holding-tower-visuals.js`: approved art/reservations/assets plus interactive/accessibility integration
 - `functions/test/emulator-holding-tower-rules.js`: public state, clan Treasury privacy, own usage privacy, garrison secrecy, hidden receipts, and server-only writes
+- `functions/test/emulator-holding-tower-donation-concurrency.js`: simultaneous first donations, locked-snapshot stability, allowance-boundary contention, idempotent accounting, and no Gold/Treasury double mutation
+- `node tools/qa-holding-tower-fixes.js`: nine fresh visual captures, horizontal-overflow assertions, browser-console checks, desktop, and exact `844×390` landscape metrics
 - the existing Crownlands static and emulator regression suites cover economy transaction retries, normal combat, city Walls, rallies, routes, reports, clan lifecycle, and reset invariants

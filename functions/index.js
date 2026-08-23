@@ -17267,6 +17267,9 @@ exports.getHoldingTowerState = timedCallable(
           exactDefenders = Math.max(0, Math.floor(safeNumber(scoutReport.troops, 0)));
         }
       }
+      const nextWallLevel = state.upgradeQueue.length
+        ? state.upgradeQueue[state.upgradeQueue.length - 1].targetLevel
+        : state.wallLevel;
       towers.push({
         ...getHoldingTowerPublicState(state, nowMs),
         exactDefenders,
@@ -17289,6 +17292,15 @@ exports.getHoldingTowerState = timedCallable(
         },
         upgradeQueue: ownerMember ? state.upgradeQueue : [],
         repair: ownerMember ? state.repair : null,
+        repairCost: ownerMember && state.wallIntegrityBps < HOLDING_TOWERS.WALL_FULL_INTEGRITY_BPS
+          ? HOLDING_TOWERS.getTowerRepairCost(state.wallLevel, state.wallIntegrityBps, getEquivalentCityWallCost)
+          : 0,
+        nextWallUpgradeCost: ownerMember
+          ? HOLDING_TOWERS.getTowerWallUpgradeCost(nextWallLevel, getEquivalentCityWallCost)
+          : null,
+        veilCost: ownerMember
+          ? HOLDING_TOWERS.getTowerVeilCost(state.wallLevel, getEquivalentCityWallCost)
+          : null,
         veilUsage: ownerMember ? state.veilUsage : null,
         veilUsesRemaining: ownerMember
           ? Math.max(0, HOLDING_TOWERS.TOWER_VEIL_DAILY_LIMIT - state.veilUsage.count)
@@ -17323,17 +17335,26 @@ exports.getClanTreasuryStatus = timedCallable(
       if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
         throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
       }
-      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
-      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
-      const donatedToday = Math.max(0, Math.floor(safeNumber(usageSnap.data()?.donated, 0)));
-      const allowance = HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday);
+      const utcDate = HOLDING_TOWERS.getUtcDateKey(nowMs);
+      const usage = HOLDING_TOWERS.normalizeDonationUsage(usageSnap.data() || {}, utcDate);
+      let currentRawBaseGoldPerHour = usage.rawGoldPerHourSnapshot || 0;
+      if (!usage.locked) {
+        const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+        const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+        currentRawBaseGoldPerHour = stats.baseGoldPerHour;
+      }
+      const allowance = HOLDING_TOWERS.getDonationAllowanceForUsage(
+        usageSnap.data() || {},
+        currentRawBaseGoldPerHour,
+        utcDate
+      );
       return {
         ok: true,
         clanId,
         role: safeString(memberSnap.data()?.role, 16),
         treasury: normalizeClanTreasury(treasurySnap),
         allowance,
-        utcDate: HOLDING_TOWERS.getUtcDateKey(nowMs),
+        utcDate,
         resetsAtMs: HOLDING_TOWERS.getNextUtcDayStartMs(nowMs),
         serverTimeMs: nowMs,
       };
@@ -17376,50 +17397,66 @@ exports.donateClanTreasuryGold = timedCallable(
         throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
       }
       const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
-      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
-      const donatedToday = Math.max(0, Math.floor(safeNumber(usageSnap.data()?.donated, 0)));
-      const allowance = HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday);
-      if (amount > allowance.remaining) {
-        throw new HttpsError("resource-exhausted", "That donation exceeds today's 12-hour raw-production allowance.");
-      }
-      if (economy.goldFloat < amount) {
-        throw new HttpsError("failed-precondition", "Not enough personal Gold for that donation.");
+      const usage = HOLDING_TOWERS.normalizeDonationUsage(usageSnap.data() || {}, utcDate);
+      let currentRawBaseGoldPerHour = usage.rawGoldPerHourSnapshot || 0;
+      if (!usage.locked) {
+        const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+        currentRawBaseGoldPerHour = stats.baseGoldPerHour;
       }
       const treasury = normalizeClanTreasury(treasurySnap);
-      const balance = treasury.balance + amount;
-      const totalDonated = treasury.totalDonated + amount;
-      if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(totalDonated)) {
-        throw new HttpsError("out-of-range", "The Clan Treasury exceeds the supported economy range.");
+      let donation;
+      try {
+        donation = HOLDING_TOWERS.applyTreasuryDonation({
+          usage: usageSnap.data() || {},
+          currentRawBaseGoldPerHour,
+          donationDayUtc: utcDate,
+          amount,
+          personalGold: economy.goldFloat,
+          treasury,
+        });
+      } catch (error) {
+        if (error?.message === "daily-donation-cap-exceeded") {
+          throw new HttpsError("resource-exhausted", "That donation exceeds today's locked 12-hour raw-production allowance.");
+        }
+        if (error?.message === "insufficient-personal-gold") {
+          throw new HttpsError("failed-precondition", "Not enough personal Gold for that donation.");
+        }
+        if (error instanceof RangeError) {
+          throw new HttpsError("out-of-range", "The Clan Treasury donation exceeds the supported economy range.");
+        }
+        throw error;
       }
-      const nextGoldFloat = economy.goldFloat - amount;
       const result = {
         ok: true,
         clanId,
         donated: amount,
-        balance,
-        totalDonated,
-        totalSpent: treasury.totalSpent,
-        allowance: HOLDING_TOWERS.getDonationAllowance(stats.baseGoldPerHour, donatedToday + amount),
+        balance: donation.treasury.balance,
+        totalDonated: donation.treasury.totalDonated,
+        totalSpent: donation.treasury.totalSpent,
+        allowance: donation.allowance,
         utcDate,
         serverTimeMs: nowMs,
       };
       writePreparedEconomy(transaction, economy, {
-        gold: Math.max(0, Math.floor(nextGoldFloat)),
-        goldFloat: nextGoldFloat,
+        gold: Math.max(0, Math.floor(donation.personalGold)),
+        goldFloat: donation.personalGold,
       }, [], { nowMs });
-      transaction.set(treasuryRef, createHoldingTowerTreasuryPatch(treasury, { balance, totalDonated }, nowMs), { merge: true });
+      transaction.set(treasuryRef, createHoldingTowerTreasuryPatch(treasury, donation.treasury, nowMs), { merge: true });
       transaction.set(usageRef, {
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
         clanId,
         uid,
-        utcDate,
-        donated: donatedToday + amount,
-        rawBaseGoldPerHour: allowance.rawBaseGoldPerHour,
-        dailyCap: allowance.dailyCap,
+        donationDayUtc: donation.usage.donationDayUtc,
+        rawGoldPerHourSnapshot: donation.usage.rawGoldPerHourSnapshot,
+        dailyDonationCap: donation.usage.dailyDonationCap,
+        donatedToday: donation.usage.donatedToday,
+        snapshotEstablishedAtMs: usage.locked
+          ? Math.max(0, Math.floor(safeNumber(usageSnap.data()?.snapshotEstablishedAtMs, nowMs)))
+          : nowMs,
         updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      });
       transaction.create(receiptRef, {
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
@@ -17432,7 +17469,13 @@ exports.donateClanTreasuryGold = timedCallable(
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
       });
-      writeClanAudit(transaction, clanId, uid, "treasury_donation", { operationId, amount, balance }, nowMs);
+      writeClanAudit(transaction, clanId, uid, "treasury_donation", {
+        operationId,
+        amount,
+        balance: donation.treasury.balance,
+        donationDayUtc: donation.usage.donationDayUtc,
+        rawGoldPerHourSnapshot: donation.usage.rawGoldPerHourSnapshot,
+      }, nowMs);
       return result;
     }, "donateClanTreasuryGold");
   }

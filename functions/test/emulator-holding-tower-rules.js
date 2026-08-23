@@ -85,7 +85,15 @@ async function main() {
     });
   });
   batch.set(db.doc(treasuryPath), { ...current, clanId, balance: 500_000, totalDonated: 700_000, totalSpent: 200_000 });
-  batch.set(db.doc(leaderUsagePath), { ...current, clanId, uid: leader.uid, utcDate: "2026-08-22", donated: 100_000 });
+  batch.set(db.doc(leaderUsagePath), {
+    ...current,
+    clanId,
+    uid: leader.uid,
+    donationDayUtc: "2026-08-22",
+    rawGoldPerHourSnapshot: 20_000,
+    dailyDonationCap: 240_000,
+    donatedToday: 100_000,
+  });
   batch.set(db.doc(receiptPath), { ...current, clanId, actorUid: leader.uid, operationId: "op-secret", result: { balance: 500_000 } });
   batch.set(db.doc(towerPath), {
     ...current,

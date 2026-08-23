@@ -333,15 +333,124 @@ function validateTowerRallyParticipants(participants = [], membersByUid = new Ma
   };
 }
 
-function getDonationAllowance(rawBaseGoldPerHour, donatedToday = 0) {
-  const baseGoldPerHour = clampInteger(rawBaseGoldPerHour);
-  const dailyCap = safeMultiply(baseGoldPerHour, TOWER_DONATION_HOURS, "daily donation cap");
+function getDonationAllowance(rawBaseGoldPerHour, donatedToday = 0, options = {}) {
+  const rawGoldPerHour = clampInteger(rawBaseGoldPerHour);
+  const dailyCap = safeMultiply(rawGoldPerHour, TOWER_DONATION_HOURS, "daily donation cap");
   const donated = clampInteger(donatedToday, 0, dailyCap);
+  const locked = options.locked !== false;
   return {
-    rawBaseGoldPerHour: baseGoldPerHour,
+    donationDayUtc: String(options.donationDayUtc || ""),
+    rawGoldPerHourSnapshot: locked ? rawGoldPerHour : null,
+    previewRawGoldPerHour: locked ? null : rawGoldPerHour,
     dailyCap,
     donatedToday: donated,
     remaining: Math.max(0, dailyCap - donated),
+    locked,
+    preview: !locked,
+  };
+}
+
+function normalizeDonationUsage(rawUsage = {}, donationDayUtc = "") {
+  const day = String(donationDayUtc || "");
+  const storedDay = String(rawUsage?.donationDayUtc || rawUsage?.utcDate || "");
+  if (!day || storedDay !== day) {
+    return {
+      donationDayUtc: day,
+      rawGoldPerHourSnapshot: null,
+      dailyDonationCap: null,
+      donatedToday: 0,
+      locked: false,
+    };
+  }
+  const hasCanonicalSnapshot = Object.prototype.hasOwnProperty.call(rawUsage || {}, "rawGoldPerHourSnapshot");
+  const hasLegacySnapshot = Object.prototype.hasOwnProperty.call(rawUsage || {}, "rawBaseGoldPerHour");
+  if (!hasCanonicalSnapshot && !hasLegacySnapshot) {
+    return {
+      donationDayUtc: day,
+      rawGoldPerHourSnapshot: null,
+      dailyDonationCap: null,
+      donatedToday: 0,
+      locked: false,
+    };
+  }
+  const rawGoldPerHourSnapshot = clampInteger(
+    hasCanonicalSnapshot ? rawUsage.rawGoldPerHourSnapshot : rawUsage.rawBaseGoldPerHour
+  );
+  const dailyDonationCap = safeMultiply(
+    rawGoldPerHourSnapshot,
+    TOWER_DONATION_HOURS,
+    "daily donation cap"
+  );
+  const donatedToday = clampInteger(
+    rawUsage?.donatedToday ?? rawUsage?.donated,
+    0,
+    dailyDonationCap
+  );
+  return {
+    donationDayUtc: day,
+    rawGoldPerHourSnapshot,
+    dailyDonationCap,
+    donatedToday,
+    locked: true,
+  };
+}
+
+function getDonationAllowanceForUsage(rawUsage, currentRawBaseGoldPerHour, donationDayUtc) {
+  const usage = normalizeDonationUsage(rawUsage, donationDayUtc);
+  if (usage.locked) {
+    return getDonationAllowance(usage.rawGoldPerHourSnapshot, usage.donatedToday, {
+      donationDayUtc,
+      locked: true,
+    });
+  }
+  return getDonationAllowance(currentRawBaseGoldPerHour, 0, {
+    donationDayUtc,
+    locked: false,
+  });
+}
+
+function applyTreasuryDonation({
+  usage = {},
+  currentRawBaseGoldPerHour = 0,
+  donationDayUtc = "",
+  amount = 0,
+  personalGold = 0,
+  treasury = {},
+} = {}) {
+  const donation = requireSafePositiveInteger(amount, "donation");
+  const normalizedUsage = normalizeDonationUsage(usage, donationDayUtc);
+  const rawGoldPerHourSnapshot = normalizedUsage.locked
+    ? normalizedUsage.rawGoldPerHourSnapshot
+    : clampInteger(currentRawBaseGoldPerHour);
+  const allowanceBefore = getDonationAllowance(
+    rawGoldPerHourSnapshot,
+    normalizedUsage.donatedToday,
+    { donationDayUtc, locked: true }
+  );
+  if (donation > allowanceBefore.remaining) throw new Error("daily-donation-cap-exceeded");
+  const availablePersonalGold = finiteNumber(personalGold, -1);
+  if (availablePersonalGold < donation) throw new Error("insufficient-personal-gold");
+  const balance = safeAdd(treasury?.balance, donation, "Clan Treasury balance");
+  const totalDonated = safeAdd(treasury?.totalDonated, donation, "Clan Treasury donated total");
+  const donatedToday = safeAdd(normalizedUsage.donatedToday, donation, "daily donation total");
+  const allowance = getDonationAllowance(rawGoldPerHourSnapshot, donatedToday, {
+    donationDayUtc,
+    locked: true,
+  });
+  return {
+    usage: {
+      donationDayUtc,
+      rawGoldPerHourSnapshot,
+      dailyDonationCap: allowance.dailyCap,
+      donatedToday,
+    },
+    allowance,
+    personalGold: availablePersonalGold - donation,
+    treasury: {
+      balance,
+      totalDonated,
+      totalSpent: clampInteger(treasury?.totalSpent),
+    },
   };
 }
 
@@ -560,6 +669,9 @@ module.exports = Object.freeze({
   getEligibility,
   validateTowerRallyParticipants,
   getDonationAllowance,
+  normalizeDonationUsage,
+  getDonationAllowanceForUsage,
+  applyTreasuryDonation,
   getEquivalentCityWallCost,
   getTowerWallUpgradeCost,
   getTowerVeilCost,

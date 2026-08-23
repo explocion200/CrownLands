@@ -62,7 +62,9 @@ const entrypointBudgets = {
   // orchestration; the larger markup/fixture renderer is split and separately capped.
   "game.js": 1632 * 1024,
   "holding-tower-ui.js": 32 * 1024,
-  "holding-tower-ui.css": 8 * 1024,
+  // The final layer reuses existing Crownlands components while overriding the
+  // superseded dashboard treatment at a bounded 16 KiB.
+  "holding-tower-ui.css": 16 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // One bounded 16 KiB step for the complete Tower/Treasury component and its
