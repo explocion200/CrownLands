@@ -73,13 +73,6 @@ const CROWDED_MAP_CITY_EXIT_THRESHOLD = 58;
 const CROWDED_MAP_ARMY_EXIT_THRESHOLD = 18;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 8;
-const INVENTORY_CATEGORIES = Object.freeze([
-  ["all", "All"],
-  ["boosts", "Boosts"],
-  ["war", "War"],
-  ["defense", "Defense"],
-  ["utility", "Utility"],
-]);
 const ECONOMY_CONFIG = window.CROWNLANDS_ECONOMY_CONFIG || {};
 const COMMON_GEAR = window.CROWNLANDS_COMMON_GEAR || null;
 const COMMON_GEAR_BOX_ITEM = Object.freeze({
@@ -31986,28 +31979,7 @@ function showInventoryModal() {
       </section>
     </div>
   `;
-  const categoryButtons = [...modalBody.querySelectorAll("[data-inventory-category]")];
-  categoryButtons.forEach((button, index) => {
-    button.addEventListener("click", () => {
-      const category = button.dataset.inventoryCategory || "all";
-      if (!INVENTORY_CATEGORIES.some(([id]) => id === category)) return;
-      selectedInventoryCategory = category;
-      selectedInventoryPage = 0;
-      inventoryPageDirection = 0;
-      selectedInventoryItemId = "";
-      selectedInventoryEntryKey = "";
-      showInventoryModal();
-    });
-    button.addEventListener("keydown", event => {
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      event.preventDefault();
-      const offset = event.key === "ArrowRight" ? 1 : -1;
-      const target = categoryButtons[(index + offset + categoryButtons.length) % categoryButtons.length];
-      const targetCategory = target?.dataset.inventoryCategory || "all";
-      target?.click();
-      modalBody.querySelector(`[data-inventory-category="${targetCategory}"]`)?.focus();
-    });
-  });
+  bindInventoryCategoryControls();
   modalBody.querySelectorAll("[data-inventory-page]").forEach(button => {
     button.addEventListener("click", () => setInventoryPage(Number(button.dataset.inventoryPage), true));
   });

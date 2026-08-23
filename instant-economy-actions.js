@@ -1,8 +1,15 @@
 "use strict";
-/* exported bindInventoryCarousel, buyShopItem, buySkill, clearInstantEconomyActions, getInventoryEffectLabel, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
+/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getInventoryEffectLabel, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
 
 const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;
 const INSTANT_ECONOMY_ITEM_BATCH_LIMIT = 25;
+const INVENTORY_CATEGORIES = Object.freeze([
+  ["all", "All"],
+  ["boosts", "Boosts"],
+  ["war", "War"],
+  ["defense", "Defense"],
+  ["utility", "Utility"],
+]);
 const instantEconomyActions = [];
 const swiftMarchOrderRequests = new Set();
 const recallHornRequests = new Set();
@@ -269,6 +276,31 @@ function getInventoryPageModel(category = selectedInventoryCategory, requestedPa
     cursor = groupEnd;
   });
   return { category, entries, totalEntries, page, pageCount };
+}
+
+function bindInventoryCategoryControls() {
+  const buttons = [...modalBody.querySelectorAll("[data-inventory-category]")];
+  buttons.forEach((button, index) => {
+    button.addEventListener("click", () => {
+      const category = button.dataset.inventoryCategory || "all";
+      if (!INVENTORY_CATEGORIES.some(([id]) => id === category)) return;
+      selectedInventoryCategory = category;
+      selectedInventoryPage = 0;
+      inventoryPageDirection = 0;
+      selectedInventoryItemId = "";
+      selectedInventoryEntryKey = "";
+      showInventoryModal();
+    });
+    button.addEventListener("keydown", event => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const offset = event.key === "ArrowRight" ? 1 : -1;
+      const target = buttons[(index + offset + buttons.length) % buttons.length];
+      const targetCategory = target?.dataset.inventoryCategory || "all";
+      target?.click();
+      modalBody.querySelector(`[data-inventory-category="${targetCategory}"]`)?.focus();
+    });
+  });
 }
 
 function renderInventorySlot(entry, selectedEntryKey = "") {

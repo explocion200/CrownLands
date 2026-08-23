@@ -14,7 +14,7 @@ const index = read("index.html");
 const worker = read("service-worker.js");
 
 assert.match(game, /const INVENTORY_SLOT_COUNT = 8;/, "The Bag page size must remain exactly eight cards.");
-assert.match(game, /\["all", "All"\][\s\S]*\["boosts", "Boosts"\][\s\S]*\["war", "War"\][\s\S]*\["defense", "Defense"\][\s\S]*\["utility", "Utility"\]/, "The five requested Bag categories are incomplete or reordered.");
+assert.match(actions, /\["all", "All"\][\s\S]*\["boosts", "Boosts"\][\s\S]*\["war", "War"\][\s\S]*\["defense", "Defense"\][\s\S]*\["utility", "Utility"\]/, "The five requested Bag categories are incomplete or reordered.");
 for (const [label, category] of [
   ["Common Gear Box", "utility"],
   ["Royal Peace Shield", "defense"],
@@ -70,12 +70,12 @@ assert.doesNotMatch(card, /inventory-slot-count|x3/, "Individual item cards must
 assert.match(game, /role="tablist" aria-label="Item categories"/);
 assert.match(game, /role="tab" aria-selected=/);
 assert.match(game, /role="group" aria-label="Owned items"/, "The card grid needs an accessible group label without overriding button roles.");
-assert.match(game, /target\?\.click\(\);\s*modalBody\.querySelector\([\s\S]{0,120}?\)\?\.focus\(\);/, "Arrow-key category changes must restore focus to the newly rendered tab.");
+assert.match(actions, /target\?\.click\(\);\s*modalBody\.querySelector\([\s\S]{0,120}?\)\?\.focus\(\);/, "Arrow-key category changes must restore focus to the newly rendered tab.");
 assert.match(actions, /setInventoryPage\(nextPage, restoreFocus = false\)[\s\S]{0,600}?inventory-carousel-viewport[\s\S]{0,80}?focus\(\)/, "Keyboard paging must restore focus after the page DOM is rebuilt.");
 assert.match(game, /aria-label="Previous item page"[\s\S]*aria-label="Next item page"/);
 assert.match(actions, /Math\.abs\(deltaX\) < 42[\s\S]*inventorySuppressSelectionUntilMs = Date\.now\(\) \+ 350/, "Swipe selection suppression is missing.");
 assert.match(actions, /addEventListener\("wheel"[\s\S]*passive: false/, "Trackpad paging is missing.");
-assert.match(game, /selectedInventoryCategory = category;\s*selectedInventoryPage = 0;[\s\S]*selectedInventoryEntryKey = "";/, "Category changes must reset page and hidden selection state.");
+assert.match(actions, /selectedInventoryCategory = category;\s*selectedInventoryPage = 0;[\s\S]*selectedInventoryEntryKey = "";/, "Category changes must reset page and hidden selection state.");
 assert.match(game, /data-inventory-use="\$\{escapeHtml\(selectedEntry\.id\)\}"/, "The selected card must retain the canonical one-item use flow.");
 assert.match(game, /const selectedEntryActionLabel = selectedEntryIsGearBox \? "OPEN" : "USE";/, "Bag actions must use the requested short OPEN or USE labels.");
 assert.match(game, /modalTitle\.textContent = "ITEM BAG";/, "The Bag heading must use the requested ITEM BAG label.");
