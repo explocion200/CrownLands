@@ -37,7 +37,6 @@
   .active-operations-tabs,
   .clan-section-nav,
   .clan-browser-nav,
-  .clan-shield-editor-tabs,
   .camp-info-tabs,
   .leaderboard-tabs,
   .daily-reward-tabs
@@ -60,7 +59,6 @@
   .active-operations-tab,
   .clan-section-nav button,
   .clan-browser-nav button,
-  .clan-shield-editor-tabs button,
   .camp-info-tab,
   .leaderboard-tab,
   .daily-reward-tabs button
@@ -82,7 +80,6 @@
   .active-operations-tab,
   .clan-section-nav button,
   .clan-browser-nav button,
-  .clan-shield-editor-tabs button,
   .camp-info-tab,
   .leaderboard-tab,
   .daily-reward-tabs button
@@ -110,8 +107,6 @@
   .clan-section-nav button[aria-selected="true"],
   .clan-browser-nav button.active,
   .clan-browser-nav button[aria-selected="true"],
-  .clan-shield-editor-tabs button.active,
-  .clan-shield-editor-tabs button[aria-selected="true"],
   .camp-info-tab.active,
   .camp-info-tab[aria-selected="true"],
   .leaderboard-tab.active,
@@ -139,7 +134,6 @@
   .active-operations-tab,
   .clan-section-nav button,
   .clan-browser-nav button,
-  .clan-shield-editor-tabs button,
   .camp-info-tab,
   .leaderboard-tab,
   .daily-reward-tabs button
@@ -160,7 +154,6 @@
   .active-operations-tab,
   .clan-section-nav button,
   .clan-browser-nav button,
-  .clan-shield-editor-tabs button,
   .camp-info-tab,
   .leaderboard-tab,
   .daily-reward-tabs button
@@ -1509,7 +1502,6 @@
     .active-operations-tab,
     .clan-section-nav button,
     .clan-browser-nav button,
-    .clan-shield-editor-tabs button,
     .camp-info-tab,
     .leaderboard-tab,
     .daily-reward-tabs button
@@ -1791,65 +1783,6 @@
   .profile-screen .flag-symbol-control .flag-symbol-grid {
     grid-template-columns: repeat(4, minmax(44px, 1fr));
   }
-}
-
-.clan-shield-editor .clan-shield-control,
-.clan-shield-editor .clan-shield-color-group {
-  color: #f6e9ca;
-  border-color: #8e6b39;
-  background: linear-gradient(180deg, #173e57, #09283d);
-  box-shadow: inset 0 1px 0 rgba(255, 244, 211, .12), 0 4px 9px rgba(34, 20, 9, .2);
-}
-
-.clan-shield-editor .clan-shield-control legend,
-.clan-shield-editor .clan-shield-color-group legend {
-  color: #ffe4a0 !important;
-  background: #123248;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, .72);
-}
-
-.clan-shield-editor .clan-shield-choice-grid button {
-  color: #f8e9c4 !important;
-  border-color: rgba(219, 180, 99, .56);
-  background: linear-gradient(180deg, #315f78, #12344a);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 219, .12);
-}
-
-.clan-shield-editor .clan-shield-choice-grid button :is(span, small) {
-  color: inherit !important;
-  opacity: 1;
-}
-
-.clan-shield-editor .clan-shield-choice-grid button {
-  min-width: 0;
-  grid-template-columns: minmax(22px, auto) minmax(0, 1fr);
-}
-
-.clan-shield-editor .clan-shield-choice-grid button small {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  line-height: 1.12;
-  text-align: center;
-  white-space: normal;
-}
-
-.clan-shield-editor .clan-shield-choice-grid button svg,
-.clan-shield-editor .clan-shield-choice-grid button svg * {
-  fill: currentColor !important;
-  stroke: currentColor !important;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .72));
-}
-
-.clan-shield-editor .clan-shield-choice-grid button.active {
-  color: #2b2118 !important;
-  border-color: #fff0bd;
-  background: linear-gradient(180deg, #f6df9b, #c9953c);
-  box-shadow: 0 0 0 2px rgba(109, 45, 53, .42), inset 0 1px 0 rgba(255, 251, 229, .5);
-}
-
-.clan-shield-editor .clan-shield-choice-grid button:not(.active):hover {
-  border-color: #f0cf83;
-  filter: brightness(1.08);
 }
 
 .profile-screen .skill-preset-tabs button.locked,

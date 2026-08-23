@@ -10,6 +10,7 @@ const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const COMMON_GEAR = require("./common-gear.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
+const CLAN_HERALDRY_CONFIG = require("./clanHeraldryConfig.js");
 const CHAT = require("./chat.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
@@ -372,13 +373,6 @@ const CLAN_QUEST_REWARDS = Object.freeze([
 ]);
 const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
-const CLAN_SHIELD_VERSION = 1;
-const CLAN_SHIELD_SHAPES = new Set(["castilian", "heater", "kite", "round"]);
-const CLAN_SHIELD_DIVISIONS = new Set(["solid", "pale", "fess", "quartered", "stripes", "bend", "saltire", "chevron"]);
-const CLAN_SHIELD_CHARGES = new Set(["none", "castle", "lion", "eagle", "crown", "swords", "fleur", "sun"]);
-const CLAN_SHIELD_CHARGE_LAYOUTS = new Set(["center", "paired", "quartered", "chief"]);
-const CLAN_SHIELD_TRIMS = new Set(["plain", "double", "riveted"]);
-const CLAN_SHIELD_FINISHES = new Set(["polished", "weathered", "battleworn"]);
 const GLOBAL_PLAYER_STATS_VERSION = 11;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
@@ -15988,60 +15982,24 @@ function normalizeClanDescription(value = "") {
   return safeString(value, 280).replace(/[\u0000-\u001f\u007f]/g, "").trim();
 }
 
-function normalizeClanShieldColor(value = "", fallback = "#2f7a4a") {
-  const color = safeString(value, 7).toLowerCase();
-  return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
-}
-
-function normalizeClanShieldChoice(value, allowed, fallback) {
-  const choice = safeString(value, 24).toLowerCase();
-  return allowed.has(choice) ? choice : fallback;
-}
-
 function normalizeClanShield(value = {}) {
-  const source = value && typeof value === "object" ? value : {};
-  const legacyPatternMap = {
-    split: "pale",
-    diagonal: "bend",
-    band: "fess",
-    cross: "quartered",
-    chief: "fess",
-  };
-  const legacySymbolMap = {
-    tower: "castle",
-    cross: "fleur",
-    star: "sun",
-    moon: "sun",
-    knight: "swords",
-    diamond: "fleur",
-    spire: "fleur",
-  };
-  const requestedDivision = legacyPatternMap[source.pattern] || source.division || source.pattern;
-  const requestedCharge = legacySymbolMap[source.symbol] || source.charge || source.symbol;
-  return {
-    version: CLAN_SHIELD_VERSION,
-    shape: normalizeClanShieldChoice(source.shape, CLAN_SHIELD_SHAPES, "castilian"),
-    division: normalizeClanShieldChoice(requestedDivision, CLAN_SHIELD_DIVISIONS, "quartered"),
-    primary: normalizeClanShieldColor(source.primary, "#7a2638"),
-    secondary: normalizeClanShieldColor(source.secondary, "#d8bd78"),
-    borderColor: normalizeClanShieldColor(source.borderColor, "#d8bd78"),
-    charge: normalizeClanShieldChoice(requestedCharge, CLAN_SHIELD_CHARGES, "castle"),
-    secondaryCharge: normalizeClanShieldChoice(source.secondaryCharge, CLAN_SHIELD_CHARGES, "lion"),
-    chargeColor: normalizeClanShieldColor(source.chargeColor, "#19201d"),
-    secondaryChargeColor: normalizeClanShieldColor(source.secondaryChargeColor, "#7a2638"),
-    chargeLayout: normalizeClanShieldChoice(source.chargeLayout, CLAN_SHIELD_CHARGE_LAYOUTS, "quartered"),
-    trim: normalizeClanShieldChoice(source.trim, CLAN_SHIELD_TRIMS, "double"),
-    finish: normalizeClanShieldChoice(source.finish, CLAN_SHIELD_FINISHES, "weathered"),
-  };
+  return CLAN_HERALDRY_CONFIG.normalizeForRead(value);
 }
 
 function clanShieldLegacyBanner(value = {}) {
   const shield = normalizeClanShield(value);
+  const legacyChargeMap = {
+    "crossed-swords": "swords",
+    "fleur-de-lis": "fleur",
+  };
+  const legacyCharge = ["castle", "lion", "eagle", "crown", "swords", "fleur", "sun"].includes(shield.charge)
+    ? shield.charge
+    : legacyChargeMap[shield.charge] || "crown";
   return {
     primary: shield.primary,
     secondary: shield.secondary,
     pattern: shield.division,
-    symbol: shield.charge,
+    symbol: legacyCharge,
   };
 }
 
@@ -16061,6 +16019,7 @@ function clanPublicSnapshot(id = "", clan = {}) {
     description: safeString(clan.description, 280),
     shield,
     banner: clanShieldLegacyBanner(shield),
+    heraldryRevision: CLAN_HERALDRY_CONFIG.normalizeHeraldryRevision(clan.heraldryRevision),
     admissionMode: normalizeAdmissionMode(clan.admissionMode),
     leaderUid: safeString(clan.leaderUid, 128),
     memberCount: clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT),
@@ -16308,6 +16267,7 @@ function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
     tag: safeString(combined.tag, 5),
     shield,
     banner: clanShieldLegacyBanner(shield),
+    heraldryRevision: CLAN_HERALDRY_CONFIG.normalizeHeraldryRevision(combined.heraldryRevision),
     memberCount: clampInt(combined.memberCount, 0, CLAN_MEMBER_LIMIT),
     totalKingPower: Math.max(0, Math.floor(safeNumber(combined.totalKingPower, 0))),
     worldId: ONLINE_WORLD_ID,
@@ -16563,6 +16523,7 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       description: normalizeClanDescription(request.data?.description),
       shield,
       banner: clanShieldLegacyBanner(shield),
+      heraldryRevision: 0,
       admissionMode: normalizeAdmissionMode(request.data?.admissionMode),
       leaderUid: uid,
       memberCount: 1,
@@ -16696,11 +16657,28 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
       remainingGold = Math.max(0, Math.floor(remainingGoldFloat));
       nextNameChangeAtMs = nowMs + CLAN_NAME_CHANGE_COOLDOWN_MS;
     }
-    const shield = normalizeClanShield(requestData.shield || requestData.banner || clan.shield || clan.banner);
+    const shieldPayloadProvided = Object.prototype.hasOwnProperty.call(requestData, "shield")
+      || Object.prototype.hasOwnProperty.call(requestData, "banner");
+    const existingShield = normalizeClanShield(clan.shield || clan.banner);
+    const requestedShield = requestData.shield || requestData.banner;
+    let shield = existingShield;
+    if (shieldPayloadProvided && CLAN_HERALDRY_CONFIG.getVersion(requestedShield) === CLAN_HERALDRY_CONFIG.CURRENT_VERSION) {
+      const validation = CLAN_HERALDRY_CONFIG.validateV2Write(requestedShield, { existing: existingShield });
+      if (!validation.ok || !validation.value) {
+        const validationMessage = validation.errors[0] || "The heraldry payload is invalid.";
+        throw new HttpsError("invalid-argument", `Invalid Clan Heraldry: ${validationMessage}`, { errors: [...validation.errors] });
+      }
+      shield = validation.value;
+    } else if (shieldPayloadProvided) {
+      shield = CLAN_HERALDRY_CONFIG.normalizeV1(requestedShield, clan.banner);
+    }
+    const shieldChanged = shieldPayloadProvided && JSON.stringify(shield) !== JSON.stringify(existingShield);
+    const heraldryRevision = CLAN_HERALDRY_CONFIG.normalizeHeraldryRevision(clan.heraldryRevision) + (shieldPayloadProvided ? 1 : 0);
     const patch = {
       description: normalizeClanDescription(requestData.description ?? clan.description),
       shield,
       banner: clanShieldLegacyBanner(shield),
+      heraldryRevision,
       admissionMode: normalizeAdmissionMode(requestData.admissionMode ?? clan.admissionMode),
       ...(nameChanged ? {
         name: requestedName.display,
@@ -16751,7 +16729,9 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     }
     writeClanLeaderboard(transaction, clanId, clan, patch);
     writeClanAudit(transaction, clanId, uid, "clan_profile_updated", {
-      shieldChanged: Boolean(requestData.shield || requestData.banner),
+      shieldChanged,
+      heraldryVersion: shield.version,
+      heraldryRevision,
       nameChanged,
     }, nowMs);
     if (nameChanged) {
@@ -16765,6 +16745,7 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     return {
       ok: true,
       clan: clanPublicSnapshot(clanId, { ...clan, ...patch }),
+      shieldChanged,
       ...(nameChanged ? {
         nameChanged: true,
         gold: remainingGold,

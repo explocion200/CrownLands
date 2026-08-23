@@ -363,19 +363,19 @@ body {
 
 /* Text hierarchy on parchment. */
 :is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
-  :is(h1, h2, h3, h4, legend, .profile-section-heading h3) {
+  :is(h1, h2, h3, h4, legend, .profile-section-heading h3):not(:where(.clan-shield-editor[data-heraldry-editor-version="2"] *)) {
   color: var(--cl-burgundy) !important;
   text-shadow: none !important;
 }
 
 :is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal)) .modal-card)
-  :is(strong, b, output, .player-name-link, .clan-name-link) {
+  :is(strong, b, output, .player-name-link, .clan-name-link):not(:where(.clan-shield-editor[data-heraldry-editor-version="2"] *)) {
   color: var(--cl-text) !important;
   text-shadow: none !important;
 }
 
 :is(.setup-card, .online-login, .login-game-info, .commander-panel, .profile-screen, .modal:where(:not(.leaderboard-modal, .island-switcher-modal, .battle-report-modal)) .modal-card)
-  :is(p, li, dd, dt, label, span:not(.flag-symbol), small, em) {
+  :is(p, li, dd, dt, label, span:not(.flag-symbol), small, em):not(:where(.clan-shield-editor[data-heraldry-editor-version="2"] *)) {
   color: var(--cl-text-secondary) !important;
   opacity: 1;
   text-shadow: none !important;
@@ -561,7 +561,7 @@ input[type="range"] {
   .profile-screen,
   .modal .modal-card,
   .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):not(.inventory-slot,.inventory-page-arrow) {
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):not(.inventory-slot,.inventory-page-arrow):not(:where(.clan-shield-editor[data-heraldry-editor-version="2"] *)) {
   color: var(--cl-text) !important;
   border-color: var(--cl-brass) !important;
   background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;

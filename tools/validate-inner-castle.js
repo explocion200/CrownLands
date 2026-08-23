@@ -85,6 +85,7 @@ function getWebpMetadata(buffer) {
 }
 
 const BUILD_ID = "20260823-item-bag-stacks-r1";
+const GAME_BUILD_ID = "20260823-clan-heraldry-live-ui-r2";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
@@ -497,10 +498,10 @@ assert.match(indexSource, /<dialog id="modal" class="modal" aria-labelledby="mod
 assert.match(indexSource, new RegExp(`name="crownlands-build" content="${BUILD_ID}"`), "The document build ID is stale.");
 assert.match(indexSource, new RegExp(`styles\\.css\\?v=${BUILD_ID}`), "The Inner Castle stylesheet cache tag is stale.");
 assert.match(indexSource, new RegExp(`common-gear-ui\\.js\\?v=${BUILD_ID}`), "The Inner Castle UI cache tag is stale.");
-assert.match(indexSource, new RegExp(`game\\.js\\?v=${BUILD_ID}`), "The Inner Castle game-script cache tag is stale.");
+assert.match(indexSource, new RegExp(`game\\.js\\?v=${GAME_BUILD_ID}`), "The Inner Castle game-script cache tag is stale.");
 assert.match(workerSource, new RegExp(`const CACHE_VERSION = "${BUILD_ID}";`), "The service-worker cache version is stale.");
 assert.match(workerSource, new RegExp(`/styles\\.css\\?v=${BUILD_ID}`), "The service worker has the wrong stylesheet version.");
-assert.match(workerSource, new RegExp(`/game\\.js\\?v=${BUILD_ID}`), "The service worker has the wrong game-script version.");
+assert.match(workerSource, new RegExp(`/game\\.js\\?v=${GAME_BUILD_ID}`), "The service worker has the wrong game-script version.");
 
 const staticCacheStart = workerSource.indexOf("const STATIC_CACHE_URLS");
 const staticCacheEnd = workerSource.indexOf("];", staticCacheStart);

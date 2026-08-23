@@ -6,8 +6,8 @@
   "use strict";
 
   const ART_SET_VERSION = 1;
-  const FULL_SPRITE_URL = "/assets/clan-heraldry/art-set-v1/charges-full.svg";
-  const MICRO_SPRITE_URL = "/assets/clan-heraldry/art-set-v1/charges-micro.svg";
+  const FULL_SPRITE_URL = "assets/clan-heraldry/art-set-v1/charges-full.svg";
+  const MICRO_SPRITE_URL = "assets/clan-heraldry/art-set-v1/charges-micro.svg";
   const SHARED_DEFS_ID = "clan-heraldry-v2-shared-defs";
   const SHARED_DEFS_MARKUP = `<svg id="${SHARED_DEFS_ID}" class="clan-heraldry-shared-defs" aria-hidden="true" focusable="false" width="0" height="0">
     <defs>

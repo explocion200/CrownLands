@@ -39,7 +39,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The Profile Inner Castle entry adds less than 2 KiB to that shell. The
 // current-world expansion from 15 to 20 regions adds about 50 KiB of canonical
 // map metadata while the map rasters themselves remain lazy loaded.
-const MAX_INSTALL_PRECACHE_BYTES = 3290 * 1024;
+// Clan Heraldry v2 adds its shared config/render runtimes and two compact SVG
+// sprites while keeping all editable PNG/source artwork out of production.
+const MAX_INSTALL_PRECACHE_BYTES = 3440 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -68,7 +70,9 @@ const categoryFileBudgets = {
 const entrypointBudgets = {
   // Shared semantic action tokens add less than 1 KiB to the runtime markup.
   // Battle-time gear report normalization and rendering add under 16 KiB.
-  "game.js": 1620 * 1024,
+  // Version-aware v1/v2 editor dispatch and strict save feedback add under one
+  // bounded 44 KiB step without adding per-frame or map-render work.
+  "game.js": 1664 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
@@ -78,7 +82,9 @@ const entrypointBudgets = {
   "manuscript-prototype.css": 64 * 1024,
   "ui-contrast-correction.css": 64 * 1024,
   "profile-theme.css": 32 * 1024,
-  "crownlands-palette.css": 40 * 1024,
+  // The heraldry v2 cascade boundary adds under 2 KiB while preventing the
+  // global palette from overriding editor labels, tabs, and selected states.
+  "crownlands-palette.css": 42 * 1024,
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,

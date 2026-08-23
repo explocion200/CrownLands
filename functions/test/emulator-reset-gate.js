@@ -793,6 +793,69 @@ async function main() {
       && !("troopStats" in publicApplicantProfile),
     "The public player profile exposed an exact troop total."
   );
+  const legacyClanBeforeHeraldrySave = (await db.doc(`clans/${applicationClanId}`).get()).data() || {};
+  assert(
+    Number(legacyClanBeforeHeraldrySave.shield?.version || 1) === 1
+      && Number(legacyClanBeforeHeraldrySave.heraldryRevision || 0) === 0,
+    "Opening and using a newly created clan did not preserve its frozen v1 heraldry."
+  );
+  const v2Heraldry = {
+    version: 2,
+    artSetVersion: 1,
+    shape: "heater",
+    division: "saltire",
+    primary: "#24445f",
+    secondary: "#7a2638",
+    charge: "fortress-keep",
+    secondaryCharge: "war-horn",
+    chargeColor: "#f2e2bf",
+    secondaryChargeColor: "#d8bd78",
+    chargeLayout: "paired",
+    borderColor: "#d8bd78",
+    trim: "double",
+    finish: "battleworn",
+  };
+  const firstHeraldrySave = await callFunction("updateClanProfile", clanLeader.token, { shield: v2Heraldry });
+  const clanAfterFirstHeraldrySave = (await db.doc(`clans/${applicationClanId}`).get()).data() || {};
+  assert(
+    firstHeraldrySave?.clan?.shield?.version === 2
+      && Number(firstHeraldrySave?.clan?.heraldryRevision || 0) === 1
+      && Object.keys(clanAfterFirstHeraldrySave.shield || {}).length === Object.keys(v2Heraldry).length
+      && Object.entries(v2Heraldry).every(([key, value]) => clanAfterFirstHeraldrySave.shield?.[key] === value)
+      && Number(clanAfterFirstHeraldrySave.heraldryRevision || 0) === 1,
+    "An explicit Leader v1-to-v2 heraldry save did not persist the strict payload and revision."
+  );
+  const repeatedHeraldrySave = await callFunction("updateClanProfile", clanLeader.token, { shield: v2Heraldry });
+  assert(
+    repeatedHeraldrySave?.shieldChanged === false
+      && Number(repeatedHeraldrySave?.clan?.heraldryRevision || 0) === 2,
+    "A confirmed repeat heraldry save did not advance the monotonic revision."
+  );
+  const publicApplicantAfterHeraldrySave = await callFunction("getCombatPlayerIdentity", clanLeader.token, {
+    uid: clanApplicant.uid,
+    includePublicProfile: true,
+  });
+  assert(
+    publicApplicantAfterHeraldrySave?.clanShield?.version === 2
+      && publicApplicantAfterHeraldrySave?.clanShield?.charge === "fortress-keep"
+      && Number(publicApplicantAfterHeraldrySave?.clan?.heraldryRevision || 0) === 2,
+    "Reloading a member's public clan identity did not return the saved v2 heraldry revision."
+  );
+  let invalidHeraldryError = null;
+  try {
+    await callFunction("updateClanProfile", clanLeader.token, {
+      shield: { ...v2Heraldry, charge: "griffin" },
+    });
+  } catch (error) {
+    invalidHeraldryError = error;
+  }
+  const clanAfterInvalidHeraldry = (await db.doc(`clans/${applicationClanId}`).get()).data() || {};
+  assert(
+    /invalid clan heraldry/i.test(String(invalidHeraldryError?.message || ""))
+      && Number(clanAfterInvalidHeraldry.heraldryRevision || 0) === 2
+      && clanAfterInvalidHeraldry.shield?.charge === "fortress-keep",
+    "A pending/unapproved v2 charge bypassed strict validation or changed the saved revision."
+  );
   let memberRenameError = null;
   try {
     await callFunction("updateClanProfile", clanApplicant.token, { name: "Member Renamed Clan" });
