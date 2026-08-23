@@ -1015,6 +1015,8 @@ input[type="range"] {
 /* Shop purchase carousel. Paid items share one selection and one anchored
    purchase control; rewarded-ad cards remain in their existing section. */
 .shop-modal > .modal-card {
+  --shop-paid-tile-size: clamp(104px, 12vw, 132px);
+  --shop-paid-tile-padding: .55rem;
   height: min(86vh, 720px);
 }
 
@@ -1060,14 +1062,20 @@ input[type="range"] {
 
 .shop-modal .shop-items .shop-item {
   box-sizing: border-box;
-  flex: 0 0 clamp(104px, 12vw, 132px);
-  min-width: 0;
-  aspect-ratio: 1;
+  flex: 0 0 var(--shop-paid-tile-size);
+  inline-size: var(--shop-paid-tile-size);
+  block-size: var(--shop-paid-tile-size);
+  min-inline-size: var(--shop-paid-tile-size);
+  min-block-size: var(--shop-paid-tile-size);
+  max-inline-size: var(--shop-paid-tile-size);
+  max-block-size: var(--shop-paid-tile-size);
+  aspect-ratio: 1 / 1;
   display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   place-items: center;
   align-self: center;
   margin: 0;
-  padding: .55rem;
+  padding: var(--shop-paid-tile-padding);
   border: 1px solid var(--cl-brass) !important;
   border-radius: 5px;
   color: var(--cl-text) !important;
@@ -1098,8 +1106,11 @@ input[type="range"] {
 
 .shop-modal .shop-items .shop-item-image-placeholder {
   box-sizing: border-box;
-  width: 100%;
-  height: 100%;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  aspect-ratio: 1 / 1;
   border: 1px solid var(--cl-brass) !important;
   border-radius: 4px;
   background: var(--cl-inset-bg) !important;
@@ -1175,6 +1186,8 @@ input[type="range"] {
 
 @media (max-height: 560px) and (orientation: landscape) {
   .shop-modal > .modal-card {
+    --shop-paid-tile-size: clamp(82px, 13vw, 108px);
+    --shop-paid-tile-padding: .38rem;
     height: calc(100dvh - .5rem);
   }
 
@@ -1235,16 +1248,6 @@ input[type="range"] {
     padding: .38rem;
   }
 
-  .shop-modal .shop-items .shop-item {
-    flex-basis: clamp(82px, 13vw, 108px);
-    padding: .38rem;
-  }
-
-  .shop-modal .shop-items .shop-item-image-placeholder {
-    width: 100%;
-    height: 100%;
-  }
-
   .shop-modal .shop-purchase-bar {
     grid-template-columns: minmax(135px, 1fr) minmax(78px, auto) minmax(48px, auto) minmax(94px, auto);
     gap: .4rem;
@@ -1258,6 +1261,11 @@ input[type="range"] {
 }
 
 @media (max-width: 620px) and (orientation: landscape) {
+  .shop-modal > .modal-card {
+    --shop-paid-tile-size: 64px;
+    --shop-paid-tile-padding: .3rem;
+  }
+
   .shop-modal .shop-rewarded-heading > div {
     display: flex;
     align-items: baseline;
@@ -1289,8 +1297,6 @@ input[type="range"] {
   .shop-modal .rewarded-ad-shop-copy small { font-size: .38rem; }
 
   .shop-modal .shop-items { padding: .25rem; }
-
-  .shop-modal .shop-items .shop-item { flex-basis: 64px; }
 
   .shop-modal .shop-purchase-bar {
     grid-template-columns: minmax(0, 1fr) 46px 78px 96px;

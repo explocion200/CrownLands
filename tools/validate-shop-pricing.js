@@ -90,11 +90,15 @@ assert.doesNotMatch(commonGearRenderer, /shop-item-copy|data-shop-card-price|dat
 assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/);
 assert.match(palette, /\.shop-modal \.shop-purchase-bar\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;[^}]*grid-template-columns:/);
 assert.match(palette, /\.shop-modal \.shop-items \.shop-item\.selected/);
-assert.match(palette, /\.shop-modal \.shop-items \.shop-item\s*\{[^}]*aspect-ratio:\s*1;[^}]*place-items:\s*center;/);
+assert.match(palette, /--shop-paid-tile-size:\s*clamp\(104px,\s*12vw,\s*132px\);/);
+assert.match(palette, /\.shop-modal \.shop-items \.shop-item\s*\{[^}]*flex:\s*0 0 var\(--shop-paid-tile-size\);[^}]*inline-size:\s*var\(--shop-paid-tile-size\);[^}]*block-size:\s*var\(--shop-paid-tile-size\);[^}]*min-inline-size:\s*var\(--shop-paid-tile-size\);[^}]*min-block-size:\s*var\(--shop-paid-tile-size\);[^}]*aspect-ratio:\s*1 \/ 1;[^}]*grid-template:\s*minmax\(0,\s*1fr\) \/ minmax\(0,\s*1fr\);[^}]*place-items:\s*center;/);
+assert.match(palette, /\.shop-modal \.shop-items \.shop-item-image-placeholder\s*\{[^}]*inline-size:\s*100%;[^}]*block-size:\s*100%;[^}]*aspect-ratio:\s*1 \/ 1;/);
+assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?--shop-paid-tile-size:\s*clamp\(82px,\s*13vw,\s*108px\);/);
+assert.match(palette, /@media \(max-width:\s*620px\)[\s\S]*?--shop-paid-tile-size:\s*64px;/);
 assert.doesNotMatch(palette, /\.shop-modal \.shop-items \.shop-item-copy/);
 assert.match(palette, /@media \(max-height:\s*560px\) and \(orientation:\s*landscape\)/);
 assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?\.shop-modal \.shop-rewarded-section\s*\{[^}]*display:\s*grid;/, "Mobile landscape must keep the desktop Shop section hierarchy.");
 assert.equal((visualQa.match(/class="shop-item(?: common-gear-shop-item)?(?: selected)?"/g) || []).length, 7, "The visual QA fixture must include all seven paid image tiles.");
 assert.doesNotMatch(visualQa.match(/<div class="shop-items"[\s\S]*?<\/div>\s*<section class="shop-purchase-bar"/)?.[0] || "", /shop-item-copy|data-shop-card-price/, "The visual QA carousel contains duplicated card details.");
 
-console.log("Validated raw-base scalable Shop pricing, image-only selection, horizontal scrolling, concise details, and anchored purchase controls.");
+console.log("Validated raw-base scalable Shop pricing, equal square image tiles, horizontal scrolling, concise details, and anchored purchase controls.");
