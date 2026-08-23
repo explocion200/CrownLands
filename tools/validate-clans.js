@@ -8,6 +8,9 @@ const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const styles = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}\n${fs.readFileSync(path.join(root, "ui-contrast-correction.css"), "utf8")}`;
+const mobileViewportStyles = fs.readFileSync(path.join(root, "mobile-viewport.css"), "utf8");
+const heraldryScrollFixture = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-scroll", "index.html"), "utf8");
+const heraldryScrollQa = fs.readFileSync(path.join(root, "tools", "qa-clan-heraldry-scroll.js"), "utf8");
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8");
 const firestoreIndexes = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
@@ -265,7 +268,12 @@ requires(
   /\.clan-gift-actions[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)[\s\S]*?\.clan-gift-actions button[\s\S]*?min-width:\s*0[\s\S]*?@media \(max-width:\s*900px\)[\s\S]*?\.clan-gift-actions\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/,
   "Clan gift actions can overflow into Conquest Quests at compact Rewards widths."
 );
-requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
+requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?min-height:\s*0[\s\S]*?overflow-y:\s*auto[\s\S]*?-webkit-overflow-scrolling:\s*touch/, "Mobile shield editor does not keep a fixed preview beside a native touch scroller.");
+requires(mobileViewportStyles, /\.clan-view:not\(\.shield-editor-active\)/, "The shared Profile scroll contract still overrides Clan Heraldry scroll ownership.");
+requires(heraldryScrollFixture, /clan-view shield-editor-active[\s\S]*?clan-content shield-editor-open[\s\S]*?data-qa-preview[\s\S]*?data-qa-controls[\s\S]*?data-qa-final-control[\s\S]*?data-qa-actions/, "Clan Heraldry scrolling QA does not cover the full fixed-preview layout chain.");
+requires(heraldryScrollQa, /name:\s*"568x320"[\s\S]*?name:\s*"844x390"[\s\S]*?name:\s*"1440x900"/, "Clan Heraldry native scrolling QA must cover both compact landscape viewports and approved desktop.");
+requires(heraldryScrollQa, /wheelScrollTop[\s\S]*?touchScrollTop[\s\S]*?previewStayedFixed[\s\S]*?actionsStayedFixed/, "Clan Heraldry native scrolling QA must retain wheel, touch, and fixed-pane evidence.");
+requires(heraldryScrollQa, /finalControlReachable[\s\S]*?native touch scrolling did not move controls/, "Clan Heraldry native scrolling QA must verify end-of-list reachability and touch input.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 requires(styles, /\.clan-member-last-login\s*\{[\s\S]*?color:\s*#88b99a[\s\S]*?font-size:\s*\.64rem/, "Clan last-login timers do not have compact readable roster styling.");
 requires(styles, /\.clan-gift-donations\s*\{[\s\S]*?font-size:\s*\.65rem[\s\S]*?\.clan-gift-donations li[\s\S]*?text-overflow:\s*ellipsis/, "Recent clan generosity is not compact or overflow-safe.");

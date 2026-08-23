@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-animation-mode="off">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Clan Heraldry Scroll QA</title>
+  <link rel="stylesheet" href="../../../styles.css">
+  <link rel="stylesheet" href="../../../interface-theme.css">
+  <link rel="stylesheet" href="../../../daily-rewards.css">
+  <link rel="stylesheet" href="../../../common-gear-ui.css">
+  <link rel="stylesheet" href="../../../readability.css">
+  <link rel="stylesheet" href="../../../manuscript-prototype.css">
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css">
+  <link rel="stylesheet" href="../../../profile-theme.css">
+  <link rel="stylesheet" href="../../../crownlands-palette.css">
+  <link rel="stylesheet" href="../../../action-buttons.css">
+  <link rel="stylesheet" href="../../../mobile-viewport.css">
+  <link rel="stylesheet" href="../../../player-flag-editor.css">
+  <link rel="stylesheet" href="../../../chat.css">
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: linear-gradient(135deg, #071b2c, #102d3c); }
+    .qa-shield { width: 100%; height: 100%; display: block; filter: drop-shadow(0 7px 8px rgba(0,0,0,.45)); }
+    .qa-shield path:first-child { fill: #7a2638; stroke: #d8bd78; stroke-width: 5; }
+    .qa-shield path:last-child { fill: #d8bd78; }
+  </style>
+</head>
+<body>
+  <section class="profile-screen open clan-active" aria-label="Kingdom profile">
+    <header class="profile-screen-header">
+      <div class="profile-screen-heading"><span>Kingdom</span><h2>Clan</h2></div>
+      <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
+        <button type="button">Profile</button>
+        <button class="active" type="button" aria-selected="true">Clan</button>
+        <button type="button">Skills</button>
+        <button type="button">Settings</button>
+      </div>
+      <button class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile">×</button>
+    </header>
+    <div class="clan-view shield-editor-active" role="tabpanel">
+      <div class="clan-content shield-editor-open">
+        <section class="clan-shield-editor" aria-label="Clan shield editor">
+          <header class="clan-shield-editor-preview" data-qa-preview>
+            <div class="clan-shield-preview-stage">
+              <span class="clan-shield clan-shield-size-editor">
+                <svg class="qa-shield" viewBox="0 0 100 110" aria-label="Preview of QA clan shield">
+                  <path d="M8 6h84v49c0 25-16 41-42 50C24 96 8 80 8 55z"></path>
+                  <path d="M48 20h4v63h-4zM27 47h46v5H27z"></path>
+                </svg>
+              </span>
+            </div>
+            <div class="clan-shield-editor-intro">
+              <span>House heraldry</span>
+              <h3>Clan Shield Editor</h3>
+              <p>Build a distinct coat of arms with historic field divisions and heraldic charges.</p>
+              <small>Only the clan leader can publish changes.</small>
+            </div>
+          </header>
+          <div class="clan-shield-editor-workspace">
+            <nav class="clan-shield-editor-tabs" aria-label="Shield editing sections" role="tablist">
+              <button type="button" role="tab" data-qa-tab="field">Field</button>
+              <button type="button" role="tab" data-qa-tab="colors">Colors</button>
+              <button class="active" type="button" role="tab" data-qa-tab="charges" aria-selected="true">Charges</button>
+              <button type="button" role="tab" data-qa-tab="details">Details</button>
+            </nav>
+            <div class="clan-shield-editor-controls" data-qa-controls tabindex="0">
+              <section class="clan-shield-panel" data-qa-panel="field" role="tabpanel">
+                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Shield shape</legend><div class="clan-shield-choice-grid" data-options="4"></div></fieldset>
+                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Field division</legend><div class="clan-shield-choice-grid" data-options="8"></div></fieldset>
+              </section>
+              <section class="clan-shield-panel" data-qa-panel="colors" role="tabpanel">
+                <section class="clan-shield-colors" aria-label="Heraldic colors">
+                  <fieldset class="clan-shield-color-group"><legend>Primary field</legend><div class="clan-shield-swatch-grid" data-swatches></div></fieldset>
+                  <fieldset class="clan-shield-color-group"><legend>Secondary field</legend><div class="clan-shield-swatch-grid" data-swatches></div></fieldset>
+                  <fieldset class="clan-shield-color-group"><legend>Primary charge</legend><div class="clan-shield-swatch-grid" data-swatches></div></fieldset>
+                  <fieldset class="clan-shield-color-group"><legend>Secondary charge</legend><div class="clan-shield-swatch-grid" data-swatches></div></fieldset>
+                  <fieldset class="clan-shield-color-group"><legend>Metal trim</legend><div class="clan-shield-swatch-grid" data-swatches></div></fieldset>
+                </section>
+              </section>
+              <section class="clan-shield-panel active" data-qa-panel="charges" role="tabpanel">
+                <fieldset class="clan-shield-control"><legend>Primary charge</legend><div class="clan-shield-choice-grid" data-options="17"></div></fieldset>
+                <fieldset class="clan-shield-control"><legend>Secondary charge</legend><div class="clan-shield-choice-grid" data-options="17"></div></fieldset>
+                <fieldset class="clan-shield-control" data-qa-final-control><legend>Charge arrangement</legend><div class="clan-shield-choice-grid" data-options="4"></div></fieldset>
+              </section>
+              <section class="clan-shield-panel" data-qa-panel="details" role="tabpanel">
+                <fieldset class="clan-shield-control"><legend>Edge detail</legend><div class="clan-shield-choice-grid" data-options="3"></div></fieldset>
+                <fieldset class="clan-shield-control clan-shield-control-wide" data-qa-final-control><legend>Paint finish</legend><div class="clan-shield-choice-grid" data-options="3"></div></fieldset>
+              </section>
+            </div>
+          </div>
+          <footer class="clan-shield-editor-actions" data-qa-actions>
+            <button class="profile-secondary-btn" type="button">Inspire Me</button>
+            <button class="profile-secondary-btn" type="button">Cancel</button>
+            <button class="profile-primary-btn clan-shield-save" type="button">Save Clan Shield</button>
+          </footer>
+        </section>
+      </div>
+    </div>
+  </section>
+  <script>
+    const labels = ["None", "Crown", "Lion", "Eagle", "Dragon", "Wolf", "Stag", "Bear", "Crossed Swords", "Gauntlet", "Fleur-de-lis", "Oak Tree", "War Horn", "Battering Ram", "Fortress Keep", "Watchtower", "Portcullis"];
+    document.querySelectorAll("[data-options]").forEach(grid => {
+      const count = Number(grid.dataset.options);
+      grid.innerHTML = Array.from({ length: count }, (_, index) => `<button type="button" class="${index === 0 ? "active" : ""}"><span aria-hidden="true">◆</span><small>${labels[index] || `Choice ${index + 1}`}</small></button>`).join("");
+    });
+    const colors = ["#7a2638", "#d8bd78", "#173e57", "#52633c", "#eee1bd"];
+    document.querySelectorAll("[data-swatches]").forEach(grid => {
+      grid.innerHTML = colors.map((color, index) => `<button type="button" class="${index === 0 ? "active" : ""}" style="--shield-swatch:${color}" aria-label="Color ${index + 1}"></button>`).join("");
+    });
+    document.querySelectorAll("[data-qa-tab]").forEach(button => button.addEventListener("click", () => {
+      document.querySelectorAll("[data-qa-tab]").forEach(item => { item.classList.toggle("active", item === button); item.setAttribute("aria-selected", item === button ? "true" : "false"); });
+      document.querySelectorAll("[data-qa-panel]").forEach(panel => panel.classList.toggle("active", panel.dataset.qaPanel === button.dataset.qaTab));
+      document.querySelector("[data-qa-controls]").scrollTop = 0;
+    }));
+    window.__HERALDRY_SCROLL_QA__ = Object.freeze({
+      measure() {
+        const selectors = [".profile-screen", ".profile-screen-header", ".clan-view", ".clan-content", ".clan-shield-editor", ".clan-shield-editor-workspace", ".clan-shield-editor-controls"];
+        return Object.fromEntries(selectors.map(selector => {
+          const element = document.querySelector(selector);
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return [selector, { clientHeight: element.clientHeight, scrollHeight: element.scrollHeight, scrollTop: element.scrollTop, height: rect.height, display: style.display, gridTemplateRows: style.gridTemplateRows, minHeight: style.minHeight, overflow: style.overflow, overflowY: style.overflowY, overflowX: style.overflowX, position: style.position, pointerEvents: style.pointerEvents, touchAction: style.touchAction, overscrollBehavior: style.overscrollBehavior }];
+        }));
+      }
+    });
+  </script>
+</body>
+</html>
