@@ -12694,7 +12694,7 @@ function renderIslandSwitcherModalContent() {
   setIslandMapPickerOpeningView(picker, activeRegionId || homeRegionId);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
-      if (picker?.dataset.justDragged === "true" || picker?.dataset.justActivated === "true") return;
+      if (picker?.dataset.justDragged === "true") return;
       rememberIslandMapPickerView(picker);
       switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
     });
@@ -13081,7 +13081,6 @@ function attachIslandMapPickerPan(picker) {
   let startY = 0;
   let startCamera = controller.getCamera();
   let moved = false;
-  let tapRegionId = "";
   let pinchGeometry = null;
   let pinchAnimationFrame = 0;
   let pickerViewportOriginX = 0;
@@ -13119,14 +13118,13 @@ function attachIslandMapPickerPan(picker) {
     return applyPendingPinch();
   };
 
-  const beginPan = (id, x, y, regionId = "") => {
+  const beginPan = (id, x, y) => {
     controller.cancel();
     pointerId = id;
     startX = x;
     startY = y;
     startCamera = controller.getCamera();
     moved = false;
-    tapRegionId = regionId;
     picker.classList.add("panning");
   };
 
@@ -13139,7 +13137,6 @@ function attachIslandMapPickerPan(picker) {
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
-    const tile = event.target?.closest?.("[data-island-region]");
     picker.setPointerCapture?.(event.pointerId);
     if (event.pointerType === "touch") {
       if (touchPointers.size === 0) {
@@ -13152,7 +13149,6 @@ function attachIslandMapPickerPan(picker) {
         controller.flush();
         pointerId = null;
         moved = true;
-        tapRegionId = "";
         pinchGeometry = getIslandMapPinchGeometry(touchPointers);
         picker.classList.add("panning", "pinching");
         event.preventDefault();
@@ -13160,7 +13156,7 @@ function attachIslandMapPickerPan(picker) {
       }
     }
     if (pointerId !== null) return;
-    beginPan(event.pointerId, event.clientX, event.clientY, tile?.dataset?.islandRegion || "");
+    beginPan(event.pointerId, event.clientX, event.clientY);
   });
 
   picker.addEventListener("pointermove", event => {
@@ -13169,7 +13165,6 @@ function attachIslandMapPickerPan(picker) {
       if (touchPointers.size >= 2) {
         schedulePinch();
         moved = true;
-        tapRegionId = "";
         event.preventDefault();
         return;
       }
@@ -13215,18 +13210,11 @@ function attachIslandMapPickerPan(picker) {
     if (moved) {
       rememberIslandMapPickerView(picker);
       suppressTileActivation();
-    } else if (tapRegionId) {
-      const releasedTile = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]");
-      if (releasedTile?.dataset?.islandRegion === tapRegionId) {
-        picker.dataset.justActivated = "true";
-        rememberIslandMapPickerView(picker);
-        switchOnlineIsland(tapRegionId, { fromMapPicker: true });
-        window.setTimeout(() => {
-          if (picker) delete picker.dataset.justActivated;
-        }, 180);
-      }
+    } else {
+      // Let the tile's completed click activate it. Closing the picker on pointerup
+      // can retarget a touch gesture's trailing click to the HUD beneath the tile.
+      rememberIslandMapPickerView(picker);
     }
-    tapRegionId = "";
   };
 
   picker.addEventListener("pointerup", stopPan);

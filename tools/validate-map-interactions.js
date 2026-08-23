@@ -349,6 +349,10 @@ assert.match(source, /const schedulePinch = \(\) => \{[\s\S]*?requestAnimationFr
 assert.match(source, /const applyPendingPinch = \(\) => \{[\s\S]*?controller\.renderNow\(getIslandMapPickerZoomedCamera[\s\S]*?nextGeometry\.centerX/, "Mobile pinch gestures should directly track the moving finger midpoint.");
 assert.match(source, /function createIslandMapPickerCameraController[\s\S]*?getIslandMapPickerAnchoredCamera\(zoomAnchor, nextZoom\)/, "Desktop zoom animation must derive every frame from the cursor anchor.");
 assert.match(source, /const zoomTo = [\s\S]*?zoomAnchor = getIslandMapPickerZoomAnchor\(current, focalX, focalY\)/, "Desktop zoom input must anchor from the currently rendered camera.");
+const islandPickerPanSource = extractFunction("attachIslandMapPickerPan");
+const islandPickerRenderSource = extractFunction("renderIslandSwitcherModalContent");
+assert.doesNotMatch(islandPickerPanSource, /switchOnlineIsland\(/, "Map picker pointer releases must not switch islands before the gesture's trailing click completes.");
+assert.match(islandPickerRenderSource, /button\.addEventListener\("click"[\s\S]*?switchOnlineIsland\(button\.dataset\.islandRegion, \{ fromMapPicker: true \}\)/, "Map picker tiles must activate through their completed click.");
 assert.match(source, /function setIslandMapPickerOpeningView[\s\S]*?getIslandMapPickerOpeningZoom[\s\S]*?position\.x \* zoom/, "Opening the map picker should center its camera on the active region.");
 assert.match(source, /renderIslandSwitcherModalContent[\s\S]*?setIslandMapPickerOpeningView\(picker, activeRegionId \|\| homeRegionId\)/, "Every map picker open should reset to the active region.");
 assert.doesNotMatch(source, /restoreIslandMapPickerView/, "The map picker must not restore a stale camera on reopen.");
