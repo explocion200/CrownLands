@@ -4115,6 +4115,7 @@ input {
   filter: grayscale(.7);
 }
 .modal.inventory-modal .inventory-slot {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -4132,6 +4133,28 @@ input {
   border-left-width: 1px !important;
   border-radius: 4px;
   box-shadow: inset 0 1px 0 rgba(255,248,232,.5), 0 3px 7px rgba(84,47,36,.22) !important;
+}
+html body .modal.inventory-modal .inventory-slot-count {
+  position: absolute;
+  z-index: 2;
+  top: .26rem;
+  right: .26rem;
+  box-sizing: border-box;
+  min-width: 2.15em;
+  max-width: calc(100% - .52rem);
+  padding: .13rem .34rem .11rem;
+  overflow: hidden;
+  color: #f2e2bf !important;
+  background: linear-gradient(180deg, #74383d, #54272d);
+  border: 1px solid #b58a3b;
+  border-radius: 999px;
+  box-shadow: inset 0 1px rgba(255,248,232,.2), 0 2px 4px rgba(48,25,19,.3);
+  font: 850 clamp(.52rem, 1.25vw, .68rem)/1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .015em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .modal.inventory-modal .inventory-slot:hover:not(:disabled) {
   border-color: var(--cl-gold-highlight) !important;

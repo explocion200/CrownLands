@@ -31926,6 +31926,7 @@ function showShopModal() {
 
 function showInventoryModal() {
   if (!state) return;
+  if (selectedInventoryItemId) reconcileInventorySelectionAfterCountChange(selectedInventoryItemId);
   const model = getInventoryPageModel();
   selectedInventoryPage = model.page;
   let selectedEntry = model.entries.find(entry => entry.entryKey === selectedInventoryEntryKey) || null;
@@ -31958,7 +31959,7 @@ function showInventoryModal() {
         </div>
         <button class="inventory-page-arrow next" data-inventory-page="${model.page + 1}" type="button" aria-label="Next item page" ${model.page >= model.pageCount - 1 ? "disabled" : ""}>${renderCrownlandsIcon("forward")}</button>
       </div>
-      <div class="inventory-page-status" aria-live="polite"><span>${formatNumber(model.totalEntries)} ${model.totalEntries === 1 ? "item" : "items"}</span><strong>Page ${model.page + 1} of ${model.pageCount}</strong></div>
+      <div class="inventory-page-status" aria-live="polite"><span>${formatNumber(model.totalEntries)} ${model.totalEntries === 1 ? "stack" : "stacks"}</span><strong>Page ${model.page + 1} of ${model.pageCount}</strong></div>
       <section class="inventory-selection">
         ${selectedEntry ? `
           <span class="inventory-selection-icon ${selectedEntry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(selectedEntry, "inventory-selection-image")}</span>
@@ -32012,10 +32013,7 @@ function consumeInventoryItem(item) {
     return null;
   }
   inventory[item.id] = owned - 1;
-  if (selectedInventoryItemId === item.id) {
-    selectedInventoryItemId = "";
-    selectedInventoryEntryKey = "";
-  }
+  reconcileInventorySelectionAfterCountChange(item.id);
   return inventory;
 }
 
@@ -32194,10 +32192,7 @@ function settleConfirmedInventoryItem(item, result, quantity = 1) {
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
-  if (selectedInventoryItemId === item.id) {
-    selectedInventoryItemId = "";
-    selectedInventoryEntryKey = "";
-  }
+  reconcileInventorySelectionAfterCountChange(item.id);
   if (modal?.open && modal.classList.contains("inventory-modal")) {
     if (isStackableTimedInventoryItem(item)) showInventoryModal();
     else modal.close();
