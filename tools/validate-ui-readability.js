@@ -8,7 +8,7 @@ const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
 const releaseId = "20260819-player-flags-v2-r1";
-const buildId = "20260822-scalable-shop-pricing-r1";
+const buildId = "20260822-scalable-shop-ui-r2";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);

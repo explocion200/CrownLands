@@ -216,6 +216,15 @@ const SHOP_ITEMS = [
     icon: "assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp",
   },
 ];
+const SHOP_SHORT_DESCRIPTIONS = Object.freeze({
+  common_gear_box: "Contains three random Common Gear pieces.",
+  shield_12h: "Protects your city for a limited time.",
+  war_drums_30m: "Boosts your army’s battle readiness.",
+  royal_tax_decree_30m: "Boosts Gold production for 30 minutes.",
+  veil_of_silence_30m: "Hides your city from scouting for a limited time.",
+  swift_march_order: "Speeds up troop movement.",
+  recall_horn: "Calls troops back to regroup.",
+});
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = economyNumber("shopItems.shield_12h.effectDurationMinutes", 720) * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
@@ -19235,15 +19244,6 @@ function getShopItemPrice(itemOrId = "") {
   return calculateScalableShopPrice(item.id, pricing.rawBaseGoldPerHour, pricing.cityCount, item.cost);
 }
 
-function getRoyalTaxDecreeBoostValue() {
-  const { rawBaseGoldPerHour } = getShopPricingContext();
-  return Math.max(0, Math.floor(
-    rawBaseGoldPerHour
-      * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
-      * ROYAL_TAX_DECREE_DURATION_MS / 3_600_000
-  ));
-}
-
 function getHarvestBonusGoldReward() {
   const passiveGold = Math.floor(getHarvestBonusBaseRates().goldPerHour * HARVEST_BONUS_GOLD_SECONDS / 3600);
   return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
@@ -31694,31 +31694,18 @@ function renderItemIcon(item, imageClass = "") {
 }
 
 function renderShopItem(item, selectedItemId = "") {
-  const owned = getProjectedInventoryCount(item.id);
-  const price = getShopItemPrice(item);
-  const cooldownText = getItemPurchaseCooldownText(item.id);
-  const purchaseLimit = getItemDailyPurchaseLimit(item.id);
-  const purchaseCount = getProjectedItemPurchaseCount(item.id);
   const selected = selectedItemId === item.id;
-  const taxValue = item.id === ROYAL_TAX_DECREE_ITEM_ID
-    ? `<small class="shop-item-value">30m value: ${formatNumber(getRoyalTaxDecreeBoostValue())} extra gold</small>`
-    : "";
   return `
-    <button class="shop-item ${selected ? "selected" : ""}" data-shop-item="${escapeHtml(item.id)}" data-shop-select="${escapeHtml(item.id)}" type="button" role="option" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
+    <button class="shop-item ${selected ? "selected" : ""}" data-shop-item="${escapeHtml(item.id)}" data-shop-select="${escapeHtml(item.id)}" type="button" role="option" aria-label="${escapeHtml(item.label)}" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
         ${renderItemIcon(item, "shop-item-image")}
       </div>
-      <div class="shop-item-copy">
-        <strong>${escapeHtml(item.label)}</strong>
-        <span data-shop-card-price>${formatNumber(price)} gold</span>
-        <small data-shop-owned>Owned: ${formatNumber(owned)}</small>
-        ${purchaseLimit > 0 ? `<small class="shop-item-purchase-limit" data-shop-purchase-count>Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)</small>` : ""}
-        ${cooldownText ? `<small class="shop-item-cooldown">UTC reset in ${escapeHtml(cooldownText)}</small>` : ""}
-        ${taxValue}
-        <small>${escapeHtml(item.description)}</small>
-      </div>
     </button>
   `;
+}
+
+function getShopShortDescription(itemId = "") {
+  return SHOP_SHORT_DESCRIPTIONS[String(itemId || "")] || "A useful item for your kingdom.";
 }
 
 function getSelectableShopItemIds() {
@@ -31738,11 +31725,14 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
     return {
       id,
       label: COMMON_GEAR_BOX_ITEM.label,
+      description: getShopShortDescription(id),
       price,
       owned: Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)),
       canBuy: !unavailable && affordable,
       buttonLabel: unavailable ? "Purchased" : affordable ? "Buy" : "Not Enough Gold",
-      status: unavailable ? "Available again after the 00:00 UTC reset." : "Fixed price · one purchase per UTC day.",
+      status: unavailable
+        ? "Daily limit reached. Available after 00:00 UTC."
+        : affordable ? "" : "Not enough Gold.",
     };
   }
 
@@ -31759,13 +31749,16 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   return {
     id: item.id,
     label: item.label,
+    description: getShopShortDescription(item.id),
     price,
     owned,
     canBuy: !pending && available && affordable,
     buttonLabel: pending ? "Queued" : !available ? "Unavailable" : affordable ? "Buy" : "Not Enough Gold",
-    status: cooldownText
-      ? `UTC purchase limit reached · resets in ${cooldownText}.`
-      : `Scales from raw base gold production and ${formatNumber(getShopPricingContext().cityCount)} regular ${getShopPricingContext().cityCount === 1 ? "city" : "cities"}.`,
+    status: pending
+      ? "Purchase pending."
+      : cooldownText
+        ? `Daily limit reached. Available in ${cooldownText}.`
+        : affordable ? "" : "Not enough Gold.",
   };
 }
 
@@ -31774,9 +31767,9 @@ function renderShopPurchaseBar(itemId = selectedShopItemId) {
   if (!purchase) return "";
   return `
     <section class="shop-purchase-bar" data-shop-purchase-bar data-selected-shop-item="${escapeHtml(purchase.id)}" aria-live="polite">
-      <div class="shop-purchase-selected"><span>Selected item</span><strong>${escapeHtml(purchase.label)}</strong><small>${escapeHtml(purchase.status)}</small></div>
-      <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
+      <div class="shop-purchase-selected"><strong>${escapeHtml(purchase.label)}</strong><small class="shop-purchase-description">${escapeHtml(purchase.description)}</small>${purchase.status ? `<small class="shop-purchase-status">${escapeHtml(purchase.status)}</small>` : ""}</div>
       <div class="shop-purchase-stat"><span>Owned</span><strong data-shop-selected-owned>${formatNumber(purchase.owned)}</strong></div>
+      <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
       <button class="shop-buy-btn shop-purchase-buy" data-shop-purchase-selected="${escapeHtml(purchase.id)}" type="button" ${purchase.canBuy ? "" : "disabled"}>${escapeHtml(purchase.buttonLabel)}</button>
     </section>`;
 }

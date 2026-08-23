@@ -198,13 +198,6 @@ function patchShopProjectedUi() {
   modalBody?.querySelectorAll("[data-shop-item]").forEach(card => {
     const item = getShopItemById(card.dataset.shopItem);
     if (!item) return;
-    const price = getShopItemPrice(item);
-    const count = getProjectedInventoryCount(item.id);
-    const purchaseCount = getProjectedItemPurchaseCount(item.id);
-    const purchaseLimit = getItemDailyPurchaseLimit(item.id);
-    setTextIfChanged(card.querySelector("[data-shop-owned]"), `Owned: ${formatNumber(count)}`);
-    setTextIfChanged(card.querySelector("[data-shop-card-price]"), `${formatNumber(price)} gold`);
-    setTextIfChanged(card.querySelector("[data-shop-purchase-count]"), `Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)`);
     card.classList.toggle("pending", getInstantPendingItemDelta(item.id) > 0);
   });
   patchShopPurchaseBar();

@@ -11,6 +11,7 @@ const controller = read("instant-economy-actions.js");
 const commonGear = read("common-gear-ui.js");
 const server = read("functions/index.js");
 const palette = read("crownlands-palette.css");
+const visualQa = read("docs/visual-qa/scalable-shop-pricing/index.html");
 
 const hours = Object.freeze({
   royal_tax_decree_30m: 0.18,
@@ -66,13 +67,34 @@ assert.match(server, /Math\.floor\(safeNumber\(data\.cost, 0\)\) !== unitPrice[\
 assert.match(controller, /getShopItemPrice\(item\)[\s\S]*?reservedGold:\s*price/, "Instant purchases must reserve the displayed scalable price.");
 
 assert.match(client, /function renderShopItem[\s\S]*?data-shop-select[\s\S]*?role="option"/);
-assert.doesNotMatch(client.match(/function renderShopItem[\s\S]*?\n}/)?.[0] || "", /data-shop-buy|>Buy</);
-assert.match(client, /function renderShopPurchaseBar[\s\S]*?data-shop-selected-price[\s\S]*?data-shop-selected-owned[\s\S]*?data-shop-purchase-selected/);
+const paidRenderer = client.match(/function renderShopItem[\s\S]*?\n}/)?.[0] || "";
+assert.match(paidRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
+assert.doesNotMatch(paidRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|item\.description|shop-item-value|data-shop-buy|>Buy</);
+assert.match(paidRenderer, /aria-label="\$\{escapeHtml\(item\.label\)\}"/);
+assert.match(client, /function renderShopPurchaseBar[\s\S]*?shop-purchase-description[\s\S]*?data-shop-selected-owned[\s\S]*?data-shop-selected-price[\s\S]*?data-shop-purchase-selected/);
+for (const description of [
+  "Boosts Gold production for 30 minutes.",
+  "Protects your city for a limited time.",
+  "Boosts your army’s battle readiness.",
+  "Hides your city from scouting for a limited time.",
+  "Speeds up troop movement.",
+  "Calls troops back to regroup.",
+]) {
+  assert.ok(client.includes(description), `Missing concise Shop description: ${description}`);
+}
+assert.doesNotMatch(client.match(/function getShopPurchaseState[\s\S]*?\n}/)?.[0] || "", /Scales from raw|raw base gold|city premium|30m value/);
 assert.match(commonGear, /function renderCommonGearShopItem[\s\S]*?data-shop-select="common_gear_box"/);
-assert.doesNotMatch(commonGear.match(/function renderCommonGearShopItem[\s\S]*?\n}/)?.[0] || "", /data-common-gear-buy|>Buy</);
+const commonGearRenderer = commonGear.match(/function renderCommonGearShopItem[\s\S]*?\n}/)?.[0] || "";
+assert.match(commonGearRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
+assert.doesNotMatch(commonGearRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|data-common-gear-buy|>Buy</);
 assert.match(palette, /\.shop-modal \.shop-items\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/);
 assert.match(palette, /\.shop-modal \.shop-purchase-bar\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;[^}]*grid-template-columns:/);
 assert.match(palette, /\.shop-modal \.shop-items \.shop-item\.selected/);
+assert.match(palette, /\.shop-modal \.shop-items \.shop-item\s*\{[^}]*aspect-ratio:\s*1;[^}]*place-items:\s*center;/);
+assert.doesNotMatch(palette, /\.shop-modal \.shop-items \.shop-item-copy/);
 assert.match(palette, /@media \(max-height:\s*560px\) and \(orientation:\s*landscape\)/);
+assert.match(palette, /@media \(max-height:\s*560px\)[\s\S]*?\.shop-modal \.shop-rewarded-section\s*\{[^}]*display:\s*grid;/, "Mobile landscape must keep the desktop Shop section hierarchy.");
+assert.equal((visualQa.match(/class="shop-item(?: common-gear-shop-item)?(?: selected)?"/g) || []).length, 7, "The visual QA fixture must include all seven paid image tiles.");
+assert.doesNotMatch(visualQa.match(/<div class="shop-items"[\s\S]*?<\/div>\s*<section class="shop-purchase-bar"/)?.[0] || "", /shop-item-copy|data-shop-card-price/, "The visual QA carousel contains duplicated card details.");
 
-console.log("Validated raw-base scalable Shop pricing, one-item selection, horizontal scrolling, and anchored purchase controls.");
+console.log("Validated raw-base scalable Shop pricing, image-only selection, horizontal scrolling, concise details, and anchored purchase controls.");

@@ -775,14 +775,9 @@ function getCommonGearBoxShopPrice() {
 
 function renderCommonGearShopItem(selectedItemId = "") {
   if (!COMMON_GEAR) return "";
-  const purchase = state?.gear?.shopPurchase || {};
-  const purchasedToday = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
-  const price = getCommonGearBoxShopPrice();
   const selected = selectedItemId === COMMON_GEAR_BOX_ITEM.id;
-  return `<button class="shop-item common-gear-shop-item ${selected ? "selected" : ""}" data-shop-item="common_gear_box" data-shop-select="common_gear_box" type="button" role="option" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
+  return `<button class="shop-item common-gear-shop-item ${selected ? "selected" : ""}" data-shop-item="common_gear_box" data-shop-select="common_gear_box" type="button" role="option" aria-label="Common Gear Box" aria-selected="${selected ? "true" : "false"}" tabindex="${selected ? "0" : "-1"}">
     <div class="shop-item-image-placeholder has-image" aria-hidden="true">${renderItemIcon(COMMON_GEAR_BOX_ITEM, "shop-item-image")}</div>
-    <div class="shop-item-copy"><strong>Common Gear Box</strong><span data-shop-card-price>${formatNumber(price)} gold</span>
-      <small data-shop-owned>Owned: ${formatNumber(state?.gear?.commonGearBoxes || 0)}</small><small>${purchasedToday ? "Purchased today · resets at 00:00 UTC" : "Limit: 1 per UTC day · fixed price"}</small></div>
   </button>`;
 }
 
