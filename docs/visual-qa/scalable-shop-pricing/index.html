@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Crownlands Scalable Shop QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { background: radial-gradient(circle at 50% 30%, #476448, #17251d 70%); }
+  </style>
+</head>
+<body>
+  <dialog class="modal shop-modal" open aria-label="Shop visual QA">
+    <section class="modal-card">
+      <h2>Shop</h2>
+      <button class="modal-close" type="button" aria-label="Close">×</button>
+      <div id="modalBody">
+        <div class="shop-panel">
+          <section class="shop-balance"><span>Gold available</span><strong data-shop-balance>2,800,000,000</strong></section>
+          <section class="shop-rewarded-section" aria-labelledby="shopRewardedHeading">
+            <header class="shop-rewarded-heading">
+              <div><span>Optional rewards</span><strong id="shopRewardedHeading">Free .5h Boosts</strong></div>
+              <small>One shared 30-minute cooldown</small>
+            </header>
+            <div class="shop-rewarded-items">
+              <article class="shop-item rewarded-ad-shop-item">
+                <div class="rewarded-ad-shop-action">
+                  <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" alt="" /></div>
+                  <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Ad</button>
+                </div>
+                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Gold Reward</strong><span>Estimated reward: 250M</span><small>Available today (UTC)</small></div>
+              </article>
+              <article class="shop-item rewarded-ad-shop-item">
+                <div class="rewarded-ad-shop-action">
+                  <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /></div>
+                  <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Ad</button>
+                </div>
+                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Troop Reward</strong><span>Estimated reward: 18M</span><small>Available today (UTC)</small></div>
+              </article>
+            </div>
+          </section>
+          <div class="shop-items" role="listbox" aria-label="Shop items">
+            <button class="shop-item common-gear-shop-item" data-id="common_gear_box" data-label="Common Gear Box" data-description="Contains three random Common Gear pieces." data-price="1,000,000,000" data-owned="2" type="button" role="option" aria-label="Common Gear Box" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-common-gear-box-192x192-d31500be5747.webp" alt="" /></div>
+            </button>
+            <button class="shop-item" data-id="shield_12h" data-label="Royal Peace Shield" data-description="Protects your city for a limited time." data-price="3,500,000,000" data-owned="1" type="button" role="option" aria-label="Royal Peace Shield" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" alt="" /></div>
+            </button>
+            <button class="shop-item" data-id="war_drums_30m" data-label="War Drums" data-description="Boosts your army’s battle readiness." data-price="1,500,000,000" data-owned="4" type="button" role="option" aria-label="War Drums" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /></div>
+            </button>
+            <button class="shop-item selected" data-id="royal_tax_decree_30m" data-label="Royal Tax Decree" data-description="Boosts Gold production for 30 minutes." data-price="180,000,000" data-owned="3" type="button" role="option" aria-label="Royal Tax Decree" aria-selected="true">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" alt="" /></div>
+            </button>
+            <button class="shop-item" data-id="veil_of_silence_30m" data-label="Veil of Silence" data-description="Hides your city from scouting for a limited time." data-price="2,000,000,000" data-owned="0" type="button" role="option" aria-label="Veil of Silence" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp" alt="" /></div>
+            </button>
+            <button class="shop-item" data-id="swift_march_order" data-label="Swift March Order" data-description="Speeds up troop movement." data-price="1,000,000,000" data-owned="6" type="button" role="option" aria-label="Swift March Order" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-swift-march-160x160-e857cc4d8977.webp" alt="" /></div>
+            </button>
+            <button class="shop-item" data-id="recall_horn" data-label="Recall Horn" data-description="Calls troops back to regroup." data-price="1,250,000,000" data-owned="0" type="button" role="option" aria-label="Recall Horn" aria-selected="false">
+              <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp" alt="" /></div>
+            </button>
+          </div>
+          <section class="shop-purchase-bar" data-shop-purchase-bar aria-live="polite">
+            <div class="shop-purchase-selected"><strong data-selected-label>Royal Tax Decree</strong><small class="shop-purchase-description" data-selected-description>Boosts Gold production for 30 minutes.</small></div>
+            <div class="shop-purchase-stat"><span>Owned</span><strong data-selected-owned>3</strong></div>
+            <div class="shop-purchase-stat"><span>Price</span><strong data-selected-price>180,000,000 gold</strong></div>
+            <button class="shop-buy-btn shop-purchase-buy" type="button">Buy</button>
+          </section>
+        </div>
+      </div>
+    </section>
+  </dialog>
+  <script>
+    const cards = [...document.querySelectorAll('.shop-items .shop-item')];
+    const list = document.querySelector('.shop-items');
+    const availableGold = 2800000000;
+    const buyButton = document.querySelector('.shop-purchase-buy');
+    function selectCard(card) {
+      cards.forEach(candidate => {
+        const selected = candidate === card;
+        candidate.classList.toggle('selected', selected);
+        candidate.setAttribute('aria-selected', String(selected));
+        candidate.tabIndex = selected ? 0 : -1;
+      });
+      document.querySelector('[data-selected-label]').textContent = card.dataset.label;
+      document.querySelector('[data-selected-description]').textContent = card.dataset.description;
+      document.querySelector('[data-selected-price]').textContent = `${card.dataset.price} gold`;
+      document.querySelector('[data-selected-owned]').textContent = card.dataset.owned;
+      const affordable = Number(card.dataset.price.replaceAll(',', '')) <= availableGold;
+      buyButton.disabled = !affordable;
+      buyButton.textContent = affordable ? 'Buy' : 'Not Enough Gold';
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+    cards.forEach((card, index) => {
+      card.addEventListener('click', () => selectCard(card));
+      card.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? cards.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + cards.length) % cards.length;
+        selectCard(cards[nextIndex]);
+        cards[nextIndex].focus({ preventScroll: true });
+      });
+    });
+    window.shopQa = {
+      get selectedCount() { return cards.filter(card => card.classList.contains('selected')).length; },
+      get horizontalScrollable() { return list.scrollWidth > list.clientWidth; },
+    };
+  </script>
+</body>
+</html>

@@ -22,7 +22,7 @@ assert.match(controller, /refreshServerEconomy\(true[\s\S]*?revalidateInstantEco
 assert.match(controller, /action\.generation !== instantEconomyGeneration/, "Late responses from an old session are not ignored.");
 assert.match(game, /clearInstantEconomyActions\(\)[\s\S]*?onlineSaveAuthUid = nextUid/, "Auth generation changes do not clear queued actions.");
 assert.match(server, /instantEconomyActionsVersion: 1/, "Realm capabilities do not advertise instant economy actions.");
-assert.match(server, /requestedQuantity = data\.quantity === undefined \? 1[\s\S]*?purchasedQuantity: requestedQuantity[\s\S]*?spentGold: totalCost/, "Shop quantity purchases are not atomic and backward compatible.");
+assert.match(server, /requestedQuantity = data\.quantity === undefined \? 1[\s\S]*?unitPrice = getShopItemPriceForEconomy\(economy, itemId\)[\s\S]*?purchasedQuantity: requestedQuantity[\s\S]*?unitPrice,[\s\S]*?spentGold: totalCost/, "Shop quantity purchases are not atomically priced and backward compatible.");
 assert.match(server, /const maxQuantity = stackable \? 25 : 1;[\s\S]*?activatedQuantity: requestedQuantity[\s\S]*?effectDurationAddedMs:[\s\S]*?requestedQuantity/, "Timed-item quantity activation is not bounded and aggregated.");
 assert.match(firebase, /purchaseShopItem\(\{ itemId = "", cost = 0, quantity = 1 \}[\s\S]*?\{ itemId, cost, quantity \}/, "The client wrapper drops Shop purchase quantities.");
 assert.ok(index.indexOf("instant-economy-actions.js") < index.indexOf("game.js"), "The action controller must load immediately before game.js.");
@@ -54,6 +54,7 @@ const sandbox = {
   cityLayer: { querySelector: () => null },
   SHOP_ITEMS: [{ id: "test_item", label: "Test Item", cost: 100 }],
   getShopItemById: id => id === "test_item" ? { id, label: "Test Item", cost: 100 } : null,
+  getShopItemPrice: item => item?.cost || 0,
   getItemPurchaseCount: () => 0,
   getItemDailyPurchaseLimit: () => 10,
   getItemPurchaseCooldownText: () => "",

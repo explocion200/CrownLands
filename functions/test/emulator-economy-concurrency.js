@@ -5,6 +5,24 @@ const economyConfig = require("../economy-config.json");
 const realm = require("../release-config.json");
 const commonGear = require("../common-gear.js");
 
+const SHOP_PRICE_HOURS = Object.freeze({
+  shield_12h: 3.5,
+  war_drums_30m: 1.5,
+  royal_tax_decree_30m: 0.18,
+  veil_of_silence_30m: 2,
+  swift_march_order: 1,
+  recall_horn: 1.25,
+});
+
+function getExpectedShopPrice(itemId, pricing = {}) {
+  const rawRate = Math.max(0, Number(pricing.rawBaseGoldPerHour) || 0);
+  const cityCount = Math.max(0, Math.floor(Number(pricing.cityCount) || 0));
+  const premium = 1 + Math.min(cityCount / 500, 0.35);
+  const amount = rawRate * SHOP_PRICE_HOURS[itemId] * premium;
+  const step = 10 ** Math.max(1, Math.floor(Math.log10(Math.max(1, amount))) - 1);
+  return Math.max(50, Math.round(amount / step) * step);
+}
+
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
@@ -151,9 +169,12 @@ async function main() {
     collectedTroops >= expectedTroops - 2 && collectedTroops < expectedTroops + 10,
     `Concurrent collection duplicated troop production (${collectedTroops}; expected about ${expectedTroops}).`
   );
+  const shopPricing = economyResults.find(result => result.ok)?.result?.shopPricing || {};
+  assert(Number(shopPricing.rawBaseGoldPerHour || 0) > 0, "Economy response omitted raw Shop pricing context.");
+  assert(Number(shopPricing.cityCount || 0) === 1, "Shop pricing context did not count the regular owned city.");
 
   const shieldId = "shield_12h";
-  const shieldCost = Number(economyConfig.shopItems?.[shieldId]?.cost || 0);
+  const shieldCost = getExpectedShopPrice(shieldId, shopPricing);
   const purchaseGold = shieldCost * 2 + 1000;
   await profileRef.set({
     gold: purchaseGold,
@@ -186,7 +207,7 @@ async function main() {
   );
 
   const drumsId = "war_drums_30m";
-  const drumsCost = Number(economyConfig.shopItems?.[drumsId]?.cost || 0);
+  const drumsCost = getExpectedShopPrice(drumsId, shopPricing);
   const drumsPurchaseGold = drumsCost * 5 + 1000;
   await profileRef.set({
     gold: drumsPurchaseGold,
@@ -212,7 +233,7 @@ async function main() {
   assert(Number(profileAfterQuantityPurchase.itemPurchaseCooldowns?.[drumsId]?.purchaseCount || 0) === 4, "Quantity purchases did not atomically update the daily count.");
 
   const taxId = "royal_tax_decree_30m";
-  const taxCost = Number(economyConfig.shopItems?.[taxId]?.cost || 0);
+  const taxCost = getExpectedShopPrice(taxId, shopPricing);
   await profileRef.set({
     gold: taxCost * 2 - 1,
     goldFloat: taxCost * 2 - 1,

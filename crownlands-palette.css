@@ -1011,3 +1011,294 @@ input[type="range"] {
     box-shadow: inset 0 1px 0 rgba(255, 248, 232, .34), 0 3px 8px rgba(84, 47, 36, .2) !important;
   }
 }
+
+/* Shop purchase carousel. Paid items share one selection and one anchored
+   purchase control; rewarded-ad cards remain in their existing section. */
+.shop-modal > .modal-card {
+  --shop-paid-tile-size: clamp(104px, 12vw, 132px);
+  --shop-paid-tile-padding: .55rem;
+  height: min(86vh, 720px);
+}
+
+.shop-modal > .modal-card > #modalBody {
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.shop-modal .shop-panel {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: .55rem;
+}
+
+.shop-modal .shop-balance { grid-row: 1; }
+.shop-modal .shop-rewarded-section { grid-row: 2; }
+.shop-modal .shop-items { grid-row: 3; }
+.shop-modal .shop-purchase-bar { grid-row: 4; }
+
+.shop-modal .shop-rewarded-items {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.shop-modal .shop-items {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .6rem;
+  border: 1px solid var(--cl-border-faded) !important;
+  border-radius: 5px;
+  background: var(--cl-inset-bg) !important;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-color: var(--cl-brass) rgba(84, 47, 36, .16);
+  scrollbar-width: thin;
+}
+
+.shop-modal .shop-items .shop-item {
+  box-sizing: border-box;
+  flex: 0 0 var(--shop-paid-tile-size);
+  inline-size: var(--shop-paid-tile-size);
+  block-size: var(--shop-paid-tile-size);
+  min-inline-size: var(--shop-paid-tile-size);
+  min-block-size: var(--shop-paid-tile-size);
+  max-inline-size: var(--shop-paid-tile-size);
+  max-block-size: var(--shop-paid-tile-size);
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+  place-items: center;
+  align-self: center;
+  margin: 0;
+  padding: var(--shop-paid-tile-padding);
+  border: 1px solid var(--cl-brass) !important;
+  border-radius: 5px;
+  color: var(--cl-text) !important;
+  background: var(--cl-card-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .5), 0 4px 9px rgba(84, 47, 36, .22) !important;
+  scroll-snap-align: start;
+  text-align: center;
+}
+
+.shop-modal .shop-items .shop-item:hover {
+  border-color: var(--cl-gold-highlight) !important;
+  background: linear-gradient(180deg, #f2e2bf, #e7d6b4) !important;
+}
+
+.shop-modal .shop-items .shop-item.selected {
+  border-color: var(--cl-gold-highlight) !important;
+  background: linear-gradient(180deg, #f2e2bf, #d0b98e) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(114, 54, 58, .78),
+    inset 0 1px 0 rgba(255, 248, 232, .62),
+    0 5px 12px rgba(84, 47, 36, .3) !important;
+}
+
+.shop-modal .shop-items .shop-item:focus-visible {
+  outline: 3px solid var(--cl-burgundy);
+  outline-offset: 2px;
+}
+
+.shop-modal .shop-items .shop-item-image-placeholder {
+  box-sizing: border-box;
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--cl-brass) !important;
+  border-radius: 4px;
+  background: var(--cl-inset-bg) !important;
+}
+
+.shop-modal .shop-items .shop-item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.shop-modal .shop-purchase-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto auto minmax(104px, auto);
+  align-items: center;
+  gap: .62rem;
+  padding: .62rem .7rem;
+  border: 1px solid var(--cl-brass);
+  border-radius: 5px;
+  color: var(--cl-text);
+  background: linear-gradient(180deg, #e7d6b4, #d0b98e);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .58), 0 -4px 12px rgba(84, 47, 36, .18);
+}
+
+.shop-modal .shop-purchase-selected,
+.shop-modal .shop-purchase-stat {
+  min-width: 0;
+  display: grid;
+  gap: .08rem;
+}
+
+.shop-modal .shop-purchase-selected span,
+.shop-modal .shop-purchase-stat span {
+  color: var(--cl-text-secondary) !important;
+  font-size: .63rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.shop-modal .shop-purchase-selected strong,
+.shop-modal .shop-purchase-stat strong {
+  color: var(--cl-text) !important;
+  font-size: .82rem;
+  line-height: 1.15;
+}
+
+.shop-modal .shop-purchase-selected small {
+  max-width: 48ch;
+  color: var(--cl-text-secondary) !important;
+  font-size: .62rem;
+  line-height: 1.15;
+}
+
+.shop-modal .shop-purchase-selected > strong {
+  color: var(--cl-burgundy) !important;
+}
+
+.shop-modal .shop-purchase-selected .shop-purchase-status {
+  color: var(--cl-burgundy) !important;
+  font-weight: 800;
+}
+
+.shop-modal .shop-purchase-buy {
+  min-width: 104px;
+  min-height: 42px;
+  justify-self: end;
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .shop-modal > .modal-card {
+    --shop-paid-tile-size: clamp(82px, 13vw, 108px);
+    --shop-paid-tile-padding: .38rem;
+    height: calc(100dvh - .5rem);
+  }
+
+  .shop-modal .shop-panel {
+    gap: .3rem;
+  }
+
+  .shop-modal .shop-rewarded-section {
+    display: grid;
+    gap: .2rem;
+    padding: .26rem .34rem;
+  }
+
+  .shop-modal .shop-rewarded-heading {
+    align-items: end;
+    flex-direction: row;
+    gap: .4rem;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .shop-modal .shop-rewarded-heading span { font-size: .48rem; }
+  .shop-modal .shop-rewarded-heading strong { font-size: .64rem; }
+  .shop-modal .shop-rewarded-heading small { font-size: .48rem; text-align: right; }
+
+  .shop-modal .shop-rewarded-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .28rem;
+  }
+
+  .shop-modal .shop-item.rewarded-ad-shop-item {
+    min-height: 0;
+    grid-template-columns: 60px minmax(0, 1fr);
+    gap: .28rem;
+    padding: .16rem .22rem;
+  }
+
+  .shop-modal .rewarded-ad-shop-action { gap: .12rem; }
+
+  .shop-modal .rewarded-ad-shop-action .shop-item-image-placeholder {
+    width: 24px;
+    height: 24px;
+  }
+
+  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn {
+    min-height: 30px;
+    padding: .1rem .2rem;
+    font-size: .48rem;
+  }
+
+  .shop-modal .rewarded-ad-shop-copy { gap: .04rem; }
+  .shop-modal .rewarded-ad-shop-copy strong { font-size: .58rem; }
+  .shop-modal .rewarded-ad-shop-copy span { font-size: .5rem; }
+  .shop-modal .rewarded-ad-shop-copy small { font-size: .44rem; }
+
+  .shop-modal .shop-items {
+    gap: .42rem;
+    padding: .38rem;
+  }
+
+  .shop-modal .shop-purchase-bar {
+    grid-template-columns: minmax(135px, 1fr) minmax(78px, auto) minmax(48px, auto) minmax(94px, auto);
+    gap: .4rem;
+    padding: .4rem .5rem;
+  }
+
+  .shop-modal .shop-purchase-selected small { max-width: 38ch; font-size: .54rem; }
+  .shop-modal .shop-purchase-selected strong,
+  .shop-modal .shop-purchase-stat strong { font-size: .7rem; }
+  .shop-modal .shop-purchase-buy { min-width: 94px; min-height: 36px; }
+}
+
+@media (max-width: 620px) and (orientation: landscape) {
+  .shop-modal > .modal-card {
+    --shop-paid-tile-size: 64px;
+    --shop-paid-tile-padding: .3rem;
+  }
+
+  .shop-modal .shop-rewarded-heading > div {
+    display: flex;
+    align-items: baseline;
+    gap: .24rem;
+  }
+
+  .shop-modal .shop-rewarded-heading strong { margin-top: 0; font-size: .54rem; }
+  .shop-modal .shop-rewarded-heading small,
+  .shop-modal .shop-rewarded-heading span { font-size: .42rem; }
+
+  .shop-modal .shop-item.rewarded-ad-shop-item {
+    grid-template-columns: 50px minmax(0, 1fr);
+    gap: .2rem;
+    padding: .12rem .16rem;
+  }
+
+  .shop-modal .rewarded-ad-shop-action .shop-item-image-placeholder {
+    width: 18px;
+    height: 18px;
+  }
+
+  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn {
+    min-height: 28px;
+    font-size: .44rem;
+  }
+
+  .shop-modal .rewarded-ad-shop-copy strong { font-size: .48rem; }
+  .shop-modal .rewarded-ad-shop-copy span { font-size: .42rem; }
+  .shop-modal .rewarded-ad-shop-copy small { font-size: .38rem; }
+
+  .shop-modal .shop-items { padding: .25rem; }
+
+  .shop-modal .shop-purchase-bar {
+    grid-template-columns: minmax(0, 1fr) 46px 78px 96px;
+  }
+}

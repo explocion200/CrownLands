@@ -99,7 +99,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-inner-castle-labels-r1/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260822-citadel-stronghold-contrast-r1[\s\S]*game\.js\?v=20260822-citadel-stronghold-contrast-r1/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260822-square-shop-tiles-r3[\s\S]*game\.js\?v=20260822-square-shop-tiles-r3/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
@@ -255,7 +255,7 @@ const economyResultSection = game.slice(
   game.indexOf("function mergeServerEconomyRefreshOptions")
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
-const css = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
+const css = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}\n${read("crownlands-palette.css")}`;
 assert.match(
   css,
   /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,
@@ -333,8 +333,8 @@ assert.match(css, /\[data-gear-officer="gatehouse"\]\s*\{ --gear-officer-positio
 assert.match(css, /@media \(max-width: 980px\)[\s\S]{0,1800}\.common-gear-character-panel > img\s*\{[^}]*object-fit: cover;[^}]*object-position: var\(--gear-officer-position, center 28%\);/, "Officer focal alignment must remain active on mobile landscape.");
 assert.match(
   css,
-  /@media \(max-width: 520px\)[\s\S]{0,3000}\.shop-items \.shop-item\s*\{[^}]*grid-template-columns: 52px minmax\(0, 1fr\);[\s\S]{0,1400}\.shop-items \.shop-buy-btn\s*\{[^}]*grid-column: 1 \/ -1;/,
-  "Narrow Shop rows must give copy room and move purchase buttons onto their own row."
+  /\.shop-modal \.shop-items\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[\s\S]*?\.shop-modal \.shop-purchase-bar\s*\{[^}]*position:\s*sticky;[^}]*bottom:\s*0;/,
+  "The paid Shop must horizontally scroll while one shared purchase bar remains anchored."
 );
 for (const [selector, label] of [
   ["\\.shop-item-image", "Shop item"],

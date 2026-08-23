@@ -198,19 +198,9 @@ function patchShopProjectedUi() {
   modalBody?.querySelectorAll("[data-shop-item]").forEach(card => {
     const item = getShopItemById(card.dataset.shopItem);
     if (!item) return;
-    const count = getProjectedInventoryCount(item.id);
-    const purchaseCount = getProjectedItemPurchaseCount(item.id);
-    const purchaseLimit = getItemDailyPurchaseLimit(item.id);
-    const cooldown = purchaseLimit > 0 && purchaseCount >= purchaseLimit;
-    setTextIfChanged(card.querySelector("[data-shop-owned]"), `Owned: ${formatNumber(count)}`);
-    setTextIfChanged(card.querySelector("[data-shop-purchase-count]"), `Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)`);
-    const button = card.querySelector("[data-shop-buy]");
-    if (button) {
-      button.disabled = cooldown || getProjectedGold() < item.cost;
-      button.textContent = getInstantPendingItemDelta(item.id) > 0 ? "Queued" : cooldown ? "Cooldown" : "Buy";
-    }
     card.classList.toggle("pending", getInstantPendingItemDelta(item.id) > 0);
   });
+  patchShopPurchaseBar();
 }
 
 function patchInventoryProjectedUi() {
@@ -294,12 +284,14 @@ function revalidateInstantEconomyActions() {
     if (action.type === "shop") {
       const item = getShopItemById(action.itemId);
       const limit = getItemDailyPurchaseLimit(action.itemId);
-      const affordable = item ? Math.floor(availableGold / item.cost) : 0;
+      const unitCost = item ? getShopItemPrice(item) : 0;
+      const affordable = unitCost > 0 ? Math.floor(availableGold / unitCost) : 0;
       const limitRoom = limit > 0 ? Math.max(0, limit - purchases[action.itemId]) : action.quantity;
       const quantity = Math.min(action.quantity, affordable, limitRoom);
       if (quantity < 1) return;
       action.quantity = quantity;
-      action.reservedGold = item.cost * quantity;
+      action.unitCost = unitCost;
+      action.reservedGold = unitCost * quantity;
       availableGold -= action.reservedGold;
       inventory[action.itemId] += quantity;
       purchases[action.itemId] += quantity;
@@ -399,17 +391,20 @@ async function executeInstantEconomyAction(action) {
 async function executeInstantShopPurchase(action) {
   const item = getShopItemById(action.itemId);
   const quantity = supportsInstantEconomyActionBatching() ? action.quantity : 1;
-  const result = await getOnlineApi().purchaseShopItem({ itemId: item.id, cost: item.cost, quantity });
+  const quotedPrice = Math.max(0, Math.floor(Number(action.unitCost) || getShopItemPrice(item)));
+  const result = await getOnlineApi().purchaseShopItem({ itemId: item.id, cost: quotedPrice, quantity });
   if (!isInstantEconomyActionCurrent(action)) return;
   const confirmed = Math.max(1, Math.min(quantity, Math.floor(Number(result?.purchasedQuantity) || quantity)));
+  const confirmedUnitPrice = Math.max(0, Math.floor(Number(result?.unitPrice) || quotedPrice));
   action.quantity -= confirmed;
-  action.reservedGold = Math.max(0, action.reservedGold - item.cost * confirmed);
+  action.unitCost = confirmedUnitPrice;
+  action.reservedGold = Math.max(0, action.reservedGold - confirmedUnitPrice * confirmed);
   applyServerEconomyResult(result);
   selectedInventoryItemId = item.id;
-  addLog(`Bought ${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} for ${formatNumber(Number(result?.spentGold) || item.cost * confirmed)} gold.`);
+  addLog(`Bought ${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} for ${formatNumber(Number(result?.spentGold) || confirmedUnitPrice * confirmed)} gold.`);
   showToast(`${formatNumber(confirmed)} ${item.label}${confirmed === 1 ? "" : "s"} added to Bag.`);
   saveGame();
-  if (action.quantity > 0) queueInstantEconomyRemainder(action, { reservedGold: item.cost * action.quantity });
+  if (action.quantity > 0) queueInstantEconomyRemainder(action, { reservedGold: confirmedUnitPrice * action.quantity });
 }
 
 async function executeInstantCityUpgrade(action) {
@@ -466,26 +461,27 @@ function buyShopItem(itemId) {
   if (!state) return false;
   const item = getShopItemById(itemId);
   if (!item) return false;
+  const price = getShopItemPrice(item);
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
   if (purchaseLimit > 0 && getProjectedItemPurchaseCount(item.id) >= purchaseLimit) {
     rejectGameAction(`${item.label} resets at 00:00 UTC, in ${getItemPurchaseCooldownText(item.id)}.`);
     return false;
   }
-  if (getProjectedGold() < item.cost) {
-    rejectGameAction(`${item.label} costs ${formatNumber(item.cost)} gold.`);
+  if (getProjectedGold() < price) {
+    rejectGameAction(`${item.label} costs ${formatNumber(price)} gold.`);
     return false;
   }
   if (usesServerEconomyAuthority()) {
     return enqueueInstantEconomyAction({
-      type: "shop", key: item.id, itemId: item.id, quantity: 1, reservedGold: item.cost,
+      type: "shop", key: item.id, itemId: item.id, quantity: 1, unitCost: price, reservedGold: price,
     });
   }
   const inventory = ensureShopItems();
-  state.gold = getProjectedGold() - item.cost;
+  state.gold = getProjectedGold() - price;
   inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
   recordItemPurchase(item.id);
   selectedInventoryItemId = item.id;
-  addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
+  addLog(`Bought ${item.label} for ${formatNumber(price)} gold.`);
   saveGame();
   renderHud();
   patchShopProjectedUi();
