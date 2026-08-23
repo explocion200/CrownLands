@@ -3852,7 +3852,7 @@ async function runHoldingTowerSpendAction(tower, action) {
 }
 
 function getHoldingTowerComposerTargets(mode, tower) {
-  if (mode === "reinforce" || mode === "scout" || mode === "rally-attack") {
+  if (mode === "reinforce" || mode === "rally-attack") {
     return playerCities().filter(city => Math.floor(Number(city.troops) || 0) > 0);
   }
   if (mode === "withdraw") return playerCities();
@@ -3862,7 +3862,6 @@ function getHoldingTowerComposerTargets(mode, tower) {
       ...WORLD_CAMPS.filter(camp => getRewardCampConfig(camp)),
     ];
   }
-  if (mode === "scout-from") return state.cities.filter(city => city.owner !== "player");
   if (mode === "rally-from") {
     return [
       ...state.cities.filter(city => isStronghold(city)),
@@ -3880,7 +3879,7 @@ function getHoldingTowerTargetType(target) {
 }
 
 function showHoldingTowerOrderComposer(tower, mode) {
-  const sourceModes = new Set(["reinforce", "scout", "rally-attack"]);
+  const sourceModes = new Set(["reinforce", "rally-attack"]);
   const candidates = getHoldingTowerComposerTargets(mode, tower);
   if (!candidates.length) {
     rejectGameAction(sourceModes.has(mode) ? "No owned city with troops is available." : "No eligible destination is available on this map.");
@@ -3888,14 +3887,11 @@ function showHoldingTowerOrderComposer(tower, mode) {
   }
   const usesTowerTroops = !sourceModes.has(mode);
   const maxTroops = usesTowerTroops ? Math.max(1, Number(tower.ownStationedTroops) || 1) : Math.max(1, Number(candidates[0].troops) || 1);
-  const scout = mode === "scout" || mode === "scout-from";
   const rally = mode === "rally-attack" || mode === "rally-from";
   const label = {
-    scout: "Scout Tower",
     reinforce: "Reinforce Tower",
     withdraw: "Withdraw My Troops",
     "attack-from": "Attack from Tower",
-    "scout-from": "Scout from Tower",
     "rally-attack": "Form Rally Attack",
     "rally-from": "Form Rally from Tower",
   }[mode] || "Tower Order";
@@ -3906,13 +3902,13 @@ function showHoldingTowerOrderComposer(tower, mode) {
       <label>${sourceModes.has(mode) ? "Owned city origin" : "Destination"}
         <select data-tower-order-target>${candidates.map(candidate => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.name || candidate.id)} · ${formatNumber(candidate.troops || 0)} troops</option>`).join("")}</select>
       </label>
-      ${scout ? `<input data-tower-order-troops type="hidden" value="1" />` : `<label>Troops <input data-tower-order-troops type="number" min="1" max="${Math.floor(maxTroops)}" value="${Math.max(1, Math.floor(maxTroops / 2))}" /></label>`}
+      <label>Troops <input data-tower-order-troops type="number" min="1" max="${Math.floor(maxTroops)}" value="${Math.max(1, Math.floor(maxTroops / 2))}" /></label>
       <div class="holding-tower-order-actions"><button type="button" data-tower-order-back>Back</button><button type="submit" class="${rally || mode === "attack-from" ? "danger-action" : ""}">${label}</button></div>
     </form>`;
   const select = modalBody.querySelector("[data-tower-order-target]");
   const troopInput = modalBody.querySelector("[data-tower-order-troops]");
   select?.addEventListener("change", () => {
-    if (usesTowerTroops || scout || !troopInput) return;
+    if (usesTowerTroops || !troopInput) return;
     const city = candidates.find(candidate => candidate.id === select.value);
     const maximum = Math.max(1, Math.floor(Number(city?.troops) || 1));
     troopInput.max = String(maximum);
@@ -3931,13 +3927,13 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
   const candidate = candidates.find(entry => entry.id === selectedId);
   const troops = Math.max(1, Math.floor(Number(modalBody.querySelector("[data-tower-order-troops]")?.value) || 1));
   if (!candidate || !api) return;
-  const sourceModes = new Set(["reinforce", "scout", "rally-attack"]);
+  const sourceModes = new Set(["reinforce", "rally-attack"]);
   const from = sourceModes.has(mode) ? candidate : tower;
   const to = sourceModes.has(mode) ? tower : candidate;
   const sourceType = isHoldingTowerTarget(from) ? "tower" : "city";
   const targetType = getHoldingTowerTargetType(to);
   const rally = mode === "rally-attack" || mode === "rally-from";
-  const kind = mode === "scout" || mode === "scout-from" ? "scout" : mode === "reinforce" ? "reinforce" : mode === "withdraw" ? "transfer" : "attack";
+  const kind = mode === "reinforce" ? "reinforce" : mode === "withdraw" ? "transfer" : "attack";
   const armyId = createOnlineArmyId(rally ? "rally" : `tower_${kind}`);
   const payload = {
     clanId: state?.clanId,
@@ -3986,6 +3982,10 @@ function bindHoldingTowerControls(tower) {
       const action = String(button.dataset.towerAction || "");
       if (["upgrade", "repair", "veil"].includes(action)) {
         void runHoldingTowerSpendAction(tower, action);
+        return;
+      }
+      if (action === "scout") {
+        void scoutTarget(tower);
         return;
       }
       showHoldingTowerOrderComposer(tower, action);
@@ -9675,10 +9675,15 @@ async function scoutTarget(target) {
   }
   pendingDirectScoutTargets.add(target.id);
   try {
-    const instantSource = findNearestOwnedSourceCandidate(target, 1);
-    const sourceOption = usesServerArmyAuthority() && instantSource?.city
-      ? { city: instantSource.city, route: createInstantOrderRoute(instantSource.city, target) }
-      : await findNearestScoutSourceAsync(target);
+    if (usesServerArmyAuthority()) {
+      try {
+        await launchAutomaticServerScout(target);
+      } catch (error) {
+        rejectGameAction(error?.message || "The scout could not be dispatched.");
+      }
+      return;
+    }
+    const sourceOption = await findNearestScoutSourceAsync(target);
     const freshTarget = getArmyTargetById(target.id);
     if (!freshTarget || getPendingScoutMission(target.id)) return;
     if (!sourceOption?.city || sourceOption.city.owner !== "player" || sourceOption.city.troops < 1) {
@@ -9697,6 +9702,42 @@ async function scoutTarget(target) {
   } finally {
     pendingDirectScoutTargets.delete(target.id);
   }
+}
+
+async function launchAutomaticServerScout(target) {
+  const api = getOnlineApi();
+  if (!api?.sendArmyOrder || !target?.id) return false;
+  const targetType = getHoldingTowerTargetType(target);
+  const targetRegionId = getCityRegionId(target);
+  const armyId = createOnlineArmyId("scout");
+  const result = await api.sendArmyOrder({
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    armyId,
+    targetType,
+    targetRegionId,
+    army: {
+      id: armyId,
+      kind: "scout",
+      targetType,
+      toId: target.id,
+      toName: target.name,
+      targetRegionId,
+      troops: 1,
+      requestedTroops: 1,
+    },
+  });
+  if (!result?.movement) return false;
+  applyServerArmyResult(result);
+  adoptServerArmyMovement(result.movement);
+  const sourceName = result.movement.fromName || "the nearest eligible holding";
+  addLog(`One scout left ${sourceName} for ${result.movement.toName || target.name}.`);
+  playGameSound("troop_dispatch", { cooldownMs: 80, regionId: result.movement.sourceRegionId });
+  if (result.sourceTower?.id) await refreshHoldingTower(result.sourceTower.id);
+  saveGame();
+  renderAll();
+  showToast(`Scout moving from ${sourceName} to ${result.movement.toName || target.name}`);
+  return true;
 }
 
 function launchScoutMission(source, target, route, _options = {}) {

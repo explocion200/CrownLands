@@ -110,6 +110,78 @@ assert.equal(towers.validateTowerRallyParticipants(participants(5), membersWithP
 assert.equal(towers.validateTowerRallyParticipants(participants(4), members, NOW, "clan-red").count, 4, "A withdrawn fifth contribution must no longer count.");
 assert.equal(towers.validateTowerRallyParticipants([...participants(4), { uid: "member-4", troops: 900 }], members, NOW, "clan-red").count, 4, "Duplicate participant records must not count twice.");
 
+// Normal scouting automatically considers authoritative City and personal Tower origins.
+const scoutPlayer = "ricky";
+const scoutMember = eligibleMember(scoutPlayer);
+const scoutTower = ownedTower(towers.TOWERS[0].id, {
+  wallIntegrityBps: 4_000,
+  repair: { completeAtMs: NOW + HOUR_MS },
+  upgradeQueue: [{ targetLevel: 2, remainingMs: 600_000 }],
+  incomingRallyIds: ["rally-incoming"],
+  attackBlocked: true,
+});
+const personalGarrisons = new Map([[scoutTower.id, {
+  uid: scoutPlayer,
+  towerId: scoutTower.id,
+  clanId: "clan-red",
+  worldId: "pending-core-v2",
+  resetGeneration: "season-test",
+  troops: 3,
+}]]);
+const eligibleTowerOrigins = towers.getEligibleScoutTowerOrigins({
+  towers: [scoutTower],
+  garrisonsByTowerId: personalGarrisons,
+  clanId: "clan-red",
+  member: scoutMember,
+  uid: scoutPlayer,
+  nowMs: NOW,
+  worldId: "pending-core-v2",
+  resetGeneration: "season-test",
+  worldActive: true,
+});
+assert.equal(eligibleTowerOrigins.length, 1, "Damage, repair, upgrades, and an incoming Rally must not block an otherwise eligible scout origin.");
+assert.equal(eligibleTowerOrigins[0].troops, 3);
+for (const [label, patch] of [
+  ["wrong clan", { towers: [{ ...scoutTower, clanId: "clan-blue" }] }],
+  ["ownership changed", { towers: [{ ...scoutTower, ownerKind: "neutral", clanId: "" }] }],
+  ["probation", { member: probationMember(scoutPlayer) }],
+  ["left or kicked", { member: { ...scoutMember, status: "removed" } }],
+  ["world inactive", { worldActive: false }],
+  ["zero personal troops", { garrisonsByTowerId: new Map([[scoutTower.id, { uid: scoutPlayer, troops: 0 }]]) }],
+  ["only another member has troops", { garrisonsByTowerId: new Map() }],
+]) {
+  assert.equal(towers.getEligibleScoutTowerOrigins({
+    towers: [scoutTower],
+    garrisonsByTowerId: personalGarrisons,
+    clanId: "clan-red",
+    member: scoutMember,
+    uid: scoutPlayer,
+    nowMs: NOW,
+    worldId: "pending-core-v2",
+    resetGeneration: "season-test",
+    worldActive: true,
+    ...patch,
+  }).length, 0, `A Tower with ${label} was accepted as a scout origin.`);
+}
+const routedScout = towers.selectClosestScoutOrigin([
+  { id: "city-far", regionId: "region-b", sourceType: "city", troops: 4, distance: 90 },
+  { id: scoutTower.id, regionId: scoutTower.regionId, sourceType: "tower", troops: 3, distance: 40 },
+  { id: towers.TOWERS[1].id, regionId: towers.TOWERS[1].regionId, sourceType: "tower", troops: 2, distance: 35 },
+  { id: "city-near", regionId: "region-a", sourceType: "city", troops: 1, distance: 60 },
+], { id: "target" }, source => ({ pathLength: source.distance, pathSegments: [{}] }));
+assert.equal(routedScout.id, towers.TOWERS[1].id, "The closest authoritative Tower route was not selected across multiple eligible Cities and Towers.");
+const cityOriginScout = towers.selectClosestScoutOrigin([
+  { id: "city-close", regionId: "region-a", sourceType: "city", troops: 1, distance: 20 },
+  { id: scoutTower.id, regionId: scoutTower.regionId, sourceType: "tower", troops: 3, distance: 40 },
+], { id: "target" }, source => ({ pathLength: source.distance, pathSegments: [{}] }));
+assert.equal(cityOriginScout.id, "city-close", "An owned City with the closest authoritative route was not selected.");
+const equalRouteScout = towers.selectClosestScoutOrigin([
+  { id: "tower-a", regionId: "region-a", sourceType: "tower", troops: 1 },
+  { id: "city-z", regionId: "region-z", sourceType: "city", troops: 1 },
+  { id: "city-a", regionId: "region-a", sourceType: "city", troops: 1 },
+], { id: "target" }, () => ({ pathLength: 50, pathSegments: [{}] }));
+assert.equal(equalRouteScout.id, "city-a", "Equal authoritative routes must resolve City before Tower, then by region and id.");
+
 // Per-player unlimited safe-integer garrisons and own-only withdrawal.
 let garrisons = {};
 garrisons = towers.addGarrisonTroops(garrisons, "ricky", 7_800);
@@ -313,6 +385,9 @@ requires(server, /createPreparedEconomyStatsSnapshot\(economy[\s\S]*?currentRawB
 requires(server, /rawGoldPerHourSnapshot:[\s\S]*?dailyDonationCap:[\s\S]*?donatedToday:/, "The locked UTC donation snapshot is not persisted with its derived cap and usage.");
 requires(server, /transaction\.set\(usageRef[\s\S]*?transaction\.set\(treasuryRef|transaction\.set\(treasuryRef[\s\S]*?transaction\.set\(usageRef/, "Treasury usage and balance are not written in the same transaction.");
 requires(server, /exports\.sendArmyOrder[\s\S]*?order\.targetType === "tower"[\s\S]*?only be attacked through a qualifying Clan Rally/, "Solo attacks can target a Holding Tower.");
+requires(server, /function launchAutomaticScoutOrder[\s\S]*?getEligibleScoutTowerOrigins[\s\S]*?selectClosestScoutOrigin[\s\S]*?buildServerGeneratedArmyRoute/, "Normal scouts do not use the shared authoritative City/Tower origin resolver.");
+requires(server, /exports\.sendArmyOrder[\s\S]*?order\.kind === "scout"[\s\S]*?launchAutomaticScoutOrder/, "The canonical Scout action does not invoke automatic origin selection.");
+requires(server, /source\.sourceType === "tower"[\s\S]*?transaction\.delete\(source\.garrisonRef\)|source\.sourceType === "tower"[\s\S]*?transaction\.set\(source\.garrisonRef/, "Tower-origin scouts do not consume the player's own garrison troop transactionally.");
 requires(server, /exports\.launchClanRally[\s\S]*?validateTowerRallyParticipants[\s\S]*?immediately|exports\.launchClanRally[\s\S]*?validateTowerRallyParticipants/, "Tower Rally eligibility is not revalidated at launch.");
 requires(server, /towerDefenderMembersSnap[\s\S]*?Holding Tower under Rally attack[\s\S]*?queueIncomingArmyNotification/, "Owning-clan members are not notified when a Rally launches against their Tower.");
 requires(server, /applyHoldingTowerTreasurySpend[\s\S]*?assertHoldingTowerManager/, "Tower Treasury spending does not enforce the canonical leader/officer role.");
@@ -334,8 +409,11 @@ for (const tower of towers.TOWERS) {
 assert.doesNotMatch(server, /holdingTower[\s\S]{0,80}(productionBonus|attackBonus|marchBonus|xpBonus|territoryBonus)/i, "A forbidden passive Holding Tower bonus was introduced.");
 requires(firebaseClient, /getHoldingTowerState[\s\S]*?getClanTreasuryStatus[\s\S]*?donateClanTreasuryGold/, "Holding Tower client callable wrappers are incomplete.");
 requires(client, /holding-tower-node[\s\S]*?openHoldingTower/, "The approved Tower art is not interactive.");
+requires(client, /function scoutTarget[\s\S]*?usesServerArmyAuthority\(\)[\s\S]*?launchAutomaticServerScout/, "The normal Scout action does not use the target-only automatic server flow.");
+assert.doesNotMatch(client, /scout-from|Scout from Tower/, "A manual Tower scout-origin selector remains in the client.");
+assert.doesNotMatch(holdingTowerUi, /scout-from|Scout from Tower/, "The dedicated Scout From Tower button remains in the Tower panel.");
 requires(holdingTowerUi, /function createQaSnapshot[\s\S]*?Wall Upgrades/, "The split Holding Tower QA/queue renderer is incomplete.");
 requires(holdingTowerUi, /function renderPanel[\s\S]*?Veil of Silence/, "The split Holding Tower panel renderer is incomplete.");
 requires(holdingTowerStyles, /holding-tower-modal[\s\S]*?var\(--cl-ink\)[\s\S]*?var\(--cl-ivory\)/, "The final Tower layer does not reuse the Crownlands parchment and ivory palette.");
 
-console.log("Validated Holding Tower neutral/reset state, probation, Rally gate, attributed garrisons, Treasury formulas, walls, repairs, conquest, Veil, security, and client integration.");
+console.log("Validated Holding Tower automatic scout origins, neutral/reset state, probation, Rally gate, attributed garrisons, Treasury formulas, walls, repairs, conquest, Veil, security, and client integration.");

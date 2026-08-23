@@ -1,324 +1,136 @@
-/* Tower-specific layout loaded after the shared Crownlands manuscript theme. */
-.holding-tower-modal .modal-card { color: var(--cl-ink); }
-.holding-tower-modal .modal-card > h2 {
-  color: #3b2412;
-  text-shadow: 0 1px rgba(255,247,216,.48);
-}
-.holding-tower-modal .modal-close { color: var(--cl-ivory); }
-.holding-tower-panel { gap: .52rem; }
-
-/* The owned-Tower header directly reuses the Clan hero and shield treatment. */
-.holding-tower-modal .holding-tower-hero {
-  grid-template-columns: 78px minmax(0,1fr) auto;
-  margin: 0;
-  padding: .68rem .78rem;
-  border-color: rgba(111,82,45,.52);
-}
-.holding-tower-modal .holding-tower-crest {
-  width: 70px;
-  height: 76px;
-  filter: drop-shadow(0 7px 8px rgba(0,0,0,.38));
-}
-.holding-tower-modal .holding-tower-crest .clan-shield { max-width: 70px; max-height: 76px; }
-.holding-tower-modal .holding-tower-crest.neutral {
-  width: 58px;
-  height: 58px;
-  color: #6f4a1e;
-  border-color: #8a642d;
-  background: radial-gradient(circle,#dfc98f,#9d8150);
-}
-.holding-tower-modal .holding-tower-hero-copy > span { color: #5f482b; }
-.holding-tower-modal .holding-tower-hero-copy h2 {
-  margin: .08rem 0;
-  color: #3b2412;
-  font-size: 1.35rem;
-  text-shadow: 0 1px rgba(255,247,216,.48);
-}
-.holding-tower-modal .holding-tower-hero-copy p,
-.holding-tower-modal .holding-tower-hero-copy p strong { color: #4b3721 !important; }
-.holding-tower-modal .holding-tower-wall-level {
-  min-width: 102px;
-  padding: .38rem .55rem;
-  border: 1px solid rgba(90,59,33,.36);
-  border-radius: var(--ui-radius-small);
-  background: rgba(95,69,39,.1);
-}
-.holding-tower-modal .holding-tower-wall-level span,
-.holding-tower-modal .holding-tower-wall-level small { color: #5f482b; }
-.holding-tower-modal .holding-tower-wall-level strong { color: #6f3034; }
-
-/* City/Stronghold stat chips and Clan quest progress are reused for Tower vitals. */
-.holding-tower-modal .holding-tower-vitals {
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: .4rem;
-  margin: 0;
-}
-.holding-tower-modal .holding-tower-vitals > section {
-  min-width: 0;
-  color: var(--cl-ink);
-  border-color: rgba(111,82,45,.42);
-  border-radius: var(--ui-radius);
-  background:
-    linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95)),
-    repeating-linear-gradient(0deg,rgba(84,59,31,.06) 0 1px,transparent 1px 9px);
-  box-shadow: inset 0 0 0 1px rgba(255,250,226,.2),0 5px 10px rgba(0,0,0,.14);
-}
-.holding-tower-modal .holding-tower-vitals :is(span,small) { color: #5f482b !important; }
-.holding-tower-modal .holding-tower-vitals :is(strong,b) { color: #3b2412 !important; }
-.holding-tower-modal .holding-tower-own-card strong { color: #355c3d !important; }
-.holding-tower-modal .holding-tower-wall-card {
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0,1fr) auto;
-  gap: .16rem .65rem;
-  padding: .48rem .58rem;
-}
-.holding-tower-modal .holding-tower-wall-card > div:first-child { min-width: 0; }
-.holding-tower-modal .holding-tower-wall-card > b { color: #6f3034 !important; font-size: 1rem; }
-.holding-tower-modal .holding-tower-wall-card > small,
-.holding-tower-modal .holding-tower-durability,
-.holding-tower-modal .holding-tower-repair-progress { grid-column: 1 / -1; }
-.holding-tower-modal .holding-tower-durability { margin: .06rem 0 0; }
-.holding-tower-modal .holding-tower-repair-progress { margin: .14rem 0 0; }
-.holding-tower-modal .clan-quest-progress-track { background: rgba(66,49,31,.2); }
-.holding-tower-modal .clan-quest-progress-track i {
-  background: linear-gradient(90deg,#6f3034,#a87531 62%,#52734f);
-}
-.holding-tower-modal .holding-tower-veil-card.active {
-  color: var(--cl-ivory);
-  border-color: rgba(105,126,148,.72);
-  background: linear-gradient(180deg,#405565,#24343f);
-}
-.holding-tower-modal .holding-tower-veil-card.active :is(span,strong,small) { color: var(--cl-ivory) !important; }
-
-.holding-tower-modal :is(.holding-tower-garrison-list,.holding-tower-queue,.holding-tower-actions) {
-  margin: 0;
-  padding: .5rem .6rem;
-  color: var(--cl-ivory);
-  border: 1px solid rgba(191,226,198,.2);
-  border-radius: var(--ui-radius);
-  background: rgba(13,28,34,.92);
-  box-shadow: 0 8px 16px rgba(0,0,0,.2);
-}
-.holding-tower-modal .holding-tower-section-heading {
-  margin-bottom: .3rem;
-  padding-bottom: .26rem;
-  border-bottom-color: rgba(211,188,134,.22);
-  text-align: left;
-}
-.holding-tower-modal .holding-tower-section-heading > span { color: #b8c9bf !important; }
-.holding-tower-modal .holding-tower-section-heading > h3 {
-  color: #f1e6cc !important;
-  text-shadow: 0 1px rgba(0,0,0,.62);
-}
-.holding-tower-modal .holding-tower-section-heading > b {
-  color: #f1e6cc !important;
-  border-color: rgba(213,184,111,.35);
-  background: rgba(96,68,31,.55);
-}
-.holding-tower-modal .holding-tower-garrison-list ol { gap: .28rem; }
-.holding-tower-modal .holding-tower-garrison-list li {
-  grid-template-columns: minmax(0,1fr) auto;
-  color: #f1e6cc;
-  border-color: rgba(211,188,134,.12);
-  background: rgba(255,255,255,.055);
-}
-.holding-tower-modal .holding-tower-garrison-list li :is(span,strong) { color: #f1e6cc !important; }
-
-/* A current build plus one compact queued-level line replaces dashboard tiles. */
-.holding-tower-modal .holding-tower-upgrade-current {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) minmax(210px,.42fr);
-  align-items: center;
-  gap: .55rem;
-  padding: .42rem .5rem;
-  border: 1px solid rgba(213,184,111,.3);
-  border-radius: var(--ui-radius-small);
-  background: rgba(4,13,18,.42);
-}
-.holding-tower-modal .holding-tower-upgrade-copy { display: grid; gap: .05rem; }
-.holding-tower-modal .holding-tower-upgrade-copy span,
-.holding-tower-modal .holding-tower-upgrade-copy small,
-.holding-tower-modal .holding-tower-queued-levels :is(span,small),
-.holding-tower-modal .holding-tower-queue-empty span { color: #b8c9bf; }
-.holding-tower-modal .holding-tower-upgrade-copy strong,
-.holding-tower-modal .holding-tower-queued-levels strong,
-.holding-tower-modal .holding-tower-queue-empty strong { color: #f1e6cc !important; }
-.holding-tower-modal .holding-tower-upgrade-copy :is(span,small),
-.holding-tower-modal .holding-tower-queued-levels :is(span,small),
-.holding-tower-modal .holding-tower-queue-empty span { color: #b8c9bf !important; }
-.holding-tower-modal .holding-tower-timer { margin: 0; }
-.holding-tower-modal .holding-tower-timer > div :is(strong,span) { color: #f1e6cc !important; }
-.holding-tower-modal .holding-tower-queued-levels,
-.holding-tower-modal .holding-tower-queue-empty {
-  display: grid;
-  grid-template-columns: auto minmax(0,1fr) auto;
-  gap: .2rem .55rem;
-  margin-top: .35rem;
-  font-size: .66rem;
-}
-.holding-tower-modal .holding-tower-queued-levels strong { overflow-wrap: anywhere; }
-
-/* Action buttons and Commandery reuse production action/city-level controls. */
-.holding-tower-modal .holding-tower-action-grid {
-  flex-wrap: wrap;
-  gap: .3rem;
-  padding: 0;
-  overflow: visible;
-}
-.holding-tower-modal .holding-tower-action-grid button,
-.holding-tower-modal .holding-tower-commandery button {
-  min-height: 36px;
-  color: var(--cl-ivory);
-  border: 1px solid rgba(90,38,42,.78);
-  border-radius: var(--ui-radius-small);
-  background: linear-gradient(180deg,#7a373b,#5a262b 66%,#361417);
-  box-shadow: inset 0 1px 0 rgba(255,233,190,.18),inset 0 -3px 0 rgba(20,7,5,.25),0 5px 10px rgba(0,0,0,.22);
-  text-shadow: 0 1px rgba(0,0,0,.62);
-}
-.holding-tower-modal .holding-tower-action-grid button.secondary {
-  border-color: rgba(69,68,62,.74);
-  background: linear-gradient(180deg,#555047,#2e2b26);
-}
-.holding-tower-modal .holding-tower-action-grid button.move-action {
-  border-color: rgba(85,97,61,.72);
-  background: linear-gradient(180deg,#647047,#374128);
-}
-.holding-tower-modal .holding-tower-action-grid button.danger {
-  border-color: rgba(136,72,44,.82);
-  background: linear-gradient(180deg,#88482c,#58262a 72%,#321316);
-}
-.holding-tower-modal .holding-tower-commandery {
-  grid-template-columns: minmax(190px,1fr) auto minmax(350px,1.2fr);
-  gap: .45rem;
-  margin: .48rem 0 0;
-  padding: .48rem .55rem;
-  color: #3b2412 !important;
-  border-color: rgba(111,82,45,.42) !important;
-  background: linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95)) !important;
-}
-.holding-tower-modal .holding-tower-commandery :is(strong,label) { color: #3b2412 !important; }
-.holding-tower-modal .holding-tower-commandery small { color: #5f482b !important; }
-.holding-tower-modal .holding-tower-commandery input {
-  color: #3b2412;
-  border-color: rgba(90,59,33,.45);
-  background: rgba(255,247,216,.48);
-}
-.holding-tower-modal .holding-tower-command-actions { min-width: 0; }
-.holding-tower-modal .holding-tower-command-actions button { min-width: 0; }
-.holding-tower-modal .holding-tower-command-actions button small { color: #f1e6cc; }
-.holding-tower-modal .holding-tower-command-actions button:disabled small { color: #5f482b; }
-.holding-tower-modal .holding-tower-treasury {
-  display: grid;
-  grid-template-columns: auto auto minmax(0,1fr);
-  gap: .2rem .65rem;
-  margin: 0;
-  padding: .42rem .58rem;
-  color: #3b2412 !important;
-  border-color: rgba(111,82,45,.42) !important;
-  background: linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95)) !important;
-}
-.holding-tower-modal .holding-tower-treasury :is(span,small) { color: #5f482b !important; }
-.holding-tower-modal .holding-tower-treasury strong { color: #6f3034 !important; }
-
-/* Treasury stays within the production Clan panel hierarchy. */
-.clan-treasury-panel.clan-gift-panel {
-  max-width: 760px;
-  margin: 0 auto;
-  color: #f1e6cc !important;
-  border-color: rgba(191,226,198,.2) !important;
-  background: linear-gradient(180deg,#21363a,#102429) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.035),0 12px 24px rgba(0,0,0,.24) !important;
-}
-.clan-treasury-panel .clan-treasury-heading > span { color: #a9cdb3 !important; }
-.clan-treasury-panel .clan-treasury-heading > h3 { color: #ffe5a1 !important; text-shadow: 0 1px rgba(0,0,0,.62); }
-.clan-treasury-panel .clan-treasury-heading > b { color: #f0d586 !important; }
-.clan-treasury-panel .clan-treasury-ledger {
-  display: grid;
-  grid-template-columns: repeat(3,minmax(0,1fr));
-  gap: .35rem;
-  margin: .45rem 0;
-}
-.clan-treasury-panel .clan-treasury-ledger > div {
-  display: grid;
-  gap: .04rem;
-  padding: .32rem .45rem;
-  border: 1px solid rgba(211,188,134,.24);
-  border-radius: var(--ui-radius-small);
-  background: linear-gradient(180deg,rgba(224,211,177,.97),rgba(185,164,122,.95));
-}
-.clan-treasury-panel .clan-treasury-ledger span { color: #5f482b !important; }
-.clan-treasury-panel .clan-treasury-ledger strong { color: #3b2412 !important; }
-.clan-treasury-panel .clan-treasury-allowance {
-  margin: .45rem 0;
-  padding: .42rem .5rem;
-  border: 1px solid rgba(143,221,163,.2);
-  border-radius: var(--ui-radius-small);
-  background: rgba(0,0,0,.16);
-}
-.clan-treasury-panel .clan-treasury-allowance > div :is(strong,span),
-.clan-treasury-panel .clan-treasury-allowance > small { color: #d8e4dc !important; }
-.clan-treasury-panel .clan-treasury-allowance.preview { border-color: rgba(213,184,111,.35); }
-.clan-treasury-panel .clan-treasury-allowance.preview .clan-quest-progress-track i { background: linear-gradient(90deg,#8b6232,#d6ae54); }
-.clan-treasury-panel .clan-treasury-donate { gap: .28rem; }
-.clan-treasury-panel .clan-treasury-donate > label,
-.clan-treasury-panel .clan-treasury-donate > small,
-.clan-treasury-panel > p { color: #cbd8d0 !important; }
-.clan-treasury-panel.clan-gift-panel > p { color: #aebfb6 !important; }
-.clan-treasury-panel .clan-treasury-donate input {
-  color: #f1e6cc !important;
-  border-color: rgba(211,188,134,.32) !important;
-  background: rgba(4,13,18,.62) !important;
-}
-.clan-treasury-panel .clan-treasury-donate input::placeholder { color: #b8c9bf !important; }
-.clan-treasury-panel .clan-treasury-donate button.profile-primary-btn { color: #fff1d2 !important; }
-
-@media (max-width: 900px) and (orientation: landscape) {
-  .holding-tower-modal .modal-card { padding: .32rem; }
-  .holding-tower-panel { gap: .24rem; }
-  .holding-tower-modal .holding-tower-hero { grid-template-columns: 46px minmax(0,1fr) 72px; gap: .38rem; padding: .28rem .38rem; }
-  .holding-tower-modal .holding-tower-crest { width: 44px; height: 48px; }
-  .holding-tower-modal .holding-tower-crest .clan-shield { max-width: 44px; max-height: 48px; }
-  .holding-tower-modal .holding-tower-hero-copy > span { font-size: .48rem; }
-  .holding-tower-modal .holding-tower-hero-copy h2 { margin: 0; font-size: .9rem; }
-  .holding-tower-modal .holding-tower-hero-copy p { font-size: .52rem; }
-  .holding-tower-modal .holding-tower-wall-level { min-width: 68px; padding: .2rem .28rem; }
-  .holding-tower-modal .holding-tower-wall-level strong { font-size: 1rem; }
-  .holding-tower-modal .holding-tower-wall-level :is(span,small) { font-size: .46rem; }
-  .holding-tower-modal .holding-tower-vitals { grid-template-columns: repeat(3,minmax(0,1fr)); gap: .22rem; }
-  .holding-tower-modal .holding-tower-wall-card { min-height: 42px; padding: .22rem .3rem; }
-  .holding-tower-modal .holding-tower-wall-card > small { font-size: .48rem; }
-  .holding-tower-modal .holding-tower-durability { margin: 0; }
-  .holding-tower-modal .holding-tower-vitals > .stat-chip { min-height: 42px; padding: .24rem .3rem; }
-  .holding-tower-modal .holding-tower-vitals :is(span,small) { font-size: .46rem; line-height: 1.1; }
-  .holding-tower-modal .holding-tower-vitals strong { font-size: .68rem; }
-  .holding-tower-modal .holding-tower-repair-progress { display: none; }
-  .holding-tower-modal .holding-tower-garrison-list { display: none; }
-  .holding-tower-modal :is(.holding-tower-queue,.holding-tower-actions) { padding: .26rem .34rem; }
-  .holding-tower-modal .holding-tower-section-heading { margin-bottom: .16rem; padding-bottom: .12rem; }
-  .holding-tower-modal .holding-tower-section-heading > span { display: none; }
-  .holding-tower-modal .holding-tower-section-heading > h3 { font-size: .64rem; }
-  .holding-tower-modal .holding-tower-section-heading > b { padding: .12rem .28rem; font-size: .46rem; }
-  .holding-tower-modal .holding-tower-upgrade-current { grid-template-columns: minmax(0,1fr) 150px; gap: .3rem; padding: .22rem .3rem; }
-  .holding-tower-modal .holding-tower-upgrade-copy :is(span,small),
-  .holding-tower-modal .holding-tower-timer > div { font-size: .44rem; }
-  .holding-tower-modal .holding-tower-upgrade-copy strong { font-size: .58rem; }
-  .holding-tower-modal .holding-tower-queued-levels { grid-template-columns: auto minmax(0,1fr); margin-top: .18rem; font-size: .46rem; }
-  .holding-tower-modal .holding-tower-queued-levels small { display: none; }
-  .holding-tower-modal .holding-tower-action-grid { gap: .18rem; }
-  .holding-tower-modal .holding-tower-action-grid button { min-width: 0; min-height: 26px; padding: .18rem .3rem; font-size: .48rem; }
-  .holding-tower-modal .holding-tower-commandery { grid-template-columns: minmax(120px,1fr) auto minmax(300px,1.5fr); gap: .24rem; margin-top: .24rem; padding: .24rem .3rem; }
-  .holding-tower-modal .holding-tower-commandery .city-level-up-copy strong { font-size: .56rem; }
-  .holding-tower-modal .holding-tower-commandery .city-level-up-copy small { display: none; }
-  .holding-tower-modal .holding-tower-commandery label { font-size: .46rem; }
-  .holding-tower-modal .holding-tower-commandery input { width: 36px; min-height: 26px; font-size: .52rem; }
-  .holding-tower-modal .holding-tower-command-actions { gap: .18rem; }
-  .holding-tower-modal .holding-tower-command-actions button { min-height: 28px; padding: .18rem .24rem; }
-  .holding-tower-modal .holding-tower-command-actions button span { font-size: .48rem; }
-  .holding-tower-modal .holding-tower-command-actions button small { margin-top: .05rem; font-size: .4rem; }
-  .holding-tower-modal .holding-tower-treasury { padding: .22rem .34rem; font-size: .5rem; }
-  .clan-treasury-panel { padding: .42rem; }
-  .clan-treasury-panel .clan-treasury-heading { margin-bottom: .2rem; }
-  .clan-treasury-panel .clan-treasury-ledger { margin: .25rem 0; }
-  .clan-treasury-panel .clan-treasury-allowance { margin: .25rem 0; padding: .25rem .35rem; }
-  .clan-treasury-panel .clan-treasury-allowance > small { font-size: .5rem; }
+.holding-tower-modal .modal-card{color:var(--cl-ink);border-color:rgba(93,66,39,.58);background:repeating-linear-gradient(0deg,rgba(73,48,23,.028) 0 1px,transparent 1px 10px),linear-gradient(180deg,#f3e5c4,#d8c08e);box-shadow:inset 0 1px 0 rgba(255,251,232,.5),0 28px 70px rgba(0,0,0,.52)}
+.holding-tower-modal .modal-card>h2{color:#3b2412;text-shadow:0 1px rgba(255,247,216,.48)}
+.holding-tower-modal .modal-close{color:var(--cl-ivory);border:1px solid rgba(73,24,29,.7);background:linear-gradient(180deg,#7a373b,#4c2025)}
+.holding-tower-panel{gap:.52rem}
+.holding-tower-modal .holding-tower-hero{grid-template-columns:78px minmax(0,1fr) auto;margin:0;padding:.68rem .78rem;border-color:rgba(190,154,86,.62);background:linear-gradient(100deg,rgba(49,80,99,.98),rgba(18,45,61,.98)),repeating-linear-gradient(135deg,rgba(245,218,151,.035) 0 2px,transparent 2px 12px);box-shadow:inset 0 1px 0 rgba(255,242,203,.12),0 6px 12px rgba(36,23,14,.2)}
+.holding-tower-modal .holding-tower-crest{width:70px;height:76px;filter:drop-shadow(0 7px 8px rgba(0,0,0,.38))}
+.holding-tower-modal .holding-tower-crest .clan-shield{max-width:70px;max-height:76px}
+.holding-tower-modal .holding-tower-crest.neutral{width:58px;height:58px;color:#6f4a1e;border-color:#8a642d;background:radial-gradient(circle,#dfc98f,#9d8150)}
+.holding-tower-modal .holding-tower-hero-copy>span{color:#c7dce5!important}
+.holding-tower-modal .holding-tower-hero-copy h2{margin:.08rem 0;color:#fff0c9;font-size:1.35rem;text-shadow:0 1px rgba(0,0,0,.62)}
+.holding-tower-modal .holding-tower-hero-copy p{color:#d7e2e4!important}
+.holding-tower-modal .holding-tower-hero-copy p strong{color:#ffe0a1!important}
+.holding-tower-modal .holding-tower-wall-level{min-width:102px;padding:.38rem .55rem;border:1px solid rgba(229,202,140,.38);border-radius:var(--ui-radius-small);background:rgba(7,23,34,.5)}
+.holding-tower-modal .holding-tower-wall-level span,.holding-tower-modal .holding-tower-wall-level small{color:#c7dce5!important}
+.holding-tower-modal .holding-tower-wall-level strong{color:#fff0c9!important}
+.holding-tower-modal .holding-tower-probation{color:#3b2412;border-color:rgba(128,86,32,.42);background:rgba(255,238,189,.62)}
+.holding-tower-modal .holding-tower-probation strong{color:#52232a}
+.holding-tower-modal .holding-tower-probation span{color:#5f482b}
+.holding-tower-modal .holding-tower-vitals{grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin:0}
+.holding-tower-modal .holding-tower-vitals>section{min-width:0;color:var(--cl-ink);border-color:rgba(111,82,45,.42);border-radius:var(--ui-radius);background:linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95)),repeating-linear-gradient(0deg,rgba(84,59,31,.06) 0 1px,transparent 1px 9px);box-shadow:inset 0 0 0 1px rgba(255,250,226,.2),0 5px 10px rgba(0,0,0,.14)}
+.holding-tower-modal .holding-tower-vitals:is(span,small){color:#5f482b!important}
+.holding-tower-modal .holding-tower-vitals:is(strong,b){color:#3b2412!important}
+.holding-tower-modal .holding-tower-own-card strong{color:#355c3d!important}
+.holding-tower-modal .holding-tower-wall-card{grid-column:1/-1;grid-template-columns:minmax(0,1fr) auto;gap:.16rem .65rem;padding:.48rem .58rem}
+.holding-tower-modal .holding-tower-wall-card>div:first-child{min-width:0}
+.holding-tower-modal .holding-tower-wall-card>b{color:#6f3034!important;font-size:1rem}
+.holding-tower-modal .holding-tower-wall-card>small,.holding-tower-modal .holding-tower-durability,.holding-tower-modal .holding-tower-repair-progress{grid-column:1/-1}
+.holding-tower-modal .holding-tower-durability{margin:.06rem 0 0}
+.holding-tower-modal .holding-tower-repair-progress{margin:.14rem 0 0}
+.holding-tower-modal .clan-quest-progress-track{background:rgba(66,49,31,.2)}
+.holding-tower-modal .clan-quest-progress-track i{background:linear-gradient(90deg,#6f3034,#a87531 62%,#52734f)}
+.holding-tower-modal .holding-tower-veil-card.active{color:var(--cl-ivory);border-color:rgba(105,126,148,.72);background:linear-gradient(180deg,#405565,#24343f)}
+.holding-tower-modal .holding-tower-veil-card.active:is(span,strong,small){color:var(--cl-ivory)!important}
+.holding-tower-modal:is(.holding-tower-garrison-list,.holding-tower-queue,.holding-tower-actions){margin:0;padding:.5rem .6rem;color:#3b2412;border:1px solid rgba(93,66,39,.48);border-radius:var(--ui-radius);background:repeating-linear-gradient(0deg,rgba(73,48,23,.035) 0 1px,transparent 1px 9px),linear-gradient(180deg,var(--cl-contrast-paper-light,#efe1b9),#d7c08e);box-shadow:inset 0 1px 0 rgba(255,251,232,.46),0 8px 16px rgba(36,23,14,.18)}
+.holding-tower-modal .holding-tower-section-heading{margin:-.5rem -.6rem .38rem;padding:.3rem .48rem;border:0;border-radius:calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px) 0 0;background:linear-gradient(180deg,#28475b,#172f40);box-shadow:inset 0 -1px 0 rgba(220,190,126,.28);text-align:left}
+.holding-tower-modal .holding-tower-section-heading>span{color:#c7dce5!important}
+.holding-tower-modal .holding-tower-section-heading>h3{color:#fff0c9!important;text-shadow:0 1px rgba(0,0,0,.62)}
+.holding-tower-modal .holding-tower-section-heading>b{color:#fff0c9!important;border-color:rgba(229,202,140,.42);background:rgba(12,29,42,.58)}
+.holding-tower-modal .holding-tower-garrison-list ol{gap:.28rem}
+.holding-tower-modal .holding-tower-garrison-list li{grid-template-columns:minmax(0,1fr) auto;color:#3b2412;border-color:rgba(94,66,39,.3);background:rgba(255,247,223,.58)}
+.holding-tower-modal .holding-tower-garrison-list li:nth-child(even){background:rgba(206,181,130,.32)}
+.holding-tower-modal .holding-tower-garrison-list li span{color:#5f482b!important}
+.holding-tower-modal .holding-tower-garrison-list li strong{color:#52232a!important}
+.holding-tower-modal .holding-tower-upgrade-current{display:grid;grid-template-columns:minmax(0,1fr) minmax(210px,.42fr);align-items:center;gap:.55rem;padding:.42rem .5rem;border:1px solid rgba(105,75,43,.34);border-radius:var(--ui-radius-small);background:rgba(255,247,223,.56)}
+.holding-tower-modal .holding-tower-upgrade-copy{display:grid;gap:.05rem}
+.holding-tower-modal .holding-tower-upgrade-copy strong,.holding-tower-modal .holding-tower-queued-levels strong,.holding-tower-modal .holding-tower-queue-empty strong{color:#3b2412!important}
+.holding-tower-modal .holding-tower-upgrade-copy:is(span,small),.holding-tower-modal .holding-tower-queued-levels:is(span,small),.holding-tower-modal .holding-tower-queue-empty span{color:#5f482b!important}
+.holding-tower-modal .holding-tower-timer{margin:0}
+.holding-tower-modal .holding-tower-timer>div strong{color:#52232a!important}
+.holding-tower-modal .holding-tower-timer>div span{color:#5f482b!important}
+.holding-tower-modal .holding-tower-queued-levels,.holding-tower-modal .holding-tower-queue-empty{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.2rem .55rem;margin-top:.35rem;font-size:.66rem}
+.holding-tower-modal .holding-tower-queued-levels strong{overflow-wrap:anywhere}
+.holding-tower-modal .holding-tower-action-grid{flex-wrap:wrap;gap:.3rem;padding:0;overflow:visible}
+.holding-tower-modal .holding-tower-action-grid button,.holding-tower-modal .holding-tower-commandery button{min-height:36px;color:var(--cl-ivory);border:1px solid rgba(90,38,42,.78);border-radius:var(--ui-radius-small);background:linear-gradient(180deg,#7a373b,#5a262b 66%,#361417);box-shadow:inset 0 1px 0 rgba(255,233,190,.18),inset 0 -3px 0 rgba(20,7,5,.25),0 5px 10px rgba(0,0,0,.22);text-shadow:0 1px rgba(0,0,0,.62)}
+.holding-tower-modal .holding-tower-action-grid button.secondary{border-color:rgba(69,68,62,.74);background:linear-gradient(180deg,#555047,#2e2b26)}
+.holding-tower-modal .holding-tower-action-grid button.move-action{border-color:rgba(85,97,61,.72);background:linear-gradient(180deg,#647047,#374128)}
+.holding-tower-modal .holding-tower-action-grid button.danger{border-color:rgba(136,72,44,.82);background:linear-gradient(180deg,#88482c,#58262a 72%,#321316)}
+.holding-tower-modal .holding-tower-commandery{grid-template-columns:minmax(190px,1fr) auto minmax(350px,1.2fr);gap:.45rem;margin:.48rem 0 0;padding:.48rem .55rem;color:#3b2412!important;border-color:rgba(111,82,45,.42)!important;background:linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95))!important}
+.holding-tower-modal .holding-tower-commandery:is(strong,label){color:#3b2412!important}
+.holding-tower-modal .holding-tower-commandery small{color:#5f482b!important}
+.holding-tower-modal .holding-tower-commandery input{color:#3b2412;border-color:rgba(90,59,33,.45);background:rgba(255,247,216,.48)}
+.holding-tower-modal .holding-tower-command-actions{min-width:0}
+.holding-tower-modal .holding-tower-command-actions button{min-width:0}
+.holding-tower-modal .holding-tower-command-actions button small{color:#f1e6cc}
+.holding-tower-modal .holding-tower-command-actions button:disabled small{color:#5f482b}
+.holding-tower-modal .holding-tower-treasury{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:.2rem .65rem;margin:0;padding:.42rem .58rem;color:#3b2412!important;border-color:rgba(111,82,45,.42)!important;background:linear-gradient(180deg,rgba(224,211,177,.96),rgba(185,164,122,.95))!important}
+.holding-tower-modal .holding-tower-treasury:is(span,small){color:#5f482b!important}
+.holding-tower-modal .holding-tower-treasury strong{color:#6f3034!important}
+.clan-treasury-panel.clan-gift-panel{max-width:760px;margin:0 auto;padding:.68rem;color:#3b2412!important;border-color:rgba(93,66,39,.48)!important;background:repeating-linear-gradient(0deg,rgba(73,48,23,.035) 0 1px,transparent 1px 9px),linear-gradient(180deg,var(--cl-contrast-paper-light,#efe1b9),#d7c08e)!important;box-shadow:inset 0 1px 0 rgba(255,251,232,.46),0 12px 24px rgba(36,23,14,.2)!important}
+.clan-treasury-panel .clan-treasury-heading{margin:-.68rem -.68rem .42rem;padding:.38rem .55rem;border-radius:calc(var(--ui-radius) - 1px) calc(var(--ui-radius) - 1px) 0 0;background:linear-gradient(180deg,#28475b,#172f40);box-shadow:inset 0 -1px 0 rgba(220,190,126,.28)}
+.clan-treasury-panel .clan-treasury-heading>span{color:#c7dce5!important}
+.clan-treasury-panel .clan-treasury-heading>h3{color:#fff0c9!important;text-shadow:0 1px rgba(0,0,0,.62)}
+.clan-treasury-panel .clan-treasury-heading>b{color:#fff0c9!important;border-color:rgba(229,202,140,.42);background:rgba(12,29,42,.58)}
+.clan-treasury-panel .clan-treasury-ledger{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.35rem;margin:.45rem 0}
+.clan-treasury-panel .clan-treasury-ledger>div{display:grid;gap:.04rem;padding:.32rem .45rem;border:1px solid rgba(211,188,134,.24);border-radius:var(--ui-radius-small);background:linear-gradient(180deg,rgba(224,211,177,.97),rgba(185,164,122,.95))}
+.clan-treasury-panel .clan-treasury-ledger span{color:#5f482b!important}
+.clan-treasury-panel .clan-treasury-ledger strong{color:#3b2412!important}
+.clan-treasury-panel .clan-treasury-allowance{margin:.45rem 0;padding:.42rem .5rem;border:1px solid rgba(105,75,43,.36);border-radius:var(--ui-radius-small);background:rgba(255,247,223,.58)}
+.clan-treasury-panel .clan-treasury-allowance>div:is(strong,span),.clan-treasury-panel .clan-treasury-allowance>small{color:#5f482b!important}
+.clan-treasury-panel .clan-treasury-allowance>div strong{color:#3b2412!important}
+.clan-treasury-panel .clan-treasury-allowance.preview{border-color:rgba(213,184,111,.35)}
+.clan-treasury-panel .clan-treasury-allowance.preview .clan-quest-progress-track i{background:linear-gradient(90deg,#8b6232,#d6ae54)}
+.clan-treasury-panel .clan-treasury-donate{gap:.28rem}
+.clan-treasury-panel .clan-treasury-donate>label,.clan-treasury-panel .clan-treasury-donate>small,.clan-treasury-panel>p{color:#5f482b!important}
+.clan-treasury-panel.clan-gift-panel>p{color:#5f482b!important}
+.clan-treasury-panel .clan-treasury-donate input{color:#3b2412!important;border-color:rgba(90,59,33,.45)!important;background:rgba(255,247,216,.7)!important;box-shadow:inset 0 1px 3px rgba(62,40,20,.14)!important}
+.clan-treasury-panel .clan-treasury-donate input::placeholder{color:#7b684e!important}
+.clan-treasury-panel .clan-treasury-donate button.profile-primary-btn{color:#271807!important}
+@media (max-width:900px) and (orientation:landscape){.holding-tower-modal .modal-card{padding:.32rem}
+.holding-tower-panel{gap:.24rem}
+.holding-tower-modal .holding-tower-hero{grid-template-columns:46px minmax(0,1fr) 72px;gap:.38rem;padding:.28rem .38rem}
+.holding-tower-modal .holding-tower-crest{width:44px;height:48px}
+.holding-tower-modal .holding-tower-crest .clan-shield{max-width:44px;max-height:48px}
+.holding-tower-modal .holding-tower-hero-copy>span{font-size:.48rem}
+.holding-tower-modal .holding-tower-hero-copy h2{margin:0;font-size:.9rem}
+.holding-tower-modal .holding-tower-hero-copy p{font-size:.52rem}
+.holding-tower-modal .holding-tower-wall-level{min-width:68px;padding:.2rem .28rem}
+.holding-tower-modal .holding-tower-wall-level strong{font-size:1rem}
+.holding-tower-modal .holding-tower-wall-level:is(span,small){font-size:.46rem}
+.holding-tower-modal .holding-tower-vitals{grid-template-columns:repeat(3,minmax(0,1fr));gap:.22rem}
+.holding-tower-modal .holding-tower-wall-card{min-height:42px;padding:.22rem .3rem}
+.holding-tower-modal .holding-tower-wall-card>small{font-size:.48rem}
+.holding-tower-modal .holding-tower-durability{margin:0}
+.holding-tower-modal .holding-tower-vitals>.stat-chip{min-height:42px;padding:.24rem .3rem}
+.holding-tower-modal .holding-tower-vitals:is(span,small){font-size:.46rem;line-height:1.1}
+.holding-tower-modal .holding-tower-vitals strong{font-size:.68rem}
+.holding-tower-modal .holding-tower-repair-progress{display:none}
+.holding-tower-modal .holding-tower-garrison-list{display:none}
+.holding-tower-modal:is(.holding-tower-queue,.holding-tower-actions){padding:.26rem .34rem}
+.holding-tower-modal .holding-tower-section-heading{margin:-.26rem -.34rem .16rem;padding:.16rem .3rem}
+.holding-tower-modal .holding-tower-section-heading>span{display:none}
+.holding-tower-modal .holding-tower-section-heading>h3{font-size:.64rem}
+.holding-tower-modal .holding-tower-section-heading>b{padding:.12rem .28rem;font-size:.46rem}
+.holding-tower-modal .holding-tower-upgrade-current{grid-template-columns:minmax(0,1fr) 150px;gap:.3rem;padding:.22rem .3rem}
+.holding-tower-modal .holding-tower-upgrade-copy:is(span,small),.holding-tower-modal .holding-tower-timer>div{font-size:.44rem}
+.holding-tower-modal .holding-tower-upgrade-copy strong{font-size:.58rem}
+.holding-tower-modal .holding-tower-queued-levels{grid-template-columns:auto minmax(0,1fr);margin-top:.18rem;font-size:.46rem}
+.holding-tower-modal .holding-tower-queued-levels small{display:none}
+.holding-tower-modal .holding-tower-action-grid{gap:.18rem}
+.holding-tower-modal .holding-tower-action-grid button{min-width:0;min-height:26px;padding:.18rem .3rem;font-size:.48rem}
+.holding-tower-modal .holding-tower-commandery{grid-template-columns:minmax(120px,1fr) auto minmax(300px,1.5fr);gap:.24rem;margin-top:.24rem;padding:.24rem .3rem}
+.holding-tower-modal .holding-tower-commandery .city-level-up-copy strong{font-size:.56rem}
+.holding-tower-modal .holding-tower-commandery .city-level-up-copy small{display:none}
+.holding-tower-modal .holding-tower-commandery label{font-size:.46rem}
+.holding-tower-modal .holding-tower-commandery input{width:36px;min-height:26px;font-size:.52rem}
+.holding-tower-modal .holding-tower-command-actions{gap:.18rem}
+.holding-tower-modal .holding-tower-command-actions button{min-height:28px;padding:.18rem .24rem}
+.holding-tower-modal .holding-tower-command-actions button span{font-size:.48rem}
+.holding-tower-modal .holding-tower-command-actions button small{margin-top:.05rem;font-size:.4rem}
+.holding-tower-modal .holding-tower-treasury{padding:.22rem .34rem;font-size:.5rem}
+.clan-treasury-panel{padding:.42rem}
+.clan-treasury-panel .clan-treasury-heading{margin:-.42rem -.42rem .2rem;padding:.22rem .35rem}
+.clan-treasury-panel .clan-treasury-ledger{margin:.25rem 0}
+.clan-treasury-panel .clan-treasury-allowance{margin:.25rem 0;padding:.25rem .35rem}
+.clan-treasury-panel .clan-treasury-allowance>small{font-size:.5rem}
 }

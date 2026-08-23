@@ -57,7 +57,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Troops can walk through forests and swamp at normal speed.
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
-- Scouting dispatches one troop from the nearest reachable owned city; its report reveals a troop and defense snapshot for ten minutes after arrival.
+- Online scouting dispatches one troop from the nearest authoritative eligible origin: an owned City, or a current-clan Holding Tower where the member has completed the 24-hour probation and has a personal garrison troop. The server chooses the origin automatically; its report reveals a troop and defense snapshot for ten minutes after arrival.
 - Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All atomically charges the current Economy-configured cost and dispatches one troop from that city to every reachable highlighted non-owned city. Online batches are validated and charged by Firebase Functions, so a failed or retried request cannot partially charge or duplicate scouts.
 - Regroup follows the same server-authoritative batch policy: it charges the configured cost once and either launches every confirmed nearby transfer or launches none.
 - A completed scout report adds a Report action to the selected city and shows the reported troop count in its banner.

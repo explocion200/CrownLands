@@ -172,7 +172,6 @@
           ${permissions.reinforce ? `<button type="button" class="move-action" data-tower-action="reinforce" ${disabled}>Reinforce</button>` : ""}
           ${permissions.withdrawOwn ? `<button type="button" class="secondary" data-tower-action="withdraw" ${disabled}>Withdraw Mine</button>` : ""}
           ${permissions.attackFrom ? `<button type="button" class="danger attack-action" data-tower-action="attack-from" ${disabled}>Attack from Tower</button>` : ""}
-          ${permissions.attackFrom ? `<button type="button" class="secondary" data-tower-action="scout-from" ${disabled}>Scout from Tower</button>` : ""}
           ${permissions.rallyFrom ? `<button type="button" class="danger attack-action" data-tower-action="rally-from" ${disabled}>Rally from Tower</button>` : ""}
         </div>
         ${permissions.manage ? `

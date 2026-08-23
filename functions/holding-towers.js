@@ -314,6 +314,85 @@ function getEligibility(member = {}, nowMs = Date.now(), clanId = "") {
   };
 }
 
+function getEligibleScoutTowerOrigins({
+  towers = [],
+  garrisonsByTowerId = new Map(),
+  clanId = "",
+  member = null,
+  uid = "",
+  nowMs = Date.now(),
+  worldId = "",
+  resetGeneration = "",
+  worldActive = true,
+} = {}) {
+  const currentClanId = String(clanId || "");
+  const playerUid = String(uid || "");
+  if (!worldActive || !currentClanId || !playerUid || !isEligibleMember(member, nowMs, currentClanId)) return [];
+
+  const lookupGarrison = towerId => garrisonsByTowerId instanceof Map
+    ? garrisonsByTowerId.get(towerId)
+    : garrisonsByTowerId?.[towerId];
+  return (Array.isArray(towers) ? towers : []).flatMap(rawTower => {
+    const towerId = String(rawTower?.id || "");
+    const definition = getTowerDefinition(towerId);
+    if (!definition || rawTower?.ownerKind !== "clan" || String(rawTower?.clanId || "") !== currentClanId) return [];
+    if (worldId && String(rawTower?.worldId || "") !== String(worldId)) return [];
+    if (resetGeneration && String(rawTower?.resetGeneration || "") !== String(resetGeneration)) return [];
+
+    const garrison = lookupGarrison(towerId) || {};
+    const troops = clampInteger(garrison?.troops);
+    if (troops < 1) return [];
+    if (garrison?.uid && String(garrison.uid) !== playerUid) return [];
+    if (garrison?.towerId && String(garrison.towerId) !== towerId) return [];
+    if (garrison?.clanId && String(garrison.clanId) !== currentClanId) return [];
+    if (worldId && String(garrison?.worldId || "") !== String(worldId)) return [];
+    if (resetGeneration && String(garrison?.resetGeneration || "") !== String(resetGeneration)) return [];
+
+    return [{
+      ...rawTower,
+      id: towerId,
+      name: String(rawTower?.name || definition.name || towerId),
+      regionId: String(rawTower?.regionId || definition.regionId || ""),
+      x: finiteNumber(rawTower?.x, definition.reservedX),
+      y: finiteNumber(rawTower?.y, definition.reservedY),
+      sourceType: "tower",
+      troops,
+      garrison,
+    }];
+  });
+}
+
+function compareStableText(left = "", right = "") {
+  const first = String(left || "");
+  const second = String(right || "");
+  return first === second ? 0 : first < second ? -1 : 1;
+}
+
+function selectClosestScoutOrigin(candidates = [], target = {}, buildRoute) {
+  if (typeof buildRoute !== "function") throw new TypeError("An authoritative scout route builder is required.");
+  const routed = [];
+  for (const candidate of Array.isArray(candidates) ? candidates : []) {
+    const sourceType = candidate?.sourceType === "tower" ? "tower" : "city";
+    if (!candidate?.id || !candidate?.regionId || clampInteger(candidate?.troops) < 1) continue;
+    try {
+      const route = buildRoute(candidate, target);
+      if (!route || !(finiteNumber(route.pathLength) > 0)) continue;
+      routed.push({ ...candidate, sourceType, route });
+    } catch (_error) {
+      // An unreachable origin is not eligible; other authoritative routes may still succeed.
+    }
+  }
+  routed.sort((left, right) => (
+    finiteNumber(left.route?.pathLength, Number.POSITIVE_INFINITY)
+      - finiteNumber(right.route?.pathLength, Number.POSITIVE_INFINITY)
+    // Stable equal-distance rule: City before Tower, then region and id in lexical order.
+    || (left.sourceType === right.sourceType ? 0 : left.sourceType === "city" ? -1 : 1)
+    || compareStableText(left.regionId, right.regionId)
+    || compareStableText(left.id, right.id)
+  ));
+  return routed[0] || null;
+}
+
 function validateTowerRallyParticipants(participants = [], membersByUid = new Map(), nowMs = Date.now(), clanId = "") {
   const byUid = new Map();
   for (const participant of Array.isArray(participants) ? participants : []) {
@@ -667,6 +746,8 @@ module.exports = Object.freeze({
   getMembershipJoinedAtMs,
   isEligibleMember,
   getEligibility,
+  getEligibleScoutTowerOrigins,
+  selectClosestScoutOrigin,
   validateTowerRallyParticipants,
   getDonationAllowance,
   normalizeDonationUsage,

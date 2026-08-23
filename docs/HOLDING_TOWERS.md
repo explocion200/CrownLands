@@ -34,7 +34,7 @@ The implementation was built on these existing server paths instead of parallel 
 | Rally lifecycle | Existing `createClanRally`, join/withdraw, `launchClanRally`, movement copies, recall, and settlement paths |
 | Combat/casualties | Existing `calculateCombatResult`, `allocateDefenderLosses`, and `allocateRallyAttackerLosses` |
 | Troop movement | Existing authoritative route construction, travel timing, army copies, troop deduction, and safe Main-City return helpers |
-| Scouting | Existing scout march/report lifecycle; Veil is evaluated only when the scout resolves |
+| Scouting | Existing normal Scout action, march/report lifecycle, authoritative route planner, notifications, and return handling; Veil is evaluated only when the scout resolves |
 | Seasonal reset | Pending Core reset architecture candidate state and validation in `tools/core-v2-reset-2/architecture.js` |
 
 No passive Tower production, attack, defense, march, scouting, XP, territory, Stronghold, Citadel, or economy bonuses are introduced.
@@ -112,6 +112,7 @@ Let `C(L)` be the existing canonical normal-city upgrade cost returned by `getCi
 - Conquest: `newLevel = max(1, previousCompletedLevel - 5)`, integrity becomes zero, and paid queue/repair/Veil state is destroyed without refund
 - Veil: exactly `600,000 ms`, no overlap, at most three activations per Tower per UTC date
 - Membership probation: eligible when `serverNow - authoritativeJoinedAt >= 86,400,000 ms`
+- Automatic Scout origin: every normal online Scout request supplies only its target. The server considers all current-world owned Cities with at least one troop and each current-clan Tower where the player is an eligible member and has at least one personally attributed garrison troop. It chooses the lowest authoritative route length. Exact ties resolve deterministically as City before Tower, then normalized region ID, then origin ID, all in lexical order.
 - Tower-target Rally: at least five unique, current, eligible clan members, each with at least one assembled troop, revalidated immediately before launch
 - Donation cap: the first successful donation of the UTC day locks `rawGoldPerHourSnapshot = authoritativeCurrentRawBaseGoldPerHour` and `dailyDonationCap = rawGoldPerHourSnapshot × 12`; subsequent production changes do not change the cap. Before that success, status is an unlocked preview only. Invalid, rejected, and unaffordable attempts create no snapshot. A new UTC day starts with no lock until its first successful donation.
 - Neutral reset: Level 1, 10,000 integrity basis points, 10,000,000 NPC troops, no clan/garrison/queue/repair/Veil, zero daily Veil use
@@ -126,7 +127,7 @@ The raw donation rate is the existing base Gold/hour aggregation. It excludes Sk
 - Only a qualifying Clan Rally can attack or conquer one; normal solo Tower attacks are rejected.
 - Every attributed garrison entry defends together. Casualties are allocated through the existing combat allocator.
 - Victorious eligible participants station their attributed survivors. Ineligible survivors use the existing safe return-to-Main-City flow.
-- Eligible members may reinforce from owned cities, withdraw only their own troops to a personally owned city, and use only their own Tower troops as a normal attack/scout or Rally origin.
+- Eligible members may reinforce from owned cities, withdraw only their own troops to a personally owned city, and use only their own Tower troops as an attack or Rally origin. Normal scouting has no origin selector: the canonical server resolver automatically considers eligible Cities and personal Tower garrisons.
 - Reinforcement remains allowed while a hostile Rally approaches.
 - An incoming Rally pauses construction but not a paid repair that began beforehand. New upgrades/repairs are rejected until the attack clears. Construction resumes only for the same owner and a fully repaired Wall.
 - Enemy public state never includes exact garrison intelligence. A successful scout can reveal it unless Veil is active at resolution. Veil does not hide normal public identity or Wall information.
@@ -138,17 +139,17 @@ Local visual fixtures are available only on localhost with `?towerQa=<scenario>`
 
 `neutral`, `clan-owned`, `owner`, `enemy`, `scout-success`, `scout-veil`, `damaged`, `repair`, `upgrading`, `queue`, `veil-active`, `treasury-preview`, `treasury-locked`, `treasury`, and `incoming`.
 
-The Tower modal reuses the production Clan hero/shield treatment, city stat panels, Clan section headings, roster rows, quest progress tracks, action buttons, and city level-up controls. Treasury reuses the production Clan gift/form/quest hierarchy. The final layer keeps the existing manuscript parchment, dark-blue Clan surfaces, burgundy actions, ivory text, restrained gold, Cinzel family, borders, shadows, and spacing instead of introducing a separate dashboard vocabulary.
+The Tower modal reuses the production Clan hero/shield treatment, city stat panels, Clan section headings, roster rows, quest progress tracks, action buttons, and city level-up controls. Treasury reuses the production Clan gift/form/quest hierarchy. Parchment and ivory carry the content surfaces; dark blue is reserved for the compact hero and title bands, with burgundy/green/charcoal action framing and the existing typography, borders, shadows, and spacing.
 
-Fresh fix captures and machine-readable dimensions live in `docs/visual-qa/holding-towers-gameplay-fixes/`. Desktop was checked at `1440×900`; mobile was checked at exactly `844×390` landscape. No portrait-specific layout was added. These fixtures do not activate or write live gameplay state.
+Fresh final-correction captures and machine-readable dimensions live in `docs/visual-qa/holding-towers-final-corrections/`. Desktop was checked at `1440×900`; mobile was checked at exactly `844×390` landscape. No portrait-specific layout was added. These fixtures do not activate or write live gameplay state.
 
 For the full Pending Core preview, use the existing Crownlands Studio/Core preview workflow against the Pending Core 5×5 candidate. The Studio serializer preserves the permanent Tower names/quadrants along with the approved immutable reservation/art fields. Do not switch the live season pointer, deploy Functions, or run reset activation as part of preview QA.
 
 ## Automated coverage
 
-- `node tools/validate-holding-towers.js`: neutral/reset, probation, Rally gate, garrison attribution and safe integer handling, Treasury formulas/roles, Wall queue/pause/resume, repairs, conquest, Veil, server contracts, reset integration, and client/rules integration
+- `node tools/validate-holding-towers.js`: automatic City/Tower Scout origin eligibility and deterministic ties, neutral/reset, probation, Rally gate, garrison attribution and safe integer handling, Treasury formulas/roles, Wall queue/pause/resume, repairs, conquest, Veil, server contracts, reset integration, and client/rules integration
 - `node tools/validate-holding-tower-visuals.js`: approved art/reservations/assets plus interactive/accessibility integration
 - `functions/test/emulator-holding-tower-rules.js`: public state, clan Treasury privacy, own usage privacy, garrison secrecy, hidden receipts, and server-only writes
 - `functions/test/emulator-holding-tower-donation-concurrency.js`: simultaneous first donations, locked-snapshot stability, allowance-boundary contention, idempotent accounting, and no Gold/Treasury double mutation
-- `node tools/qa-holding-tower-fixes.js`: nine fresh visual captures, horizontal-overflow assertions, browser-console checks, desktop, and exact `844×390` landscape metrics
+- `node tools/qa-holding-tower-fixes.js`: seven fresh visual captures, horizontal-overflow assertions, browser-console checks, desktop, and exact `844×390` landscape metrics
 - the existing Crownlands static and emulator regression suites cover economy transaction retries, normal combat, city Walls, rallies, routes, reports, clan lifecycle, and reset invariants

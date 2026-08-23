@@ -6,20 +6,18 @@ const { chromium } = require("playwright");
 const root = path.resolve(__dirname, "..");
 const chromePath = process.env.CROWNLANDS_CHROME_PATH
   || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
-const outputDir = path.join(root, "docs", "visual-qa", "holding-towers-gameplay-fixes");
+const outputDir = path.join(root, "docs", "visual-qa", "holding-towers-final-corrections");
 const screenshotDir = path.join(outputDir, "screenshots");
 const baseUrl = process.env.CROWNLANDS_QA_URL || "http://127.0.0.1:4173/";
 
 const captures = [
   { file: "01-clan-owned-tower.jpg", scenario: "owner", width: 1280, height: 900 },
   { file: "02-wall-repair-ui.jpg", scenario: "repair", width: 1440, height: 900 },
-  { file: "03-active-upgrade-queue.jpg", scenario: "upgrading", width: 1440, height: 900 },
+  { file: "03-wall-upgrade-and-queue.jpg", scenario: "upgrading", width: 1440, height: 900 },
   { file: "04-veil-of-silence.jpg", scenario: "veil-active", width: 1440, height: 900 },
   { file: "05-clan-treasury.jpg", scenario: "treasury-locked", width: 1440, height: 900 },
-  { file: "06-allowance-before-first-donation.jpg", scenario: "treasury-preview", width: 1440, height: 900, selector: ".clan-treasury-allowance" },
-  { file: "07-allowance-after-lock.jpg", scenario: "treasury-locked", width: 1440, height: 900, selector: ".clan-treasury-allowance" },
-  { file: "08-desktop-1440x900.jpg", scenario: "owner", width: 1440, height: 900 },
-  { file: "09-landscape-mobile-844x390.jpg", scenario: "owner", width: 844, height: 390 },
+  { file: "06-desktop-1440x900.jpg", scenario: "owner", width: 1440, height: 900 },
+  { file: "07-landscape-844x390.jpg", scenario: "owner", width: 844, height: 390 },
 ];
 
 async function main() {
@@ -125,7 +123,7 @@ async function main() {
   }
 
   fs.writeFileSync(path.join(outputDir, "metrics.json"), `${JSON.stringify(metrics, null, 2)}\n`);
-  console.log("Holding Tower fix visual QA passed with nine fresh captures, including exact 844x390 landscape.");
+  console.log("Holding Tower final visual QA passed with seven fresh captures, including exact 844x390 landscape.");
 }
 
 main().catch(error => {

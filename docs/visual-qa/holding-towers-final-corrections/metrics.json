@@ -1,0 +1,247 @@
+[
+  {
+    "file": "screenshots/01-clan-owned-tower.jpg",
+    "scenario": "owner",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1280
+    },
+    "card": {
+      "bottom": 846.015625,
+      "height": 792.03125,
+      "left": 120,
+      "right": 1160,
+      "top": 53.984375,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 792,
+      "clientWidth": 1040,
+      "scrollHeight": 792,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 832.015625,
+      "height": 728.578125,
+      "left": 134,
+      "right": 1128.609375,
+      "top": 103.4375,
+      "width": 994.609375
+    },
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/02-wall-repair-ui.jpg",
+    "scenario": "repair",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1440
+    },
+    "card": {
+      "bottom": 864,
+      "height": 828,
+      "left": 200,
+      "right": 1240,
+      "top": 36,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 828,
+      "clientWidth": 1040,
+      "scrollHeight": 828,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 853.890625,
+      "height": 768.4375,
+      "left": 214,
+      "right": 1208.609375,
+      "top": 85.453125,
+      "width": 994.609375
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/03-wall-upgrade-and-queue.jpg",
+    "scenario": "upgrading",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1440
+    },
+    "card": {
+      "bottom": 864,
+      "height": 828,
+      "left": 200,
+      "right": 1240,
+      "top": 36,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 828,
+      "clientWidth": 1040,
+      "scrollHeight": 828,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 898.65625,
+      "height": 813.203125,
+      "left": 214,
+      "right": 1208.609375,
+      "top": 85.453125,
+      "width": 994.609375
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/04-veil-of-silence.jpg",
+    "scenario": "veil-active",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1440
+    },
+    "card": {
+      "bottom": 846.015625,
+      "height": 792.03125,
+      "left": 200,
+      "right": 1240,
+      "top": 53.984375,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 792,
+      "clientWidth": 1040,
+      "scrollHeight": 792,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 832.015625,
+      "height": 728.578125,
+      "left": 214,
+      "right": 1208.609375,
+      "top": 103.4375,
+      "width": 994.609375
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/05-clan-treasury.jpg",
+    "scenario": "treasury-locked",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1440
+    },
+    "card": {
+      "bottom": 656.390625,
+      "height": 412.796875,
+      "left": 200,
+      "right": 1240,
+      "top": 243.59375,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 413,
+      "clientWidth": 1040,
+      "scrollHeight": 413,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 642.390625,
+      "height": 349.34375,
+      "left": 371.296875,
+      "right": 1051.296875,
+      "top": 293.046875,
+      "width": 680
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/06-desktop-1440x900.jpg",
+    "scenario": "owner",
+    "selector": null,
+    "body": {
+      "scrollHeight": 900,
+      "scrollWidth": 1440
+    },
+    "card": {
+      "bottom": 846.015625,
+      "height": 792.03125,
+      "left": 200,
+      "right": 1240,
+      "top": 53.984375,
+      "width": 1040
+    },
+    "overlay": {
+      "clientHeight": 792,
+      "clientWidth": 1040,
+      "scrollHeight": 792,
+      "scrollWidth": 1040
+    },
+    "root": {
+      "bottom": 832.015625,
+      "height": 728.578125,
+      "left": 214,
+      "right": 1208.609375,
+      "top": 103.4375,
+      "width": 994.609375
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  {
+    "file": "screenshots/07-landscape-844x390.jpg",
+    "scenario": "owner",
+    "selector": null,
+    "body": {
+      "scrollHeight": 390,
+      "scrollWidth": 844
+    },
+    "card": {
+      "bottom": 404.1875,
+      "height": 385.1875,
+      "left": 2.796875,
+      "right": 841.1875,
+      "top": 19,
+      "width": 838.390625
+    },
+    "overlay": {
+      "clientHeight": 352,
+      "clientWidth": 838,
+      "scrollHeight": 385,
+      "scrollWidth": 838
+    },
+    "root": {
+      "bottom": 461.046875,
+      "height": 407.796875,
+      "left": 9.90625,
+      "right": 819.078125,
+      "top": 53.25,
+      "width": 809.171875
+    },
+    "viewport": {
+      "width": 844,
+      "height": 390
+    }
+  }
+]
