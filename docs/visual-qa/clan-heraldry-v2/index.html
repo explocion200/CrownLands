@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Crownlands Clan Heraldry v2 Proof</title>
+  <link rel="stylesheet" href="../../../clan-heraldry-v2.css">
+  <style>
+    :root{color-scheme:dark;font-family:Inter,Segoe UI,sans-serif;background:#110f0c;color:#eee1bd}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% -10%,#4b3222 0,transparent 35%),#110f0c}
+    main{width:min(100%,1440px);margin:auto;padding:18px 22px 42px}header{display:flex;align-items:end;justify-content:space-between;gap:20px;border-bottom:1px solid #6f5330;padding-bottom:12px}
+    h1,h2,h3,p{margin:0}h1{font-family:Georgia,serif;font-size:clamp(24px,3vw,42px);letter-spacing:.02em}h2{font:700 20px Georgia,serif;color:#d8bd78;margin-bottom:12px}h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#d8bd78}
+    .lede{max-width:720px;color:#c8b894;font-size:13px}.status{font:700 11px ui-monospace,monospace;color:#9fd3a9;border:1px solid #356b44;border-radius:999px;padding:5px 9px;white-space:nowrap}
+    section{margin-top:22px;border:1px solid #4e3b29;border-radius:12px;background:rgba(28,23,18,.92);padding:16px;box-shadow:0 14px 30px #0005}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(285px,1fr));gap:10px}#exclusive-grid{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}.card{min-width:0;border:1px solid #55402a;border-radius:9px;background:#181511;padding:10px;overflow:hidden}.card.pending{border-style:dashed;color:#9f927c;background:#15130f}
+    .row{display:flex;align-items:center;gap:10px;min-height:106px}.size-strip{display:flex;align-items:end;justify-content:space-between;gap:7px;height:116px;padding-top:8px}.shield-slot{display:grid;place-items:end center;color:#887b66;font:10px ui-monospace,monospace}.shield-slot>span:first-child{display:block}
+    .source-compare{display:grid;grid-template-columns:120px 90px 70px 50px;align-items:center;gap:14px}.source-tile{display:grid;place-items:center;min-height:120px;background:#f5f2e9;border-radius:7px;overflow:hidden}.source-tile img{display:block;width:100%;height:120px;object-fit:contain}.source-tile svg{width:100px;height:100px;color:#19201d}
+    .proof-label{margin-top:7px;font-size:11px;color:#aa9a7c}.badge{display:inline-block;margin-top:6px;padding:2px 6px;border-radius:999px;background:#2f482f;color:#b9deb9;font-size:9px;letter-spacing:.05em;text-transform:uppercase}.badge.exclusive{background:#552b35;color:#f0c5cf}.badge.pending{background:#3b352d;color:#b8ab96}
+    .samples{display:flex;align-items:center;flex-wrap:wrap;gap:14px}.sample{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:10px;min-width:205px}.sample .clan-heraldry-v2{width:82px}.legacy-v2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.legacy-v2>div{display:flex;align-items:center;gap:16px}.legacy-v2 .clan-shield{width:96px;height:102px;display:inline-block}.legacy-v2 .clan-shield svg{width:100%;height:100%}
+    .metrics{display:grid;grid-template-columns:repeat(5,minmax(100px,1fr));gap:8px}.metric{padding:9px;border-radius:8px;background:#0f0e0c;border:1px solid #3a3024}.metric strong{display:block;font:700 17px ui-monospace,monospace;color:#d8bd78}.metric span{font-size:10px;color:#a99b84}
+    @media(max-width:900px) and (orientation:landscape){main{padding:12px}.source-compare{grid-template-columns:96px 70px 56px 40px}.source-tile,.source-tile img{min-height:92px;height:92px}.grid{grid-template-columns:repeat(auto-fit,minmax(275px,1fr))}#exclusive-grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(5,1fr)}}
+  </style>
+</head>
+<body>
+<main>
+  <header><div><h1>Clan Heraldry v2 · Art Set 1</h1><p class="lede">Architecture and visual proof only. Production v1 remains frozen; pending artwork is intentionally unavailable.</p></div><div class="status" id="proof-status">BUILDING PROOF</div></header>
+  <section><h2>Performance and package budgets</h2><div class="metrics" id="metrics"></div></section>
+  <section><h2>Five clan-exclusive approved sources</h2><div class="grid" id="exclusive-grid"></div></section>
+  <section><h2>Approved charge recognition strip</h2><div class="grid" id="charge-grid"></div></section>
+  <section><h2>Reused approved player-source artwork</h2><div class="grid" id="reuse-grid"></div></section>
+  <section><h2>Artwork pending — not selectable</h2><div class="grid" id="pending-grid"></div></section>
+  <section><h2>V2 shapes</h2><div class="samples" id="shapes"></div></section>
+  <section><h2>V2 divisions</h2><div class="samples" id="divisions"></div></section>
+  <section><h2>V2 layouts</h2><div class="samples" id="layouts"></div></section>
+  <section><h2>Trim and finish</h2><div class="samples" id="materials"></div></section>
+  <section><h2>Frozen v1 reference beside explicit v2</h2><div class="legacy-v2" id="version-proof"></div></section>
+</main>
+<script src="../../../functions/clanHeraldryConfig.js"></script>
+<script src="../../../functions/clanHeraldryAssets.js"></script>
+<script src="../../../functions/clanHeraldryLegacyV1.js"></script>
+<script src="../../../functions/clanHeraldryRenderer.js"></script>
+<script>
+(() => {
+  const config = window.CrownlandsClanHeraldryConfig;
+  const assets = window.CrownlandsClanHeraldryAssets;
+  const legacy = window.CrownlandsClanHeraldryLegacyV1;
+  const renderer = window.CrownlandsClanHeraldryRenderer.create({ config, assets, legacyRenderer: legacy });
+  assets.installSharedDefs(document);
+  const base = config.DEFAULT_V2;
+  const sourceNames = { "war-horn":"War Horn.png", "battering-ram":"Battering Ram.png", "fortress-keep":"Fortress Keep.png", watchtower:"Watchtower.png", portcullis:"Portcullis Gate.png" };
+  const shield = (changes = {}, width = 82, variant = null) => renderer.renderMarkup({ ...base, ...changes }, { width, variant, label: `${changes.charge || base.charge} shield` });
+  const rawSymbol = (id, variant) => `<svg viewBox="0 0 100 100" aria-label="${id} ${variant}"><use href="${assets.symbolHref(id, variant)}" fill="currentColor"/></svg>`;
+  const chargeCard = option => `<article class="card" data-proof-charge="${option.key}"><h3>${option.label}</h3><div class="size-strip">${[96,48,40,30,27].map(size => `<span class="shield-slot"><span style="width:${size}px;height:${size === 27 ? 30 : Math.round(size*1.06)}px">${shield({ charge: option.key, chargeLayout:"center" }, size, size < 45 ? "micro" : "full")}</span><small>${size === 27 ? "27×30" : size}</small></span>`).join("")}</div><span class="badge ${option.provenance === "clan-exclusive" ? "exclusive" : ""}">${option.provenance}</span></article>`;
+  document.querySelector("#charge-grid").innerHTML = config.SELECTABLE_CHARGES.filter(x => x.key !== "none").map(chargeCard).join("");
+  document.querySelector("#reuse-grid").innerHTML = config.CHARGES.filter(x => x.provenance === "player-source").map(chargeCard).join("");
+  document.querySelector("#pending-grid").innerHTML = config.CHARGES.filter(x => x.artworkPending).map(option => `<article class="card pending" data-proof-pending="${option.key}"><h3>${option.label}</h3><div class="row"><div aria-hidden="true" style="font:48px Georgia">?</div><p>Approved source required.<br>Not selectable; no fallback artwork.</p></div><span class="badge pending">artwork pending</span></article>`).join("");
+  document.querySelector("#exclusive-grid").innerHTML = config.CHARGES.filter(x => x.provenance === "clan-exclusive").map(option => `<article class="card" data-proof-exclusive="${option.key}"><h3>${option.label}</h3><div class="source-compare"><div><div class="source-tile"><img src="../../../assets/clan-heraldry/art-set-v1/source/full/${encodeURIComponent(sourceNames[option.key])}" alt="Approved ${option.label} source"></div><div class="proof-label">Approved source</div></div><div><div class="source-tile">${rawSymbol(option.key,"full")}</div><div class="proof-label">Traced full</div></div><div><div class="source-tile">${rawSymbol(option.key,"micro")}</div><div class="proof-label">Traced micro</div></div><div><div class="source-tile">${shield({ charge:option.key },27,"micro")}</div><div class="proof-label">27×30</div></div></div><span class="badge exclusive">clan-exclusive</span></article>`).join("");
+  const sample = (label, changes) => `<article class="sample" data-proof-option="${label}">${shield(changes,82,"full")}<div><h3>${label}</h3><p class="proof-label">${JSON.stringify(changes)}</p></div></article>`;
+  document.querySelector("#shapes").innerHTML = config.SHAPES.map(option => sample(option.label,{shape:option.key})).join("");
+  document.querySelector("#divisions").innerHTML = config.DIVISIONS.map(option => sample(option.label,{division:option.key})).join("");
+  document.querySelector("#layouts").innerHTML = config.CHARGE_LAYOUTS.map(option => sample(option.label,{chargeLayout:option.key,charge:"fortress-keep",secondaryCharge:"lion"})).join("");
+  document.querySelector("#materials").innerHTML = [...config.TRIMS.map(option => sample(option.label,{trim:option.key})),...config.FINISHES.map(option => sample(option.label,{finish:option.key}))].join("");
+  document.querySelector("#version-proof").innerHTML = `<div><div>${renderer.renderMarkup(config.DEFAULT_V1,{size:"large",instance:"proof-v1",label:"Frozen version one"})}</div><div><h3>Version 1 · Frozen</h3><p class="proof-label">Exact legacy geometry, textures, charges, and per-instance definitions.</p></div></div><div><div style="width:96px">${shield({},96,"full")}</div><div><h3>Version 2 · Sprite foundation</h3><p class="proof-label">Shared definitions and independent clan charge sprites.</p></div></div>`;
+  const trial = document.createElement("div"); const start = performance.now();
+  for (let i=0;i<100;i++) trial.insertAdjacentHTML("beforeend",shield({charge:config.SELECTABLE_CHARGES[1+(i%(config.SELECTABLE_CHARGES.length-1))].key},40,"micro"));
+  const duration = performance.now()-start; const microNodes = trial.firstElementChild.querySelectorAll("*").length+1;
+  const complex = document.createElement("div"); complex.innerHTML = shield({chargeLayout:"quartered"},96,"full"); const complexNodes = complex.firstElementChild.querySelectorAll("*").length+1;
+  const center = document.createElement("div"); center.innerHTML = shield({},96,"full"); const centerNodes = center.firstElementChild.querySelectorAll("*").length+1;
+  document.querySelector("#metrics").innerHTML = [[microNodes,"micro nodes"],[centerNodes,"full center nodes"],[complexNodes,"complex nodes"],[trial.querySelectorAll("*").length,"100-row nodes"],[`${duration.toFixed(1)}ms`,"100-row build"]].map(([value,label])=>`<div class="metric"><strong>${value}</strong><span>${label}</span></div>`).join("");
+  document.documentElement.dataset.proofReady = "true"; document.querySelector("#proof-status").textContent = "PROOF READY · V1 UNCHANGED";
+})();
+</script>
+</body>
+</html>

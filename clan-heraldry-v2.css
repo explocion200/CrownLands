@@ -1,0 +1,14 @@
+.clan-heraldry-shared-defs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
+.clan-heraldry-v2{display:inline-grid;place-items:center;isolation:isolate;width:100%;height:100%;aspect-ratio:100/106;max-width:100%;overflow:hidden;vertical-align:middle}
+.clan-heraldry-v2>svg{display:block;width:100%;height:100%;overflow:hidden}
+.clan-heraldry-backplate{fill:#241811;stroke:#110d0a;stroke-width:7;stroke-linejoin:round}
+.clan-heraldry-field{fill:var(--clan-heraldry-primary)}
+.clan-heraldry-charge{fill:currentColor}
+.clan-heraldry-border{fill:none;stroke:var(--clan-heraldry-border);stroke-width:4.5;stroke-linejoin:round}
+.clan-heraldry-inner-trim{fill:none;stroke:var(--clan-heraldry-border);stroke-width:1.7;opacity:.9;transform:translate(5px,5.3px) scale(.9);transform-origin:0 0}
+.clan-heraldry-rivets{fill:var(--clan-heraldry-border);stroke:#17120d;stroke-width:.7}
+.clan-heraldry-wear{fill:none;stroke:#f2e2bf;stroke-width:1.15;stroke-linecap:round;opacity:.28}
+.clan-heraldry-micro .clan-heraldry-border{stroke-width:6}
+.clan-heraldry-micro .clan-heraldry-inner-trim{stroke-width:2.4}
+.clan-heraldry-micro .clan-heraldry-rivets{stroke-width:0}
+@media (prefers-contrast:more){.clan-heraldry-border{stroke-width:6}.clan-heraldry-charge{filter:drop-shadow(0 0 .5px #000)}}

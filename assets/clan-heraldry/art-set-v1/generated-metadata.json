@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "artSetVersion": 1,
+  "entries": [
+    {
+      "id": "crown",
+      "fullBounds": {
+        "left": 32,
+        "top": 111,
+        "right": 479,
+        "bottom": 399
+      },
+      "microBounds": {
+        "left": 24,
+        "top": 108,
+        "right": 487,
+        "bottom": 402
+      }
+    },
+    {
+      "id": "lion",
+      "fullBounds": {
+        "left": 78,
+        "top": 32,
+        "right": 432,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 71,
+        "top": 24,
+        "right": 439,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "eagle",
+      "fullBounds": {
+        "left": 41,
+        "top": 32,
+        "right": 470,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 33,
+        "top": 24,
+        "right": 477,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "dragon",
+      "fullBounds": {
+        "left": 71,
+        "top": 32,
+        "right": 439,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 67,
+        "top": 24,
+        "right": 443,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "wolf",
+      "fullBounds": {
+        "left": 82,
+        "top": 32,
+        "right": 428,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 77,
+        "top": 24,
+        "right": 434,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "stag",
+      "fullBounds": {
+        "left": 112,
+        "top": 32,
+        "right": 399,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 106,
+        "top": 24,
+        "right": 405,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "bear",
+      "fullBounds": {
+        "left": 109,
+        "top": 32,
+        "right": 401,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 102,
+        "top": 24,
+        "right": 409,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "crossed-swords",
+      "fullBounds": {
+        "left": 32,
+        "top": 33,
+        "right": 479,
+        "bottom": 478
+      },
+      "microBounds": {
+        "left": 24,
+        "top": 24,
+        "right": 487,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "gauntlet",
+      "fullBounds": {
+        "left": 140,
+        "top": 32,
+        "right": 371,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 135,
+        "top": 24,
+        "right": 376,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "fleur-de-lis",
+      "fullBounds": {
+        "left": 79,
+        "top": 32,
+        "right": 431,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 73,
+        "top": 24,
+        "right": 437,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "oak-tree",
+      "fullBounds": {
+        "left": 51,
+        "top": 32,
+        "right": 460,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 43,
+        "top": 24,
+        "right": 467,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "war-horn",
+      "fullBounds": {
+        "left": 32,
+        "top": 65,
+        "right": 479,
+        "bottom": 445
+      },
+      "microBounds": {
+        "left": 24,
+        "top": 58,
+        "right": 487,
+        "bottom": 452
+      }
+    },
+    {
+      "id": "battering-ram",
+      "fullBounds": {
+        "left": 32,
+        "top": 99,
+        "right": 479,
+        "bottom": 412
+      },
+      "microBounds": {
+        "left": 24,
+        "top": 92,
+        "right": 487,
+        "bottom": 419
+      }
+    },
+    {
+      "id": "fortress-keep",
+      "fullBounds": {
+        "left": 47,
+        "top": 32,
+        "right": 464,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 38,
+        "top": 24,
+        "right": 472,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "watchtower",
+      "fullBounds": {
+        "left": 167,
+        "top": 32,
+        "right": 344,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 163,
+        "top": 24,
+        "right": 348,
+        "bottom": 487
+      }
+    },
+    {
+      "id": "portcullis",
+      "fullBounds": {
+        "left": 37,
+        "top": 32,
+        "right": 474,
+        "bottom": 479
+      },
+      "microBounds": {
+        "left": 28,
+        "top": 24,
+        "right": 483,
+        "bottom": 487
+      }
+    }
+  ]
+}
