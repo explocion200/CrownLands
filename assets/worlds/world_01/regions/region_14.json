@@ -700,7 +700,20 @@
         "notes": "Connects to Stonebrook Farms"
       }
     ],
-    "south": [],
+    "south": [
+      {
+        "id": "south_road",
+        "side": "south",
+        "start": 0.466,
+        "end": 0.626,
+        "type": "road",
+        "connectsToRegionId": "region_21",
+        "arrowXNorm": 0.545,
+        "arrowYNorm": 0.843,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 21"
+      }
+    ],
     "east": [
       {
         "id": "east_road",

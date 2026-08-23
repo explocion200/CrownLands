@@ -697,8 +697,8 @@
       "id": "region_13_city_063",
       "name": "Blackstead",
       "regionId": "region_13",
-      "xNorm": 0.586,
-      "yNorm": 0.837,
+      "xNorm": 0.604,
+      "yNorm": 0.826,
       "level": 1,
       "owner": "neutral",
       "startType": "neutral",
@@ -865,7 +865,20 @@
         "notes": "Connects to Lowroad Vale"
       }
     ],
-    "south": [],
+    "south": [
+      {
+        "id": "south_road",
+        "side": "south",
+        "start": 0.446,
+        "end": 0.606,
+        "type": "road",
+        "connectsToRegionId": "region_19",
+        "arrowXNorm": 0.526,
+        "arrowYNorm": 0.88,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 19"
+      }
+    ],
     "east": [
       {
         "id": "east_road",

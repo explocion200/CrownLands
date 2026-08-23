@@ -17,7 +17,7 @@ async function main() {
     path.join(root, "assets", "worlds", "world_01", "map-manifest.json"),
     "utf8",
   ));
-  assert.equal(manifest.maps?.length, 15, "Expected 15 immutable gameplay maps.");
+  assert.equal(manifest.maps?.length, 20, "Expected 20 immutable gameplay maps.");
 
   const browser = await chromium.launch({ executablePath: chromePath, headless: true });
   try {

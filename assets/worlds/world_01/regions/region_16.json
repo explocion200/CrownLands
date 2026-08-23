@@ -1,0 +1,358 @@
+{
+  "id": "region_16",
+  "name": "Region 16",
+  "type": "midgame",
+  "gridX": -2,
+  "gridY": 4,
+  "width": 1448,
+  "height": 1086,
+  "imagePath": "assets/worlds/world_01/maps/versioned/region_16-1-1787455007403-57a6635d1c8d.webp",
+  "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_16-thumb-8e24a812e206.webp",
+  "cityCapacity": 50,
+  "regionPath": "assets/worlds/world_01/regions/region_16.json",
+  "cities": [
+    {
+      "id": "region_16_city_001",
+      "name": "Lowcross Abbey",
+      "regionId": "region_16",
+      "xNorm": 0.061,
+      "yNorm": 0.384,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_002",
+      "name": "Fenwatch",
+      "regionId": "region_16",
+      "xNorm": 0.136,
+      "yNorm": 0.376,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_003",
+      "name": "Brindleham",
+      "regionId": "region_16",
+      "xNorm": 0.341,
+      "yNorm": 0.441,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_004",
+      "name": "Wolfvale",
+      "regionId": "region_16",
+      "xNorm": 0.294,
+      "yNorm": 0.553,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_005",
+      "name": "Oakstead",
+      "regionId": "region_16",
+      "xNorm": 0.216,
+      "yNorm": 0.712,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_006",
+      "name": "Flintreach Mead",
+      "regionId": "region_16",
+      "xNorm": 0.414,
+      "yNorm": 0.705,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_007",
+      "name": "Brookfall",
+      "regionId": "region_16",
+      "xNorm": 0.547,
+      "yNorm": 0.759,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_008",
+      "name": "Wyvernport",
+      "regionId": "region_16",
+      "xNorm": 0.672,
+      "yNorm": 0.644,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_009",
+      "name": "Ravenfield",
+      "regionId": "region_16",
+      "xNorm": 0.488,
+      "yNorm": 0.576,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_010",
+      "name": "Greenbrook",
+      "regionId": "region_16",
+      "xNorm": 0.41,
+      "yNorm": 0.497,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_011",
+      "name": "Cedarhurst Abbey",
+      "regionId": "region_16",
+      "xNorm": 0.607,
+      "yNorm": 0.37,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_012",
+      "name": "Aldermarket",
+      "regionId": "region_16",
+      "xNorm": 0.75,
+      "yNorm": 0.348,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_013",
+      "name": "Redford",
+      "regionId": "region_16",
+      "xNorm": 0.918,
+      "yNorm": 0.416,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_014",
+      "name": "Greycross",
+      "regionId": "region_16",
+      "xNorm": 0.796,
+      "yNorm": 0.197,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_015",
+      "name": "Crowwatch",
+      "regionId": "region_16",
+      "xNorm": 0.862,
+      "yNorm": 0.122,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_016",
+      "name": "Ashham Mead",
+      "regionId": "region_16",
+      "xNorm": 0.266,
+      "yNorm": 0.295,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_017",
+      "name": "Silvervale",
+      "regionId": "region_16",
+      "xNorm": 0.2,
+      "yNorm": 0.178,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_018",
+      "name": "Hartstead",
+      "regionId": "region_16",
+      "xNorm": 0.472,
+      "yNorm": 0.3,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_019",
+      "name": "Dunreach",
+      "regionId": "region_16",
+      "xNorm": 0.379,
+      "yNorm": 0.28,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_020",
+      "name": "Barrowfall",
+      "regionId": "region_16",
+      "xNorm": 0.798,
+      "yNorm": 0.724,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_021",
+      "name": "Stoneport Abbey",
+      "regionId": "region_16",
+      "xNorm": 0.57,
+      "yNorm": 0.517,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_022",
+      "name": "Highfield",
+      "regionId": "region_16",
+      "xNorm": 0.867,
+      "yNorm": 0.661,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_023",
+      "name": "Elderbrook",
+      "regionId": "region_16",
+      "xNorm": 0.677,
+      "yNorm": 0.348,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_024",
+      "name": "Bellhurst",
+      "regionId": "region_16",
+      "xNorm": 0.838,
+      "yNorm": 0.33,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_025",
+      "name": "Thornbridge",
+      "regionId": "region_16",
+      "xNorm": 0.205,
+      "yNorm": 0.406,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_026",
+      "name": "Ironford Mead",
+      "regionId": "region_16",
+      "xNorm": 0.358,
+      "yNorm": 0.615,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_027",
+      "name": "Embercross",
+      "regionId": "region_16",
+      "xNorm": 0.456,
+      "yNorm": 0.877,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_16_city_028",
+      "name": "Blackwatch",
+      "regionId": "region_16",
+      "xNorm": 0.647,
+      "yNorm": 0.8,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    }
+  ],
+  "strongholds": [],
+  "camps": [],
+  "edgeConnections": {
+    "north": [
+      {
+        "id": "north_road",
+        "side": "north",
+        "start": 0.451,
+        "end": 0.611,
+        "type": "road",
+        "connectsToRegionId": "region_11",
+        "arrowXNorm": 0.528,
+        "arrowYNorm": 0.099,
+        "intentionalOuter": false,
+        "notes": "Connects to Bandit Wastes"
+      }
+    ],
+    "south": [],
+    "east": [
+      {
+        "id": "east_road",
+        "side": "east",
+        "start": 0.433,
+        "end": 0.593,
+        "type": "road",
+        "connectsToRegionId": "region_17",
+        "arrowXNorm": 0.932,
+        "arrowYNorm": 0.517,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 17"
+      }
+    ],
+    "west": []
+  },
+  "notes": ""
+}

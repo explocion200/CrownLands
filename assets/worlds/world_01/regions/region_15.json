@@ -832,7 +832,20 @@
         "notes": "Connects to Goldmere Plains"
       }
     ],
-    "south": [],
+    "south": [
+      {
+        "id": "south_road",
+        "side": "south",
+        "start": 0.426,
+        "end": 0.586,
+        "type": "road",
+        "connectsToRegionId": "region_22",
+        "arrowXNorm": 0.507,
+        "arrowYNorm": 0.931,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 22"
+      }
+    ],
     "east": [],
     "west": [
       {

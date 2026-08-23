@@ -1,0 +1,371 @@
+{
+  "id": "region_19",
+  "name": "Region 19",
+  "type": "midgame",
+  "gridX": 0,
+  "gridY": 4,
+  "width": 1448,
+  "height": 1086,
+  "imagePath": "assets/worlds/world_01/maps/versioned/region_19-3-1787455288271-9dfd20912983.webp",
+  "thumbnailPath": "assets/worlds/world_01/thumbnails/versioned/region_19-thumb-dd38037b0228.webp",
+  "cityCapacity": 50,
+  "regionPath": "assets/worlds/world_01/regions/region_19.json",
+  "cities": [
+    {
+      "id": "region_19_city_001",
+      "name": "Brindlefall March",
+      "regionId": "region_19",
+      "xNorm": 0.433,
+      "yNorm": 0.88,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_002",
+      "name": "Wolfport",
+      "regionId": "region_19",
+      "xNorm": 0.493,
+      "yNorm": 0.823,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_003",
+      "name": "Oakfield",
+      "regionId": "region_19",
+      "xNorm": 0.436,
+      "yNorm": 0.715,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_004",
+      "name": "Flintbrook",
+      "regionId": "region_19",
+      "xNorm": 0.5,
+      "yNorm": 0.612,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_005",
+      "name": "Brookhurst",
+      "regionId": "region_19",
+      "xNorm": 0.556,
+      "yNorm": 0.521,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_006",
+      "name": "Wyvernbridge Rise",
+      "regionId": "region_19",
+      "xNorm": 0.385,
+      "yNorm": 0.568,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_007",
+      "name": "Ravenford",
+      "regionId": "region_19",
+      "xNorm": 0.323,
+      "yNorm": 0.616,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_008",
+      "name": "Greencross",
+      "regionId": "region_19",
+      "xNorm": 0.254,
+      "yNorm": 0.675,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_009",
+      "name": "Cedarwatch",
+      "regionId": "region_19",
+      "xNorm": 0.725,
+      "yNorm": 0.764,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_010",
+      "name": "Alderham",
+      "regionId": "region_19",
+      "xNorm": 0.748,
+      "yNorm": 0.86,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_011",
+      "name": "Redvale March",
+      "regionId": "region_19",
+      "xNorm": 0.85,
+      "yNorm": 0.854,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_012",
+      "name": "Greystead",
+      "regionId": "region_19",
+      "xNorm": 0.828,
+      "yNorm": 0.686,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_013",
+      "name": "Crowreach",
+      "regionId": "region_19",
+      "xNorm": 0.689,
+      "yNorm": 0.572,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_014",
+      "name": "Ashfall",
+      "regionId": "region_19",
+      "xNorm": 0.649,
+      "yNorm": 0.411,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_015",
+      "name": "Silverport",
+      "regionId": "region_19",
+      "xNorm": 0.86,
+      "yNorm": 0.433,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_016",
+      "name": "Hartfield Rise",
+      "regionId": "region_19",
+      "xNorm": 0.794,
+      "yNorm": 0.446,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_017",
+      "name": "Dunbrook",
+      "regionId": "region_19",
+      "xNorm": 0.807,
+      "yNorm": 0.285,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_018",
+      "name": "Barrowhurst",
+      "regionId": "region_19",
+      "xNorm": 0.871,
+      "yNorm": 0.211,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_019",
+      "name": "Stonebridge",
+      "regionId": "region_19",
+      "xNorm": 0.513,
+      "yNorm": 0.281,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_020",
+      "name": "Highford",
+      "regionId": "region_19",
+      "xNorm": 0.45,
+      "yNorm": 0.296,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_021",
+      "name": "Eldercross March",
+      "regionId": "region_19",
+      "xNorm": 0.353,
+      "yNorm": 0.416,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_022",
+      "name": "Bellwatch",
+      "regionId": "region_19",
+      "xNorm": 0.257,
+      "yNorm": 0.184,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_023",
+      "name": "Thornwall",
+      "regionId": "region_19",
+      "xNorm": 0.586,
+      "yNorm": 0.276,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_024",
+      "name": "Ironvale",
+      "regionId": "region_19",
+      "xNorm": 0.285,
+      "yNorm": 0.418,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_025",
+      "name": "Emberstead",
+      "regionId": "region_19",
+      "xNorm": 0.196,
+      "yNorm": 0.633,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_026",
+      "name": "Blackreach Rise",
+      "regionId": "region_19",
+      "xNorm": 0.45,
+      "yNorm": 0.472,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_027",
+      "name": "Valegate",
+      "regionId": "region_19",
+      "xNorm": 0.435,
+      "yNorm": 0.126,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "region_19_city_028",
+      "name": "Kingsport",
+      "regionId": "region_19",
+      "xNorm": 0.354,
+      "yNorm": 0.147,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    }
+  ],
+  "strongholds": [],
+  "camps": [],
+  "edgeConnections": {
+    "north": [
+      {
+        "id": "north_road",
+        "side": "north",
+        "start": 0.441,
+        "end": 0.601,
+        "type": "road",
+        "connectsToRegionId": "region_13",
+        "arrowXNorm": 0.523,
+        "arrowYNorm": 0.087,
+        "intentionalOuter": false,
+        "notes": "Connects to Redbanner Fields"
+      }
+    ],
+    "south": [],
+    "east": [
+      {
+        "id": "east_road",
+        "side": "east",
+        "start": 0.222,
+        "end": 0.382,
+        "type": "road",
+        "connectsToRegionId": "region_21",
+        "arrowXNorm": 0.936,
+        "arrowYNorm": 0.294,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 21"
+      }
+    ],
+    "west": [
+      {
+        "id": "west_road",
+        "side": "west",
+        "start": 0.34,
+        "end": 0.5,
+        "type": "road",
+        "connectsToRegionId": "region_17",
+        "arrowXNorm": 0.088,
+        "arrowYNorm": 0.428,
+        "intentionalOuter": false,
+        "notes": "Connects to Region 17"
+      }
+    ]
+  },
+  "notes": ""
+}
