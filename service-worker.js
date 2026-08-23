@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260823-shop-carousel-stability-r4";
+const CACHE_VERSION = "20260823-item-bag-shop-theme-r2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -11,15 +11,15 @@ function resolveAppUrl(path = "") {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260823-shop-carousel-stability-r4",
+  "/styles.css?v=20260823-item-bag-shop-theme-r2",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
   "/ui-contrast-correction.css?v=20260819-player-flags-v2-r1",
   "/profile-theme.css?v=20260819-player-flags-v2-r1",
-  "/crownlands-palette.css?v=20260823-shop-carousel-stability-r4",
+  "/crownlands-palette.css?v=20260823-item-bag-shop-theme-r2",
   "/action-buttons.css?v=20260814-readability-r38",
-  "/mobile-viewport.css?v=20260814-readability-r38",
+  "/mobile-viewport.css?v=20260823-item-bag-shop-theme-r2",
   "/player-flag-editor.css?v=20260819-player-flags-v2-r1",
   "/chat.css?v=20260818-global-clan-chat-r1",
   "/release-config.js",
@@ -30,12 +30,11 @@ const STATIC_CACHE_URLS = [
   "/functions/playerFlagConfig.js?v=20260819-player-flags-v2-r1",
   "/functions/flagRenderer.js?v=20260819-player-flags-v2-r1",
   "/firebaseClient.js?v=20260819-player-flags-v2-r1",
-  "/chat-ui.js?v=20260818-global-clan-chat-r1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
-  "/instant-economy-actions.js?v=20260823-shop-carousel-stability-r4",
+  "/instant-economy-actions.js?v=20260823-item-bag-shop-theme-r2",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260823-shop-carousel-stability-r4",
+  "/game.js?v=20260823-item-bag-shop-theme-r2",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

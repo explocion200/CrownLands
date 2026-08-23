@@ -137,8 +137,8 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /selectedEntryActiveRemaining > 0[\s\S]*?selectedEntryIsStackable \? `Add \$\{formatDuration\([\s\S]*?\)\}` : "Active"[\s\S]*?: "Use"/,
-  "The Bag must show Use before activation and Add 30m while a stackable timer is active."
+  /const selectedEntryActionLabel = selectedEntryIsGearBox \? "OPEN" : "USE";/,
+  "The Bag must keep its action labels short while stackable timers remain usable."
 );
 assert.match(
   clientSource,
@@ -147,13 +147,13 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /if \(inventory\[item\.id\] <= 0 && selectedInventoryItemId === item\.id\) \{\s*selectedInventoryItemId = "";/,
-  "The selected stackable item must only be cleared after its final copy is consumed."
+  /if \(selectedInventoryItemId === item\.id\) \{\s*selectedInventoryItemId = "";\s*selectedInventoryEntryKey = "";/,
+  "Each consumed presentation copy must clear its selection so another copy can be chosen."
 );
 assert.match(
   clientSource,
-  /const selectedEntry = slots\.find\([\s\S]*?selectedInventoryItemId\) \|\| null;\s*if \(!selectedEntry\) selectedInventoryItemId = "";/,
-  "The Bag must clear a selection once the selected item no longer has an inventory slot."
+  /let selectedEntry = model\.entries\.find\([\s\S]*?selectedInventoryEntryKey\)[\s\S]*?if \(selectedEntry\)[\s\S]*?selectedInventoryEntryKey = selectedEntry\.entryKey;[\s\S]*?else \{\s*selectedInventoryItemId = "";\s*selectedInventoryEntryKey = "";/,
+  "The paged Bag must clear an item and presentation-key selection once that copy is no longer visible."
 );
 assert.match(
   clientSource,

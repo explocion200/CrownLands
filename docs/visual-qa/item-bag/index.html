@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Crownlands Item Bag QA</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #4e3927, #17100b 72%); }
+    .modal.inventory-modal { position: relative; inset: auto; display: block; margin: auto; opacity: 1; }
+    .modal.inventory-modal > .modal-card { opacity: 1; transform: none; }
+    .modal.inventory-modal::backdrop { display: none; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" aria-hidden="true">
+    <symbol id="cl-icon-back" viewBox="0 0 32 32"><path d="M19 7l-9 9 9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="cl-icon-forward" viewBox="0 0 32 32"><path d="M13 7l9 9-9 9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+  <dialog id="modal" class="modal inventory-modal" open>
+    <article class="modal-card">
+      <button class="modal-close" type="button" aria-label="Close">×</button>
+      <h2 class="modal-title">ITEM BAG</h2>
+      <div id="modalBody"></div>
+    </article>
+  </dialog>
+  <script>
+    const items = [
+      { id: "common_gear_box", label: "Common Gear Box", category: "utility", count: 2, description: "Open to receive exactly 3 random Common gear pieces for your Inner Castle officers.", effect: "Contains: 3 Common gear pieces", icon: "../../../assets/optimized/item-common-gear-box-192x192-d31500be5747.webp" },
+      { id: "shield_12h", label: "Royal Peace Shield", category: "defense", count: 2, description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.", effect: "Duration: 12h", icon: "../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" },
+      { id: "war_drums_30m", label: "War Drums", category: "boosts", count: 3, description: "Adds 5% of base troop production from owned cities for 30 minutes. Using more adds their duration to the active timer.", effect: "Adds: 30m per use", icon: "../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" },
+      { id: "royal_tax_decree_30m", label: "Royal Tax Decree", category: "boosts", count: 2, description: "Adds 50% of base gold production from owned cities for 30 minutes. Using more adds their duration to the active timer.", effect: "Adds: 30m per use", icon: "../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" },
+      { id: "veil_of_silence_30m", label: "Veil of Silence", category: "defense", count: 2, description: "Blocks enemy scouting for 5 minutes.", effect: "Duration: 5m", icon: "../../../assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp" },
+      { id: "swift_march_order", label: "Swift March Order", category: "war", count: 2, description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.", effect: "Effect: one eligible march", icon: "../../../assets/optimized/item-swift-march-160x160-e857cc4d8977.webp" },
+      { id: "recall_horn", label: "Recall Horn", category: "war", count: 2, description: "Cancels one active march before it reaches the target.", effect: "Effect: one active march", icon: "../../../assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp" },
+    ];
+    const categories = [["all", "All"], ["boosts", "Boosts"], ["war", "War"], ["defense", "Defense"], ["utility", "Utility"]];
+    const query = new URLSearchParams(location.search);
+    let category = query.get("category") || "all";
+    let page = Math.max(0, Number(query.get("page")) || 0);
+    let selectedKey = query.get("selected") || "";
+    const icon = direction => `<svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-${direction}"></use></svg>`;
+    const entries = () => items.filter(item => category === "all" || item.category === category).flatMap(item => Array.from({ length: item.count }, (_, index) => ({ ...item, ownedCount: item.count, copyOrdinal: index + 1, entryKey: `${item.id}:copy-${index + 1}` })));
+    function render() {
+      const owned = entries();
+      const pages = Math.max(1, Math.ceil(owned.length / 8));
+      page = Math.min(page, pages - 1);
+      const visible = owned.slice(page * 8, page * 8 + 8);
+      const selected = visible.find(item => item.entryKey === selectedKey) || null;
+      if (!selected) selectedKey = "";
+      document.getElementById("modalBody").innerHTML = `<div class="inventory-panel">
+        <div class="inventory-category-tabs" role="tablist" aria-label="Item categories">${categories.map(([id, label]) => `<button id="inventoryTab-${id}" class="inventory-category-tab ${category === id ? "selected" : ""}" data-category="${id}" type="button" role="tab" aria-selected="${category === id}" aria-controls="inventoryCarouselViewport" tabindex="${category === id ? 0 : -1}">${label}</button>`).join("")}</div>
+        <div class="inventory-carousel">
+          <button class="inventory-page-arrow previous" data-page="${page - 1}" type="button" aria-label="Previous item page" ${page === 0 ? "disabled" : ""}>${icon("back")}</button>
+          <div id="inventoryCarouselViewport" class="inventory-carousel-viewport" role="tabpanel" aria-labelledby="inventoryTab-${category}" tabindex="0">
+            <div class="inventory-slots inventory-page" role="group" aria-label="Owned items">${visible.map(item => `<button class="inventory-slot filled ${item.entryKey === selectedKey ? "selected" : ""}" data-select="${item.entryKey}" type="button" aria-pressed="${item.entryKey === selectedKey}" aria-label="${item.label}, copy ${item.copyOrdinal} of ${item.ownedCount}"><span class="inventory-slot-icon has-image" aria-hidden="true"><img class="inventory-slot-image" src="${item.icon}" alt="" /></span><strong class="inventory-slot-name">${item.label}</strong></button>`).join("")}</div>
+          </div>
+          <button class="inventory-page-arrow next" data-page="${page + 1}" type="button" aria-label="Next item page" ${page >= pages - 1 ? "disabled" : ""}>${icon("forward")}</button>
+        </div>
+        <div class="inventory-page-status" aria-live="polite"><span>${owned.length} items</span><strong>Page ${page + 1} of ${pages}</strong></div>
+        <section class="inventory-selection">${selected ? `<span class="inventory-selection-icon has-image" aria-hidden="true"><img class="inventory-selection-image" src="${selected.icon}" alt="" /></span><div class="inventory-selection-copy"><strong>${selected.label}</strong><small>${selected.description}</small><small class="inventory-selection-effect">${selected.effect}</small><small data-inventory-active></small><span data-inventory-owned>Owned: ${selected.ownedCount}</span></div><button class="inventory-use-btn" type="button">${selected.id === "common_gear_box" ? "OPEN" : "USE"}</button>` : `<div class="inventory-selection-empty"><strong>Select an item</strong><small>Choose an item above to review its effect.</small></div>`}</section>
+      </div>`;
+      document.querySelectorAll("[data-category]").forEach(button => button.onclick = () => { category = button.dataset.category; page = 0; selectedKey = ""; render(); });
+      const categoryButtons = [...document.querySelectorAll("[data-category]")];
+      categoryButtons.forEach((button, index) => button.onkeydown = event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const offset = event.key === "ArrowRight" ? 1 : -1;
+        const target = categoryButtons[(index + offset + categoryButtons.length) % categoryButtons.length];
+        const targetCategory = target?.dataset.category || "all";
+        target?.click();
+        document.querySelector(`[data-category="${targetCategory}"]`)?.focus();
+      });
+      const setPage = (nextPage, restoreFocus = false) => {
+        page = Math.max(0, Number(nextPage));
+        selectedKey = "";
+        render();
+        if (restoreFocus) document.querySelector(".inventory-carousel-viewport")?.focus();
+      };
+      document.querySelectorAll("[data-page]").forEach(button => button.onclick = () => setPage(button.dataset.page, true));
+      document.querySelector(".inventory-carousel-viewport").onkeydown = event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        setPage(page + (event.key === "ArrowRight" ? 1 : -1), true);
+      };
+      document.querySelectorAll("[data-select]").forEach(button => button.onclick = () => { selectedKey = button.dataset.select; render(); });
+      document.documentElement.dataset.qaReady = "true";
+    }
+    render();
+  </script>
+</body>
+</html>

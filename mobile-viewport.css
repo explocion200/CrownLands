@@ -185,3 +185,140 @@
     --cl-mobile-ui-height: calc(100vh - var(--cl-mobile-ui-top) - var(--cl-mobile-ui-bottom));
   }
 }
+
+@media (max-height: 440px) and (orientation: landscape) {
+  .modal.inventory-modal {
+    width: min(780px, var(--cl-mobile-ui-width));
+  }
+
+  .modal.inventory-modal > .modal-card {
+    height: var(--cl-mobile-ui-height);
+    padding: .35rem;
+  }
+
+  .modal.inventory-modal > .modal-card > h2 {
+    min-height: 28px;
+    margin: 0 0 .24rem !important;
+    padding: .32rem .55rem !important;
+    font-size: .9rem;
+    line-height: 1;
+  }
+
+  .modal.inventory-modal > .modal-card .modal-close {
+    top: .44rem;
+    right: .48rem;
+    width: 27px;
+    height: 27px;
+  }
+
+  .modal.inventory-modal > .modal-card #modalBody {
+    min-height: 0;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+  }
+
+  .modal.inventory-modal .inventory-panel {
+    height: 100%;
+    gap: .22rem;
+  }
+
+  .modal.inventory-modal .inventory-category-tabs {
+    gap: .18rem;
+  }
+
+  .modal.inventory-modal .inventory-category-tab {
+    min-height: 25px;
+    padding: .15rem .12rem;
+    font-size: .55rem;
+  }
+
+  .modal.inventory-modal .inventory-carousel {
+    grid-template-columns: 27px minmax(0, 1fr) 27px;
+    gap: .22rem;
+  }
+
+  .modal.inventory-modal .inventory-carousel-viewport,
+  .modal.inventory-modal .inventory-slots,
+  .modal.inventory-modal .inventory-empty-state {
+    min-height: 0;
+  }
+
+  .modal.inventory-modal .inventory-slots {
+    gap: .22rem;
+    padding: .22rem;
+  }
+
+  .modal.inventory-modal .inventory-page-arrow {
+    min-width: 27px;
+    min-height: 38px;
+  }
+
+  .modal.inventory-modal .inventory-page-arrow .cl-icon {
+    width: 17px;
+    height: 17px;
+  }
+
+  .modal.inventory-modal .inventory-slot {
+    grid-template-rows: minmax(0, 1fr) 1.9em;
+    gap: .08rem;
+    padding: .16rem .12rem .12rem;
+  }
+
+  .modal.inventory-modal .inventory-slot-icon {
+    width: clamp(32px, 11vh, 46px);
+    height: clamp(32px, 11vh, 46px);
+  }
+
+  .modal.inventory-modal .inventory-slot-name {
+    min-height: 1.9em;
+    font-size: clamp(.5rem, 1.3vw, .62rem);
+    line-height: .96;
+  }
+
+  .modal.inventory-modal .inventory-page-status {
+    min-height: 11px;
+    padding: 0 2rem;
+    font-size: .52rem;
+  }
+
+  .modal.inventory-modal .inventory-selection {
+    min-height: 56px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: .34rem;
+    padding: .3rem .38rem;
+  }
+
+  .modal.inventory-modal .inventory-selection-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .modal.inventory-modal .inventory-selection-copy {
+    column-gap: .35rem;
+    row-gap: .02rem;
+  }
+
+  .modal.inventory-modal .inventory-selection-copy strong {
+    font-size: .68rem;
+  }
+
+  .modal.inventory-modal .inventory-selection-copy small {
+    font-size: .51rem;
+    line-height: 1.05;
+  }
+
+  .modal.inventory-modal .inventory-selection-copy span {
+    font-size: .54rem;
+  }
+
+  .modal.inventory-modal .inventory-use-btn {
+    min-width: 56px;
+    min-height: 30px;
+    padding: .2rem .4rem;
+    font-size: .59rem;
+  }
+
+  .modal.inventory-modal .inventory-selection-empty {
+    min-height: 42px;
+  }
+}

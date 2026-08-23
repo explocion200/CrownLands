@@ -224,8 +224,6 @@ body {
   .shop-balance,
   .shop-rewarded-section,
   .shop-item,
-  .inventory-summary,
-  .inventory-slot,
   .inventory-selection,
   .city-list-summary,
   .city-list-row,
@@ -557,14 +555,13 @@ input[type="range"] {
   color: inherit !important;
 }
 
-/* General controls. */
 :is(
   .setup-card,
   .commander-panel,
   .profile-screen,
   .modal .modal-card,
   .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.cl-action-button):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):not(.inventory-slot,.inventory-page-arrow) {
   color: var(--cl-text) !important;
   border-color: var(--cl-brass) !important;
   background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;

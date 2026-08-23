@@ -80,6 +80,7 @@ const COMMON_GEAR_BOX_ITEM = Object.freeze({
   label: "Common Gear Box",
   description: "Open to receive exactly 3 random Common gear pieces for your Inner Castle officers.",
   icon: "assets/optimized/item-common-gear-box-192x192-d31500be5747.webp",
+  bagCategory: "utility",
 });
 const COMMON_GEAR_BOX_OPEN_ART = "assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp";
 
@@ -179,6 +180,7 @@ const SHOP_ITEMS = [
     description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
     icon: "assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+    bagCategory: "defense",
   },
   {
     id: "war_drums_30m",
@@ -187,6 +189,7 @@ const SHOP_ITEMS = [
     description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
     icon: "assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+    bagCategory: "boosts",
   },
   {
     id: "royal_tax_decree_30m",
@@ -194,6 +197,7 @@ const SHOP_ITEMS = [
     description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000),
     icon: "assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+    bagCategory: "boosts",
   },
   {
     id: "veil_of_silence_30m",
@@ -202,6 +206,7 @@ const SHOP_ITEMS = [
     description: `Blocks enemy scouting for ${economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5)} minutes.`,
     cost: economyNumber("shopItems.veil_of_silence_30m.cost", 125_000),
     icon: "assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+    bagCategory: "defense",
   },
   {
     id: "swift_march_order",
@@ -209,6 +214,7 @@ const SHOP_ITEMS = [
     description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.",
     cost: economyNumber("shopItems.swift_march_order.cost", 300_000),
     icon: "assets/optimized/item-swift-march-160x160-e857cc4d8977.webp",
+    bagCategory: "war",
   },
   {
     id: "recall_horn",
@@ -216,6 +222,7 @@ const SHOP_ITEMS = [
     description: "Cancels one active march before it reaches the target.",
     cost: economyNumber("shopItems.recall_horn.cost", 500_000),
     icon: "assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp",
+    bagCategory: "war",
   },
 ];
 const SHOP_SHORT_DESCRIPTIONS = Object.freeze({
@@ -2011,6 +2018,12 @@ let selectedShopItemId = "";
 let shopCarouselScrollLeft = 0;
 let shopCarouselRestoreToken = 0;
 let authoritativeShopPricing = null;
+let selectedInventoryEntryKey = "";
+let selectedInventoryCategory = "all";
+let selectedInventoryPage = 0;
+let inventoryPageDirection = 0;
+let inventorySuppressSelectionUntilMs = 0;
+let inventoryHorizontalInputUntilMs = 0;
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let deployedUpdateAvailableBuildId = "";
@@ -31910,110 +31923,72 @@ function showShopModal() {
   retryPendingRewardedAdClaim();
 }
 
-function getInventorySlotEntries() {
-  const entries = [
-    ...(Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)) > 0
-      ? [{ ...COMMON_GEAR_BOX_ITEM, count: Math.max(0, Math.floor(Number(state.gear.commonGearBoxes) || 0)) }]
-      : []),
-    ...SHOP_ITEMS
-    .map(item => ({
-      ...item,
-      count: getProjectedInventoryCount(item.id),
-    }))
-    .filter(item => item.count > 0),
-  ]
-    .slice(0, INVENTORY_SLOT_COUNT);
-
-  while (entries.length < INVENTORY_SLOT_COUNT) entries.push(null);
-  return entries;
-}
-
-function renderInventorySlot(entry, selectedItemId = "") {
-  if (!entry) {
-    return `
-      <article class="inventory-slot empty">
-        <span class="inventory-slot-empty">Empty</span>
-      </article>
-    `;
-  }
-  const selected = entry.id === selectedItemId;
-  return `
-    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.id)}" type="button" aria-pressed="${selected ? "true" : "false"}">
-      <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
-      <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
-      <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
-    </button>
-  `;
-}
-
-function getActiveItemEffectSummaryHtml() {
-  const effects = [
-    { label: "Peace Shield", expiresAtMs: getActivePeaceShieldExpiresAtMs() },
-    { label: "War Drums", expiresAtMs: getActiveWarDrumsExpiresAtMs() },
-    { label: "Royal Tax Decree", expiresAtMs: getActiveRoyalTaxDecreeExpiresAtMs() },
-    { label: "Veil of Silence", expiresAtMs: getActiveVeilOfSilenceExpiresAtMs() },
-  ].filter(effect => getPeaceShieldRemainingSeconds(effect.expiresAtMs) > 0);
-  if (!effects.length) return "<small>No active item effects</small>";
-  return effects.map(effect => (
-    `<small>${escapeHtml(effect.label)} active: ${formatDuration(getPeaceShieldRemainingSeconds(effect.expiresAtMs))}</small>`
-  )).join("");
-}
-
-/* Common Gear Box reveal flow lives in common-gear-ui.js. */
 
 function showInventoryModal() {
   if (!state) return;
-  const slots = getInventorySlotEntries();
-  const filledSlots = slots.filter(Boolean).length;
-  const selectedEntry = slots.find(entry => entry?.id === selectedInventoryItemId) || null;
-  if (!selectedEntry) selectedInventoryItemId = "";
-  const selectedEntryActiveRemaining = selectedEntry ? getInventoryItemActiveRemainingSeconds(selectedEntry) : 0;
-  const selectedEntryIsSwiftMarch = selectedEntry?.id === SWIFT_MARCH_ORDER_ITEM_ID;
-  const selectedEntryIsRecallHorn = selectedEntry?.id === RECALL_HORN_ITEM_ID;
+  const model = getInventoryPageModel();
+  selectedInventoryPage = model.page;
+  let selectedEntry = model.entries.find(entry => entry.entryKey === selectedInventoryEntryKey) || null;
+  if (!selectedEntry && !selectedInventoryEntryKey && selectedInventoryItemId) selectedEntry = model.entries.find(entry => entry.id === selectedInventoryItemId) || null;
+  if (selectedEntry) {
+    selectedInventoryItemId = selectedEntry.id;
+    selectedInventoryEntryKey = selectedEntry.entryKey;
+  } else {
+    selectedInventoryItemId = "";
+    selectedInventoryEntryKey = "";
+  }
+  const selectedEntryProjectedExpiresAtMs = selectedEntry ? getProjectedItemEffectExpiresAtMs(selectedEntry) : 0;
+  const selectedEntryActiveRemaining = Math.max(0, Math.ceil((selectedEntryProjectedExpiresAtMs - Date.now()) / 1000));
   const selectedEntryIsGearBox = selectedEntry?.id === COMMON_GEAR_BOX_ITEM.id;
   const selectedEntryIsStackable = isStackableTimedInventoryItem(selectedEntry);
-  const selectedEntryActionLabel = selectedEntryIsGearBox
-    ? "Open"
-    : selectedEntryIsSwiftMarch || selectedEntryIsRecallHorn
-    ? "View Marches"
-    : selectedEntryActiveRemaining > 0
-      ? selectedEntryIsStackable ? `Add ${formatDuration(selectedEntry.id === WAR_DRUMS_ITEM_ID ? WAR_DRUMS_DURATION_MS / 1000 : ROYAL_TAX_DECREE_DURATION_MS / 1000)}` : "Active"
-      : "Use";
-  const activeItemStatus = getActiveItemEffectSummaryHtml();
+  const selectedEntryActionLabel = selectedEntryIsGearBox ? "OPEN" : "USE";
+  const effectLabel = getInventoryEffectLabel(selectedEntry);
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
-  modalTitle.textContent = "Bag";
+  modalTitle.textContent = "ITEM BAG";
   modalBody.innerHTML = `
     <div class="inventory-panel">
-      <section class="inventory-summary">
-        <span>Item slots ${activeItemStatus}</span>
-        <strong>${formatNumber(filledSlots)}/${formatNumber(INVENTORY_SLOT_COUNT)}</strong>
-      </section>
-      <div class="inventory-slots">
-        ${slots.map(entry => renderInventorySlot(entry, selectedInventoryItemId)).join("")}
+      <div class="inventory-category-tabs" role="tablist" aria-label="Item categories">
+        ${INVENTORY_CATEGORIES.map(([id, label]) => `<button id="inventoryTab-${id}" class="inventory-category-tab ${model.category === id ? "selected" : ""}" data-inventory-category="${id}" type="button" role="tab" aria-selected="${model.category === id ? "true" : "false"}" aria-controls="inventoryCarouselViewport" tabindex="${model.category === id ? "0" : "-1"}">${label}</button>`).join("")}
       </div>
+      <div class="inventory-carousel">
+        <button class="inventory-page-arrow previous" data-inventory-page="${model.page - 1}" type="button" aria-label="Previous item page" ${model.page <= 0 ? "disabled" : ""}>${renderCrownlandsIcon("back")}</button>
+        <div id="inventoryCarouselViewport" class="inventory-carousel-viewport" role="tabpanel" aria-labelledby="inventoryTab-${model.category}" aria-label="Item page ${model.page + 1} of ${model.pageCount}" tabindex="0">
+          ${model.entries.length ? `<div class="inventory-slots inventory-page" data-page-direction="${inventoryPageDirection}" role="group" aria-label="Owned items">${model.entries.map(entry => renderInventorySlot(entry, selectedInventoryEntryKey)).join("")}</div>` : `<div class="inventory-empty-state"><strong>Your bag is empty</strong><small>${model.category === "all" ? "Collect or purchase an item to place it here." : "No owned items are in this category."}</small></div>`}
+        </div>
+        <button class="inventory-page-arrow next" data-inventory-page="${model.page + 1}" type="button" aria-label="Next item page" ${model.page >= model.pageCount - 1 ? "disabled" : ""}>${renderCrownlandsIcon("forward")}</button>
+      </div>
+      <div class="inventory-page-status" aria-live="polite"><span>${formatNumber(model.totalEntries)} ${model.totalEntries === 1 ? "item" : "items"}</span><strong>Page ${model.page + 1} of ${model.pageCount}</strong></div>
       <section class="inventory-selection">
         ${selectedEntry ? `
           <span class="inventory-selection-icon ${selectedEntry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(selectedEntry, "inventory-selection-image")}</span>
           <div class="inventory-selection-copy">
             <strong>${escapeHtml(selectedEntry.label)}</strong>
             <small>${escapeHtml(selectedEntry.description)}</small>
+            ${effectLabel ? `<small class="inventory-selection-effect">${escapeHtml(effectLabel)}</small>` : ""}
             ${selectedEntryActiveRemaining > 0 ? `<small data-inventory-active>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : `<small data-inventory-active></small>`}
-            <span data-inventory-owned>Owned: ${formatNumber(selectedEntry.count)}</span>
+            <span data-inventory-owned>Owned: ${formatNumber(selectedEntry.ownedCount)}</span>
           </div>
           <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 && !selectedEntryIsStackable ? "disabled" : ""}>${selectedEntryActionLabel}</button>
         ` : `
           <div class="inventory-selection-empty">
             <strong>Select an item</strong>
-            <small>Tap an item slot, then press Use.</small>
+            <small>Choose an item above to review its effect.</small>
           </div>
         `}
       </section>
     </div>
   `;
+  bindInventoryCategoryControls();
+  modalBody.querySelectorAll("[data-inventory-page]").forEach(button => {
+    button.addEventListener("click", () => setInventoryPage(Number(button.dataset.inventoryPage), true));
+  });
   modalBody.querySelectorAll("[data-inventory-select]").forEach(button => {
     button.addEventListener("click", () => {
-      selectedInventoryItemId = button.dataset.inventorySelect || "";
+      if (Date.now() < inventorySuppressSelectionUntilMs) return;
+      selectedInventoryEntryKey = button.dataset.inventorySelect || "";
+      selectedInventoryItemId = button.dataset.inventoryItem || "";
+      inventoryPageDirection = 0;
       showInventoryModal();
     });
   });
@@ -32023,6 +31998,8 @@ function showInventoryModal() {
       else useInventoryItem(button.dataset.inventoryUse);
     });
   });
+  bindInventoryCarousel(modalBody.querySelector(".inventory-carousel-viewport"));
+  inventoryPageDirection = 0;
   if (!modal.open) modal.showModal();
 }
 
@@ -32035,8 +32012,9 @@ function consumeInventoryItem(item) {
     return null;
   }
   inventory[item.id] = owned - 1;
-  if (inventory[item.id] <= 0 && selectedInventoryItemId === item.id) {
+  if (selectedInventoryItemId === item.id) {
     selectedInventoryItemId = "";
+    selectedInventoryEntryKey = "";
   }
   return inventory;
 }
@@ -32216,6 +32194,10 @@ function settleConfirmedInventoryItem(item, result, quantity = 1) {
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (selectedInventoryItemId === item.id) {
+    selectedInventoryItemId = "";
+    selectedInventoryEntryKey = "";
+  }
   if (modal?.open && modal.classList.contains("inventory-modal")) {
     if (isStackableTimedInventoryItem(item)) showInventoryModal();
     else modal.close();

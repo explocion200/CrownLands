@@ -44,6 +44,7 @@ const sandbox = {
   selectedSourceId: "",
   verifiedRealmInfo: { capabilities: { instantEconomyActionsVersion: 1 } },
   selectedInventoryItemId: "",
+  selectedInventoryEntryKey: "stale-entry",
   skillPresetMarkupSignature: "",
   window: {
     setTimeout(callback) { scheduled.push(callback); return scheduled.length; },
@@ -92,5 +93,71 @@ resolvePurchase({
 setImmediate(() => {
   assert.equal(vm.runInContext("getProjectedGold()", sandbox), 700, "Confirmed gold did not settle cleanly.");
   assert.equal(vm.runInContext('getProjectedInventoryCount("test_item")', sandbox), 3, "Confirmed inventory did not settle cleanly.");
-  console.log("Instant economy action validation passed.");
+  assert.equal(sandbox.selectedInventoryEntryKey, "", "Confirmed purchases must clear a stale presentation key before selecting the purchased item.");
+
+  const failedItemTimers = [];
+  let failedItemBagRebuilds = 0;
+  const failedItemSandbox = {
+    console: { ...console, warn() {} },
+    Promise,
+    Map,
+    Set,
+    Date,
+    Math,
+    state: { gold: 0, shopItems: { shield: 1 } },
+    selectedSourceId: "",
+    selectedInventoryItemId: "shield",
+    selectedInventoryEntryKey: "shield:copy-1",
+    verifiedRealmInfo: { capabilities: { instantEconomyActionsVersion: 1 } },
+    skillPresetMarkupSignature: "",
+    window: {
+      setTimeout(callback) { failedItemTimers.push(callback); return failedItemTimers.length; },
+      clearTimeout() {},
+    },
+    modal: { open: true, classList: { contains: name => name === "inventory-modal" } },
+    modalBody: { querySelector: () => null, querySelectorAll: () => [] },
+    cityLayer: { querySelector: () => null },
+    SHOP_ITEMS: [{ id: "shield", label: "Shield", cost: 0 }],
+    SWIFT_MARCH_ORDER_ITEM_ID: "swift",
+    RECALL_HORN_ITEM_ID: "recall",
+    WAR_DRUMS_ITEM_ID: "drums",
+    ROYAL_TAX_DECREE_ITEM_ID: "tax",
+    ROYAL_PEACE_SHIELD_ITEM_ID: "shield",
+    VEIL_OF_SILENCE_ITEM_ID: "veil",
+    WAR_DRUMS_DURATION_MS: 1_800_000,
+    ROYAL_TAX_DECREE_DURATION_MS: 1_800_000,
+    ROYAL_PEACE_SHIELD_DURATION_MS: 86_400_000,
+    VEIL_OF_SILENCE_DURATION_MS: 21_600_000,
+    getShopItemById: id => id === "shield" ? { id, label: "Shield", cost: 0 } : null,
+    ensureShopItems() { return failedItemSandbox.state.shopItems; },
+    getItemPurchaseCount: () => 0,
+    getItemDailyPurchaseLimit: () => 1,
+    getItemPurchaseCooldownText: () => "",
+    getActiveWarDrumsExpiresAtMs: () => 0,
+    getActiveRoyalTaxDecreeExpiresAtMs: () => 0,
+    getActivePeaceShieldExpiresAtMs: () => 0,
+    getActiveVeilOfSilenceExpiresAtMs: () => 0,
+    isStackableTimedInventoryItem: () => false,
+    usesServerEconomyAuthority: () => true,
+    getOnlineApi: () => ({ activateInventoryItem: async () => { throw new Error("rejected"); } }),
+    refreshServerEconomy: async () => {},
+    refreshAllOwnedCities: async () => {},
+    renderHud() {},
+    cityById: () => null,
+    formatNumber: value => String(value),
+    formatDuration: value => String(value),
+    rejectGameAction() {},
+    showInventoryModal() { failedItemBagRebuilds += 1; },
+  };
+  vm.createContext(failedItemSandbox);
+  vm.runInContext(controller, failedItemSandbox, { filename: "instant-economy-actions.js" });
+  assert.equal(vm.runInContext('useInventoryItem("shield")', failedItemSandbox), true);
+  assert.equal(failedItemSandbox.selectedInventoryEntryKey, "", "An accepted item action must clear its individual presentation key immediately.");
+  assert.equal(failedItemBagRebuilds, 1, "An accepted item action must rebuild the projected Bag once.");
+  failedItemTimers.shift()();
+  setImmediate(() => {
+    assert.equal(failedItemBagRebuilds, 2, "A rejected item action must rebuild the Bag and restore its authoritative card count.");
+    assert.equal(vm.runInContext('getProjectedInventoryCount("shield")', failedItemSandbox), 1, "Rejected item inventory did not roll back to its authoritative count.");
+    console.log("Instant economy action validation passed.");
+  });
 });
