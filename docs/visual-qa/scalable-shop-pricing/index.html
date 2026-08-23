@@ -32,18 +32,14 @@
             </header>
             <div class="shop-rewarded-items">
               <article class="shop-item rewarded-ad-shop-item">
-                <div class="rewarded-ad-shop-action">
-                  <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" alt="" /></div>
-                  <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Ad</button>
-                </div>
-                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Gold Reward</strong><span>Estimated reward: 250M</span><small>Available today (UTC)</small></div>
+                <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp" alt="" /></div>
+                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Gold .5h Boost</strong><span>Receive 30 minutes of Gold production.</span><small>Estimated reward: 250M gold</small><small>0/20 watched today (UTC)</small><small class="rewarded-ad-availability">Available now</small></div>
+                <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Advertisement</button>
               </article>
               <article class="shop-item rewarded-ad-shop-item">
-                <div class="rewarded-ad-shop-action">
-                  <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /></div>
-                  <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Ad</button>
-                </div>
-                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Troop Reward</strong><span>Estimated reward: 18M</span><small>Available today (UTC)</small></div>
+                <div class="shop-item-image-placeholder has-image"><img class="shop-item-image" src="../../../assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp" alt="" /></div>
+                <div class="shop-item-copy rewarded-ad-shop-copy"><strong>Troop .5h Boost</strong><span>Receive 30 minutes of Troop production.</span><small>Estimated reward: 18M troops</small><small>0/20 watched today (UTC)</small><small class="rewarded-ad-availability">Available now</small></div>
+                <button class="shop-buy-btn rewarded-ad-watch-btn" type="button">Watch Advertisement</button>
               </article>
             </div>
           </section>
@@ -85,7 +81,7 @@
     const list = document.querySelector('.shop-items');
     const availableGold = 2800000000;
     const buyButton = document.querySelector('.shop-purchase-buy');
-    function selectCard(card) {
+    function selectCard(card, { reveal = false } = {}) {
       cards.forEach(candidate => {
         const selected = candidate === card;
         candidate.classList.toggle('selected', selected);
@@ -99,7 +95,7 @@
       const affordable = Number(card.dataset.price.replaceAll(',', '')) <= availableGold;
       buyButton.disabled = !affordable;
       buyButton.textContent = affordable ? 'Buy' : 'Not Enough Gold';
-      card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      if (reveal) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
     cards.forEach((card, index) => {
       card.addEventListener('click', () => selectCard(card));
@@ -108,13 +104,15 @@
         event.preventDefault();
         const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? cards.length - 1
           : (index + (event.key === 'ArrowRight' ? 1 : -1) + cards.length) % cards.length;
-        selectCard(cards[nextIndex]);
+        selectCard(cards[nextIndex], { reveal: true });
         cards[nextIndex].focus({ preventScroll: true });
       });
     });
     window.shopQa = {
       get selectedCount() { return cards.filter(card => card.classList.contains('selected')).length; },
       get horizontalScrollable() { return list.scrollWidth > list.clientWidth; },
+      get scrollLeft() { return list.scrollLeft; },
+      selectWithoutReveal(index) { selectCard(cards[index]); return list.scrollLeft; },
     };
   </script>
 </body>

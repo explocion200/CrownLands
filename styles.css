@@ -3718,7 +3718,7 @@ input {
 .skill-row small { color: var(--muted); }
 
 .shop-modal.modal {
-  width: min(620px, calc(100vw - 1.3rem));
+  width: min(880px, calc(100vw - 1.3rem));
 }
 .shop-modal .modal-card {
   background: linear-gradient(180deg, #071a2d, #132f56 72%, #1a416d);
@@ -3800,26 +3800,24 @@ input {
 }
 .shop-item.rewarded-ad-shop-item {
   min-height: 0;
-  grid-template-columns: 92px minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: 72px minmax(0, 1fr) minmax(112px, auto);
+  align-items: center;
 }
-.rewarded-ad-shop-action {
-  display: grid;
-  justify-items: stretch;
-  gap: .45rem;
-  min-width: 0;
-}
-.rewarded-ad-shop-action .shop-item-image-placeholder {
+.rewarded-ad-shop-item > .shop-item-image-placeholder {
   width: 72px;
   height: 72px;
-  justify-self: center;
+  justify-self: start;
 }
 .shop-buy-btn.rewarded-ad-watch-btn {
-  width: 100%;
-  min-width: 0;
+  width: 112px;
+  max-width: 112px;
+  min-width: 112px;
   min-height: 38px;
   padding-inline: .35rem;
   font-size: .78rem;
+  line-height: 1.08;
+  white-space: normal;
+  justify-self: end;
 }
 .rewarded-ad-shop-copy {
   min-width: 0;
@@ -3839,16 +3837,19 @@ input {
     text-align: left;
   }
   .shop-rewarded-items {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .shop-item.rewarded-ad-shop-item {
-    grid-template-columns: 82px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr) minmax(92px, auto);
   }
-  .rewarded-ad-shop-action .shop-item-image-placeholder {
-    width: 64px;
-    height: 64px;
+  .rewarded-ad-shop-item > .shop-item-image-placeholder {
+    width: 56px;
+    height: 56px;
   }
   .shop-buy-btn.rewarded-ad-watch-btn {
+    width: 92px;
+    max-width: 92px;
+    min-width: 92px;
     font-size: .7rem;
   }
 }
@@ -10145,10 +10146,10 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   .shop-item-image-placeholder span { width: 24px; height: 24px; font-size: .82rem; }
   .shop-buy-btn { min-width: 78px; min-height: 38px; }
   .shop-rewarded-section { padding: .5rem; }
-  .shop-rewarded-items { grid-template-columns: minmax(0, 1fr); }
-  .shop-item.rewarded-ad-shop-item { grid-template-columns: 82px minmax(0, 1fr); }
-  .rewarded-ad-shop-action .shop-item-image-placeholder { width: 64px; height: 64px; }
-  .shop-buy-btn.rewarded-ad-watch-btn { min-width: 0; font-size: .7rem; }
+  .shop-rewarded-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shop-item.rewarded-ad-shop-item { grid-template-columns: 56px minmax(0, 1fr) minmax(92px, auto); }
+  .rewarded-ad-shop-item > .shop-item-image-placeholder { width: 56px; height: 56px; }
+  .shop-buy-btn.rewarded-ad-watch-btn { width: 92px; min-width: 92px; max-width: 92px; font-size: .7rem; }
   .city-list-modal.modal { width: min(760px, calc(100vw - .8rem)); }
   .city-list-toolbar { gap: .5rem; padding-inline: 0; }
   .city-list-toolbar button { min-width: 104px; min-height: 42px; }
@@ -10606,12 +10607,12 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   }
   .shop-rewarded-section { padding: .5rem; }
   .shop-item.rewarded-ad-shop-item {
-    grid-template-columns: 74px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr) minmax(90px, auto);
     gap: .5rem;
     padding: .55rem;
   }
-  .rewarded-ad-shop-action .shop-item-image-placeholder { width: 56px; height: 56px; }
-  .shop-buy-btn.rewarded-ad-watch-btn { min-height: 34px; font-size: .66rem; }
+  .rewarded-ad-shop-item > .shop-item-image-placeholder { width: 56px; height: 56px; }
+  .shop-buy-btn.rewarded-ad-watch-btn { width: 90px; min-width: 90px; max-width: 90px; min-height: 34px; font-size: .66rem; }
   .rewarded-ad-shop-copy strong { font-size: .88rem; }
   .rewarded-ad-shop-copy span { font-size: .72rem; }
   .rewarded-ad-shop-copy small { font-size: .65rem; line-height: 1.18; }
