@@ -340,7 +340,7 @@ input[type="range"] {
   .profile-screen,
   .modal .modal-card,
   .bottom-nav
-) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]) {
+) :is(button, .profile-secondary-btn, .privacy-settings-link):not(.flag-color-swatch):not([data-flag-color]):not(.player-name-link):not(.clan-identity-link):not(.island-map-icon):not(.primary-btn):not(.profile-primary-btn):not(.offline-collect-btn):not(.danger-action):not(.active):not([aria-selected="true"]):not([aria-pressed="true"]):not(.inventory-slot,.inventory-page-arrow) {
   color: var(--cl-profile-ivory) !important;
   border-color: var(--cl-profile-border-bright) !important;
   background: linear-gradient(180deg, #315f78, #183b50) !important;

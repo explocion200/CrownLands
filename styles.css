@@ -4058,10 +4058,10 @@ input {
   min-width: 0;
   min-height: 176px;
   overflow: hidden;
-  border: 1px solid rgba(111,82,45,.52);
+  border: 1px solid var(--cl-border-faded);
   border-radius: 4px;
-  background: rgba(75,56,36,.14);
-  box-shadow: inset 0 0 0 1px rgba(255,247,216,.18);
+  background: var(--cl-inset-bg);
+  box-shadow: inset 0 0 0 1px rgba(255,248,232,.28);
   touch-action: pan-y;
 }
 .modal.inventory-modal .inventory-slots {
@@ -4094,11 +4094,16 @@ input {
   display: grid;
   place-items: center;
   padding: 0;
-  color: #f2e2bf !important;
-  background: linear-gradient(180deg, #6f3439, #452127) !important;
-  border: 1px solid #9d7b43 !important;
+  color: var(--cl-text) !important;
+  background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
+  border: 1px solid var(--cl-brass) !important;
   border-radius: 3px;
-  box-shadow: inset 0 0 0 1px rgba(242,226,191,.1), 0 3px 6px rgba(24,15,9,.25) !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.44), 0 3px 6px rgba(84,47,36,.22) !important;
+}
+.modal.inventory-modal .inventory-page-arrow:hover:not(:disabled) {
+  color: var(--cl-burgundy-dark) !important;
+  border-color: var(--cl-gold-highlight) !important;
+  background: linear-gradient(180deg, #f2e2bf, var(--cl-panel-secondary)) !important;
 }
 .modal.inventory-modal .inventory-page-arrow .cl-icon {
   width: 20px;
@@ -4120,21 +4125,21 @@ input {
   gap: .2rem;
   padding: .34rem .28rem .3rem;
   overflow: hidden;
-  color: #f2e2bf !important;
-  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
-  border: 1px solid #8d7448 !important;
+  color: var(--cl-text) !important;
+  background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
+  border: 1px solid var(--cl-brass) !important;
   border-left-width: 1px !important;
   border-radius: 4px;
-  box-shadow: inset 0 0 0 1px rgba(204,226,236,.07), 0 3px 7px rgba(19,14,10,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.5), 0 3px 7px rgba(84,47,36,.22) !important;
 }
 .modal.inventory-modal .inventory-slot:hover:not(:disabled) {
-  border-color: #c6a55f !important;
-  background: linear-gradient(180deg, #1c4a6c, #0d2c47) !important;
+  border-color: var(--cl-gold-highlight) !important;
+  background: linear-gradient(180deg, #f2e2bf, var(--cl-panel-secondary)) !important;
 }
 .modal.inventory-modal .inventory-slot.selected {
-  border-color: #e5c06b !important;
-  background: linear-gradient(180deg, #285c79, #11324e) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,236,177,.28), 0 0 0 2px rgba(215,177,83,.18) !important;
+  border-color: var(--cl-gold-highlight) !important;
+  background: linear-gradient(180deg, #f2e2bf, var(--cl-panel-inset)) !important;
+  box-shadow: inset 0 0 0 2px rgba(114,54,58,.78), inset 0 1px 0 rgba(255,248,232,.62), 0 3px 8px rgba(84,47,36,.28) !important;
 }
 .modal.inventory-modal .inventory-slot:disabled {
   opacity: .42;
@@ -4146,9 +4151,9 @@ input {
   place-items: center;
   overflow: hidden;
   align-self: center;
-  border-color: rgba(213,183,106,.48) !important;
-  background: rgba(6,25,40,.72) !important;
-  box-shadow: inset 0 0 0 1px rgba(240,216,151,.08) !important;
+  border-color: var(--cl-brass) !important;
+  background: var(--cl-inset-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.28) !important;
 }
 .modal.inventory-modal .inventory-slot-image {
   box-sizing: border-box;
@@ -4163,11 +4168,11 @@ input {
   display: -webkit-box;
   align-self: end;
   overflow: hidden;
-  color: #f2e2bf !important;
+  color: var(--cl-text) !important;
   font-size: clamp(.6rem, 1.4vw, .72rem);
   line-height: 1;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 1px rgba(0,0,0,.7) !important;
+  text-shadow: none !important;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -4210,7 +4215,11 @@ input {
   align-items: center;
   gap: .58rem;
   padding: .48rem .58rem;
+  color: var(--cl-text);
+  border: 1px solid var(--cl-brass);
   border-radius: 4px;
+  background: linear-gradient(180deg, var(--cl-panel-secondary), var(--cl-panel-inset));
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.48), 0 3px 7px rgba(84,47,36,.18);
 }
 .modal.inventory-modal .inventory-selection-icon {
   width: 56px;
@@ -4218,6 +4227,9 @@ input {
   display: grid;
   place-items: center;
   overflow: hidden;
+  border-color: var(--cl-brass) !important;
+  background: var(--cl-inset-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.28) !important;
 }
 .modal.inventory-modal .inventory-selection-image {
   box-sizing: border-box;
@@ -4253,12 +4265,15 @@ input {
   white-space: nowrap;
 }
 .modal.inventory-modal .inventory-selection-copy strong {
+  color: var(--cl-burgundy) !important;
   font-size: .82rem;
 }
 .modal.inventory-modal .inventory-selection-copy small {
+  color: var(--cl-text-secondary) !important;
   font-size: .63rem;
 }
 .modal.inventory-modal .inventory-selection-copy span {
+  color: var(--cl-text) !important;
   font-size: .66rem;
 }
 .modal.inventory-modal .inventory-use-btn {
@@ -4274,27 +4289,27 @@ input {
   text-align: center;
 }
 html body .modal.inventory-modal .inventory-carousel .inventory-slot.filled {
-  color: #f2e2bf !important;
-  background: linear-gradient(180deg, #173f5e, #0b263d) !important;
-  border-color: #8d7448 !important;
-  box-shadow: inset 0 0 0 1px rgba(204,226,236,.07), 0 3px 7px rgba(19,14,10,.28) !important;
+  color: var(--cl-text) !important;
+  background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
+  border-color: var(--cl-brass) !important;
+  box-shadow: inset 0 1px 0 rgba(255,248,232,.5), 0 3px 7px rgba(84,47,36,.22) !important;
 }
 html body .modal.inventory-modal .inventory-carousel .inventory-slot.filled:hover:not(:disabled) {
-  background: linear-gradient(180deg, #1c4a6c, #0d2c47) !important;
-  border-color: #c6a55f !important;
+  background: linear-gradient(180deg, #f2e2bf, var(--cl-panel-secondary)) !important;
+  border-color: var(--cl-gold-highlight) !important;
 }
 html body .modal.inventory-modal .inventory-carousel .inventory-slot.filled.selected {
-  background: linear-gradient(180deg, #285c79, #11324e) !important;
-  border-color: #e5c06b !important;
-  box-shadow: inset 0 0 0 1px rgba(255,236,177,.28), 0 0 0 2px rgba(215,177,83,.18) !important;
+  background: linear-gradient(180deg, #f2e2bf, var(--cl-panel-inset)) !important;
+  border-color: var(--cl-gold-highlight) !important;
+  box-shadow: inset 0 0 0 2px rgba(114,54,58,.78), inset 0 1px 0 rgba(255,248,232,.62), 0 3px 8px rgba(84,47,36,.28) !important;
 }
 html body .modal.inventory-modal .inventory-carousel .inventory-slot-name {
-  color: #f2e2bf !important;
+  color: var(--cl-text) !important;
 }
 html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
-  color: #f2e2bf !important;
-  background: linear-gradient(180deg, #6f3439, #452127) !important;
-  border-color: #9d7b43 !important;
+  color: var(--cl-text) !important;
+  background: linear-gradient(180deg, var(--cl-panel-raised), var(--cl-panel-inset)) !important;
+  border-color: var(--cl-brass) !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .modal.inventory-modal .inventory-page { animation: none !important; }

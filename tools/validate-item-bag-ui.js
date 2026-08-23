@@ -9,6 +9,7 @@ const game = read("game.js");
 const actions = read("instant-economy-actions.js");
 const styles = read("styles.css");
 const mobile = read("mobile-viewport.css");
+const profileTheme = read("profile-theme.css");
 const index = read("index.html");
 const worker = read("service-worker.js");
 
@@ -88,13 +89,19 @@ assert.doesNotMatch(actions.slice(actions.indexOf("function patchInventoryProjec
 assert.match(actions, /async function refreshInstantEconomyAfterFailure[\s\S]{0,420}?revalidateInstantEconomyActions\(\);[\s\S]{0,180}?showInventoryModal\(\);/, "Rejected item actions must rebuild the Bag so the restored card and page totals return immediately.");
 assert.match(game, /if \(selectedInventoryItemId === item\.id\) \{\s*selectedInventoryItemId = "";\s*selectedInventoryEntryKey = "";/, "Confirmed or local item use must clear the consumed presentation selection.");
 assert.match(styles, /\.modal\.inventory-modal \.inventory-slots[\s\S]*grid-template-columns: repeat\(4,[\s\S]*grid-template-rows: repeat\(2,/, "The Bag must use a fixed 4 by 2 card grid.");
-assert.match(styles, /background: linear-gradient\(180deg, #173f5e, #0b263d\) !important;/, "Bag cards must retain the Crownlands navy surface.");
+const bagTheme = styles.slice(styles.indexOf("/* Item Bag:"), styles.indexOf(".city-list-modal.modal"));
+assert.match(bagTheme, /\.inventory-carousel-viewport[\s\S]*background: var\(--cl-inset-bg\);/, "The Bag item area must use the Shop parchment inset surface.");
+assert.match(bagTheme, /\.inventory-slot \{[\s\S]*color: var\(--cl-text\) !important;[\s\S]*background: linear-gradient\(180deg, var\(--cl-panel-raised\), var\(--cl-panel-inset\)\) !important;[\s\S]*border: 1px solid var\(--cl-brass\) !important;/, "Bag cards must use the Shop parchment, brown-text, and brass treatment.");
+assert.match(bagTheme, /\.inventory-slot\.selected \{[\s\S]*border-color: var\(--cl-gold-highlight\) !important;[\s\S]*background: linear-gradient\(180deg, #f2e2bf, var\(--cl-panel-inset\)\) !important;[\s\S]*rgba\(114,54,58,\.78\)/, "Selected Bag cards must retain the Shop-style burgundy and restrained-gold accent.");
+assert.match(bagTheme, /\.inventory-page-arrow \{[\s\S]*color: var\(--cl-text\) !important;[\s\S]*background: linear-gradient\(180deg, var\(--cl-panel-raised\), var\(--cl-panel-inset\)\) !important;/, "Bag arrows must use the Shop parchment button language.");
+assert.doesNotMatch(bagTheme, /#173f5e|#0b263d|#1c4a6c|#285c79|#11324e/, "The approved Bag must not regress to navy fantasy surfaces.");
+assert.match(profileTheme, /:not\(\[aria-pressed="true"\]\):not\(\.inventory-slot,\.inventory-page-arrow\)/, "The legacy Profile button layer must not repaint Bag cards or arrows navy.");
 assert.match(mobile, /max-height: 440px[\s\S]*\.modal\.inventory-modal[\s\S]*\.inventory-selection/, "Landscape Bag compaction is missing.");
-assert.match(index, /crownlands-build" content="20260823-item-bag-shop-reconcile-r1"/);
+assert.match(index, /crownlands-build" content="20260823-item-bag-shop-theme-r1"/);
 for (const asset of ["styles.css", "mobile-viewport.css", "instant-economy-actions.js", "game.js"]) {
-  assert(index.includes(`${asset}?v=20260823-item-bag-shop-reconcile-r1`), `${asset} has a stale page cache stamp.`);
-  assert(worker.includes(`/${asset}?v=20260823-item-bag-shop-reconcile-r1`), `${asset} is missing from the refreshed offline shell.`);
+  assert(index.includes(`${asset}?v=20260823-item-bag-shop-theme-r1`), `${asset} has a stale page cache stamp.`);
+  assert(worker.includes(`/${asset}?v=20260823-item-bag-shop-theme-r1`), `${asset} is missing from the refreshed offline shell.`);
 }
-assert(worker.includes('CACHE_VERSION = "20260823-item-bag-shop-reconcile-r1"'));
+assert(worker.includes('CACHE_VERSION = "20260823-item-bag-shop-theme-r1"'));
 
 console.log("Validated the Crownlands Item Bag: categories, individual copies, bounded 4x2 paging, input guards, responsive layout, and cache delivery.");
