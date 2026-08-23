@@ -97,11 +97,11 @@ assert.match(bagTheme, /\.inventory-page-arrow \{[\s\S]*color: var\(--cl-text\) 
 assert.doesNotMatch(bagTheme, /#173f5e|#0b263d|#1c4a6c|#285c79|#11324e/, "The approved Bag must not regress to navy fantasy surfaces.");
 assert.match(profileTheme, /:not\(\[aria-pressed="true"\]\):not\(\.inventory-slot,\.inventory-page-arrow\)/, "The legacy Profile button layer must not repaint Bag cards or arrows navy.");
 assert.match(mobile, /max-height: 440px[\s\S]*\.modal\.inventory-modal[\s\S]*\.inventory-selection/, "Landscape Bag compaction is missing.");
-assert.match(index, /crownlands-build" content="20260823-item-bag-shop-theme-r1"/);
+assert.match(index, /crownlands-build" content="20260823-item-bag-shop-theme-r2"/);
 for (const asset of ["styles.css", "mobile-viewport.css", "instant-economy-actions.js", "game.js"]) {
-  assert(index.includes(`${asset}?v=20260823-item-bag-shop-theme-r1`), `${asset} has a stale page cache stamp.`);
-  assert(worker.includes(`/${asset}?v=20260823-item-bag-shop-theme-r1`), `${asset} is missing from the refreshed offline shell.`);
+  assert(index.includes(`${asset}?v=20260823-item-bag-shop-theme-r2`), `${asset} has a stale page cache stamp.`);
+  assert(worker.includes(`/${asset}?v=20260823-item-bag-shop-theme-r2`), `${asset} is missing from the refreshed offline shell.`);
 }
-assert(worker.includes('CACHE_VERSION = "20260823-item-bag-shop-theme-r1"'));
+assert(worker.includes('CACHE_VERSION = "20260823-item-bag-shop-theme-r2"'));
 
 console.log("Validated the Crownlands Item Bag: categories, individual copies, bounded 4x2 paging, input guards, responsive layout, and cache delivery.");

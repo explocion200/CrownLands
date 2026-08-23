@@ -108,12 +108,14 @@ const REWARDED_AD_ITEMS = Object.freeze([
   {
     id: "gold",
     label: "Gold .5h Boost",
+    description: "Receive 30 minutes of Gold production.",
     rewardLabel: "gold",
     icon: "assets/optimized/pickup-gold-192x192-a1de679b797d.webp",
   },
   {
     id: "troops",
     label: "Troop .5h Boost",
+    description: "Receive 30 minutes of Troop production.",
     rewardLabel: "troops",
     icon: "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp",
   },
@@ -2020,6 +2022,8 @@ let cityRelinquishCountdownTimer = 0;
 let pendingHarvestBonusIds = new Set();
 let selectedInventoryItemId = "";
 let selectedShopItemId = "";
+let shopCarouselScrollLeft = 0;
+let shopCarouselRestoreToken = 0;
 let authoritativeShopPricing = null;
 let selectedInventoryEntryKey = "";
 let selectedInventoryCategory = "all";
@@ -31350,24 +31354,22 @@ function renderRewardedAdShopItem(item = {}) {
   const dailyLimit = Math.max(1, Math.floor(Number(status?.dailyLimit) || getRewardedAdClientConfig().dailyLimit));
   return `
     <article class="shop-item rewarded-ad-shop-item">
-      <div class="rewarded-ad-shop-action">
-        <div class="shop-item-image-placeholder has-image" aria-hidden="true">
-          <img class="shop-item-image" src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />
-        </div>
-        <button
-          class="shop-buy-btn rewarded-ad-watch-btn"
-          data-rewarded-ad-watch="${escapeHtml(item.id)}"
-          type="button"
-          ${availability.canWatch ? "" : "disabled"}
-        >Watch Ad</button>
+      <div class="shop-item-image-placeholder has-image" aria-hidden="true">
+        <img class="shop-item-image" src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />
       </div>
       <div class="shop-item-copy rewarded-ad-shop-copy">
         <strong>${escapeHtml(item.label)}</strong>
-        <span>${Math.max(1, Math.floor(Number(status?.rewardMinutes) || 30))} minutes of base production</span>
+        <span>${escapeHtml(item.description)}</span>
         <small>${rewardAmount > 0 ? `Estimated reward: ${formatNumber(rewardAmount)} ${escapeHtml(item.rewardLabel)}` : "Exact reward calculated before the ad"}</small>
-        <small class="shop-item-purchase-limit">Rewarded ads: ${formatNumber(claimedToday)}/${formatNumber(dailyLimit)} today (UTC)</small>
+        <small class="shop-item-purchase-limit">${formatNumber(claimedToday)}/${formatNumber(dailyLimit)} watched today (UTC)</small>
         ${availability.text ? `<small class="rewarded-ad-availability">${escapeHtml(availability.text)}</small>` : ""}
       </div>
+      <button
+        class="shop-buy-btn rewarded-ad-watch-btn"
+        data-rewarded-ad-watch="${escapeHtml(item.id)}"
+        type="button"
+        ${availability.canWatch ? "" : "disabled"}
+      >Watch Advertisement</button>
     </article>
   `;
 }
@@ -31813,7 +31815,29 @@ function patchShopPurchaseBar() {
   bindShopPurchaseBar();
 }
 
-function selectShopItem(itemId = "", { focus = false } = {}) {
+function rememberShopCarouselScroll() {
+  const carousel = modalBody?.querySelector(".shop-items");
+  if (carousel) shopCarouselScrollLeft = Math.max(0, carousel.scrollLeft);
+}
+
+function restoreShopCarouselScroll() {
+  const restoreToken = ++shopCarouselRestoreToken;
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      if (restoreToken !== shopCarouselRestoreToken) return;
+      const carousel = modalBody?.querySelector(".shop-items");
+      if (!carousel) return;
+      const maximumScrollLeft = Math.max(0, carousel.scrollWidth - carousel.clientWidth);
+      const targetScrollLeft = Math.min(maximumScrollLeft, Math.max(0, shopCarouselScrollLeft));
+      const previousScrollBehavior = carousel.style.scrollBehavior;
+      carousel.style.scrollBehavior = "auto";
+      carousel.scrollLeft = targetScrollLeft;
+      carousel.style.scrollBehavior = previousScrollBehavior;
+    });
+  });
+}
+
+function selectShopItem(itemId = "", { focus = false, reveal = focus } = {}) {
   const ids = getSelectableShopItemIds();
   if (!ids.includes(itemId)) return;
   selectedShopItemId = itemId;
@@ -31824,13 +31848,18 @@ function selectShopItem(itemId = "", { focus = false } = {}) {
     card.tabIndex = selected ? 0 : -1;
     if (selected) {
       if (focus) card.focus({ preventScroll: true });
-      card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      if (reveal) {
+        card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        window.requestAnimationFrame(rememberShopCarouselScroll);
+      }
     }
   });
   patchShopPurchaseBar();
 }
 
 function bindShopItemSelection() {
+  const carousel = modalBody.querySelector(".shop-items");
+  carousel?.addEventListener("scroll", rememberShopCarouselScroll, { passive: true });
   const cards = [...modalBody.querySelectorAll("[data-shop-select]")];
   cards.forEach((card, index) => {
     card.addEventListener("click", () => selectShopItem(card.dataset.shopSelect || ""));
@@ -31852,6 +31881,7 @@ function bindShopItemSelection() {
 
 function renderShopModal() {
   if (!state) return;
+  rememberShopCarouselScroll();
   const selectableIds = getSelectableShopItemIds();
   if (!selectableIds.includes(selectedShopItemId)) selectedShopItemId = selectableIds[0] || "";
   modal.classList.remove("rewarded-ad-confirmation-modal");
@@ -31886,6 +31916,7 @@ function renderShopModal() {
   });
   bindShopItemSelection();
   bindShopPurchaseBar();
+  restoreShopCarouselScroll();
 }
 
 function showShopModal() {

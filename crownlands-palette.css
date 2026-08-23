@@ -1009,8 +1009,7 @@ input[type="range"] {
   }
 }
 
-/* Shop purchase carousel. Paid items share one selection and one anchored
-   purchase control; rewarded-ad cards remain in their existing section. */
+/* Shop carousel and anchored purchase controls. */
 .shop-modal > .modal-card {
   --shop-paid-tile-size: clamp(104px, 12vw, 132px);
   --shop-paid-tile-padding: .55rem;
@@ -1052,7 +1051,7 @@ input[type="range"] {
   border-radius: 5px;
   background: var(--cl-inset-bg) !important;
   scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
+  scroll-snap-type: x proximity;
   scrollbar-color: var(--cl-brass) rgba(84, 47, 36, .16);
   scrollbar-width: thin;
 }
@@ -1118,6 +1117,10 @@ input[type="range"] {
   height: 100%;
   object-fit: contain;
 }
+
+.shop-modal .shop-item.rewarded-ad-shop-item { grid-template-columns: 72px minmax(0, 1fr) minmax(112px, auto); align-items: center; }
+.shop-modal .rewarded-ad-shop-item > .shop-item-image-placeholder { width: 72px; height: 72px; justify-self: start; }
+.shop-modal .rewarded-ad-shop-item > .rewarded-ad-watch-btn { grid-column: 3; width: 112px; max-width: 112px; min-width: 112px; justify-self: end; }
 
 .shop-modal .shop-purchase-bar {
   position: sticky;
@@ -1215,25 +1218,10 @@ input[type="range"] {
     gap: .28rem;
   }
 
-  .shop-modal .shop-item.rewarded-ad-shop-item {
-    min-height: 0;
-    grid-template-columns: 60px minmax(0, 1fr);
-    gap: .28rem;
-    padding: .16rem .22rem;
-  }
+  .shop-modal .shop-item.rewarded-ad-shop-item { min-height: 0; grid-template-columns: 50px minmax(0, 1fr) minmax(94px, auto); gap: .28rem; padding: .16rem .22rem; }
 
-  .shop-modal .rewarded-ad-shop-action { gap: .12rem; }
-
-  .shop-modal .rewarded-ad-shop-action .shop-item-image-placeholder {
-    width: 24px;
-    height: 24px;
-  }
-
-  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn {
-    min-height: 30px;
-    padding: .1rem .2rem;
-    font-size: .48rem;
-  }
+  .shop-modal .rewarded-ad-shop-item > .shop-item-image-placeholder { width: 50px; height: 50px; }
+  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn { width: 94px; max-width: 94px; min-width: 94px; min-height: 30px; padding: .1rem .2rem; font-size: .48rem; }
 
   .shop-modal .rewarded-ad-shop-copy { gap: .04rem; }
   .shop-modal .rewarded-ad-shop-copy strong { font-size: .58rem; }
@@ -1273,21 +1261,10 @@ input[type="range"] {
   .shop-modal .shop-rewarded-heading small,
   .shop-modal .shop-rewarded-heading span { font-size: .42rem; }
 
-  .shop-modal .shop-item.rewarded-ad-shop-item {
-    grid-template-columns: 50px minmax(0, 1fr);
-    gap: .2rem;
-    padding: .12rem .16rem;
-  }
+  .shop-modal .shop-item.rewarded-ad-shop-item { grid-template-columns: 38px minmax(0, 1fr) minmax(70px, auto); gap: .2rem; padding: .12rem .16rem; }
 
-  .shop-modal .rewarded-ad-shop-action .shop-item-image-placeholder {
-    width: 18px;
-    height: 18px;
-  }
-
-  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn {
-    min-height: 28px;
-    font-size: .44rem;
-  }
+  .shop-modal .rewarded-ad-shop-item > .shop-item-image-placeholder { width: 38px; height: 38px; }
+  .shop-modal .shop-buy-btn.rewarded-ad-watch-btn { width: 70px; max-width: 70px; min-width: 70px; min-height: 28px; font-size: .4rem; }
 
   .shop-modal .rewarded-ad-shop-copy strong { font-size: .48rem; }
   .shop-modal .rewarded-ad-shop-copy span { font-size: .42rem; }

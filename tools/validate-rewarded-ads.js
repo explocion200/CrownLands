@@ -156,9 +156,13 @@ assert.match(firebaseClientSource, /async function claimRewardedAd/);
 const rewardRenderer = extractFunction(gameSource, "renderRewardedAdShopItem");
 assert.match(rewardRenderer, /data-rewarded-ad-watch/);
 assert.ok(
-  rewardRenderer.indexOf("shop-item-image-placeholder") < rewardRenderer.indexOf("data-rewarded-ad-watch"),
-  "Watch Ad must render beneath the ad boost icon."
+  rewardRenderer.indexOf("shop-item-image-placeholder") < rewardRenderer.indexOf("rewarded-ad-shop-copy")
+    && rewardRenderer.indexOf("rewarded-ad-shop-copy") < rewardRenderer.indexOf("data-rewarded-ad-watch"),
+  "Rewarded items must render image, short copy, and Watch Advertisement control from left to right."
 );
+assert.doesNotMatch(rewardRenderer, /rewarded-ad-shop-action/);
+assert.match(rewardRenderer, /Watch Advertisement/);
+assert.match(rewardRenderer, /item\.description/);
 assert.match(rewardRenderer, /today \(UTC\)/);
 assert.match(rewardRenderer, /Estimated reward:/);
 assert.doesNotMatch(rewardRenderer, /City levels only/);
@@ -191,11 +195,11 @@ assert.ok(
   "The server claim must only run after the Google rewarded flow grants the slot."
 );
 
-assert.match(stylesSource, /\.rewarded-ad-shop-action[\s\S]*display:\s*grid/);
-assert.match(stylesSource, /\.shop-item\.rewarded-ad-shop-item[\s\S]*grid-template-columns:\s*92px\s+minmax\(0,\s*1fr\)/);
-assert.match(stylesSource, /\.shop-buy-btn\.rewarded-ad-watch-btn[\s\S]*width:\s*100%[\s\S]*min-width:\s*0/);
+assert.match(stylesSource, /\.shop-item\.rewarded-ad-shop-item[\s\S]*grid-template-columns:\s*72px\s+minmax\(0,\s*1fr\)\s+minmax\(112px,\s*auto\)/);
+assert.match(stylesSource, /\.rewarded-ad-shop-item\s*>\s*\.shop-item-image-placeholder[\s\S]*width:\s*72px[\s\S]*height:\s*72px/);
+assert.match(stylesSource, /\.rewarded-ad-shop-item\s*>\s*\.rewarded-ad-watch-btn[\s\S]*grid-column:\s*3/);
 assert.match(stylesSource, /\.rewarded-ad-shop-copy[\s\S]*overflow-wrap:\s*anywhere/);
-assert.match(stylesSource, /@media\s*\(max-width:\s*620px\)[\s\S]*?\.shop-rewarded-items\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+assert.match(stylesSource, /@media\s*\(max-width:\s*620px\)[\s\S]*?\.shop-rewarded-items\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
 const publisherTagLoader = extractFunction(gameSource, "loadGooglePublisherTag");
 assert.match(gameSource, /GOOGLE_PUBLISHER_TAG_URL\s*=\s*"https:\/\/securepubads\.g\.doubleclick\.net\/tag\/js\/gpt\.js"/);
 assert.match(publisherTagLoader, /document\.createElement\("script"\)/);
