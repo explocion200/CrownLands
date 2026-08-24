@@ -257,6 +257,7 @@ async function mapWithConcurrency(items, concurrency, mapper) {
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
   const queuedUser = await createAuthUser(50);
+  const returningClanOfficer = await createAuthUser(51);
   const lobbySessions = users.map((_, index) => `lobby-session-${index}`);
   const lobbyJoins = await mapWithConcurrency(
     users,
@@ -348,26 +349,241 @@ async function main() {
     emblem: "crown",
     emblemColor: "#ffffff",
   };
-  await db.doc(`players/${users[0].uid}`).set({
-    uid: users[0].uid,
-    playerName: "Preserved Ruler",
-    flag: preservedFlag,
-    resetGeneration: "archived-generation",
-    worldId: "main-archived-generation",
-    gold: 999999,
-    character: { level: 99, xp: 123, skillPoints: 98 },
-    shopItems: { shield_12h: 7 },
-    clanId: "archived-clan",
-    battleReports: [{ id: "old-report" }],
-    activeSession: { id: "preserved-session", device: "test" },
-  });
-  await db.doc(`islands/main-archived-generation-region_11/cities/legacy_city`).set({
-    worldId: "main-archived-generation",
-    resetGeneration: "archived-generation",
-    ownerKind: "player",
-    ownerUid: users[0].uid,
-    troops: 999999,
-  });
+  const preservedAccountCreatedAtMs = Date.UTC(2024, 3, 12, 14, 30, 0);
+  const archivedClanId = "archived-clan";
+  const archivedOfficerUid = returningClanOfficer.uid;
+  const archivedMemberUid = "archived-member";
+  const preservedClanHeraldry = {
+    version: 2,
+    artSetVersion: 1,
+    shape: "heater",
+    division: "saltire",
+    primary: "#24445f",
+    secondary: "#7a2638",
+    charge: "fortress-keep",
+    secondaryCharge: "war-horn",
+    chargeColor: "#f2e2bf",
+    secondaryChargeColor: "#d8bd78",
+    chargeLayout: "paired",
+    borderColor: "#d8bd78",
+    trim: "double",
+    finish: "battleworn",
+  };
+  const persistentGear = {
+    schemaVersion: 1,
+    commonGearBoxes: 7,
+    instances: {
+      persistent_helm: {
+        instanceId: "persistent_helm",
+        gearKey: "barracks_head_common_01",
+        buildingId: "barracks",
+        slot: "head",
+        rarity: "common",
+        level: 4,
+        isEquipped: true,
+        isNew: false,
+        acquiredAtMs: 1_700_000_000_000,
+        upgradedAtMs: 1_710_000_000_000,
+      },
+      persistent_ledger: {
+        instanceId: "persistent_ledger",
+        gearKey: "treasury_weapon_common_01",
+        buildingId: "treasury",
+        slot: "weapon",
+        rarity: "common",
+        level: 5,
+        isEquipped: true,
+        isNew: true,
+        acquiredAtMs: 1_720_000_000_000,
+        upgradedAtMs: 1_730_000_000_000,
+      },
+    },
+    equipped: {
+      barracks: { head: "persistent_helm" },
+      treasury: { weapon: "persistent_ledger" },
+    },
+    newMarkers: { barracks: false, treasury: true },
+    shopPurchase: { utcDate: "2026-08-23", purchaseCount: 1 },
+    lastOpenRequestId: "archived-open-request",
+    lastOpenReceipt: {
+      requestId: "archived-open-request",
+      openedAtMs: 1_730_000_000_000,
+      instanceIds: ["persistent_helm", "persistent_ledger"],
+    },
+    updatedAtMs: 1_730_000_000_000,
+  };
+  const currentClanQuestPeriod = getClanQuestPeriod(Date.now(), realm.resetGeneration);
+  await Promise.all([
+    db.doc(`players/${users[0].uid}`).set({
+      uid: users[0].uid,
+      displayName: "Preserved Ruler",
+      playerName: "Preserved Ruler",
+      flag: preservedFlag,
+      createdAtMs: preservedAccountCreatedAtMs,
+      createdAt: Timestamp.fromMillis(preservedAccountCreatedAtMs),
+      notificationPreferences: { incomingAttacks: false, rallies: true, clanGifts: false },
+      resetGeneration: "archived-generation",
+      worldId: "main-archived-generation",
+      gold: 999999,
+      character: { level: 99, xp: 123, skillPoints: 98 },
+      upgrades: { attack: 8, fieldMedics: 6 },
+      skillPresets: { modelVersion: 4, activeSlot: 2, slots: [{ slot: 2, name: "Archived" }] },
+      shopItems: { shield_12h: 7, war_drums_1h: 4 },
+      gear: persistentGear,
+      itemEffects: { warDrums: { expiresAtMs: Date.now() + 86_400_000 } },
+      itemPurchaseCooldowns: { shield_12h: Date.now() + 86_400_000 },
+      daily: { gold: 123, troops: 456, captures: 7 },
+      seasonalAchievements: { completedCount: 40, claimedCount: 39 },
+      achievementHistory: [{ id: "archived-achievement", claimed: false }],
+      clanId: archivedClanId,
+      clanName: "Stale Client Clan Name",
+      clanTag: "OLD",
+      clanRole: "member",
+      battleReports: [{ id: "old-report" }],
+      activeSession: { id: "preserved-session", device: "test" },
+    }),
+    db.doc(`players/${returningClanOfficer.uid}`).set({
+      uid: returningClanOfficer.uid,
+      displayName: "Preserved Officer",
+      playerName: "Preserved Officer",
+      flag: preservedFlag,
+      createdAtMs: preservedAccountCreatedAtMs + 1_000,
+      notificationPreferences: { clanGifts: true },
+      resetGeneration: "archived-generation",
+      worldId: "main-archived-generation",
+      gold: 654_321,
+      character: { level: 44, xp: 321, skillPoints: 43 },
+      shopItems: { shield_12h: 3 },
+      clanId: archivedClanId,
+      clanName: "Stale Officer Clan Name",
+      clanTag: "OLD",
+      clanRole: "member",
+    }),
+    db.doc(`islands/main-archived-generation-region_11/cities/legacy_city`).set({
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      ownerKind: "player",
+      ownerUid: users[0].uid,
+      troops: 999999,
+    }),
+    db.doc(`clans/${archivedClanId}`).set({
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      releaseId: "archived-release",
+      name: "Archived Company",
+      normalizedName: "archived-company",
+      tag: "ARCH",
+      normalizedTag: "arch",
+      description: "Seasonal description that must reset.",
+      shield: preservedClanHeraldry,
+      heraldryRevision: 7,
+      admissionMode: "open",
+      leaderUid: users[0].uid,
+      memberCount: 3,
+      totalKingPower: 9_999_999,
+      seasonalScore: 888_888,
+      treasuryGold: 777_777,
+      status: "active",
+      createdAtMs: 1_690_000_000_000,
+    }),
+    db.doc(`clans/${archivedClanId}/members/${users[0].uid}`).set({
+      uid: users[0].uid,
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      role: "leader",
+      displayName: "Preserved Ruler",
+      flag: preservedFlag,
+      kingPower: 7_000_000,
+      joinedAtMs: 1_690_000_000_000,
+      roleChangedAtMs: 1_691_000_000_000,
+      status: "active",
+      seasonalContribution: 123_456,
+    }),
+    db.doc(`clans/${archivedClanId}/members/${archivedOfficerUid}`).set({
+      uid: archivedOfficerUid,
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      role: "officer",
+      displayName: "Preserved Officer",
+      flag: preservedFlag,
+      kingPower: 2_000_000,
+      joinedAtMs: 1_692_000_000_000,
+      roleChangedAtMs: 1_693_000_000_000,
+      status: "active",
+      seasonalContribution: 234_567,
+    }),
+    db.doc(`clans/${archivedClanId}/members/${archivedMemberUid}`).set({
+      uid: archivedMemberUid,
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      role: "member",
+      displayName: "Preserved Member",
+      flag: preservedFlag,
+      kingPower: 999_999,
+      joinedAtMs: 1_694_000_000_000,
+      roleChangedAtMs: 1_695_000_000_000,
+      status: "active",
+      seasonalContribution: 345_678,
+    }),
+    ...[users[0].uid, archivedOfficerUid, archivedMemberUid].map(memberUid => (
+      db.doc(`clans/${archivedClanId}/memberRewards/${memberUid}`).set({
+        uid: memberUid,
+        worldId: "main-archived-generation",
+        resetGeneration: "archived-generation",
+        pendingGiftGoldMinutes: 999,
+        giftCountReceived: 8,
+        giftCountSent: 7,
+        giftGoldMinutesClaimed: 6,
+        questClaims: { archived: { claimedAtMs: 1_730_000_000_000 } },
+      })
+    )),
+    db.doc(`clans/${archivedClanId}/questProgress/${currentClanQuestPeriod.questPeriodId}`).set({
+      clanId: archivedClanId,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      questPeriodId: currentClanQuestPeriod.questPeriodId,
+      captureCount: 999,
+      milestoneUnlocks: { first: true, final: true },
+    }),
+    db.doc(`clans/${archivedClanId}/worldBenefits/${realm.resetGeneration}`).set({
+      clanId: archivedClanId,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      status: "active",
+      objectives: [{ id: "archived-stronghold", type: "stronghold" }],
+      sharedBonuses: { goldPercent: 99, troopPercent: 99 },
+      citadelControllerUid: users[0].uid,
+      cumulativeGoldPercentMs: 999_999,
+      cumulativeTroopPercentMs: 999_999,
+      revision: 99,
+    }),
+    db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).set({
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      recentDonations: [{ donorUid: users[0].uid, sentAtMs: Date.now(), productionMinutes: 999 }],
+    }),
+    db.doc(`clans/${archivedClanId}/rallyState/${realm.resetGeneration}`).set({
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      activeRallyIds: ["archived-rally"],
+      committedTroops: 999_999,
+    }),
+    db.doc(`clanLeaderboards/${realm.resetGeneration}/entries/${archivedClanId}`).set({
+      clanId: archivedClanId,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      memberCount: 3,
+      totalKingPower: 9_999_999,
+    }),
+    db.doc(`leaderboards/${realm.resetGeneration}/entries/${users[0].uid}`).set({
+      uid: users[0].uid,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      kingPower: 8_888_888,
+      cityCount: 88,
+      totalTroops: 8_888_888,
+    }),
+  ]);
 
   const firstClaim = await callReplaySafeFunction("claimStartingCity", users[0].token, {
     playerName: "Client Tried To Rename",
@@ -384,22 +600,213 @@ async function main() {
   assert(new Set(claims.map(claim => claim.cityId)).size === 50, "Starting city assignments collided.");
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
-  assert(profile.playerName === "Preserved Ruler", "Ruler name was not preserved.");
+  assert(
+    profile.displayName === "Preserved Ruler" && profile.playerName === "Preserved Ruler",
+    `Player display/name identity was not preserved (displayName=${profile.displayName}, playerName=${profile.playerName}).`
+  );
   const expectedPreservedFlag = playerFlagConfig.toStoredFlag(preservedFlag, users[0].uid);
   assert(
     JSON.stringify(profile.flag) === JSON.stringify(expectedPreservedFlag),
     "Personal flag components were not preserved through legacy-field migration."
   );
+  assert(
+    Number(profile.createdAtMs || 0) === preservedAccountCreatedAtMs
+      && profile.createdAt?.toMillis?.() === preservedAccountCreatedAtMs,
+    "The account creation date was not preserved."
+  );
+  assert(
+    JSON.stringify(profile.notificationPreferences) === JSON.stringify({
+      incomingAttacks: false,
+      rallies: true,
+      clanGifts: false,
+    }),
+    "Notification preferences were not preserved."
+  );
   assert(profile.gold === 100, "Starting gold was not reset to 100.");
-  assert(profile.character?.level === 1 && profile.character?.xp === 0, "Character progression was not reset.");
-  assert(!profile.clanId && !profile.battleReports?.length, "Clan or report progression survived the reset.");
-  assert(Object.values(profile.shopItems || {}).every(count => count === 0), "Items survived the reset.");
+  assert(
+    profile.character?.level === 1
+      && profile.character?.xp === 0
+      && profile.character?.skillPoints === 0
+      && Object.values(profile.upgrades || {}).every(level => Number(level || 0) === 0)
+      && profile.skillPresets?.activeSlot === 0
+      && (profile.skillPresets?.slots || []).every(slot => slot.saved !== true),
+    "Hero progression, upgrades, or presets survived the reset."
+  );
+  assert(!profile.battleReports?.length, "Seasonal report progression survived the reset.");
+  assert(Object.values(profile.shopItems || {}).every(count => count === 0), "Normal Bag consumables survived the reset.");
+  assert(
+    Object.values(profile.itemEffects || {}).every(value => Number(value || 0) === 0)
+      && Object.values(profile.itemPurchaseCooldowns || {}).every(counter => Number(counter?.purchaseCount || 0) === 0),
+    "Consumable effects or purchase cooldowns survived the reset."
+  );
+  assert(!profile.achievementHistory && !profile.seasonalAchievements, "Achievement history survived on the reset profile.");
   assert(profile.activeSession?.id === "preserved-session", "Technical session state was not preserved.");
+  assert(
+    profile.gear?.commonGearBoxes === 7
+      && Object.keys(profile.gear?.instances || {}).length === 2
+      && profile.gear?.instances?.persistent_helm?.level === 4
+      && profile.gear?.instances?.persistent_ledger?.level === 5
+      && profile.gear?.instances?.persistent_helm?.acquiredAtMs === 1_700_000_000_000
+      && profile.gear?.instances?.persistent_ledger?.upgradedAtMs === 1_730_000_000_000
+      && profile.gear?.equipped?.barracks?.head === "persistent_helm"
+      && profile.gear?.equipped?.treasury?.weapon === "persistent_ledger"
+      && profile.gear?.instances?.persistent_helm?.isEquipped === true
+      && profile.gear?.instances?.persistent_ledger?.isEquipped === true
+      && profile.gear?.newMarkers?.treasury === true,
+    "Common Gear ownership, levels, equipment, progression, or unopened Boxes did not persist."
+  );
+  assert(
+    profile.gear?.shopPurchase?.utcDate === ""
+      && profile.gear?.shopPurchase?.purchaseCount === 0
+      && profile.gear?.lastOpenRequestId === ""
+      && profile.gear?.lastOpenReceipt === null
+      && profile.gear?.updatedAtMs === 0,
+    "Seasonal or request-scoped Gear metadata incorrectly survived the reset."
+  );
+  assert(
+    firstClaim.currentUser?.gear?.commonGearBoxes === 7
+      && firstClaim.currentUser?.gear?.equipped?.barracks?.head === "persistent_helm",
+    "The reset claim response omitted preserved Common Gear."
+  );
+
+  const [
+    persistedClanSnap,
+    persistedRosterSnap,
+    persistedLeaderRewardsSnap,
+    persistedOfficerRewardsSnap,
+    persistedMemberRewardsSnap,
+    persistedQuestSnap,
+    persistedBenefitsSnap,
+    persistedGiftActivitySnap,
+    persistedRallyStateSnap,
+    persistedClanLeaderboardSnap,
+    persistedPlayerLeaderboardSnap,
+    persistedNameReservationSnap,
+    persistedTagReservationSnap,
+  ] = await Promise.all([
+    db.doc(`clans/${archivedClanId}`).get(),
+    db.collection(`clans/${archivedClanId}/members`).get(),
+    db.doc(`clans/${archivedClanId}/memberRewards/${users[0].uid}`).get(),
+    db.doc(`clans/${archivedClanId}/memberRewards/${archivedOfficerUid}`).get(),
+    db.doc(`clans/${archivedClanId}/memberRewards/${archivedMemberUid}`).get(),
+    db.doc(`clans/${archivedClanId}/questProgress/${currentClanQuestPeriod.questPeriodId}`).get(),
+    db.doc(`clans/${archivedClanId}/worldBenefits/${realm.resetGeneration}`).get(),
+    db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get(),
+    db.doc(`clans/${archivedClanId}/rallyState/${realm.resetGeneration}`).get(),
+    db.doc(`clanLeaderboards/${realm.resetGeneration}/entries/${archivedClanId}`).get(),
+    db.doc(`leaderboards/${realm.resetGeneration}/entries/${users[0].uid}`).get(),
+    db.doc(`clanNameReservations/${realm.resetGeneration}_archived-company`).get(),
+    db.doc(`clanTagReservations/${realm.resetGeneration}_arch`).get(),
+  ]);
+  const persistedClan = persistedClanSnap.data() || {};
+  assert(
+    profile.clanId === archivedClanId
+      && profile.clanName === "Archived Company"
+      && profile.clanTag === "ARCH"
+      && profile.clanRole === "leader"
+      && firstClaim.currentUser?.clanId === archivedClanId
+      && firstClaim.currentUser?.clanRole === "leader",
+    "Clan identity, membership, or the claimant's exact role did not persist."
+  );
+  assert(
+    persistedClan.worldId === realm.worldId
+      && persistedClan.resetGeneration === realm.resetGeneration
+      && persistedClan.name === "Archived Company"
+      && persistedClan.tag === "ARCH"
+      && persistedClan.leaderUid === users[0].uid
+      && persistedClan.memberCount === 3
+      && persistedClan.totalKingPower === profile.kingPower
+      && Number(persistedClan.heraldryRevision || 0) === 7
+      && Object.entries(preservedClanHeraldry).every(([key, value]) => persistedClan.shield?.[key] === value),
+    "The persistent clan identity or new-season aggregate was not rebuilt correctly."
+  );
+  assert(
+    !("seasonalScore" in persistedClan)
+      && !("treasuryGold" in persistedClan)
+      && persistedClan.description === ""
+      && persistedClan.admissionMode === "approval",
+    "Non-allowlisted clan state survived the reset."
+  );
+  const persistedRoster = new Map(persistedRosterSnap.docs.map(snapshot => [snapshot.id, snapshot.data() || {}]));
+  assert(
+    persistedRoster.size === 3
+      && persistedRoster.get(users[0].uid)?.role === "leader"
+      && persistedRoster.get(archivedOfficerUid)?.role === "officer"
+      && persistedRoster.get(archivedMemberUid)?.role === "member"
+      && [...persistedRoster.values()].every(member => (
+        member.worldId === realm.worldId && member.resetGeneration === realm.resetGeneration
+      ))
+      && persistedRoster.get(users[0].uid)?.kingPower === profile.kingPower
+      && persistedRoster.get(archivedOfficerUid)?.kingPower === 0
+      && persistedRoster.get(archivedMemberUid)?.kingPower === 0
+      && [...persistedRoster.values()].every(member => !("seasonalContribution" in member)),
+    "The clan roster, roles, or reset member aggregates were not preserved correctly."
+  );
+  [persistedLeaderRewardsSnap, persistedOfficerRewardsSnap, persistedMemberRewardsSnap].forEach(snapshot => {
+    const rewards = snapshot.data() || {};
+    assert(
+      rewards.resetGeneration === realm.resetGeneration
+        && rewards.pendingGiftGoldMinutes === 0
+        && rewards.giftCountReceived === 0
+        && rewards.giftCountSent === 0
+        && rewards.giftGoldMinutesClaimed === 0
+        && Object.keys(rewards.questClaims || {}).length === 0,
+      `Clan member seasonal rewards were not reset for ${snapshot.ref.path}.`
+    );
+  });
+  assert(
+    persistedQuestSnap.data()?.captureCount === 0
+      && Object.keys(persistedQuestSnap.data()?.milestoneUnlocks || {}).length === 0,
+    "Weekly clan-goal progress survived the reset."
+  );
+  assert(
+    (persistedBenefitsSnap.data()?.objectives || []).length === 0
+      && !persistedBenefitsSnap.data()?.citadelControllerUid
+      && Number(persistedBenefitsSnap.data()?.sharedBonuses?.goldPercent || 0) === 0
+      && Number(persistedBenefitsSnap.data()?.sharedBonuses?.troopPercent || 0) === 0,
+    "Clan objective ownership or shared bonuses survived the reset."
+  );
+  assert(
+    (persistedGiftActivitySnap.data()?.recentDonations || []).length === 0,
+    "Clan donation/gift activity survived the reset."
+  );
+  assert(!persistedRallyStateSnap.exists, "Clan rally state survived the reset.");
+  assert(
+    persistedClanLeaderboardSnap.data()?.memberCount === 3
+      && persistedClanLeaderboardSnap.data()?.totalKingPower === profile.kingPower
+      && persistedPlayerLeaderboardSnap.data()?.kingPower === profile.kingPower
+      && persistedPlayerLeaderboardSnap.data()?.cityCount === 1
+      && persistedPlayerLeaderboardSnap.data()?.clanId === archivedClanId,
+    "Active player or clan leaderboard state was not reset and rebuilt from current-season values."
+  );
+  assert(
+    persistedNameReservationSnap.data()?.clanId === archivedClanId
+      && persistedTagReservationSnap.data()?.clanId === archivedClanId,
+    "The preserved clan name or tag was not reserved in the new season."
+  );
+
+  const resetAchievementStatus = await callReplaySafeFunction("getSeasonalAchievementStatus", users[0].token);
+  const resetAchievementState = resetAchievementStatus?.seasonalAchievementState || {};
+  assert(
+    resetAchievementState.completedCount === 0
+      && resetAchievementState.claimedCount === 0
+      && resetAchievementState.claimableCount === 0
+      && (resetAchievementState.achievements || []).every(entry => (
+        Number(entry?.progress || 0) === 0 && !entry?.completedAtMs && !entry?.claimedAtMs
+      )),
+    "Achievement progress, claims, rewards, or completion history survived the reset."
+  );
   const newPlayerProfiles = await Promise.all(users.slice(1).map(async user => (
     (await db.doc(`players/${user.uid}`).get()).data() || {}
   )));
   const newPlayerFlags = newPlayerProfiles.map((newProfile, index) => {
     assertRandomStarterFlag(newProfile.flag, `New player ${index + 2}`);
+    assert(
+      !newProfile.clanId
+        && newProfile.gear?.commonGearBoxes === 0
+        && Object.keys(newProfile.gear?.instances || {}).length === 0,
+      `New player ${index + 2} received persisted clan or Gear data.`
+    );
     return JSON.stringify(newProfile.flag);
   });
   assert(
@@ -428,6 +835,82 @@ async function main() {
     Number((await db.doc(`islands/${realm.worldId}-${regionId}`).get()).data()?.playerCount) || 0
   )));
   assert(countsAfterRetry.join(",") === counts.join(","), "Repeated claims changed island populations.");
+
+  const postRolloverDonation = {
+    donorUid: users[0].uid,
+    donorName: "Preserved Ruler",
+    sentAtMs: Date.now(),
+    productionMinutes: 15,
+  };
+  await Promise.all([
+    db.doc(`clans/${archivedClanId}/memberRewards/${returningClanOfficer.uid}`).set({
+      pendingGiftGoldMinutes: 15,
+      giftCountReceived: 1,
+    }, { merge: true }),
+    db.doc(`clans/${archivedClanId}/questProgress/${currentClanQuestPeriod.questPeriodId}`).set({
+      captureCount: 2,
+      milestoneUnlocks: { currentSeason: true },
+    }, { merge: true }),
+    db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).set({
+      recentDonations: [postRolloverDonation],
+    }, { merge: true }),
+  ]);
+  const returningOfficerClaim = await callReplaySafeFunction(
+    "claimStartingCity",
+    returningClanOfficer.token,
+    { playerName: "Client Tried To Rename Officer" }
+  );
+  const [
+    returningOfficerProfileSnap,
+    returningOfficerMemberSnap,
+    currentClanAfterOfficerSnap,
+    officerRewardsAfterClaimSnap,
+    questAfterOfficerClaimSnap,
+    giftActivityAfterOfficerClaimSnap,
+  ] = await Promise.all([
+    db.doc(`players/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}/members/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}`).get(),
+    db.doc(`clans/${archivedClanId}/memberRewards/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}/questProgress/${currentClanQuestPeriod.questPeriodId}`).get(),
+    db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get(),
+  ]);
+  const returningOfficerProfile = returningOfficerProfileSnap.data() || {};
+  assert(
+    returningOfficerClaim.cityId
+      && returningOfficerProfile.playerName === "Preserved Officer"
+      && returningOfficerProfile.clanId === archivedClanId
+      && returningOfficerProfile.clanRole === "officer"
+      && returningOfficerMemberSnap.data()?.role === "officer"
+      && returningOfficerProfile.createdAtMs === preservedAccountCreatedAtMs + 1_000
+      && returningOfficerProfile.createdAt?.toMillis?.() === preservedAccountCreatedAtMs + 1_000
+      && returningOfficerProfile.notificationPreferences?.clanGifts === true
+      && returningOfficerProfile.gold === 100
+      && returningOfficerProfile.character?.level === 1
+      && returningOfficerProfile.gear?.commonGearBoxes === 0,
+    "A later returning clan member did not receive the same identity, role, or fresh seasonal profile."
+  );
+  assert(
+    currentClanAfterOfficerSnap.data()?.totalKingPower === profile.kingPower + returningOfficerProfile.kingPower
+      && officerRewardsAfterClaimSnap.data()?.pendingGiftGoldMinutes === 15
+      && officerRewardsAfterClaimSnap.data()?.giftCountReceived === 1
+      && questAfterOfficerClaimSnap.data()?.captureCount === 2
+      && questAfterOfficerClaimSnap.data()?.milestoneUnlocks?.currentSeason === true
+      && giftActivityAfterOfficerClaimSnap.data()?.recentDonations?.[0]?.productionMinutes === 15,
+    "A later member's reset claim cleared valid activity from the already-current clan season."
+  );
+  await callReplaySafeFunction("leaveClan", returningClanOfficer.token);
+  const [officerAfterLeaveSnap, officerMembershipAfterLeaveSnap, clanAfterOfficerLeaveSnap] = await Promise.all([
+    db.doc(`players/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}/members/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}`).get(),
+  ]);
+  assert(
+    !officerAfterLeaveSnap.data()?.clanId
+      && !officerMembershipAfterLeaveSnap.exists
+      && clanAfterOfficerLeaveSnap.data()?.memberCount === 2,
+    "The returning-officer persistence fixture could not be cleanly detached after verification."
+  );
 
   await waitForOwnershipEvents(50);
   const eventsBeforeEconomy = await db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`).get();

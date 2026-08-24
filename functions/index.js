@@ -77,6 +77,16 @@ function normalizeCommonGear(profileOrGear = {}) {
   return COMMON_GEAR.normalizeState(profileOrGear?.gear || profileOrGear);
 }
 
+function createPersistentCommonGearForSeasonReset(previous = {}) {
+  const gear = normalizeCommonGear(previous);
+  return COMMON_GEAR.normalizeState({
+    commonGearBoxes: gear.commonGearBoxes,
+    instances: gear.instances,
+    equipped: gear.equipped,
+    newMarkers: gear.newMarkers,
+  });
+}
+
 function getCommonGearBonuses(profileOrGear = {}) {
   return COMMON_GEAR.getBonuses(profileOrGear);
 }
@@ -14792,6 +14802,264 @@ function createRandomPlayerFlag() {
   return PLAYER_FLAG_CONFIG.createRandomFlag(max => crypto.randomInt(0, max));
 }
 
+function normalizePersistentClanRole(value = "") {
+  const role = safeString(value, 16).toLowerCase();
+  return ["leader", "officer", "member"].includes(role) ? role : "";
+}
+
+function createResetClanWorldBenefits(clanId = "", nowMs = Date.now()) {
+  return {
+    clanId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+    status: "active",
+    objectives: [],
+    sharedBonuses: emptyObjectiveBonuses(),
+    citadelControllerUid: "",
+    cumulativeGoldPercentMs: 0,
+    cumulativeTroopPercentMs: 0,
+    lastIntegratedAtMs: nowMs,
+    effectiveAtMs: nowMs,
+    revision: 1,
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function createResetClanGiftActivity(nowMs = Date.now()) {
+  return {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    recentDonations: [],
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function assertClanReservationAvailableForReset(snapshot, clanId = "", nowMs = Date.now(), label = "identity") {
+  if (!snapshot?.exists) return;
+  const reservation = snapshot.data() || {};
+  if (safeString(reservation.clanId, 128) === clanId) return;
+  if (timestampToMs(reservation.reusableAtMs) > nowMs) {
+    throw new HttpsError(
+      "failed-precondition",
+      `The preserved clan ${label} conflicts with another current-season clan. Manual resolution is required.`
+    );
+  }
+}
+
+async function readClanSeasonPersistenceContext(transaction, { uid = "", previous = {}, nowMs = Date.now() } = {}) {
+  const clanId = safeString(previous.clanId, 128);
+  if (!clanId) return null;
+  const clanRef = db.doc(`clans/${clanId}`);
+  const memberRef = db.doc(`clans/${clanId}/members/${uid}`);
+  const [clanSnap, memberSnap] = await Promise.all([
+    transaction.get(clanRef),
+    transaction.get(memberRef),
+  ]);
+  if (!clanSnap.exists || !memberSnap.exists) return null;
+  const clan = clanSnap.data() || {};
+  const member = memberSnap.data() || {};
+  if (clan.status === "disbanded" || member.status === "removed") return null;
+  const role = normalizePersistentClanRole(member.role);
+  if (!role) {
+    throw new HttpsError("failed-precondition", "The preserved clan membership has an invalid role.");
+  }
+
+  const alreadyCurrent = safeString(clan.resetGeneration, 120) === RESET_GENERATION
+    && safeString(clan.worldId, 120) === ONLINE_WORLD_ID;
+  if (alreadyCurrent) {
+    if (safeString(member.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(member.worldId, 120) !== ONLINE_WORLD_ID) {
+      throw new HttpsError("failed-precondition", "The current clan roster is not synchronized with this season.");
+    }
+    const benefitsSnap = await transaction.get(clanWorldBenefitsRef(clanId));
+    return {
+      clanId,
+      clanRef,
+      clan,
+      memberRef,
+      member,
+      role,
+      alreadyCurrent: true,
+      benefits: benefitsSnap.exists ? benefitsSnap.data() || {} : createResetClanWorldBenefits(clanId, nowMs),
+    };
+  }
+
+  const membersSnap = await transaction.get(db.collection(`clans/${clanId}/members`));
+  const memberEntries = membersSnap.docs
+    .map(snapshot => ({
+      snapshot,
+      uid: snapshot.id,
+      member: snapshot.data() || {},
+      role: normalizePersistentClanRole(snapshot.data()?.role),
+    }))
+    .filter(entry => entry.member.status !== "removed");
+  if (!memberEntries.length || memberEntries.length > CLAN_MEMBER_LIMIT) {
+    throw new HttpsError("failed-precondition", "The preserved clan roster is invalid.");
+  }
+  if (memberEntries.some(entry => !entry.role)) {
+    throw new HttpsError("failed-precondition", "The preserved clan roster contains an invalid role.");
+  }
+  const preservedMember = memberEntries.find(entry => entry.uid === uid);
+  if (!preservedMember || preservedMember.role !== role) {
+    throw new HttpsError("failed-precondition", "The preserved clan membership does not match its roster.");
+  }
+  const leaderEntries = memberEntries.filter(entry => entry.role === "leader");
+  if (leaderEntries.length !== 1 || leaderEntries[0].uid !== safeString(clan.leaderUid, 128)) {
+    throw new HttpsError("failed-precondition", "The preserved clan does not have one authoritative leader.");
+  }
+
+  const name = normalizeClanName(clan.name);
+  const tag = normalizeClanTag(clan.tag);
+  const nameRef = clanNameReservationRef(name.normalized);
+  const tagRef = clanTagReservationRef(tag.normalized);
+  const [nameSnap, tagSnap] = await Promise.all([
+    transaction.get(nameRef),
+    transaction.get(tagRef),
+  ]);
+  assertClanReservationAvailableForReset(nameSnap, clanId, nowMs, "name");
+  assertClanReservationAvailableForReset(tagSnap, clanId, nowMs, "tag");
+  return {
+    clanId,
+    clanRef,
+    clan,
+    memberRef,
+    member,
+    role,
+    alreadyCurrent: false,
+    memberEntries,
+    name,
+    tag,
+    nameRef,
+    tagRef,
+  };
+}
+
+function createResetClanMember(entry = {}, { claimantUid = "", claimantProfile = {}, claimantPower = 0, nowMs = Date.now() } = {}) {
+  const isClaimant = entry.uid === claimantUid;
+  const displayName = isClaimant
+    ? claimantProfile.playerName
+    : normalizePlayerName(entry.member?.displayName || entry.member?.playerName || "Ruler");
+  const flag = isClaimant
+    ? claimantProfile.flag
+    : normalizeServerFlag(entry.member?.flag, entry.uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(entry.uid);
+  return {
+    uid: entry.uid,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    role: entry.role,
+    displayName,
+    flag,
+    kingPower: isClaimant ? Math.max(0, Math.floor(safeNumber(claimantPower, 0))) : 0,
+    joinedAtMs: nowMs,
+    roleChangedAtMs: nowMs,
+    lastLoginAtMs: isClaimant ? getPlayerLastLoginAtMs(claimantProfile, nowMs) : 0,
+    lastActiveAtMs: isClaimant ? nowMs : 0,
+    status: "active",
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function applyClanSeasonPersistence(transaction, context, { uid = "", freshProfile = {}, stats = {}, nowMs = Date.now() } = {}) {
+  if (!context) return null;
+  const claimantPower = Math.max(0, Math.floor(safeNumber(stats.kingPower, 0)));
+  let currentClan = context.clan;
+  let benefits = context.benefits;
+
+  if (!context.alreadyCurrent) {
+    const shield = normalizeClanShield(context.clan.shield || context.clan.banner);
+    currentClan = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
+      name: context.name.display,
+      normalizedName: context.name.normalized,
+      tag: context.tag.display,
+      normalizedTag: context.tag.normalized,
+      description: "",
+      shield,
+      banner: clanShieldLegacyBanner(shield),
+      heraldryRevision: CLAN_HERALDRY_CONFIG.normalizeHeraldryRevision(context.clan.heraldryRevision),
+      admissionMode: "approval",
+      leaderUid: safeString(context.clan.leaderUid, 128),
+      memberCount: context.memberEntries.length,
+      memberLimit: CLAN_MEMBER_LIMIT,
+      totalKingPower: claimantPower,
+      status: "active",
+      lastNameChangedAtMs: 0,
+      nextNameChangeAtMs: 0,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    benefits = createResetClanWorldBenefits(context.clanId, nowMs);
+    transaction.set(context.clanRef, currentClan);
+    context.memberEntries.forEach(entry => {
+      transaction.set(entry.snapshot.ref, createResetClanMember(entry, {
+        claimantUid: uid,
+        claimantProfile: freshProfile,
+        claimantPower,
+        nowMs,
+      }));
+      transaction.set(clanMemberRewardsRef(context.clanId, entry.uid), createClanMemberRewards(entry.uid, nowMs));
+    });
+    const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
+    transaction.set(clanQuestProgressRef(context.clanId, questPeriod), createClanQuestProgress(context.clanId, questPeriod, nowMs));
+    transaction.set(clanWorldBenefitsRef(context.clanId), benefits);
+    transaction.set(clanGiftActivityRef(context.clanId), createResetClanGiftActivity(nowMs));
+    transaction.delete(clanRallyStateRef(context.clanId));
+    transaction.set(context.nameRef, {
+      clanId: context.clanId,
+      reusableAtMs: Number.MAX_SAFE_INTEGER,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(context.tagRef, {
+      clanId: context.clanId,
+      reusableAtMs: Number.MAX_SAFE_INTEGER,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } else {
+    const previousPower = Math.max(0, Math.floor(safeNumber(context.member.kingPower, 0)));
+    const totalKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(context.clan.totalKingPower, 0)) - previousPower + claimantPower
+    );
+    currentClan = { ...context.clan, totalKingPower };
+    transaction.set(context.memberRef, {
+      displayName: freshProfile.playerName,
+      flag: freshProfile.flag,
+      kingPower: claimantPower,
+      lastLoginAtMs: getPlayerLastLoginAtMs(freshProfile, nowMs),
+      lastActiveAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(context.clanRef, {
+      totalKingPower,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  const identity = clanIdentityPatch(context.clanId, currentClan, context.role);
+  Object.assign(freshProfile, identity, {
+    clanIdentityRevision: Math.max(0, Math.floor(safeNumber(freshProfile.clanIdentityRevision, 0))) + 1,
+    clanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    clanIdentityUpdatedAtMs: nowMs,
+    clanObjectiveAccrual: clanBenefitAccrualBaseline(benefits, context.clanId, nowMs),
+  });
+  writeClanLeaderboard(transaction, context.clanId, currentClan);
+  return identity;
+}
+
 function createFreshResetPlayerProfile({
   uid = "",
   previous = {},
@@ -14802,11 +15070,15 @@ function createFreshResetPlayerProfile({
   regionId = "",
   nowMs = Date.now(),
 } = {}) {
-  const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
-  const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
+  const displayName = safeString(
+    previous.displayName || previous.playerName || requestData.displayName || authToken.name,
+    80
+  );
+  const playerName = normalizePlayerName(previous.playerName || previous.displayName || requestData.playerName || displayName);
   const flag = previous.flag && typeof previous.flag === "object"
     ? normalizeServerFlag(previous.flag, uid)
     : createRandomPlayerFlag();
+  const accountCreatedAtMs = Math.max(0, timestampToMs(previous.createdAtMs || previous.createdAt));
   const profile = {
     uid,
     displayName,
@@ -14830,7 +15102,7 @@ function createFreshResetPlayerProfile({
     freeSkillResetGrantVersion: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
-    gear: COMMON_GEAR.createDefaultState(),
+    gear: createPersistentCommonGearForSeasonReset(previous),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
     dailyLoginReward: createDefaultDailyLoginRewardState(),
@@ -14848,7 +15120,9 @@ function createFreshResetPlayerProfile({
     pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
     lastRealTimeMs: nowMs,
     lastSeenAtMs: nowMs,
-    createdAt: previous.createdAt || FieldValue.serverTimestamp(),
+    createdAtMs: accountCreatedAtMs || nowMs,
+    createdAt: previous.createdAt
+      || (accountCreatedAtMs ? Timestamp.fromMillis(accountCreatedAtMs) : FieldValue.serverTimestamp()),
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (previous.activeSession && typeof previous.activeSession === "object") {
@@ -14916,6 +15190,7 @@ async function claimFreshStartingCity(request) {
       }
     }
 
+    const clanPersistence = await readClanSeasonPersistenceContext(transaction, { uid, previous, nowMs });
     const chosenIsland = placement.island;
     const chosenIslandSnap = await transaction.get(chosenIsland.ref);
     const placementSlotSnap = await transaction.get(placement.slotRef);
@@ -14999,6 +15274,12 @@ async function claimFreshStartingCity(request) {
       activeArmies: [],
       nowMs,
     });
+    const clanIdentity = applyClanSeasonPersistence(transaction, clanPersistence, {
+      uid,
+      freshProfile,
+      stats,
+      nowMs,
+    });
 
     transaction.set(playerRef, {
       ...freshProfile,
@@ -15033,6 +15314,7 @@ async function claimFreshStartingCity(request) {
       mainCityId: chosenCity.id,
       mainRegionId: chosenIsland.regionId,
       mainIslandId: chosenIsland.islandId,
+      ...(clanIdentity || {}),
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -15064,6 +15346,7 @@ async function claimFreshStartingCity(request) {
         upgrades: freshProfile.upgrades,
         skillPresets: freshProfile.skillPresets,
         shopItems: freshProfile.shopItems,
+        gear: freshProfile.gear,
         itemEffects: freshProfile.itemEffects,
         itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,
         dailyLoginReward: freshProfile.dailyLoginReward,
@@ -15072,6 +15355,7 @@ async function claimFreshStartingCity(request) {
         mainRegionId: chosenIsland.regionId,
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        ...(clanIdentity || {}),
         globalStats: globalStatsForClient(stats),
       },
     };
