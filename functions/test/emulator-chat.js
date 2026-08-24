@@ -3,6 +3,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
 const CHAT = require("../chat.js");
+const worldLayout = require("../world-layout.json");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -169,12 +170,27 @@ async function runChatQuery(user, parentPath) {
   return { status: response.status, body: await response.json().catch(() => null) };
 }
 
-function playerRecord(user, name, clanId = "") {
+function playerRecord(user, name, clanId = "", mainCityId = "") {
   return {
     uid: user.uid,
     playerName: name,
     displayName: `${name} ignored`,
     clanId,
+    mainCityId,
+    mainIslandId: `${realm.worldId}-region_11`,
+    mainRegionId: "region_11",
+    resetGeneration: realm.resetGeneration,
+    worldId: realm.worldId,
+  };
+}
+
+function mainCityRecord(user, mainCityId) {
+  return {
+    id: mainCityId,
+    regionId: "region_11",
+    ownerKind: "player",
+    ownerUid: user.uid,
+    isMainCity: true,
     resetGeneration: realm.resetGeneration,
     worldId: realm.worldId,
   };
@@ -209,15 +225,30 @@ async function main() {
   const unsafeSender = await createAuthUser("unsafe");
   const muted = await createAuthUser("muted");
   const stale = await createAuthUser("stale");
+  const chatCityIds = (worldLayout.maps || [])
+    .find(map => map.id === "region_11")
+    ?.cities?.slice(0, 6)
+    .map(city => city.id) || [];
+  assert(chatCityIds.length === 6, "Chat emulator fixtures could not reserve current-world main cities.");
 
   const setup = db.batch();
-  setup.set(db.doc(`players/${author.uid}`), playerRecord(author, "Lady Author", clanA));
-  setup.set(db.doc(`players/${switcher.uid}`), playerRecord(switcher, "Sir Switcher", clanA));
-  setup.set(db.doc(`players/${outsider.uid}`), playerRecord(outsider, "Outer Ruler"));
-  setup.set(db.doc(`players/${unsafeSender.uid}`), playerRecord(unsafeSender, "Markup Baron"));
-  setup.set(db.doc(`players/${muted.uid}`), playerRecord(muted, "Muted Ruler"));
+  const currentPlayers = [
+    { user: author, name: "Lady Author", clanId: clanA },
+    { user: switcher, name: "Sir Switcher", clanId: clanA },
+    { user: outsider, name: "Outer Ruler", clanId: "" },
+    { user: unsafeSender, name: "Markup Baron", clanId: "" },
+    { user: muted, name: "Muted Ruler", clanId: "" },
+  ];
+  currentPlayers.forEach(({ user, name, clanId }, index) => {
+    const mainCityId = chatCityIds[index];
+    setup.set(db.doc(`players/${user.uid}`), playerRecord(user, name, clanId, mainCityId));
+    setup.set(
+      db.doc(`islands/${realm.worldId}-region_11/cities/${mainCityId}`),
+      mainCityRecord(user, mainCityId)
+    );
+  });
   setup.set(db.doc(`players/${stale.uid}`), {
-    ...playerRecord(stale, "Stale Ruler"),
+    ...playerRecord(stale, "Stale Ruler", "", chatCityIds[5]),
     resetGeneration: "archived-generation",
     worldId: "archived-world",
   });

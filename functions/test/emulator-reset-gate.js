@@ -5,6 +5,7 @@ const realm = require("../release-config.json");
 const economyConfig = require("../economy-config.json");
 const { getClanQuestPeriod } = require("../clanQuestPeriod.js");
 const playerFlagConfig = require("../playerFlagConfig.js");
+const CHAT = require("../chat.js");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -720,6 +721,77 @@ async function main() {
     flag: { background: "#000000" },
   });
   assert(firstClaim.cityId, "The first reset player did not receive a city.");
+  const settledClanBenefitsSnap = await waitForDocumentValue(
+    db.doc(`clans/${archivedClanId}/worldBenefits/${realm.resetGeneration}`),
+    benefits => Number(benefits.revision || 0) >= 2
+  );
+  await waitForDocumentValue(
+    db.doc(`players/${users[0].uid}/stats/global`),
+    stats => Number(stats.updatedAtMs || 0) > Number(settledClanBenefitsSnap.data()?.updatedAtMs || 0)
+  );
+  const [preclaimOfficerProfileSnap, preclaimOfficerMemberSnap, preclaimOfficerStatsSnap, preclaimOfficerLeaderboardSnap] = await Promise.all([
+    db.doc(`players/${returningClanOfficer.uid}`).get(),
+    db.doc(`clans/${archivedClanId}/members/${returningClanOfficer.uid}`).get(),
+    db.doc(`players/${returningClanOfficer.uid}/stats/global`).get(),
+    db.doc(`leaderboards/${realm.resetGeneration}/entries/${returningClanOfficer.uid}`).get(),
+  ]);
+  const preclaimOfficerProfile = preclaimOfficerProfileSnap.data() || {};
+  assert(
+    preclaimOfficerProfile.resetGeneration === "archived-generation"
+      && preclaimOfficerProfile.worldId === "main-archived-generation"
+      && !preclaimOfficerProfile.mainCityId
+      && !preclaimOfficerProfile.mainIslandId
+      && preclaimOfficerProfile.gold === 654_321,
+    "Clan rollover background work promoted a non-returning member's archived profile."
+  );
+  assert(
+    preclaimOfficerMemberSnap.data()?.resetGeneration === realm.resetGeneration
+      && preclaimOfficerMemberSnap.data()?.worldId === realm.worldId
+      && preclaimOfficerMemberSnap.data()?.role === "officer",
+    "Clan rollover did not preserve the non-returning officer's current-season roster identity."
+  );
+  assert(
+    !preclaimOfficerStatsSnap.exists && !preclaimOfficerLeaderboardSnap.exists,
+    "Clan rollover created current-season stats or leaderboard state for a non-returning member."
+  );
+
+  const preclaimGlobalRequestId = "preclaim_global_chat_gate";
+  const preclaimClanRequestId = "preclaim_clan_chat_gate";
+  const preclaimGlobalMessageId = CHAT.chatMessageId(returningClanOfficer.uid, preclaimGlobalRequestId);
+  const preclaimClanMessageId = CHAT.chatMessageId(returningClanOfficer.uid, preclaimClanRequestId);
+  const preclaimSideEffectRefs = [
+    db.doc(`globalChat/${realm.resetGeneration}/messages/${preclaimGlobalMessageId}`),
+    db.doc(`clans/${archivedClanId}/messages/${preclaimClanMessageId}`),
+    db.doc(`players/${returningClanOfficer.uid}/chatSendRequests/${preclaimGlobalMessageId}`),
+    db.doc(`players/${returningClanOfficer.uid}/chatSendRequests/${preclaimClanMessageId}`),
+    db.doc(`serverRateLimits/chat_${returningClanOfficer.uid}`),
+  ];
+  const [preclaimSideEffectsBefore, preclaimAuditBefore] = await Promise.all([
+    db.getAll(...preclaimSideEffectRefs),
+    db.collection(`clans/${archivedClanId}/audit`).get(),
+  ]);
+  assert(
+    preclaimSideEffectsBefore.every(snapshot => !snapshot.exists),
+    "The pre-claim Chat regression fixture started with unexpected message, receipt, or rate-limit state."
+  );
+  await expectFunctionFailure(
+    () => callFunction("sendChatMessage", returningClanOfficer.token, {
+      channel: "global",
+      text: "Archived Global attempt",
+      requestId: preclaimGlobalRequestId,
+    }),
+    /current crownlands realm/i,
+    "An archived player profile used Global Chat before completing reset claim"
+  );
+  await expectFunctionFailure(
+    () => callFunction("sendChatMessage", returningClanOfficer.token, {
+      channel: "clan",
+      text: "Archived Clan attempt",
+      requestId: preclaimClanRequestId,
+    }),
+    /current crownlands realm/i,
+    "An archived player profile used Clan Chat before completing reset claim"
+  );
   const clanGiftActivityBeforeArchivedAction = (
     await db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get()
   ).data() || {};
@@ -731,10 +803,19 @@ async function main() {
   const clanGiftActivityAfterArchivedAction = (
     await db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get()
   ).data() || {};
+  const [preclaimSideEffectsAfter, preclaimAuditAfter] = await Promise.all([
+    db.getAll(...preclaimSideEffectRefs),
+    db.collection(`clans/${archivedClanId}/audit`).get(),
+  ]);
   assert(
     JSON.stringify(clanGiftActivityAfterArchivedAction.recentDonations || [])
       === JSON.stringify(clanGiftActivityBeforeArchivedAction.recentDonations || []),
     "A rejected archived-profile clan action changed current-season clan activity."
+  );
+  assert(
+    preclaimSideEffectsAfter.every(snapshot => !snapshot.exists)
+      && preclaimAuditAfter.size === preclaimAuditBefore.size,
+    "Rejected pre-claim actions created a Chat message, request receipt, rate-limit record, or clan audit entry."
   );
   const remainingClaims = [];
   for (const [index, user] of users.slice(1).entries()) {
@@ -1107,6 +1188,36 @@ async function main() {
       && questAfterOfficerClaimSnap.data()?.milestoneUnlocks?.currentSeason === true
       && giftActivityAfterOfficerClaimSnap.data()?.recentDonations?.[0]?.productionMinutes === 15,
     "A later member's reset claim cleared valid activity from the already-current clan season."
+  );
+  const postclaimGlobalChat = await callReplaySafeFunction("sendChatMessage", returningClanOfficer.token, {
+    channel: "global",
+    text: "Returned to the realm",
+    requestId: "postclaim_global_chat_gate",
+  });
+  assert(
+    postclaimGlobalChat?.ok === true && postclaimGlobalChat.channel === "global",
+    "A returning clan member could not use Global Chat after completing reset claim."
+  );
+  await db.doc(`serverRateLimits/chat_${returningClanOfficer.uid}`).set({
+    lastMessageAtMs: Date.now() - CHAT.CHAT_SEND_COOLDOWN_MS - 25,
+    cooldownUntilMs: Date.now() - 25,
+  }, { merge: true });
+  const postclaimClanChat = await callReplaySafeFunction("sendChatMessage", returningClanOfficer.token, {
+    channel: "clan",
+    text: "Officer reporting",
+    requestId: "postclaim_clan_chat_gate",
+  });
+  const [postclaimGlobalMessageSnap, postclaimClanMessageSnap] = await Promise.all([
+    db.doc(`globalChat/${realm.resetGeneration}/messages/${postclaimGlobalChat.messageId}`).get(),
+    db.doc(`clans/${archivedClanId}/messages/${postclaimClanChat.messageId}`).get(),
+  ]);
+  assert(
+    postclaimClanChat?.ok === true
+      && postclaimClanChat.channel === "clan"
+      && postclaimClanChat.clanId === archivedClanId
+      && postclaimGlobalMessageSnap.data()?.senderUid === returningClanOfficer.uid
+      && postclaimClanMessageSnap.data()?.senderUid === returningClanOfficer.uid,
+    "A returning clan member could not use both Chat channels after completing reset claim."
   );
   const currentOfficerGift = await callReplaySafeFunction("sendClanGift", returningClanOfficer.token);
   assert(

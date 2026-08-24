@@ -10610,8 +10610,8 @@ async function rebuildClanBenefitsAndMemberStats(clanId = "", effectiveAtMs = Da
   const membersSnap = await db.collection(`clans/${safeClanId}/members`).get();
   let membersUpdated = 0;
   await processWithConcurrency(membersSnap.docs, 4, async memberDoc => {
-    await rebuildGlobalStatsForPlayer(memberDoc.id);
-    membersUpdated += 1;
+    const result = await rebuildGlobalStatsForPlayer(memberDoc.id);
+    if (!result.skipped) membersUpdated += 1;
   });
   return { clanId: safeClanId, benefits, membersUpdated };
 }
@@ -12081,8 +12081,23 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
-    profileRef.get(),
+  const profileSnap = await profileRef.get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const currentSeasonProfile = profileSnap.exists
+    && safeString(profile.resetGeneration, 120) === RESET_GENERATION
+    && safeString(profile.worldId, 120) === ONLINE_WORLD_ID;
+  if (!currentSeasonProfile) {
+    return {
+      uid: playerUid,
+      skipped: true,
+      reason: profileSnap.exists ? "archived-player-profile" : "missing-player-profile",
+      stats: null,
+      cityUpdates: 0,
+      armyUpdates: 0,
+      mainCityRepairs: 0,
+    };
+  }
+  const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     db.collectionGroup("cities")
       .where("ownerUid", "==", playerUid)
       .where("resetGeneration", "==", RESET_GENERATION)
@@ -12091,7 +12106,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     activeArmiesQueryForPlayer(playerUid).get(),
     heldRewardCampsQueryForPlayer(playerUid).get(),
   ]);
-  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
   const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
   const clanBenefitsSnap = identity.clanId
@@ -12138,8 +12152,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       ref: profileRef,
       data: {
         uid: playerUid,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
         playerName: identity.ownerName,
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
@@ -16684,6 +16696,47 @@ function assertCurrentChatAccount(profileSnap) {
   return profile;
 }
 
+function getCurrentChatMainCityContext(profile = {}) {
+  const mainCityId = safeString(profile.mainCityId, 96);
+  const mainIslandId = safeString(profile.mainIslandId, 160);
+  const mainRegionId = getRegionIdFromOnlineIslandId(mainIslandId);
+  const storedMainRegionId = normalizeRegionId(profile.mainRegionId || mainRegionId);
+  const validMainCityId = /^[a-zA-Z0-9_-]+$/.test(mainCityId)
+    && getServerWorldRegularCityIds(mainRegionId).has(mainCityId);
+  if (!validMainCityId
+    || !isCurrentWorldIslandId(mainIslandId)
+    || mainIslandId !== getOnlineIslandId(mainRegionId)
+    || storedMainRegionId !== mainRegionId) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
+  }
+  return {
+    mainCityId,
+    mainIslandId,
+    mainRegionId,
+    ref: cityRefForRegion(mainRegionId, mainCityId),
+  };
+}
+
+function assertCurrentChatMainCity(profile = {}, mainCityContext = {}, mainCitySnap = null, uid = "") {
+  const city = mainCitySnap?.exists ? mainCitySnap.data() || {} : {};
+  const cityIslandId = safeString(mainCitySnap?.ref?.parent?.parent?.id, 160);
+  const cityRegionId = getRegionIdFromCityDoc(mainCitySnap, city);
+  if (!mainCitySnap?.exists
+    || mainCitySnap.id !== mainCityContext.mainCityId
+    || cityIslandId !== mainCityContext.mainIslandId
+    || cityRegionId !== mainCityContext.mainRegionId
+    || safeString(city.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(city.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(city.ownerKind || "player", 32) !== "player"
+    || getOwnerUid(city) !== uid
+    || city.isMainCity !== true
+    || isStronghold(city)
+    || safeString(profile.mainCityId, 96) !== mainCitySnap.id) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
+  }
+  return city;
+}
+
 function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   if (!restrictionSnap?.exists) return;
   const restriction = restrictionSnap.data() || {};
@@ -16730,6 +16783,9 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       transaction.get(requestRef),
     ]);
     const profile = assertCurrentChatAccount(profileSnap);
+    const mainCityContext = getCurrentChatMainCityContext(profile);
+    const mainCitySnap = await transaction.get(mainCityContext.ref);
+    assertCurrentChatMainCity(profile, mainCityContext, mainCitySnap, uid);
     assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
 
     const clanId = channel === "clan" ? safeString(profile.clanId, 128) : "";
