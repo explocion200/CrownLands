@@ -254,10 +254,101 @@ async function mapWithConcurrency(items, concurrency, mapper) {
   return results;
 }
 
+async function expectFunctionFailure(action, pattern, label) {
+  let capturedError = null;
+  try {
+    await action();
+  } catch (error) {
+    capturedError = error;
+  }
+  assert(
+    capturedError && pattern.test(String(capturedError?.message || capturedError)),
+    `${label}: ${String(capturedError?.message || "no error")}`
+  );
+  return capturedError;
+}
+
+function normalizedClanFixtureName(name = "") {
+  return String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+async function seedArchivedClanFixture({
+  claimant,
+  clanId,
+  name,
+  tag,
+  members = null,
+  clanStatus = "active",
+  omitClan = false,
+  omitClaimantMember = false,
+} = {}) {
+  const roster = members || [{ uid: claimant.uid, role: "leader", status: "active" }];
+  const leader = roster.find(member => member.role === "leader");
+  const claimantMember = roster.find(member => member.uid === claimant.uid);
+  const writes = [
+    db.doc(`players/${claimant.uid}`).set({
+      uid: claimant.uid,
+      displayName: `Archived ${name}`,
+      playerName: `Archived ${name}`,
+      resetGeneration: "archived-generation",
+      worldId: "main-archived-generation",
+      gold: 999_999,
+      character: { level: 22, xp: 1_234, skillPoints: 21 },
+      clanId,
+      clanName: name,
+      clanTag: tag,
+      clanRole: claimantMember?.role || "member",
+    }),
+  ];
+  if (!omitClan) {
+    writes.push(db.doc(`clans/${clanId}`).set({
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      releaseId: "archived-release",
+      name,
+      normalizedName: normalizedClanFixtureName(name),
+      tag,
+      normalizedTag: String(tag).toLowerCase(),
+      shield: {},
+      heraldryRevision: 0,
+      leaderUid: leader?.uid || "",
+      memberCount: roster.filter(member => member.status !== "removed").length,
+      totalKingPower: 9_999,
+      status: clanStatus,
+    }));
+  }
+  roster.forEach((member, index) => {
+    if (omitClaimantMember && member.uid === claimant.uid) return;
+    writes.push(db.doc(`clans/${clanId}/members/${member.uid}`).set({
+      uid: member.uid,
+      worldId: "main-archived-generation",
+      resetGeneration: "archived-generation",
+      role: member.role,
+      status: member.status || "active",
+      displayName: member.displayName || `Archived Member ${index + 1}`,
+      kingPower: 1_000 + index,
+      joinedAtMs: 1_700_000_000_000 + index,
+      roleChangedAtMs: 1_700_000_100_000 + index,
+    }));
+  });
+  await Promise.all(writes);
+}
+
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
   const queuedUser = await createAuthUser(50);
   const returningClanOfficer = await createAuthUser(51);
+  const concurrentClanLeader = await createAuthUser(52);
+  const concurrentClanOfficer = await createAuthUser(53);
+  const incompleteClanUser = await createAuthUser(54);
+  const missingClanUser = await createAuthUser(55);
+  const invalidRoleUser = await createAuthUser(56);
+  const noLeaderUser = await createAuthUser(57);
+  const multipleLeaderUser = await createAuthUser(58);
+  const maxRosterUser = await createAuthUser(59);
+  const oversizedRosterUser = await createAuthUser(60);
+  const disbandedClanUser = await createAuthUser(61);
+  const removedClanUser = await createAuthUser(62);
   const lobbySessions = users.map((_, index) => `lobby-session-${index}`);
   const lobbyJoins = await mapWithConcurrency(
     users,
@@ -585,11 +676,66 @@ async function main() {
     }),
   ]);
 
+  const identityAttacker = users[49];
+  const identityAttackerClaim = await callReplaySafeFunction("claimStartingCity", identityAttacker.token, {
+    playerName: "Identity Taker",
+  });
+  const identityAttackerRef = db.doc(`players/${identityAttacker.uid}`);
+  await identityAttackerRef.set({
+    character: { level: 10, xp: 0, skillPoints: 9 },
+    gold: 200_000,
+    goldFloat: 200_000,
+    economyUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const identityAttackerGoldBefore = Number((await identityAttackerRef.get()).data()?.gold || 0);
+  await expectFunctionFailure(
+    () => callFunction("createClan", identityAttacker.token, {
+      name: "Archived Company",
+      tag: "TAKR",
+      description: "Must not take a persistent clan name before rollover.",
+      admissionMode: "approval",
+    }),
+    /name.*already in use/i,
+    "A current-season clan took a persistent archived clan name before its first member returned"
+  );
+  await expectFunctionFailure(
+    () => callFunction("createClan", identityAttacker.token, {
+      name: "Tag Takers",
+      tag: "ARCH",
+      description: "Must not take a persistent clan tag before rollover.",
+      admissionMode: "approval",
+    }),
+    /tag.*already in use/i,
+    "A current-season clan took a persistent archived clan tag before its first member returned"
+  );
+  const identityAttackerAfterConflicts = (await identityAttackerRef.get()).data() || {};
+  assert(
+    !identityAttackerAfterConflicts.clanId
+      && Number(identityAttackerAfterConflicts.gold || 0) === identityAttackerGoldBefore,
+    "A rejected persistent clan identity conflict changed the actor's clan or economy state."
+  );
+
   const firstClaim = await callReplaySafeFunction("claimStartingCity", users[0].token, {
     playerName: "Client Tried To Rename",
     flag: { background: "#000000" },
   });
   assert(firstClaim.cityId, "The first reset player did not receive a city.");
+  const clanGiftActivityBeforeArchivedAction = (
+    await db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get()
+  ).data() || {};
+  await expectFunctionFailure(
+    () => callFunction("sendClanGift", returningClanOfficer.token),
+    /current crownlands world/i,
+    "An archived player profile used a current-season clan operation before completing reset claim"
+  );
+  const clanGiftActivityAfterArchivedAction = (
+    await db.doc(`clans/${archivedClanId}/giftActivity/${realm.resetGeneration}`).get()
+  ).data() || {};
+  assert(
+    JSON.stringify(clanGiftActivityAfterArchivedAction.recentDonations || [])
+      === JSON.stringify(clanGiftActivityBeforeArchivedAction.recentDonations || []),
+    "A rejected archived-profile clan action changed current-season clan activity."
+  );
   const remainingClaims = [];
   for (const [index, user] of users.slice(1).entries()) {
     remainingClaims.push(
@@ -597,6 +743,10 @@ async function main() {
     );
   }
   const claims = [firstClaim, ...remainingClaims];
+  assert(
+    claims[49].alreadyClaimed === true && claims[49].cityId === identityAttackerClaim.cityId,
+    "The identity-conflict fixture did not preserve idempotent starting-city behavior."
+  );
   assert(new Set(claims.map(claim => claim.cityId)).size === 50, "Starting city assignments collided.");
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
@@ -831,6 +981,65 @@ async function main() {
     assert(result.alreadyClaimed === true, `Repeated claim ${index} was not idempotent.`);
     assert(result.cityId === claims[index].cityId, `Repeated claim ${index} changed city.`);
   });
+  const retriedPersistentUser = idempotentResults[0]?.currentUser || {};
+  const requiredCurrentUserFields = [
+    "playerName",
+    "flag",
+    "gold",
+    "character",
+    "upgrades",
+    "skillPresets",
+    "freeSkillResetGrantVersion",
+    "freeSkillResetCredits",
+    "shopItems",
+    "gear",
+    "itemEffects",
+    "itemPurchaseCooldowns",
+    "dailyLoginReward",
+    "daily",
+    "mainCityId",
+    "mainIslandId",
+    "mainRegionId",
+    "worldId",
+    "resetGeneration",
+    "clanId",
+    "clanName",
+    "clanTag",
+    "clanRole",
+    "globalStats",
+  ];
+  assert(
+    requiredCurrentUserFields.every(field => Object.prototype.hasOwnProperty.call(retriedPersistentUser, field)),
+    "The alreadyClaimed response omitted authoritative current-user fields."
+  );
+  const [authoritativeRetryProfileSnap, authoritativeRetryStatsSnap] = await Promise.all([
+    db.doc(`players/${users[0].uid}`).get(),
+    db.doc(`players/${users[0].uid}/stats/global`).get(),
+  ]);
+  const authoritativeRetryProfile = authoritativeRetryProfileSnap.data() || {};
+  const authoritativeRetryStats = authoritativeRetryStatsSnap.data() || {};
+  assert(
+    retriedPersistentUser.playerName === authoritativeRetryProfile.playerName
+      && JSON.stringify(retriedPersistentUser.flag) === JSON.stringify(authoritativeRetryProfile.flag)
+      && retriedPersistentUser.gold === authoritativeRetryProfile.gold
+      && JSON.stringify(retriedPersistentUser.character) === JSON.stringify(authoritativeRetryProfile.character)
+      && JSON.stringify(retriedPersistentUser.gear) === JSON.stringify(authoritativeRetryProfile.gear)
+      && retriedPersistentUser.mainCityId === authoritativeRetryProfile.mainCityId
+      && retriedPersistentUser.mainIslandId === authoritativeRetryProfile.mainIslandId
+      && retriedPersistentUser.mainRegionId === authoritativeRetryProfile.mainRegionId
+      && retriedPersistentUser.globalStats?.kingPower === authoritativeRetryStats.kingPower,
+    "A response-loss retry did not return current authoritative player and stats state."
+  );
+  assert(
+    retriedPersistentUser.gear?.commonGearBoxes === 7
+      && retriedPersistentUser.gear?.equipped?.barracks?.head === "persistent_helm"
+      && retriedPersistentUser.clanId === archivedClanId
+      && retriedPersistentUser.clanRole === "leader"
+      && retriedPersistentUser.character?.level === 1
+      && Object.values(retriedPersistentUser.shopItems || {}).every(count => count === 0)
+      && retriedPersistentUser.globalStats?.kingPower === profile.kingPower,
+    "The alreadyClaimed response did not reflect persistent and reset state from authoritative documents."
+  );
   const countsAfterRetry = await Promise.all(starterRegions.map(async regionId => (
     Number((await db.doc(`islands/${realm.worldId}-${regionId}`).get()).data()?.playerCount) || 0
   )));
@@ -898,6 +1107,11 @@ async function main() {
       && questAfterOfficerClaimSnap.data()?.milestoneUnlocks?.currentSeason === true
       && giftActivityAfterOfficerClaimSnap.data()?.recentDonations?.[0]?.productionMinutes === 15,
     "A later member's reset claim cleared valid activity from the already-current clan season."
+  );
+  const currentOfficerGift = await callReplaySafeFunction("sendClanGift", returningClanOfficer.token);
+  assert(
+    currentOfficerGift?.ok === true && currentOfficerGift.recipientCount === 2,
+    "A returning clan member could not use a current-season clan action after completing reset claim."
   );
   await callReplaySafeFunction("leaveClan", returningClanOfficer.token);
   const [officerAfterLeaveSnap, officerMembershipAfterLeaveSnap, clanAfterOfficerLeaveSnap] = await Promise.all([
@@ -2677,10 +2891,15 @@ async function main() {
     }
   );
   await retargetBatch.commit();
-  await waitForOwnershipEvents(52);
-
   const retargetedArmyRef = db.doc(`armies/${reinforcementArmyId}`);
-  const retargetedArmy = (await retargetedArmyRef.get()).data() || {};
+  const retargetedArmySnap = await waitForDocumentValue(
+    retargetedArmyRef,
+    army => army.kind === "attack"
+      && army.targetOwnerUid === users[1].uid
+      && army.retargetedFromKind === "transfer",
+    30_000
+  );
+  const retargetedArmy = retargetedArmySnap.data() || {};
   assert(retargetedArmy.kind === "attack", "Reinforcement did not become an attack after its target changed owner.");
   assert(retargetedArmy.targetOwnerUid === users[1].uid, "Retargeted attack did not follow the new city owner.");
   assert(retargetedArmy.retargetedFromKind === "transfer", "Retargeted attack lost its reinforcement origin.");
@@ -2962,10 +3181,14 @@ async function main() {
   );
 
   const pendingDisbandApplicant = queuedUser;
+  const pendingDisbandApplicantClaim = await callReplaySafeFunction(
+    "claimStartingCity",
+    pendingDisbandApplicant.token,
+    { playerName: "Pending Applicant" }
+  );
+  assert(pendingDisbandApplicantClaim?.cityId, "The disband-cleanup applicant did not enter the current world.");
   await db.doc(`players/${pendingDisbandApplicant.uid}`).set({
     character: { level: 10, xp: 0, skillPoints: 9 },
-    resetGeneration: realm.resetGeneration,
-    worldId: realm.worldId,
   }, { merge: true });
   await callFunction("applyToClan", pendingDisbandApplicant.token, {
     clanId: applicationClanId,
@@ -3039,6 +3262,264 @@ async function main() {
   assert(!releasedApplicantProfile.data()?.pendingClanApplicationId, "Disbanding did not release the pending applicant.");
   assert(disbandedBenefitsSnapshot.data()?.status === "inactive", "Disbanding did not end shared clan benefits.");
   assert(!disbandedLeaderboardSnapshot.exists, "Disbanding did not remove the clan leaderboard entry.");
+
+  const concurrentClanId = "concurrent-persistent-clan";
+  const concurrentMembers = [
+    { uid: concurrentClanLeader.uid, role: "leader", status: "active", displayName: "Concurrent Leader" },
+    { uid: concurrentClanOfficer.uid, role: "officer", status: "active", displayName: "Concurrent Officer" },
+  ];
+  await seedArchivedClanFixture({
+    claimant: concurrentClanLeader,
+    clanId: concurrentClanId,
+    name: "Concurrent Clan",
+    tag: "CCLN",
+    members: concurrentMembers,
+  });
+  await db.doc(`players/${concurrentClanOfficer.uid}`).set({
+    uid: concurrentClanOfficer.uid,
+    displayName: "Concurrent Officer",
+    playerName: "Concurrent Officer",
+    resetGeneration: "archived-generation",
+    worldId: "main-archived-generation",
+    gold: 888_888,
+    character: { level: 18, xp: 500, skillPoints: 17 },
+    clanId: concurrentClanId,
+    clanName: "Concurrent Clan",
+    clanTag: "CCLN",
+    clanRole: "officer",
+  });
+  const concurrentClaims = await Promise.all([
+    callReplaySafeFunction("claimStartingCity", concurrentClanLeader.token),
+    callReplaySafeFunction("claimStartingCity", concurrentClanOfficer.token),
+  ]);
+  const [
+    concurrentClanSnap,
+    concurrentLeaderProfileSnap,
+    concurrentOfficerProfileSnap,
+    concurrentLeaderMemberSnap,
+    concurrentOfficerMemberSnap,
+  ] = await Promise.all([
+    db.doc(`clans/${concurrentClanId}`).get(),
+    db.doc(`players/${concurrentClanLeader.uid}`).get(),
+    db.doc(`players/${concurrentClanOfficer.uid}`).get(),
+    db.doc(`clans/${concurrentClanId}/members/${concurrentClanLeader.uid}`).get(),
+    db.doc(`clans/${concurrentClanId}/members/${concurrentClanOfficer.uid}`).get(),
+  ]);
+  const concurrentLeaderProfile = concurrentLeaderProfileSnap.data() || {};
+  const concurrentOfficerProfile = concurrentOfficerProfileSnap.data() || {};
+  assert(
+    concurrentClaims.every(claim => claim?.cityId)
+      && new Set(concurrentClaims.map(claim => claim.cityId)).size === 2
+      && concurrentClanSnap.data()?.resetGeneration === realm.resetGeneration
+      && concurrentClanSnap.data()?.memberCount === 2
+      && concurrentClanSnap.data()?.totalKingPower
+        === Number(concurrentLeaderProfile.kingPower || 0) + Number(concurrentOfficerProfile.kingPower || 0)
+      && concurrentLeaderMemberSnap.data()?.role === "leader"
+      && concurrentOfficerMemberSnap.data()?.role === "officer",
+    "Concurrent first claims did not converge on one valid persistent clan rollover."
+  );
+
+  const assertNoPartialResetClaim = async (user, clanId, label) => {
+    const [profileSnap, leaderboardSnap, clanSnap] = await Promise.all([
+      db.doc(`players/${user.uid}`).get(),
+      db.doc(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`).get(),
+      db.doc(`clans/${clanId}`).get(),
+    ]);
+    const failedProfile = profileSnap.data() || {};
+    assert(
+      failedProfile.resetGeneration === "archived-generation"
+        && failedProfile.worldId === "main-archived-generation"
+        && !failedProfile.mainCityId
+        && !leaderboardSnap.exists
+        && (!clanSnap.exists || clanSnap.data()?.resetGeneration === "archived-generation"),
+      `${label} partially changed player, leaderboard, or clan season state.`
+    );
+  };
+
+  const incompleteClanId = "incomplete-member-clan";
+  await seedArchivedClanFixture({
+    claimant: incompleteClanUser,
+    clanId: incompleteClanId,
+    name: "Repair Clan",
+    tag: "RPR",
+    omitClaimantMember: true,
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", incompleteClanUser.token),
+    /membership is incomplete.*no season data was changed/i,
+    "A missing persistent member document did not fail safely"
+  );
+  await assertNoPartialResetClaim(incompleteClanUser, incompleteClanId, "Missing persistent member rejection");
+  await db.doc(`clans/${incompleteClanId}/members/${incompleteClanUser.uid}`).set({
+    uid: incompleteClanUser.uid,
+    worldId: "main-archived-generation",
+    resetGeneration: "archived-generation",
+    role: "leader",
+    status: "active",
+    displayName: "Repair Leader",
+    kingPower: 1_000,
+    joinedAtMs: 1_700_000_000_000,
+    roleChangedAtMs: 1_700_000_100_000,
+  });
+  const repairedClanClaim = await callReplaySafeFunction("claimStartingCity", incompleteClanUser.token);
+  const [repairedProfileSnap, repairedClanSnap] = await Promise.all([
+    db.doc(`players/${incompleteClanUser.uid}`).get(),
+    db.doc(`clans/${incompleteClanId}`).get(),
+  ]);
+  assert(
+    repairedClanClaim?.cityId
+      && repairedProfileSnap.data()?.clanId === incompleteClanId
+      && repairedClanSnap.data()?.resetGeneration === realm.resetGeneration,
+    "Repairing an incomplete clan record did not allow an idempotent retry to complete rollover."
+  );
+
+  const missingClanId = "missing-root-clan";
+  await seedArchivedClanFixture({
+    claimant: missingClanUser,
+    clanId: missingClanId,
+    name: "Missing Clan",
+    tag: "MSC",
+    omitClan: true,
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", missingClanUser.token),
+    /clan record is incomplete.*no season data was changed/i,
+    "A missing persistent clan root did not fail safely"
+  );
+  await assertNoPartialResetClaim(missingClanUser, missingClanId, "Missing persistent clan rejection");
+
+  const invalidRoleClanId = "invalid-role-clan";
+  await seedArchivedClanFixture({
+    claimant: invalidRoleUser,
+    clanId: invalidRoleClanId,
+    name: "Invalid Role",
+    tag: "INV",
+    members: [{ uid: invalidRoleUser.uid, role: "duke", status: "active" }],
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", invalidRoleUser.token),
+    /invalid role/i,
+    "An invalid persistent clan role was accepted"
+  );
+  await assertNoPartialResetClaim(invalidRoleUser, invalidRoleClanId, "Invalid-role rejection");
+
+  const noLeaderClanId = "no-leader-clan";
+  await seedArchivedClanFixture({
+    claimant: noLeaderUser,
+    clanId: noLeaderClanId,
+    name: "No Leader",
+    tag: "NOL",
+    members: [
+      { uid: noLeaderUser.uid, role: "member", status: "active" },
+      { uid: "no-leader-officer", role: "officer", status: "active" },
+    ],
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", noLeaderUser.token),
+    /one authoritative leader/i,
+    "A persistent clan without a leader was accepted"
+  );
+  await assertNoPartialResetClaim(noLeaderUser, noLeaderClanId, "No-leader rejection");
+
+  const multipleLeaderClanId = "multiple-leader-clan";
+  await seedArchivedClanFixture({
+    claimant: multipleLeaderUser,
+    clanId: multipleLeaderClanId,
+    name: "Two Leaders",
+    tag: "TWO",
+    members: [
+      { uid: multipleLeaderUser.uid, role: "leader", status: "active" },
+      { uid: "second-leader", role: "leader", status: "active" },
+    ],
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", multipleLeaderUser.token),
+    /one authoritative leader/i,
+    "A persistent clan with multiple leaders was accepted"
+  );
+  await assertNoPartialResetClaim(multipleLeaderUser, multipleLeaderClanId, "Multiple-leader rejection");
+
+  const maxRosterClanId = "max-roster-clan";
+  const maxRoster = [
+    { uid: maxRosterUser.uid, role: "leader", status: "active" },
+    ...Array.from({ length: 29 }, (_, index) => ({
+      uid: `max-roster-member-${index + 1}`,
+      role: "member",
+      status: "active",
+    })),
+  ];
+  await seedArchivedClanFixture({
+    claimant: maxRosterUser,
+    clanId: maxRosterClanId,
+    name: "Thirty Clan",
+    tag: "MAX",
+    members: maxRoster,
+  });
+  const maxRosterClaim = await callReplaySafeFunction("claimStartingCity", maxRosterUser.token);
+  const [maxRosterClanSnap, maxRosterMembersSnap] = await Promise.all([
+    db.doc(`clans/${maxRosterClanId}`).get(),
+    db.collection(`clans/${maxRosterClanId}/members`).get(),
+  ]);
+  assert(
+    maxRosterClaim?.cityId
+      && maxRosterClanSnap.data()?.memberCount === 30
+      && maxRosterMembersSnap.size === 30
+      && maxRosterMembersSnap.docs.every(snapshot => snapshot.data()?.resetGeneration === realm.resetGeneration),
+    "A valid 30-member persistent clan did not roll over intact."
+  );
+
+  const oversizedRosterClanId = "oversized-roster-clan";
+  const oversizedRoster = [
+    { uid: oversizedRosterUser.uid, role: "leader", status: "active" },
+    ...Array.from({ length: 30 }, (_, index) => ({
+      uid: `oversized-roster-member-${index + 1}`,
+      role: "member",
+      status: "active",
+    })),
+  ];
+  await seedArchivedClanFixture({
+    claimant: oversizedRosterUser,
+    clanId: oversizedRosterClanId,
+    name: "Too Many",
+    tag: "BIG",
+    members: oversizedRoster,
+  });
+  await expectFunctionFailure(
+    () => callReplaySafeFunction("claimStartingCity", oversizedRosterUser.token),
+    /roster is invalid/i,
+    "A 31-member persistent clan bypassed the roster limit"
+  );
+  await assertNoPartialResetClaim(oversizedRosterUser, oversizedRosterClanId, "Oversized-roster rejection");
+
+  const disbandedPersistenceClanId = "archived-disbanded-clan";
+  await seedArchivedClanFixture({
+    claimant: disbandedClanUser,
+    clanId: disbandedPersistenceClanId,
+    name: "Old Disband",
+    tag: "DSB",
+    clanStatus: "disbanded",
+  });
+  const disbandedPersistenceClaim = await callReplaySafeFunction("claimStartingCity", disbandedClanUser.token);
+  const disbandedPersistenceProfile = (await db.doc(`players/${disbandedClanUser.uid}`).get()).data() || {};
+  assert(
+    disbandedPersistenceClaim?.cityId && !disbandedPersistenceProfile.clanId,
+    "A disbanded archived clan incorrectly persisted onto a fresh-season profile."
+  );
+
+  const removedPersistenceClanId = "archived-removed-member-clan";
+  await seedArchivedClanFixture({
+    claimant: removedClanUser,
+    clanId: removedPersistenceClanId,
+    name: "Removed Clan",
+    tag: "REM",
+    members: [{ uid: removedClanUser.uid, role: "leader", status: "removed" }],
+  });
+  const removedPersistenceClaim = await callReplaySafeFunction("claimStartingCity", removedClanUser.token);
+  const removedPersistenceProfile = (await db.doc(`players/${removedClanUser.uid}`).get()).data() || {};
+  assert(
+    removedPersistenceClaim?.cityId && !removedPersistenceProfile.clanId,
+    "A removed archived clan membership incorrectly persisted onto a fresh-season profile."
+  );
 
   console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, conquest quests, and leader clan disbanding: ${counts.join("/")} across starter islands.`);
 }

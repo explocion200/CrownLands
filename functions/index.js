@@ -13836,11 +13836,15 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
 exports.returnClanReinforcement = timedCallable(
   "returnClanReinforcement",
   { region: "us-central1", maxInstances: 30, invoker: "public" },
-  async request => beginReinforcementReturn({
-    reinforcementId: request.data?.reinforcementId || request.data?.id,
-    callerUid: requireAuth(request),
-    reason: safeString(request.data?.reason, 40) || "recalled",
-  })
+  async request => {
+    const uid = requireAuth(request);
+    await requireCurrentClanActorProfile(uid);
+    return beginReinforcementReturn({
+      reinforcementId: request.data?.reinforcementId || request.data?.id,
+      callerUid: uid,
+      reason: safeString(request.data?.reason, 40) || "recalled",
+    });
+  }
 );
 
 exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
@@ -14862,10 +14866,22 @@ async function readClanSeasonPersistenceContext(transaction, { uid = "", previou
     transaction.get(clanRef),
     transaction.get(memberRef),
   ]);
-  if (!clanSnap.exists || !memberSnap.exists) return null;
+  if (!clanSnap.exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your preserved clan record is incomplete. No season data was changed; contact Crownlands support before retrying."
+    );
+  }
   const clan = clanSnap.data() || {};
+  if (clan.status === "disbanded") return null;
+  if (!memberSnap.exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your preserved clan membership is incomplete. No season data was changed; contact Crownlands support before retrying."
+    );
+  }
   const member = memberSnap.data() || {};
-  if (clan.status === "disbanded" || member.status === "removed") return null;
+  if (member.status === "removed") return null;
   const role = normalizePersistentClanRole(member.role);
   if (!role) {
     throw new HttpsError("failed-precondition", "The preserved clan membership has an invalid role.");
@@ -15134,6 +15150,47 @@ function createFreshResetPlayerProfile({
   return profile;
 }
 
+function createStartingCityCurrentUser(profile = {}, {
+  uid = "",
+  cityId = "",
+  islandId = "",
+  regionId = "",
+  stats = null,
+} = {}) {
+  const clanId = safeString(profile.clanId, 128);
+  const currentUser = {
+    playerName: normalizePlayerName(profile.playerName || profile.displayName),
+    flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
+    gold: Math.max(0, Math.floor(safeNumber(profile.gold, TEST_STARTING_GOLD))),
+    character: normalizeCharacterProgress(profile.character),
+    upgrades: normalizeSkillUpgrades(profile.upgrades),
+    skillPresets: normalizeSkillPresets(profile.skillPresets),
+    freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0))),
+    freeSkillResetCredits: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))),
+    shopItems: normalizeShopItems(profile.shopItems),
+    gear: normalizeCommonGear(profile),
+    itemEffects: normalizeItemEffects(profile.itemEffects),
+    itemPurchaseCooldowns: normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns),
+    dailyLoginReward: normalizeDailyLoginRewardState(profile.dailyLoginReward),
+    daily: normalizeDaily(profile.daily),
+    mainCityId: cityId || safeString(profile.mainCityId, 96),
+    mainIslandId: islandId || safeString(profile.mainIslandId, 160),
+    mainRegionId: regionId || normalizeRegionId(profile.mainRegionId),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+  };
+  if (clanId) {
+    Object.assign(currentUser, {
+      clanId,
+      clanName: safeString(profile.clanName, 24),
+      clanTag: safeString(profile.clanTag, 5),
+      clanRole: normalizePersistentClanRole(profile.clanRole) || "member",
+    });
+  }
+  if (stats && typeof stats === "object") currentUser.globalStats = globalStatsForClient(stats);
+  return currentUser;
+}
+
 async function claimFreshStartingCity(request) {
   const uid = requireAuth(request);
   const data = request.data || {};
@@ -15161,6 +15218,7 @@ async function claimFreshStartingCity(request) {
       const existingMainRef = db.doc(`islands/${existingMainIslandId}/cities/${existingMainCityId}`);
       const existingMainSnap = await transaction.get(existingMainRef);
       if (existingMainSnap.exists && getOwnerUid(existingMainSnap.data() || {}) === uid) {
+        const currentStatsSnap = await transaction.get(playerGlobalStatsRef(uid));
         const existingRegionId = normalizeRegionId(
           previous.mainRegionId || getRegionIdFromOnlineIslandId(existingMainIslandId)
         );
@@ -15173,19 +15231,13 @@ async function claimFreshStartingCity(request) {
           resetGeneration: RESET_GENERATION,
           releaseId: REALM_RELEASE_ID,
           alreadyClaimed: true,
-          currentUser: {
-            playerName: normalizePlayerName(previous.playerName || previous.displayName),
-            flag: normalizeServerFlag(previous.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
-            gold: Math.max(0, Math.floor(safeNumber(previous.gold, TEST_STARTING_GOLD))),
-            character: normalizeCharacterProgress(previous.character),
-            upgrades: normalizeSkillUpgrades(previous.upgrades),
-            skillPresets: normalizeSkillPresets(previous.skillPresets),
-            mainCityId: existingMainCityId,
-            mainIslandId: existingMainIslandId,
-            mainRegionId: existingRegionId,
-            worldId: ONLINE_WORLD_ID,
-            resetGeneration: RESET_GENERATION,
-          },
+          currentUser: createStartingCityCurrentUser(previous, {
+            uid,
+            cityId: existingMainCityId,
+            islandId: existingMainIslandId,
+            regionId: existingRegionId,
+            stats: currentStatsSnap.exists ? currentStatsSnap.data() || {} : null,
+          }),
         };
       }
     }
@@ -15338,26 +15390,13 @@ async function claimFreshStartingCity(request) {
       resetGeneration: RESET_GENERATION,
       releaseId: REALM_RELEASE_ID,
       alreadyClaimed: false,
-      currentUser: {
-        playerName: freshProfile.playerName,
-        flag: freshProfile.flag,
-        gold: TEST_STARTING_GOLD,
-        character: freshProfile.character,
-        upgrades: freshProfile.upgrades,
-        skillPresets: freshProfile.skillPresets,
-        shopItems: freshProfile.shopItems,
-        gear: freshProfile.gear,
-        itemEffects: freshProfile.itemEffects,
-        itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,
-        dailyLoginReward: freshProfile.dailyLoginReward,
-        mainCityId: chosenCity.id,
-        mainIslandId: chosenIsland.islandId,
-        mainRegionId: chosenIsland.regionId,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        ...(clanIdentity || {}),
-        globalStats: globalStatsForClient(stats),
-      },
+      currentUser: createStartingCityCurrentUser(freshProfile, {
+        uid,
+        cityId: chosenCity.id,
+        islandId: chosenIsland.islandId,
+        regionId: chosenIsland.regionId,
+        stats,
+      }),
     };
   };
 
@@ -16254,6 +16293,26 @@ function clanTagReservationRef(normalizedTag = "") {
   return db.doc(`clanTagReservations/${RESET_GENERATION}_${safeString(normalizedTag, 40)}`);
 }
 
+function persistentClanNameOwnersQuery(normalizedName = "") {
+  return db.collection("clans").where("normalizedName", "==", safeString(normalizedName, 40));
+}
+
+function persistentClanTagOwnersQuery(normalizedTag = "") {
+  return db.collection("clans").where("normalizedTag", "==", safeString(normalizedTag, 40));
+}
+
+function assertPersistentClanIdentityAvailable(snapshot, {
+  exceptClanId = "",
+  label = "identity",
+} = {}) {
+  const conflictingClan = snapshot?.docs?.find(doc => (
+    doc.id !== exceptClanId && doc.data()?.status !== "disbanded"
+  ));
+  if (conflictingClan) {
+    throw new HttpsError("already-exists", `That clan ${label} is already in use.`);
+  }
+}
+
 function getClanNameChangeCooldownUntilMs(clan = {}) {
   return Math.max(
     0,
@@ -16526,6 +16585,27 @@ function assertCurrentClan(clan = {}) {
   }
 }
 
+function assertCurrentClanActorProfile(profile = {}, expectedClanId = null) {
+  if (
+    safeString(profile.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
+    || !safeString(profile.mainCityId, 96)
+    || !isCurrentWorldIslandId(profile.mainIslandId)
+  ) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands world before using clan features.");
+  }
+  if (expectedClanId !== null && safeString(profile.clanId, 128) !== safeString(expectedClanId, 128)) {
+    throw new HttpsError("failed-precondition", "Your current clan identity does not match this clan action.");
+  }
+  return profile;
+}
+
+async function requireCurrentClanActorProfile(uid = "", expectedClanId = null) {
+  const profileSnap = await db.doc(`players/${safeString(uid, 128)}`).get();
+  if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+  return assertCurrentClanActorProfile(profileSnap.data() || {}, expectedClanId);
+}
+
 function clanAuditRef(clanId = "") {
   return db.collection(`clans/${clanId}/audit`).doc();
 }
@@ -16773,17 +16853,24 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
   const clanRef = db.doc(`clans/${clanId}`);
   const nameRef = clanNameReservationRef(name.normalized);
   const tagRef = clanTagReservationRef(tag.normalized);
+  const persistentNameQuery = persistentClanNameOwnersQuery(name.normalized);
+  const persistentTagQuery = persistentClanTagOwnersQuery(tag.normalized);
   const profileRef = db.doc(`players/${uid}`);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [profileSnap, nameSnap, tagSnap] = await Promise.all([
+    const [profileSnap, nameSnap, tagSnap, persistentNameSnap, persistentTagSnap] = await Promise.all([
       transaction.get(profileRef),
       transaction.get(nameRef),
       transaction.get(tagRef),
+      transaction.get(persistentNameQuery),
+      transaction.get(persistentTagQuery),
     ]);
     if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     assertClanUnlocked(profile);
     assertNoClan(profile, nowMs);
+    assertPersistentClanIdentityAvailable(persistentNameSnap, { label: "name" });
+    assertPersistentClanIdentityAvailable(persistentTagSnap, { label: "tag" });
     if (nameSnap.exists && timestampToMs(nameSnap.data()?.reusableAtMs) > nowMs) {
       throw new HttpsError("already-exists", "That clan name is already in use.");
     }
@@ -16880,7 +16967,10 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     : null;
   const profileRef = db.doc(`players/${uid}`);
   const profileSnap = await profileRef.get();
-  const clanId = safeString(profileSnap.data()?.clanId, 128);
+  const preflightProfile = profileSnap.exists
+    ? assertCurrentClanActorProfile(profileSnap.data() || {})
+    : {};
+  const clanId = safeString(preflightProfile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   return runTransactionWithInfrastructureRetry(async transaction => {
     const clanRef = db.doc(`clans/${clanId}`);
@@ -16893,7 +16983,11 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     assertClanRole(memberSnap.data(), ["leader"]);
     const clan = clanSnap.data() || {};
     assertCurrentClan(clan);
-    if (!currentProfileSnap.exists || safeString(currentProfileSnap.data()?.clanId, 128) !== clanId) {
+    if (!currentProfileSnap.exists) {
+      throw new HttpsError("not-found", "Player profile was not found.");
+    }
+    assertCurrentClanActorProfile(currentProfileSnap.data() || {}, clanId);
+    if (safeString(currentProfileSnap.data()?.clanId, 128) !== clanId) {
       throw new HttpsError("failed-precondition", "Your clan membership changed. Reopen the Clan screen and try again.");
     }
     const nameChanged = Boolean(requestedName && requestedName.display !== safeString(clan.name, 24));
@@ -16905,13 +16999,15 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     let nextNameChangeAtMs = getClanNameChangeCooldownUntilMs(clan);
     const newNameRef = nameChanged ? clanNameReservationRef(requestedName.normalized) : null;
     if (nameChanged) {
-      const [loadedMembersSnap, newNameReservationSnap, preparedEconomy] = await Promise.all([
+      const [loadedMembersSnap, newNameReservationSnap, persistentNameSnap, preparedEconomy] = await Promise.all([
         transaction.get(db.collection(`clans/${clanId}/members`)),
         transaction.get(newNameRef),
+        transaction.get(persistentClanNameOwnersQuery(requestedName.normalized)),
         prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap: currentProfileSnap }),
       ]);
       membersSnap = loadedMembersSnap;
       economy = preparedEconomy;
+      assertPersistentClanIdentityAvailable(persistentNameSnap, { exceptClanId: clanId, label: "name" });
       if (nextNameChangeAtMs > nowMs) {
         throw new HttpsError(
           "failed-precondition",
@@ -17042,6 +17138,7 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
 async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clanSnap, applicationRef = null, nowMs = Date.now() }) {
   const profile = profileSnap.data() || {};
   const clan = clanSnap.data() || {};
+  assertCurrentClanActorProfile(profile);
   assertCurrentClan(clan);
   assertClanUnlocked(profile);
   assertNoClan(profile, nowMs, applicationRef ? clanId : "");
@@ -17107,6 +17204,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
     const profile = profileSnap.data() || {};
     const clan = clanSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     assertCurrentClan(clan);
     assertClanUnlocked(profile);
     assertNoClan(profile, nowMs, clanId);
@@ -17155,6 +17253,8 @@ exports.cancelClanApplication = onCall({ region: "us-central1", maxInstances: 20
       transaction.get(applicationRef),
     ]);
     const pendingClanId = safeString(profileSnap.data()?.pendingClanApplicationId, 128);
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    assertCurrentClanActorProfile(profileSnap.data() || {});
     if (pendingClanId && pendingClanId !== clanId) {
       throw new HttpsError("failed-precondition", "That is not your current clan application.");
     }
@@ -17179,13 +17279,17 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
   if (!clanId || !applicantUid) throw new HttpsError("invalid-argument", "Choose a clan application to review.");
   const accept = request.data?.accept === true;
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, reviewerSnap, applicantSnap, applicationSnap] = await Promise.all([
+    const [clanSnap, reviewerSnap, reviewerProfileSnap, applicantSnap, applicationSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`players/${applicantUid}`)),
       transaction.get(db.doc(`clans/${clanId}/applications/${applicantUid}`)),
     ]);
-    if (!clanSnap.exists || !applicantSnap.exists || !applicationSnap.exists) throw new HttpsError("not-found", "Application was not found.");
+    if (!clanSnap.exists || !reviewerProfileSnap.exists || !applicantSnap.exists || !applicationSnap.exists) {
+      throw new HttpsError("not-found", "Application was not found.");
+    }
+    assertCurrentClanActorProfile(reviewerProfileSnap.data() || {}, clanId);
     assertClanRole(reviewerSnap.data(), ["leader", "officer"]);
     const application = applicationSnap.data() || {};
     assertCurrentClan(application);
@@ -17257,14 +17361,16 @@ async function reconcileClanRalliesBeforeDisband(clanId = "") {
 
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
-  const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
+  const [preflightClanSnap, preflightActorSnap, preflightActorProfileSnap, preflightTargetSnap] = await Promise.all([
     db.doc(`clans/${clanId}`).get(),
     db.doc(`clans/${clanId}/members/${actorUid}`).get(),
+    db.doc(`players/${actorUid}`).get(),
     db.doc(`clans/${clanId}/members/${targetUid}`).get(),
   ]);
-  if (!preflightClanSnap.exists || !preflightTargetSnap.exists) {
+  if (!preflightClanSnap.exists || !preflightActorProfileSnap.exists || !preflightTargetSnap.exists) {
     throw new HttpsError("not-found", "Clan member was not found.");
   }
+  assertCurrentClanActorProfile(preflightActorProfileSnap.data() || {}, clanId);
   const preflightClan = preflightClanSnap.data() || {};
   const preflightActor = preflightActorSnap.data() || {};
   const preflightTarget = preflightTargetSnap.data() || {};
@@ -17280,14 +17386,18 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
   }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
+    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
+      transaction.get(db.doc(`players/${actorUid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
       transaction.get(db.doc(`players/${targetUid}`)),
       transaction.get(clanWorldBenefitsRef(clanId)),
     ]);
-    if (!clanSnap.exists || !targetMemberSnap.exists) throw new HttpsError("not-found", "Clan member was not found.");
+    if (!clanSnap.exists || !actorProfileSnap.exists || !targetMemberSnap.exists) {
+      throw new HttpsError("not-found", "Clan member was not found.");
+    }
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     const clan = clanSnap.data() || {};
     const actor = actorMemberSnap.data() || {};
     const target = targetMemberSnap.data() || {};
@@ -17381,7 +17491,7 @@ async function changeClanRole(request, nextRole) {
   if (!["officer", "member"].includes(nextRole)) {
     throw new HttpsError("internal", "Unsupported clan role change.");
   }
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   const nowMs = Date.now();
@@ -17390,9 +17500,10 @@ async function changeClanRole(request, nextRole) {
     const actorRef = db.doc(`clans/${clanId}/members/${uid}`);
     const targetRef = db.doc(`clans/${clanId}/members/${targetUid}`);
     const targetProfileRef = db.doc(`players/${targetUid}`);
-    const [clanSnap, actorSnap, targetSnap, targetProfileSnap] = await Promise.all([
+    const [clanSnap, actorSnap, actorProfileSnap, targetSnap, targetProfileSnap] = await Promise.all([
       transaction.get(clanRef),
       transaction.get(actorRef),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(targetRef),
       transaction.get(targetProfileRef),
     ]);
@@ -17401,6 +17512,7 @@ async function changeClanRole(request, nextRole) {
     }
     const clan = clanSnap.data() || {};
     assertCurrentClan(clan);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     assertClanRole(actorSnap.data(), ["leader"]);
     const targetMember = targetSnap.exists ? targetSnap.data() || {} : {};
     const targetProfile = targetProfileSnap.exists ? targetProfileSnap.data() || {} : {};
@@ -17435,14 +17547,17 @@ exports.demoteClanOfficer = onCall({ region: "us-central1", maxInstances: 20, in
 exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const targetUid = safeString(request.data?.targetUid, 128);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorSnap, targetSnap] = await Promise.all([
+    const [clanSnap, actorSnap, actorProfileSnap, targetSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
     ]);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
+    assertCurrentClan(clanSnap.data() || {});
     assertClanRole(actorSnap.data(), ["leader"]);
     if (!targetSnap.exists || targetUid === uid) throw new HttpsError("failed-precondition", "Choose another clan member.");
     transaction.set(clanSnap.ref, { leaderUid: targetUid, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -17457,12 +17572,17 @@ exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 2
 
 exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const clanSnap = await transaction.get(db.doc(`clans/${clanId}`));
+    const [clanSnap, actorProfileSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`players/${uid}`)),
+    ]);
     if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
     const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     const [leaderProfileSnap, membersSnap] = await Promise.all([
       transaction.get(db.doc(`players/${clan.leaderUid}`)),
       transaction.get(db.collection(`clans/${clanId}/members`).orderBy("joinedAtMs", "asc")),
@@ -17486,7 +17606,7 @@ exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstanc
 
 exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   const [preflightClanSnap, preflightActorSnap] = await Promise.all([
@@ -17632,6 +17752,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const senderRewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -17748,6 +17869,7 @@ exports.claimClanGiftPool = onCall({ region: "us-central1", maxInstances: 20, in
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const rewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -17825,6 +17947,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const rewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -18136,6 +18259,7 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
 
 exports.createClanRally = timedCallable("createClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
   order.kind = "attack";
@@ -18359,6 +18483,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
 
 exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18525,6 +18650,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
 
 async function withdrawClanRallyContributionRequest(request) {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18636,6 +18762,7 @@ exports.withdrawClanRallyContribution = timedCallable(
 
 async function cancelClanRallyRequest(request) {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18800,6 +18927,7 @@ exports.cancelClanRally = timedCallable(
 
 exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
