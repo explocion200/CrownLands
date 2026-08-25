@@ -14508,6 +14508,40 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   return realm;
 }
 
+function resolveMainCityRecoveryResult(result = null) {
+  if (
+    result?.requiresStartingCityClaim === true
+    && result?.mainCityRecoveryStatus === "claim-required"
+    && result?.recoveryReason === "no-valid-owned-regular-city"
+  ) {
+    return {
+      status: "claim-required",
+      mainCityId: "",
+      mainRegionId: "",
+      mainIslandId: "",
+    };
+  }
+  const recoveryStatus = result?.mainCityRecoveryStatus;
+  const mainCityId = getKnownCityId(result?.currentUser?.mainCityId);
+  if (
+    result?.ok !== true
+    || result?.requiresStartingCityClaim !== false
+    || (recoveryStatus !== "valid" && recoveryStatus !== "repaired")
+    || !mainCityId
+  ) {
+    throw new Error("Main city verification did not return an authoritative recovery result.");
+  }
+  const mainRegionId = normalizeRegionId(
+    result?.currentUser?.mainRegionId || getCityRegionId(mainCityId)
+  );
+  return {
+    status: recoveryStatus,
+    mainCityId,
+    mainRegionId,
+    mainIslandId: result?.currentUser?.mainIslandId || getOnlineIslandId(mainRegionId),
+  };
+}
+
 async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -14584,10 +14618,12 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   };
   state.mainCityId = mainCityId || "";
   normalizeSingleMainCityAssignment(state.mainCityId);
-  let needsMainCityClaim = !storedMainCityId;
+  let needsMainCityClaim = !hasCurrentProfile;
 
-  const needsMainCityRepair = Number(profile?.mainCityAssignmentVersion || 0) < MAIN_CITY_ASSIGNMENT_VERSION;
-  if (api.repairMainCityAssignment && needsMainCityRepair && (mainCityId || hasCurrentProfile)) {
+  if (hasCurrentProfile && !api.repairMainCityAssignment) {
+    throw new Error("The Crownlands main-city verification service is still updating. Retry in a moment.");
+  }
+  if (api.repairMainCityAssignment && hasCurrentProfile) {
     onlineStatusDetail.textContent = "Verifying your main city...";
     try {
       const repair = await withTimeout(
@@ -14595,25 +14631,31 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
         12000,
         "Main city repair is taking too long."
       );
-      applyServerEconomyResult(repair);
-      serverEconomyLastSyncAt = Date.now();
-      const repairedMainCityId = getKnownCityId(repair?.currentUser?.mainCityId) || mainCityId;
-      const repairedMainRegionId = normalizeRegionId(repair?.currentUser?.mainRegionId || homeRegionId);
-      if (repairedMainCityId) {
+      const recovery = resolveMainCityRecoveryResult(repair);
+      if (recovery.status === "claim-required") {
+        needsMainCityClaim = true;
+        state.mainCityId = "";
+        state.online.mainCityId = "";
+        profile = { ...(profile || {}), mainCityId: "", mainIslandId: "", mainRegionId: "" };
+        normalizeSingleMainCityAssignment("", { markDirty: false });
+      } else {
+        applyServerEconomyResult(repair);
+        serverEconomyLastSyncAt = Date.now();
         needsMainCityClaim = false;
-        homeRegionId = repairedMainRegionId;
-        activeRegionId = repairedMainRegionId;
+        homeRegionId = recovery.mainRegionId;
+        activeRegionId = recovery.mainRegionId;
         state.activeRegionId = activeRegionId;
-        state.mainCityId = repairedMainCityId;
+        state.mainCityId = recovery.mainCityId;
         state.online.islandId = getOnlineIslandId(activeRegionId);
         state.online.activeRegionId = activeRegionId;
-        state.online.mainCityId = repairedMainCityId;
-        state.online.mainRegionId = repairedMainRegionId;
-        state.online.mainIslandId = repair?.currentUser?.mainIslandId || getOnlineIslandId(repairedMainRegionId);
-        normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+        state.online.mainCityId = recovery.mainCityId;
+        state.online.mainRegionId = recovery.mainRegionId;
+        state.online.mainIslandId = recovery.mainIslandId;
+        normalizeSingleMainCityAssignment(recovery.mainCityId, { markDirty: false });
       }
     } catch (error) {
       console.warn("Could not verify main city during online setup", error);
+      throw error;
     }
   }
 

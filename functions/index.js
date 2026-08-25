@@ -11534,6 +11534,122 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
   };
 }
 
+function isCurrentRegularOwnedCityEntry(entry = {}, uid = "") {
+  if (!entry?.ref || !entry.city || getOwnerUid(entry.city) !== uid || isStronghold(entry.city)) return false;
+  const regionId = normalizeRegionId(
+    entry.city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry))
+  );
+  return getServerWorldRegularCityIds(regionId).has(entry.city.id);
+}
+
+function getMainCityRecoveryEntries(uid = "", ownedSnap = null) {
+  const ownedEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
+  const regularEntries = ownedEntries.filter(entry => isCurrentRegularOwnedCityEntry(entry, uid));
+  const strongholdEntries = ownedEntries.filter(entry => entry?.city && isStronghold(entry.city));
+  return {
+    regularEntries,
+    repairEntries: [...regularEntries, ...strongholdEntries],
+  };
+}
+
+function mainCityRecoveryProjectionPatch(repair = {}, nowMs = Date.now()) {
+  return {
+    mainCityId: repair.canonicalMainCityId,
+    mainIslandId: repair.canonicalMainIslandId,
+    mainRegionId: repair.canonicalMainRegionId,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+async function recoverCurrentSeasonMainCity(transaction, {
+  uid = "",
+  profileRef = null,
+  profileSnap = null,
+  nowMs = Date.now(),
+} = {}) {
+  const playerUid = safeString(uid, 128);
+  const resolvedProfileRef = profileRef || db.doc(`players/${playerUid}`);
+  const resolvedProfileSnap = profileSnap || await transaction.get(resolvedProfileRef);
+  if (!resolvedProfileSnap?.exists) {
+    throw new HttpsError("failed-precondition", "Claim a starting city before repairing your kingdom.");
+  }
+  const profile = assertCurrentPlayerProfile(resolvedProfileSnap.data() || {});
+  const ownedQuery = db.collectionGroup("cities")
+    .where("ownerUid", "==", playerUid)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  const statsRef = playerGlobalStatsRef(playerUid);
+  const leaderboardRef = leaderboardEntryRef(playerUid);
+  const [ownedSnap, statsSnap, leaderboardSnap] = await Promise.all([
+    transaction.get(ownedQuery),
+    transaction.get(statsRef),
+    transaction.get(leaderboardRef),
+  ]);
+  const { regularEntries, repairEntries } = getMainCityRecoveryEntries(playerUid, ownedSnap);
+  if (!regularEntries.length) {
+    return {
+      ok: true,
+      repairedMainCity: false,
+      requiresStartingCityClaim: true,
+      mainCityRecoveryStatus: "claim-required",
+      recoveryReason: "no-valid-owned-regular-city",
+    };
+  }
+
+  const repair = createMainCityAssignmentRepair(playerUid, profile, repairEntries);
+  if (!repair.canonicalMainCityId || !repair.mainCityEntry) {
+    throw new HttpsError("failed-precondition", "No valid current-season main city could be recovered.");
+  }
+  const pointerChanged = safeString(profile.mainCityId, 96) !== repair.canonicalMainCityId
+    || safeString(profile.mainIslandId, 160) !== repair.canonicalMainIslandId
+    || normalizeRegionId(profile.mainRegionId || getRegionIdFromOnlineIslandId(profile.mainIslandId)) !== repair.canonicalMainRegionId;
+  const versionChanged = Math.max(0, Math.floor(safeNumber(profile.mainCityAssignmentVersion, 0))) < MAIN_CITY_ASSIGNMENT_VERSION;
+  const assignmentChanged = pointerChanged || versionChanged || repair.cityPatches.length > 0;
+  const recoveredProfile = {
+    ...profile,
+    ...repair.profileFields,
+  };
+  const projectionPatch = mainCityRecoveryProjectionPatch(repair, nowMs);
+  const recoveredStats = statsSnap.exists
+    ? { ...statsSnap.data(), ...projectionPatch }
+    : null;
+
+  if (assignmentChanged) {
+    repair.cityPatches.forEach(entry => {
+      transaction.set(entry.ref, cleanCityUpdate(entry.city, entry.patch), { merge: true });
+    });
+    transaction.set(resolvedProfileRef, {
+      ...repair.profileFields,
+      mainCityRepairUpdatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    if (pointerChanged && statsSnap.exists) {
+      transaction.set(statsRef, projectionPatch, { merge: true });
+    }
+    if (pointerChanged && leaderboardSnap.exists) {
+      transaction.set(leaderboardRef, projectionPatch, { merge: true });
+    }
+  }
+
+  const currentUser = createStartingCityCurrentUser(recoveredProfile, {
+    uid: playerUid,
+    cityId: repair.canonicalMainCityId,
+    islandId: repair.canonicalMainIslandId,
+    regionId: repair.canonicalMainRegionId,
+    stats: recoveredStats,
+  });
+  return {
+    ok: true,
+    repairedMainCity: assignmentChanged,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: assignmentChanged ? "repaired" : "valid",
+    currentUser,
+    ...(recoveredStats ? { globalStats: globalStatsForClient(recoveredStats) } : {}),
+    cityUpdates: repair.cityUpdates,
+  };
+}
+
 function createSingleMainCityPatches(cityEntries = [], mainRef = null) {
   const mainPath = safeString(mainRef?.path, 240);
   const cityPatches = [];
@@ -13847,12 +13963,13 @@ exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances:
   const uid = requireAuth(request);
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { allowMainCityRepair: true });
-    writePreparedEconomy(transaction, economy, {
-      mainCityRepairUpdatedAtMs: nowMs,
-    });
-    return createEconomyResponse(economy, {
-      repairedMainCity: true,
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    return recoverCurrentSeasonMainCity(transaction, {
+      uid,
+      profileRef,
+      profileSnap,
+      nowMs,
     });
   });
 });
@@ -15329,33 +15446,24 @@ async function claimFreshStartingCity(request) {
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
     const currentProfile = safeString(previous.resetGeneration, 120) === RESET_GENERATION
       && safeString(previous.worldId, 120) === ONLINE_WORLD_ID;
-    const existingMainCityId = safeString(previous.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const existingMainIslandId = safeString(previous.mainIslandId, 160);
 
-    if (currentProfile && existingMainCityId && isCurrentWorldIslandId(existingMainIslandId)) {
-      const existingMainRef = db.doc(`islands/${existingMainIslandId}/cities/${existingMainCityId}`);
-      const existingMainSnap = await transaction.get(existingMainRef);
-      if (existingMainSnap.exists && getOwnerUid(existingMainSnap.data() || {}) === uid) {
-        const currentStatsSnap = await transaction.get(playerGlobalStatsRef(uid));
-        const existingRegionId = normalizeRegionId(
-          previous.mainRegionId || getRegionIdFromOnlineIslandId(existingMainIslandId)
-        );
+    if (currentProfile) {
+      const recovery = await recoverCurrentSeasonMainCity(transaction, {
+        uid,
+        profileRef: playerRef,
+        profileSnap: playerSnap,
+        nowMs,
+      });
+      if (!recovery.requiresStartingCityClaim) {
         return {
-          ok: true,
-          cityId: existingMainCityId,
-          islandId: existingMainIslandId,
-          mainRegionId: existingRegionId,
+          ...recovery,
+          cityId: recovery.currentUser.mainCityId,
+          islandId: recovery.currentUser.mainIslandId,
+          mainRegionId: recovery.currentUser.mainRegionId,
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
           releaseId: REALM_RELEASE_ID,
           alreadyClaimed: true,
-          currentUser: createStartingCityCurrentUser(previous, {
-            uid,
-            cityId: existingMainCityId,
-            islandId: existingMainIslandId,
-            regionId: existingRegionId,
-            stats: currentStatsSnap.exists ? currentStatsSnap.data() || {} : null,
-          }),
         };
       }
     }
