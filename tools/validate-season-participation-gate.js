@@ -14,6 +14,14 @@ function callableSource(name, nextMarker) {
   return server.slice(start, end);
 }
 
+function functionSource(name, nextMarker) {
+  const start = server.indexOf(`async function ${name}(`);
+  assert.notEqual(start, -1, `Missing ${name} function.`);
+  const end = server.indexOf(nextMarker, start);
+  assert.notEqual(end, -1, `Missing end marker for ${name}.`);
+  return server.slice(start, end);
+}
+
 assert.match(
   server,
   /async function requireCurrentSeasonParticipation[\s\S]*?assertCurrentPlayerProfile[\s\S]*?getCurrentSeasonMainCityContext[\s\S]*?transaction\.get\(mainCityContext\.ref\)[\s\S]*?assertCurrentSeasonMainCity/,
@@ -49,6 +57,29 @@ for (const [name, nextMarker] of [
     callableSource(name, nextMarker),
     /requireCurrentSeasonParticipation\(/,
     `${name} bypasses the season participation guard.`
+  );
+}
+
+for (const [name, nextMarker] of [
+  ["createClanRally", "exports.joinClanRally ="],
+  ["joinClanRally", "async function withdrawClanRallyContributionRequest"],
+  ["launchClanRally", "exports.previewArmyProtection ="],
+]) {
+  assert.match(
+    callableSource(name, nextMarker),
+    /await requireCurrentClanActorProfile\(uid\)/,
+    `${name} bypasses the current-season clan participation guard.`
+  );
+}
+
+for (const [name, nextMarker] of [
+  ["withdrawClanRallyContributionRequest", "exports.withdrawClanRallyContribution ="],
+  ["cancelClanRallyRequest", "exports.cancelClanRally ="],
+]) {
+  assert.match(
+    functionSource(name, nextMarker),
+    /serverReconciliation[\s\S]*?if \(!serverReconciliation\) await requireCurrentClanActorProfile\(uid\)/,
+    `${name} does not gate player calls while allowing trusted server reconciliation.`
   );
 }
 

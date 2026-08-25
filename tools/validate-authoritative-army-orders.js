@@ -141,8 +141,7 @@ assert.match(server, /SCHEDULED_ARMY_RESOLVE_MAX_PAGES\s*=\s*4/);
 assert.match(server, /backlogOldestLateByMs/);
 assert.match(server, /options\.checkpointWriteBudget/);
 assert.match(server, /ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET\s*=\s*96/);
-assert.match(server, /RALLY_MAX_PARTICIPANTS\s*=\s*3/);
-assert.match(server, /RALLY_CANCEL_PARTICIPANT_CHECKPOINT_WRITE_BUDGET\s*=\s*80/);
+assert.match(server, /RALLY_MAX_PARTICIPANTS\s*=\s*20/);
 assert.match(server, /sharedCheckpointWriteBudget\.remaining\s*=\s*Math\.max/,
   "Shared economy checkpoint budgets must be consumed across participants.");
 assert.match(server, /priorityCheckpointPaths\.has\(rightPath\)/,
@@ -162,9 +161,16 @@ assert.match(settlementSource, /checkpointWriteBudget:\s*settlementParticipantCh
 const cancelRallyStart = server.indexOf("async function cancelClanRallyRequest");
 const cancelRallyEnd = server.indexOf("exports.launchClanRally", cancelRallyStart);
 const cancelRallySource = server.slice(cancelRallyStart, cancelRallyEnd);
-assert.match(cancelRallySource, /checkpointWriteBudget:\s*RALLY_CANCEL_PARTICIPANT_CHECKPOINT_WRITE_BUDGET/,
-  "Rally cancellation must cap each of its at-most-three participant economy checkpoints.");
-assert.match(cancelRallySource, /checkpointPriorityRefs:\s*\[participantSourceRef, assemblyRef\]/);
+assert.match(cancelRallySource, /receiptKind:\s*"rally_cancel"[\s\S]*?cancellationSettlementPending/,
+  "Rally cancellation must fan a 20-player Rally into bounded participant receipts.");
+assert.doesNotMatch(cancelRallySource, /prepareEconomyCollection|writeArmyMovementCopies|writeRallyJoinMovementCopies/,
+  "The parent Rally cancellation transaction must not perform unbounded participant settlement writes.");
+const cancelReceiptStart = server.indexOf("async function settleRallyCancellationReceipt");
+const cancelReceiptEnd = server.indexOf("async function settleRallyBattleReceipt", cancelReceiptStart);
+const cancelReceiptSource = server.slice(cancelReceiptStart, cancelReceiptEnd);
+assert.match(cancelReceiptSource, /checkpointWriteBudget:\s*ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET/,
+  "Each Rally cancellation receipt must use the bounded army-settlement economy budget.");
+assert.match(cancelReceiptSource, /checkpointPriorityRefs:\s*\[originRef, assemblyRef\]\.filter\(Boolean\)/);
 
 const dueLoaderStart = server.indexOf("async function loadDueArmyTargets");
 const dueLoaderEnd = server.indexOf("async function loadDueArmyBacklogSnapshot", dueLoaderStart);

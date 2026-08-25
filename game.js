@@ -1168,6 +1168,9 @@ const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
+const CLAN_RALLY_MIN_PARTICIPANTS = 2;
+const CLAN_RALLY_MAX_PARTICIPANTS = 20;
+const CLAN_ACTIVE_RALLY_LIMIT = 5;
 const CLAN_MEMBER_ROLE_ORDER = Object.freeze({ leader: 0, officer: 1, member: 2 });
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
@@ -23272,6 +23275,7 @@ function getClanRallyParticipantStatusLabel(rally, participant, nowMs = Date.now
   const rallyStatus = String(rally?.status || "");
   const participantStatus = String(participant?.status || "");
   if (rallyStatus === "recalling" || participantStatus === "returning") return "Returning";
+  if (participantStatus === "stationed") return "Stationed";
   if (rallyStatus === "launched") {
     if (participantStatus === "assembled") return "Marching";
     if (participantStatus === "inbound") return "Returning";
@@ -23302,6 +23306,8 @@ function renderClanRallyCard(rally) {
     .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
   const ownParticipant = getRallyParticipantForCurrentPlayer(rally);
   const leader = String(rally.leaderUid || "") === currentUid;
+  const clanLeader = String(state?.clanRole || "") === "leader";
+  const canManageFormingRally = leader || clanLeader;
   const forming = rally.status === "forming";
   const launched = rally.status === "launched";
   const recalling = rally.status === "recalling";
@@ -23319,13 +23325,15 @@ function renderClanRallyCard(rally) {
       </li>`;
   }).join("");
   let controls = "";
-  if (forming && leader) {
+  const allReady = activeParticipants.length >= CLAN_RALLY_MIN_PARTICIPANTS
+    && activeParticipants.every(participant => participant.status === "assembled");
+  if (forming && canManageFormingRally) {
     controls = `
-      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Launch</button>
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy || !allReady ? "disabled" : ""}>${allReady ? "Launch" : `Waiting for ${CLAN_RALLY_MIN_PARTICIPANTS}+ Ready`}</button>
       <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
   } else if (forming && ownParticipant) {
     controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
-  } else if (forming && activeParticipants.length < 3) {
+  } else if (forming && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
     controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
   } else if (launched && leader) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
@@ -23334,7 +23342,7 @@ function renderClanRallyCard(rally) {
     <article class="clan-rally-card ${escapeHtml(rally.status || "")}">
       <header>
         <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
-        <b>${activeParticipants.length || participants.length}/3</b>
+        <b>${activeParticipants.length || participants.length}/${CLAN_RALLY_MAX_PARTICIPANTS}</b>
       </header>
       <div class="clan-rally-summary">
         <span>Leader ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span>
@@ -23357,7 +23365,7 @@ function renderClanRallyPanel() {
       </div>
       <div class="clan-war-room-feature">
         <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
-        <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+        <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies. Every contribution must arrive and show Ready before the creator or Clan Leader can launch.</p>
         <div class="clan-rally-list">
           ${onlineClanRallies.length
             ? onlineClanRallies.map(renderClanRallyCard).join("")
@@ -23399,11 +23407,11 @@ function confirmClanRallyAction(rally, action) {
         <h3>${escapeHtml(rally.targetName || "Rally objective")}</h3>
       </div>
       ${launching
-        ? `<p>Only troops already assembled will attack. These inbound contributions will automatically turn around:</p>${inboundList}`
-        : `<p>Your waiting troops return to the assembly immediately. Assembled allies and inbound contributions will march home. Peace Shields are not restored.</p>`}
+        ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">Launch is blocked until these contributions arrive:</p>${inboundList}` : ""}`
+        : `<p>The creator's troops return to the assembly city. Assembled allies and inbound contributions will travel back normally.</p>`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
-        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Assembled Troops" : "Cancel Rally"}</button>
+        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept" ${launching && inbound.length ? "disabled" : ""}>${launching ? "Launch Rally" : "Cancel Rally"}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -23475,10 +23483,7 @@ async function runClanRallyAction(action, rally) {
         regionId: result?.movement?.sourceRegionId || rally.sourceRegionId || rally.targetRegionId,
         allowCrossMap: true,
       });
-      const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
-      showToast(returned
-        ? `Rally launched. ${formatNumber(returned)} inbound contribution${returned === 1 ? " is" : "s are"} returning.`
-        : "Rally launched.");
+      showToast("Rally launched with every Ready participant.");
     } else {
       showToast("Rally cancelled. Committed forces are returning.");
     }
@@ -25489,7 +25494,6 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
-  const canRally = Boolean(canCurrentPlayerCreateClanRally() && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -25511,12 +25515,6 @@ function renderSelectedRewardCampWheel(camp) {
       <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
-    ${canRally ? `
-      <button class="gold-camp-wheel-action cl-action-button cl-action-rally camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
-        <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
-        <strong>Rally</strong>
-      </button>
-    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
         <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
@@ -25539,10 +25537,6 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showRewardCampInfoModal(camp.id);
-  });
-  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
-    event.stopPropagation();
-    beginCreateClanRally(camp);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -26419,7 +26413,7 @@ function canCurrentPlayerCreateClanRally() {
 
 function beginCreateClanRally(targetOrId) {
   const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
-  const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
+  const eligibleObjective = target && isStronghold(target);
   if (!state?.clanId) {
     rejectGameAction("Join a clan before forming a rally.");
     return;
@@ -27756,9 +27750,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
   const commandIcon = rallyOrder ? "rally" : isTransfer ? "transfer" : isReinforcement ? "reinforcement" : "attack";
   const shieldDropWarning = rallyOrder
-    ? getActivePeaceShieldExpiresAtMs() > Date.now()
-      ? "Committing rally troops immediately removes your Royal Peace Shield. It will not be restored if you withdraw or the rally is cancelled."
-      : ""
+    ? ""
     : isReinforcement
     ? getActivePeaceShieldExpiresAtMs() > Date.now()
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
@@ -27796,7 +27788,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
-      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>3 participant limit</strong><span>${orderKind === "rally_create" ? "You will lead this rally and choose when to launch." : "Your troops march visibly to the assembly city; the objective remains clan-private."}</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${CLAN_RALLY_MIN_PARTICIPANTS}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
@@ -27933,7 +27925,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
       <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
-      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Rally commitment does not remove an active Royal Peace Shield</small></div>
     `;
     return;
   }
@@ -35119,6 +35111,22 @@ function getDetailedBattleViewerRole(snapshot = null, report = null) {
   return report?.type === "defense" ? "defender" : "attacker";
 }
 
+function renderRallyParticipantResults(snapshot = null) {
+  const participants = getDetailedBattleSideParticipants(snapshot, "attacker");
+  if (participants.length < 2) return "";
+  return `
+    <section class="battle-visual-section rally-battle-participants">
+      <div class="battle-visual-section-title"><h3>Rally participant results</h3><span>${formatNumber(participants.length)} players</span></div>
+      <div class="battle-visual-participant-list">
+        ${participants.map(participant => `
+          <article class="battle-visual-participant-row">
+            <span>${renderPlayerNameLink(participant.ownerUid, participant.ownerName || "Ruler")}<small>${participant.role === "leader" ? "Rally creator" : "Clan participant"}</small></span>
+            <div>${renderBattleMetric("Committed", formatNumber(participant.startingTroops || 0))}${renderBattleMetric("Losses", formatNumber(participant.losses || 0))}${renderBattleMetric("Survivors", formatNumber(participant.survivors || 0))}${renderBattleMetric("Attack power", formatNumber(participant.effectivePower || 0))}</div>
+          </article>`).join("")}
+      </div>
+    </section>`;
+}
+
 function getBattleRuleLabel(snapshot = null) {
   if (snapshot?.target?.targetType === "camp") return "Camp combat — 1.00 defense per troop, no level or walls";
   if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
@@ -35351,6 +35359,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       ${renderBattleReportNavigation(report, snapshot.target)}
       ${ruleLabel ? `<div class="battle-visual-rule">${escapeHtml(ruleLabel)}</div>` : ""}
       ${renderBattleReportHero(left, right, badge, getViewerBattleResultLabel(snapshot, viewerRole, report))}
+      ${renderRallyParticipantResults(snapshot)}
       ${renderBattleComparisonSections(
         left,
         right,

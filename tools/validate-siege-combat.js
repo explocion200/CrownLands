@@ -405,7 +405,7 @@ assert.equal(legacy.fortification, null, "Unversioned in-flight armies must reta
 assert.match(server, /const settlementSiegeCombatVersion = targetType === "camp"[\s\S]*?army\.siegeCombatVersion, 0/);
 assert.match(server, /function getScoutCombatIntel[\s\S]*?report\.siegeCombatVersion[\s\S]*?return \{ status: "unavailable", report: null \}/);
 assert.match(server, /siegeCombatVersion: order\.targetType === "camp" \? 0 : SIEGE_COMBAT_VERSION/);
-assert.match(server, /siegeCombatVersion: rally\.targetType === "camp" \? 0 : SIEGE_COMBAT_VERSION/);
+assert.match(server, /rallyAttack:\s*true[\s\S]*?siegeCombatVersion:\s*SIEGE_COMBAT_VERSION[\s\S]*?defenseCombatVersion:\s*DEFENSE_COMBAT_VERSION/);
 assert.match(server, /function writeFortificationSettlement[\s\S]*?fortificationState/);
 assert.match(server, /function getFortificationSnapshot[\s\S]*?getFortificationIntegrityBpsAt\(state, nowMs\)[\s\S]*?currentWallPower/);
 assert.match(client, /function getCityFortificationSnapshot[\s\S]*?getFortificationIntegrityBpsAt\(state, nowMs\)[\s\S]*?currentWallPower/);

@@ -5350,6 +5350,32 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   color: inherit;
   font-size: .88rem;
 }
+.battle-visual-participant-list {
+  display: grid;
+  gap: .42rem;
+}
+.battle-visual-participant-row {
+  display: grid;
+  grid-template-columns: minmax(130px, .8fr) minmax(0, 2fr);
+  gap: .55rem;
+  padding: .52rem;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 10px;
+  background: rgba(11, 39, 67, .68);
+}
+.battle-visual-participant-row > span {
+  display: grid;
+  align-content: center;
+  gap: .12rem;
+  min-width: 0;
+  color: #d7edfa;
+}
+.battle-visual-participant-row > span small { color: #9eb8c9; }
+.battle-visual-participant-row > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .3rem;
+}
 .battle-visual-two-column {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
