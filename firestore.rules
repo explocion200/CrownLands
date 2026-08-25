@@ -91,6 +91,7 @@ service cloud.firestore {
           'itemEffects',
           'itemPurchaseCooldowns',
           'dailyLoginReward',
+          'cityUpgradeReceipts',
           'reportsViewedAtMs',
           'realmAnnouncementSeenThroughMs',
           'lastRealmAnnouncementEventId',

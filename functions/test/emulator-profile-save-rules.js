@@ -66,6 +66,23 @@ async function patchPlayer(user, fields) {
   return { status: response.status, body: await response.json().catch(() => null) };
 }
 
+async function createPlayer(user, fields) {
+  const response = await fetch(
+    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players?documentId=${encodeURIComponent(user.uid)}`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${user.token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        fields: Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, firestoreValue(value)])),
+      }),
+    }
+  );
+  return { status: response.status, body: await response.json().catch(() => null) };
+}
+
 async function writeSnapshot(user, slot, state) {
   const response = await fetch(
     `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}/saves?documentId=${encodeURIComponent(slot)}`,
@@ -89,6 +106,21 @@ async function writeSnapshot(user, slot, state) {
 }
 
 async function main() {
+  const forgedReceiptUser = await createAuthUser();
+  const forgedReceiptCreate = await createPlayer(forgedReceiptUser, {
+    uid: forgedReceiptUser.uid,
+    playerName: "Receipt Forger",
+    cityUpgradeReceipts: [{
+      requestId: "forged_receipt_request",
+      signature: "exact:west:city_001:1",
+      mode: "exact",
+      upgraded: 1,
+      spentGold: 0,
+      finalLevel: 999,
+    }],
+  });
+  assert(forgedReceiptCreate.status === 403, "A client-created profile seeded the server-owned city-upgrade receipt ledger.");
+
   const user = await createAuthUser();
   await db.doc(`players/${user.uid}`).set({
     uid: user.uid,
@@ -142,7 +174,7 @@ async function main() {
   const staleSnapshotWrite = await writeSnapshot(user, "default-archived-generation", {});
   assert(staleSnapshotWrite.status === 403, "An archived game snapshot slot was writable.");
 
-  console.log("Profile save rules passed: session/profile/snapshot writes work and protected state remains server-owned.");
+  console.log("Profile save rules passed: session/profile/snapshot writes work and protected state, including city-upgrade receipts, remains server-owned.");
 }
 
 main().catch(error => {

@@ -4468,7 +4468,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .city-list-row {
   min-height: 66px;
   display: grid;
-  grid-template-columns: 54px 62px 58px minmax(104px, .9fr) minmax(120px, 1.1fr) minmax(94px, .75fr) 48px;
+  grid-template-columns: 54px 62px 58px minmax(96px, .8fr) minmax(108px, 1fr) minmax(82px, .7fr) minmax(190px, auto);
   align-items: center;
   gap: .42rem;
   padding: .42rem .52rem;
@@ -4503,6 +4503,12 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   font-size: 1.35rem;
   background: linear-gradient(#1b6fb6, #063761);
 }
+.city-list-actions{min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:.28rem}
+.city-list-upgrade{min-width:42px;height:46px;padding:.2rem .34rem;display:grid;place-items:center;border-radius:9px;color:#fff7d7;background:linear-gradient(180deg,#81434a,#51252b);border:1px solid rgba(246,190,82,.55);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25),0 4px 8px rgba(0,0,0,.22);font-size:.72rem;font-weight:1000;line-height:1;white-space:nowrap}
+.city-list-upgrade:hover:not(:disabled),.city-list-upgrade:focus-visible{border-color:#fff0a7;filter:brightness(1.1)}
+.city-list-upgrade:focus-visible{outline:3px solid rgba(255,240,167,.82);outline-offset:2px}
+.city-list-upgrade:disabled{cursor:not-allowed;opacity:.48;filter:saturate(.55)}
+.city-list-upgrade[aria-busy="true"]{opacity:.72}
 .island-switcher-modal.modal {
   width: min(980px, calc(100vw - .7rem));
 }
@@ -10316,12 +10322,14 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   .city-list-toolbar button { min-width: 104px; min-height: 42px; }
   .city-list-row {
     min-height: 56px;
-    grid-template-columns: 44px 44px 44px minmax(84px, .85fr) minmax(92px, 1fr) minmax(70px, .65fr) 40px;
+    grid-template-columns: 44px 44px 44px minmax(76px, .75fr) minmax(82px, .9fr) minmax(62px, .55fr) minmax(172px, auto);
     gap: .32rem;
     padding: .34rem .42rem;
   }
   .city-list-locate,
-  .city-list-info { width: 38px; height: 38px; font-size: 1.15rem; }
+  .city-list-info { width: 40px; height: 40px; font-size: 1.15rem; }
+  .city-list-upgrade { min-width: 40px; height: 40px; padding-inline: .22rem; font-size: .66rem; }
+  .city-list-actions { gap: .18rem; }
   .city-list-art { width: 42px; height: 36px; font-size: 1.25rem; }
   .city-list-level { width: 32px; height: 36px; font-size: .82rem; }
   .city-list-troops,
@@ -10330,6 +10338,16 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   .city-list-pager button { width: 42px; height: 42px; font-size: 1.7rem; }
   .main-city-return { width: 36px; height: 36px; }
   .main-city-return-arrow { transform: translate(-50%, -50%) rotate(var(--main-city-angle, 0deg)) translateX(18px); }
+}
+
+@media (max-width: 600px) and (orientation: landscape) {
+  .city-list-modal.modal{width:calc(100vw - .35rem)}
+  .city-list-modal .modal-card{padding-inline:.42rem}
+  .city-list-row{grid-template-columns:40px 38px minmax(66px,.72fr) minmax(72px,1fr) minmax(168px,auto);gap:.22rem;padding-inline:.28rem}
+  .city-list-art,.city-list-main-label { display: none; }
+  .city-list-troops,.city-list-name{font-size:.82rem}
+  .city-list-actions{gap:.12rem}
+  .city-list-upgrade { min-width: 40px; width: 40px; height: 40px; padding: 0; font-size: .62rem; }
 }
 
 @media (max-width: 780px) and (orientation: landscape) and (max-height: 390px) {
@@ -11339,6 +11357,7 @@ select:focus {
 
 .city-list-locate,
 .city-list-info,
+.city-list-upgrade,
 .battle-report-detail-btn,
 .battle-report-locate-btn,
 .city-list-pager button {
