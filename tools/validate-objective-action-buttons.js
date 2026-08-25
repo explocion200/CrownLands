@@ -115,11 +115,13 @@ assert.match(foreignCity, /cl-action-info wheel-report/, "City scout reports are
 assert.match(foreignCity, /is-pending[\s\S]*?aria-busy/, "Pending city scouting is not exposed as a persistent red busy state.");
 
 for (const [label, source] of [["Stronghold/Citadel", wheelFunctions[2]], ["Camp", wheelFunctions[3]]]) {
-  for (const variant of ["cl-action-scout", "cl-action-info", "cl-action-reinforce", "cl-action-attack", "cl-action-rally"]) {
+  for (const variant of ["cl-action-scout", "cl-action-info", "cl-action-reinforce", "cl-action-attack"]) {
     assert.ok(source.includes(variant), `${label} actions are missing ${variant}.`);
   }
   assert.match(source, /is-pending[\s\S]*?aria-busy/, `${label} pending scouting is not exposed as a persistent red state.`);
 }
+assert.ok(wheelFunctions[2].includes("cl-action-rally"), "Stronghold/Citadel actions are missing cl-action-rally.");
+assert.ok(!wheelFunctions[3].includes("cl-action-rally"), "Reward Camp actions must not expose Rally.");
 assert.ok(wheelFunctions[2].includes("cl-action-send"), "Owned Stronghold/Citadel Send is missing its movement token.");
 assert.ok(wheelFunctions[3].includes("cl-action-send camp-recall-action"), "Held Camp Recall is missing its movement token.");
 
