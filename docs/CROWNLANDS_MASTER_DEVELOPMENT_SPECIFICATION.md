@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.13
+**Version:** 1.14
 **Effective date:** August 25, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 25, 2026
@@ -610,6 +610,8 @@ Common Gear Boxes are Shop/Bag objects connected to Gear progression. Unopened C
 - Each role has eight equipment slots, for 32 Common Gear definitions in the current foundation.
 - Common Gear progresses from Level 1 through Level 5.
 - A Common Gear Box reveals exactly three server-rolled Level 1 Common pieces.
+- Each upgrade combines two matching items at the target's current level into one newly identified next-level item. Both input identities are consumed, inventory count falls by exactly one, and an equipped target transfers its slot to the result. Upgrade request IDs are replay-safe. The direct Gold charge is 0.5, 1, 2, or 4 hours of current raw regular-city Gold production for Levels 1→2 through 4→5. A complete Level 5 path therefore represents 16 Level 1 copies and 16 cumulative raw-production hours.
+- Common Gear bonuses by level are 0.25%, 0.50%, 0.80%, 1.15%, and 1.50%.
 - Current Box sources include weekly daily-login milestones, completion of all three Daily Missions, the configured Relic Camp bonus chance, and one 1-billion-Gold purchase per UTC day.
 - Gear inventory, Box opening, purchasing, equipping, and upgrading are server-authoritative and must not be writable through ordinary profile saves.
 - Equipped bonuses apply additively to their applicable base systems.
@@ -1168,6 +1170,10 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.14 — August 25, 2026
+
+- Corrected Common Gear upgrades to consume both same-level input identities, create one next-level identity, transfer equipment state, and settle retries idempotently.
 
 ## v1.13 — August 25, 2026
 

@@ -1877,8 +1877,8 @@
     return callServerFunction("unequipCommonGear", { instanceId });
   }
 
-  async function upgradeCommonGear({ instanceId = "" } = {}) {
-    return callServerFunction("upgradeCommonGear", { instanceId });
+  async function upgradeCommonGear({ instanceId = "", requestId = "" } = {}) {
+    return callServerFunction("upgradeCommonGear", { instanceId, requestId });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {

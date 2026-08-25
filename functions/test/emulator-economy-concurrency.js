@@ -776,19 +776,32 @@ async function main() {
   const assertSuccessfulUpgrade = async (level, options = {}) => {
     const gear = createSuccessUpgradeState(level, options);
     await seedUpgradeState(gear);
-    const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
+    const requestId = `gear-level-${level}-${crypto.randomBytes(6).toString("hex")}`;
+    const upgraded = await callFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId });
     const upgradedState = upgraded.currentUser?.gear || {};
     const storedProfile = (await profileRef.get()).data() || {};
+    const storedGear = commonGear.normalizeState(storedProfile.gear);
+    const resultInstanceId = upgraded.upgradedInstanceId;
     assert(
-      Number(upgradedState.instances?.upgrade_target?.level || 0) === level + 1,
+      Number(upgradedState.instances?.[resultInstanceId]?.level || 0) === level + 1,
       `Common Gear did not upgrade from Level ${level} to Level ${level + 1}.`
     );
-    assert(upgraded.upgradedInstanceId === "upgrade_target", `The Level ${level} upgrade did not preserve the target instanceId.`);
-    assert(!upgradedState.instances?.upgrade_material, `The Level ${level} upgrade did not consume the oldest matching same-level material.`);
+    assert(resultInstanceId && !["upgrade_target", "upgrade_material"].includes(resultInstanceId), `The Level ${level} upgrade reused an input instanceId.`);
+    assert(!upgradedState.instances?.upgrade_target && !upgradedState.instances?.upgrade_material, `The Level ${level} upgrade did not consume both input identities.`);
+    assert(
+      !storedGear.instances?.upgrade_target
+        && !storedGear.instances?.upgrade_material
+        && Number(storedGear.instances?.[resultInstanceId]?.level || 0) === level + 1,
+      `The persisted Level ${level} upgrade retained an input or lost its Level ${level + 1} result.`
+    );
+    assert(
+      [...(upgraded.consumedInstanceIds || [])].sort().join("|") === "upgrade_material|upgrade_target",
+      `The Level ${level} receipt did not name both consumed input items.`
+    );
     if (options.includeSpare === false) {
       assert(
-        Object.keys(upgradedState.instances || {}).length === 1 && upgradedState.instances?.upgrade_target,
-        `The exact-two-copy Level ${level} upgrade did not consume exactly one material and preserve only the target.`
+        Object.keys(upgradedState.instances || {}).length === 1 && upgradedState.instances?.[resultInstanceId],
+        `The exact-two-copy Level ${level} upgrade did not consume both inputs and create exactly one result.`
       );
     } else {
       assert(upgradedState.instances?.upgrade_spare, `The Level ${level} upgrade consumed more than one matching material.`);
@@ -805,16 +818,16 @@ async function main() {
     );
     if (options.targetEquipped) {
       assert(
-        upgradedState.equipped?.[upgradeDefinition.buildingId]?.[upgradeDefinition.slot] === "upgrade_target",
-        `Upgrading equipped Level ${level} gear unexpectedly unequipped it.`
+        upgradedState.equipped?.[upgradeDefinition.buildingId]?.[upgradeDefinition.slot] === resultInstanceId,
+        `Upgrading equipped Level ${level} gear did not replace its loadout reference with the new result.`
       );
-      assert(upgradedState.instances?.upgrade_target?.isEquipped === true, `The upgraded Level ${level} target lost equipped state.`);
+      assert(upgradedState.instances?.[resultInstanceId]?.isEquipped === true, `The upgraded Level ${level} result lost equipped state.`);
       assert(
         Number(upgraded.bonuses?.attackStrength || 0) === commonGear.BONUS_BY_LEVEL[level + 1],
         `The equipped Level ${level} upgrade did not recalculate its active bonus.`
       );
     } else {
-      assert(upgradedState.instances?.upgrade_target?.isEquipped === false, `The stored Level ${level} target became equipped.`);
+      assert(upgradedState.instances?.[resultInstanceId]?.isEquipped === false, `The stored Level ${level} result became equipped.`);
     }
     if (options.includeEquippedMatch) {
       assert(
@@ -825,7 +838,10 @@ async function main() {
   };
   const assertRejectedUpgrade = async (label, gear, expectedTargetLevel) => {
     await seedUpgradeState(gear);
-    const response = await invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target" });
+    const response = await invokeFunction("upgradeCommonGear", user.token, {
+      instanceId: "upgrade_target",
+      requestId: `gear-reject-${crypto.randomBytes(6).toString("hex")}`,
+    });
     assert(
       !response.ok && response.error?.status === "FAILED_PRECONDITION",
       `${label} was not rejected: ${JSON.stringify(response)}`
@@ -857,6 +873,55 @@ async function main() {
   await assertSuccessfulUpgrade(2, { includeEquippedMatch: true });
   await assertSuccessfulUpgrade(3, { targetEquipped: true });
   await assertSuccessfulUpgrade(4);
+
+  const concurrentUpgradeGear = createSuccessUpgradeState(2, { includeSpare: false });
+  await seedUpgradeState(concurrentUpgradeGear);
+  const concurrentUpgradeRequestId = `gear-concurrent-${crypto.randomBytes(6).toString("hex")}`;
+  const concurrentUpgrades = await Promise.all([
+    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId }),
+    invokeFunction("upgradeCommonGear", user.token, { instanceId: "upgrade_target", requestId: concurrentUpgradeRequestId }),
+  ]);
+  assert(concurrentUpgrades.every(response => response.ok), `A duplicate Common Gear request failed instead of replaying safely: ${JSON.stringify(concurrentUpgrades)}`);
+  assert(concurrentUpgrades.filter(response => response.result?.replayed === false).length === 1, "A duplicate Common Gear request crafted more than once.");
+  assert(concurrentUpgrades.filter(response => response.result?.replayed === true).length === 1, "A duplicate Common Gear request did not return one replay receipt.");
+  const concurrentResultIds = new Set(concurrentUpgrades.map(response => response.result?.upgradedInstanceId));
+  assert(concurrentResultIds.size === 1, "Duplicate Common Gear requests returned different crafted item identities.");
+  const concurrentStoredProfile = (await profileRef.get()).data() || {};
+  const concurrentStoredGear = commonGear.normalizeState(concurrentStoredProfile.gear);
+  const [concurrentResultId] = concurrentResultIds;
+  assert(
+    Object.keys(concurrentStoredGear.instances).length === 1
+      && Number(concurrentStoredGear.instances?.[concurrentResultId]?.level || 0) === 3,
+    `Concurrent Level 2 upgrades did not settle to exactly one Level 3 item: ${JSON.stringify({
+      concurrentResultId,
+      instances: concurrentStoredGear.instances,
+      responses: concurrentUpgrades.map(response => response.result),
+    })}`
+  );
+  assert(!concurrentStoredGear.instances.upgrade_target && !concurrentStoredGear.instances.upgrade_material, "Concurrent upgrade settlement left an input item behind.");
+  assert(
+    concurrentUpgrades.reduce((total, response) => total + Number(response.result?.spentGold || 0), 0) > 0
+      && concurrentUpgrades.filter(response => Number(response.result?.spentGold || 0) > 0).length === 1,
+    "A replayed Common Gear request charged the upgrade price more than once."
+  );
+
+  const unaffordableGear = createSuccessUpgradeState(2, { includeSpare: false });
+  await seedUpgradeState(unaffordableGear);
+  await profileRef.update({ gold: 0, goldFloat: 0, economyUpdatedAtMs: Date.now() + 60_000 });
+  const unaffordableResponse = await invokeFunction("upgradeCommonGear", user.token, {
+    instanceId: "upgrade_target",
+    requestId: `gear-unaffordable-${crypto.randomBytes(6).toString("hex")}`,
+  });
+  assert(
+    !unaffordableResponse.ok && unaffordableResponse.error?.status === "FAILED_PRECONDITION",
+    `An unaffordable Common Gear upgrade was accepted: ${JSON.stringify(unaffordableResponse)}`
+  );
+  const unaffordableStored = (await profileRef.get()).data() || {};
+  assert(
+    unaffordableStored.gear?.instances?.upgrade_target && unaffordableStored.gear?.instances?.upgrade_material,
+    "An unaffordable Common Gear upgrade consumed an input item."
+  );
+  assert(Number(unaffordableStored.goldFloat || 0) === 0, "An unaffordable Common Gear upgrade changed gold.");
 
   const maxLevelGear = commonGear.createDefaultState();
   maxLevelGear.instances.upgrade_target = createUpgradeInstance("upgrade_target", upgradeDefinition, 5, Date.now() - 2000);
@@ -907,7 +972,7 @@ async function main() {
     "The leaderboard did not receive the authoritative King Power snapshot."
   );
 
-  console.log("Emulator economy concurrency passed: production, city XP, items, Common Gear transactions, city propagation, and King Power.");
+  console.log("Emulator economy concurrency passed: production, city XP, items, replay-safe two-to-one Common Gear consumption, city propagation, and King Power.");
 }
 
 main()

@@ -5,7 +5,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
-  const SCHEMA_VERSION = 1;
+  const SCHEMA_VERSION = 2;
   const RARITY = "common";
   const MAX_LEVEL = 5;
   const BOX_REVEAL_COUNT = 3;
@@ -13,6 +13,7 @@
   const SHOP_PRICE_HOURS = 1;
   const RELIC_BONUS_CHANCE_PERCENT = 1;
   const CASUALTY_RECOVERY_CAP_PERCENT = 75;
+  const UPGRADE_RECEIPT_LIMIT = 24;
   const BONUS_BY_LEVEL = Object.freeze({ 1: 0.25, 2: 0.5, 3: 0.8, 4: 1.15, 5: 1.5 });
   const UPGRADE_BY_LEVEL = Object.freeze({
     1: Object.freeze({ duplicates: 1, baseGoldHours: 0.5 }),
@@ -214,6 +215,7 @@
       shopPurchase: { utcDate: "", purchaseCount: 0 },
       lastOpenRequestId: "",
       lastOpenReceipt: null,
+      recentUpgradeReceipts: [],
       updatedAtMs: 0,
     };
   }
@@ -272,6 +274,21 @@
       openedAtMs: timestampToMs(receipt.openedAtMs),
       instanceIds: (Array.isArray(receipt.instanceIds) ? receipt.instanceIds : []).map(id => cleanId(id, 128)).filter(id => state.instances[id]).slice(0, BOX_REVEAL_COUNT),
     } : null;
+    state.recentUpgradeReceipts = (Array.isArray(source.recentUpgradeReceipts) ? source.recentUpgradeReceipts : [])
+      .map(rawReceipt => ({
+        requestId: cleanId(rawReceipt?.requestId, 96),
+        upgradedAtMs: timestampToMs(rawReceipt?.upgradedAtMs),
+        upgradedInstanceId: cleanId(rawReceipt?.upgradedInstanceId, 128),
+        consumedInstanceIds: (Array.isArray(rawReceipt?.consumedInstanceIds) ? rawReceipt.consumedInstanceIds : [])
+          .map(id => cleanId(id, 128))
+          .filter(Boolean)
+          .slice(0, 8),
+        previousLevel: Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(rawReceipt?.previousLevel) || 1))),
+        newLevel: Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(rawReceipt?.newLevel) || 1))),
+        spentGold: Math.max(0, Math.floor(Number(rawReceipt?.spentGold) || 0)),
+      }))
+      .filter(rawReceipt => rawReceipt.requestId && rawReceipt.upgradedInstanceId)
+      .slice(-UPGRADE_RECEIPT_LIMIT);
     state.updatedAtMs = timestampToMs(source.updatedAtMs || source.updatedAt);
     return state;
   }
@@ -314,6 +331,33 @@
     return UPGRADE_BY_LEVEL[normalizedLevel] || null;
   }
 
+  function getUpgradeGoldCost(baseGoldPerHour = 0, level = 1) {
+    const requirement = getUpgradeRequirement(level);
+    if (!requirement) return 0;
+    const rawProductionRate = Math.max(0, Math.floor(Number(baseGoldPerHour) || 0));
+    return Math.max(0, Math.floor(rawProductionRate * requirement.baseGoldHours));
+  }
+
+  function getBaseCopyCountForLevel(level = 1) {
+    const targetLevel = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
+    let copies = 1;
+    for (let currentLevel = 1; currentLevel < targetLevel; currentLevel += 1) {
+      copies *= 1 + (getUpgradeRequirement(currentLevel)?.duplicates || 0);
+    }
+    return copies;
+  }
+
+  function getCumulativeGoldHoursForLevel(level = 1) {
+    const targetLevel = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
+    let hours = 0;
+    for (let currentLevel = 1; currentLevel < targetLevel; currentLevel += 1) {
+      const requirement = getUpgradeRequirement(currentLevel);
+      if (!requirement) break;
+      hours = hours * (1 + requirement.duplicates) + requirement.baseGoldHours;
+    }
+    return hours;
+  }
+
   function getUpgradeMaterialInstances(target, instances = []) {
     if (!target || typeof target !== "object") return [];
     const candidates = Array.isArray(instances)
@@ -328,6 +372,46 @@
       .sort((a, b) => a.acquiredAtMs - b.acquiredAtMs || a.instanceId.localeCompare(b.instanceId));
   }
 
+  function consumeUpgradeInputs(gear, targetInstanceId = "", resultInstanceId = "", upgradedAtMs = 0) {
+    if (!gear || typeof gear !== "object" || !gear.instances || typeof gear.instances !== "object") return null;
+    const targetId = cleanId(targetInstanceId, 128);
+    const resultId = cleanId(resultInstanceId, 128);
+    const target = gear.instances[targetId];
+    const requirement = target ? getUpgradeRequirement(target.level) : null;
+    if (!target || !requirement || !resultId || gear.instances[resultId]) return null;
+    const materials = getUpgradeMaterialInstances(target, gear.instances).slice(0, requirement.duplicates);
+    if (materials.length !== requirement.duplicates) return null;
+    const beforeCount = Object.keys(gear.instances).length;
+    const previousLevel = target.level;
+    const wasEquipped = target.isEquipped === true;
+    const craftedAtMs = timestampToMs(upgradedAtMs) || target.upgradedAtMs || target.acquiredAtMs;
+    const consumedInstanceIds = [target.instanceId, ...materials.map(material => material.instanceId)];
+    const upgradedInstance = normalizeInstance({
+      instanceId: resultId,
+      gearKey: target.gearKey,
+      level: previousLevel + 1,
+      isNew: false,
+      acquiredAtMs: craftedAtMs,
+      upgradedAtMs: craftedAtMs,
+    });
+    if (!upgradedInstance) return null;
+    upgradedInstance.isEquipped = wasEquipped;
+    consumedInstanceIds.forEach(instanceId => { delete gear.instances[instanceId]; });
+    gear.instances[resultId] = upgradedInstance;
+    if (wasEquipped) gear.equipped[target.buildingId][target.slot] = resultId;
+    const afterCount = Object.keys(gear.instances).length;
+    if (afterCount !== beforeCount - requirement.duplicates) return null;
+    return {
+      upgradedInstance,
+      upgradedInstanceId: resultId,
+      consumedInstanceIds,
+      previousLevel,
+      newLevel: upgradedInstance.level,
+      beforeCount,
+      afterCount,
+    };
+  }
+
   return Object.freeze({
     SCHEMA_VERSION,
     RARITY,
@@ -337,6 +421,7 @@
     SHOP_PRICE_HOURS,
     RELIC_BONUS_CHANCE_PERCENT,
     CASUALTY_RECOVERY_CAP_PERCENT,
+    UPGRADE_RECEIPT_LIMIT,
     BONUS_BY_LEVEL,
     UPGRADE_BY_LEVEL,
     SLOTS,
@@ -350,6 +435,10 @@
     getBonusPercent,
     getBonuses,
     getUpgradeRequirement,
+    getUpgradeGoldCost,
+    getBaseCopyCountForLevel,
+    getCumulativeGoldHoursForLevel,
     getUpgradeMaterialInstances,
+    consumeUpgradeInputs,
   });
 });

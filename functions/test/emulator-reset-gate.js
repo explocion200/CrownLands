@@ -1305,12 +1305,21 @@ async function main() {
   }, { merge: true });
   const postclaimUpgrade = await callReplaySafeFunction("upgradeCommonGear", returningClanOfficer.token, {
     instanceId: "preclaim_upgrade_target",
+    requestId: "postclaim_upgrade_gear",
   });
+  const postclaimUpgradeId = String(postclaimUpgrade?.upgradedInstanceId || "");
+  const postclaimUpgradeStored = (await db.doc(`players/${returningClanOfficer.uid}`).get()).data()?.gear || {};
   assert(
     postclaimUpgrade?.spentGold > 0
-      && postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_target?.level === 2
-      && !postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_material,
-    "A valid post-claim Gear upgrade did not consume a duplicate and a positive Gold cost."
+      && postclaimUpgradeId
+      && !["preclaim_upgrade_target", "preclaim_upgrade_material"].includes(postclaimUpgradeId)
+      && postclaimUpgrade.currentUser?.gear?.instances?.[postclaimUpgradeId]?.level === 2
+      && !postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_target
+      && !postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_material
+      && postclaimUpgradeStored.instances?.[postclaimUpgradeId]?.level === 2
+      && !postclaimUpgradeStored.instances?.preclaim_upgrade_target
+      && !postclaimUpgradeStored.instances?.preclaim_upgrade_material,
+    "A valid post-claim Gear upgrade did not persist one new result, consume both inputs, and charge a positive Gold cost."
   );
   const postclaimOpen = await callReplaySafeFunction("openCommonGearBox", returningClanOfficer.token, {
     requestId: "postclaim_open_box",
@@ -1323,10 +1332,10 @@ async function main() {
     "A persistent Common Gear Box could not be opened after reset claim."
   );
   const postclaimUnequip = await callReplaySafeFunction("unequipCommonGear", returningClanOfficer.token, {
-    instanceId: "preclaim_upgrade_target",
+    instanceId: postclaimUpgradeId,
   });
   const postclaimEquip = await callReplaySafeFunction("equipCommonGear", returningClanOfficer.token, {
-    instanceId: "preclaim_upgrade_target",
+    instanceId: postclaimUpgradeId,
   });
   const postclaimView = await callReplaySafeFunction("viewCommonGearBuilding", returningClanOfficer.token, {
     buildingId: "barracks",
@@ -1337,8 +1346,8 @@ async function main() {
     bonus: { id: "postclaim_pickup", type: "gold", regionId: "region_11", x: 1200, y: 900 },
   });
   assert(
-    postclaimUnequip?.currentUser?.gear?.instances?.preclaim_upgrade_target?.isEquipped === false
-      && postclaimEquip?.currentUser?.gear?.instances?.preclaim_upgrade_target?.isEquipped === true
+    postclaimUnequip?.currentUser?.gear?.instances?.[postclaimUpgradeId]?.isEquipped === false
+      && postclaimEquip?.currentUser?.gear?.instances?.[postclaimUpgradeId]?.isEquipped === true
       && postclaimView?.ok === true
       && postclaimEconomy?.ok !== false
       && postclaimHarvest?.ok === true,
