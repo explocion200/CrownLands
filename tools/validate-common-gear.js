@@ -48,7 +48,8 @@ assert.equal(gear.getDefinition("treasury_weapon_common_01").isToolInsteadOfWeap
 assert.match(gear.getDefinition("treasury_weapon_common_01").gearName, /Ledger/, "Treasury tool must remain visibly identified as a ledger.");
 assert.equal(gear.BOX_REVEAL_COUNT, 3);
 assert.equal(gear.SHOP_DAILY_LIMIT, 1);
-assert.equal(gear.SHOP_PRICE_GOLD, 1_000_000_000, "The Common Gear Box must cost exactly 1 billion gold.");
+assert.equal(gear.SHOP_PRICE_HOURS, 1, "The Common Gear Box must cost one raw Gold-production hour.");
+assert.equal(serverGear.SHOP_PRICE_HOURS, gear.SHOP_PRICE_HOURS, "Client and server Gear Box hour costs must stay synchronized.");
 assert.equal(gear.RELIC_BONUS_CHANCE_PERCENT, 1);
 assert.equal(gear.CASUALTY_RECOVERY_CAP_PERCENT, 75);
 assert.deepEqual(gear.BONUS_BY_LEVEL, { 1: .25, 2: .5, 3: .8, 4: 1.15, 5: 1.5 });
@@ -89,9 +90,11 @@ assert.match(index, /currentState\.completedCount[\s\S]{0,1500}gear\.commonGearB
 assert.match(index, /getCasualtyRecoveryPercent[\s\S]{0,500}CASUALTY_RECOVERY_CAP_PERCENT/, "Field Medic plus gear recovery must be capped.");
 assert.match(
   index,
-  /createCommonGearClientStatus[\s\S]{0,700}price: COMMON_GEAR\.SHOP_PRICE_GOLD/,
-  "The authoritative Common Gear shop status must use the fixed shared price."
+  /function createCommonGearClientStatus[\s\S]{0,900}price: getCommonGearBoxPriceForEconomy\(economy\)/,
+  "The authoritative Common Gear shop status must use the scalable shared price."
 );
+assert.match(index, /function getCommonGearBoxPriceForEconomy[\s\S]{0,400}COMMON_GEAR_BOX_ITEM_ID[\s\S]{0,200}rawBaseGoldPerHour[\s\S]{0,120}cityCount/, "Gear Box pricing must use raw production and kingdom size.");
+assert.match(index, /purchaseCommonGearBox[\s\S]{0,900}data\.cost[\s\S]{0,300}status\.shop\.price[\s\S]{0,220}Gear Box price changed/, "The Gear Box purchase must reject a stale client quote.");
 
 const rules = read("firestore.rules");
 assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not seed authoritative gear.");
@@ -99,7 +102,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-inner-castle-labels-r1/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260823-item-bag-stacks-r1[\s\S]*game\.js\?v=20260825-player-flags-audit-r2/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-shop-hourly-prices-r1[\s\S]*game\.js\?v=20260825-player-flags-audit-r2/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
@@ -242,9 +245,10 @@ assert.match(game, /class="common-gear-reveal-card"[\s\S]{0,140}definition\.art/
 assert.match(game, /onerror="this\.hidden=true"/, "Gear art must fail gracefully without obscuring labels.");
 assert.match(
   game,
-  /function getCommonGearBoxShopPrice\(\)[\s\S]{0,180}COMMON_GEAR\?\.SHOP_PRICE_GOLD/,
-  "The Shop must display the same fixed Common Gear Box price used by the server."
+  /function getCommonGearBoxShopPrice\(\)[\s\S]{0,360}getShopPricingContext\(\)[\s\S]{0,220}calculateScalableShopPrice\(/,
+  "The Shop must display the same scalable Common Gear Box price used by the server."
 );
+assert.match(gearUi, /purchaseCommonGearBox\(\{ cost: quotedPrice \}\)/, "The Gear Box purchase must submit the displayed price for server validation.");
 const profilePatchSection = game.slice(
   game.indexOf("function applyServerProfilePatch"),
   game.indexOf("function applyServerCityUpdateToOwnedCache")

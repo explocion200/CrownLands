@@ -222,6 +222,18 @@ if (!serverSource.includes("addActiveArmies: [movement]")
   || !serverSource.includes("statsCityPatches: [{ ref: targetRef, city: target, patch: targetTroopPatch }]")) {
   throw new Error("Transfer launch and arrival do not atomically move troops between garrisons and active armies.");
 }
+const statsRebuildSource = serverSource.slice(
+  serverSource.indexOf("async function rebuildGlobalStatsForPlayer"),
+  serverSource.indexOf("function createEconomyResponse")
+);
+const statsCityProjectionSource = statsRebuildSource.slice(
+  statsRebuildSource.indexOf("const cityProjectionWrites"),
+  statsRebuildSource.indexOf("const armyProjectionWrites")
+);
+assert.match(statsRebuildSource, /writeCurrentOwnerPatches\(playerUid, cityProjectionWrites/,
+  "Global stats rebuilds must conditionally refresh owned-city projections.");
+assert.doesNotMatch(statsCityProjectionSource, /ownerKind\s*:|ownerUid\s*:/,
+  "Global stats rebuilds must not write authoritative city ownership fields.");
 const base = cityMilitaryComponents(75, 1_000_000);
 const training = cityMilitaryComponents(75, 1_000_000, { troop: 15 });
 const defense = cityMilitaryComponents(75, 1_000_000, { defense: 15 });

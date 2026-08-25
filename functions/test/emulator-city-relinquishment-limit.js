@@ -178,9 +178,53 @@ async function main() {
   const initialProfile = (await db.doc(`players/${firstAccount.uid}`).get()).data() || {};
   assert(!initialProfile.lastCityRelinquishedAtMs, "A new account began with its relinquishment allowance already used.");
 
+  const mainCityAttempt = await relinquish(firstAccount, {
+    id: firstClaim.cityId,
+    regionId: getRegionId(firstClaim),
+  });
+  assert(
+    !mainCityAttempt.ok
+      && mainCityAttempt.error?.status === "FAILED_PRECONDITION"
+      && /main city/i.test(mainCityAttempt.error?.message || ""),
+    `The main city was not rejected cleanly: ${JSON.stringify(mainCityAttempt.error)}`
+  );
+  const foreignCityAttempt = await relinquish(firstAccount, {
+    id: secondClaim.cityId,
+    regionId: getRegionId(secondClaim),
+  });
+  assert(
+    !foreignCityAttempt.ok && foreignCityAttempt.error?.status === "PERMISSION_DENIED",
+    `A foreign city was not rejected cleanly: ${JSON.stringify(foreignCityAttempt.error)}`
+  );
+
+  const firstMainCityForRouting = (
+    await db.doc(`islands/${firstClaim.islandId}/cities/${firstClaim.cityId}`).get()
+  ).data() || {};
+  const mainCityX = Number(firstMainCityForRouting.x || 0);
+  const mainCityY = Number(firstMainCityForRouting.y || 0);
   const [firstCity, secondCity] = await Promise.all([
-    seedOwnedHolding(firstAccount, firstClaim, "race_a"),
-    seedOwnedHolding(firstAccount, firstClaim, "race_b"),
+    seedOwnedHolding(firstAccount, firstClaim, "race_a", {
+      x: mainCityX + 1,
+      y: mainCityY,
+      troops: 137,
+      troopFloat: 137,
+      ownerClanId: "stale-clan",
+      ownerClanName: "Stale Clan",
+      ownerClanTag: "OLD",
+      ownerClanIdentityRevision: 99,
+      alliedReinforcementTroops: 41,
+    }),
+    seedOwnedHolding(firstAccount, firstClaim, "race_b", {
+      x: mainCityX - 1,
+      y: mainCityY,
+      troops: 137,
+      troopFloat: 137,
+      ownerClanId: "stale-clan",
+      ownerClanName: "Stale Clan",
+      ownerClanTag: "OLD",
+      ownerClanIdentityRevision: 99,
+      alliedReinforcementTroops: 41,
+    }),
   ]);
   const concurrentResults = await Promise.all([
     relinquish(firstAccount, firstCity),
@@ -191,6 +235,7 @@ async function main() {
       && concurrentResults.filter(result => !result.ok).length === 1,
     "Simultaneous relinquishments did not produce exactly one success and one rejection."
   );
+  const successfulRace = concurrentResults.find(result => result.ok);
   const blockedRace = concurrentResults.find(result => !result.ok);
   assert(
     blockedRace.error?.status === "FAILED_PRECONDITION"
@@ -204,14 +249,116 @@ async function main() {
     db.doc(`players/${firstAccount.uid}`).get(),
   ]);
   const raceCities = [firstCityAfter.data() || {}, secondCityAfter.data() || {}];
+  const relinquishedCity = raceCities.find(city => city.ownerKind === "neutral" && !city.ownerUid);
   assert(
     raceCities.filter(city => city.ownerKind === "neutral" && !city.ownerUid).length === 1
       && raceCities.filter(city => city.ownerUid === firstAccount.uid).length === 1,
     "The simultaneous transaction changed ownership for more than one holding."
   );
+  assert(
+    relinquishedCity
+      && relinquishedCity.ownerName === ""
+      && !relinquishedCity.ownerFlag
+      && Number(relinquishedCity.ownerKingPower || 0) === 0
+      && relinquishedCity.ownerClanId === ""
+      && relinquishedCity.ownerClanName === ""
+      && relinquishedCity.ownerClanTag === ""
+      && Number(relinquishedCity.ownerClanIdentityRevision || 0) === 0
+      && Number(relinquishedCity.ownerShieldExpiresAtMs || 0) === 0
+      && Number(relinquishedCity.troops || 0) === 0
+      && Number(relinquishedCity.troopFloat || 0) === 0
+      && Number(relinquishedCity.alliedReinforcementTroops || 0) === 0
+      && Number(relinquishedCity.investedGold || 0) === 0
+      && relinquishedCity.isMainCity === false,
+    `Relinquishment left stale ownership or garrison data: ${JSON.stringify(relinquishedCity)}`
+  );
+  const relinquishMovement = successfulRace.result?.movement;
+  assert(
+    Number(successfulRace.result?.transferredTroops || 0) === 137
+      && relinquishMovement?.kind === "transfer"
+      && relinquishMovement.relinquishTransfer === true
+      && relinquishMovement.fromId === successfulRace.result?.relinquishedCity?.id
+      && relinquishMovement.toId === successfulRace.result?.destinationCity?.id
+      && Array.isArray(relinquishMovement.routeRegionIds)
+      && relinquishMovement.routeRegionIds.length > 0
+      && Array.isArray(relinquishMovement.path)
+      && relinquishMovement.path.length > 1,
+    `The server did not create the troop march from the city-only request: ${JSON.stringify(successfulRace.result)}`
+  );
+  const canonicalMovementRef = db.doc(`armies/${relinquishMovement.id}`);
+  const canonicalMovementBefore = await canonicalMovementRef.get();
+  assert(
+    canonicalMovementBefore.exists
+      && canonicalMovementBefore.data()?.status === "active"
+      && canonicalMovementBefore.data()?.troops === 137,
+    "The server-generated relinquishment march was not persisted canonically."
+  );
   const firstRelinquishedAtMs = Number(firstProfileAfter.data()?.lastCityRelinquishedAtMs || 0);
   assert(firstRelinquishedAtMs > 0, "A successful relinquishment did not record the profile timestamp.");
   const stillOwnedCity = raceCities[0].ownerUid === firstAccount.uid ? firstCity : secondCity;
+
+  const movementDestinationRef = db.doc(
+    `islands/${realm.worldId}-${relinquishMovement.targetRegionId}/cities/${relinquishMovement.toId}`
+  );
+  const movementDestinationBefore = await movementDestinationRef.get();
+  assert(movementDestinationBefore.exists, "The relinquishment destination disappeared before the reroute test.");
+  const movementDestinationData = movementDestinationBefore.data() || {};
+  const destinationTroopsBefore = Number(movementDestinationData.troops || 0);
+  const firstMainCityRef = db.doc(`islands/${firstClaim.islandId}/cities/${firstClaim.cityId}`);
+  const swappedMainCityForReroute = movementDestinationRef.path === firstMainCityRef.path;
+  if (swappedMainCityForReroute) {
+    const mainCitySwap = db.batch();
+    mainCitySwap.set(db.doc(`players/${firstAccount.uid}`), {
+      mainCityId: stillOwnedCity.id,
+      mainIslandId: firstClaim.islandId,
+      mainRegionId: stillOwnedCity.regionId,
+    }, { merge: true });
+    mainCitySwap.set(firstMainCityRef, { isMainCity: false }, { merge: true });
+    mainCitySwap.set(stillOwnedCity.ref, { isMainCity: true }, { merge: true });
+    await mainCitySwap.commit();
+  }
+  await movementDestinationRef.set({
+    ownerKind: "player",
+    ownerUid: secondAccount.uid,
+    ownerName: "Relinquish Second",
+    ownerFlag: null,
+    ownerKingPower: 1,
+    isMainCity: false,
+  }, { merge: true });
+  await canonicalMovementRef.set({
+    arrivesAtMs: Date.now() - 1000,
+    status: "active",
+  }, { merge: true });
+  const rerouteResult = await invokeFunction("resolveArmyOrder", firstAccount.token, {
+    armyId: relinquishMovement.id,
+    routeRegionIds: relinquishMovement.routeRegionIds,
+  });
+  assert(
+    rerouteResult.ok
+      && rerouteResult.result?.rerouted === true
+      && rerouteResult.result?.redirectReason === "captured_destination"
+      && rerouteResult.result?.movement?.relinquishTransfer === true
+      && rerouteResult.result?.movement?.toId !== relinquishMovement.toId,
+    `A captured destination did not reroute the relinquished troops: ${JSON.stringify(rerouteResult)}`
+  );
+  const capturedDestinationAfter = await movementDestinationRef.get();
+  assert(
+    capturedDestinationAfter.data()?.ownerUid === secondAccount.uid
+      && Number(capturedDestinationAfter.data()?.troops || 0) === destinationTroopsBefore,
+    "A relinquishment march attacked or transferred into the newly captured destination."
+  );
+  await movementDestinationRef.set(movementDestinationData, { merge: false });
+  if (swappedMainCityForReroute) {
+    const mainCityRestore = db.batch();
+    mainCityRestore.set(db.doc(`players/${firstAccount.uid}`), {
+      mainCityId: firstClaim.cityId,
+      mainIslandId: firstClaim.islandId,
+      mainRegionId: getRegionId(firstClaim),
+    }, { merge: true });
+    mainCityRestore.set(firstMainCityRef, { isMainCity: true }, { merge: true });
+    mainCityRestore.set(stillOwnedCity.ref, { isMainCity: false }, { merge: true });
+    await mainCityRestore.commit();
+  }
 
   const repeatedAttempt = await relinquish(firstAccount, stillOwnedCity);
   assert(
@@ -269,7 +416,10 @@ async function main() {
   const resetAttempt = await relinquish(firstAccount, stillOwnedCity);
   assert(resetAttempt.ok, "An allowance from a prior UTC day did not reset.");
 
-  console.log("Emulator city relinquishment limit passed: atomic race, same-day lock, special holdings, account isolation, rules, and UTC reset.");
+  console.log(
+    "Emulator city relinquishment passed: server-generated marches, cleanup, rerouting, invalid cases, atomic limits, rules, and UTC reset."
+      + ` Main-city destination fixture: ${swappedMainCityForReroute ? "covered" : "not selected"}.`
+  );
 }
 
 main().catch(error => {

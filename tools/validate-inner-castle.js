@@ -84,7 +84,7 @@ function getWebpMetadata(buffer) {
   throw new Error("WebP does not contain a supported frame.");
 }
 
-const BUILD_ID = "20260823-item-bag-stacks-r1";
+const BUILD_ID = "20260825-shop-hourly-prices-r1";
 const STYLE_BUILD_ID = "20260825-player-flags-audit-r2";
 const GAME_BUILD_ID = "20260825-player-flags-audit-r2";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");

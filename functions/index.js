@@ -314,14 +314,16 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const COMMON_GEAR_BOX_ITEM_ID = "common_gear_box";
 const SHOP_MINIMUM_PRICE_GOLD = 50;
 const SHOP_PRICE_HOURS = Object.freeze({
   [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
-  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
-  [RECALL_HORN_ITEM_ID]: 1.25,
-  [WAR_DRUMS_ITEM_ID]: 1.5,
-  [VEIL_OF_SILENCE_ITEM_ID]: 2,
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 0.18,
+  [WAR_DRUMS_ITEM_ID]: 0.36,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 0.36,
+  [RECALL_HORN_ITEM_ID]: 0.54,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [COMMON_GEAR_BOX_ITEM_ID]: Math.max(0, safeNumber(COMMON_GEAR.SHOP_PRICE_HOURS, 1)),
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const ALLIED_TARGET_RETURN_REASON = "target_became_clan_ally";
@@ -6892,6 +6894,32 @@ function getNeutralClaimClearedPatch(nowMs = Date.now()) {
   };
 }
 
+function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
+  return {
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    ownerKingPower: 0,
+    ownerClanId: "",
+    ownerClanName: "",
+    ownerClanTag: "",
+    ownerClanIdentityRevision: 0,
+    ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    ownerShieldExpiresAtMs: 0,
+    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
+    troops: 0,
+    troopFloat: 0,
+    alliedReinforcementTroops: 0,
+    investedGold: 0,
+    isMainCity: false,
+    productionUpdatedAtMs: nowMs,
+    relinquishedAtMs: nowMs,
+    relocatedAtMs: 0,
+    ...getNeutralClaimClearedPatch(nowMs),
+  };
+}
+
 function normalizeAntiFarmPairState(data = {}, nowMs = Date.now()) {
   return {
     sharedInstallationLastSeenAtMs: Math.max(0, timestampToMs(data.sharedInstallationLastSeenAtMs)),
@@ -8733,13 +8761,17 @@ function normalizeItemEffects(effects = {}) {
   };
 }
 
-function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
+function getVeilOfSilenceExpiresAtMs(profile = {}) {
   return timestampToMs(
     profile?.itemEffects?.veilOfSilenceExpiresAtMs ||
     profile?.itemEffects?.veilOfSilenceExpiresAt ||
     profile?.itemEffects?.antiScoutExpiresAtMs ||
     profile?.itemEffects?.antiScoutExpiresAt
-  ) > nowMs;
+  );
+}
+
+function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
+  return getVeilOfSilenceExpiresAtMs(profile) > nowMs;
 }
 
 function doesVeilOfSilenceBlock(kind = "", targetType = "city") {
@@ -12407,6 +12439,41 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
   return stats;
 }
 
+async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation = "writeCurrentOwnerPatches") {
+  const playerUid = safeString(ownerUid, 128);
+  if (!playerUid) return 0;
+  const byPath = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const path = safeString(entry?.ref?.path, 240);
+    if (!path || !entry?.data) return;
+    const existing = byPath.get(path);
+    byPath.set(path, {
+      ref: entry.ref,
+      data: {
+        ...(existing?.data || {}),
+        ...entry.data,
+      },
+    });
+  });
+
+  let updated = 0;
+  const writes = [...byPath.values()];
+  for (let index = 0; index < writes.length; index += 25) {
+    const results = await Promise.all(writes.slice(index, index + 25).map(async entry => {
+      let wrote = false;
+      await runTransactionWithInfrastructureRetry(async transaction => {
+        const snapshot = await transaction.get(entry.ref);
+        if (!snapshot.exists || getOwnerUid(snapshot.data() || {}) !== playerUid) return;
+        transaction.set(entry.ref, entry.data, { merge: true });
+        wrote = true;
+      }, operation);
+      return wrote;
+    }));
+    updated += results.filter(Boolean).length;
+  }
+  return updated;
+}
+
 async function rebuildGlobalStatsForPlayer(uid = "") {
   const playerUid = safeString(uid, 128);
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
@@ -12539,22 +12606,17 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     },
   ];
 
-  cityEntries.forEach(entry => {
-    writes.push({
+  const cityProjectionWrites = cityEntries.map(entry => ({
       ref: entry.ref,
       data: {
-        ownerKind: "player",
-        ownerUid: playerUid,
         ownerName: identity.ownerName,
         ownerFlag: identity.ownerFlag,
         ownerKingPower: stats.kingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       },
-    });
-  });
-  activeArmyDocs.forEach(armyDoc => {
-    writes.push({
+    }));
+  const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
       ref: armyDoc.ref,
       data: {
         ownerName: identity.ownerName,
@@ -12564,10 +12626,9 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       },
-    });
-  });
+    }));
   mainRepair.cityPatches.forEach(entry => {
-    writes.push({
+    cityProjectionWrites.push({
       ref: entry.ref,
       data: cleanCityUpdate(entry.city, entry.patch),
     });
@@ -12580,12 +12641,19 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     });
     await batch.commit();
   }
+  // Stats and identity projections must never restore ownership from the stale query
+  // snapshot above. Re-read each asset in a transaction and only refresh metadata while
+  // the same player still owns it.
+  const [cityUpdates, armyUpdates] = await Promise.all([
+    writeCurrentOwnerPatches(playerUid, cityProjectionWrites, "writeCurrentOwnerCityProjections"),
+    writeCurrentOwnerPatches(playerUid, armyProjectionWrites, "writeCurrentOwnerArmyProjections"),
+  ]);
 
   return {
     uid: playerUid,
     stats: globalStatsForClient(stats),
-    cityUpdates: cityEntries.length,
-    armyUpdates: activeArmyDocs.length,
+    cityUpdates,
+    armyUpdates,
     mainCityRepairs: mainRepair.cityPatches.length,
   };
 }
@@ -13067,7 +13135,16 @@ function requireCommonGearInstance(gear, instanceId) {
   return instance;
 }
 
-function createCommonGearClientStatus(profile = {}, nowMs = Date.now()) {
+function getCommonGearBoxPriceForEconomy(economy = null) {
+  const context = getShopPricingContext(economy);
+  return calculateScalableShopPrice(
+    COMMON_GEAR_BOX_ITEM_ID,
+    context.rawBaseGoldPerHour,
+    context.cityCount
+  );
+}
+
+function createCommonGearClientStatus(profile = {}, nowMs = Date.now(), economy = null) {
   const gear = normalizeCommonGear(profile);
   const today = getUtcDateKey(nowMs);
   const purchasedToday = gear.shopPurchase.utcDate === today ? gear.shopPurchase.purchaseCount : 0;
@@ -13079,7 +13156,7 @@ function createCommonGearClientStatus(profile = {}, nowMs = Date.now()) {
       purchaseCount: purchasedToday,
       dailyLimit: COMMON_GEAR.SHOP_DAILY_LIMIT,
       available: purchasedToday < COMMON_GEAR.SHOP_DAILY_LIMIT,
-      price: COMMON_GEAR.SHOP_PRICE_GOLD,
+      price: getCommonGearBoxPriceForEconomy(economy),
       resetsAtMs: getNextUtcDayStartMs(nowMs),
     },
   };
@@ -13091,16 +13168,20 @@ exports.getCommonGearStatus = onCall({ region: "us-central1", maxInstances: 30, 
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy);
-    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, nowMs), ...createEconomyResponse(economy) };
+    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, nowMs, economy), ...createEconomyResponse(economy) };
   });
 });
 
 exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  const data = request.data || {};
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    const status = createCommonGearClientStatus(economy.profileAfter, nowMs);
+    const status = createCommonGearClientStatus(economy.profileAfter, nowMs, economy);
+    if (Number.isFinite(Number(data.cost)) && Math.floor(safeNumber(data.cost, 0)) !== status.shop.price) {
+      throw new HttpsError("failed-precondition", "Gear Box price changed. Refresh the Shop and try again.");
+    }
     if (!status.shop.available) throw new HttpsError("resource-exhausted", "You already bought today's Common Gear Box.");
     if (economy.goldFloat < status.shop.price) throw new HttpsError("failed-precondition", "Not enough gold for today's Common Gear Box.");
     const gear = status.gear;
@@ -13112,7 +13193,7 @@ exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30
     writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
     return createEconomyResponse(economy, {
       gear, gold, goldFloat, purchased: true, spentGold: status.shop.price,
-      commonGearStatus: createCommonGearClientStatus({ gear }, nowMs),
+      commonGearStatus: createCommonGearClientStatus({ gear }, nowMs, economy),
     });
   });
 });
@@ -16015,26 +16096,16 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
     const destination = destinationEntry.city;
     const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool || regionId);
     let movement = null;
-    let armyRefs = [];
 
     if (transferredTroops > 0) {
-      if (
-        order.kind !== "transfer"
-        || order.fromId !== source.id
-        || order.toId !== destination.id
-        || order.sourceRegionId !== regionId
-        || order.targetRegionId !== destinationRegionId
-      ) {
-        throw new HttpsError("invalid-argument", "The relinquish march does not match the nearest friendly city.");
-      }
-      // The client still supplies route fields for payload compatibility, but relinquishment
-      // always persists geometry rebuilt from the authoritative world layout.
+      // Relinquishment is a city action, not a client-authored army order. The server chooses
+      // the destination and rebuilds the complete route so stale or unloaded client map data
+      // cannot prevent an otherwise valid relinquishment.
       const validatedRoute = buildServerGeneratedArmyRoute(source, destination);
-      armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
-      if (!armyRefs.length) {
+      if (!validatedRoute.routeRegionIds.length) {
         throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
       }
-      const existingArmySnap = await transaction.get(armyRefs[0]);
+      const existingArmySnap = await transaction.get(canonicalArmyRef(order.id));
       if (existingArmySnap.exists) {
         throw new HttpsError("already-exists", "That relinquish march has already been created.");
       }
@@ -16098,24 +16169,8 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       previousOwnerUid: uid,
       nextOwnerUid: "",
     });
-    const sourceLevel = isStronghold(source) ? getStrongholdDefenseLevel(source) : clampCityLevel(source.level);
-    const sourcePatch = {
-      ownerKind: "neutral",
-      ownerUid: null,
-      ownerName: "",
-      ownerFlag: null,
-      ownerKingPower: 0,
-      ownerShieldExpiresAtMs: 0,
-      level: sourceLevel,
-      troops: 0,
-      troopFloat: 0,
-      investedGold: 0,
-      isMainCity: false,
-      productionUpdatedAtMs: nowMs,
-      relinquishedAtMs: nowMs,
-      relocatedAtMs: 0,
-      ...getNeutralClaimClearedPatch(nowMs),
-    };
+    const sourcePatch = getCityRelinquishNeutralPatch(source, nowMs);
+    const sourceLevel = sourcePatch.level;
 
     const sourceUpdate = {
       id: source.id,
@@ -21116,9 +21171,6 @@ exports.sendNearbyScouts = timedCallable(
         if (targetOwnerUid && attackerClanId && attackerClanId === safeString(defender.profile.clanId, 128)) {
           throw new HttpsError("failed-precondition", "You cannot scout a current clan ally.");
         }
-        if (targetOwnerUid && isVeilOfSilenceActive(defender.profile, nowMs)) {
-          throw new HttpsError("failed-precondition", "A selected city is hidden by Veil of Silence.");
-        }
         if (isProtectedMainCity(target, uid, getMainCityProtectionProfile(
           defender.profile,
           defender.globalStats,
@@ -21126,6 +21178,28 @@ exports.sendNearbyScouts = timedCallable(
         ))) {
           throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
         }
+      }
+      const veiledTargets = targets.flatMap(target => {
+        const targetOwnerUid = getOwnerUid(target);
+        const defender = defenderSnapshots.get(targetOwnerUid);
+        const expiresAtMs = defender ? getVeilOfSilenceExpiresAtMs(defender.profile) : 0;
+        return targetOwnerUid && expiresAtMs > nowMs
+          ? [{ cityId: target.id, ownerUid: targetOwnerUid, expiresAtMs }]
+          : [];
+      });
+      if (veiledTargets.length) {
+        throw new HttpsError(
+          "failed-precondition",
+          veiledTargets.length === 1
+            ? "A selected city is hidden by Veil of Silence."
+            : `${veiledTargets.length.toLocaleString("en-US")} selected cities are hidden by Veil of Silence.`,
+          {
+            reason: "veil_of_silence",
+            expiresAtMs: Math.max(...veiledTargets.map(target => target.expiresAtMs)),
+            targetCityIds: veiledTargets.map(target => target.cityId),
+            targets: veiledTargets,
+          }
+        );
       }
 
       const routes = targets.map(target => buildServerGeneratedArmyRoute(source, target));
@@ -21789,8 +21863,18 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
     }
-    if (doesVeilOfSilenceBlock(resolvedKind, order.targetType) && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
-      throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
+    const veilOfSilenceExpiresAtMs = getVeilOfSilenceExpiresAtMs(defenderPowerData);
+    if (doesVeilOfSilenceBlock(resolvedKind, order.targetType) && targetOwnerUid && targetOwnerUid !== uid && veilOfSilenceExpiresAtMs > nowMs) {
+      throw new HttpsError(
+        "failed-precondition",
+        "That city is hidden by Veil of Silence.",
+        {
+          reason: "veil_of_silence",
+          expiresAtMs: veilOfSilenceExpiresAtMs,
+          targetCityIds: [order.toId],
+          targets: [{ cityId: order.toId, ownerUid: targetOwnerUid, expiresAtMs: veilOfSilenceExpiresAtMs }],
+        }
+      );
     }
     if (resolvedKind === "attack" && order.targetType !== "camp") {
       if (isProtectedMainCity(target, uid, defenderMainCityProfile)) {
@@ -24692,6 +24776,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
+    if (army.relinquishTransfer && defenderUid !== attackerUid) {
+      const destinationEntry = findNearestOwnedCityDestination(
+        attackerEconomy,
+        { ...target, regionId: targetRegionId },
+        [targetRef.path]
+      );
+      if (!destinationEntry?.city) {
+        throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
+      }
+      return continueRelinquishMarch({
+        destinationEntry,
+        reason: defenderUid ? "captured_destination" : "released_destination",
+      });
+    }
+
     if (effectiveKind === "transfer") {
       const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
       const targetTroopPatch = {
@@ -24704,21 +24803,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       finalizeReinforcementReturn(troopCount);
       markResolved({ kind: "transfer", troops: troopCount });
       return { ok: true, status: "resolved", kind: "transfer", cityUpdates: withEconomyCityUpdates(cityUpdates) };
-    }
-
-    if (army.relinquishTransfer && !defenderUid) {
-      const destinationEntry = findNearestOwnedCityDestination(
-        attackerEconomy,
-        { ...target, regionId: targetRegionId },
-        [targetRef.path]
-      );
-      if (!destinationEntry?.city) {
-        throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
-      }
-      return continueRelinquishMarch({
-        destinationEntry,
-        reason: "released_destination",
-      });
     }
 
     const neutralCaptureBlockReason = getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target);
