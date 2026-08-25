@@ -11562,6 +11562,14 @@ function mainCityRecoveryProjectionPatch(repair = {}, nowMs = Date.now()) {
   };
 }
 
+function mainCityRecoveryProjectionChanged(projection = {}, repair = {}) {
+  const storedRegionId = safeString(projection.mainRegionId, 160);
+  return safeString(projection.mainCityId, 96) !== repair.canonicalMainCityId
+    || safeString(projection.mainIslandId, 160) !== repair.canonicalMainIslandId
+    || !storedRegionId
+    || normalizeRegionId(storedRegionId) !== repair.canonicalMainRegionId;
+}
+
 async function recoverCurrentSeasonMainCity(transaction, {
   uid = "",
   profileRef = null,
@@ -11601,11 +11609,14 @@ async function recoverCurrentSeasonMainCity(transaction, {
   if (!repair.canonicalMainCityId || !repair.mainCityEntry) {
     throw new HttpsError("failed-precondition", "No valid current-season main city could be recovered.");
   }
-  const pointerChanged = safeString(profile.mainCityId, 96) !== repair.canonicalMainCityId
-    || safeString(profile.mainIslandId, 160) !== repair.canonicalMainIslandId
-    || normalizeRegionId(profile.mainRegionId || getRegionIdFromOnlineIslandId(profile.mainIslandId)) !== repair.canonicalMainRegionId;
+  const pointerChanged = mainCityRecoveryProjectionChanged(profile, repair);
   const versionChanged = Math.max(0, Math.floor(safeNumber(profile.mainCityAssignmentVersion, 0))) < MAIN_CITY_ASSIGNMENT_VERSION;
   const assignmentChanged = pointerChanged || versionChanged || repair.cityPatches.length > 0;
+  const statsProjectionChanged = statsSnap.exists
+    && mainCityRecoveryProjectionChanged(statsSnap.data() || {}, repair);
+  const leaderboardProjectionChanged = leaderboardSnap.exists
+    && mainCityRecoveryProjectionChanged(leaderboardSnap.data() || {}, repair);
+  const recoveryChanged = assignmentChanged || statsProjectionChanged || leaderboardProjectionChanged;
   const recoveredProfile = {
     ...profile,
     ...repair.profileFields,
@@ -11624,12 +11635,12 @@ async function recoverCurrentSeasonMainCity(transaction, {
       mainCityRepairUpdatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    if (pointerChanged && statsSnap.exists) {
-      transaction.set(statsRef, projectionPatch, { merge: true });
-    }
-    if (pointerChanged && leaderboardSnap.exists) {
-      transaction.set(leaderboardRef, projectionPatch, { merge: true });
-    }
+  }
+  if (statsProjectionChanged) {
+    transaction.set(statsRef, projectionPatch, { merge: true });
+  }
+  if (leaderboardProjectionChanged) {
+    transaction.set(leaderboardRef, projectionPatch, { merge: true });
   }
 
   const currentUser = createStartingCityCurrentUser(recoveredProfile, {
@@ -11641,9 +11652,9 @@ async function recoverCurrentSeasonMainCity(transaction, {
   });
   return {
     ok: true,
-    repairedMainCity: assignmentChanged,
+    repairedMainCity: recoveryChanged,
     requiresStartingCityClaim: false,
-    mainCityRecoveryStatus: assignmentChanged ? "repaired" : "valid",
+    mainCityRecoveryStatus: recoveryChanged ? "repaired" : "valid",
     currentUser,
     ...(recoveredStats ? { globalStats: globalStatsForClient(recoveredStats) } : {}),
     cityUpdates: repair.cityUpdates,

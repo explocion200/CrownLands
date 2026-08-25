@@ -6407,19 +6407,38 @@ async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCity
     });
   }
 
-  const result = await api.repairMainCityAssignment({ mainCityId: getKnownCityId(mainCityId) });
-  applyServerEconomyResult(result);
-  const repairedMainCityId = getKnownCityId(result?.currentUser?.mainCityId) || getKnownCityId(mainCityId);
-  if (repairedMainCityId) {
-    state.mainCityId = repairedMainCityId;
-    if (state.online) {
-      state.online.mainCityId = repairedMainCityId;
-      state.online.mainRegionId = normalizeRegionId(result?.currentUser?.mainRegionId || state.online.mainRegionId);
-      state.online.mainIslandId = result?.currentUser?.mainIslandId || state.online.mainIslandId || getOnlineIslandId(state.online.mainRegionId);
-    }
-    normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+  let result;
+  let recovery;
+  try {
+    ({ result, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId));
+  } catch (error) {
+    disconnectOnlineWorld();
+    if (state) state.online = null;
+    startOnlineSetupInBackground();
+    throw error;
   }
-  return Boolean(result?.ok ?? true);
+  if (recovery.status === "claim-required") {
+    state.mainCityId = "";
+    if (state.online) {
+      state.online.mainCityId = "";
+      state.online.mainRegionId = "";
+      state.online.mainIslandId = "";
+    }
+    normalizeSingleMainCityAssignment("", { markDirty: false });
+    disconnectOnlineWorld();
+    state.online = null;
+    startOnlineSetupInBackground();
+    throw new Error("No valid current-season main city remains. Reconnecting to restore your kingdom.");
+  }
+  applyServerEconomyResult(result);
+  state.mainCityId = recovery.mainCityId;
+  if (state.online) {
+    state.online.mainCityId = recovery.mainCityId;
+    state.online.mainRegionId = recovery.mainRegionId;
+    state.online.mainIslandId = recovery.mainIslandId;
+  }
+  normalizeSingleMainCityAssignment(recovery.mainCityId, { markDirty: false });
+  return true;
 }
 
 function getMainCityChangeCooldownDurationMs(ownedCount = getOwnedRegularCityCountForDisplay()) {
@@ -14510,7 +14529,8 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
 
 function resolveMainCityRecoveryResult(result = null) {
   if (
-    result?.requiresStartingCityClaim === true
+    result?.ok === true
+    && result?.requiresStartingCityClaim === true
     && result?.mainCityRecoveryStatus === "claim-required"
     && result?.recoveryReason === "no-valid-owned-regular-city"
   ) {
@@ -14539,6 +14559,21 @@ function resolveMainCityRecoveryResult(result = null) {
     mainCityId,
     mainRegionId,
     mainIslandId: result?.currentUser?.mainIslandId || getOnlineIslandId(mainRegionId),
+  };
+}
+
+async function requestAuthoritativeMainCityRecovery(api, mainCityId = "", timeoutMs = 12000) {
+  if (!api?.repairMainCityAssignment) {
+    throw new Error("The Crownlands main-city verification service is unavailable.");
+  }
+  const result = await withTimeout(
+    api.repairMainCityAssignment({ mainCityId: getKnownCityId(mainCityId) }),
+    timeoutMs,
+    "Main city verification is taking too long."
+  );
+  return {
+    result,
+    recovery: resolveMainCityRecoveryResult(result),
   };
 }
 
@@ -14626,12 +14661,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   if (api.repairMainCityAssignment && hasCurrentProfile) {
     onlineStatusDetail.textContent = "Verifying your main city...";
     try {
-      const repair = await withTimeout(
-        api.repairMainCityAssignment({ mainCityId }),
-        12000,
-        "Main city repair is taking too long."
-      );
-      const recovery = resolveMainCityRecoveryResult(repair);
+      const { result: repair, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId);
       if (recovery.status === "claim-required") {
         needsMainCityClaim = true;
         state.mainCityId = "";

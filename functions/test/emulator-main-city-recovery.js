@@ -272,6 +272,105 @@ async function main() {
   assert(recovery.currentUser?.mainCityId === secondCityId, "A stronghold displaced the valid owned regular city.");
   assert((await strongholdRef.get()).data()?.isMainCity === false, "The stronghold retained an invalid main-city flag.");
 
+  const playerStatsRef = db.doc(`players/${player.uid}/stats/global`);
+  const playerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${player.uid}`);
+  const staleProjection = {
+    mainCityId: claim.cityId,
+    mainIslandId: claim.islandId,
+    mainRegionId: regionId,
+  };
+
+  // stale Global Stats projection
+  const [profileBeforeStatsRepair, leaderboardBeforeStatsRepair] = await Promise.all([
+    playerRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  await playerStatsRef.set(staleProjection, { merge: true });
+  recovery = await callFunction("repairMainCityAssignment", player.token);
+  const [profileAfterStatsRepair, statsAfterStatsRepair, leaderboardAfterStatsRepair] = await Promise.all([
+    playerRef.get(),
+    playerStatsRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  assert(recovery.mainCityRecoveryStatus === "repaired", "A stale Global Stats projection was not reported as repaired.");
+  assert(statsAfterStatsRepair.data()?.mainCityId === secondCityId, "The stale Global Stats projection was not repaired.");
+  assert(recovery.globalStats?.mainCityId === secondCityId, "The recovery response returned stale Global Stats.");
+  assert(updateTimeMs(profileAfterStatsRepair) === updateTimeMs(profileBeforeStatsRepair), "Projection-only repair rewrote the profile.");
+  assert(
+    updateTimeMs(leaderboardAfterStatsRepair) === updateTimeMs(leaderboardBeforeStatsRepair),
+    "Global Stats-only repair rewrote the correct leaderboard projection."
+  );
+
+  // stale leaderboard projection
+  const [profileBeforeLeaderboardRepair, statsBeforeLeaderboardRepair] = await Promise.all([
+    playerRef.get(),
+    playerStatsRef.get(),
+  ]);
+  await playerLeaderboardRef.set(staleProjection, { merge: true });
+  recovery = await callFunction("repairMainCityAssignment", player.token);
+  const [profileAfterLeaderboardRepair, statsAfterLeaderboardRepair, leaderboardAfterLeaderboardRepair] = await Promise.all([
+    playerRef.get(),
+    playerStatsRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  assert(recovery.mainCityRecoveryStatus === "repaired", "A stale leaderboard projection was not reported as repaired.");
+  assert(leaderboardAfterLeaderboardRepair.data()?.mainCityId === secondCityId, "The stale leaderboard projection was not repaired.");
+  assert(updateTimeMs(profileAfterLeaderboardRepair) === updateTimeMs(profileBeforeLeaderboardRepair), "Leaderboard-only repair rewrote the profile.");
+  assert(
+    updateTimeMs(statsAfterLeaderboardRepair) === updateTimeMs(statsBeforeLeaderboardRepair),
+    "Leaderboard-only repair rewrote the correct Global Stats projection."
+  );
+
+  // both projections stale
+  await Promise.all([
+    playerStatsRef.set(staleProjection, { merge: true }),
+    playerLeaderboardRef.set(staleProjection, { merge: true }),
+  ]);
+  recovery = await callFunction("repairMainCityAssignment", player.token);
+  const [statsAfterBothRepair, leaderboardAfterBothRepair] = await Promise.all([
+    playerStatsRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  assert(recovery.mainCityRecoveryStatus === "repaired", "Both stale projections were not reported as repaired.");
+  assert(
+    statsAfterBothRepair.data()?.mainCityId === secondCityId
+      && leaderboardAfterBothRepair.data()?.mainCityId === secondCityId,
+    "Both stale projections were not repaired to the canonical city."
+  );
+
+  // already-correct projections
+  const [profileBeforeValidRecovery, statsBeforeValidRecovery, leaderboardBeforeValidRecovery] = await Promise.all([
+    playerRef.get(),
+    playerStatsRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  recovery = await callFunction("repairMainCityAssignment", player.token);
+  const [profileAfterValidRecovery, statsAfterValidRecovery, leaderboardAfterValidRecovery] = await Promise.all([
+    playerRef.get(),
+    playerStatsRef.get(),
+    playerLeaderboardRef.get(),
+  ]);
+  assert(recovery.mainCityRecoveryStatus === "valid", "Already-correct projections were incorrectly reported as repaired.");
+  assert(updateTimeMs(profileAfterValidRecovery) === updateTimeMs(profileBeforeValidRecovery), "Valid recovery rewrote the profile.");
+  assert(updateTimeMs(statsAfterValidRecovery) === updateTimeMs(statsBeforeValidRecovery), "Valid recovery rewrote Global Stats.");
+  assert(
+    updateTimeMs(leaderboardAfterValidRecovery) === updateTimeMs(leaderboardBeforeValidRecovery),
+    "Valid recovery rewrote the leaderboard."
+  );
+
+  // missing projection documents
+  const strangerStatsRef = db.doc(`players/${stranger.uid}/stats/global`);
+  const strangerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${stranger.uid}`);
+  await Promise.all([strangerStatsRef.delete(), strangerLeaderboardRef.delete()]);
+  const strangerRecovery = await callFunction("repairMainCityAssignment", stranger.token);
+  const [missingStatsAfterRecovery, missingLeaderboardAfterRecovery] = await Promise.all([
+    strangerStatsRef.get(),
+    strangerLeaderboardRef.get(),
+  ]);
+  assert(strangerRecovery.currentUser?.mainCityId === strangerClaim.cityId, "Missing projections changed the canonical main city.");
+  assert(!missingStatsAfterRecovery.exists, "Recovery created a missing Global Stats projection.");
+  assert(!missingLeaderboardAfterRecovery.exists, "Recovery created a missing leaderboard projection.");
+
   // preserved recovery state
   const [profileAfterRecovery, dailyAfterRecovery, achievementsAfterRecovery] = await Promise.all([
     playerRef.get(),
