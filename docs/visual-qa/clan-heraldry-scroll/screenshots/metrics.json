@@ -100,7 +100,7 @@
       }
     },
     "wheelScrollTop": 420,
-    "touchScrollTop": 60,
+    "touchScrollTop": 75,
     "middleScrollTop": 915,
     "previewStayedFixed": true,
     "actionsStayedFixed": true,
@@ -512,7 +512,7 @@
       }
     },
     "wheelScrollTop": 420,
-    "touchScrollTop": 179,
+    "touchScrollTop": 240,
     "middleScrollTop": 443,
     "previewStayedFixed": true,
     "actionsStayedFixed": true,
