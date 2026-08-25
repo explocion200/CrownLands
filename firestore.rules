@@ -11,20 +11,44 @@ service cloud.firestore {
     }
 
     function currentResetGeneration() {
-      return 'fresh-2026-07-26-server-reset';
+      return exists(/databases/$(database)/documents/realmConfig/current)
+        ? get(/databases/$(database)/documents/realmConfig/current).data.get('resetGeneration', 'fresh-2026-07-26-server-reset')
+        : 'fresh-2026-07-26-server-reset';
     }
 
     function currentWorldId() {
-      return 'main-fresh-2026-07-26-server-reset';
+      return exists(/databases/$(database)/documents/realmConfig/current)
+        ? get(/databases/$(database)/documents/realmConfig/current).data.get('worldId', 'main-fresh-2026-07-26-server-reset')
+        : 'main-fresh-2026-07-26-server-reset';
+    }
+
+    function currentRealmShardId() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/players/$(request.auth.uid)).data.get('realmShardId', 'legacy')
+        : 'legacy';
+    }
+
+    function currentRealmStorageId() {
+      return currentRealmShardId() == 'legacy'
+        ? currentResetGeneration()
+        : currentResetGeneration() + '--' + currentRealmShardId();
+    }
+
+    function isCurrentRealmShard(data) {
+      return data.get('realmShardId', 'legacy') == currentRealmShardId();
     }
 
     function isCurrentGeneration(data) {
       return data.get('resetGeneration', '') == currentResetGeneration()
-        && data.get('worldId', '') == currentWorldId();
+        && data.get('worldId', '') == currentWorldId()
+        && isCurrentRealmShard(data);
     }
 
     function isCurrentIslandId(islandId) {
-      return islandId.matches('^main-fresh-2026-07-26-server-reset-.*$');
+      return currentRealmShardId() == 'legacy'
+        ? islandId.matches('^' + currentWorldId() + '-[^-].*$')
+        : islandId.matches('^' + currentWorldId() + '--' + currentRealmShardId() + '--.*$');
     }
 
     function shieldCount(data) {
@@ -138,6 +162,7 @@ service cloud.firestore {
            'pendingClanApplicationId',
            'resetGeneration',
            'worldId',
+           'realmShardId',
            'releaseId',
            'cloudSaveSlot'
         ]);
@@ -196,6 +221,24 @@ service cloud.firestore {
         ]);
     }
 
+    match /realmConfig/{configId} {
+      allow read: if signedIn() && configId == 'current';
+      allow create, update, delete: if false;
+    }
+
+    match /realmGenerations/{resetGeneration} {
+      allow read, write: if false;
+
+      match /assignments/{uid} {
+        allow read: if ownsPlayerDoc(uid) && resetGeneration == currentResetGeneration();
+        allow create, update, delete: if false;
+      }
+
+      match /shards/{shardId} {
+        allow read, write: if false;
+      }
+    }
+
     match /players/{uid} {
       allow read: if ownsPlayerDoc(uid);
       allow create: if ownsPlayerDoc(uid) && validPlayerProfileCreate();
@@ -204,9 +247,9 @@ service cloud.firestore {
 
       match /saves/{saveId} {
         allow read: if ownsPlayerDoc(uid)
-          && saveId == 'default-fresh-2026-07-26-server-reset';
+          && saveId == 'default-' + currentResetGeneration();
         allow create, update: if ownsPlayerDoc(uid)
-          && saveId == 'default-fresh-2026-07-26-server-reset'
+          && saveId == 'default-' + currentResetGeneration()
           && validPlayerSaveFlag();
         allow delete: if false;
       }
@@ -286,9 +329,9 @@ service cloud.firestore {
       }
     }
 
-    match /realmEvents/{resetGeneration}/activity/{eventId} {
+    match /realmEvents/{realmStorageId}/activity/{eventId} {
       allow read: if signedIn()
-        && resetGeneration == currentResetGeneration()
+        && realmStorageId == currentRealmStorageId()
         && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
@@ -298,7 +341,7 @@ service cloud.firestore {
     }
 
     match /leaderboards/{boardId}/entries/{uid} {
-      allow read: if signedIn() && boardId == currentResetGeneration() && isCurrentGeneration(resource.data);
+      allow read: if signedIn() && boardId == currentRealmStorageId() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
@@ -359,7 +402,7 @@ service cloud.firestore {
 
       match /worldBenefits/{resetId} {
         allow read: if clanMember(clanId)
-          && resetId == currentResetGeneration()
+          && resetId == currentRealmStorageId()
           && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
@@ -373,7 +416,7 @@ service cloud.firestore {
 
       match /giftActivity/{resetId} {
         allow get: if clanMember(clanId)
-          && resetId == currentResetGeneration()
+          && resetId == currentRealmStorageId()
           && (
             !exists(/databases/$(database)/documents/clans/$(clanId)/giftActivity/$(resetId))
             || isCurrentGeneration(resource.data)
@@ -428,13 +471,15 @@ service cloud.firestore {
     }
 
     match /clanLeaderboards/{resetId}/entries/{clanId} {
-      allow read: if signedIn() && resetId == currentResetGeneration();
+      allow read: if signedIn()
+        && resetId == currentRealmStorageId()
+        && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
     match /globalChat/{resetId}/messages/{messageId} {
       allow read: if currentPlayerAccount()
-        && resetId == currentResetGeneration()
+        && resetId == currentRealmStorageId()
         && isCurrentGeneration(resource.data)
         && resource.data.status == 'visible';
       allow create, update, delete: if false;
@@ -452,13 +497,13 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
-    match /crownCitadelReigns/{resetId}/entries/{uid} {
-      allow read: if signedIn() && resetId == currentResetGeneration() && isCurrentGeneration(resource.data);
+    match /crownCitadelReigns/{realmStorageId}/entries/{uid} {
+      allow read: if signedIn() && realmStorageId == currentRealmStorageId() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
-    match /strongholdLegacies/{resetId}/entries/{entryId} {
-      allow read: if signedIn() && resetId == currentResetGeneration() && isCurrentGeneration(resource.data);
+    match /strongholdLegacies/{realmStorageId}/entries/{entryId} {
+      allow read: if signedIn() && realmStorageId == currentRealmStorageId() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
@@ -530,9 +575,9 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
-    match /battleSnapshots/{resetId}/entries/{battleId} {
+    match /battleSnapshots/{realmStorageId}/entries/{battleId} {
       allow read: if signedIn()
-        && resetId == currentResetGeneration()
+        && realmStorageId == currentRealmStorageId()
         && isCurrentGeneration(resource.data)
         && request.auth.uid in resource.data.participantUids;
       allow create, update, delete: if false;

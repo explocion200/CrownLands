@@ -15,6 +15,7 @@ const indexes = JSON.parse(read("firestore.indexes.json"));
 const browserRealm = read("release-config.js");
 const serverRealm = JSON.parse(read("functions/release-config.json"));
 const manifestGenerator = read("tools/generate-release-manifest.js");
+const topology = require("../functions/realmTopology.js");
 
 for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId, serverRealm.apiContractHash]) {
   if (!value || !browserRealm.includes(JSON.stringify(value))) {
@@ -53,7 +54,7 @@ requireMatch(
 );
 requireMatch(
   client,
-  /loadPlayerIdentities[\s\S]*?doc\(client\.db,\s*"leaderboards",\s*RESET_GENERATION,\s*"entries",\s*identityUid\)/,
+  /loadPlayerIdentities[\s\S]*?doc\(client\.db,\s*"leaderboards",\s*getRealmStorageId\(\),\s*"entries",\s*identityUid\)/,
   "Combat identity lookups are not reading the active generation leaderboard."
 );
 if (client.includes('doc(client.db, "leaderboards", "kingPower", "entries", identityUid)')) {
@@ -98,6 +99,16 @@ for (let trial = 0; trial < 500; trial += 1) {
   if (counts.reduce((sum, count) => sum + count, 0) !== 50) {
     throw new Error("The reset allocation model lost a player.");
   }
+}
+
+const shardCounts = Array.from({ length: 120 }, (_, sequence) => (
+  topology.getRealmShardForSequence(sequence, serverRealm.realmShardCapacity)
+)).reduce((counts, assignment) => {
+  counts[assignment.realmShardId] = (counts[assignment.realmShardId] || 0) + 1;
+  return counts;
+}, {});
+if (JSON.stringify(shardCounts) !== JSON.stringify({ shard_0001: 50, shard_0002: 50, shard_0003: 20 })) {
+  throw new Error(`Realm sharding lost or overfilled players: ${JSON.stringify(shardCounts)}.`);
 }
 
 console.log(`Reset release validation passed for ${serverRealm.resetGeneration}.`);

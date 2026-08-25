@@ -28,7 +28,7 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /strongholdLegacies\/\$\{RESET_GENERATION\}\/entries\/\$\{strongholdId\}__\$\{safeUid\}/,
+  /strongholdLegacies\/\$\{getRealmStorageId\(\)\}\/entries\/\$\{strongholdId\}__\$\{safeUid\}/,
   "Stronghold Legacy records are not separated by Stronghold and player."
 );
 requireMatch(
@@ -95,7 +95,7 @@ requireMatch(
 );
 requireMatch(
   rulesSource,
-  /match \/strongholdLegacies\/\{resetId\}\/entries\/\{entryId\}[\s\S]*?allow read: if signedIn\(\)[\s\S]*?allow create, update, delete: if false;/,
+  /match \/strongholdLegacies\/\{realmStorageId\}\/entries\/\{entryId\}[\s\S]*?allow read: if signedIn\(\)[\s\S]*?realmStorageId == currentRealmStorageId\(\)[\s\S]*?allow create, update, delete: if false;/,
   "Stronghold Legacy scores must be readable by signed-in players and writable only by the server."
 );
 
@@ -109,11 +109,12 @@ requireMatch(legacyLoaderSource, /strongholdLegacies/, "Missing the Stronghold L
 requireMatch(legacyLoaderSource, /where\("strongholdId",\s*"==",\s*safeStrongholdId\)/, "The Stronghold Legacy query is not isolated to one Stronghold.");
 requireMatch(legacyLoaderSource, /where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)/, "The Stronghold Legacy query does not prove the reset-generation read rule.");
 requireMatch(legacyLoaderSource, /where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)/, "The Stronghold Legacy query does not prove the world read rule.");
+requireMatch(legacyLoaderSource, /\.\.\.getRealmShardQueryConstraints\(where\)/, "The Stronghold Legacy query does not use the legacy-compatible shard read rule.");
 requireMatch(legacyLoaderSource, /orderBy\("totalHeldMs",\s*"desc"\)/, "The Stronghold Legacy query is not ranked by completed hold time.");
 requireMatch(legacyLoaderSource, /currentHolderRef[\s\S]*?getDoc\(currentHolderRef\)[\s\S]*?legacyDocs\.push\(currentHolderSnapshot\)/, "The live holder's prior cumulative score can fall outside the completed-time query limit.");
 requireMatch(
   indexesSource,
-  /"collectionGroup":\s*"entries"[\s\S]*?"fieldPath":\s*"strongholdId"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"totalHeldMs"[\s\S]*?"order":\s*"DESCENDING"/,
+  /"collectionGroup":\s*"entries"[\s\S]*?"fieldPath":\s*"strongholdId"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"realmShardId"[\s\S]*?"fieldPath":\s*"totalHeldMs"[\s\S]*?"order":\s*"DESCENDING"/,
   "Missing the per-Stronghold ranked Legacy composite index."
 );
 requireMatch(firebaseClientSource, /loadStrongholdLegacyLeaderboard,/, "The Stronghold Legacy loader is not exported to the game client.");

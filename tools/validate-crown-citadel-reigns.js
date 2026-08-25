@@ -55,7 +55,7 @@ const resolverCitadelWrites = [...armyResolverSource.matchAll(/recordCrownCitade
 if (resolverCitadelWrites.length !== 2 || resolverCitadelWrites.some(match => !/reignSnapshots: citadelReignSnapshots/.test(match[1]))) {
   throw new Error("Every direct and rally Citadel capture must use the prefetched reign snapshots.");
 }
-requireMatch(rulesSource, /match \/crownCitadelReigns\/(?:\{uid\}|\{resetId\}\/entries\/\{uid\})[\s\S]*?allow read: if signedIn\(\)(?:\s*&&[\s\S]*?)?;[\s\S]*?allow create, update, delete: if false;/, "Citadel reign scores must be public to signed-in players and server-owned.");
+requireMatch(rulesSource, /match \/crownCitadelReigns\/\{realmStorageId\}\/entries\/\{uid\}[\s\S]*?allow read: if signedIn\(\)[\s\S]*?realmStorageId == currentRealmStorageId\(\)[\s\S]*?allow create, update, delete: if false;/, "Citadel reign scores must be shard-readable by signed-in players and server-owned.");
 const reignLoaderSource = sourceBetween(
   firebaseClientSource,
   "async function loadCrownCitadelReignLeaderboard",
@@ -65,8 +65,9 @@ const reignLoaderSource = sourceBetween(
 requireMatch(reignLoaderSource, /crownCitadelReigns/, "Missing public Reign Ledger loader.");
 requireMatch(reignLoaderSource, /where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)/, "The Reign Ledger query does not prove the reset-generation read rule.");
 requireMatch(reignLoaderSource, /where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)/, "The Reign Ledger query does not prove the world read rule.");
+requireMatch(reignLoaderSource, /\.\.\.getRealmShardQueryConstraints\(where\)/, "The Reign Ledger query does not use the legacy-compatible shard read rule.");
 requireMatch(reignLoaderSource, /orderBy\("totalHeldMs",\s*"desc"\)/, "The Reign Ledger query is not ranked by completed hold time.");
-requireMatch(indexesSource, /"collectionGroup":\s*"entries"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"totalHeldMs"[\s\S]*?"order":\s*"DESCENDING"/, "Missing the ranked Reign Ledger composite index.");
+requireMatch(indexesSource, /"collectionGroup":\s*"entries"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"realmShardId"[\s\S]*?"fieldPath":\s*"totalHeldMs"[\s\S]*?"order":\s*"DESCENDING"/, "Missing the shard-ranked Reign Ledger composite index.");
 requireMatch(firebaseClientSource, /subscribeCrownCitadel[\s\S]*?onCitadel/, "Missing lightweight Crown Citadel control listener.");
 requireMatch(clientSource, /Reign Ledger/, "Crown Citadel info is missing the Reign Ledger tab.");
 requireMatch(clientSource, /data-citadel-reign-score/, "Citadel reign scores do not update while the current reign is active.");

@@ -11,8 +11,9 @@
   const PLAYER_NAME_MAX_LENGTH = 18;
   const DEFAULT_GAME_SERVER_ID = "crown-marches";
   const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
-  const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
-  const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
+  let RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
+  let ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
+  let REALM_SHARD_ID = "legacy";
   const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
   const PLAYER_FLAG_CONFIG = window.CrownlandsPlayerFlags || null;
 
@@ -424,6 +425,42 @@
     return client.user.uid;
   }
 
+  function applyRealmIdentity(raw = {}) {
+    if (!raw || typeof raw !== "object") return getRealmIdentity();
+    const resetGeneration = String(raw.resetGeneration || "").trim();
+    const worldId = String(raw.worldId || "").trim();
+    const realmShardId = String(raw.realmShardId || "").trim().toLowerCase();
+    if (resetGeneration && worldId) {
+      RESET_GENERATION = resetGeneration.slice(0, 120);
+      ONLINE_WORLD_ID = worldId.slice(0, 120);
+    }
+    if (realmShardId === "legacy" || /^shard_\d{4,10}$/.test(realmShardId)) {
+      REALM_SHARD_ID = realmShardId;
+    }
+    return getRealmIdentity();
+  }
+
+  function getRealmIdentity() {
+    return {
+      releaseId: APP_RELEASE_ID,
+      resetGeneration: RESET_GENERATION,
+      worldId: ONLINE_WORLD_ID,
+      realmShardId: REALM_SHARD_ID,
+    };
+  }
+
+  function getRealmStorageId() {
+    return REALM_SHARD_ID === "legacy"
+      ? RESET_GENERATION
+      : `${RESET_GENERATION}--${REALM_SHARD_ID}`;
+  }
+
+  function getRealmShardQueryConstraints(whereFactory) {
+    return REALM_SHARD_ID === "legacy"
+      ? []
+      : [whereFactory("realmShardId", "==", REALM_SHARD_ID)];
+  }
+
   async function callServerFunction(name, payload = {}) {
     await init();
     const uid = requireSignedIn();
@@ -437,6 +474,7 @@
       clientReleaseId: APP_RELEASE_ID,
       clientResetGeneration: RESET_GENERATION,
       clientWorldId: ONLINE_WORLD_ID,
+      clientRealmShardId: REALM_SHARD_ID,
     }) || {});
     return result?.data || null;
   }
@@ -468,6 +506,7 @@
       releaseId: APP_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
+      realmShardId: REALM_SHARD_ID,
     };
   }
 
@@ -500,11 +539,14 @@
   }
 
   async function joinGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
-    return callServerFunction("joinGameServer", createGameServerPayload(serverId));
+    const result = await callServerFunction("joinGameServer", createGameServerPayload(serverId));
+    applyRealmIdentity(result);
+    return result;
   }
 
   async function heartbeatGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
     const result = await callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
+    applyRealmIdentity(result);
     registerGameInstallation().catch(error => {
       console.warn("Could not refresh this Crownlands installation", error);
     });
@@ -808,7 +850,7 @@
   function getChatMessagesCollection(channel = "global", clanId = "") {
     if (!client.db || !client.modules?.firestore?.collection) return null;
     const { collection } = client.modules.firestore;
-    if (channel === "global") return collection(client.db, "globalChat", RESET_GENERATION, "messages");
+    if (channel === "global") return collection(client.db, "globalChat", getRealmStorageId(), "messages");
     const safeClanId = String(clanId || "").trim().slice(0, 128);
     return safeClanId ? collection(client.db, "clans", safeClanId, "messages") : null;
   }
@@ -823,6 +865,7 @@
       messagesRef,
       where("resetGeneration", "==", RESET_GENERATION),
       where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
       where("status", "==", "visible"),
       orderBy("createdAtMs", "desc"),
       limit(safeLimit)
@@ -863,6 +906,7 @@
     const constraints = [
       where("resetGeneration", "==", RESET_GENERATION),
       where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
       where("status", "==", "visible"),
       orderBy("createdAtMs", "desc"),
     ];
@@ -879,7 +923,11 @@
     const snapshot = await getDoc(doc(client.db, "clans", String(clanId).slice(0, 128)));
     if (!snapshot.exists()) return null;
     const clan = { id: snapshot.id, ...snapshot.data() };
-    return clan.resetGeneration === RESET_GENERATION && clan.worldId === ONLINE_WORLD_ID ? clan : null;
+    return clan.resetGeneration === RESET_GENERATION
+      && clan.worldId === ONLINE_WORLD_ID
+      && String(clan.realmShardId || "legacy") === REALM_SHARD_ID
+      ? clan
+      : null;
   }
 
   async function searchClans(searchText = "", limitCount = 30) {
@@ -889,9 +937,16 @@
     const safeLimit = Math.max(1, Math.min(50, Math.floor(Number(limitCount) || 30)));
     const normalized = String(searchText || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const base = collection(client.db, "clans");
+    const constraints = [
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
+      where("status", "==", "active"),
+      orderBy("normalizedName"),
+    ];
     const clanQuery = normalized
-      ? query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
-      : query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
+      ? query(base, ...constraints, startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
+      : query(base, ...constraints, limit(safeLimit));
     const snapshot = await getDocs(clanQuery);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   }
@@ -904,6 +959,7 @@
       collection(client.db, "clans", clanId, "members"),
       where("resetGeneration", "==", RESET_GENERATION),
       where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
       orderBy("joinedAtMs", "asc")
     ));
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
@@ -917,6 +973,7 @@
       collection(client.db, "clans", clanId, "applications"),
       where("resetGeneration", "==", RESET_GENERATION),
       where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
       where("status", "==", "pending"),
       orderBy("createdAtMs", "asc")
     ));
@@ -928,7 +985,7 @@
     if (!requireSignedIn()) return [];
     const { collection, getDocs, query, orderBy, limit } = client.modules.firestore;
     const snapshot = await getDocs(query(
-      collection(client.db, "clanLeaderboards", RESET_GENERATION, "entries"),
+      collection(client.db, "clanLeaderboards", getRealmStorageId(), "entries"),
       orderBy("totalKingPower", "desc"),
       limit(Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100))))
     ));
@@ -952,7 +1009,7 @@
         }
       ),
       onSnapshot(
-        doc(client.db, "clans", safeClanId, "worldBenefits", RESET_GENERATION),
+        doc(client.db, "clans", safeClanId, "worldBenefits", getRealmStorageId()),
         snapshot => {
           if (typeof handlers.onWorldBenefits === "function") {
             handlers.onWorldBenefits(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
@@ -963,7 +1020,7 @@
         }
       ),
       onSnapshot(
-        doc(client.db, "clans", safeClanId, "giftActivity", RESET_GENERATION),
+        doc(client.db, "clans", safeClanId, "giftActivity", getRealmStorageId()),
         snapshot => {
           if (typeof handlers.onGiftActivity === "function") {
             handlers.onGiftActivity(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
@@ -1010,6 +1067,7 @@
         collection(client.db, "clans", safeClanId, "applications"),
         where("resetGeneration", "==", RESET_GENERATION),
         where("worldId", "==", ONLINE_WORLD_ID),
+        ...getRealmShardQueryConstraints(where),
         where("status", "==", "pending"),
         orderBy("createdAtMs", "asc")
       ),
@@ -1034,6 +1092,7 @@
         collection(client.db, "clans", safeClanId, "rallies"),
         where("resetGeneration", "==", RESET_GENERATION),
         where("worldId", "==", ONLINE_WORLD_ID),
+        ...getRealmShardQueryConstraints(where),
         where("status", "in", ["forming", "launched", "recalling"])
       ),
       snapshot => {
@@ -1075,6 +1134,7 @@
           collection(client.db, "clans", safeClanId, "members"),
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           orderBy("joinedAtMs", "asc")
         ),
         snapshot => {
@@ -1114,11 +1174,13 @@
   }
 
   async function getRealmInfo() {
-    return callServerFunction("getRealmInfo", {
+    const result = await callServerFunction("getRealmInfo", {
       releaseId: APP_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
     });
+    applyRealmIdentity(result);
+    return result;
   }
 
   async function ensureMainIsland(payload = {}) {
@@ -1126,7 +1188,9 @@
   }
 
   async function claimStartingCity(payload = {}) {
-    return callServerFunction("claimStartingCity", payload);
+    const result = await callServerFunction("claimStartingCity", payload);
+    applyRealmIdentity(result?.currentUser || result);
+    return result;
   }
 
   async function relinquishCity(payload = {}) {
@@ -1744,12 +1808,13 @@
     if (!uid) return [];
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const { collection, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
-    const reignsRef = collection(client.db, "crownCitadelReigns", RESET_GENERATION, "entries");
+    const reignsRef = collection(client.db, "crownCitadelReigns", getRealmStorageId(), "entries");
     const reignsQuery = firestoreQuery && where && orderBy && limit
       ? firestoreQuery(
           reignsRef,
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           orderBy("totalHeldMs", "desc"),
           limit(safeLimit)
         )
@@ -1783,19 +1848,20 @@
     if (!safeStrongholdId) throw new Error("Missing Stronghold ID.");
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const { collection, doc, getDoc, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
-    const legaciesRef = collection(client.db, "strongholdLegacies", RESET_GENERATION, "entries");
+    const legaciesRef = collection(client.db, "strongholdLegacies", getRealmStorageId(), "entries");
     const legaciesQuery = firestoreQuery && where && orderBy && limit
       ? firestoreQuery(
           legaciesRef,
           where("strongholdId", "==", safeStrongholdId),
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           orderBy("totalHeldMs", "desc"),
           limit(safeLimit)
         )
       : legaciesRef;
     const currentHolderRef = safeCurrentHolderUid
-      ? doc(client.db, "strongholdLegacies", RESET_GENERATION, "entries", `${safeStrongholdId}__${safeCurrentHolderUid}`)
+      ? doc(client.db, "strongholdLegacies", getRealmStorageId(), "entries", `${safeStrongholdId}__${safeCurrentHolderUid}`)
       : null;
     const [snapshot, currentHolderSnapshot] = await Promise.all([
       getDocs(legaciesQuery),
@@ -2182,7 +2248,7 @@
       orderBy,
       limit: firestoreLimit,
     } = client.modules.firestore;
-    const entriesRef = collection(client.db, "leaderboards", RESET_GENERATION, "entries");
+    const entriesRef = collection(client.db, "leaderboards", getRealmStorageId(), "entries");
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const queryRef = firestoreQuery && where && orderBy && firestoreLimit
       ? firestoreQuery(
@@ -2208,7 +2274,7 @@
       .slice(0, 80);
     if (!uniqueUids.length) return [];
     const rows = await Promise.all(uniqueUids.map(identityUid => (
-      getDoc(doc(client.db, "leaderboards", RESET_GENERATION, "entries", identityUid))
+      getDoc(doc(client.db, "leaderboards", getRealmStorageId(), "entries", identityUid))
         .then(snapshot => (snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null))
         .catch(() => null)
     )));
@@ -2376,7 +2442,7 @@
     const snapshot = await getDoc(doc(
       client.db,
       "battleSnapshots",
-      RESET_GENERATION,
+      getRealmStorageId(),
       "entries",
       safeBattleId
     ));
@@ -2391,11 +2457,12 @@
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     if (!collection || !onSnapshot || !firestoreQuery || !where || !orderBy || !limit) return () => {};
-    const activityRef = collection(client.db, "realmEvents", RESET_GENERATION, "activity");
+    const activityRef = collection(client.db, "realmEvents", getRealmStorageId(), "activity");
     const activityQuery = firestoreQuery(
       activityRef,
       where("resetGeneration", "==", RESET_GENERATION),
       where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where),
       orderBy("occurredAtMs", "desc"),
       limit(250)
     );
@@ -2827,6 +2894,8 @@
     getCombatPlayerIdentity,
     loadPublicPlayerProfile,
     getRealmInfo,
+    getRealmIdentity,
+    applyRealmIdentity,
     relinquishCity,
     purchaseShopItem,
     getCommonGearStatus,

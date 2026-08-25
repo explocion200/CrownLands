@@ -12,9 +12,10 @@ const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPe
 const STARTER_REGION_TYPE = "starter";
 const NEW_PLAYER_SPAWN_REGION_TYPE_ORDER = [STARTER_REGION_TYPE, "midgame", "endgame"];
 const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = 10;
-const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
-const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
-const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
+let RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
+let REALM_SHARD_ID = "legacy";
+let STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
+let PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
 const PUSH_NOTIFICATIONS_PREF_KEY = "crownlands-push-notifications";
 const ANIMATION_MODE_STORAGE_KEY = "crownlands.animation.mode.v1";
 const LEGACY_ANIMATION_MODE_STORAGE_KEY = "crownlands-animation-mode";
@@ -22,10 +23,10 @@ const ANIMATION_MODES = Object.freeze(["full", "reduced", "off"]);
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
-const ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
+let ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
 const ONLINE_SAVE_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000];
-const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
-const ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
+let ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
+let ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
 const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
 const GAME_SERVER_HEARTBEAT_SECONDS = 60;
@@ -92,7 +93,7 @@ function getCommonGearBonuses() {
   return COMMON_GEAR?.getBonuses(state?.gear || {}) || {};
 }
 const ADS_CONFIG = window.CROWNLANDS_ADS_CONFIG || {};
-const REWARDED_AD_PENDING_STORAGE_KEY = `crownlands-pending-rewarded-ad-${RESET_GENERATION}`;
+let REWARDED_AD_PENDING_STORAGE_KEY = `crownlands-pending-rewarded-ad-${RESET_GENERATION}`;
 const REWARDED_AD_LOAD_TIMEOUT_MS = 20 * 1000;
 const REWARDED_AD_DECISION_TIMEOUT_MS = 10 * 60 * 1000;
 const REWARDED_AD_COMPLETION_TIMEOUT_MS = 15 * 60 * 1000;
@@ -316,7 +317,7 @@ function buildDailyLoginRewardTrack(monthLength) {
 const DAILY_LOGIN_REWARD_TRACKS = Object.freeze(Object.fromEntries(
   DAILY_LOGIN_REWARD_MONTH_LENGTHS.map(length => [String(length), buildDailyLoginRewardTrack(length)])
 ));
-const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
+let DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const DAILY_MISSION_VERSION = 1;
 const SEASONAL_ACHIEVEMENT_VERSION = 1;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
@@ -2681,12 +2682,55 @@ function getKnownCityId(cityId) {
   return getPlayableBaseCityById(value) ? value : "";
 }
 
+function normalizeRealmShardId(value = "legacy") {
+  const cleaned = String(value || "").trim().toLowerCase();
+  return cleaned === "legacy" || /^shard_\d{4,10}$/.test(cleaned) ? cleaned : "legacy";
+}
+
+function applyVerifiedRealmIdentity(raw = {}) {
+  if (!raw || typeof raw !== "object") return false;
+  const nextResetGeneration = String(raw.resetGeneration || RESET_GENERATION).trim().slice(0, 120);
+  const nextWorldId = String(raw.worldId || ONLINE_WORLD_ID).trim().slice(0, 120);
+  const nextRealmShardId = normalizeRealmShardId(raw.realmShardId || REALM_SHARD_ID);
+  if (!nextResetGeneration || !nextWorldId) return false;
+  const changed = nextResetGeneration !== RESET_GENERATION
+    || nextWorldId !== ONLINE_WORLD_ID
+    || nextRealmShardId !== REALM_SHARD_ID;
+  RESET_GENERATION = nextResetGeneration;
+  ONLINE_WORLD_ID = nextWorldId;
+  REALM_SHARD_ID = nextRealmShardId;
+  ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
+  const storageScope = REALM_SHARD_ID === "legacy"
+    ? RESET_GENERATION
+    : `${RESET_GENERATION}-${REALM_SHARD_ID}`;
+  STORAGE_KEY = `crownlands-realtime-${storageScope}`;
+  PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${storageScope}`;
+  REWARDED_AD_PENDING_STORAGE_KEY = `crownlands-pending-rewarded-ad-${storageScope}`;
+  DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${storageScope}`;
+  ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
+  window.CrownlandsOnline?.applyRealmIdentity?.({
+    resetGeneration: RESET_GENERATION,
+    worldId: ONLINE_WORLD_ID,
+    realmShardId: REALM_SHARD_ID,
+  });
+  return changed;
+}
+
 function getOnlineIslandId(regionId = DEFAULT_ONLINE_REGION_ID) {
-  return `${ONLINE_WORLD_ID}-${normalizeRegionId(regionId)}`;
+  const safeRegionId = normalizeRegionId(regionId);
+  return REALM_SHARD_ID === "legacy"
+    ? `${ONLINE_WORLD_ID}-${safeRegionId}`
+    : `${ONLINE_WORLD_ID}--${REALM_SHARD_ID}--${safeRegionId}`;
 }
 
 function getRegionIdFromOnlineIslandId(islandId) {
   const value = String(islandId || "");
+  const shardedPrefix = `${ONLINE_WORLD_ID}--`;
+  if (value.startsWith(shardedPrefix)) {
+    const suffix = value.slice(shardedPrefix.length);
+    const separatorIndex = suffix.indexOf("--");
+    if (separatorIndex > 0) return normalizeRegionId(suffix.slice(separatorIndex + 2));
+  }
   const prefix = `${ONLINE_WORLD_ID}-`;
   if (!value.startsWith(prefix)) return "";
   return normalizeRegionId(value.slice(prefix.length));
@@ -14673,7 +14717,8 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   if (!force
     && verifiedRealmInfo?.releaseId === APP_RELEASE_ID
     && verifiedRealmInfo?.resetGeneration === RESET_GENERATION
-    && verifiedRealmInfo?.worldId === ONLINE_WORLD_ID) {
+    && verifiedRealmInfo?.worldId === ONLINE_WORLD_ID
+    && normalizeRealmShardId(verifiedRealmInfo?.realmShardId) === REALM_SHARD_ID) {
     return verifiedRealmInfo;
   }
   const requestStartedAtMs = Date.now();
@@ -14682,6 +14727,9 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
     10000,
     "The Crownlands server version check is taking too long."
   );
+  const priorResetGeneration = RESET_GENERATION;
+  const priorWorldId = ONLINE_WORLD_ID;
+  applyVerifiedRealmIdentity(realm);
   const releaseMatches = String(realm?.releaseId || "") === APP_RELEASE_ID;
   const generationMatches = String(realm?.resetGeneration || "") === RESET_GENERATION;
   const worldMatches = String(realm?.worldId || "") === ONLINE_WORLD_ID;
@@ -14694,6 +14742,9 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   if (!releaseMatches || !generationMatches || !worldMatches || !contractMatches) {
     if (!generationMatches || !worldMatches) clearInstantEconomyActions();
     throw new Error("A Crownlands update is still deploying. Refresh before entering the kingdom.");
+  }
+  if (priorResetGeneration !== RESET_GENERATION || priorWorldId !== ONLINE_WORLD_ID) {
+    clearInstantEconomyActions();
   }
   const clientBuildId = String(clientManifest.buildId || "");
   const serverBuildId = String(realm?.serverBuildId || "");
@@ -15013,25 +15064,31 @@ async function connectOnlineIsland(regionId, {
       }), isNewHomeClaim ? 45000 : 20000, "Starting city claim is taking too long.");
 
       if (!claim?.cityId) throw new Error("No starting city was claimed.");
+      applyVerifiedRealmIdentity(claim.currentUser || claim);
+      if (verifiedRealmInfo) {
+        verifiedRealmInfo = { ...verifiedRealmInfo, realmShardId: REALM_SHARD_ID };
+      }
       if (claim.currentUser) applyOnlineProfileSnapshot(claim.currentUser, state.playerName);
       const claimedRegionId = claim?.islandId ? getRegionIdFromOnlineIslandId(claim.islandId) : "";
       const redirectedRegionId = claimedRegionId && claimedRegionId !== targetRegionId ? claimedRegionId : "";
-      if (redirectedRegionId && redirectedRegionId !== targetRegionId) {
-        onlineStatusDetail.textContent = `Opening your ${getRegionLabel(redirectedRegionId)} main island...`;
+      const claimedIslandChanged = Boolean(claim?.islandId && claim.islandId !== islandId);
+      if (redirectedRegionId || claimedIslandChanged) {
+        const claimedHomeRegionId = redirectedRegionId || claimedRegionId || targetRegionId;
+        onlineStatusDetail.textContent = `Opening your ${getRegionLabel(claimedHomeRegionId)} main island...`;
         state.online.mainIslandId = claim.islandId;
-        state.online.mainRegionId = redirectedRegionId;
+        state.online.mainRegionId = claimedHomeRegionId;
         state.online.mainCityId = claim.cityId;
         state.mainCityId = claim.cityId;
         onlineWorldLoading = false;
-        return connectOnlineIsland(redirectedRegionId, {
+        return connectOnlineIsland(claimedHomeRegionId, {
           claimHome: true,
-          homeRegionId: redirectedRegionId,
+          homeRegionId: claimedHomeRegionId,
           allowWelcomeBack,
           announceLocation,
           profile: {
             ...(profile || {}),
             mainIslandId: claim.islandId,
-            mainRegionId: redirectedRegionId,
+            mainRegionId: claimedHomeRegionId,
             mainCityId: claim.cityId,
           },
         });

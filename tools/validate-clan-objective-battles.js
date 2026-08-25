@@ -281,7 +281,7 @@ requires(
 );
 requires(
   rules,
-  /match \/battleSnapshots\/\{resetId\}\/entries\/\{battleId\}[\s\S]*?request\.auth\.uid in resource\.data\.participantUids[\s\S]*?allow create, update, delete: if false/,
+  /match \/battleSnapshots\/\{realmStorageId\}\/entries\/\{battleId\}[\s\S]*?realmStorageId == currentRealmStorageId\(\)[\s\S]*?request\.auth\.uid in resource\.data\.participantUids[\s\S]*?allow create, update, delete: if false/,
   "Battle snapshots are not restricted to battle participants."
 );
 assert.doesNotMatch(
@@ -291,7 +291,7 @@ assert.doesNotMatch(
 );
 requires(
   firebaseClient,
-  /function loadBattleSnapshot[\s\S]*?battleSnapshots[\s\S]*?RESET_GENERATION[\s\S]*?entries/,
+  /function loadBattleSnapshot[\s\S]*?battleSnapshots[\s\S]*?getRealmStorageId\(\)[\s\S]*?entries/,
   "The client cannot load participant-protected battle snapshots."
 );
 requires(
