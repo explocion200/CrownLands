@@ -98,6 +98,7 @@ function assertContextEvidence(evidence, viewportName) {
     const prefix = `${viewportName}/${entry.context}`;
     assert.equal(entry.visible, true, `${prefix}: shield is not visible.`);
     assert.ok(entry.box.width >= 24 && entry.box.height >= 25, `${prefix}: shield collapsed to ${entry.box.width}x${entry.box.height}.`);
+    assert.ok(Math.abs((entry.box.width / entry.box.height) - (100 / 106)) <= 0.035, `${prefix}: shield aspect ratio is distorted (${entry.box.width}x${entry.box.height}).`);
     assert.equal(entry.renderedVariant, entry.requestedVariant, `${prefix}: wrong artwork variant.`);
     assert.deepEqual(entry.variables, expectedVariables, `${prefix}: one or more saved color variables changed in the production cascade.`);
     assert.equal(entry.field, expectedColors.primary, `${prefix}: primary field color changed.`);
@@ -110,6 +111,26 @@ function assertContextEvidence(evidence, viewportName) {
     else assert.equal(entry.rivets, expectedColors.border, `${prefix}: rivet color changed.`);
     assert.notEqual(entry.clipPath, "none", `${prefix}: shape clipping is missing.`);
     assert.equal(entry.lineage.some(item => /brightness|saturate|grayscale|contrast/i.test(item.filter)), false, `${prefix}: a surrounding state filter recolors the saved heraldry.`);
+  }
+}
+
+async function readVersionFootprints(page) {
+  return page.evaluate(() => ["public-player", "hud", "leaderboard-current"].map(context => {
+    const current = document.querySelector(`[data-shield-context="${context}"]`).getBoundingClientRect();
+    const legacy = document.querySelector(`[data-legacy-shield-context="${context}"]`).getBoundingClientRect();
+    return {
+      context,
+      current: { width: current.width, height: current.height },
+      legacy: { width: legacy.width, height: legacy.height },
+    };
+  }));
+}
+
+function assertVersionFootprints(footprints, viewportName) {
+  for (const entry of footprints) {
+    const prefix = `${viewportName}/${entry.context}`;
+    assert.ok(Math.abs(entry.current.width - entry.legacy.width) <= 2.1, `${prefix}: v2 and legacy widths diverge (${entry.current.width}px vs ${entry.legacy.width}px).`);
+    assert.ok(Math.abs(entry.current.height - entry.legacy.height) <= 2.1, `${prefix}: v2 and legacy heights diverge (${entry.current.height}px vs ${entry.legacy.height}px).`);
   }
 }
 
@@ -167,11 +188,13 @@ async function main() {
       await page.waitForFunction(() => document.documentElement.dataset.contextProofReady === "true");
       const evidence = await readContextEvidence(page);
       assertContextEvidence(evidence, viewport.name);
+      const footprints = await readVersionFootprints(page);
+      assertVersionFootprints(footprints, viewport.name);
       const states = await verifyInteractiveStates(page, viewport.name);
       assert.deepEqual(consoleErrors, [], `${viewport.name}: console errors: ${consoleErrors.join(" | ")}`);
       assert.deepEqual(requestFailures, [], `${viewport.name}: failed requests: ${requestFailures.join(" | ")}`);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false, `${viewport.name}: context proof overflows horizontally.`);
-      results[viewport.name] = { contexts: evidence.length, states };
+      results[viewport.name] = { contexts: evidence.length, versionComparisons: footprints.length, states };
       await context.close();
     }
   } finally {
