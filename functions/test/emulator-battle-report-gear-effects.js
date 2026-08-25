@@ -201,6 +201,10 @@ async function main() {
     },
   });
   assert(launch.movement?.id === armyId, "The battle-report test attack did not launch.");
+  const notificationOutbox = await db.doc(`serverNotificationOutbox/incoming_${armyId}_${defender.uid}`).get();
+  assert(notificationOutbox.exists, "The attack did not atomically queue its defender notification.");
+  assert(notificationOutbox.data()?.notification?.defenderUid === defender.uid, "The queued alert targets the wrong defender.");
+  assert(notificationOutbox.data()?.notification?.url === "/play/", "The queued alert does not open the playable game route.");
 
   await db.doc(`armies/${armyId}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
   const resolution = await callFunction("resolveArmyOrder", attacker.token, {
@@ -244,6 +248,10 @@ async function main() {
   const defenderReport = (defenderProfile.data()?.battleReports || []).find(report => report.battleId === armyId);
   assert(attackerReport, "The attacker battle report is missing.");
   assert(defenderReport, "The defender battle report is missing.");
+  assert(attackerReport.gearEffects?.attacker?.attackStrength?.bonusPower > 0, "The attack report fallback omitted attacker gear.");
+  assert(attackerReport.gearEffects?.defender?.defenderStrength?.bonusPower > 0, "The attack report fallback omitted defender gear.");
+  assert(defenderReport.gearEffects?.attacker?.attackStrength?.bonusPower > 0, "The defense report fallback omitted attacker gear.");
+  assert(defenderReport.gearEffects?.defender?.wallStrength?.bonusPower > 0, "The defense report fallback omitted wall gear.");
   assert(attackerReport.casualtyRecovery?.fieldMedicsPercent === 20, "Attacker Field Medics was not snapshotted separately.");
   assert(attackerReport.casualtyRecovery?.gearPercent === 1.5, "Attacker casualty gear was not snapshotted separately.");
   assert(defenderReport.casualtyRecovery?.fieldMedicsPercent === 20, "Defender Field Medics was not snapshotted separately.");
