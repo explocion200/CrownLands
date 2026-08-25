@@ -166,21 +166,23 @@ async function main() {
   const invalidPresence = await patchDocument(user, presencePath, { flag: { ...v2, imageUrl: "https://example.test/flag.svg" } });
   assert(invalidPresence.status === 403, "Presence accepted an unexpected flag field.");
 
-  await callFunction("claimStartingCity", user, { playerName: "Flag Rules Sentinel" });
+  const claim = await callFunction("claimStartingCity", user, { playerName: "Flag Rules Sentinel" });
   const identity = await callFunction("syncPlayerIdentity", user, {
     ownerName: "Flag Rules Sentinel",
     ownerFlag: v2,
     ownerKingPower: 123,
-    mainCityId: "",
-    mainRegionId: "ashenfen_march",
-    mainIslandId: `${realm.worldId}-ashenfen_march`,
+    mainCityId: claim.cityId,
+    mainRegionId: claim.regionId,
+    mainIslandId: claim.islandId,
   });
   assert(identity?.ok === true, `Identity sync did not confirm success: ${JSON.stringify(identity)}`);
   assert(stableJson(identity.ownerFlag) === stableJson(v2), `Identity sync returned a different flag: ${JSON.stringify(identity.ownerFlag)}`);
+  assert(identity.cityUpdates >= 1, `Identity sync did not update the claimed city: ${JSON.stringify(identity)}`);
 
   await assertStoredFlag(`players/${user.uid}`, "flag", v2, "Canonical profile");
   await assertStoredFlag(`players/${user.uid}/saves/${saveId}`, "state.flag", v2, "Cloud save");
   await assertStoredFlag(presencePath, "flag", v2, "Presence");
+  await assertStoredFlag(`islands/${claim.islandId}/cities/${claim.cityId}`, "ownerFlag", v2, "Owned city identity");
   await assertStoredFlag(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`, "flag", v2, "Leaderboard identity");
 
   for (const [label, invalidFlag] of [
@@ -194,7 +196,7 @@ async function main() {
     assert(result.status === 403, `The rules accepted an invalid ${label} flag: ${JSON.stringify(result.body)}`);
   }
 
-  console.log("Player flag persistence passed: exact v2 profile, save, presence, callable, and leaderboard destinations round-trip safely.");
+  console.log("Player flag persistence passed: exact v2 profile, save, presence, callable, owned city, and leaderboard destinations round-trip safely.");
 }
 
 main().catch(error => {
