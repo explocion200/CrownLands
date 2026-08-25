@@ -8,6 +8,8 @@ const server = read("functions/index.js");
 const client = read("game.js");
 const firebaseClient = read("firebaseClient.js");
 const rules = read("firestore.rules");
+const beginnerGuide = read("how-to-play.html");
+const firebaseSetup = read("FIREBASE_SETUP.md");
 const styles = `${read("styles.css")}\n${read("interface-theme.css")}`;
 const indexes = JSON.parse(read("firestore.indexes.json"));
 
@@ -197,6 +199,14 @@ requires(client, /function renderRallyParticipantResults[\s\S]*?Committed[\s\S]*
 requires(client, /function isHostileClanMarch[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.kind === "scout"[\s\S]*?mission\.rallyAttack[\s\S]*?function getArmyRouteRelationshipClass[\s\S]*?clan-hostile-route[\s\S]*?clan-support-route/, "Clan rally attacks do not use mixed hostile styling while rally assembly and return paths stay green.");
 requires(styles, /\.clan-rally-card[\s\S]*?\.clan-rally-confirmation/, "Rally card or confirmation styling is missing.");
 requires(styles, /\.camp-rally-action/, "Rally map action styling is missing.");
+requires(beginnerGuide, /Rally supports 2&ndash;20 unique clan members/, "The beginner guide does not publish the 2–20-player Rally limit.");
+requires(beginnerGuide, /Reward Camps and ordinary cities are not Rally targets/, "The beginner guide still exposes invalid ordinary Rally targets.");
+requires(beginnerGuide, /slowest participant&rsquo;s locked march speed/, "The beginner guide does not explain the slowest-participant Rally speed.");
+requires(beginnerGuide, /Committing Rally troops does not remove an active Royal Peace Shield/, "The beginner guide still documents the obsolete Rally shield behavior.");
+requires(beginnerGuide, /creator leaves, is removed from, or changes clans[\s\S]*?recalls the whole Rally/, "The beginner guide omits automatic creator-departure recall.");
+assert.doesNotMatch(beginnerGuide, /up to three rulers|contribution is still inbound, that contribution turns around|uses the leader&rsquo;s march bonuses/, "The beginner guide still contains pre-correction Rally behavior.");
+requires(firebaseSetup, /2–20-player ordinary Rally assembly/, "Firebase setup still documents the obsolete three-player Rally limit.");
+assert.doesNotMatch(firebaseSetup, /three-player rally/i, "Firebase setup still contains the obsolete Rally limit.");
 
 const participantStatusSource = extractFunction(client, "getClanRallyParticipantStatusLabel", "renderClanRallyCard");
 const getParticipantStatus = new Function(
