@@ -10,6 +10,12 @@
   "monthlyGenerationPrefix": "realm",
   "worldIdPrefix": "main",
   "legacyRealmShardId": "legacy",
-  "realmShardCapacity": 50
+  "realmShardCapacity": 50,
+  "legacyCompatibleClients": [
+    {
+      "releaseId": "crownlands-2026-08-02-single-active-skill-preset-v1",
+      "apiContractHash": "e6029faf76eb863612cebf975f69bbd2e5116571153a916993825a7a7f674020"
+    }
+  ]
 });
 })();

@@ -90,6 +90,12 @@ assert.deepEqual(topology.parseIslandId(shardIslandId, septemberRealm.worldId), 
 assert.equal(topology.parseIslandId(shardIslandId, octoberRealm.worldId), null);
 
 assert.match(serverSource, /ensureRealmShardAssignment/);
+assert.deepEqual(releaseConfig.legacyCompatibleClients, [{
+  releaseId: "crownlands-2026-08-02-single-active-skill-preset-v1",
+  apiContractHash: "e6029faf76eb863612cebf975f69bbd2e5116571153a916993825a7a7f674020",
+}]);
+assert.match(serverSource, /identity\.mode === "legacy"[\s\S]*?LEGACY_COMPATIBLE_CLIENTS\.some/);
+assert.match(serverSource, /function getRealmInfoResponseContract/);
 assert.match(serverSource, /nextPlayerSequence: sequence \+ 1/);
 assert.match(serverSource, /status: "claimed"/);
 assert.match(serverSource, /activateMonthlyRealm/);

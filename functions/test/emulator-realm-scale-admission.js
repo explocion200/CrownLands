@@ -51,7 +51,7 @@ async function createAuthUser(index) {
   return { uid: body.localId, token: body.idToken };
 }
 
-async function callFunction(name, token, data = {}) {
+async function callFunction(name, token, data = {}, clientIdentity = {}) {
   const functionsHost = await resolveFunctionsHost();
   const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
     method: "POST",
@@ -62,10 +62,10 @@ async function callFunction(name, token, data = {}) {
     body: JSON.stringify({
       data: {
         ...data,
-        clientReleaseId: realm.releaseId,
-        clientResetGeneration: realm.resetGeneration,
-        clientWorldId: realm.worldId,
-        clientRealmShardId: "legacy",
+        clientReleaseId: clientIdentity.releaseId || realm.releaseId,
+        clientResetGeneration: clientIdentity.resetGeneration || realm.resetGeneration,
+        clientWorldId: clientIdentity.worldId || realm.worldId,
+        clientRealmShardId: clientIdentity.realmShardId || "legacy",
       },
     }),
   });
@@ -93,6 +93,29 @@ async function main() {
     20,
     createAuthUser
   );
+  const legacyClient = realm.legacyCompatibleClients?.[0];
+  assert(legacyClient, "The legacy login bridge client is not configured.");
+  const legacyIdentity = {
+    releaseId: legacyClient.releaseId,
+    resetGeneration: realm.resetGeneration,
+    worldId: realm.worldId,
+    realmShardId: "legacy",
+  };
+  const legacyRealmInfo = await callFunction("getRealmInfo", users[0].token, {}, legacyIdentity);
+  assert(legacyRealmInfo?.releaseId === legacyClient.releaseId, "The legacy client did not receive its compatible release ID.");
+  assert(legacyRealmInfo?.contractHash === legacyClient.apiContractHash, "The legacy client did not receive its compatible contract hash.");
+  const legacyJoin = await callFunction("joinGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "legacy-login-bridge-session",
+    displayName: "Legacy Bridge Ruler",
+  }, legacyIdentity);
+  assert(legacyJoin?.status === "active", "The legacy client could not enter the current legacy realm.");
+  const legacyHeartbeat = await callFunction("heartbeatGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "legacy-login-bridge-session",
+    displayName: "Legacy Bridge Ruler",
+  }, legacyIdentity);
+  assert(legacyHeartbeat?.status === "active", "The legacy client could not heartbeat in the current legacy realm.");
   const sessions = users.map((_, index) => `scale-session-${index}`);
   const joins = await mapWithConcurrency(users, 12, (user, index) => callFunction(
     "joinGameServer",

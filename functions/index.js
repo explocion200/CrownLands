@@ -126,6 +126,14 @@ function economyRewardSchedule(campType, fallback = []) {
 }
 
 const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-camp-hours-v2");
+const LEGACY_COMPATIBLE_CLIENTS = Object.freeze(
+  (Array.isArray(REALM_CONFIG.legacyCompatibleClients) ? REALM_CONFIG.legacyCompatibleClients : [])
+    .map(entry => Object.freeze({
+      releaseId: safeConfigString(entry?.releaseId),
+      apiContractHash: safeConfigString(entry?.apiContractHash),
+    }))
+    .filter(entry => entry.releaseId && /^[a-f0-9]{64}$/.test(entry.apiContractHash))
+);
 const REALM_REQUEST_CONTEXT = new AsyncLocalStorage();
 const LEGACY_REALM_SHARD_ID = REALM_TOPOLOGY.LEGACY_REALM_SHARD_ID;
 let ACTIVE_REALM_IDENTITY = REALM_TOPOLOGY.getRealmIdentity(REALM_CONFIG, Date.now());
@@ -947,13 +955,35 @@ function onCall(options, handler) {
 }
 
 function requireCompatibleClient(data = {}) {
-  refreshActiveRealmIdentity(Date.now());
-  if (safeString(data.clientReleaseId, 120) !== REALM_RELEASE_ID
-    || safeString(data.clientResetGeneration, 120) !== RESET_GENERATION
-    || safeString(data.clientWorldId, 120) !== ONLINE_WORLD_ID
-    || REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) !== getCurrentRealmShardId()) {
+  const identity = refreshActiveRealmIdentity(Date.now());
+  const clientReleaseId = safeString(data.clientReleaseId, 120);
+  const currentRealmShardId = getCurrentRealmShardId();
+  const realmScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID
+    && REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === currentRealmShardId;
+  const legacyClientMatches = identity.mode === "legacy"
+    && currentRealmShardId === LEGACY_REALM_SHARD_ID
+    && LEGACY_COMPATIBLE_CLIENTS.some(entry => entry.releaseId === clientReleaseId);
+  if (!realmScopeMatches || (clientReleaseId !== REALM_RELEASE_ID && !legacyClientMatches)) {
     throw new HttpsError("failed-precondition", "Crownlands was updated. Refresh before continuing.");
   }
+}
+
+function getRealmInfoResponseContract(data = {}) {
+  const clientReleaseId = safeString(data.clientReleaseId, 120);
+  const currentRealmShardId = getCurrentRealmShardId();
+  const realmScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID
+    && REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === currentRealmShardId;
+  const legacyClient = ACTIVE_REALM_IDENTITY.mode === "legacy"
+    && currentRealmShardId === LEGACY_REALM_SHARD_ID
+    && realmScopeMatches
+    ? LEGACY_COMPATIBLE_CLIENTS.find(entry => entry.releaseId === clientReleaseId)
+    : null;
+  return legacyClient || {
+    releaseId: REALM_RELEASE_ID,
+    apiContractHash: String(RELEASE_MANIFEST.contractHash || ""),
+  };
 }
 
 function requireAuth(request, { allowRealmMismatch = false } = {}) {
@@ -13686,9 +13716,11 @@ exports.getRealmInfo = timedCallable(
     requireAuth(request, { allowRealmMismatch: true });
     const serverTimeMs = Date.now();
     const realm = await ensureCurrentRealmConfiguration(serverTimeMs);
+    const responseContract = getRealmInfoResponseContract(request.data || {});
     return {
       ok: true,
-      releaseId: REALM_RELEASE_ID,
+      releaseId: responseContract.releaseId,
+      currentReleaseId: REALM_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
       realmMode: realm.mode,
@@ -13698,7 +13730,8 @@ exports.getRealmInfo = timedCallable(
       realmShardId: getCurrentRealmShardId(),
       realmShardCapacity: GAME_SERVER_CAPACITY,
       serverBuildId: String(RELEASE_MANIFEST.buildId || "development"),
-      contractHash: String(RELEASE_MANIFEST.contractHash || ""),
+      contractHash: responseContract.apiContractHash,
+      currentContractHash: String(RELEASE_MANIFEST.contractHash || ""),
       releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       serverTimeMs,
       clanQuestPeriod: getClanQuestPeriod(serverTimeMs, RESET_GENERATION),
