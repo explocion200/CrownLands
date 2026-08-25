@@ -269,6 +269,18 @@ async function expectFunctionFailure(action, pattern, label) {
   return capturedError;
 }
 
+async function snapshotDirectSubcollections(documentRef) {
+  const collections = await documentRef.listCollections();
+  const rows = [];
+  for (const collection of collections) {
+    const snapshot = await collection.get();
+    snapshot.docs.forEach(doc => {
+      rows.push([doc.ref.path, doc.data()]);
+    });
+  }
+  return JSON.stringify(rows.sort(([left], [right]) => left.localeCompare(right)));
+}
+
 function normalizedClanFixtureName(name = "") {
   return String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -543,9 +555,35 @@ async function main() {
       notificationPreferences: { clanGifts: true },
       resetGeneration: "archived-generation",
       worldId: "main-archived-generation",
-      gold: 654_321,
+      gold: 2_000_000_000,
+      goldFloat: 2_000_000_000,
       character: { level: 44, xp: 321, skillPoints: 43 },
       shopItems: { shield_12h: 3 },
+      gear: {
+        schemaVersion: 1,
+        commonGearBoxes: 2,
+        instances: {
+          preclaim_upgrade_target: {
+            instanceId: "preclaim_upgrade_target",
+            gearKey: "barracks_head_common_01",
+            level: 1,
+            isEquipped: true,
+            isNew: true,
+            acquiredAtMs: 1_730_000_000_000,
+          },
+          preclaim_upgrade_material: {
+            instanceId: "preclaim_upgrade_material",
+            gearKey: "barracks_head_common_01",
+            level: 1,
+            isEquipped: false,
+            isNew: true,
+            acquiredAtMs: 1_730_000_000_001,
+          },
+        },
+        equipped: { barracks: { head: "preclaim_upgrade_target" } },
+        newMarkers: { barracks: true },
+        updatedAtMs: 1_730_000_000_001,
+      },
       clanId: archivedClanId,
       clanName: "Stale Officer Clan Name",
       clanTag: "OLD",
@@ -741,7 +779,7 @@ async function main() {
       && preclaimOfficerProfile.worldId === "main-archived-generation"
       && !preclaimOfficerProfile.mainCityId
       && !preclaimOfficerProfile.mainIslandId
-      && preclaimOfficerProfile.gold === 654_321,
+      && preclaimOfficerProfile.gold === 2_000_000_000,
     "Clan rollover background work promoted a non-returning member's archived profile."
   );
   assert(
@@ -753,6 +791,69 @@ async function main() {
   assert(
     !preclaimOfficerStatsSnap.exists && !preclaimOfficerLeaderboardSnap.exists,
     "Clan rollover created current-season stats or leaderboard state for a non-returning member."
+  );
+
+  const preclaimOfficerRef = db.doc(`players/${returningClanOfficer.uid}`);
+  const preclaimProfileBeforeGameplay = JSON.stringify(preclaimOfficerProfile);
+  const preclaimSubcollectionsBeforeGameplay = await snapshotDirectSubcollections(preclaimOfficerRef);
+  const prohibitedPreclaimActions = [
+    ["collectEconomy", {}],
+    ["getCommonGearStatus", {}],
+    ["purchaseCommonGearBox", {}],
+    ["openCommonGearBox", { requestId: "preclaim_open_box" }],
+    ["equipCommonGear", { instanceId: "preclaim_upgrade_material" }],
+    ["unequipCommonGear", { instanceId: "preclaim_upgrade_target" }],
+    ["upgradeCommonGear", { instanceId: "preclaim_upgrade_target" }],
+    ["viewCommonGearBuilding", { buildingId: "barracks" }],
+    ["reserveHarvestBonusSpawn", {
+      type: "gold",
+      bonus: { id: "preclaim_pickup", type: "gold", regionId: "region_11", x: 1200, y: 900 },
+    }],
+    ["collectHarvestBonus", { type: "gold", bonusId: "preclaim_pickup" }],
+    ["purchaseShopItem", { itemId: "shield_12h", quantity: 1 }],
+    ["activateInventoryItem", { itemId: "shield_12h", quantity: 1 }],
+    ["getDailyLoginRewardStatus", {}],
+    ["claimDailyLoginReward", { claimId: "preclaim_daily_reward" }],
+    ["getDailyMissionStatus", {}],
+    ["getSeasonalAchievementStatus", {}],
+    ["spendSkillPoint", { skillId: "swordmastery" }],
+    ["repairMainCityAssignment", {}],
+    ["syncPlayerIdentity", {}],
+    ["markReportsViewed", {}],
+    ["markRealmAnnouncementSeen", { eventId: "preclaim_realm_event", seenThroughMs: 1 }],
+  ];
+  for (const [functionName, payload] of prohibitedPreclaimActions) {
+    await expectFunctionFailure(
+      () => callFunction(functionName, returningClanOfficer.token, payload),
+      /FAILED_PRECONDITION/i,
+      `Archived player unexpectedly reached ${functionName}`
+    );
+  }
+
+  const [preclaimProfileAfterGameplaySnap, preclaimStatsAfterGameplaySnap, preclaimLeaderboardAfterGameplaySnap] = await Promise.all([
+    preclaimOfficerRef.get(),
+    db.doc(`players/${returningClanOfficer.uid}/stats/global`).get(),
+    db.doc(`leaderboards/${realm.resetGeneration}/entries/${returningClanOfficer.uid}`).get(),
+  ]);
+  const preclaimSubcollectionsAfterGameplay = await snapshotDirectSubcollections(preclaimOfficerRef);
+  assert(
+    JSON.stringify(preclaimProfileAfterGameplaySnap.data() || {}) === preclaimProfileBeforeGameplay,
+    "A rejected pre-claim economy, Gear, reward, harvest, or gameplay action changed the archived profile."
+  );
+  assert(
+    preclaimSubcollectionsAfterGameplay === preclaimSubcollectionsBeforeGameplay,
+    "A rejected pre-claim action created or changed a player stats, mission, achievement, receipt, or rate document."
+  );
+  assert(
+    !preclaimStatsAfterGameplaySnap.exists && !preclaimLeaderboardAfterGameplaySnap.exists,
+    "A rejected pre-claim action created current-season global stats or a leaderboard entry."
+  );
+  assert(
+    preclaimProfileAfterGameplaySnap.data()?.gear?.instances?.preclaim_upgrade_target?.level === 1
+      && preclaimProfileAfterGameplaySnap.data()?.gear?.instances?.preclaim_upgrade_material?.level === 1
+      && preclaimProfileAfterGameplaySnap.data()?.gear?.commonGearBoxes === 2
+      && preclaimProfileAfterGameplaySnap.data()?.gold === 2_000_000_000,
+    "Pre-claim Gear or seasonal Gold changed; the zero-cost upgrade or old-Gold laundering gate failed."
   );
 
   const preclaimGlobalRequestId = "preclaim_global_chat_gate";
@@ -1177,7 +1278,9 @@ async function main() {
       && returningOfficerProfile.notificationPreferences?.clanGifts === true
       && returningOfficerProfile.gold === 100
       && returningOfficerProfile.character?.level === 1
-      && returningOfficerProfile.gear?.commonGearBoxes === 0,
+      && returningOfficerProfile.gear?.commonGearBoxes === 2
+      && returningOfficerProfile.gear?.instances?.preclaim_upgrade_target?.level === 1
+      && returningOfficerProfile.gear?.instances?.preclaim_upgrade_material?.level === 1,
     "A later returning clan member did not receive the same identity, role, or fresh seasonal profile."
   );
   assert(
@@ -1188,6 +1291,58 @@ async function main() {
       && questAfterOfficerClaimSnap.data()?.milestoneUnlocks?.currentSeason === true
       && giftActivityAfterOfficerClaimSnap.data()?.recentDonations?.[0]?.productionMinutes === 15,
     "A later member's reset claim cleared valid activity from the already-current clan season."
+  );
+  const postclaimGearStatus = await callReplaySafeFunction("getCommonGearStatus", returningClanOfficer.token);
+  assert(
+    postclaimGearStatus?.ok === true
+      && postclaimGearStatus.gear?.commonGearBoxes === 2
+      && postclaimGearStatus.gear?.instances?.preclaim_upgrade_target?.level === 1,
+    "Persistent Common Gear was not available after the player completed reset claim."
+  );
+  await db.doc(`players/${returningClanOfficer.uid}`).set({
+    gold: 1_000_000,
+    goldFloat: 1_000_000,
+  }, { merge: true });
+  const postclaimUpgrade = await callReplaySafeFunction("upgradeCommonGear", returningClanOfficer.token, {
+    instanceId: "preclaim_upgrade_target",
+  });
+  assert(
+    postclaimUpgrade?.spentGold > 0
+      && postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_target?.level === 2
+      && !postclaimUpgrade.currentUser?.gear?.instances?.preclaim_upgrade_material,
+    "A valid post-claim Gear upgrade did not consume a duplicate and a positive Gold cost."
+  );
+  const postclaimOpen = await callReplaySafeFunction("openCommonGearBox", returningClanOfficer.token, {
+    requestId: "postclaim_open_box",
+  });
+  assert(
+    postclaimOpen?.ok === true
+      && postclaimOpen.replayed === false
+      && postclaimOpen.gear?.commonGearBoxes === 1
+      && postclaimOpen.receipt?.instanceIds?.length === 3,
+    "A persistent Common Gear Box could not be opened after reset claim."
+  );
+  const postclaimUnequip = await callReplaySafeFunction("unequipCommonGear", returningClanOfficer.token, {
+    instanceId: "preclaim_upgrade_target",
+  });
+  const postclaimEquip = await callReplaySafeFunction("equipCommonGear", returningClanOfficer.token, {
+    instanceId: "preclaim_upgrade_target",
+  });
+  const postclaimView = await callReplaySafeFunction("viewCommonGearBuilding", returningClanOfficer.token, {
+    buildingId: "barracks",
+  });
+  const postclaimEconomy = await callReplaySafeFunction("collectEconomy", returningClanOfficer.token);
+  const postclaimHarvest = await callReplaySafeFunction("reserveHarvestBonusSpawn", returningClanOfficer.token, {
+    type: "gold",
+    bonus: { id: "postclaim_pickup", type: "gold", regionId: "region_11", x: 1200, y: 900 },
+  });
+  assert(
+    postclaimUnequip?.currentUser?.gear?.instances?.preclaim_upgrade_target?.isEquipped === false
+      && postclaimEquip?.currentUser?.gear?.instances?.preclaim_upgrade_target?.isEquipped === true
+      && postclaimView?.ok === true
+      && postclaimEconomy?.ok !== false
+      && postclaimHarvest?.ok === true,
+    "Economy, Gear management, or harvest access remained blocked after reset claim."
   );
   const postclaimGlobalChat = await callReplaySafeFunction("sendChatMessage", returningClanOfficer.token, {
     channel: "global",

@@ -7660,7 +7660,8 @@ exports.markReportsViewed = onCall(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Your Crownlands profile is not ready yet.");
       }
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const currentViewedAtMs = Math.max(0, timestampToMs(profile.reportsViewedAtMs));
       const viewedAtMs = Math.max(
         currentViewedAtMs,
@@ -7698,6 +7699,7 @@ exports.markRealmAnnouncementSeen = onCall(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Your Crownlands profile is not ready yet.");
       }
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
       if (!eventSnap.exists) {
         throw new HttpsError("not-found", "That Realm Activity event is no longer available.");
       }
@@ -8825,7 +8827,7 @@ function getSeasonalAchievementRewardCapacity(stats = {}) {
   };
 }
 
-async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.now()) {
+async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.now(), options = {}) {
   const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
   const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
   if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Seasonal Achievements.");
@@ -8838,7 +8840,11 @@ async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.no
     if (!profileSnap.exists) {
       throw new HttpsError("failed-precondition", "Claim a starting city before opening Seasonal Achievements.");
     }
-    assertCurrentPlayerProfile(profileSnap.data() || {});
+    if (options.requireParticipation === true) {
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    } else {
+      assertCurrentPlayerProfile(profileSnap.data() || {});
+    }
     const state = stateSnap.exists
       ? reconcileSeasonalAchievementState(stateSnap.data() || {}, {
         uid,
@@ -9478,7 +9484,7 @@ function dailyMissionStateForClient(state = {}, nowMs = Date.now()) {
   };
 }
 
-async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
+async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now(), options = {}) {
   const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
   const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
   if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Daily Missions.");
@@ -9491,8 +9497,11 @@ async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
     if (!profileSnap.exists) {
       throw new HttpsError("failed-precondition", "Claim a starting city before opening Daily Missions.");
     }
-    const profile = profileSnap.data() || {};
-    assertCurrentPlayerProfile(profile);
+    if (options.requireParticipation === true) {
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    } else {
+      assertCurrentPlayerProfile(profileSnap.data() || {});
+    }
     if (stateSnap.exists) {
       const existingState = stateSnap.data() || {};
       if (Math.max(0, Math.floor(safeNumber(existingState.schemaVersion, 0))) >= DAILY_MISSION_SCHEMA_VERSION) {
@@ -9916,8 +9925,92 @@ function assertCurrentPlayerProfile(profile = {}) {
     safeString(profile.resetGeneration, 120) !== RESET_GENERATION
     || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
   ) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands world before claiming a daily reward.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Enter the current Crownlands realm; your profile must belong to the current Crownlands world before using gameplay."
+    );
   }
+  return profile;
+}
+
+function getCurrentSeasonMainCityContext(profile = {}) {
+  const mainCityId = safeString(profile.mainCityId, 96);
+  const mainIslandId = safeString(profile.mainIslandId, 160);
+  const mainRegionId = getRegionIdFromOnlineIslandId(mainIslandId);
+  const storedMainRegionId = normalizeRegionId(profile.mainRegionId || mainRegionId);
+  const validMainCityId = /^[a-zA-Z0-9_-]+$/.test(mainCityId)
+    && getServerWorldRegularCityIds(mainRegionId).has(mainCityId);
+  if (!validMainCityId
+    || !isCurrentWorldIslandId(mainIslandId)
+    || mainIslandId !== getOnlineIslandId(mainRegionId)
+    || storedMainRegionId !== mainRegionId) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using gameplay.");
+  }
+  return {
+    mainCityId,
+    mainIslandId,
+    mainRegionId,
+    ref: cityRefForRegion(mainRegionId, mainCityId),
+  };
+}
+
+function assertCurrentSeasonMainCity(
+  profile = {},
+  mainCityContext = {},
+  mainCitySnap = null,
+  uid = "",
+  { allowMainCityRepair = false } = {}
+) {
+  const city = mainCitySnap?.exists ? mainCitySnap.data() || {} : {};
+  const cityIslandId = safeString(mainCitySnap?.ref?.parent?.parent?.id, 160);
+  const cityRegionId = getRegionIdFromCityDoc(mainCitySnap, city);
+  if (!mainCitySnap?.exists
+    || mainCitySnap.id !== mainCityContext.mainCityId
+    || cityIslandId !== mainCityContext.mainIslandId
+    || cityRegionId !== mainCityContext.mainRegionId
+    || safeString(city.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(city.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(city.ownerKind || "player", 32) !== "player"
+    || getOwnerUid(city) !== uid
+    || (!allowMainCityRepair && city.isMainCity !== true)
+    || isStronghold(city)
+    || safeString(profile.mainCityId, 96) !== mainCitySnap.id) {
+    throw new HttpsError("failed-precondition", "Verify your current Crownlands main city before using gameplay.");
+  }
+  return city;
+}
+
+async function requireCurrentSeasonParticipation(transaction, uid = "", options = {}) {
+  const playerUid = safeString(uid, 128);
+  if (!transaction || !playerUid) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using gameplay.");
+  }
+  const profileRef = options.profileRef || db.doc(`players/${playerUid}`);
+  const profileSnap = options.profileSnap || await transaction.get(profileRef);
+  if (!profileSnap?.exists) {
+    throw new HttpsError("failed-precondition", "Claim a starting city before using gameplay.");
+  }
+  const profile = assertCurrentPlayerProfile(profileSnap.data() || {});
+  const mainCityContext = getCurrentSeasonMainCityContext(profile);
+  const mainCitySnap = options.mainCitySnap || await transaction.get(mainCityContext.ref);
+  const mainCity = assertCurrentSeasonMainCity(profile, mainCityContext, mainCitySnap, playerUid, {
+    allowMainCityRepair: options.allowMainCityRepair === true,
+  });
+  return {
+    profileRef,
+    profileSnap,
+    profile,
+    mainCityContext,
+    mainCitySnap,
+    mainCity,
+  };
+}
+
+async function verifyCurrentSeasonParticipation(uid = "") {
+  return runTransactionWithInfrastructureRetry(
+    transaction => requireCurrentSeasonParticipation(transaction, uid),
+    "verifyCurrentSeasonParticipation"
+  );
 }
 
 function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
@@ -11551,7 +11644,12 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   }
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
-  const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const participation = await requireCurrentSeasonParticipation(transaction, uid, {
+    profileRef,
+    profileSnap,
+    allowMainCityRepair: options.allowMainCityRepair === true,
+  });
+  const rawProfile = participation.profile;
   const upgrades = normalizeSkillUpgrades(rawProfile.upgrades);
   const character = reconcileSkillPoints(rawProfile.character, upgrades);
   const freeSkillResetState = normalizeFreeSkillResetState(rawProfile);
@@ -12789,8 +12887,8 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
-    if (!profileSnap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before opening gear.");
-    const gear = normalizeCommonGear(profileSnap.data() || {});
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const gear = normalizeCommonGear(participation.profile);
     if (gear.lastOpenRequestId === requestId && gear.lastOpenReceipt) {
       return { ok: true, replayed: true, gear, receipt: gear.lastOpenReceipt };
     }
@@ -12821,8 +12919,11 @@ exports.viewCommonGearBuilding = onCall({ region: "us-central1", maxInstances: 3
   return runTransactionWithInfrastructureRetry(async transaction => {
     const ref = db.doc(`players/${uid}`);
     const snap = await transaction.get(ref);
-    if (!snap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before managing gear.");
-    const gear = normalizeCommonGear(snap.data() || {});
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, {
+      profileRef: ref,
+      profileSnap: snap,
+    });
+    const gear = normalizeCommonGear(participation.profile);
     gear.newMarkers[buildingId] = false;
     Object.values(gear.instances).forEach(instance => {
       if (instance.buildingId === buildingId) instance.isNew = false;
@@ -13169,8 +13270,8 @@ exports.getDailyLoginRewardStatus = timedCallable(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Claim a starting city before opening daily rewards.");
       }
-      const profile = profileSnap.data() || {};
-      assertCurrentPlayerProfile(profile);
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       if (attendance.changed) {
         transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
@@ -13199,8 +13300,8 @@ exports.claimDailyLoginReward = timedCallable(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Claim a starting city before collecting daily rewards.");
       }
-      const profile = profileSnap.data() || {};
-      assertCurrentPlayerProfile(profile);
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       const statusBefore = createDailyLoginRewardStatus(attendance.state, nowMs);
       if (
@@ -13347,6 +13448,7 @@ exports.getRewardedAdStatus = onCall(REWARDED_AD_STATUS_CALLABLE_OPTIONS, async 
   const uid = requireAuth(request);
   requireRewardedAdAppCheck(request, true);
   const nowMs = Date.now();
+  await verifyCurrentSeasonParticipation(uid);
   const [stateSnap, configSnap, statsSnap] = await Promise.all([
     rewardedAdStateRef(uid).get(),
     rewardedAdServerConfigRef().get(),
@@ -13647,7 +13749,8 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
-    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const profile = participation.profile;
     const daily = mergeHarvestDailyTrackers(profile.daily, data.daily, new Date(nowMs));
     const preferredType = normalizeHarvestBonusType(profile.harvestNextBonusType || requestedType);
     const alternateType = preferredType === "troops" ? "gold" : "troops";
@@ -13744,7 +13847,7 @@ exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances:
   const uid = requireAuth(request);
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { allowMainCityRepair: true });
     writePreparedEconomy(transaction, economy, {
       mainCityRepairUpdatedAtMs: nowMs,
     });
@@ -14072,7 +14175,8 @@ exports.saveSkillPreset = timedCallable(
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const upgrades = normalizeSkillUpgrades(profile.upgrades);
@@ -14118,7 +14222,8 @@ exports.renameSkillPreset = timedCallable(
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const name = requireSkillPresetName(request.data?.name, definition.slot);
@@ -14217,6 +14322,7 @@ exports.applySkillPreset = timedCallable(
 
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await verifyCurrentSeasonParticipation(uid);
   const data = request.data || {};
   const authToken = request.auth?.token || {};
   const profileRef = db.doc(`players/${uid}`);
@@ -16686,57 +16792,6 @@ function assertChatPayloadDoesNotSpoofIdentity(data = {}) {
   }
 }
 
-function assertCurrentChatAccount(profileSnap) {
-  const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
-  if (!profileSnap?.exists
-    || safeString(profile.resetGeneration, 120) !== RESET_GENERATION
-    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
-  }
-  return profile;
-}
-
-function getCurrentChatMainCityContext(profile = {}) {
-  const mainCityId = safeString(profile.mainCityId, 96);
-  const mainIslandId = safeString(profile.mainIslandId, 160);
-  const mainRegionId = getRegionIdFromOnlineIslandId(mainIslandId);
-  const storedMainRegionId = normalizeRegionId(profile.mainRegionId || mainRegionId);
-  const validMainCityId = /^[a-zA-Z0-9_-]+$/.test(mainCityId)
-    && getServerWorldRegularCityIds(mainRegionId).has(mainCityId);
-  if (!validMainCityId
-    || !isCurrentWorldIslandId(mainIslandId)
-    || mainIslandId !== getOnlineIslandId(mainRegionId)
-    || storedMainRegionId !== mainRegionId) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
-  }
-  return {
-    mainCityId,
-    mainIslandId,
-    mainRegionId,
-    ref: cityRefForRegion(mainRegionId, mainCityId),
-  };
-}
-
-function assertCurrentChatMainCity(profile = {}, mainCityContext = {}, mainCitySnap = null, uid = "") {
-  const city = mainCitySnap?.exists ? mainCitySnap.data() || {} : {};
-  const cityIslandId = safeString(mainCitySnap?.ref?.parent?.parent?.id, 160);
-  const cityRegionId = getRegionIdFromCityDoc(mainCitySnap, city);
-  if (!mainCitySnap?.exists
-    || mainCitySnap.id !== mainCityContext.mainCityId
-    || cityIslandId !== mainCityContext.mainIslandId
-    || cityRegionId !== mainCityContext.mainRegionId
-    || safeString(city.resetGeneration, 120) !== RESET_GENERATION
-    || safeString(city.worldId, 120) !== ONLINE_WORLD_ID
-    || safeString(city.ownerKind || "player", 32) !== "player"
-    || getOwnerUid(city) !== uid
-    || city.isMainCity !== true
-    || isStronghold(city)
-    || safeString(profile.mainCityId, 96) !== mainCitySnap.id) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
-  }
-  return city;
-}
-
 function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   if (!restrictionSnap?.exists) return;
   const restriction = restrictionSnap.data() || {};
@@ -16782,10 +16837,8 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       transaction.get(rateRef),
       transaction.get(requestRef),
     ]);
-    const profile = assertCurrentChatAccount(profileSnap);
-    const mainCityContext = getCurrentChatMainCityContext(profile);
-    const mainCitySnap = await transaction.get(mainCityContext.ref);
-    assertCurrentChatMainCity(profile, mainCityContext, mainCitySnap, uid);
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const profile = participation.profile;
     assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
 
     const clanId = channel === "clan" ? safeString(profile.clanId, 128) : "";
@@ -19883,7 +19936,7 @@ exports.getSeasonalAchievementStatus = timedCallable(
     const uid = requireAuth(request);
     const nowMs = Date.now();
     const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
-    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs, { requireParticipation: true });
     await applyLongReignProgressForPlayer(uid, nowMs);
     const stateSnap = await seasonalAchievementStateRef(uid, cycle.seasonId).get();
     if (!stateSnap.exists) throw new HttpsError("unavailable", "Seasonal Achievements are being prepared.");
@@ -19909,7 +19962,7 @@ exports.claimSeasonalAchievementReward = timedCallable(
     if (requestedSeasonId && requestedSeasonId !== cycle.seasonId) {
       throw new HttpsError("failed-precondition", "That Seasonal Achievement reward expired at the UTC month rollover.");
     }
-    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs, { requireParticipation: true });
     await applyLongReignProgressForPlayer(uid, nowMs);
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
@@ -20020,7 +20073,7 @@ exports.getDailyMissionStatus = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const nowMs = Date.now();
-    const dailyMissionState = await ensureDailyMissionStateForPlayer(uid, nowMs);
+    const dailyMissionState = await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return {
       ok: true,
       serverTimeMs: nowMs,
@@ -20043,7 +20096,7 @@ exports.rerollDailyMission = timedCallable(
     if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
       throw new HttpsError("failed-precondition", "Daily Missions reset at 00:00 UTC. Refresh the mission list.");
     }
-    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
       const profileRef = db.doc(`players/${uid}`);
@@ -20137,7 +20190,7 @@ exports.claimDailyMissionReward = timedCallable(
     if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
       throw new HttpsError("failed-precondition", "That Daily Mission expired at 00:00 UTC.");
     }
-    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
       const profileRef = db.doc(`players/${uid}`);
