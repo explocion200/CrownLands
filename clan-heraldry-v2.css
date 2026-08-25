@@ -156,7 +156,26 @@
 .clan-shield-choice-mini>.clan-heraldry-v2{width:31px;height:33px}
 .clan-shield-choice-none{font-size:1.35rem}
 .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid{grid-template-columns:repeat(8,24px);justify-content:start;gap:.38rem}
-.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button{width:24px;height:24px}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button{
+  width:24px;
+  min-width:0;
+  height:24px;
+  min-height:0;
+  padding:0;
+  border:2px solid rgba(255,255,255,.34);
+  border-radius:3px;
+  background:
+    repeating-linear-gradient(0deg,rgba(255,255,255,.1) 0 1px,transparent 1px 5px),
+    linear-gradient(90deg,rgba(255,255,255,.08),transparent 45%,rgba(0,0,0,.12)),
+    var(--shield-swatch);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.38);
+}
+.clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button:is(.active,[aria-pressed="true"]){
+  border-color:#fff4cf;
+  outline:2px solid #6d2d35;
+  outline-offset:2px;
+  box-shadow:inset 0 0 0 1px rgba(28,17,9,.48),0 0 0 1px rgba(255,244,207,.34);
+}
 .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-swatch-grid button:focus-visible,
 .clan-shield-editor[data-heraldry-editor-version="2"] button:focus-visible{outline:3px solid #fff0a8;outline-offset:2px}
 .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-actions{min-width:0;grid-column:2;grid-row:2;display:grid;grid-template-columns:minmax(100px,.7fr) minmax(100px,.7fr) minmax(170px,1.3fr);gap:.45rem}
@@ -172,7 +191,7 @@
   .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-preview{gap:.25rem;padding:.3rem}
   .clan-shield-preview-full{width:min(94%,150px);height:100%}
   .clan-shield-micro-preview{right:.25rem;bottom:.22rem;grid-template-columns:26px;padding:.16rem}
-  .clan-shield-micro-preview>span{display:none}
+  .clan-shield-micro-preview>span:not(.clan-heraldry-v2){display:none}
   .clan-shield-micro-preview>.clan-heraldry-v2{width:24px;height:26px}
   .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs{gap:.22rem;padding:.12rem}
   .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-editor-tabs button{min-height:34px;padding:.2rem .25rem;font-size:.63rem}
@@ -203,3 +222,25 @@
 }
 
 @media (prefers-contrast:more){.clan-heraldry-border{stroke-width:6}.clan-heraldry-charge{filter:drop-shadow(0 0 .5px #000)}}
+
+/* Preserve the clan's authored dyes when shared button themes add state
+   filters. The shadow keeps the hover/press affordance without recoloring the
+   shield pixels beneath it. */
+@media (hover:hover){
+  :is(
+    .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button,
+    .public-profile-clan,
+    .objective-clan-link,
+    .profile-clan-affiliation,
+    .clan-shield-link,
+    .clan-hud-btn.has-clan
+  ):not(:disabled):hover{filter:drop-shadow(0 0 4px rgba(216,199,161,.48))}
+}
+:is(
+  .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid button,
+  .public-profile-clan,
+  .objective-clan-link,
+  .profile-clan-affiliation,
+  .clan-shield-link,
+  .clan-hud-btn.has-clan
+):not(:disabled):active{filter:drop-shadow(0 2px 2px rgba(0,0,0,.46))}
