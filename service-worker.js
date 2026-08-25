@@ -8,6 +8,23 @@ function resolveAppUrl(path = "") {
   return new URL(value.replace(/^\/+/, ""), APP_BASE_URL).href;
 }
 
+function resolveNotificationUrl(path = "") {
+  const value = String(path || "").trim();
+  return resolveAppUrl(!value || value === "/" ? "play/" : value);
+}
+
+function getNotificationOpenUrl(notificationData = {}) {
+  const url = new URL(resolveNotificationUrl(notificationData.url));
+  if (notificationData.type === "incoming_army" && notificationData.cityId) {
+    url.searchParams.set("notification", "incoming_army");
+    url.searchParams.set("notificationCity", String(notificationData.cityId).slice(0, 96));
+    if (notificationData.targetRegionId) {
+      url.searchParams.set("notificationRegion", String(notificationData.targetRegionId).slice(0, 80));
+    }
+  }
+  return url.href;
+}
+
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
@@ -75,7 +92,7 @@ try {
         ? `crownlands-${data.armyId}`
         : "crownlands-incoming-army";
 
-      self.registration.showNotification(title, {
+      return self.registration.showNotification(title, {
         body,
         tag,
         renotify: true,
@@ -84,7 +101,7 @@ try {
         badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
         data: {
           ...data,
-          url: resolveAppUrl(data.url || ""),
+          url: resolveNotificationUrl(data.url),
         },
       });
     });
@@ -264,19 +281,27 @@ self.addEventListener("message", event => {
 self.addEventListener("notificationclick", event => {
   const notificationData = event.notification?.data || {};
   event.notification.close();
-  const url = resolveAppUrl(notificationData.url || "play/");
+  const url = getNotificationOpenUrl(notificationData);
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-    const sameOriginClient = windowClients.find(client => {
+    const targetUrl = new URL(url);
+    const gameClient = windowClients.find(client => {
       try {
-        return new URL(client.url).origin === self.location.origin;
+        const clientUrl = new URL(client.url);
+        const normalizedClientPath = clientUrl.pathname.replace(/\/+$/, "") || "/";
+        const normalizedTargetPath = targetUrl.pathname.replace(/\/+$/, "") || "/";
+        return clientUrl.origin === targetUrl.origin
+          && (
+            normalizedClientPath === normalizedTargetPath
+            || (normalizedTargetPath === "/play" && normalizedClientPath === "/index.html")
+          );
       } catch (_error) {
         return false;
       }
     });
-    if (sameOriginClient) {
-      await sameOriginClient.focus();
-      sameOriginClient.postMessage({
+    if (gameClient) {
+      await gameClient.focus();
+      gameClient.postMessage({
         type: "CROWNLANDS_NOTIFICATION_CLICK",
         notification: notificationData,
       });
