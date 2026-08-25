@@ -362,51 +362,50 @@ async function main() {
   const oversizedRosterUser = await createAuthUser(60);
   const disbandedClanUser = await createAuthUser(61);
   const removedClanUser = await createAuthUser(62);
-  const lobbySessions = users.map((_, index) => `lobby-session-${index}`);
+  const lobbyUsers = [...users, queuedUser];
+  const lobbySessions = lobbyUsers.map((_, index) => `lobby-session-${index}`);
   const lobbyJoins = await mapWithConcurrency(
-    users,
-    4,
+    lobbyUsers,
+    12,
     (user, index) => callReplaySafeFunction("joinGameServer", user.token, {
       serverId: "crown-marches",
       sessionId: lobbySessions[index],
       displayName: `Lobby Ruler ${index + 1}`,
     })
   );
-  assert(lobbyJoins.every(result => result?.status === "active"), "The first 50 concurrent realm joins were not all admitted.");
-  const queuedJoin = await callFunction("joinGameServer", queuedUser.token, {
-    serverId: "crown-marches",
-    sessionId: "lobby-session-50",
-    displayName: "Queued Ruler",
-  });
-  assert(queuedJoin?.status === "waiting", "The 51st realm join bypassed the waiting queue.");
+  assert(
+    lobbyJoins.length === 51 && lobbyJoins.every(result => result?.status === "active"),
+    "A concurrent realm join was incorrectly placed in a global waiting room."
+  );
 
   const serverDocumentId = `crown-marches-${realm.resetGeneration}`;
   const serverRef = db.doc(`gameServers/${serverDocumentId}`);
   const serverAfterJoins = (await serverRef.get()).data() || {};
   assert(
-    Object.keys(serverAfterJoins.activeSlots || {}).length === 50
-      && Object.keys(serverAfterJoins.waitingQueue || {}).length === 1
-      && Number(serverAfterJoins.activeCount || 0) === 50
-      && Number(serverAfterJoins.waitingCount || 0) === 1,
-    "Realm capacity counters or queue state drifted after concurrent joins."
+    serverAfterJoins.admissionModel === "sharded-members-v3"
+      && Number(serverAfterJoins.waitingCount || 0) === 0
+      && !Object.prototype.hasOwnProperty.call(serverAfterJoins, "activeSlots")
+      && !Object.prototype.hasOwnProperty.call(serverAfterJoins, "waitingQueue"),
+    "Realm admission recreated the removed global capacity maps."
   );
   const sharedServerUpdatedAtMs = Number(serverAfterJoins.updatedAtMs || 0);
-  const heartbeatSubjects = [
-    ...users.map((user, index) => ({ user, index, sessionId: lobbySessions[index] })),
-    { user: queuedUser, index: 50, sessionId: "lobby-session-50" },
-  ];
+  const heartbeatSubjects = lobbyUsers.map((user, index) => ({
+    user,
+    index,
+    sessionId: lobbySessions[index],
+  }));
   const heartbeatResults = await mapWithConcurrency(
     heartbeatSubjects,
-    4,
+    12,
     subject => callReplaySafeFunction("heartbeatGameServer", subject.user.token, {
       serverId: "crown-marches",
       sessionId: subject.sessionId,
-      displayName: subject.index === 50 ? "Queued Ruler" : `Lobby Ruler ${subject.index + 1}`,
+      displayName: `Lobby Ruler ${subject.index + 1}`,
     })
   );
   assert(
-    heartbeatResults.filter(result => result?.status === "active").length === 50
-      && heartbeatResults.filter(result => result?.status === "waiting").length === 1,
+    heartbeatResults.length === 51
+      && heartbeatResults.every(result => result?.status === "active"),
     "Sharded heartbeats changed realm admission state."
   );
   const serverAfterHeartbeats = (await serverRef.get()).data() || {};
@@ -418,7 +417,7 @@ async function main() {
   assert(
     memberSnapshot.size === 51
       && memberSnapshot.docs.every(doc => Number(doc.data()?.heartbeatModelVersion || 0) === 2),
-    "Per-player realm heartbeat documents were not written for every active or waiting player."
+    "Per-player realm heartbeat documents were not written for every active player."
   );
   const replacedHeartbeat = await callFunction("heartbeatGameServer", users[0].token, {
     serverId: "crown-marches",
@@ -431,19 +430,13 @@ async function main() {
     sessionId: lobbySessions[0],
   });
   assert(leaveResult?.status === "left", "An active realm slot could not be released.");
-  const [serverAfterPromotionSnap, queuedMembershipSnap] = await Promise.all([
-    serverRef.get(),
+  const [membersAfterLeave, queuedMembershipSnap] = await Promise.all([
+    serverRef.collection("members").get(),
     db.doc(`players/${queuedUser.uid}/serverMembership/current`).get(),
   ]);
-  const serverAfterPromotion = serverAfterPromotionSnap.data() || {};
-  const promotionActiveCount = Object.keys(serverAfterPromotion.activeSlots || {}).length;
-  const promotionWaitingCount = Object.keys(serverAfterPromotion.waitingQueue || {}).length;
-  const promotedMembershipStatus = queuedMembershipSnap.data()?.status || "missing";
   assert(
-    promotionActiveCount === 50
-      && promotionWaitingCount === 0
-      && promotedMembershipStatus === "active",
-    `Leaving an active slot did not promote the first waiting player (active=${promotionActiveCount}, waiting=${promotionWaitingCount}, membership=${promotedMembershipStatus}).`
+    membersAfterLeave.size === 50 && queuedMembershipSnap.data()?.status === "active",
+    "Leaving one realm membership disturbed another active player."
   );
 
   const preservedFlag = {

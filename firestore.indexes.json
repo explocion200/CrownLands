@@ -13,6 +13,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "status",
           "order": "ASCENDING"
         },
@@ -32,6 +36,10 @@
         },
         {
           "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
           "order": "ASCENDING"
         },
         {
@@ -294,6 +302,10 @@
         },
         {
           "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
           "order": "ASCENDING"
         },
         {
@@ -649,6 +661,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "status",
           "order": "ASCENDING"
         },
@@ -668,6 +684,10 @@
         },
         {
           "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
           "order": "ASCENDING"
         },
         {
@@ -795,6 +815,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "status",
           "order": "ASCENDING"
         }
@@ -835,6 +859,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "totalHeldMs",
           "order": "DESCENDING"
         }
@@ -854,6 +882,10 @@
         },
         {
           "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
           "order": "ASCENDING"
         },
         {
@@ -896,6 +928,60 @@
           "fieldPath": "status",
           "order": "ASCENDING"
         }
+      ]
+    },
+    {
+      "collectionGroup": "armies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "armies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "targetOwnerUid", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "armies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "targetKey", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "camps",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "holderUid", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reinforcements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "targetKey", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
     {
