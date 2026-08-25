@@ -176,6 +176,20 @@ async function main() {
     "An incomplete Camp hold changed the holder's Gold."
   );
 
+  await configureHold(troopCamp, holder, claim, { due: false });
+  const cityBeforeEarlyTroopCall = (await mainCityRef.get()).data() || {};
+  const earlyTroop = await callFunction("resolveRewardCampPayout", holder.token, {
+    campId: troopCamp.id,
+    regionId: troopCamp.regionId,
+  });
+  assert(earlyTroop.status === "not-due", "A Warband Camp paid before its authoritative hold timer elapsed.");
+  const cityAfterEarlyTroopCall = (await mainCityRef.get()).data() || {};
+  assert(
+    Number(cityAfterEarlyTroopCall.troopFloat || cityAfterEarlyTroopCall.troops || 0)
+      === Number(cityBeforeEarlyTroopCall.troopFloat || cityBeforeEarlyTroopCall.troops || 0),
+    "An incomplete Warband Camp hold changed the holder's troops."
+  );
+
   await configureHold(goldCamp, holder, claim, { due: true, alliedReinforcementTroops: 25 });
   const beforePayout = (await profileRef.get()).data() || {};
   const outsiderAttempt = await callFunctionResponse("resolveRewardCampPayout", outsider.token, {

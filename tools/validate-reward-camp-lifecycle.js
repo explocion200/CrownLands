@@ -39,6 +39,16 @@ const recall = extractBetween(
   "function getScheduledArmyTarget"
 );
 const troopCredit = extractBetween(payout, "let troopReward =", "let returnArmy = null");
+const rewardPreview = extractBetween(
+  client,
+  "function rewardCampProgressMarkup",
+  "function findRewardCampProgressPanel"
+);
+const campInfoModal = extractBetween(
+  client,
+  "function showRewardCampInfoModal",
+  "function showScoutReportModal"
+);
 
 requireMatch(
   payout,
@@ -112,5 +122,29 @@ requireMatch(
   /function getDeedCampHistoryCacheKey[\s\S]*?getCurrentOnlineUid\(\)[\s\S]*?Your Rewards/,
   "Private Deed Camp history is not isolated by player in the client cache and UI."
 );
+requireMatch(
+  rewardPreview,
+  /const rewards = getRewardCampEstimatedRewards\(config\);[\s\S]*?const rows = rewards\.map\([\s\S]*?Upcoming[\s\S]*?<strong>\$\{formatNumber\(reward\)\} \$\{escapeHtml\(config\.rewardLabel\)\}<\/strong>/,
+  "Gold and Warband Camp panels no longer show every potential reward in the four-step ladder."
+);
+assert(
+  !/payoutPending|payoutAtMs|countdown/.test(rewardPreview),
+  "Gold and Warband Camp reward previews are incorrectly hidden until the hold timer completes."
+);
+requireMatch(
+  campInfoModal,
+  /const rewardPanelMarkup = isDeedCamp[\s\S]*?data-deed-history-panel[\s\S]*?: rewardCampProgressMarkup\(config, null, "loading"\)/,
+  "Deed Camp history and Gold/Warband reward previews are no longer rendered as separate views."
+);
+requireMatch(
+  campInfoModal,
+  /const estimatedCampRewards = !isDeedCamp && !isRelicCamp[\s\S]*?getRewardCampEstimatedRewards\(config\)/,
+  "Gold and Warband Camp estimated rewards are no longer visible before completion."
+);
+requireMatch(
+  campInfoModal,
+  /isDeedCamp \? "Your Rewards" : "Reward"/,
+  "The recipient-private Deed Camp history tab is not clearly distinguished from public reward previews."
+);
 
-console.log("Validated Camp completion gating, private rewards, idempotency, abandonment, reinforcement reset, and troop-production preservation.");
+console.log("Validated Camp completion gating, four-step Gold/Warband previews, private Deed rewards, idempotency, abandonment, reinforcement reset, and troop-production preservation.");
