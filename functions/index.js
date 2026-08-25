@@ -77,6 +77,16 @@ function normalizeCommonGear(profileOrGear = {}) {
   return COMMON_GEAR.normalizeState(profileOrGear?.gear || profileOrGear);
 }
 
+function createPersistentCommonGearForSeasonReset(previous = {}) {
+  const gear = normalizeCommonGear(previous);
+  return COMMON_GEAR.normalizeState({
+    commonGearBoxes: gear.commonGearBoxes,
+    instances: gear.instances,
+    equipped: gear.equipped,
+    newMarkers: gear.newMarkers,
+  });
+}
+
 function getCommonGearBonuses(profileOrGear = {}) {
   return COMMON_GEAR.getBonuses(profileOrGear);
 }
@@ -7650,7 +7660,8 @@ exports.markReportsViewed = onCall(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Your Crownlands profile is not ready yet.");
       }
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const currentViewedAtMs = Math.max(0, timestampToMs(profile.reportsViewedAtMs));
       const viewedAtMs = Math.max(
         currentViewedAtMs,
@@ -7688,6 +7699,7 @@ exports.markRealmAnnouncementSeen = onCall(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Your Crownlands profile is not ready yet.");
       }
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
       if (!eventSnap.exists) {
         throw new HttpsError("not-found", "That Realm Activity event is no longer available.");
       }
@@ -8815,7 +8827,7 @@ function getSeasonalAchievementRewardCapacity(stats = {}) {
   };
 }
 
-async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.now()) {
+async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.now(), options = {}) {
   const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
   const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
   if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Seasonal Achievements.");
@@ -8828,7 +8840,11 @@ async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.no
     if (!profileSnap.exists) {
       throw new HttpsError("failed-precondition", "Claim a starting city before opening Seasonal Achievements.");
     }
-    assertCurrentPlayerProfile(profileSnap.data() || {});
+    if (options.requireParticipation === true) {
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    } else {
+      assertCurrentPlayerProfile(profileSnap.data() || {});
+    }
     const state = stateSnap.exists
       ? reconcileSeasonalAchievementState(stateSnap.data() || {}, {
         uid,
@@ -9468,7 +9484,7 @@ function dailyMissionStateForClient(state = {}, nowMs = Date.now()) {
   };
 }
 
-async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
+async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now(), options = {}) {
   const cycle = getDailyMissionCycle(nowMs, RESET_GENERATION);
   const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
   if (!stateRef) throw new HttpsError("invalid-argument", "A player is required for Daily Missions.");
@@ -9481,8 +9497,11 @@ async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now()) {
     if (!profileSnap.exists) {
       throw new HttpsError("failed-precondition", "Claim a starting city before opening Daily Missions.");
     }
-    const profile = profileSnap.data() || {};
-    assertCurrentPlayerProfile(profile);
+    if (options.requireParticipation === true) {
+      await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    } else {
+      assertCurrentPlayerProfile(profileSnap.data() || {});
+    }
     if (stateSnap.exists) {
       const existingState = stateSnap.data() || {};
       if (Math.max(0, Math.floor(safeNumber(existingState.schemaVersion, 0))) >= DAILY_MISSION_SCHEMA_VERSION) {
@@ -9906,8 +9925,92 @@ function assertCurrentPlayerProfile(profile = {}) {
     safeString(profile.resetGeneration, 120) !== RESET_GENERATION
     || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
   ) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands world before claiming a daily reward.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Enter the current Crownlands realm; your profile must belong to the current Crownlands world before using gameplay."
+    );
   }
+  return profile;
+}
+
+function getCurrentSeasonMainCityContext(profile = {}) {
+  const mainCityId = safeString(profile.mainCityId, 96);
+  const mainIslandId = safeString(profile.mainIslandId, 160);
+  const mainRegionId = getRegionIdFromOnlineIslandId(mainIslandId);
+  const storedMainRegionId = normalizeRegionId(profile.mainRegionId || mainRegionId);
+  const validMainCityId = /^[a-zA-Z0-9_-]+$/.test(mainCityId)
+    && getServerWorldRegularCityIds(mainRegionId).has(mainCityId);
+  if (!validMainCityId
+    || !isCurrentWorldIslandId(mainIslandId)
+    || mainIslandId !== getOnlineIslandId(mainRegionId)
+    || storedMainRegionId !== mainRegionId) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using gameplay.");
+  }
+  return {
+    mainCityId,
+    mainIslandId,
+    mainRegionId,
+    ref: cityRefForRegion(mainRegionId, mainCityId),
+  };
+}
+
+function assertCurrentSeasonMainCity(
+  profile = {},
+  mainCityContext = {},
+  mainCitySnap = null,
+  uid = "",
+  { allowMainCityRepair = false } = {}
+) {
+  const city = mainCitySnap?.exists ? mainCitySnap.data() || {} : {};
+  const cityIslandId = safeString(mainCitySnap?.ref?.parent?.parent?.id, 160);
+  const cityRegionId = getRegionIdFromCityDoc(mainCitySnap, city);
+  if (!mainCitySnap?.exists
+    || mainCitySnap.id !== mainCityContext.mainCityId
+    || cityIslandId !== mainCityContext.mainIslandId
+    || cityRegionId !== mainCityContext.mainRegionId
+    || safeString(city.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(city.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(city.ownerKind || "player", 32) !== "player"
+    || getOwnerUid(city) !== uid
+    || (!allowMainCityRepair && city.isMainCity !== true)
+    || isStronghold(city)
+    || safeString(profile.mainCityId, 96) !== mainCitySnap.id) {
+    throw new HttpsError("failed-precondition", "Verify your current Crownlands main city before using gameplay.");
+  }
+  return city;
+}
+
+async function requireCurrentSeasonParticipation(transaction, uid = "", options = {}) {
+  const playerUid = safeString(uid, 128);
+  if (!transaction || !playerUid) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using gameplay.");
+  }
+  const profileRef = options.profileRef || db.doc(`players/${playerUid}`);
+  const profileSnap = options.profileSnap || await transaction.get(profileRef);
+  if (!profileSnap?.exists) {
+    throw new HttpsError("failed-precondition", "Claim a starting city before using gameplay.");
+  }
+  const profile = assertCurrentPlayerProfile(profileSnap.data() || {});
+  const mainCityContext = getCurrentSeasonMainCityContext(profile);
+  const mainCitySnap = options.mainCitySnap || await transaction.get(mainCityContext.ref);
+  const mainCity = assertCurrentSeasonMainCity(profile, mainCityContext, mainCitySnap, playerUid, {
+    allowMainCityRepair: options.allowMainCityRepair === true,
+  });
+  return {
+    profileRef,
+    profileSnap,
+    profile,
+    mainCityContext,
+    mainCitySnap,
+    mainCity,
+  };
+}
+
+async function verifyCurrentSeasonParticipation(uid = "") {
+  return runTransactionWithInfrastructureRetry(
+    transaction => requireCurrentSeasonParticipation(transaction, uid),
+    "verifyCurrentSeasonParticipation"
+  );
 }
 
 function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
@@ -10600,8 +10703,8 @@ async function rebuildClanBenefitsAndMemberStats(clanId = "", effectiveAtMs = Da
   const membersSnap = await db.collection(`clans/${safeClanId}/members`).get();
   let membersUpdated = 0;
   await processWithConcurrency(membersSnap.docs, 4, async memberDoc => {
-    await rebuildGlobalStatsForPlayer(memberDoc.id);
-    membersUpdated += 1;
+    const result = await rebuildGlobalStatsForPlayer(memberDoc.id);
+    if (!result.skipped) membersUpdated += 1;
   });
   return { clanId: safeClanId, benefits, membersUpdated };
 }
@@ -11431,6 +11534,133 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
   };
 }
 
+function isCurrentRegularOwnedCityEntry(entry = {}, uid = "") {
+  if (!entry?.ref || !entry.city || getOwnerUid(entry.city) !== uid || isStronghold(entry.city)) return false;
+  const regionId = normalizeRegionId(
+    entry.city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry))
+  );
+  return getServerWorldRegularCityIds(regionId).has(entry.city.id);
+}
+
+function getMainCityRecoveryEntries(uid = "", ownedSnap = null) {
+  const ownedEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
+  const regularEntries = ownedEntries.filter(entry => isCurrentRegularOwnedCityEntry(entry, uid));
+  const strongholdEntries = ownedEntries.filter(entry => entry?.city && isStronghold(entry.city));
+  return {
+    regularEntries,
+    repairEntries: [...regularEntries, ...strongholdEntries],
+  };
+}
+
+function mainCityRecoveryProjectionPatch(repair = {}, nowMs = Date.now()) {
+  return {
+    mainCityId: repair.canonicalMainCityId,
+    mainIslandId: repair.canonicalMainIslandId,
+    mainRegionId: repair.canonicalMainRegionId,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function mainCityRecoveryProjectionChanged(projection = {}, repair = {}) {
+  const storedRegionId = safeString(projection.mainRegionId, 160);
+  return safeString(projection.mainCityId, 96) !== repair.canonicalMainCityId
+    || safeString(projection.mainIslandId, 160) !== repair.canonicalMainIslandId
+    || !storedRegionId
+    || normalizeRegionId(storedRegionId) !== repair.canonicalMainRegionId;
+}
+
+async function recoverCurrentSeasonMainCity(transaction, {
+  uid = "",
+  profileRef = null,
+  profileSnap = null,
+  nowMs = Date.now(),
+} = {}) {
+  const playerUid = safeString(uid, 128);
+  const resolvedProfileRef = profileRef || db.doc(`players/${playerUid}`);
+  const resolvedProfileSnap = profileSnap || await transaction.get(resolvedProfileRef);
+  if (!resolvedProfileSnap?.exists) {
+    throw new HttpsError("failed-precondition", "Claim a starting city before repairing your kingdom.");
+  }
+  const profile = assertCurrentPlayerProfile(resolvedProfileSnap.data() || {});
+  const ownedQuery = db.collectionGroup("cities")
+    .where("ownerUid", "==", playerUid)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  const statsRef = playerGlobalStatsRef(playerUid);
+  const leaderboardRef = leaderboardEntryRef(playerUid);
+  const [ownedSnap, statsSnap, leaderboardSnap] = await Promise.all([
+    transaction.get(ownedQuery),
+    transaction.get(statsRef),
+    transaction.get(leaderboardRef),
+  ]);
+  const { regularEntries, repairEntries } = getMainCityRecoveryEntries(playerUid, ownedSnap);
+  if (!regularEntries.length) {
+    return {
+      ok: true,
+      repairedMainCity: false,
+      requiresStartingCityClaim: true,
+      mainCityRecoveryStatus: "claim-required",
+      recoveryReason: "no-valid-owned-regular-city",
+    };
+  }
+
+  const repair = createMainCityAssignmentRepair(playerUid, profile, repairEntries);
+  if (!repair.canonicalMainCityId || !repair.mainCityEntry) {
+    throw new HttpsError("failed-precondition", "No valid current-season main city could be recovered.");
+  }
+  const pointerChanged = mainCityRecoveryProjectionChanged(profile, repair);
+  const versionChanged = Math.max(0, Math.floor(safeNumber(profile.mainCityAssignmentVersion, 0))) < MAIN_CITY_ASSIGNMENT_VERSION;
+  const assignmentChanged = pointerChanged || versionChanged || repair.cityPatches.length > 0;
+  const statsProjectionChanged = statsSnap.exists
+    && mainCityRecoveryProjectionChanged(statsSnap.data() || {}, repair);
+  const leaderboardProjectionChanged = leaderboardSnap.exists
+    && mainCityRecoveryProjectionChanged(leaderboardSnap.data() || {}, repair);
+  const recoveryChanged = assignmentChanged || statsProjectionChanged || leaderboardProjectionChanged;
+  const recoveredProfile = {
+    ...profile,
+    ...repair.profileFields,
+  };
+  const projectionPatch = mainCityRecoveryProjectionPatch(repair, nowMs);
+  const recoveredStats = statsSnap.exists
+    ? { ...statsSnap.data(), ...projectionPatch }
+    : null;
+
+  if (assignmentChanged) {
+    repair.cityPatches.forEach(entry => {
+      transaction.set(entry.ref, cleanCityUpdate(entry.city, entry.patch), { merge: true });
+    });
+    transaction.set(resolvedProfileRef, {
+      ...repair.profileFields,
+      mainCityRepairUpdatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+  if (statsProjectionChanged) {
+    transaction.set(statsRef, projectionPatch, { merge: true });
+  }
+  if (leaderboardProjectionChanged) {
+    transaction.set(leaderboardRef, projectionPatch, { merge: true });
+  }
+
+  const currentUser = createStartingCityCurrentUser(recoveredProfile, {
+    uid: playerUid,
+    cityId: repair.canonicalMainCityId,
+    islandId: repair.canonicalMainIslandId,
+    regionId: repair.canonicalMainRegionId,
+    stats: recoveredStats,
+  });
+  return {
+    ok: true,
+    repairedMainCity: recoveryChanged,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: recoveryChanged ? "repaired" : "valid",
+    currentUser,
+    ...(recoveredStats ? { globalStats: globalStatsForClient(recoveredStats) } : {}),
+    cityUpdates: repair.cityUpdates,
+  };
+}
+
 function createSingleMainCityPatches(cityEntries = [], mainRef = null) {
   const mainPath = safeString(mainRef?.path, 240);
   const cityPatches = [];
@@ -11541,7 +11771,12 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   }
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
-  const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const participation = await requireCurrentSeasonParticipation(transaction, uid, {
+    profileRef,
+    profileSnap,
+    allowMainCityRepair: options.allowMainCityRepair === true,
+  });
+  const rawProfile = participation.profile;
   const upgrades = normalizeSkillUpgrades(rawProfile.upgrades);
   const character = reconcileSkillPoints(rawProfile.character, upgrades);
   const freeSkillResetState = normalizeFreeSkillResetState(rawProfile);
@@ -12071,8 +12306,23 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
-    profileRef.get(),
+  const profileSnap = await profileRef.get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const currentSeasonProfile = profileSnap.exists
+    && safeString(profile.resetGeneration, 120) === RESET_GENERATION
+    && safeString(profile.worldId, 120) === ONLINE_WORLD_ID;
+  if (!currentSeasonProfile) {
+    return {
+      uid: playerUid,
+      skipped: true,
+      reason: profileSnap.exists ? "archived-player-profile" : "missing-player-profile",
+      stats: null,
+      cityUpdates: 0,
+      armyUpdates: 0,
+      mainCityRepairs: 0,
+    };
+  }
+  const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     db.collectionGroup("cities")
       .where("ownerUid", "==", playerUid)
       .where("resetGeneration", "==", RESET_GENERATION)
@@ -12081,7 +12331,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     activeArmiesQueryForPlayer(playerUid).get(),
     heldRewardCampsQueryForPlayer(playerUid).get(),
   ]);
-  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
   const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
   const clanBenefitsSnap = identity.clanId
@@ -12128,8 +12377,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       ref: profileRef,
       data: {
         uid: playerUid,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
         playerName: identity.ownerName,
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
@@ -12767,8 +13014,8 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
-    if (!profileSnap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before opening gear.");
-    const gear = normalizeCommonGear(profileSnap.data() || {});
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const gear = normalizeCommonGear(participation.profile);
     if (gear.lastOpenRequestId === requestId && gear.lastOpenReceipt) {
       return { ok: true, replayed: true, gear, receipt: gear.lastOpenReceipt };
     }
@@ -12799,8 +13046,11 @@ exports.viewCommonGearBuilding = onCall({ region: "us-central1", maxInstances: 3
   return runTransactionWithInfrastructureRetry(async transaction => {
     const ref = db.doc(`players/${uid}`);
     const snap = await transaction.get(ref);
-    if (!snap.exists) throw new HttpsError("failed-precondition", "Claim a kingdom before managing gear.");
-    const gear = normalizeCommonGear(snap.data() || {});
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, {
+      profileRef: ref,
+      profileSnap: snap,
+    });
+    const gear = normalizeCommonGear(participation.profile);
     gear.newMarkers[buildingId] = false;
     Object.values(gear.instances).forEach(instance => {
       if (instance.buildingId === buildingId) instance.isNew = false;
@@ -13147,8 +13397,8 @@ exports.getDailyLoginRewardStatus = timedCallable(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Claim a starting city before opening daily rewards.");
       }
-      const profile = profileSnap.data() || {};
-      assertCurrentPlayerProfile(profile);
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       if (attendance.changed) {
         transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
@@ -13177,8 +13427,8 @@ exports.claimDailyLoginReward = timedCallable(
       if (!profileSnap.exists) {
         throw new HttpsError("failed-precondition", "Claim a starting city before collecting daily rewards.");
       }
-      const profile = profileSnap.data() || {};
-      assertCurrentPlayerProfile(profile);
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       const statusBefore = createDailyLoginRewardStatus(attendance.state, nowMs);
       if (
@@ -13325,6 +13575,7 @@ exports.getRewardedAdStatus = onCall(REWARDED_AD_STATUS_CALLABLE_OPTIONS, async 
   const uid = requireAuth(request);
   requireRewardedAdAppCheck(request, true);
   const nowMs = Date.now();
+  await verifyCurrentSeasonParticipation(uid);
   const [stateSnap, configSnap, statsSnap] = await Promise.all([
     rewardedAdStateRef(uid).get(),
     rewardedAdServerConfigRef().get(),
@@ -13625,7 +13876,8 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
-    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const profile = participation.profile;
     const daily = mergeHarvestDailyTrackers(profile.daily, data.daily, new Date(nowMs));
     const preferredType = normalizeHarvestBonusType(profile.harvestNextBonusType || requestedType);
     const alternateType = preferredType === "troops" ? "gold" : "troops";
@@ -13722,12 +13974,13 @@ exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances:
   const uid = requireAuth(request);
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    writePreparedEconomy(transaction, economy, {
-      mainCityRepairUpdatedAtMs: nowMs,
-    });
-    return createEconomyResponse(economy, {
-      repairedMainCity: true,
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    return recoverCurrentSeasonMainCity(transaction, {
+      uid,
+      profileRef,
+      profileSnap,
+      nowMs,
     });
   });
 });
@@ -13826,11 +14079,15 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
 exports.returnClanReinforcement = timedCallable(
   "returnClanReinforcement",
   { region: "us-central1", maxInstances: 30, invoker: "public" },
-  async request => beginReinforcementReturn({
-    reinforcementId: request.data?.reinforcementId || request.data?.id,
-    callerUid: requireAuth(request),
-    reason: safeString(request.data?.reason, 40) || "recalled",
-  })
+  async request => {
+    const uid = requireAuth(request);
+    await requireCurrentClanActorProfile(uid);
+    return beginReinforcementReturn({
+      reinforcementId: request.data?.reinforcementId || request.data?.id,
+      callerUid: uid,
+      reason: safeString(request.data?.reason, 40) || "recalled",
+    });
+  }
 );
 
 exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
@@ -14046,7 +14303,8 @@ exports.saveSkillPreset = timedCallable(
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const upgrades = normalizeSkillUpgrades(profile.upgrades);
@@ -14092,7 +14350,8 @@ exports.renameSkillPreset = timedCallable(
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
-      const profile = profileSnap.data() || {};
+      const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+      const profile = participation.profile;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const name = requireSkillPresetName(request.data?.name, definition.slot);
@@ -14191,6 +14450,7 @@ exports.applySkillPreset = timedCallable(
 
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await verifyCurrentSeasonParticipation(uid);
   const data = request.data || {};
   const authToken = request.auth?.token || {};
   const profileRef = db.doc(`players/${uid}`);
@@ -14792,6 +15052,276 @@ function createRandomPlayerFlag() {
   return PLAYER_FLAG_CONFIG.createRandomFlag(max => crypto.randomInt(0, max));
 }
 
+function normalizePersistentClanRole(value = "") {
+  const role = safeString(value, 16).toLowerCase();
+  return ["leader", "officer", "member"].includes(role) ? role : "";
+}
+
+function createResetClanWorldBenefits(clanId = "", nowMs = Date.now()) {
+  return {
+    clanId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+    status: "active",
+    objectives: [],
+    sharedBonuses: emptyObjectiveBonuses(),
+    citadelControllerUid: "",
+    cumulativeGoldPercentMs: 0,
+    cumulativeTroopPercentMs: 0,
+    lastIntegratedAtMs: nowMs,
+    effectiveAtMs: nowMs,
+    revision: 1,
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function createResetClanGiftActivity(nowMs = Date.now()) {
+  return {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    recentDonations: [],
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function assertClanReservationAvailableForReset(snapshot, clanId = "", nowMs = Date.now(), label = "identity") {
+  if (!snapshot?.exists) return;
+  const reservation = snapshot.data() || {};
+  if (safeString(reservation.clanId, 128) === clanId) return;
+  if (timestampToMs(reservation.reusableAtMs) > nowMs) {
+    throw new HttpsError(
+      "failed-precondition",
+      `The preserved clan ${label} conflicts with another current-season clan. Manual resolution is required.`
+    );
+  }
+}
+
+async function readClanSeasonPersistenceContext(transaction, { uid = "", previous = {}, nowMs = Date.now() } = {}) {
+  const clanId = safeString(previous.clanId, 128);
+  if (!clanId) return null;
+  const clanRef = db.doc(`clans/${clanId}`);
+  const memberRef = db.doc(`clans/${clanId}/members/${uid}`);
+  const [clanSnap, memberSnap] = await Promise.all([
+    transaction.get(clanRef),
+    transaction.get(memberRef),
+  ]);
+  if (!clanSnap.exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your preserved clan record is incomplete. No season data was changed; contact Crownlands support before retrying."
+    );
+  }
+  const clan = clanSnap.data() || {};
+  if (clan.status === "disbanded") return null;
+  if (!memberSnap.exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Your preserved clan membership is incomplete. No season data was changed; contact Crownlands support before retrying."
+    );
+  }
+  const member = memberSnap.data() || {};
+  if (member.status === "removed") return null;
+  const role = normalizePersistentClanRole(member.role);
+  if (!role) {
+    throw new HttpsError("failed-precondition", "The preserved clan membership has an invalid role.");
+  }
+
+  const alreadyCurrent = safeString(clan.resetGeneration, 120) === RESET_GENERATION
+    && safeString(clan.worldId, 120) === ONLINE_WORLD_ID;
+  if (alreadyCurrent) {
+    if (safeString(member.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(member.worldId, 120) !== ONLINE_WORLD_ID) {
+      throw new HttpsError("failed-precondition", "The current clan roster is not synchronized with this season.");
+    }
+    const benefitsSnap = await transaction.get(clanWorldBenefitsRef(clanId));
+    return {
+      clanId,
+      clanRef,
+      clan,
+      memberRef,
+      member,
+      role,
+      alreadyCurrent: true,
+      benefits: benefitsSnap.exists ? benefitsSnap.data() || {} : createResetClanWorldBenefits(clanId, nowMs),
+    };
+  }
+
+  const membersSnap = await transaction.get(db.collection(`clans/${clanId}/members`));
+  const memberEntries = membersSnap.docs
+    .map(snapshot => ({
+      snapshot,
+      uid: snapshot.id,
+      member: snapshot.data() || {},
+      role: normalizePersistentClanRole(snapshot.data()?.role),
+    }))
+    .filter(entry => entry.member.status !== "removed");
+  if (!memberEntries.length || memberEntries.length > CLAN_MEMBER_LIMIT) {
+    throw new HttpsError("failed-precondition", "The preserved clan roster is invalid.");
+  }
+  if (memberEntries.some(entry => !entry.role)) {
+    throw new HttpsError("failed-precondition", "The preserved clan roster contains an invalid role.");
+  }
+  const preservedMember = memberEntries.find(entry => entry.uid === uid);
+  if (!preservedMember || preservedMember.role !== role) {
+    throw new HttpsError("failed-precondition", "The preserved clan membership does not match its roster.");
+  }
+  const leaderEntries = memberEntries.filter(entry => entry.role === "leader");
+  if (leaderEntries.length !== 1 || leaderEntries[0].uid !== safeString(clan.leaderUid, 128)) {
+    throw new HttpsError("failed-precondition", "The preserved clan does not have one authoritative leader.");
+  }
+
+  const name = normalizeClanName(clan.name);
+  const tag = normalizeClanTag(clan.tag);
+  const nameRef = clanNameReservationRef(name.normalized);
+  const tagRef = clanTagReservationRef(tag.normalized);
+  const [nameSnap, tagSnap] = await Promise.all([
+    transaction.get(nameRef),
+    transaction.get(tagRef),
+  ]);
+  assertClanReservationAvailableForReset(nameSnap, clanId, nowMs, "name");
+  assertClanReservationAvailableForReset(tagSnap, clanId, nowMs, "tag");
+  return {
+    clanId,
+    clanRef,
+    clan,
+    memberRef,
+    member,
+    role,
+    alreadyCurrent: false,
+    memberEntries,
+    name,
+    tag,
+    nameRef,
+    tagRef,
+  };
+}
+
+function createResetClanMember(entry = {}, { claimantUid = "", claimantProfile = {}, claimantPower = 0, nowMs = Date.now() } = {}) {
+  const isClaimant = entry.uid === claimantUid;
+  const displayName = isClaimant
+    ? claimantProfile.playerName
+    : normalizePlayerName(entry.member?.displayName || entry.member?.playerName || "Ruler");
+  const flag = isClaimant
+    ? claimantProfile.flag
+    : normalizeServerFlag(entry.member?.flag, entry.uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(entry.uid);
+  return {
+    uid: entry.uid,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    role: entry.role,
+    displayName,
+    flag,
+    kingPower: isClaimant ? Math.max(0, Math.floor(safeNumber(claimantPower, 0))) : 0,
+    joinedAtMs: nowMs,
+    roleChangedAtMs: nowMs,
+    lastLoginAtMs: isClaimant ? getPlayerLastLoginAtMs(claimantProfile, nowMs) : 0,
+    lastActiveAtMs: isClaimant ? nowMs : 0,
+    status: "active",
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function applyClanSeasonPersistence(transaction, context, { uid = "", freshProfile = {}, stats = {}, nowMs = Date.now() } = {}) {
+  if (!context) return null;
+  const claimantPower = Math.max(0, Math.floor(safeNumber(stats.kingPower, 0)));
+  let currentClan = context.clan;
+  let benefits = context.benefits;
+
+  if (!context.alreadyCurrent) {
+    const shield = normalizeClanShield(context.clan.shield || context.clan.banner);
+    currentClan = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
+      name: context.name.display,
+      normalizedName: context.name.normalized,
+      tag: context.tag.display,
+      normalizedTag: context.tag.normalized,
+      description: "",
+      shield,
+      banner: clanShieldLegacyBanner(shield),
+      heraldryRevision: CLAN_HERALDRY_CONFIG.normalizeHeraldryRevision(context.clan.heraldryRevision),
+      admissionMode: "approval",
+      leaderUid: safeString(context.clan.leaderUid, 128),
+      memberCount: context.memberEntries.length,
+      memberLimit: CLAN_MEMBER_LIMIT,
+      totalKingPower: claimantPower,
+      status: "active",
+      lastNameChangedAtMs: 0,
+      nextNameChangeAtMs: 0,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    benefits = createResetClanWorldBenefits(context.clanId, nowMs);
+    transaction.set(context.clanRef, currentClan);
+    context.memberEntries.forEach(entry => {
+      transaction.set(entry.snapshot.ref, createResetClanMember(entry, {
+        claimantUid: uid,
+        claimantProfile: freshProfile,
+        claimantPower,
+        nowMs,
+      }));
+      transaction.set(clanMemberRewardsRef(context.clanId, entry.uid), createClanMemberRewards(entry.uid, nowMs));
+    });
+    const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
+    transaction.set(clanQuestProgressRef(context.clanId, questPeriod), createClanQuestProgress(context.clanId, questPeriod, nowMs));
+    transaction.set(clanWorldBenefitsRef(context.clanId), benefits);
+    transaction.set(clanGiftActivityRef(context.clanId), createResetClanGiftActivity(nowMs));
+    transaction.delete(clanRallyStateRef(context.clanId));
+    transaction.set(context.nameRef, {
+      clanId: context.clanId,
+      reusableAtMs: Number.MAX_SAFE_INTEGER,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(context.tagRef, {
+      clanId: context.clanId,
+      reusableAtMs: Number.MAX_SAFE_INTEGER,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } else {
+    const previousPower = Math.max(0, Math.floor(safeNumber(context.member.kingPower, 0)));
+    const totalKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(context.clan.totalKingPower, 0)) - previousPower + claimantPower
+    );
+    currentClan = { ...context.clan, totalKingPower };
+    transaction.set(context.memberRef, {
+      displayName: freshProfile.playerName,
+      flag: freshProfile.flag,
+      kingPower: claimantPower,
+      lastLoginAtMs: getPlayerLastLoginAtMs(freshProfile, nowMs),
+      lastActiveAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(context.clanRef, {
+      totalKingPower,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  const identity = clanIdentityPatch(context.clanId, currentClan, context.role);
+  Object.assign(freshProfile, identity, {
+    clanIdentityRevision: Math.max(0, Math.floor(safeNumber(freshProfile.clanIdentityRevision, 0))) + 1,
+    clanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    clanIdentityUpdatedAtMs: nowMs,
+    clanObjectiveAccrual: clanBenefitAccrualBaseline(benefits, context.clanId, nowMs),
+  });
+  writeClanLeaderboard(transaction, context.clanId, currentClan);
+  return identity;
+}
+
 function createFreshResetPlayerProfile({
   uid = "",
   previous = {},
@@ -14802,11 +15332,15 @@ function createFreshResetPlayerProfile({
   regionId = "",
   nowMs = Date.now(),
 } = {}) {
-  const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
-  const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
+  const displayName = safeString(
+    previous.displayName || previous.playerName || requestData.displayName || authToken.name,
+    80
+  );
+  const playerName = normalizePlayerName(previous.playerName || previous.displayName || requestData.playerName || displayName);
   const flag = previous.flag && typeof previous.flag === "object"
     ? normalizeServerFlag(previous.flag, uid)
     : createRandomPlayerFlag();
+  const accountCreatedAtMs = Math.max(0, timestampToMs(previous.createdAtMs || previous.createdAt));
   const profile = {
     uid,
     displayName,
@@ -14830,7 +15364,7 @@ function createFreshResetPlayerProfile({
     freeSkillResetGrantVersion: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
-    gear: COMMON_GEAR.createDefaultState(),
+    gear: createPersistentCommonGearForSeasonReset(previous),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
     dailyLoginReward: createDefaultDailyLoginRewardState(),
@@ -14848,7 +15382,9 @@ function createFreshResetPlayerProfile({
     pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
     lastRealTimeMs: nowMs,
     lastSeenAtMs: nowMs,
-    createdAt: previous.createdAt || FieldValue.serverTimestamp(),
+    createdAtMs: accountCreatedAtMs || nowMs,
+    createdAt: previous.createdAt
+      || (accountCreatedAtMs ? Timestamp.fromMillis(accountCreatedAtMs) : FieldValue.serverTimestamp()),
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (previous.activeSession && typeof previous.activeSession === "object") {
@@ -14858,6 +15394,47 @@ function createFreshResetPlayerProfile({
     profile.notificationPreferences = sanitizeJsonValue(previous.notificationPreferences);
   }
   return profile;
+}
+
+function createStartingCityCurrentUser(profile = {}, {
+  uid = "",
+  cityId = "",
+  islandId = "",
+  regionId = "",
+  stats = null,
+} = {}) {
+  const clanId = safeString(profile.clanId, 128);
+  const currentUser = {
+    playerName: normalizePlayerName(profile.playerName || profile.displayName),
+    flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
+    gold: Math.max(0, Math.floor(safeNumber(profile.gold, TEST_STARTING_GOLD))),
+    character: normalizeCharacterProgress(profile.character),
+    upgrades: normalizeSkillUpgrades(profile.upgrades),
+    skillPresets: normalizeSkillPresets(profile.skillPresets),
+    freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0))),
+    freeSkillResetCredits: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))),
+    shopItems: normalizeShopItems(profile.shopItems),
+    gear: normalizeCommonGear(profile),
+    itemEffects: normalizeItemEffects(profile.itemEffects),
+    itemPurchaseCooldowns: normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns),
+    dailyLoginReward: normalizeDailyLoginRewardState(profile.dailyLoginReward),
+    daily: normalizeDaily(profile.daily),
+    mainCityId: cityId || safeString(profile.mainCityId, 96),
+    mainIslandId: islandId || safeString(profile.mainIslandId, 160),
+    mainRegionId: regionId || normalizeRegionId(profile.mainRegionId),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+  };
+  if (clanId) {
+    Object.assign(currentUser, {
+      clanId,
+      clanName: safeString(profile.clanName, 24),
+      clanTag: safeString(profile.clanTag, 5),
+      clanRole: normalizePersistentClanRole(profile.clanRole) || "member",
+    });
+  }
+  if (stats && typeof stats === "object") currentUser.globalStats = globalStatsForClient(stats);
+  return currentUser;
 }
 
 async function claimFreshStartingCity(request) {
@@ -14880,42 +15457,29 @@ async function claimFreshStartingCity(request) {
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
     const currentProfile = safeString(previous.resetGeneration, 120) === RESET_GENERATION
       && safeString(previous.worldId, 120) === ONLINE_WORLD_ID;
-    const existingMainCityId = safeString(previous.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const existingMainIslandId = safeString(previous.mainIslandId, 160);
 
-    if (currentProfile && existingMainCityId && isCurrentWorldIslandId(existingMainIslandId)) {
-      const existingMainRef = db.doc(`islands/${existingMainIslandId}/cities/${existingMainCityId}`);
-      const existingMainSnap = await transaction.get(existingMainRef);
-      if (existingMainSnap.exists && getOwnerUid(existingMainSnap.data() || {}) === uid) {
-        const existingRegionId = normalizeRegionId(
-          previous.mainRegionId || getRegionIdFromOnlineIslandId(existingMainIslandId)
-        );
+    if (currentProfile) {
+      const recovery = await recoverCurrentSeasonMainCity(transaction, {
+        uid,
+        profileRef: playerRef,
+        profileSnap: playerSnap,
+        nowMs,
+      });
+      if (!recovery.requiresStartingCityClaim) {
         return {
-          ok: true,
-          cityId: existingMainCityId,
-          islandId: existingMainIslandId,
-          mainRegionId: existingRegionId,
+          ...recovery,
+          cityId: recovery.currentUser.mainCityId,
+          islandId: recovery.currentUser.mainIslandId,
+          mainRegionId: recovery.currentUser.mainRegionId,
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
           releaseId: REALM_RELEASE_ID,
           alreadyClaimed: true,
-          currentUser: {
-            playerName: normalizePlayerName(previous.playerName || previous.displayName),
-            flag: normalizeServerFlag(previous.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
-            gold: Math.max(0, Math.floor(safeNumber(previous.gold, TEST_STARTING_GOLD))),
-            character: normalizeCharacterProgress(previous.character),
-            upgrades: normalizeSkillUpgrades(previous.upgrades),
-            skillPresets: normalizeSkillPresets(previous.skillPresets),
-            mainCityId: existingMainCityId,
-            mainIslandId: existingMainIslandId,
-            mainRegionId: existingRegionId,
-            worldId: ONLINE_WORLD_ID,
-            resetGeneration: RESET_GENERATION,
-          },
         };
       }
     }
 
+    const clanPersistence = await readClanSeasonPersistenceContext(transaction, { uid, previous, nowMs });
     const chosenIsland = placement.island;
     const chosenIslandSnap = await transaction.get(chosenIsland.ref);
     const placementSlotSnap = await transaction.get(placement.slotRef);
@@ -14999,6 +15563,12 @@ async function claimFreshStartingCity(request) {
       activeArmies: [],
       nowMs,
     });
+    const clanIdentity = applyClanSeasonPersistence(transaction, clanPersistence, {
+      uid,
+      freshProfile,
+      stats,
+      nowMs,
+    });
 
     transaction.set(playerRef, {
       ...freshProfile,
@@ -15033,6 +15603,7 @@ async function claimFreshStartingCity(request) {
       mainCityId: chosenCity.id,
       mainRegionId: chosenIsland.regionId,
       mainIslandId: chosenIsland.islandId,
+      ...(clanIdentity || {}),
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     });
@@ -15056,24 +15627,13 @@ async function claimFreshStartingCity(request) {
       resetGeneration: RESET_GENERATION,
       releaseId: REALM_RELEASE_ID,
       alreadyClaimed: false,
-      currentUser: {
-        playerName: freshProfile.playerName,
-        flag: freshProfile.flag,
-        gold: TEST_STARTING_GOLD,
-        character: freshProfile.character,
-        upgrades: freshProfile.upgrades,
-        skillPresets: freshProfile.skillPresets,
-        shopItems: freshProfile.shopItems,
-        itemEffects: freshProfile.itemEffects,
-        itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,
-        dailyLoginReward: freshProfile.dailyLoginReward,
-        mainCityId: chosenCity.id,
-        mainIslandId: chosenIsland.islandId,
-        mainRegionId: chosenIsland.regionId,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        globalStats: globalStatsForClient(stats),
-      },
+      currentUser: createStartingCityCurrentUser(freshProfile, {
+        uid,
+        cityId: chosenCity.id,
+        islandId: chosenIsland.islandId,
+        regionId: chosenIsland.regionId,
+        stats,
+      }),
     };
   };
 
@@ -15970,6 +16530,26 @@ function clanTagReservationRef(normalizedTag = "") {
   return db.doc(`clanTagReservations/${RESET_GENERATION}_${safeString(normalizedTag, 40)}`);
 }
 
+function persistentClanNameOwnersQuery(normalizedName = "") {
+  return db.collection("clans").where("normalizedName", "==", safeString(normalizedName, 40));
+}
+
+function persistentClanTagOwnersQuery(normalizedTag = "") {
+  return db.collection("clans").where("normalizedTag", "==", safeString(normalizedTag, 40));
+}
+
+function assertPersistentClanIdentityAvailable(snapshot, {
+  exceptClanId = "",
+  label = "identity",
+} = {}) {
+  const conflictingClan = snapshot?.docs?.find(doc => (
+    doc.id !== exceptClanId && doc.data()?.status !== "disbanded"
+  ));
+  if (conflictingClan) {
+    throw new HttpsError("already-exists", `That clan ${label} is already in use.`);
+  }
+}
+
 function getClanNameChangeCooldownUntilMs(clan = {}) {
   return Math.max(
     0,
@@ -16242,6 +16822,27 @@ function assertCurrentClan(clan = {}) {
   }
 }
 
+function assertCurrentClanActorProfile(profile = {}, expectedClanId = null) {
+  if (
+    safeString(profile.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
+    || !safeString(profile.mainCityId, 96)
+    || !isCurrentWorldIslandId(profile.mainIslandId)
+  ) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands world before using clan features.");
+  }
+  if (expectedClanId !== null && safeString(profile.clanId, 128) !== safeString(expectedClanId, 128)) {
+    throw new HttpsError("failed-precondition", "Your current clan identity does not match this clan action.");
+  }
+  return profile;
+}
+
+async function requireCurrentClanActorProfile(uid = "", expectedClanId = null) {
+  const profileSnap = await db.doc(`players/${safeString(uid, 128)}`).get();
+  if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+  return assertCurrentClanActorProfile(profileSnap.data() || {}, expectedClanId);
+}
+
 function clanAuditRef(clanId = "") {
   return db.collection(`clans/${clanId}/audit`).doc();
 }
@@ -16310,16 +16911,6 @@ function assertChatPayloadDoesNotSpoofIdentity(data = {}) {
   }
 }
 
-function assertCurrentChatAccount(profileSnap) {
-  const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
-  if (!profileSnap?.exists
-    || safeString(profile.resetGeneration, 120) !== RESET_GENERATION
-    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID) {
-    throw new HttpsError("failed-precondition", "Enter the current Crownlands realm before using chat.");
-  }
-  return profile;
-}
-
 function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   if (!restrictionSnap?.exists) return;
   const restriction = restrictionSnap.data() || {};
@@ -16365,7 +16956,8 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       transaction.get(rateRef),
       transaction.get(requestRef),
     ]);
-    const profile = assertCurrentChatAccount(profileSnap);
+    const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
+    const profile = participation.profile;
     assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
 
     const clanId = channel === "clan" ? safeString(profile.clanId, 128) : "";
@@ -16489,17 +17081,24 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
   const clanRef = db.doc(`clans/${clanId}`);
   const nameRef = clanNameReservationRef(name.normalized);
   const tagRef = clanTagReservationRef(tag.normalized);
+  const persistentNameQuery = persistentClanNameOwnersQuery(name.normalized);
+  const persistentTagQuery = persistentClanTagOwnersQuery(tag.normalized);
   const profileRef = db.doc(`players/${uid}`);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [profileSnap, nameSnap, tagSnap] = await Promise.all([
+    const [profileSnap, nameSnap, tagSnap, persistentNameSnap, persistentTagSnap] = await Promise.all([
       transaction.get(profileRef),
       transaction.get(nameRef),
       transaction.get(tagRef),
+      transaction.get(persistentNameQuery),
+      transaction.get(persistentTagQuery),
     ]);
     if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     assertClanUnlocked(profile);
     assertNoClan(profile, nowMs);
+    assertPersistentClanIdentityAvailable(persistentNameSnap, { label: "name" });
+    assertPersistentClanIdentityAvailable(persistentTagSnap, { label: "tag" });
     if (nameSnap.exists && timestampToMs(nameSnap.data()?.reusableAtMs) > nowMs) {
       throw new HttpsError("already-exists", "That clan name is already in use.");
     }
@@ -16596,7 +17195,10 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     : null;
   const profileRef = db.doc(`players/${uid}`);
   const profileSnap = await profileRef.get();
-  const clanId = safeString(profileSnap.data()?.clanId, 128);
+  const preflightProfile = profileSnap.exists
+    ? assertCurrentClanActorProfile(profileSnap.data() || {})
+    : {};
+  const clanId = safeString(preflightProfile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   return runTransactionWithInfrastructureRetry(async transaction => {
     const clanRef = db.doc(`clans/${clanId}`);
@@ -16609,7 +17211,11 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     assertClanRole(memberSnap.data(), ["leader"]);
     const clan = clanSnap.data() || {};
     assertCurrentClan(clan);
-    if (!currentProfileSnap.exists || safeString(currentProfileSnap.data()?.clanId, 128) !== clanId) {
+    if (!currentProfileSnap.exists) {
+      throw new HttpsError("not-found", "Player profile was not found.");
+    }
+    assertCurrentClanActorProfile(currentProfileSnap.data() || {}, clanId);
+    if (safeString(currentProfileSnap.data()?.clanId, 128) !== clanId) {
       throw new HttpsError("failed-precondition", "Your clan membership changed. Reopen the Clan screen and try again.");
     }
     const nameChanged = Boolean(requestedName && requestedName.display !== safeString(clan.name, 24));
@@ -16621,13 +17227,15 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     let nextNameChangeAtMs = getClanNameChangeCooldownUntilMs(clan);
     const newNameRef = nameChanged ? clanNameReservationRef(requestedName.normalized) : null;
     if (nameChanged) {
-      const [loadedMembersSnap, newNameReservationSnap, preparedEconomy] = await Promise.all([
+      const [loadedMembersSnap, newNameReservationSnap, persistentNameSnap, preparedEconomy] = await Promise.all([
         transaction.get(db.collection(`clans/${clanId}/members`)),
         transaction.get(newNameRef),
+        transaction.get(persistentClanNameOwnersQuery(requestedName.normalized)),
         prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap: currentProfileSnap }),
       ]);
       membersSnap = loadedMembersSnap;
       economy = preparedEconomy;
+      assertPersistentClanIdentityAvailable(persistentNameSnap, { exceptClanId: clanId, label: "name" });
       if (nextNameChangeAtMs > nowMs) {
         throw new HttpsError(
           "failed-precondition",
@@ -16758,6 +17366,7 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
 async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clanSnap, applicationRef = null, nowMs = Date.now() }) {
   const profile = profileSnap.data() || {};
   const clan = clanSnap.data() || {};
+  assertCurrentClanActorProfile(profile);
   assertCurrentClan(clan);
   assertClanUnlocked(profile);
   assertNoClan(profile, nowMs, applicationRef ? clanId : "");
@@ -16823,6 +17432,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
     const profile = profileSnap.data() || {};
     const clan = clanSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     assertCurrentClan(clan);
     assertClanUnlocked(profile);
     assertNoClan(profile, nowMs, clanId);
@@ -16871,6 +17481,8 @@ exports.cancelClanApplication = onCall({ region: "us-central1", maxInstances: 20
       transaction.get(applicationRef),
     ]);
     const pendingClanId = safeString(profileSnap.data()?.pendingClanApplicationId, 128);
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    assertCurrentClanActorProfile(profileSnap.data() || {});
     if (pendingClanId && pendingClanId !== clanId) {
       throw new HttpsError("failed-precondition", "That is not your current clan application.");
     }
@@ -16895,13 +17507,17 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
   if (!clanId || !applicantUid) throw new HttpsError("invalid-argument", "Choose a clan application to review.");
   const accept = request.data?.accept === true;
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, reviewerSnap, applicantSnap, applicationSnap] = await Promise.all([
+    const [clanSnap, reviewerSnap, reviewerProfileSnap, applicantSnap, applicationSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`players/${applicantUid}`)),
       transaction.get(db.doc(`clans/${clanId}/applications/${applicantUid}`)),
     ]);
-    if (!clanSnap.exists || !applicantSnap.exists || !applicationSnap.exists) throw new HttpsError("not-found", "Application was not found.");
+    if (!clanSnap.exists || !reviewerProfileSnap.exists || !applicantSnap.exists || !applicationSnap.exists) {
+      throw new HttpsError("not-found", "Application was not found.");
+    }
+    assertCurrentClanActorProfile(reviewerProfileSnap.data() || {}, clanId);
     assertClanRole(reviewerSnap.data(), ["leader", "officer"]);
     const application = applicationSnap.data() || {};
     assertCurrentClan(application);
@@ -16973,14 +17589,16 @@ async function reconcileClanRalliesBeforeDisband(clanId = "") {
 
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
-  const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
+  const [preflightClanSnap, preflightActorSnap, preflightActorProfileSnap, preflightTargetSnap] = await Promise.all([
     db.doc(`clans/${clanId}`).get(),
     db.doc(`clans/${clanId}/members/${actorUid}`).get(),
+    db.doc(`players/${actorUid}`).get(),
     db.doc(`clans/${clanId}/members/${targetUid}`).get(),
   ]);
-  if (!preflightClanSnap.exists || !preflightTargetSnap.exists) {
+  if (!preflightClanSnap.exists || !preflightActorProfileSnap.exists || !preflightTargetSnap.exists) {
     throw new HttpsError("not-found", "Clan member was not found.");
   }
+  assertCurrentClanActorProfile(preflightActorProfileSnap.data() || {}, clanId);
   const preflightClan = preflightClanSnap.data() || {};
   const preflightActor = preflightActorSnap.data() || {};
   const preflightTarget = preflightTargetSnap.data() || {};
@@ -16996,14 +17614,18 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
   }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
+    const [clanSnap, actorMemberSnap, actorProfileSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
+      transaction.get(db.doc(`players/${actorUid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
       transaction.get(db.doc(`players/${targetUid}`)),
       transaction.get(clanWorldBenefitsRef(clanId)),
     ]);
-    if (!clanSnap.exists || !targetMemberSnap.exists) throw new HttpsError("not-found", "Clan member was not found.");
+    if (!clanSnap.exists || !actorProfileSnap.exists || !targetMemberSnap.exists) {
+      throw new HttpsError("not-found", "Clan member was not found.");
+    }
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     const clan = clanSnap.data() || {};
     const actor = actorMemberSnap.data() || {};
     const target = targetMemberSnap.data() || {};
@@ -17097,7 +17719,7 @@ async function changeClanRole(request, nextRole) {
   if (!["officer", "member"].includes(nextRole)) {
     throw new HttpsError("internal", "Unsupported clan role change.");
   }
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   const nowMs = Date.now();
@@ -17106,9 +17728,10 @@ async function changeClanRole(request, nextRole) {
     const actorRef = db.doc(`clans/${clanId}/members/${uid}`);
     const targetRef = db.doc(`clans/${clanId}/members/${targetUid}`);
     const targetProfileRef = db.doc(`players/${targetUid}`);
-    const [clanSnap, actorSnap, targetSnap, targetProfileSnap] = await Promise.all([
+    const [clanSnap, actorSnap, actorProfileSnap, targetSnap, targetProfileSnap] = await Promise.all([
       transaction.get(clanRef),
       transaction.get(actorRef),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(targetRef),
       transaction.get(targetProfileRef),
     ]);
@@ -17117,6 +17740,7 @@ async function changeClanRole(request, nextRole) {
     }
     const clan = clanSnap.data() || {};
     assertCurrentClan(clan);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     assertClanRole(actorSnap.data(), ["leader"]);
     const targetMember = targetSnap.exists ? targetSnap.data() || {} : {};
     const targetProfile = targetProfileSnap.exists ? targetProfileSnap.data() || {} : {};
@@ -17151,14 +17775,17 @@ exports.demoteClanOfficer = onCall({ region: "us-central1", maxInstances: 20, in
 exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const targetUid = safeString(request.data?.targetUid, 128);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [clanSnap, actorSnap, targetSnap] = await Promise.all([
+    const [clanSnap, actorSnap, actorProfileSnap, targetSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
     ]);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
+    assertCurrentClan(clanSnap.data() || {});
     assertClanRole(actorSnap.data(), ["leader"]);
     if (!targetSnap.exists || targetUid === uid) throw new HttpsError("failed-precondition", "Choose another clan member.");
     transaction.set(clanSnap.ref, { leaderUid: targetUid, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -17173,12 +17800,17 @@ exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 2
 
 exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const clanSnap = await transaction.get(db.doc(`clans/${clanId}`));
+    const [clanSnap, actorProfileSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`players/${uid}`)),
+    ]);
     if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
     const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
+    assertCurrentClanActorProfile(actorProfileSnap.data() || {}, clanId);
     const [leaderProfileSnap, membersSnap] = await Promise.all([
       transaction.get(db.doc(`players/${clan.leaderUid}`)),
       transaction.get(db.collection(`clans/${clanId}/members`).orderBy("joinedAtMs", "asc")),
@@ -17202,7 +17834,7 @@ exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstanc
 
 exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const profile = await requireCurrentClanActorProfile(uid);
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   const [preflightClanSnap, preflightActorSnap] = await Promise.all([
@@ -17348,6 +17980,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const senderRewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -17464,6 +18097,7 @@ exports.claimClanGiftPool = onCall({ region: "us-central1", maxInstances: 20, in
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const rewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -17541,6 +18175,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
   return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
+    assertCurrentClanActorProfile(profile);
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const rewardsRef = clanMemberRewardsRef(clanId, uid);
@@ -17852,6 +18487,7 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
 
 exports.createClanRally = timedCallable("createClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
   order.kind = "attack";
@@ -18075,6 +18711,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
 
 exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18241,6 +18878,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
 
 async function withdrawClanRallyContributionRequest(request) {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18352,6 +18990,7 @@ exports.withdrawClanRallyContribution = timedCallable(
 
 async function cancelClanRallyRequest(request) {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -18516,6 +19155,7 @@ exports.cancelClanRally = timedCallable(
 
 exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
   const rallyId = normalizeRallyId(request.data?.rallyId);
@@ -19415,7 +20055,7 @@ exports.getSeasonalAchievementStatus = timedCallable(
     const uid = requireAuth(request);
     const nowMs = Date.now();
     const cycle = getSeasonalAchievementCycle(nowMs, RESET_GENERATION);
-    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs, { requireParticipation: true });
     await applyLongReignProgressForPlayer(uid, nowMs);
     const stateSnap = await seasonalAchievementStateRef(uid, cycle.seasonId).get();
     if (!stateSnap.exists) throw new HttpsError("unavailable", "Seasonal Achievements are being prepared.");
@@ -19441,7 +20081,7 @@ exports.claimSeasonalAchievementReward = timedCallable(
     if (requestedSeasonId && requestedSeasonId !== cycle.seasonId) {
       throw new HttpsError("failed-precondition", "That Seasonal Achievement reward expired at the UTC month rollover.");
     }
-    await ensureSeasonalAchievementStateForPlayer(uid, nowMs);
+    await ensureSeasonalAchievementStateForPlayer(uid, nowMs, { requireParticipation: true });
     await applyLongReignProgressForPlayer(uid, nowMs);
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = seasonalAchievementStateRef(uid, cycle.seasonId);
@@ -19552,7 +20192,7 @@ exports.getDailyMissionStatus = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const nowMs = Date.now();
-    const dailyMissionState = await ensureDailyMissionStateForPlayer(uid, nowMs);
+    const dailyMissionState = await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return {
       ok: true,
       serverTimeMs: nowMs,
@@ -19575,7 +20215,7 @@ exports.rerollDailyMission = timedCallable(
     if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
       throw new HttpsError("failed-precondition", "Daily Missions reset at 00:00 UTC. Refresh the mission list.");
     }
-    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
       const profileRef = db.doc(`players/${uid}`);
@@ -19669,7 +20309,7 @@ exports.claimDailyMissionReward = timedCallable(
     if (requestedCycleKey && requestedCycleKey !== cycle.cycleKey) {
       throw new HttpsError("failed-precondition", "That Daily Mission expired at 00:00 UTC.");
     }
-    await ensureDailyMissionStateForPlayer(uid, nowMs);
+    await ensureDailyMissionStateForPlayer(uid, nowMs, { requireParticipation: true });
     return runTransactionWithInfrastructureRetry(async transaction => {
       const stateRef = dailyMissionStateRef(uid, cycle.cycleKey);
       const profileRef = db.doc(`players/${uid}`);

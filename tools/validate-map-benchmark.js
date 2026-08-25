@@ -3,11 +3,14 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const { BENCHMARK_SEED, SCENARIOS, createFixture } = require("./map-benchmark/fixtures.js");
+const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
 const root = path.resolve(__dirname, "..");
 const productionGame = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const benchmarkMockSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "mock-firebase.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 assert.equal(BENCHMARK_SEED, "crownlands-map-phase-0-v1");
@@ -39,4 +42,75 @@ for (const file of ["early-instrumentation.js", "injected-runtime.js", "mock-fir
   assert.ok(source.includes("127.0.0.1"), `${file} does not contain its loopback safety gate.`);
 }
 
-console.log("Map benchmark validation passed: deterministic scenarios, loopback gates, and production-source isolation verified.");
+function createBenchmarkMockSandbox(fixture, hostname = "127.0.0.1") {
+  let networkRequests = 0;
+  const sandbox = {
+    location: { hostname },
+    queueMicrotask,
+    window: { __CROWNLANDS_BENCHMARK_BOOTSTRAP__: fixture },
+    fetch: async () => {
+      networkRequests += 1;
+      throw new Error("The benchmark Firebase mock attempted a network request.");
+    },
+  };
+  vm.createContext(sandbox);
+  return {
+    sandbox,
+    getNetworkRequestCount: () => networkRequests,
+  };
+}
+
+async function validateMainCityRecoveryMock() {
+  const fixture = createFixture("A");
+  const expectedMainCity = fixture.citiesByRegion[fixture.primaryRegionId]
+    .find(city => city.ownerUid === fixture.player.uid && city.isMainCity === true);
+  assert.ok(expectedMainCity?.id, "Scenario A is missing its player-owned main city.");
+
+  const loopback = createBenchmarkMockSandbox(fixture);
+  vm.runInContext(benchmarkMockSource, loopback.sandbox, { filename: "mock-firebase.js" });
+  const response = await loopback.sandbox.window.CrownlandsOnline.repairMainCityAssignment();
+  const expectedIslandId = `${fixture.releaseConfig.worldId}-${fixture.primaryRegionId}`;
+
+  assert.equal(response.ok, true, "Benchmark main-city recovery did not report success.");
+  assert.equal(response.repairedMainCity, false, "Benchmark main-city recovery unexpectedly reported a repair.");
+  assert.equal(response.requiresStartingCityClaim, false, "Benchmark main-city recovery requested a fresh starting city.");
+  assert.equal(response.mainCityRecoveryStatus, "valid", "Benchmark main-city recovery returned an invalid status.");
+  assert.equal(response.currentUser?.mainCityId, expectedMainCity.id, "Benchmark recovery returned the wrong main city.");
+  assert.equal(response.currentUser?.mainRegionId, fixture.primaryRegionId, "Benchmark recovery returned the wrong region.");
+  assert.equal(response.currentUser?.mainIslandId, expectedIslandId, "Benchmark recovery returned a mismatched island.");
+  assert.equal(loopback.getNetworkRequestCount(), 0, "Benchmark main-city recovery contacted a network endpoint.");
+
+  const nonLoopback = createBenchmarkMockSandbox(fixture, "playcrownlands.com");
+  assert.throws(
+    () => vm.runInContext(benchmarkMockSource, nonLoopback.sandbox, { filename: "mock-firebase.js" }),
+    /loopback-only/i,
+    "The benchmark Firebase adapter ran outside loopback."
+  );
+}
+
+async function validateBenchmarkServerAssetBase() {
+  const server = createMapBenchmarkServer();
+  const address = await server.listen(0);
+  try {
+    const response = await fetch(`${address.url}/__benchmark__/?scenario=A`);
+    assert.equal(response.status, 200, "The benchmark page was not served from its documented route.");
+    const source = await response.text();
+    assert.match(
+      source,
+      /<base id="crownlandsBase" href="\/" \/>/,
+      "The benchmark page did not resolve production assets from the loopback root."
+    );
+  } finally {
+    await server.close();
+  }
+}
+
+Promise.all([
+  validateMainCityRecoveryMock(),
+  validateBenchmarkServerAssetBase(),
+])
+  .then(() => console.log("Map benchmark validation passed: deterministic scenarios, loopback gates, recovery contract, and production-source isolation verified."))
+  .catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });

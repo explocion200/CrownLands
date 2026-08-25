@@ -82,6 +82,8 @@ async function main() {
   const user = await createAuthUser();
   const profileRef = db.doc(`players/${user.uid}`);
   await profileRef.set({ playerName: "Report Reader", reportsViewedAtMs: 0 });
+  await invokeCallable("claimStartingCity", user.token, { playerName: "Report Reader" });
+  await profileRef.set({ reportsViewedAtMs: 0 }, { merge: true });
 
   const baseMs = Date.now() - 30_000;
   const [firstDevice, secondDevice] = await Promise.all([

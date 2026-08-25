@@ -166,6 +166,7 @@ async function main() {
   const invalidPresence = await patchDocument(user, presencePath, { flag: { ...v2, imageUrl: "https://example.test/flag.svg" } });
   assert(invalidPresence.status === 403, "Presence accepted an unexpected flag field.");
 
+  await callFunction("claimStartingCity", user, { playerName: "Flag Rules Sentinel" });
   const identity = await callFunction("syncPlayerIdentity", user, {
     ownerName: "Flag Rules Sentinel",
     ownerFlag: v2,

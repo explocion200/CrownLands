@@ -628,9 +628,17 @@
   function applyHudQaState() {
     const query = new URLSearchParams(location.search);
     const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
-    const operationMode = hash.get("operations") || query.get("hudOperations") || "none";
+    const requestedOperationMode = hash.get("operations") || query.get("hudOperations") || "";
+    const operationMode = requestedOperationMode || "baseline";
     const chatMode = hash.get("chat") || query.get("chatMode") || "closed";
-    const operationResult = setHudOperationState(operationMode);
+    const operationResult = requestedOperationMode
+      ? setHudOperationState(requestedOperationMode)
+      : {
+          ...emitVisualQaArmies(benchmarkState.createdArmies),
+          mode: operationMode,
+          incomingVisible: Boolean(incomingAttackBtn && !incomingAttackBtn.hidden),
+          outgoingVisible: Boolean(outgoingAttackBtn && !outgoingAttackBtn.hidden),
+        };
     const controller = window.CrownlandsChat?.init?.();
     if (["closed", "quick", "full"].includes(chatMode)) controller?.setMode?.(chatMode);
     const chat = controller?.diagnostics?.() || null;

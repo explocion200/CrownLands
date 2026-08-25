@@ -135,7 +135,7 @@ async function main() {
   });
   batch.set(db.doc(`rallyBattleReceipts/${realm.resetGeneration}/entries/${attackId}_${ally.uid}`), {
     ...current,
-    status: "pending",
+    status: "settled",
     contributorUid: ally.uid,
   });
   batch.set(db.doc(`islands/${islandId}/armies/${joinId}`), {
