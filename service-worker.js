@@ -39,7 +39,7 @@ const STATIC_CACHE_URLS = [
   "/mobile-viewport.css?v=20260825-shop-hourly-prices-r1",
   "/player-flag-editor.css?v=20260819-player-flags-v2-r1",
   "/chat.css?v=20260818-global-clan-chat-r1",
-  "/clan-heraldry-v2.css?v=20260823-clan-heraldry-live-ui-r1",
+  "/clan-heraldry-v2.css?v=20260825-clan-shield-colors-r1",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",

@@ -150,6 +150,59 @@ async function verifySpriteRuntime(page, viewportName) {
   return spriteProof;
 }
 
+async function verifyColorSelector(page, viewportName) {
+  await page.getByRole("tab", { name: "Colors" }).click();
+  const channelCases = [
+    { key: "primary", variable: "--clan-heraldry-primary", original: "#24445f", selected: "#d8bd78", selector: ".clan-heraldry-field", property: "fill" },
+    { key: "secondary", variable: "--clan-heraldry-secondary", original: "#7a2638", selected: "#547a9a", selector: ".clan-heraldry-division", property: "fill" },
+    { key: "chargeColor", variable: "--clan-heraldry-charge", original: "#f2e2bf", selected: "#c69a45", selector: ".clan-heraldry-charge", property: "fill", index: 0 },
+    { key: "secondaryChargeColor", variable: "--clan-heraldry-secondary-charge", original: "#d8bd78", selected: "#b7c3bf", selector: ".clan-heraldry-charge", property: "fill", index: 1 },
+    { key: "borderColor", variable: "--clan-heraldry-border", original: "#d8bd78", selected: "#253f3a", selector: ".clan-heraldry-border", property: "stroke" },
+  ];
+  const channelProof = [];
+  for (const channel of channelCases) {
+    const swatches = page.locator(`[data-color-key="${channel.key}"] [data-color-value]`);
+    const evidence = await swatches.evaluateAll(buttons => buttons.map(button => ({
+      value: button.dataset.colorValue,
+      pressed: button.getAttribute("aria-pressed"),
+      backgroundColor: getComputedStyle(button).backgroundColor,
+      backgroundImage: getComputedStyle(button).backgroundImage,
+    })));
+    assert.equal(evidence.length, 16, `${viewportName}/${channel.key}: the selector does not expose all 16 dyes.`);
+    assert.equal(new Set(evidence.map(entry => entry.backgroundColor)).size, 16, `${viewportName}/${channel.key}: shared button styling still hides one or more shield dyes.`);
+    for (const entry of evidence) {
+      const channels = entry.value.slice(1).match(/.{2}/g).map(value => Number.parseInt(value, 16));
+      assert.equal(entry.backgroundColor, `rgb(${channels.join(", ")})`, `${viewportName}/${channel.key}: ${entry.value} renders as ${entry.backgroundColor}.`);
+      assert.doesNotMatch(entry.backgroundImage, /244, 232, 205|221, 199, 158|199, 171, 121/, `${viewportName}/${channel.key}: the parchment button face still covers ${entry.value}.`);
+    }
+    const previous = page.locator(`[data-color-key="${channel.key}"] [data-color-value="${channel.original}"]`);
+    const selected = page.locator(`[data-color-key="${channel.key}"] [data-color-value="${channel.selected}"]`);
+    await selected.click();
+    assert.equal(await selected.getAttribute("aria-pressed"), "true", `${viewportName}/${channel.key}: the chosen dye is not selected.`);
+    assert.equal(await previous.getAttribute("aria-pressed"), "false", `${viewportName}/${channel.key}: the previous dye remains selected.`);
+    const root = page.locator("[data-qa-full-preview] .clan-heraldry-v2");
+    const previewStyle = await root.getAttribute("style");
+    assert.ok((previewStyle || "").includes(`${channel.variable}:${channel.selected}`), `${viewportName}/${channel.key}: the preview did not receive ${channel.selected}.`);
+    const rendered = root.locator(channel.selector).nth(channel.index || 0);
+    const renderedColor = await rendered.evaluate((element, property) => getComputedStyle(element)[property], channel.property);
+    const selectedChannels = channel.selected.slice(1).match(/.{2}/g).map(value => Number.parseInt(value, 16));
+    assert.equal(renderedColor, `rgb(${selectedChannels.join(", ")})`, `${viewportName}/${channel.key}: the rendered SVG channel is ${renderedColor}.`);
+    await previous.click();
+    assert.equal(await previous.getAttribute("aria-pressed"), "true", `${viewportName}/${channel.key}: the original dye could not be restored.`);
+    channelProof.push({
+      key: channel.key,
+      swatchCount: evidence.length,
+      distinctComputedColors: new Set(evidence.map(entry => entry.backgroundColor)).size,
+      selectedValue: channel.selected,
+      restoredValue: channel.original,
+      renderedColor,
+    });
+  }
+  await page.getByRole("tab", { name: "Charges" }).click();
+  await page.evaluate(() => document.activeElement?.blur());
+  return { channels: channelProof };
+}
+
 async function swipeControls(context, page) {
   const controls = page.locator("[data-qa-controls]");
   const box = await controls.boundingBox();
@@ -196,6 +249,7 @@ async function main() {
       const controls = page.locator("[data-qa-controls]");
       const top = await measure(page);
       const spriteProof = await verifySpriteRuntime(page, viewport.name);
+      const colorProof = await verifyColorSelector(page, viewport.name);
       assert.deepEqual(consoleErrors, [], `${viewport.name}: console errors: ${consoleErrors.join(" | ")}`);
       assert.deepEqual(requestFailures, [], `${viewport.name}: failed requests: ${requestFailures.join(" | ")}`);
       assert.notEqual(top.touchAction, "none", `${viewport.name}: controls block native touch scrolling.`);
@@ -215,7 +269,7 @@ async function main() {
         const desktopBottom = await measure(page);
         assert.ok(desktopBottom.scrollTop > 0, `${viewport.name}: desktop Charges panel did not scroll.`);
         assert.equal(desktopBottom.actionsVisible, true, `${viewport.name}: desktop actions cannot be reached.`);
-        results[viewport.name] = { top, bottom: desktopBottom, spriteProof, consoleErrors, requestFailures };
+        results[viewport.name] = { top, bottom: desktopBottom, spriteProof, colorProof, consoleErrors, requestFailures };
         await context.close();
         continue;
       }
@@ -270,6 +324,7 @@ async function main() {
         actionsStayedFixed: bottom.actionsVisible,
         bottom,
         spriteProof,
+        colorProof,
         consoleErrors,
         requestFailures,
       };
