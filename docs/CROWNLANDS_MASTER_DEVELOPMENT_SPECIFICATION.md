@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.9
+**Version:** 1.10
 **Effective date:** August 25, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 25, 2026
@@ -33,7 +33,7 @@ This document records confirmed rules, verified deployment status, unresolved co
 
 ### Deployment authority
 
-1. `https://playcrownlands.com` is the primary LIVE production authority.
+1. `https://playcrownlands.com` is the primary LIVE web authority. Its public pages and the canonical game application at `https://game.playcrownlands.com` are separately published surfaces and must both be checked when player-facing documentation is part of a release.
 2. itch.io is a secondary published distribution channel and may temporarily lag web production.
 3. A feature is not LIVE merely because it was implemented, committed, pushed, reviewed, or merged.
 4. LIVE status requires a verified deployment to the named channel. When risk warrants it, production smoke-test evidence is also required.
@@ -58,9 +58,10 @@ Snapshot verified on August 25, 2026.
 
 | Item | Verified state |
 |---|---|
-| Primary web production | Build `054aac0aadfc353c762fb444102fd62af76153af` |
-| Web deployment time | August 25, 2026 at 16:10:04 UTC / 12:10:04 PM EDT |
-| Netlify production deploy | `6a8dbe456280b500084541ab` |
+| Canonical game web production | Build `09328e60518706b14ae3ed38614ec339792b3e96`; docs-only descendant of audited application and Functions source build `054aac0aadfc353c762fb444102fd62af76153af` |
+| Canonical game deployment time | August 25, 2026 at 17:05:28 UTC / 1:05:28 PM EDT |
+| Canonical game Netlify production deploy | `6a8dcb383450a500086cedcd` |
+| Primary-domain public site | Separately published surface; exact build and deployment ownership remain **NEEDS VERIFICATION**. Its Rally guide is current, but its beginner guide still exposes the superseded three-ruler Rally rules. |
 | Web world | 20 connected regions |
 | Web release ID | `crownlands-2026-08-02-single-active-skill-preset-v1` |
 | Web reset generation | `fresh-2026-07-26-server-reset` |
@@ -72,7 +73,7 @@ Snapshot verified on August 25, 2026.
 | Published itch.io client | Build `289a9d82f16739fac8d73376a5c4c85e08aeadc5` |
 | itch.io client date | August 22, 2026 |
 | itch.io world | 15 connected regions |
-| Authoritative repository commit inspected | `origin/main` at `054aac0aadfc353c762fb444102fd62af76153af` |
+| Authoritative repository commit inspected | `origin/main` at `09328e60518706b14ae3ed38614ec339792b3e96` |
 | Remote `origin/main` verification | Local remote-tracking ref and remote Git ref matched at the August 25 release audit time |
 | New-player initialization in inspected source | 100 Gold, 200 troops, one Level 1 Main City |
 | Rally lifecycle release baseline | Merge build `1e5cdad50ba52878b504243cd9edf4ac8ec4a894` |
@@ -82,15 +83,16 @@ Snapshot verified on August 25, 2026.
 
 The web and itch.io clients target the same release ID, reset generation, world ID, and API contract hash. Their source fingerprints and feature sets differ. Compatibility is intended but must be verified as part of cross-channel release QA.
 
-The August 24 broad implementation verification remains historical evidence for commit `27105ae...`. The August 25 Rally audit now records current `origin/main` at `054aac0a...`, which descends from Rally baseline `1e5cdad...` and Rally stability merge `1a0efbcb...`. Repository facts are not automatically proof that corresponding backend code is deployed or that production data follows the same path; the current web and Functions rows above are backed by separate deployment evidence.
+The August 24 broad implementation verification remains historical evidence for commit `27105ae...`. The August 25 Rally audit now records current `origin/main` at `09328e60...`, which descends from Rally baseline `1e5cdad...`, Rally stability merge `1a0efbcb...`, audited application and Functions source build `054aac0a...`, and deployment-ledger PR #181. Repository facts are not automatically proof that corresponding backend code is deployed or that production data follows the same path; the canonical game and Functions rows above are backed by separate deployment evidence. The primary-domain public site is a separate publication surface and is not proven current by the game Netlify deployment.
 
 ### Ordinary Rally lifecycle release ledger
 
 | Channel / artifact | Build and deployment time | Validation result | Known difference |
 |---|---|---|---|
 | Firebase Functions and Firestore release | Exact Rally baseline `1e5cdad50ba52878b504243cd9edf4ac8ec4a894`; current full Functions refresh deployed from clean descendant build `054aac0aadfc353c762fb444102fd62af76153af` on August 25, 2026 | 102 Node.js 22 functions ACTIVE with shared hash `0fc34326...`; `syncPlayerIdentity` generation `1787676134610065`; release manifest recorded contract `e6029faf...` and server source `d90184eb...`; 29 clan callable access checks and the read-only production backend parity check passed | Firestore rules and indexes were unchanged and were not redeployed in the current Functions-only release. An authenticated `getRealmInfo` response remains **NEEDS VERIFICATION**. |
-| Netlify Rally release baseline | `1e5cdad50ba52878b504243cd9edf4ac8ec4a894`; deploy `6a8d830f79ae0d9195aa50b1`; published August 25, 2026 at 11:57:35 UTC | Release manifest matched the build and contract; `/`, `/play/`, and `service-worker.js` returned HTTP 200; game and service worker carried the exact build stamp | Superseded as the current web artifact by descendant build `054aac0...`; retained as the exact Rally deployment baseline. |
-| Current Netlify web production | `054aac0aadfc353c762fb444102fd62af76153af`; deploy `6a8dbe456280b500084541ab`; published August 25, 2026 at 16:10:04 UTC | Current-main release gate `32870265000` passed static, all 26 multiplayer emulator files, and final validation; live manifest, `/`, `/play/`, service worker, Rally guide, and beginner guide returned HTTP 200 with the exact build stamp and current Rally rules | This descendant includes PR #180's stale-ownership and Rally-guide corrections plus PR #177's Player Flag audit. Its manifest fingerprints are `d90184eb...` server and `9bdafbd3...` client. |
+| Netlify Rally release baseline | `1e5cdad50ba52878b504243cd9edf4ac8ec4a894`; deploy `6a8d830f79ae0d9195aa50b1`; published August 25, 2026 at 11:57:35 UTC | Release manifest matched the build and contract; `/`, `/play/`, and `service-worker.js` returned HTTP 200; game and service worker carried the exact build stamp | Superseded as the current canonical game artifact by descendant build `09328e60...`; retained as the exact Rally deployment baseline. |
+| Current canonical game production | `09328e60518706b14ae3ed38614ec339792b3e96`; deploy `6a8dcb383450a500086cedcd`; published August 25, 2026 at 17:05:28 UTC | Post-merge release gate `32875771534` passed static, all 26 multiplayer emulator files, and final validation; the canonical game page, manifest, service worker, Rally guide, and beginner guide returned HTTP 200 with the exact build stamp and current Rally rules | This docs-only descendant retains application source fingerprints `d90184eb...` server and `9bdafbd3...` client. The public homepage points its Play actions to this canonical game host. |
+| Primary-domain public pages | Exact build and deployment ownership **NEEDS VERIFICATION** | `clans-rallies-guide.html` exposes the current 2–20-player rules, but `how-to-play.html` still says a Rally holds up to three rulers, can target Reward Camps, removes the shield, may launch with inbound contributions, and uses the leader's march bonuses | The corrected beginner-guide source is merged and present on the canonical game host, but is not deployed to this separate public-site surface. Do not treat the game Netlify deploy as proof that these pages were refreshed. |
 | itch.io published client | `289a9d82f16739fac8d73376a5c4c85e08aeadc5`; published August 22, 2026 | Existing 261-file artifact previously passed exact-byte and SHA-256 validation | It was not republished for the Rally lifecycle correction. That correction remains unverified on itch.io and must not be labeled all-channel LIVE. |
 
 ## FM-3. Release Channel Matrix
@@ -98,7 +100,7 @@ The August 24 broad implementation verification remains historical evidence for 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
 | Core cities, economy, armies, combat, objectives, clans, rallies, chat, missions, achievements, Shop, Bag, and Common Gear foundation | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
-| Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; baseline `1e5cdad...`, retained in current `054aac0...` | Not verified; artifact not republished | `LIVE — WEB` |
+| Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; baseline `1e5cdad...`, retained in canonical game build `09328e60...`; primary-domain beginner guide remains stale | Not verified; artifact not republished | `LIVE — WEB` |
 | Connected world size | 20 regions | 15 regions | Channel-specific LIVE state |
 | Gear skill stacking and same-level upgrade availability | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Gear Effects in battle reports | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
@@ -508,7 +510,7 @@ Holding Towers and Clan Treasury are `IMPLEMENTED BUT NOT LIVE`. The audited imp
 - Every participant receives the same Rally battle outcome snapshot with a clearly labeled breakdown of each participant's committed troops, losses, survivors, and contribution.
 - If a Rally return's original city is still owned by the participant, the army returns there. If it is neutral or clan-owned, the army returns to the participant's Main City. If an enemy owns it, the returning army attacks that city.
 - Ordinary objective Rallies are not restricted by ordinary-city attack protection, neutral-city caps, or anti-farming gates. Committing Rally troops does not remove a Royal Peace Shield.
-- The ordinary Rally lifecycle correction above is `LIVE — WEB`. PR #171 merged as `1e5cdad...`; its complete static and multiplayer emulator gates passed; the exact Rally Functions source, Firestore rules/indexes, and web artifact were deployed and smoke-tested on August 25, 2026. PR #180 then merged the stale Rally-ownership identity-sync correction and matching player-guide fixes as `1a0efbcb...`. Current web build `054aac0...` descends from both merges, and all 102 Functions were refreshed from that exact clean build. The itch.io artifact was not republished and remains unverified for these corrected rules.
+- The ordinary Rally lifecycle correction above is `LIVE — WEB`. PR #171 merged as `1e5cdad...`; its complete static and multiplayer emulator gates passed; the exact Rally Functions source, Firestore rules/indexes, and web artifact were deployed and smoke-tested on August 25, 2026. PR #180 then merged the stale Rally-ownership identity-sync correction and matching player-guide fixes as `1a0efbcb...`. Canonical game build `09328e60...` descends from both merges, and all 102 Functions were refreshed from exact clean source build `054aac0...`. The corrected beginner guide is live on the canonical game host but not on the separately published primary-domain public site. The itch.io artifact was not republished and remains unverified for these corrected rules.
 - The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `IMPLEMENTED BUT NOT LIVE`; its five-member minimum does not replace the ordinary Rally minimum globally.
 
 ### Clan Treasury
@@ -948,8 +950,8 @@ Before a status becomes LIVE:
 ### Current workflow issues
 
 - The historical August 24 audit used a local working branch behind GitHub `main`; that audit inspected the exact remote Git object without mutating the user's worktree. The August 25 Rally release audit used an isolated, current worktree.
-- The local `dist` matches the itch.io build, not current web production build `054aac0...`.
-- Exact deployment ownership and the target parity interval between web and itch.io are **NEEDS VERIFICATION**.
+- The local `dist` matches the itch.io build, not canonical game production build `09328e60...`.
+- Exact deployment ownership of the primary-domain public pages and the target parity interval between web and itch.io are **NEEDS VERIFICATION**.
 
 ## 23. Current Development Status
 
@@ -981,10 +983,12 @@ Status verified through August 25, 2026.
 ### Verified current issues
 
 - The historical August 24 audit branch was behind GitHub `main`; the August 25 Rally release audit used an isolated branch containing current `origin/main`.
-- The locally preserved `dist` represents itch.io build `289a9d82f167`, not current web build `054aac0aadfc`.
+- The locally preserved `dist` represents itch.io build `289a9d82f167`, not canonical game build `09328e605187`.
 - At the August 25 snapshot, itch.io remained behind web production and exposed five fewer regions; the exact current commit lag is **NEEDS VERIFICATION**.
 - itch.io has not been republished or verified for the ordinary Rally lifecycle correction, so that correction remains `LIVE — WEB`.
 - Deployment provenance, the generated release manifest, and the post-deploy inventory verify all 102 Node.js 22 Functions were refreshed from clean build `054aac0...` with shared Firebase source hash `0fc34326...`. An authenticated `getRealmInfo` runtime response was not performed and remains **NEEDS VERIFICATION**.
+- The primary-domain `how-to-play.html` still documents superseded three-ruler Rally behavior even though corrected source is merged and published on the canonical game host. The public-site deployment owner and refresh path remain **NEEDS VERIFICATION**; no manual Netlify deployment was authorized in this audit.
+- The legacy direct `https://playcrownlands.com/play/` route serves the game shell while root game assets on that host return 404. Normal public Play actions point to the working canonical `https://game.playcrownlands.com/play/` route.
 - Web roadmap copy contains an internal 20-versus-15-region contradiction.
 - The descriptive release ID remains dated August 2 despite newer builds.
 - Five web regions use placeholder numeric names.
@@ -1098,7 +1102,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 | Source | Purpose | Audit note |
 |---|---|---|
-| [Web release manifest](https://playcrownlands.com/release-manifest.js) | Primary web build identity | Verified current build `054aac0aadfc...`, contract `e6029faf...`, server fingerprint `d90184eb...`, client fingerprint `9bdafbd3...`, and 102 callables |
+| [Canonical game release manifest](https://game.playcrownlands.com/release-manifest.js) | Deployed game build identity | Verified current build `09328e605187...`, contract `e6029faf...`, server fingerprint `d90184eb...`, client fingerprint `9bdafbd3...`, and 102 callables |
 | [Live world](https://playcrownlands.com/world) | Current player-facing web world | Verified 20 regions; five placeholder names |
 | [Game rules](https://playcrownlands.com/game-rules) | Current player-facing rules | Used for live rules baseline |
 | [Roadmap](https://playcrownlands.com/roadmap) | Public direction and status | Planning evidence only; contains stale 15-region copy |
@@ -1113,9 +1117,11 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | [Netlify Rally deploy metadata](https://api.netlify.com/api/v1/deploys/6a8d830f79ae0d9195aa50b1) | Exact Rally web publication evidence | Ready production deploy of `1e5cdad...`, published at 11:57:35 UTC |
 | [GitHub PR #180](https://github.com/explocion200/CrownLands/pull/180) | Rally ownership-sync stability and player-guide correction | Merged August 25, 2026 as `1a0efbcb...`; clears stale Rally ownership during identity sync and aligns both guides with the shipped Rally rules |
 | [Rally stability release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32868326745) | Post-merge validation of PR #180 | Static, all 26 multiplayer emulator files, and final validation passed |
-| [GitHub commit `054aac0aadfc...`](https://github.com/explocion200/CrownLands/commit/054aac0aadfc353c762fb444102fd62af76153af) | Audited current web/main source point | Descends from both Rally merges and is the verified live manifest and Functions source build |
-| [Current-main release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32870265000) | Current descendant-build validation | Static, all 26 multiplayer emulator files, and final validation jobs passed for exact build `054aac0...` |
-| [Current Netlify deploy metadata](https://api.netlify.com/api/v1/deploys/6a8dbe456280b500084541ab) | Current production deploy evidence | Ready production deploy of exact build `054aac0...`, published at 16:10:04 UTC; manifest, game, service worker, and Rally guides passed live smoke checks |
+| [GitHub commit `054aac0aadfc...`](https://github.com/explocion200/CrownLands/commit/054aac0aadfc353c762fb444102fd62af76153af) | Audited application and Functions source point | Descends from both Rally merges and is the exact source used for the verified Functions refresh |
+| [GitHub PR #181](https://github.com/explocion200/CrownLands/pull/181) | Verified deployment-ledger update | Merged August 25, 2026 as docs-only descendant `09328e60...`; its PR and post-merge release gates passed |
+| [Current-main release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32875771534) | Current descendant-build validation | Static, all 26 multiplayer emulator files, and final validation jobs passed for exact build `09328e60...` |
+| [Current canonical game Netlify deploy](https://api.netlify.com/api/v1/deploys/6a8dcb383450a500086cedcd) | Current game production evidence | Ready production deploy of exact build `09328e60...`, published at 17:05:28 UTC; canonical game page, manifest, service worker, and both Rally guides passed live smoke checks |
+| [Primary-domain beginner guide](https://playcrownlands.com/how-to-play.html) | Separately published player-facing documentation | Live response still contains the superseded three-ruler, Reward Camp, shield-removal, inbound-launch, and leader-speed rules; refresh ownership and deployment remain **NEEDS VERIFICATION** |
 | August 25 post-deploy Firebase Functions listing | Current backend deployment metadata | Authorized full refresh from clean build `054aac0...`; 102 active Node.js 22 Functions share source hash `0fc34326...`, with source generations spanning 16:41:24–16:45:19 UTC. The 29-callable access audit and production rules parity check passed; an authenticated `getRealmInfo` runtime response remains **NEEDS VERIFICATION**. |
 | [GitHub PR #159](https://github.com/explocion200/CrownLands/pull/159) | Holding Towers/Clan Treasury | Open, unmerged, not live |
 | `README.md` | Historical mechanics and implementation documentation | Detailed but stale on world/build state |
@@ -1125,6 +1131,14 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.10 — August 25, 2026
+
+- Distinguished the primary-domain public pages from the separately published canonical game application at `game.playcrownlands.com`.
+- Recorded canonical game build `09328e60...`, Netlify deploy `6a8dcb383450a500086cedcd`, and successful post-merge release gate `32875771534` while retaining exact Functions source provenance at `054aac0...`.
+- Corrected the earlier smoke conclusion: the beginner-guide source and canonical game-host copy contain the current Rally rules, but the primary-domain copy still exposes superseded behavior and requires a separate deployment path.
+- Recorded the broken legacy direct `playcrownlands.com/play/` asset route while confirming that public Play actions use the working canonical game host.
+- Kept authenticated `getRealmInfo`, primary public-site deployment ownership, and itch.io Rally parity as **NEEDS VERIFICATION**.
 
 ## v1.9 — August 25, 2026
 
