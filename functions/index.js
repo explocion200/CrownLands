@@ -13578,10 +13578,25 @@ exports.unequipCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
 
 exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  const requestId = safeString(request.data?.requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const gear = normalizeCommonGear(economy.profileAfter);
+    const replayReceipt = requestId
+      ? gear.recentUpgradeReceipts.find(receipt => receipt.requestId === requestId)
+      : null;
+    if (replayReceipt) {
+      writePreparedEconomy(transaction, economy, { gear });
+      return createEconomyResponse(economy, {
+        gear,
+        replayed: true,
+        upgradedInstanceId: replayReceipt.upgradedInstanceId,
+        consumedInstanceIds: replayReceipt.consumedInstanceIds,
+        upgradeReceipt: replayReceipt,
+        spentGold: 0,
+      });
+    }
     const instance = requireCommonGearInstance(gear, request.data?.instanceId);
     const requirement = COMMON_GEAR.getUpgradeRequirement(instance.level);
     if (!requirement) throw new HttpsError("failed-precondition", "Max Level Reached.");
@@ -13592,18 +13607,43 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
         `You need ${requirement.duplicates} unequipped matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}.`
       );
     }
-    const rates = getRewardedAdBaseRates(economy);
-    const cost = Math.max(0, Math.floor(rates.goldPerHour * requirement.baseGoldHours));
+    const rawBaseGoldPerHour = getShopPricingContext(economy).rawBaseGoldPerHour;
+    const cost = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance.level);
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
-    materials.slice(0, requirement.duplicates).forEach(material => { delete gear.instances[material.instanceId]; });
-    instance.level += 1;
-    instance.upgradedAtMs = nowMs;
+    const resultInstanceId = `cg_up_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
+    const upgrade = COMMON_GEAR.consumeUpgradeInputs(gear, instance.instanceId, resultInstanceId, nowMs);
+    if (!upgrade) throw new HttpsError("internal", "The gear upgrade could not settle its inventory inputs.");
     const goldFloat = economy.goldFloat - cost;
     const gold = Math.floor(goldFloat);
+    const upgradeReceipt = {
+      requestId,
+      upgradedAtMs: nowMs,
+      upgradedInstanceId: upgrade.upgradedInstanceId,
+      consumedInstanceIds: upgrade.consumedInstanceIds,
+      previousLevel: upgrade.previousLevel,
+      newLevel: upgrade.newLevel,
+      spentGold: cost,
+    };
+    if (requestId) {
+      gear.recentUpgradeReceipts = [
+        ...gear.recentUpgradeReceipts.filter(receipt => receipt.requestId !== requestId),
+        upgradeReceipt,
+      ].slice(-COMMON_GEAR.UPGRADE_RECEIPT_LIMIT);
+    }
     gear.updatedAtMs = nowMs;
     writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
+    transaction.update(economy.profileRef, Object.fromEntries(
+      upgrade.consumedInstanceIds.map(consumedInstanceId => [
+        `gear.instances.${consumedInstanceId}`,
+        FieldValue.delete(),
+      ])
+    ));
     return createEconomyResponse(economy, {
-      gear, gold, goldFloat, upgradedInstanceId: instance.instanceId, spentGold: cost,
+      gear, gold, goldFloat, replayed: false,
+      upgradedInstanceId: upgrade.upgradedInstanceId,
+      consumedInstanceIds: upgrade.consumedInstanceIds,
+      upgradeReceipt,
+      spentGold: cost,
       bonuses: getCommonGearBonuses(gear),
     });
   });

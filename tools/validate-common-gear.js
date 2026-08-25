@@ -62,6 +62,56 @@ assert.deepEqual(gear.UPGRADE_BY_LEVEL, {
 assert.deepEqual(serverGear.UPGRADE_BY_LEVEL, gear.UPGRADE_BY_LEVEL, "Client and server upgrade requirements must stay synchronized.");
 assert.equal(typeof gear.getUpgradeMaterialInstances, "function", "Client Common Gear must expose the shared upgrade-material rule.");
 assert.equal(typeof serverGear.getUpgradeMaterialInstances, "function", "Server Common Gear must expose the shared upgrade-material rule.");
+assert.equal(gear.getUpgradeGoldCost(101, 1), 50, "Level 1 upgrade Gold must be half of the floored raw hourly rate.");
+assert.equal(gear.getUpgradeGoldCost(101, 2), 101, "Level 2 upgrade Gold must be one raw-production hour.");
+assert.equal(gear.getUpgradeGoldCost(101, 3), 202, "Level 3 upgrade Gold must be two raw-production hours.");
+assert.equal(gear.getUpgradeGoldCost(101, 4), 404, "Level 4 upgrade Gold must be four raw-production hours.");
+assert.equal(gear.getUpgradeGoldCost(101, 5), 0, "Maximum-level gear must have no upgrade cost.");
+assert.deepEqual([1, 2, 3, 4, 5].map(gear.getBaseCopyCountForLevel), [1, 2, 4, 8, 16], "Same-level merging must double the underlying Level 1 copy count each level.");
+assert.deepEqual([1, 2, 3, 4, 5].map(gear.getCumulativeGoldHoursForLevel), [0, .5, 2, 6, 16], "Gear's cumulative Gold-hour progression is incorrect.");
+for (const helper of ["getUpgradeGoldCost", "getBaseCopyCountForLevel", "getCumulativeGoldHoursForLevel", "consumeUpgradeInputs"]) {
+  assert.equal(serverGear[helper].toString(), gear[helper].toString(), `Client and server ${helper} must stay synchronized.`);
+}
+
+const mergeDefinition = gear.DEFINITIONS[0];
+const createMergeInstance = (instanceId, level, acquiredAtMs = 1) => gear.normalizeInstance({
+  instanceId,
+  gearKey: mergeDefinition.gearKey,
+  level,
+  acquiredAtMs,
+});
+for (let level = 1; level < gear.MAX_LEVEL; level += 1) {
+  const mergeState = gear.createDefaultState();
+  mergeState.instances.target = createMergeInstance("target", level, 1);
+  mergeState.instances.material = createMergeInstance("material", level, 2);
+  const merge = gear.consumeUpgradeInputs(mergeState, "target", `result_${level + 1}`, 3);
+  assert(merge, `Level ${level} + Level ${level} did not produce a result.`);
+  assert.equal(Object.keys(mergeState.instances).length, 1, `Level ${level} + Level ${level} did not reduce two inputs to one output.`);
+  assert(!mergeState.instances.target && !mergeState.instances.material, `A Level ${level} input identity survived the upgrade.`);
+  assert.equal(mergeState.instances[`result_${level + 1}`]?.level, level + 1, `The Level ${level + 1} result is missing.`);
+  assert.deepEqual(merge.consumedInstanceIds, ["target", "material"], `The Level ${level} receipt did not name both consumed inputs.`);
+}
+
+function craftFromLevelOneCopies(copyCount, expectedLevel) {
+  const mergeState = gear.createDefaultState();
+  for (let index = 0; index < copyCount; index += 1) {
+    const instanceId = `base_${index}`;
+    mergeState.instances[instanceId] = createMergeInstance(instanceId, 1, index + 1);
+  }
+  let resultIndex = 0;
+  for (let level = 1; level < expectedLevel; level += 1) {
+    while (Object.values(mergeState.instances).filter(instance => instance.level === level).length >= 2) {
+      const [target] = Object.values(mergeState.instances).filter(instance => instance.level === level);
+      const resultId = `crafted_${level}_${resultIndex++}`;
+      assert(gear.consumeUpgradeInputs(mergeState, target.instanceId, resultId, 100 + resultIndex));
+    }
+  }
+  assert.equal(Object.keys(mergeState.instances).length, 1, `${copyCount} Level 1 copies did not settle to exactly one item.`);
+  assert.equal(Object.values(mergeState.instances)[0].level, expectedLevel, `${copyCount} Level 1 copies did not craft Level ${expectedLevel}.`);
+}
+
+craftFromLevelOneCopies(4, 3);
+craftFromLevelOneCopies(16, 5);
 
 const sample = gear.createDefaultState();
 const attackDefinition = gear.DEFINITIONS.find(item => item.statType === "attackStrength");
@@ -78,8 +128,20 @@ for (const callable of ["getCommonGearStatus", "purchaseCommonGearBox", "openCom
 assert.match(index, /crypto\.randomInt\(0, COMMON_GEAR\.DEFINITIONS\.length\)/, "Box rolls must use server cryptographic randomness.");
 assert.match(
   index,
-  /COMMON_GEAR\.getUpgradeMaterialInstances\(instance, gear\.instances\)/,
-  "The authoritative upgrade must use the shared same-level material rule."
+  /COMMON_GEAR\.consumeUpgradeInputs\(gear, instance\.instanceId, resultInstanceId, nowMs\)/,
+  "The authoritative upgrade must consume both inputs through the shared two-to-one craft rule."
+);
+assert.match(index, /recentUpgradeReceipts\.find\(receipt => receipt\.requestId === requestId\)/, "Gear upgrades must replay safely by request id.");
+assert.match(index, /consumedInstanceIds: upgrade\.consumedInstanceIds/, "The authoritative receipt must identify both consumed input instances.");
+assert.match(
+  index,
+  /upgrade\.consumedInstanceIds\.map\(consumedInstanceId => \[[\s\S]{0,140}`gear\.instances\.\$\{consumedInstanceId\}`,[\s\S]{0,100}FieldValue\.delete\(\)/,
+  "The authoritative transaction must explicitly delete consumed nested Firestore instance fields instead of relying on recursive map merge semantics."
+);
+assert.match(
+  index,
+  /const rawBaseGoldPerHour = getShopPricingContext\(economy\)\.rawBaseGoldPerHour;[\s\S]{0,120}COMMON_GEAR\.getUpgradeGoldCost\(rawBaseGoldPerHour, instance\.level\)/,
+  "The authoritative upgrade must use the shared Gold formula and regular-city raw production rate."
 );
 const sharedMaterialRule = gear.getUpgradeMaterialInstances.toString();
 assert.match(sharedMaterialRule, /candidate\.instanceId !== target\.instanceId[\s\S]{0,180}candidate\.gearKey === target\.gearKey[\s\S]{0,120}candidate\.level === target\.level[\s\S]{0,120}!candidate\.isEquipped/, "The shared rule must require a different, stored, same-key, same-level material.");
@@ -102,7 +164,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-inner-castle-labels-r1/, "The equipment stylesheet must load in the game shell.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-shop-hourly-prices-r1[\s\S]*game\.js\?v=20260825-player-flags-audit-r2/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-gear-upgrade-consumption-r1[\s\S]*game\.js\?v=20260825-player-flags-audit-r2/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
@@ -121,15 +183,21 @@ assert.match(game, /data-gear-bag-scroll/, "The redesigned officer bag must own 
 assert.match(game, /commonGearBagScrollTop/, "Officer bag scroll position must survive rerenders.");
 assert.match(game, /common-gear-bottom-info/, "Selected equipment metadata must render in the bottom strip.");
 assert.match(game, /common-gear-confirm-backdrop/, "Upgrade must have an in-game confirmation step.");
-assert.match(game, /upgradeCommonGear\(\{ instanceId \}\)/, "Upgrade must continue through the existing authoritative upgrade callable.");
+assert.match(game, /upgradeCommonGear\(\{[\s\S]{0,180}instanceId,[\s\S]{0,180}requestId:/, "Upgrade must continue through the authoritative callable with a replay-safe request id.");
 assert.match(gearUi, />\$\{requirement \? "Upgrade" : "Max Level"\}<\//, "The player-facing equipment action must say Upgrade.");
 assert.match(gearUi, />Upgrade requirements<|<span>Upgrade requirements<\/span>/, "The equipment requirement label must say Upgrade requirements.");
 assert.match(gearUi, /Confirm Upgrade/, "The upgrade confirmation action must use Upgrade wording.");
 assert.match(gearUi, /Requires \$\{requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Selected gear requirements must name the matching current-level copy.");
-assert.match(gearUi, /This consumes \$\{requirement\.duplicates\} unequipped matching Level \$\{selected\.level\}/, "Upgrade confirmation must identify the stored same-level material.");
-assert.match(gearUi, /Next \+\$\{viewModel\.nextBonus\.toFixed\(2\)\}% · Requires \$\{viewModel\.requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Bottom metadata must show the same-level upgrade material.");
+assert.match(gearUi, /Both Level \$\{selected\.level\} inputs disappear/, "Upgrade confirmation must explain that both input identities are consumed.");
+assert.match(gearUi, /Next \+\$\{viewModel\.nextBonus\.toFixed\(2\)\}% \(\+\$\{viewModel\.nextBonusIncrease\.toFixed\(2\)\}%\) · Requires \$\{viewModel\.requirement\.duplicates\} matching Level \$\{selected\.level\}/, "Bottom metadata must show the marginal bonus and same-level upgrade material.");
 assert.match(gearUi, /No matching material\. Requires \$\{requirement\.duplicates\} matching Level \$\{instance\.level\}/, "A missing material must have a player-readable reason.");
 assert.match(gearUi, /Insufficient gold\. Requires \$\{formatNumber\(upgradeGold\)\} gold/, "Missing gold must be identified separately from missing material.");
+assert.match(gearUi, /authoritativeShopPricing[\s\S]{0,700}COMMON_GEAR\.getUpgradeGoldCost\(rawBaseGoldPerHour, instance\.level\)/, "The equipment UI must preview the shared cost from authoritative regular-city pricing.");
+assert.match(gearUi, /Level \$\{viewModel\.progressionLevel\} full path:[\s\S]{0,180}progressionBaseCopies[\s\S]{0,180}progressionGoldHours/, "The equipment UI must explain the complete same-level merge path.");
+assert.match(gearUi, /Next level:[\s\S]{0,120}nextBonusIncrease/, "The equipment UI must show the marginal bonus gained by an upgrade.");
+assert.match(gearUi, /requestId: createDailyMissionRequestId\("gear-upgrade"\)/, "The equipment UI must send an idempotency key for every upgrade.");
+assert.match(gearUi, /selectedCommonGearInstanceId = upgradedInstanceId/, "The equipment UI must select the newly created result instance.");
+assert.match(gearUi, /consumedInstanceIds\.some\(consumedId => state\?\.gear\?\.instances\?\.\[consumedId\]\)/, "The equipment UI must detect and refresh any stale consumed input.");
 assert.match(gearUi, /reason: "Max level\."/, "Maximum-level gear must expose a concise disabled reason.");
 assert.doesNotMatch(gearUi, /Level 1 duplicate|Level 1 duplicates/, "Old always-Level-1 material wording must not remain in the equipment UI.");
 assert.doesNotMatch(gearUi, />Merge(?:\s|<)|Merge cost|Confirm Merge|Select an item to merge|merged to Level|merge equipment|gear merge/, "Player-facing Merge wording must not remain in the equipment UI.");
@@ -185,9 +253,10 @@ const previewDuplicate = { ...groupedInstances[1], instanceId: "preview_duplicat
 const previewContext = {
   COMMON_GEAR: gear,
   formatNumber: value => String(value),
+  authoritativeShopPricing: { rawBaseGoldPerHour: 100 },
   state: {
     gold: 1000,
-    globalStats: { baseGoldPerHour: 100 },
+    globalStats: { baseGoldPerHour: 1000 },
     gear: { instances: { previewTarget, previewDuplicate } },
   },
 };
@@ -233,6 +302,7 @@ assert.equal(insufficientGoldPreview.canUpgrade, false, "An item without enough 
 assert.equal(insufficientGoldPreview.hasMatchingMaterial, true, "Insufficient gold must not hide a valid same-level material.");
 assert.equal(insufficientGoldPreview.hasEnoughGold, false);
 assert.match(insufficientGoldPreview.reason, /^Insufficient gold\. Requires 50 gold; 49 available\.$/);
+assert.equal(insufficientGoldPreview.upgradeGold, 50, "The UI used Stronghold-inclusive global production instead of authoritative regular-city pricing.");
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
 assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
 assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");

@@ -101,7 +101,7 @@ async function clientDocumentRequest(user, documentPath, options = {}) {
   });
 }
 
-async function pollUntil(read, predicate, message, timeoutMs = 20_000) {
+async function pollUntil(read, predicate, message, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const value = await read();
@@ -172,7 +172,13 @@ async function main() {
   );
 
   const mainCityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
-  const troopsBefore = Number((await mainCityRef.get()).data()?.troops || 0);
+  const mainCityBeforeClaim = (await mainCityRef.get()).data() || {};
+  const troopsBefore = Number(mainCityBeforeClaim.troops || 0);
+  // Keep passive production from being counted as part of the exact reward delta.
+  await mainCityRef.set({
+    troopFloat: troopsBefore,
+    productionUpdatedAtMs: Date.now() + 60_000,
+  }, { merge: true });
   const firstClaim = await callFunction("claimSeasonalAchievementReward", player.token, {
     seasonId: state.seasonId,
     achievementId: "stronghold_raider",

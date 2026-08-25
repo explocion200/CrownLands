@@ -5,7 +5,9 @@ const { spawnSync } = require("node:child_process");
 const testDirectory = __dirname;
 const functionsDirectory = path.resolve(testDirectory, "..");
 const firebaseCli = path.join(functionsDirectory, "node_modules", "firebase-tools", "lib", "bin", "firebase.js");
-const firebaseConfig = process.env.CROWNLANDS_FIREBASE_CONFIG || "../firebase.json";
+const firebaseConfig = process.env.CROWNLANDS_FIREBASE_EMULATOR_CONFIG
+  || process.env.CROWNLANDS_FIREBASE_CONFIG
+  || "../firebase.json";
 const resetGate = "emulator-reset-gate.js";
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))

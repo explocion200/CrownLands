@@ -1177,7 +1177,12 @@ async function main() {
     assert(redirected.redirectReason === expectedReason, `${label} Rally return used the wrong redirect reason.`);
     assert(redirected.movement?.toId === backupCity.id, `${label} Rally return did not redirect to the Main City.`);
     assert(redirected.movement?.rallyReturnAttack === false, `${label} Rally return remained a hostile attack after redirect.`);
-    const mainBeforeArrival = Number((await backupRef.get()).data()?.troops || 0);
+    const backupBeforeArrival = (await backupRef.get()).data() || {};
+    const mainBeforeArrival = Number(backupBeforeArrival.troops || 0);
+    await backupRef.set({
+      troopFloat: mainBeforeArrival,
+      productionUpdatedAtMs: Date.now() + 60_000,
+    }, { merge: true });
     await db.doc(`armies/${redirected.movement.id}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
     await callFunction("resolveArmyOrder", clanLeader.token, {
       armyId: redirected.movement.id,
@@ -1356,7 +1361,12 @@ async function main() {
       mainRegionId: defenderClaim.regionId,
     }, { merge: true }),
   ]);
-  const mainBeforeDefeat = Number((await creatorCityRef.get()).data()?.troops || 0);
+  const creatorCityBeforeDefeat = (await creatorCityRef.get()).data() || {};
+  const mainBeforeDefeat = Number(creatorCityBeforeDefeat.troops || 0);
+  await creatorCityRef.set({
+    troopFloat: mainBeforeDefeat,
+    productionUpdatedAtMs: Date.now() + 60_000,
+  }, { merge: true });
   await db.doc(`armies/${defeatedReturnArmyId}`).set(rallyReturnArmy({
     id: defeatedReturnArmyId,
     owner: { uid: rallyCreator.uid, name: "Rally Creator" },

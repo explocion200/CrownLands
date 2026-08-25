@@ -297,9 +297,18 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
     && candidate.gearKey === instance.gearKey
     && candidate.level === instance.level
     && candidate.isEquipped).length;
-  const upgradeGold = Math.max(0, Math.floor(
-    Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0) * requirement.baseGoldHours
-  ));
+  const authoritativeRawRate = typeof authoritativeShopPricing === "object" && authoritativeShopPricing
+    ? Number(authoritativeShopPricing.rawBaseGoldPerHour)
+    : Number.NaN;
+  const localBaseRates = typeof getHarvestBonusBaseRates === "function"
+    ? getHarvestBonusBaseRates()
+    : null;
+  const localRawRate = Number(localBaseRates?.goldPerHour);
+  const fallbackRawRate = Math.max(0, Number(state?.globalStats?.baseGoldPerHour) || 0);
+  const rawBaseGoldPerHour = Number.isFinite(authoritativeRawRate)
+    ? authoritativeRawRate
+    : Number.isFinite(localRawRate) ? localRawRate : fallbackRawRate;
+  const upgradeGold = COMMON_GEAR.getUpgradeGoldCost(rawBaseGoldPerHour, instance.level);
   const hasMatchingMaterial = duplicateCount >= requirement.duplicates;
   const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= upgradeGold;
   const issues = [];
@@ -375,6 +384,16 @@ function createCommonGearViewModel(buildingId) {
     requirement,
     currentBonus: selected ? COMMON_GEAR.getBonusPercent(selected) : 0,
     nextBonus: requirement ? COMMON_GEAR.BONUS_BY_LEVEL[selected.level + 1] : null,
+    nextBonusIncrease: requirement
+      ? COMMON_GEAR.BONUS_BY_LEVEL[selected.level + 1] - COMMON_GEAR.getBonusPercent(selected)
+      : 0,
+    progressionLevel: selected ? Math.min(COMMON_GEAR.MAX_LEVEL, selected.level + (requirement ? 1 : 0)) : 1,
+    progressionBaseCopies: selected
+      ? COMMON_GEAR.getBaseCopyCountForLevel(Math.min(COMMON_GEAR.MAX_LEVEL, selected.level + (requirement ? 1 : 0)))
+      : 1,
+    progressionGoldHours: selected
+      ? COMMON_GEAR.getCumulativeGoldHoursForLevel(Math.min(COMMON_GEAR.MAX_LEVEL, selected.level + (requirement ? 1 : 0)))
+      : 0,
     duplicateCount,
     upgradeGold,
     canMerge: upgradePreview.canUpgrade,
@@ -466,7 +485,7 @@ function renderCommonGearSelectedPanel(viewModel) {
   }
   const progressPercent = Math.max(0, Math.min(100, selected.level / COMMON_GEAR.MAX_LEVEL * 100));
   const mergeCopy = requirement
-    ? `Requires ${requirement.duplicates} matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} (${viewModel.duplicateCount} available) + ${formatNumber(viewModel.upgradeGold)} gold`
+    ? `Requires ${requirement.duplicates} matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} (${viewModel.duplicateCount} available) + ${formatNumber(viewModel.upgradeGold)} gold (${formatStackedBonusPercent(requirement.baseGoldHours)}h raw production)`
     : "This item has reached its maximum level.";
   return `<section class="common-gear-detail-panel common-gear-selected-panel" data-gear-panel="details">
     <span class="common-gear-detail-eyebrow">${escapeHtml(viewModel.officerName)}'s</span>
@@ -478,10 +497,11 @@ function renderCommonGearSelectedPanel(viewModel) {
     </div>
     <div class="common-gear-effect-copy">
       <strong>+${viewModel.currentBonus.toFixed(2)}% ${escapeHtml(definition.statLabel)}</strong>
-      ${viewModel.nextBonus !== null ? `<small>Next level: +${viewModel.nextBonus.toFixed(2)}%</small>` : `<small>Maximum bonus reached</small>`}
+      ${viewModel.nextBonus !== null ? `<small>Next level: +${viewModel.nextBonus.toFixed(2)}% (+${viewModel.nextBonusIncrease.toFixed(2)}%)</small>` : `<small>Maximum bonus reached</small>`}
     </div>
     <div class="common-gear-merge-cost">
       <span>Upgrade requirements</span><strong>${escapeHtml(mergeCopy)}</strong><small>You have ${formatNumber(state.gold)} gold</small>
+      <small>Level ${viewModel.progressionLevel} full path: ${formatNumber(viewModel.progressionBaseCopies)} Level 1 copies · ${formatStackedBonusPercent(viewModel.progressionGoldHours)} raw-production hours</small>
     </div>
     <div class="common-gear-actions">
       <button class="common-gear-equip-btn" type="button" data-gear-equip ${viewModel.actionInFlight ? "disabled" : ""}>${viewModel.actionInFlight ? "Working…" : selected.isEquipped ? "Unequip" : "Equip"}</button>
@@ -497,7 +517,7 @@ function renderCommonGearBottomInfo(viewModel) {
     return `<section class="common-gear-bottom-info empty"><div><strong>Select an equipment piece</strong><p>Its description, role, bonus, and upgrade requirements will appear here.</p></div></section>`;
   }
   const nextEffect = viewModel.nextBonus !== null
-    ? `Next +${viewModel.nextBonus.toFixed(2)}% · Requires ${viewModel.requirement.duplicates} matching Level ${selected.level} cop${viewModel.requirement.duplicates === 1 ? "y" : "ies"}`
+    ? `Next +${viewModel.nextBonus.toFixed(2)}% (+${viewModel.nextBonusIncrease.toFixed(2)}%) · Requires ${viewModel.requirement.duplicates} matching Level ${selected.level} cop${viewModel.requirement.duplicates === 1 ? "y" : "ies"}`
     : "Maximum level";
   return `<section class="common-gear-bottom-info">
     <img src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
@@ -511,6 +531,7 @@ function renderCommonGearBottomInfo(viewModel) {
       <div><dt>Equip slot</dt><dd>${escapeHtml(titleCaseCommonGearLabel(definition.slot))}</dd></div>
       <div><dt>Current effect</dt><dd>+${viewModel.currentBonus.toFixed(2)}%</dd></div>
       <div><dt>Upgrade</dt><dd>${escapeHtml(nextEffect)}</dd></div>
+      <div><dt>Full path</dt><dd>${formatNumber(viewModel.progressionBaseCopies)} Level 1 copies · ${formatStackedBonusPercent(viewModel.progressionGoldHours)}h</dd></div>
       <div><dt>Binding</dt><dd>Not tradeable</dd></div>
       <div><dt>State</dt><dd>${selected.isEquipped ? "Equipped" : "In bag"}</dd></div>
     </dl>
@@ -524,8 +545,8 @@ function renderCommonGearMergeConfirmation(viewModel) {
     <section class="common-gear-confirm" role="alertdialog" aria-modal="true" aria-labelledby="commonGearMergeTitle" aria-describedby="commonGearMergeCopy">
       <span class="common-gear-confirm-icon" aria-hidden="true">⚒</span>
       <strong id="commonGearMergeTitle">Upgrade ${escapeHtml(definition.gearName)}?</strong>
-      <p id="commonGearMergeCopy">Upgrade Level ${selected.level} to Level ${selected.level + 1}. This consumes ${requirement.duplicates} unequipped matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} and ${formatNumber(viewModel.upgradeGold)} gold.</p>
-      <small>This cannot be undone.</small>
+      <p id="commonGearMergeCopy">Combine this Level ${selected.level} item with ${requirement.duplicates} unequipped matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} to create one new Level ${selected.level + 1} item. Both Level ${selected.level} inputs disappear. Cost: ${formatNumber(viewModel.upgradeGold)} gold (${formatStackedBonusPercent(requirement.baseGoldHours)} hours of raw production).</p>
+      <small>The two-to-one upgrade cannot be undone.</small>
       <div>
         <button class="safe-action" type="button" data-gear-merge-cancel>Cancel</button>
         <button type="button" data-gear-merge-confirm>Confirm Upgrade</button>
@@ -574,12 +595,27 @@ async function runCommonGearAction(buildingId, action, instanceId) {
       result = await api.equipCommonGear({ instanceId });
     } else {
       if (!api?.upgradeCommonGear) throw new Error("Connect to the realm to upgrade equipment.");
-      result = await api.upgradeCommonGear({ instanceId });
+      result = await api.upgradeCommonGear({
+        instanceId,
+        requestId: createDailyMissionRequestId("gear-upgrade"),
+      });
     }
     applyServerEconomyResult(result);
-    const settledInstance = state?.gear?.instances?.[instanceId];
-    if (action === "merge") showToast(`${definition.gearName} upgraded to Level ${settledInstance?.level || previousLevel + 1}.`);
-    else showToast(`${definition.gearName} ${action === "equip" ? "equipped" : "returned to the bag"}.`);
+    if (action === "merge") {
+      const responseGear = result?.currentUser?.gear || result?.gear;
+      if (responseGear && Number(responseGear.updatedAtMs || 0) >= Number(state?.gear?.updatedAtMs || 0)) {
+        state.gear = normalizeCommonGearState(responseGear);
+      }
+      const upgradedInstanceId = String(result?.upgradedInstanceId || "");
+      if (state?.gear?.instances?.[upgradedInstanceId]) selectedCommonGearInstanceId = upgradedInstanceId;
+      const consumedInstanceIds = Array.isArray(result?.consumedInstanceIds) ? result.consumedInstanceIds : [];
+      if (consumedInstanceIds.some(consumedId => state?.gear?.instances?.[consumedId])) {
+        const refreshed = await api.viewCommonGearBuilding?.({ buildingId });
+        if (refreshed?.gear) state.gear = normalizeCommonGearState(refreshed.gear);
+      }
+      const settledInstance = state?.gear?.instances?.[upgradedInstanceId];
+      showToast(`${definition.gearName} upgraded to Level ${settledInstance?.level || previousLevel + 1}. Both input items were consumed.`);
+    } else showToast(`${definition.gearName} ${action === "equip" ? "equipped" : "returned to the bag"}.`);
   } catch (error) {
     showToast(error?.message || (action === "merge" ? "The gear upgrade could not be completed." : "The gear loadout could not be changed."));
   } finally {
