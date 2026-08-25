@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.7  
-**Effective date:** August 24, 2026  
-**Document status:** Authoritative baseline with read-only implementation verification  
-**Evidence reviewed through:** August 24, 2026  
+**Version:** 1.8
+**Effective date:** August 25, 2026
+**Document status:** Authoritative baseline with implementation and release verification
+**Evidence reviewed through:** August 25, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -54,35 +54,51 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-Snapshot verified on August 24, 2026.
+Snapshot verified on August 25, 2026.
 
 | Item | Verified state |
 |---|---|
-| Primary web production | Build `27105ae76fbb329559151030ebbac652a9ee8119` |
-| Web deployment date | August 23, 2026 |
+| Primary web production | Build `998ebbd3cd34d030c9dcd2311d3b50fe13757421` |
+| Web deployment time | August 25, 2026 at 12:29:19 UTC / 8:29:19 AM EDT |
+| Netlify production deploy | `6a8d8a87e2c5450009e2c829` |
 | Web world | 20 connected regions |
 | Web release ID | `crownlands-2026-08-02-single-active-skill-preset-v1` |
 | Web reset generation | `fresh-2026-07-26-server-reset` |
 | Web world ID | `main-fresh-2026-07-26-server-reset` |
 | Web API contract hash | `e6029faf76eb863612cebf975f69bbd2e5116571153a916993825a7a7f674020` |
+| Web manifest server-source fingerprint | `f610faa664c774c43885d8713bbeb29df71bbb7567fa52969ace155448af7516` |
+| Web manifest client-source fingerprint | `3ac3d645c73ed4a314afa7835deda803f571f67db2ee09a21e2020753a611771` |
+| Web manifest callable count | 102 |
 | Published itch.io client | Build `289a9d82f16739fac8d73376a5c4c85e08aeadc5` |
 | itch.io client date | August 22, 2026 |
 | itch.io world | 15 connected regions |
-| Authoritative repository commit inspected | `origin/main` at `27105ae76fbb329559151030ebbac652a9ee8119` |
-| Remote `origin/main` verification | Local remote-tracking ref and remote Git ref matched at the audit time |
-| Local working branch during audit | `codex/cloud-map-transitions` at `495e7dae04dafe630c36cc0481fb65823bcf261d`; inspected without checkout or mutation |
+| Authoritative repository commit inspected | `origin/main` at `998ebbd3cd34d030c9dcd2311d3b50fe13757421` |
+| Remote `origin/main` verification | Local remote-tracking ref and remote Git ref matched at the August 25 release audit time |
 | New-player initialization in inspected source | 100 Gold, 200 troops, one Level 1 Main City |
-| Exact deployed Cloud Functions source and runtime | **NEEDS VERIFICATION** through authenticated deployment/runtime evidence |
+| Rally lifecycle release baseline | Merge build `1e5cdad50ba52878b504243cd9edf4ac8ec4a894` |
+| Rally release Functions manifest | Node.js 22; 102 functions; source fingerprint `7e2d310bdde5f501c6fd0386ca7ccffac4af6782d15d198e8d2b2e1a0f2b9b3b` |
+| Current Cloud Functions deployment | 102 active Node.js 22 functions; deployment completed August 25, 2026 at approximately 12:33 UTC; Firebase source artifact hash `68579fb133a6761ce75381025c95e374a3576001` |
+| Exact current Cloud Functions build ID | **NEEDS VERIFICATION** through an authenticated `getRealmInfo` response; the currently listed Functions were updated after the `998ebbd...` merge, but deployment metadata alone does not expose the embedded Git build ID |
 
-The web and itch.io clients target the same release ID, reset generation, world ID, and API contract hash. Their server-source fingerprints differ. Compatibility is intended but must be verified as part of cross-channel release QA.
+The web and itch.io clients target the same release ID, reset generation, world ID, and API contract hash. Their source fingerprints and feature sets differ. Compatibility is intended but must be verified as part of cross-channel release QA.
 
-The August 24 implementation verification inspected the exact `origin/main` Git object read-only. Repository facts in this document are therefore verified for commit `27105ae...`; they are not automatically proof that the corresponding backend code is deployed or that production data follows the same path.
+The August 24 broad implementation verification remains historical evidence for commit `27105ae...`. The August 25 Rally audit inspected current `origin/main` at `998ebbd...`, which contains Rally merge `1e5cdad...` as its first parent. Repository facts are not automatically proof that corresponding backend code is deployed or that production data follows the same path.
+
+### Ordinary Rally lifecycle release ledger
+
+| Channel / artifact | Build and deployment time | Validation result | Known difference |
+|---|---|---|---|
+| Firebase Functions and Firestore release | Exact Rally source build `1e5cdad50ba52878b504243cd9edf4ac8ec4a894`; deployed August 25, 2026 before the 11:57:35 UTC web publication | 102 Node.js 22 functions deployed; 29 clan callable access checks passed; Firestore rules and indexes deployed; release manifest recorded contract `e6029faf...`, server source `7e2d310b...`, and client source `afa347a7...` | A later full Functions update completed at approximately 12:33 UTC. Its Firebase artifact hash is `68579fb1...`; the exact embedded build ID remains **NEEDS VERIFICATION** through authenticated runtime evidence. |
+| Netlify Rally release baseline | `1e5cdad50ba52878b504243cd9edf4ac8ec4a894`; deploy `6a8d830f79ae0d9195aa50b1`; published August 25, 2026 at 11:57:35 UTC | Release manifest matched the build and contract; `/`, `/play/`, and `service-worker.js` returned HTTP 200; game and service worker carried the exact build stamp | Superseded as the current web artifact by descendant build `998ebbd...`; retained as the exact Rally deployment baseline. |
+| Current Netlify web production | `998ebbd3cd34d030c9dcd2311d3b50fe13757421`; deploy `6a8d8a87e2c5450009e2c829`; published August 25, 2026 at 12:29:19 UTC | Current-main static, multiplayer emulator, and final validation jobs passed; live manifest, `/`, `/play/`, service worker, and Rally guide returned HTTP 200; the game and service worker carried the current build stamp; the guide exposed 2–20 participants and creator-departure recall | This descendant adds the separate notifications/report work from PR #172. Its manifest fingerprints are `f610faa6...` server and `3ac3d645...` client. |
+| itch.io published client | `289a9d82f16739fac8d73376a5c4c85e08aeadc5`; published August 22, 2026 | Existing 261-file artifact previously passed exact-byte and SHA-256 validation | It was not republished for the Rally lifecycle correction. That correction remains unverified on itch.io and must not be labeled all-channel LIVE. |
 
 ## FM-3. Release Channel Matrix
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
 | Core cities, economy, armies, combat, objectives, clans, rallies, chat, missions, achievements, Shop, Bag, and Common Gear foundation | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
+| Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; baseline `1e5cdad...`, retained in current `998ebbd...` | Not verified; artifact not republished | `LIVE — WEB` |
 | Connected world size | 20 regions | 15 regions | Channel-specific LIVE state |
 | Gear skill stacking and same-level upgrade availability | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Gear Effects in battle reports | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
@@ -252,7 +268,7 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Verified `origin/main` initialization
 
-The current server implementation at commit `27105ae...` initializes a fresh/reset player with:
+The server implementation inspected during the August 24 audit at commit `27105ae...` initializes a fresh/reset player with:
 
 - 100 Gold (`TEST_STARTING_GOLD`)
 - 200 troops in the starting city (`PLAYER_STARTING_TROOPS`)
@@ -483,6 +499,7 @@ Holding Towers and Clan Treasury are `IMPLEMENTED BUT NOT LIVE`. The audited imp
 
 - The confirmed ordinary Rally design supports 2–20 unique clan members, with one army from one city per participant. A clan may have no more than five active Rallies. There is no formation expiry or automatic launch timer.
 - Any active clan member may join. Only Clan Leaders and Officers may create a Rally. Only the Rally creator or the Clan Leader may manually launch or cancel a forming Rally; only the creator may recall the launched combined army.
+- If the creator of a launched Rally leaves the clan, is removed from it, or changes clans, the server automatically recalls the complete combined Rally army. This automatic safety recall preserves the committed combined force for participant settlement, consumes no Recall Horn, and records `rally_creator_clan_departure` as the reason. A non-creator leaving the clan does not recall another creator's launched Rally.
 - A launch is atomic and must be blocked with a clear explanation unless every participant is still an eligible clan member, every contribution has arrived and is Ready, the creator still owns the assembly city, the objective is still eligible and hostile, and at least two participants remain. An invalid non-creator contribution is removed and returned; an invalid creator cancels the Rally.
 - Ordinary Rallies may target only Strongholds and the Crown Citadel. Reward Camps and ordinary cities are not Rally targets. The future four Holding Towers will also be Rally targets under their separate Tower rules.
 - A launched Rally travels at its slowest participant's march speed, locked at launch. Each participant keeps that ruler's own attack skills, Common Gear, applicable bonuses, casualty recovery, and troop ownership. Combat resolves all participant packages together against live arrival-time defense.
@@ -491,7 +508,7 @@ Holding Towers and Clan Treasury are `IMPLEMENTED BUT NOT LIVE`. The audited imp
 - Every participant receives the same Rally battle outcome snapshot with a clearly labeled breakdown of each participant's committed troops, losses, survivors, and contribution.
 - If a Rally return's original city is still owned by the participant, the army returns there. If it is neutral or clan-owned, the army returns to the participant's Main City. If an enemy owns it, the returning army attacks that city.
 - Ordinary objective Rallies are not restricted by ordinary-city attack protection, neutral-city caps, or anti-farming gates. Committing Rally troops does not remove a Royal Peace Shield.
-- The implementation correction for these confirmed rules is `IN DEVELOPMENT` until reviewed, validated, merged, and separately deployed. Published clients may still exhibit the older three-participant behavior in the meantime.
+- The ordinary Rally lifecycle correction above is `LIVE — WEB`. PR #171 merged as `1e5cdad...`; its complete static and multiplayer emulator gates passed; the exact Rally Functions source, Firestore rules/indexes, and web artifact were deployed and smoke-tested on August 25, 2026. Current web build `998ebbd...` descends from that Rally merge and retains the correction. The itch.io artifact was not republished and remains unverified for these corrected rules.
 - The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `IMPLEMENTED BUT NOT LIVE`; its five-member minimum does not replace the ordinary Rally minimum globally.
 
 ### Clan Treasury
@@ -930,20 +947,21 @@ Before a status becomes LIVE:
 
 ### Current workflow issues
 
-- The local working branch used during the audit is behind current GitHub `main`; the audit nevertheless inspected the exact `origin/main` Git object without changing branches.
-- The local `dist` matches the itch.io build, not current web production.
+- The historical August 24 audit used a local working branch behind GitHub `main`; that audit inspected the exact remote Git object without mutating the user's worktree. The August 25 Rally release audit used an isolated, current worktree.
+- The local `dist` matches the itch.io build, not current web production build `998ebbd...`.
 - Exact deployment ownership and the target parity interval between web and itch.io are **NEEDS VERIFICATION**.
 
 ## 23. Current Development Status
 
-Status verified through August 24, 2026.
+Status verified through August 25, 2026.
 
 | System | Status | Notes |
 |---|---|---|
 | Core city/economy/army/combat game | `LIVE — ALL PUBLISHED CHANNELS` | Channel world sizes differ. |
 | Web world expansion to 20 regions | `LIVE — WEB` | itch.io remains at 15 regions. |
 | Camps, Strongholds, Crown Citadel | `LIVE — ALL PUBLISHED CHANNELS` | Latest contrast fixes are web-only. |
-| Clans and ordinary rallies | `LIVE — ALL PUBLISHED CHANNELS` | Holding Tower rally rules are not live. |
+| Clans and ordinary Rally foundation | `LIVE — ALL PUBLISHED CHANNELS` | The corrected lifecycle is tracked separately because itch.io was not republished. |
+| Ordinary Rally lifecycle correction | `LIVE — WEB` | 2–20 participants, deterministic settlement and safe returns, plus automatic complete-army recall when the creator leaves, is removed, or changes clans. Holding Tower Rally rules remain separate and are not live. |
 | Global and Clan Chat | `LIVE — ALL PUBLISHED CHANNELS` | Moderation expansion is unresolved. |
 | Daily Login, Daily Missions, 40 Achievements | `LIVE — ALL PUBLISHED CHANNELS` | Reward calculations are verified in source; complete definitions and production runtime parity remain open. |
 | Common Gear foundation and upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Future rarities are planned. |
@@ -962,9 +980,11 @@ Status verified through August 24, 2026.
 
 ### Verified current issues
 
-- The local working branch is behind current GitHub `main`; the verification audit inspected the current `origin/main` Git object directly.
-- The locally preserved `dist` represents itch.io build `289a9d82f167`, not web build `27105ae76fbb`.
-- itch.io currently lags web production by 29 commits and five regions.
+- The historical August 24 audit branch was behind GitHub `main`; the August 25 Rally release audit used an isolated branch containing current `origin/main`.
+- The locally preserved `dist` represents itch.io build `289a9d82f167`, not current web build `998ebbd3cd34`.
+- At the August 25 snapshot, itch.io lagged web production by 44 commits and five regions.
+- itch.io has not been republished or verified for the ordinary Rally lifecycle correction, so that correction remains `LIVE — WEB`.
+- Current Functions deployment metadata shows all 102 Node.js 22 functions updated after the latest main merge, but the exact embedded build ID still requires an authenticated `getRealmInfo` verification.
 - Web roadmap copy contains an internal 20-versus-15-region contradiction.
 - The descriptive release ID remains dated August 2 despite newer builds.
 - Five web regions use placeholder numeric names.
@@ -1042,8 +1062,8 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 | Status | Major systems/features |
 |---|---|
-| `LIVE — ALL PUBLISHED CHANNELS` | Core game, 15-region common world subset, cities, economy, movement, combat, scouting, Camps, Strongholds, Citadel, clans, ordinary rallies, Global/Clan Chat, Daily Login, Daily Missions, 40 Achievements, Common Gear foundation, Gear upgrading, Gear Effects reports, existing consumables |
-| `LIVE — WEB` | 20-region world, Profile Inner Castle entry, current Stronghold/Citadel contrast, scalable Shop, reworked/stacked Bag, Clan Heraldry v2, Shop carousel/ad-layout fix, map-touch Shop/Bag guard |
+| `LIVE — ALL PUBLISHED CHANNELS` | Core game, 15-region common world subset, cities, economy, movement, combat, scouting, Camps, Strongholds, Citadel, clans, ordinary Rally foundation, Global/Clan Chat, Daily Login, Daily Missions, 40 Achievements, Common Gear foundation, Gear upgrading, Gear Effects reports, existing consumables |
+| `LIVE — WEB` | 20-region world, ordinary Rally lifecycle correction, Profile Inner Castle entry, current Stronghold/Citadel contrast, scalable Shop, reworked/stacked Bag, Clan Heraldry v2, Shop carousel/ad-layout fix, map-touch Shop/Bag guard |
 | `LIVE — ITCH.IO` | No feature is known to be uniquely newer on itch.io; the channel retains older versions of several web-live systems |
 | `IMPLEMENTED BUT NOT LIVE` | Holding Towers and Clan Treasury |
 | `IN DEVELOPMENT` | Pending 5×5 Core, production reset enforcement including Common Gear/clan persistence corrections, dynamic map expansion, continuing UI/performance/onboarding work |
@@ -1066,6 +1086,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Mobile portrait | Earlier portrait Gear QA | Does not establish portrait game support; landscape is authoritative |
 | Item pricing | Older fixed prices versus scalable pricing | Scalable formula is confirmed and `LIVE — WEB`; itch.io remains older |
 | Clan heraldry | v1 compatibility versus v2 presentation | v1 remains unchanged until deliberate v2 save; v2 is `LIVE — WEB` |
+| Ordinary Rally lifecycle deployment | Older published behavior could limit ordinary Rallies to three participants and lacked the creator-departure safety recall | Corrected 2–20-player lifecycle and creator-departure recall are `LIVE — WEB` beginning with `1e5cdad...`; itch.io remains unverified. |
 | Merge versus deployment | Completion reports sometimes implied live status | Merge never proves deployment; release evidence controls LIVE status |
 | Common Gear reset persistence | Confirmed design preserves owned/equipped/leveled/upgraded Common Gear and unopened Common Gear Boxes; current reset initializer creates an empty Gear state | Design remains authoritative; implementation is divergent and `IN DEVELOPMENT` |
 | Clan reset persistence | Confirmed design preserves clan ID/name/tag/heraldry, roster, membership, and roles; current reset initializer and generation gates remove them | Design remains authoritative; implementation and its emulator expectation are divergent and `IN DEVELOPMENT` |
@@ -1077,15 +1098,23 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 | Source | Purpose | Audit note |
 |---|---|---|
-| [Web release manifest](https://playcrownlands.com/release-manifest.js) | Primary web build identity | Verified build `27105ae76fbb...` |
+| [Web release manifest](https://playcrownlands.com/release-manifest.js) | Primary web build identity | Verified current build `998ebbd3cd34...`, contract `e6029faf...`, server fingerprint `f610faa6...`, client fingerprint `3ac3d645...`, and 102 callables |
 | [Live world](https://playcrownlands.com/world) | Current player-facing web world | Verified 20 regions; five placeholder names |
 | [Game rules](https://playcrownlands.com/game-rules) | Current player-facing rules | Used for live rules baseline |
 | [Roadmap](https://playcrownlands.com/roadmap) | Public direction and status | Planning evidence only; contains stale 15-region copy |
 | [Updates](https://playcrownlands.com/updates) | Public release narrative | Used with release manifests, not alone |
 | [itch.io](https://crownlands.itch.io/crownlands) | Secondary published channel | Published build `289a9d82f167...` verified locally |
 | [GitHub commit `289a9d82f167...`](https://github.com/explocion200/CrownLands/commit/289a9d82f16739fac8d73376a5c4c85e08aeadc5) | itch.io artifact source point | Includes itch subpath fix and prior merged Gear work |
-| [GitHub commit `27105ae76fbb...`](https://github.com/explocion200/CrownLands/commit/27105ae76fbb329559151030ebbac652a9ee8119) | Current web/main source point at audit | Matches web release manifest |
+| [GitHub commit `27105ae76fbb...`](https://github.com/explocion200/CrownLands/commit/27105ae76fbb329559151030ebbac652a9ee8119) | August 24 broad implementation audit source point | Historical audit baseline; no longer current web/main |
 | August 24 read-only implementation verification | Exact `origin/main` source audit of initialization, economy, King Power, objectives, Shop, rewards, reset persistence, rankings, and version gates | No checkout, code/config/data change, test run, build, commit, push, merge, deployment, or production mutation; deployed Functions parity remains unverified |
+| [GitHub PR #171](https://github.com/explocion200/CrownLands/pull/171) | Ordinary Rally lifecycle correction | Merged August 25, 2026 as `1e5cdad...`; records 2–20-player lifecycle, deterministic settlement, safe returns, and creator-departure recall |
+| [Rally merge release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32844321201) | Static and multiplayer Rally validation | Passed all three jobs, including the full multiplayer emulator gate |
+| [GitHub commit `1e5cdad50ba5...`](https://github.com/explocion200/CrownLands/commit/1e5cdad50ba52878b504243cd9edf4ac8ec4a894) | Exact Rally deployment baseline | Functions, Firestore rules/indexes, and Netlify web artifact deployed and smoke-tested August 25, 2026 |
+| [Netlify Rally deploy metadata](https://api.netlify.com/api/v1/deploys/6a8d830f79ae0d9195aa50b1) | Exact Rally web publication evidence | Ready production deploy of `1e5cdad...`, published at 11:57:35 UTC |
+| [GitHub commit `998ebbd3cd34...`](https://github.com/explocion200/CrownLands/commit/998ebbd3cd34d030c9dcd2311d3b50fe13757421) | Current web/main source point | Descends from the Rally merge and is the current live manifest build |
+| [Current-main release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32847818634) | Current descendant-build validation | Static, multiplayer emulator, and final validation jobs all passed |
+| [Current Netlify site metadata](https://api.netlify.com/api/v1/sites/crownland.netlify.app) | Current production deploy evidence | Ready production deploy `6a8d8a87...` of `998ebbd...`, published at 12:29:19 UTC |
+| August 25 authenticated Firebase Functions listing | Current backend deployment metadata | 102 active Node.js 22 functions; latest full update completed at approximately 12:33 UTC with Firebase source artifact hash `68579fb1...`; exact embedded Git build ID still **NEEDS VERIFICATION** |
 | [GitHub PR #159](https://github.com/explocion200/CrownLands/pull/159) | Holding Towers/Clan Treasury | Open, unmerged, not live |
 | `README.md` | Historical mechanics and implementation documentation | Detailed but stale on world/build state |
 | `docs/CROWNLANDS_ART_BIBLE.md` | Visual direction | Incorporated by reference |
@@ -1094,6 +1123,15 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.8 — August 25, 2026
+
+- Updated the primary web snapshot to current build `998ebbd...` and recorded its deployment time, Netlify deploy ID, contract, source fingerprints, callable count, current repository commit, and smoke evidence.
+- Added the exact `1e5cdad...` Rally release baseline, PR #171, green release-gate run, Functions/Firestore deployment evidence, Netlify publication, and current descendant-build evidence.
+- Recorded automatic complete-army Rally recall when the creator leaves, is removed, or changes clans; confirmed that it consumes no Recall Horn, records a specific reason, and does not recall another creator's Rally for a non-creator departure.
+- Reclassified the ordinary Rally lifecycle correction from `IN DEVELOPMENT` to `LIVE — WEB` without changing the all-channel status of the older Rally foundation.
+- Preserved the five-member Holding Tower minimum as a separate target-specific, not-live rule.
+- Recorded that itch.io was not republished and that the exact embedded build ID of the latest Functions deployment still requires authenticated runtime verification.
 
 ## v1.7 — August 24, 2026
 
