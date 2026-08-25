@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands HUD Flag Frame Responsive QA</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 18px; overflow: auto; color: #f2e2bf; background: #17110d; font-family: Georgia, serif; }
+    main { width: min(1220px, 100%); margin: 0 auto; display: grid; gap: 24px; }
+    h1, h2, p { margin: 0; }
+    p { color: #d9c8aa; }
+    figure { margin: 0; display: grid; gap: 8px; justify-items: start; }
+    figcaption { display: grid; gap: 3px; }
+    iframe { display: block; max-width: 100%; border: 2px solid #997643; background: #17110d; box-shadow: 0 10px 28px rgba(0,0,0,.36); }
+    .desktop { width: 1180px; height: 390px; }
+    .narrow { width: 760px; height: 470px; }
+    .mobile { width: 390px; height: 1080px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header><h1>HUD player-flag frame containment</h1><p>The production frame, renderer, level badge, and responsive CSS at three viewport sizes.</p></header>
+    <figure>
+      <figcaption><h2>Desktop · 1180 × 390</h2><p>All stored v1/v2 pattern cases.</p></figcaption>
+      <iframe class="desktop" src="index.html?state=hud" title="Desktop HUD flag frame cases"></iframe>
+    </figure>
+    <figure>
+      <figcaption><h2>Narrow landscape · 760 × 470</h2><p>Exercises the compact HUD frame media query.</p></figcaption>
+      <iframe class="narrow" src="index.html?state=hud" title="Narrow landscape HUD flag frame cases"></iframe>
+    </figure>
+    <figure>
+      <figcaption><h2>Mobile portrait · 390 × 1080</h2><p>Confirms wrapping does not alter the flag aperture.</p></figcaption>
+      <iframe class="mobile" src="index.html?state=hud" title="Mobile portrait HUD flag frame cases"></iframe>
+    </figure>
+  </main>
+</body>
+</html>

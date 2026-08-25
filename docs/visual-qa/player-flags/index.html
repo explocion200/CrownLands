@@ -74,6 +74,16 @@
     .qa-symbol-card .kingdom-flag { width: 72px; height: 52px; }
     .qa-pattern-card .flag-symbol,
     .qa-symbol-card .flag-symbol { font-size: 1.55rem; }
+    .qa-hud-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 10px; }
+    .qa-hud-case { min-height: 132px; padding: 12px; display: grid; place-items: center; align-content: center; gap: 7px; border: 1px solid #997643; background: #d0b98e; text-align: center; }
+    .qa-hud-case .profile-button { cursor: default; }
+    .qa-hud-case strong { color: #2f2113 !important; font-size: 11px; }
+    html[data-qa-state="hud"] body { padding: 8px; }
+    html[data-qa-state="hud"] .qa-shell { width: 100%; }
+    html[data-qa-state="hud"] .qa-header,
+    html[data-qa-state="hud"] .qa-editor-panel,
+    html[data-qa-state="hud"] .qa-panel:not(.qa-hud-panel),
+    html[data-qa-state="hud"] .flag-discard-dialog { display: none; }
     .qa-city-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
     .qa-city-card.city-node {
       position: relative !important;
@@ -224,6 +234,11 @@
       </form>
     </dialog>
 
+    <section class="qa-panel qa-hud-panel">
+      <h2>HUD profile frame aperture</h2>
+      <div id="hudFrameGrid" class="qa-hud-grid"></div>
+    </section>
+
     <section class="qa-panel"><h2>Patterns</h2><div id="patternCatalog" class="qa-catalog"></div></section>
     <section class="qa-panel"><h2>Renderer compatibility symbols (30 supported)</h2><div id="symbolCatalog" class="qa-catalog"></div></section>
 
@@ -279,6 +294,17 @@
       function paintFlag(element, rawFlag, stableKey = "qa") {
         return flagRenderer.render(element, rawFlag, { stableKey, context: "visual-qa" });
       }
+
+      const hudCases = config.PATTERNS.map((option, index) => ({
+        version: index % 2 ? 2 : 1,
+        primary: index % 3 === 0 ? "#315A8A" : index % 3 === 1 ? "#6E2025" : "#274E3C",
+        secondary: index % 2 ? "#C69A45" : "#DDD0AE",
+        symbolColor: index % 2 ? "#F2E2BF" : "#202426",
+        pattern: option.key,
+        symbol: config.SELECTABLE_SYMBOL_KEYS[index % config.SELECTABLE_SYMBOL_KEYS.length],
+      }));
+      document.getElementById("hudFrameGrid").innerHTML = hudCases.map((flag, index) => `<article class="qa-hud-case"><button class="portrait-placeholder profile-button" type="button" aria-label="HUD ${config.PATTERNS[index].label}, saved flag version ${flag.version}"><span class="kingdom-flag kingdom-flag-small" data-hud-case="${index}"><span class="flag-symbol"></span></span><span class="character-level-badge">Lv ${index + 1}</span></button><strong>${config.PATTERNS[index].label} · v${flag.version}</strong></article>`).join("");
+      hudCases.forEach((flag, index) => paintFlag(document.querySelector(`[data-hud-case="${index}"]`), flag, `hud-frame-${index}`));
 
       function renderPreview() {
         const flag = paintFlag(document.getElementById("livePreview"), draft, "qa-editor");
@@ -397,6 +423,26 @@
       checks.push({ label: "21 selectable symbol cards", pass: document.querySelectorAll("[data-qa-symbol]").length === 21 });
       checks.push({ label: "legacy-only symbols hidden from selector", pass: config.LEGACY_ONLY_SYMBOL_KEYS.every(key => !document.querySelector(`[data-qa-symbol="${key}"]`)) });
       checks.push({ label: "14 pattern cards", pass: document.querySelectorAll("[data-pattern]").length === 14 });
+      checks.push({ label: "14 HUD frame pattern cases", pass: document.querySelectorAll("[data-hud-case]").length === config.PATTERNS.length });
+      const firstHudFlagStyle = getComputedStyle(document.querySelector("[data-hud-case]"));
+      checks.push({ label: "HUD flag aperture clips rounded frame corners", pass: firstHudFlagStyle.clipPath === "inset(15% 9% 12% round 12%)" && firstHudFlagStyle.borderRadius !== "0px" });
+      const firstHudFlagRect = document.querySelector("[data-hud-case]").getBoundingClientRect();
+      const firstHudButton = document.querySelector(".qa-hud-case .profile-button");
+      const firstHudButtonRect = firstHudButton.getBoundingClientRect();
+      const visibleHudBounds = {
+        left: firstHudFlagRect.left + firstHudFlagRect.width * .09,
+        top: firstHudFlagRect.top + firstHudFlagRect.height * .15,
+        right: firstHudFlagRect.right - firstHudFlagRect.width * .09,
+        bottom: firstHudFlagRect.bottom - firstHudFlagRect.height * .12,
+      };
+      checks.push({
+        label: "HUD visible paint resolves inside frame aperture",
+        pass: visibleHudBounds.left >= firstHudButtonRect.left + firstHudButtonRect.width * .195 - .5
+          && visibleHudBounds.top >= firstHudButtonRect.top + firstHudButtonRect.height * .254 - .5
+          && visibleHudBounds.right <= firstHudButtonRect.left + firstHudButtonRect.width * .805 + .5
+          && visibleHudBounds.bottom <= firstHudButtonRect.top + firstHudButtonRect.height * .775 + .5,
+      });
+      checks.push({ label: "HUD frame art remains unclipped", pass: getComputedStyle(firstHudButton).overflow === "visible" });
       const declaredCaptureWidth = Number(qaParams.get("width")) || 0;
       checks.push({
         label: "no horizontal page clipping",

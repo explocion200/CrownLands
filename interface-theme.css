@@ -2037,6 +2037,9 @@ input[type="range"] {
 }
 
 .profile-button .kingdom-flag-small {
+  /* This later theme rule owns the production HUD geometry, so its clip must match the frame aperture. */
+  --hud-flag-aperture-inset: 15% 9% 12%;
+  --hud-flag-aperture-radius: 12%;
   left: 13.5%;
   top: 15%;
   width: 73%;

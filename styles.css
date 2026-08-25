@@ -7492,13 +7492,18 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   z-index: 1;
 }
 .profile-button .kingdom-flag-small {
+  --hud-flag-aperture-inset: 3%;
+  --hud-flag-aperture-radius: 10%;
   position: absolute;
   left: 19.5%;
   top: 25.4%;
   width: 60.8%;
   height: 52%;
   border: 0;
-  border-radius: 0;
+  /* Clip the flag to the frame PNG's rounded inner window without clipping the ornate frame itself. */
+  border-radius: var(--hud-flag-aperture-radius);
+  clip-path: inset(var(--hud-flag-aperture-inset) round var(--hud-flag-aperture-radius));
+  contain: paint;
   box-shadow: none;
 }
 .profile-rank-btn {
@@ -10242,7 +10247,7 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 @media (max-width: 780px) and (orientation: landscape) {
   .profile-action-row { gap: .44rem; }
   .portrait-placeholder { width: 74px; height: 58px; border-radius: 14px; }
-  .profile-button .kingdom-flag-small { left: 19.5%; top: 25.4%; width: 60.8%; height: 52%; border-radius: 0; }
+  .profile-button .kingdom-flag-small { left: 19.5%; top: 25.4%; width: 60.8%; height: 52%; }
   .profile-rank-btn { width: 44px; height: 44px; }
   .clan-hud-icon .clan-shield-size-small { width: 40px; height: 44px; }
   .clan-hud-btn.is-search::after { right: -3px; bottom: -3px; width: 18px; height: 18px; font-size: .76rem; }
