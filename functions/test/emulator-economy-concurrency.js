@@ -24,6 +24,19 @@ function getExpectedShopPrice(itemId, pricing = {}) {
   return Math.max(50, Math.round(amount / step) * step);
 }
 
+function getXpRequiredForLevel(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  const legacyRequirement = value => Math.floor(150 + value * 65 + Math.pow(value, 2.05) * 35);
+  if (current <= 25) return legacyRequirement(current);
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(legacyRequirement(25) * Math.pow(1.1, current - 25)));
+}
+
+function getCityUpgradeXp(level) {
+  return Math.max(1, Math.floor(
+    getXpRequiredForLevel(level) * Number(economyConfig.cityUpgradeXp?.fixedXpRate || 0.05)
+  ));
+}
+
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
@@ -175,6 +188,267 @@ async function main() {
   const shopPricing = economyResults.find(result => result.ok)?.result?.shopPricing || {};
   assert(Number(shopPricing.rawBaseGoldPerHour || 0) > 0, "Economy response omitted raw Shop pricing context.");
   assert(Number(shopPricing.cityCount || 0) === 1, "Shop pricing context did not count the regular owned city.");
+
+  const cityRegionId = String((await cityRef.get()).data()?.regionId || claim.regionId || "west");
+  const cityXpHighWatermarkRef = db.doc(
+    `players/${user.uid}/cityUpgradeXp/${realm.resetGeneration}_${cityRegionId}_${claim.cityId}`
+  );
+  await Promise.all([
+    profileRef.set({
+      gold: 1000000000,
+      goldFloat: 1000000000,
+      character: { level: 1, xp: 0, skillPoints: 0 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    cityRef.set({
+      level: 1,
+      troops: 200,
+      troopFloat: 200,
+      investedGold: 0,
+      productionUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+  ]);
+  const legacyUpgrade = await callFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+  });
+  assert(legacyUpgrade.legacyCityUpgradeRequest === true, "A request without an ID was not handled as legacy.");
+  assert(Number(legacyUpgrade.cityUpgradeXp?.rawXp || 0) === 0, "A legacy upgrade exposed awardable Hero XP.");
+  assert(Number(legacyUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "A legacy upgrade awarded Hero XP.");
+  assert(
+    Number(legacyUpgrade.cityUpgradeXp?.legacySuppressedXp || 0) === getCityUpgradeXp(1),
+    "The legacy receipt did not account for the skipped city XP."
+  );
+  const [profileAfterLegacy, cityAfterLegacy, highWatermarkAfterLegacy] = await Promise.all([
+    profileRef.get(),
+    cityRef.get(),
+    cityXpHighWatermarkRef.get(),
+  ]);
+  assert(Number(cityAfterLegacy.data()?.level || 0) === 2, "A compatible legacy request did not upgrade the city.");
+  assert(Number(profileAfterLegacy.data()?.character?.xp || 0) === 0, "A legacy request changed Hero progression.");
+  assert(
+    Number(highWatermarkAfterLegacy.data()?.highestDevelopedCityLevel || 0) === 2,
+    "A legacy request did not advance the seasonal city high-watermark."
+  );
+
+  await cityRef.set({
+    level: 1,
+    productionUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const reclaimPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+  });
+  assert(Number(reclaimPreview.cityUpgradeXp?.rawXp || 0) === 0, "A modern client could reclaim legacy-upgraded XP.");
+  assert(
+    Number(reclaimPreview.cityUpgradeXp?.rebuildSuppressedXp || 0) === getCityUpgradeXp(1),
+    "The legacy-upgraded level was not treated as already developed."
+  );
+  const [profileBeforeRejectedReclaim, cityBeforeRejectedReclaim] = await Promise.all([
+    profileRef.get(),
+    cityRef.get(),
+  ]);
+  const rejectedReclaim = await invokeFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-legacy-reclaim-warning-${crypto.randomBytes(6).toString("hex")}`,
+  });
+  assert(!rejectedReclaim.ok, "An unacknowledged legacy-level reclaim committed.");
+  assert(
+    rejectedReclaim.error?.details?.reason === "city-upgrade-xp-warning-required",
+    "The legacy-level reclaim did not require the modern suppression warning."
+  );
+  const [profileAfterRejectedReclaim, cityAfterRejectedReclaim, watermarkAfterRejectedReclaim] = await Promise.all([
+    profileRef.get(),
+    cityRef.get(),
+    cityXpHighWatermarkRef.get(),
+  ]);
+  assert(Number(cityAfterRejectedReclaim.data()?.level || 0) === 1, "A rejected reclaim partially upgraded the city.");
+  assert(
+    Number(profileAfterRejectedReclaim.data()?.goldFloat || 0)
+      === Number(profileBeforeRejectedReclaim.data()?.goldFloat || 0),
+    "A rejected reclaim partially spent Gold."
+  );
+  assert(
+    JSON.stringify(profileAfterRejectedReclaim.data()?.character || {})
+      === JSON.stringify(profileBeforeRejectedReclaim.data()?.character || {}),
+    "A rejected reclaim changed Hero progression or level-up rewards."
+  );
+  for (const field of ["investedGold", "troops", "troopFloat"]) {
+    assert(
+      Number(cityAfterRejectedReclaim.data()?.[field] || 0) === Number(cityBeforeRejectedReclaim.data()?.[field] || 0),
+      `A rejected reclaim partially changed city ${field}.`
+    );
+  }
+  assert(
+    Number(watermarkAfterRejectedReclaim.data()?.highestDevelopedCityLevel || 0) === 2,
+    "A rejected reclaim changed the city high-watermark."
+  );
+  const acknowledgedReclaim = await callFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-legacy-reclaim-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedRebuildSuppressedXp: getCityUpgradeXp(1),
+  });
+  assert(Number(acknowledgedReclaim.cityUpgradeXp?.awardedXp || 0) === 0, "A legacy-upgraded level awarded XP later.");
+
+  await Promise.all([
+    cityXpHighWatermarkRef.delete(),
+    profileRef.set({
+      gold: 1000000000,
+      goldFloat: 1000000000,
+      character: { level: 1, xp: 0, skillPoints: 0 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    cityRef.set({
+      level: 1,
+      troops: 200,
+      troopFloat: 200,
+      investedGold: 0,
+      productionUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+  ]);
+
+  const preview = await callFunction("getCityUpgradeXpPreview", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 2,
+  });
+  const expectedBulkCityXp = getCityUpgradeXp(1) + getCityUpgradeXp(2);
+  assert(Number(preview.cityUpgradeXp?.rawXp || 0) === expectedBulkCityXp, "Bulk city XP preview did not sum each crossed level.");
+  assert(
+    JSON.stringify(preview.cityUpgradeXp?.eligibleLevels || []) === JSON.stringify([2, 3]),
+    "First city XP encounter did not baseline at the current level."
+  );
+
+  await Promise.all([
+    profileRef.set({
+      gold: 1000000000,
+      goldFloat: 1000000000,
+      character: { level: 1, xp: 240, skillPoints: 0 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    cityRef.set({
+      level: 1,
+      troops: 200,
+      troopFloat: 200,
+      investedGold: 0,
+      productionUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+  ]);
+  const replaySafeRequest = {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 2,
+    requestId: `city-upgrade-replay-${crypto.randomBytes(6).toString("hex")}`,
+  };
+  const concurrentCityUpgrades = await Promise.all([
+    invokeFunction("upgradeCity", user.token, replaySafeRequest),
+    invokeFunction("upgradeCity", user.token, replaySafeRequest),
+  ]);
+  assert(concurrentCityUpgrades.every(result => result.ok), "A replay-safe concurrent city upgrade returned an error.");
+  assert(
+    concurrentCityUpgrades.every(result => Number(result.result?.cityUpgradeXp?.awardedXp || 0) === expectedBulkCityXp),
+    "Concurrent replay returned inconsistent city XP receipts."
+  );
+  const [profileAfterCityXp, cityAfterCityXp] = await Promise.all([profileRef.get(), cityRef.get()]);
+  assert(Number(cityAfterCityXp.data()?.level || 0) === 3, "A replayed city upgrade applied its levels more than once.");
+  assert(Number(profileAfterCityXp.data()?.character?.level || 0) === 2, "City XP did not use the normal Hero level-up path.");
+  assert(Number(profileAfterCityXp.data()?.character?.xp || 0) === expectedBulkCityXp - 10, "City XP was not applied exactly once.");
+  assert(Number(cityAfterCityXp.data()?.troops || 0) > 200, "The Hero level-up troop reward was not credited to the Main City.");
+
+  await cityRef.set({
+    level: 1,
+    productionUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const rebuildXp = getCityUpgradeXp(1);
+  const unacknowledgedRebuild = await invokeFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-unacknowledged-${crypto.randomBytes(6).toString("hex")}`,
+  });
+  assert(!unacknowledgedRebuild.ok, "A rebuild committed without acknowledging suppressed Hero XP.");
+  assert(
+    unacknowledgedRebuild.error?.details?.reason === "city-upgrade-xp-warning-required",
+    "The server did not return the refreshed city XP warning receipt."
+  );
+  assert(Number((await cityRef.get()).data()?.level || 0) === 1, "An unacknowledged rebuild changed the city.");
+  const rebuildUpgrade = await callFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-rebuild-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedRebuildSuppressedXp: rebuildXp,
+  });
+  assert(Number(rebuildUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "Rebuilding a prior seasonal city level awarded Hero XP.");
+  assert(Number(rebuildUpgrade.cityUpgradeXp?.rebuildSuppressedXp || 0) === rebuildXp, "Rebuild suppression was not explicit.");
+
+  await Promise.all([
+    profileRef.set({
+      gold: Number.MAX_SAFE_INTEGER,
+      goldFloat: Number.MAX_SAFE_INTEGER,
+      character: { level: 50, xp: 0, skillPoints: 49 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    cityRef.set({
+      level: 150,
+      productionUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+  ]);
+  const cappedPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+  });
+  const cappedUpgrade = await callFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-cap-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedCapSuppressedXp: Number(cappedPreview.cityUpgradeXp?.capSuppressedXp || 0),
+    acknowledgedRebuildSuppressedXp: Number(cappedPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
+  });
+  assert(Number(cappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getXpRequiredForLevel(50), "Hero Level 50 did not use one exact level-equivalent.");
+  assert(Number(cappedUpgrade.cityUpgradeXp?.capSuppressedXp || 0) > 0, "The Level-50 cap did not report discarded excess XP.");
+  assert(Number(cappedUpgrade.cityUpgradeXp?.capReferenceHeroLevel || 0) === 50, "The daily cap did not freeze at Hero Level 50.");
+
+  await profileRef.set({
+    gold: Number.MAX_SAFE_INTEGER,
+    goldFloat: Number.MAX_SAFE_INTEGER,
+    character: { level: 90, xp: 0, skillPoints: 89 },
+    economyUpdatedAtMs: Date.now(),
+  }, { merge: true });
+  const frozenCapPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+  });
+  const frozenCapUpgrade = await callFunction("upgradeCity", user.token, {
+    cityId: claim.cityId,
+    regionId: cityRegionId,
+    levels: 1,
+    requestId: `city-upgrade-frozen-cap-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedCapSuppressedXp: Number(frozenCapPreview.cityUpgradeXp?.capSuppressedXp || 0),
+    acknowledgedRebuildSuppressedXp: Number(frozenCapPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
+  });
+  assert(Number(frozenCapUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "A full frozen daily allowance awarded more city XP.");
+  assert(Number(frozenCapUpgrade.cityUpgradeXp?.capReferenceHeroLevel || 0) === 50, "Combat-style Hero progress recalculated the frozen city XP cap.");
+
+  await Promise.all([
+    profileRef.set({
+      character: { level: 1, xp: 0, skillPoints: 0 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    cityRef.set({
+      level: 1,
+      productionUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+  ]);
 
   const shieldId = "shield_12h";
   const shieldCost = getExpectedShopPrice(shieldId, shopPricing);
@@ -633,7 +907,7 @@ async function main() {
     "The leaderboard did not receive the authoritative King Power snapshot."
   );
 
-  console.log("Emulator economy concurrency passed: production, items, Common Gear transactions, city propagation, and King Power.");
+  console.log("Emulator economy concurrency passed: production, city XP, items, Common Gear transactions, city propagation, and King Power.");
 }
 
 main()

@@ -950,10 +950,23 @@ const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndga
 const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = economyNumber("levelRewards.troopEarlyBaseHours", 4);
 const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEarlyHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = economyNumber("levelRewards.troopMidBaseHours", 24);
-const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.48);
-const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 48);
-const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.32);
-const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 96);
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.6);
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 54);
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.4);
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 108);
+const CITY_UPGRADE_XP_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.enabled !== false;
+const CITY_UPGRADE_XP_MODEL_VERSION = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.modelVersion", 1)));
+const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.05));
+const CITY_UPGRADE_XP_CAP_START_HERO_LEVEL = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.capStartHeroLevel", 50)));
+const CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL = Math.max(
+  CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+  Math.floor(economyNumber("cityUpgradeXp.capMaximumHeroLevel", 100))
+);
+const CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS = Math.max(0, economyNumber("cityUpgradeXp.capStartLevelEquivalents", 1));
+const CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS = Math.max(
+  CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS,
+  economyNumber("cityUpgradeXp.capMaximumLevelEquivalents", 2)
+);
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
@@ -6029,6 +6042,58 @@ function getXpRequiredForLevel(level) {
   );
 }
 
+function getCityUpgradeFixedXp(cityLevel) {
+  const level = Math.max(1, Math.floor(Number(cityLevel) || 1));
+  return Math.max(1, Math.floor(getXpRequiredForLevel(level) * CITY_UPGRADE_XP_FIXED_RATE));
+}
+
+function getCityUpgradeRawXp(startingCityLevel, levels = 1) {
+  if (!CITY_UPGRADE_XP_ENABLED) return 0;
+  const startLevel = Math.max(1, Math.floor(Number(startingCityLevel) || 1));
+  const levelCount = Math.max(0, Math.floor(Number(levels) || 0));
+  let total = 0;
+  for (let offset = 0; offset < levelCount; offset += 1) {
+    total = Math.min(Number.MAX_SAFE_INTEGER, total + getCityUpgradeFixedXp(startLevel + offset));
+  }
+  return total;
+}
+
+function getCityUpgradeXpCapLevelEquivalents(heroLevel) {
+  const level = Math.max(
+    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+    Math.floor(Number(heroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
+  );
+  if (level >= CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL) {
+    return CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS;
+  }
+  const progress = (level - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
+    / Math.max(1, CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL);
+  return CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS
+    + (CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS - CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS)
+      * progress;
+}
+
+function getCityUpgradeXpDailyCap(heroLevel) {
+  const referenceLevel = Math.max(
+    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+    Math.floor(Number(heroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
+  );
+  const equivalents = getCityUpgradeXpCapLevelEquivalents(referenceLevel);
+  const wholeLevels = Math.max(0, Math.floor(equivalents));
+  const fractionalLevel = Math.max(0, equivalents - wholeLevels);
+  let allowance = 0;
+  for (let offset = 0; offset < wholeLevels; offset += 1) {
+    allowance = Math.min(Number.MAX_SAFE_INTEGER, allowance + getXpRequiredForLevel(referenceLevel + offset));
+  }
+  if (fractionalLevel > 0 && allowance < Number.MAX_SAFE_INTEGER) {
+    allowance = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      allowance + getXpRequiredForLevel(referenceLevel + wholeLevels) * fractionalLevel
+    );
+  }
+  return Math.max(0, Math.floor(allowance));
+}
+
 function getLevelUpGoldUpgradeShare(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
   if (current <= HERO_XP_SOFT_CAP_LEVEL) return LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE;
@@ -10529,6 +10594,24 @@ function getAuthoritativeProfileRevisionMs(profile = null) {
     || timestampToMs(profile.updatedAt);
 }
 
+function normalizeCityUpgradeXpDailyState(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const dayKey = String(raw.dayKey || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  const dailyCapXp = Math.max(0, Math.floor(Number(raw.dailyCapXp) || 0));
+  return {
+    modelVersion: Math.max(1, Math.floor(Number(raw.modelVersion) || CITY_UPGRADE_XP_MODEL_VERSION)),
+    resetGeneration: String(raw.resetGeneration || "").slice(0, 120),
+    dayKey,
+    capReferenceHeroLevel: Math.max(
+      CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+      Math.floor(Number(raw.capReferenceHeroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
+    ),
+    dailyCapXp,
+    dailyAwardedXp: Math.min(dailyCapXp, Math.max(0, Math.floor(Number(raw.dailyAwardedXp) || 0))),
+  };
+}
+
 function applyServerProfilePatch(patch = null, options = {}) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
@@ -10581,6 +10664,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
   }
   if (patch.daily && typeof patch.daily === "object") {
     state.daily = normalizeDailyCaptureTracker(patch.daily);
+    changed = true;
+  }
+  if (patch.cityUpgradeXpDaily !== undefined) {
+    state.cityUpgradeXpDaily = normalizeCityUpgradeXpDailyState(patch.cityUpgradeXpDaily);
     changed = true;
   }
   if (patch.dailyLoginReward && typeof patch.dailyLoginReward === "object") {
@@ -32816,9 +32903,12 @@ function getAffordableCityUpgradeLevels(city, levelLimit = Number.POSITIVE_INFIN
   return affordableLevels;
 }
 
-function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
+function renderCityLevelUpButton({ label, levels, cost, xp = 0, disabled, reason }) {
   const safeLevels = Math.max(0, Math.floor(Number(levels) || 0));
-  const costLabel = Number.isFinite(cost) && cost > 0 ? `${formatNumber(cost)}g` : (reason || "Unavailable");
+  const safeXp = Math.max(0, Math.floor(Number(xp) || 0));
+  const costLabel = Number.isFinite(cost) && cost > 0
+    ? `${formatNumber(cost)}g${safeXp > 0 ? ` · +${formatNumber(safeXp)} XP` : ""}`
+    : (reason || "Unavailable");
   return `
     <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" data-audio-effect="none" type="button" ${disabled ? "disabled" : ""}>
       <span>${escapeHtml(label)}</span>
@@ -32836,8 +32926,12 @@ function renderCityLevelUpAction(city) {
     : "";
   const oneCost = getMultiLevelCost(projectedCity, 1);
   const fiveCost = getMultiLevelCost(projectedCity, 5);
+  const showCityUpgradeXp = CITY_UPGRADE_XP_ENABLED && usesServerEconomyAuthority();
+  const oneXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 1) : 0;
+  const fiveXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 5) : 0;
   const affordableMax = baseDisabledReason ? 0 : getProjectedAffordableCityUpgradeLevels(city);
   const maxCost = affordableMax > 0 ? getMultiLevelCost(projectedCity, affordableMax) : Infinity;
+  const maxXp = showCityUpgradeXp && affordableMax > 0 ? getCityUpgradeRawXp(currentLevel, affordableMax) : 0;
   const nextLevelLabel = `Next: Lv ${formatNumber(currentLevel + 1)}`;
   const availableGold = getProjectedGold();
   const insufficientReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
@@ -32846,13 +32940,14 @@ function renderCityLevelUpAction(city) {
     <section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}">
       <div class="city-level-up-copy">
         <strong>Level up city</strong>
-        <small>${escapeHtml(nextLevelLabel)} · Gold ${formatNumber(availableGold)}</small>
+        <small>${escapeHtml(nextLevelLabel)}${oneXp > 0 ? ` · up to +${formatNumber(oneXp)} Hero XP` : ""} · Gold ${formatNumber(availableGold)}</small>
       </div>
       <div class="city-level-up-actions">
         ${renderCityLevelUpButton({
           label: "1 lvl",
           levels: 1,
           cost: oneCost,
+          xp: oneXp,
           disabled: Boolean(baseDisabledReason) || availableGold < oneCost,
           reason: baseDisabledReason || (availableGold < oneCost ? insufficientReason : ""),
         })}
@@ -32860,6 +32955,7 @@ function renderCityLevelUpAction(city) {
           label: "5 lvls",
           levels: 5,
           cost: fiveCost,
+          xp: fiveXp,
           disabled: Boolean(baseDisabledReason) || !Number.isFinite(fiveCost) || availableGold < fiveCost,
           reason: baseDisabledReason || (!Number.isFinite(fiveCost) ? "Unavailable" : availableGold < fiveCost ? `Need ${formatNumber(fiveCost)}g` : ""),
         })}
@@ -32867,8 +32963,11 @@ function renderCityLevelUpAction(city) {
           label: "Max",
           levels: affordableMax,
           cost: maxCost,
+          xp: maxXp,
           disabled: Boolean(baseDisabledReason) || affordableMax < 1,
-          reason: baseDisabledReason || (affordableMax < 1 ? insufficientReason : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g`),
+          reason: baseDisabledReason || (affordableMax < 1
+            ? insufficientReason
+            : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g${maxXp > 0 ? ` · up to +${formatNumber(maxXp)} XP` : ""}`),
         })}
       </div>
     </section>`;

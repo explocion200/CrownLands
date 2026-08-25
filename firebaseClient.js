@@ -683,6 +683,10 @@
     return callServerFunction("upgradeCity", payload);
   }
 
+  async function getCityUpgradeXpPreview(payload = {}) {
+    return callServerFunction("getCityUpgradeXpPreview", payload);
+  }
+
   async function spendSkillPoint(payload = {}) {
     return callServerFunction("spendSkillPoint", payload);
   }
@@ -2776,6 +2780,7 @@
     claimRewardedAd,
     reserveHarvestBonusSpawn,
     collectHarvestBonus,
+    getCityUpgradeXpPreview,
     upgradeCity,
     spendSkillPoint,
     spendSkillPoints,

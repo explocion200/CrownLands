@@ -292,10 +292,24 @@ const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndga
 const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = economyNumber("levelRewards.troopEarlyBaseHours", 4);
 const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEarlyHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = economyNumber("levelRewards.troopMidBaseHours", 24);
-const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.48);
-const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 48);
-const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.32);
-const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 96);
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.6);
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 54);
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.4);
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 108);
+const CITY_UPGRADE_XP_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.enabled !== false;
+const CITY_UPGRADE_XP_MODEL_VERSION = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.modelVersion", 1)));
+const CITY_UPGRADE_XP_LEGACY_REQUESTS_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.legacyRequestsEnabled === true;
+const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.05));
+const CITY_UPGRADE_XP_CAP_START_HERO_LEVEL = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.capStartHeroLevel", 50)));
+const CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL = Math.max(
+  CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+  Math.floor(economyNumber("cityUpgradeXp.capMaximumHeroLevel", 100))
+);
+const CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS = Math.max(0, economyNumber("cityUpgradeXp.capStartLevelEquivalents", 1));
+const CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS = Math.max(
+  CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS,
+  economyNumber("cityUpgradeXp.capMaximumLevelEquivalents", 2)
+);
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
@@ -3757,6 +3771,34 @@ function playerGlobalStatsRef(uid = "") {
   return db.doc(`players/${safeString(uid, 128)}/stats/global`);
 }
 
+function cityUpgradeXpHighWatermarkRef(uid = "", regionId = "", cityId = "") {
+  const playerUid = safeString(uid, 128);
+  const region = safeString(normalizeRegionId(regionId), 40);
+  const city = safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return db.doc(`players/${playerUid}/cityUpgradeXp/${RESET_GENERATION}_${region}_${city}`);
+}
+
+function cityUpgradeRequestRef(uid = "", requestId = "") {
+  return db.doc(
+    `players/${safeString(uid, 128)}/cityUpgradeRequests/${safeString(requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_")}`
+  );
+}
+
+function resolveCityUpgradeRequestCompatibility(
+  requestIdValue = "",
+  legacyRequestsEnabled = CITY_UPGRADE_XP_LEGACY_REQUESTS_ENABLED
+) {
+  const requestId = safeString(requestIdValue, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const legacyRequest = !requestId;
+  const allowed = !legacyRequest || legacyRequestsEnabled === true;
+  return {
+    requestId,
+    legacyRequest,
+    allowed,
+    reason: allowed ? "" : "city-upgrade-client-update-required",
+  };
+}
+
 function rewardedAdStateRef(uid = "") {
   return db.doc(`players/${safeString(uid, 128)}/rewardedAds/state`);
 }
@@ -4609,6 +4651,216 @@ function getXpRequiredForLevel(level) {
     Number.MAX_SAFE_INTEGER,
     Math.floor(requirement)
   );
+}
+
+function getCityUpgradeFixedXp(cityLevel) {
+  const level = Math.max(1, Math.floor(safeNumber(cityLevel, 1)));
+  return Math.max(1, Math.floor(getXpRequiredForLevel(level) * CITY_UPGRADE_XP_FIXED_RATE));
+}
+
+function getCityUpgradeXpCapLevelEquivalents(heroLevel) {
+  const level = Math.max(CITY_UPGRADE_XP_CAP_START_HERO_LEVEL, Math.floor(safeNumber(
+    heroLevel,
+    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL
+  )));
+  if (level >= CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL) {
+    return CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS;
+  }
+  const progress = (level - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
+    / Math.max(1, CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL);
+  return CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS
+    + (CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS - CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS)
+      * progress;
+}
+
+function getCityUpgradeXpDailyCap(heroLevel) {
+  const referenceLevel = Math.max(
+    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+    Math.floor(safeNumber(heroLevel, CITY_UPGRADE_XP_CAP_START_HERO_LEVEL))
+  );
+  const equivalents = getCityUpgradeXpCapLevelEquivalents(referenceLevel);
+  const wholeLevels = Math.max(0, Math.floor(equivalents));
+  const fractionalLevel = Math.max(0, equivalents - wholeLevels);
+  let allowance = 0;
+  for (let offset = 0; offset < wholeLevels; offset += 1) {
+    allowance = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      allowance + getXpRequiredForLevel(referenceLevel + offset)
+    );
+  }
+  if (fractionalLevel > 0 && allowance < Number.MAX_SAFE_INTEGER) {
+    allowance = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      allowance + getXpRequiredForLevel(referenceLevel + wholeLevels) * fractionalLevel
+    );
+  }
+  return Math.max(0, Math.floor(allowance));
+}
+
+function getXpNeededToReachHeroLevel(character = {}, targetLevel = 1) {
+  const current = normalizeCharacterProgress(character);
+  const target = Math.max(current.level, Math.floor(safeNumber(targetLevel, current.level)));
+  if (current.level >= target) return 0;
+  let needed = Math.max(0, getXpRequiredForLevel(current.level) - current.xp);
+  for (let level = current.level + 1; level < target; level += 1) {
+    needed = Math.min(Number.MAX_SAFE_INTEGER, needed + getXpRequiredForLevel(level));
+  }
+  return needed;
+}
+
+function normalizeCityUpgradeXpDailyState(raw = null, dayKey = "") {
+  if (!raw || typeof raw !== "object") return null;
+  if (safeString(raw.resetGeneration, 120) !== RESET_GENERATION) return null;
+  if (safeString(raw.dayKey, 10) !== safeString(dayKey, 10)) return null;
+  if (Math.floor(safeNumber(raw.modelVersion, 0)) !== CITY_UPGRADE_XP_MODEL_VERSION) return null;
+  const capReferenceHeroLevel = Math.max(
+    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+    Math.floor(safeNumber(raw.capReferenceHeroLevel, CITY_UPGRADE_XP_CAP_START_HERO_LEVEL))
+  );
+  const dailyCapXp = Math.max(0, Math.floor(safeNumber(raw.dailyCapXp, 0)));
+  return {
+    modelVersion: CITY_UPGRADE_XP_MODEL_VERSION,
+    resetGeneration: RESET_GENERATION,
+    dayKey: safeString(dayKey, 10),
+    capReferenceHeroLevel,
+    dailyCapXp,
+    dailyAwardedXp: Math.min(dailyCapXp, Math.max(0, Math.floor(safeNumber(raw.dailyAwardedXp, 0)))),
+  };
+}
+
+function calculateCityUpgradeXpReceipt({
+  character = {},
+  dailyState = null,
+  dayKey = "",
+  startingCityLevel = 1,
+  endingCityLevel = 1,
+  highestDevelopedCityLevel = null,
+} = {}) {
+  const normalizedCharacter = normalizeCharacterProgress(character);
+  const startLevel = Math.max(1, Math.floor(safeNumber(startingCityLevel, 1)));
+  const endLevel = Math.max(startLevel, Math.floor(safeNumber(endingCityLevel, startLevel)));
+  const highWatermark = highestDevelopedCityLevel === null || highestDevelopedCityLevel === undefined
+    ? startLevel
+    : Math.max(1, Math.floor(safeNumber(highestDevelopedCityLevel, startLevel)));
+  const eligibleLevels = [];
+  const ineligibleLevels = [];
+  let rawXp = 0;
+  let rebuildSuppressedXp = 0;
+  for (let targetLevel = startLevel + 1; targetLevel <= endLevel; targetLevel += 1) {
+    const levelXp = getCityUpgradeFixedXp(targetLevel - 1);
+    if (targetLevel > highWatermark) {
+      eligibleLevels.push(targetLevel);
+      rawXp = Math.min(Number.MAX_SAFE_INTEGER, rawXp + levelXp);
+    } else {
+      ineligibleLevels.push(targetLevel);
+      rebuildSuppressedXp = Math.min(Number.MAX_SAFE_INTEGER, rebuildSuppressedXp + levelXp);
+    }
+  }
+
+  let awardedXp = CITY_UPGRADE_XP_ENABLED ? rawXp : 0;
+  let uncappedAwardedXp = 0;
+  let cappedCandidateXp = 0;
+  let nextDailyState = normalizeCityUpgradeXpDailyState(dailyState, dayKey);
+  let dailyCapActive = false;
+
+  if (CITY_UPGRADE_XP_ENABLED && awardedXp > 0) {
+    if (normalizedCharacter.level < CITY_UPGRADE_XP_CAP_START_HERO_LEVEL) {
+      const freeXpToBoundary = getXpNeededToReachHeroLevel(
+        normalizedCharacter,
+        CITY_UPGRADE_XP_CAP_START_HERO_LEVEL
+      );
+      uncappedAwardedXp = Math.min(awardedXp, freeXpToBoundary);
+      cappedCandidateXp = Math.max(0, awardedXp - uncappedAwardedXp);
+    } else {
+      cappedCandidateXp = awardedXp;
+    }
+
+    if (cappedCandidateXp > 0) {
+      dailyCapActive = true;
+      if (!nextDailyState) {
+        const capReferenceHeroLevel = Math.max(
+          CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
+          normalizedCharacter.level
+        );
+        nextDailyState = {
+          modelVersion: CITY_UPGRADE_XP_MODEL_VERSION,
+          resetGeneration: RESET_GENERATION,
+          dayKey: safeString(dayKey, 10),
+          capReferenceHeroLevel,
+          dailyCapXp: getCityUpgradeXpDailyCap(capReferenceHeroLevel),
+          dailyAwardedXp: 0,
+        };
+      }
+      const remaining = Math.max(0, nextDailyState.dailyCapXp - nextDailyState.dailyAwardedXp);
+      const cappedAwardedXp = Math.min(cappedCandidateXp, remaining);
+      nextDailyState.dailyAwardedXp += cappedAwardedXp;
+      awardedXp = uncappedAwardedXp + cappedAwardedXp;
+    }
+  }
+
+  const dailyCapXp = nextDailyState?.dailyCapXp || 0;
+  const dailyAwardedXp = nextDailyState?.dailyAwardedXp || 0;
+  return {
+    modelVersion: CITY_UPGRADE_XP_MODEL_VERSION,
+    rawXp,
+    awardedXp,
+    capSuppressedXp: Math.max(0, rawXp - awardedXp),
+    rebuildSuppressedXp,
+    eligibleLevels,
+    ineligibleLevels,
+    dailyCapActive,
+    dailyCapXp,
+    dailyAwardedXp,
+    dailyRemainingXp: Math.max(0, dailyCapXp - dailyAwardedXp),
+    capReferenceHeroLevel: nextDailyState?.capReferenceHeroLevel || null,
+    dayKey: safeString(dayKey, 10),
+    dailyState: nextDailyState,
+    highestDevelopedCityLevel: Math.max(highWatermark, endLevel),
+  };
+}
+
+function calculateLegacyCityUpgradeXpReceipt({
+  dayKey = "",
+  startingCityLevel = 1,
+  endingCityLevel = 1,
+  highestDevelopedCityLevel = null,
+} = {}) {
+  const startLevel = Math.max(1, Math.floor(safeNumber(startingCityLevel, 1)));
+  const endLevel = Math.max(startLevel, Math.floor(safeNumber(endingCityLevel, startLevel)));
+  const highWatermark = highestDevelopedCityLevel === null || highestDevelopedCityLevel === undefined
+    ? startLevel
+    : Math.max(1, Math.floor(safeNumber(highestDevelopedCityLevel, startLevel)));
+  const legacyLevels = [];
+  let legacySuppressedXp = 0;
+  for (let targetLevel = startLevel + 1; targetLevel <= endLevel; targetLevel += 1) {
+    legacyLevels.push(targetLevel);
+    if (CITY_UPGRADE_XP_ENABLED) {
+      legacySuppressedXp = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        legacySuppressedXp + getCityUpgradeFixedXp(targetLevel - 1)
+      );
+    }
+  }
+  return {
+    modelVersion: CITY_UPGRADE_XP_MODEL_VERSION,
+    legacyCompatibility: true,
+    rawXp: 0,
+    awardedXp: 0,
+    capSuppressedXp: 0,
+    rebuildSuppressedXp: 0,
+    legacySuppressedXp,
+    eligibleLevels: [],
+    ineligibleLevels: [],
+    legacyLevels,
+    dailyCapActive: false,
+    dailyCapXp: 0,
+    dailyAwardedXp: 0,
+    dailyRemainingXp: 0,
+    capReferenceHeroLevel: null,
+    dayKey: safeString(dayKey, 10),
+    dailyState: null,
+    highestDevelopedCityLevel: Math.max(highWatermark, endLevel),
+  };
 }
 
 function getLevelUpGoldUpgradeShare(level) {
@@ -12705,6 +12957,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     harvestSpawnTimer,
     harvestNextSpawnAtMs,
     harvestNextBonusType,
+    cityUpgradeXpDaily,
     cityUpdates,
     shopPricing: shopPricingOverride,
     globalStats: _globalStats,
@@ -12745,6 +12998,9 @@ function createEconomyResponse(economy = null, overrides = {}) {
     mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
     mainCityChangedAtMs: timestampToMs(economy.profileAfter.mainCityChangedAtMs),
     lastCityRelinquishedAtMs: timestampToMs(economy.profileAfter.lastCityRelinquishedAtMs),
+    cityUpgradeXpDaily: cityUpgradeXpDaily !== undefined
+      ? cityUpgradeXpDaily
+      : economy.profileAfter.cityUpgradeXpDaily || null,
     shopPricing,
   };
   if (globalStats) currentUser.globalStats = globalStats;
@@ -15992,16 +16248,103 @@ exports.claimStartingCity = timedCallable(
   claimFreshStartingCity
 );
 
+exports.getCityUpgradeXpPreview = onCall(
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const data = request.data || {};
+    const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
+    const requestedLevels = clampInt(data.levels || 1, 1, 500);
+    if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to upgrade.");
+
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const nowMs = Date.now();
+      const dayKey = getCurrentDateKey(new Date(nowMs));
+      const cityRef = cityRefForRegion(regionId, cityId);
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+      const cityEntry = getEconomyCityByRef(economy, cityRef);
+      if (!cityEntry?.city || getOwnerUid(cityEntry.city) !== uid) {
+        throw new HttpsError("permission-denied", "You can only preview upgrades for your own city.");
+      }
+      if (isStronghold(cityEntry.city)) {
+        throw new HttpsError("failed-precondition", "Strongholds cannot be upgraded.");
+      }
+      const highWatermarkRef = cityUpgradeXpHighWatermarkRef(uid, regionId, cityId);
+      const highWatermarkSnap = await transaction.get(highWatermarkRef);
+      const startingCityLevel = clampCityLevel(cityEntry.city.level);
+      const endingCityLevel = clampCityLevel(startingCityLevel + requestedLevels);
+      const calculation = calculateCityUpgradeXpReceipt({
+        character: economy.profileAfter.character,
+        dailyState: economy.profileAfter.cityUpgradeXpDaily,
+        dayKey,
+        startingCityLevel,
+        endingCityLevel,
+        highestDevelopedCityLevel: highWatermarkSnap.exists
+          ? highWatermarkSnap.data()?.highestDevelopedCityLevel
+          : null,
+      });
+      const {
+        dailyState: _dailyState,
+        highestDevelopedCityLevel: _highestDevelopedCityLevel,
+        ...cityUpgradeXp
+      } = calculation;
+      return {
+        ok: true,
+        cityId,
+        regionId,
+        startingCityLevel,
+        endingCityLevel,
+        cityUpgradeXp,
+      };
+    });
+  }
+);
+
 exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
   const requestedLevels = clampInt(data.levels || 1, 1, 25);
+  const upgradeRequestCompatibility = resolveCityUpgradeRequestCompatibility(data.requestId);
+  const { requestId, legacyRequest } = upgradeRequestCompatibility;
+  const acknowledgedCapSuppressedXp = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.floor(safeNumber(data.acknowledgedCapSuppressedXp, 0)))
+  );
+  const acknowledgedRebuildSuppressedXp = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.floor(safeNumber(data.acknowledgedRebuildSuppressedXp, 0)))
+  );
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to upgrade.");
+  if (!upgradeRequestCompatibility.allowed) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Update Crownlands to the latest version to continue upgrading cities.",
+      {
+        reason: upgradeRequestCompatibility.reason,
+        legacyRequestsEnabled: false,
+      }
+    );
+  }
 
   return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
+    const dayKey = getCurrentDateKey(new Date(nowMs));
+    const requestRef = legacyRequest ? null : cityUpgradeRequestRef(uid, requestId);
+    const requestSnap = requestRef ? await transaction.get(requestRef) : null;
+    if (requestSnap?.exists && requestSnap.data()?.response) {
+      const priorRequest = requestSnap.data() || {};
+      if (
+        safeString(priorRequest.cityId, 96) !== cityId
+        || normalizeRegionId(priorRequest.regionId) !== regionId
+        || clampInt(priorRequest.requestedLevels, 1, 25) !== requestedLevels
+      ) {
+        throw new HttpsError("failed-precondition", "That city upgrade request ID was already used.");
+      }
+      return priorRequest.response;
+    }
     const cityRef = cityRefForRegion(regionId, cityId);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const cityEntry = getEconomyCityByRef(economy, cityRef);
@@ -16013,6 +16356,9 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     }
 
     const city = { ...cityEntry.city };
+    const startingCityLevel = clampCityLevel(city.level);
+    const highWatermarkRef = cityUpgradeXpHighWatermarkRef(uid, regionId, cityId);
+    const highWatermarkSnap = await transaction.get(highWatermarkRef);
     let goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold));
     let gold = Math.max(0, Math.floor(goldFloat));
     let investedGold = Math.max(0, Math.floor(safeNumber(city.investedGold, 0)));
@@ -16054,6 +16400,64 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       investedGold,
       productionUpdatedAtMs: nowMs,
     };
+    const cityUpgradeXpCalculation = legacyRequest
+      ? calculateLegacyCityUpgradeXpReceipt({
+        dayKey,
+        startingCityLevel,
+        endingCityLevel: city.level,
+        highestDevelopedCityLevel: highWatermarkSnap.exists
+          ? highWatermarkSnap.data()?.highestDevelopedCityLevel
+          : null,
+      })
+      : calculateCityUpgradeXpReceipt({
+        character: economy.profileAfter.character,
+        dailyState: economy.profileAfter.cityUpgradeXpDaily,
+        dayKey,
+        startingCityLevel,
+        endingCityLevel: city.level,
+        highestDevelopedCityLevel: highWatermarkSnap.exists
+          ? highWatermarkSnap.data()?.highestDevelopedCityLevel
+          : null,
+      });
+    const {
+      dailyState: _dailyState,
+      highestDevelopedCityLevel: _highestDevelopedCityLevel,
+      ...cityUpgradeXp
+    } = cityUpgradeXpCalculation;
+    if (
+      !legacyRequest
+      && (
+        cityUpgradeXpCalculation.capSuppressedXp > acknowledgedCapSuppressedXp
+        || cityUpgradeXpCalculation.rebuildSuppressedXp > acknowledgedRebuildSuppressedXp
+      )
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Hero XP eligibility changed before the upgrade. Review the updated warning and try again.",
+        {
+          reason: "city-upgrade-xp-warning-required",
+          cityUpgradeXp,
+        }
+      );
+    }
+
+    appendEconomyCityPatch(economy, cityRef, cityEntry.city, cityPatch);
+    const progress = legacyRequest ? null : buildPlayerProgressPatch({
+      ...economy.profileAfter,
+      gold,
+      character: economy.profileAfter.character,
+    }, { xp: cityUpgradeXpCalculation.awardedXp });
+    if (progress) {
+      progress.goldFloat = Math.max(0, goldFloat + progress.goldAwarded);
+      progress.gold = Math.max(0, Math.floor(progress.goldFloat));
+    }
+    const troopCredit = progress ? creditLevelUpTroopsToMainCity(
+      economy,
+      { ...economy.profileAfter, character: progress.character },
+      progress.levelTroopReward,
+      nowMs
+    ) : null;
+    const levelUpReward = progress ? finalizeLevelUpReward(progress, troopCredit) : null;
     const latestCity = getEconomyCityByRef(economy, cityRef)?.city || city;
     const cityUpdate = {
       id: city.id,
@@ -16062,11 +16466,40 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       troopFloat: Math.max(0, safeNumber(latestCity.troopFloat, latestCity.troops || 0)),
       ...cityPatch,
     };
+    const existingCityUpdate = economy.cityUpdates.find(update => (
+      update?.id === cityUpdate.id && normalizeRegionId(update.regionId) === normalizeRegionId(cityUpdate.regionId)
+    ));
+    if (existingCityUpdate) Object.assign(existingCityUpdate, cityUpdate);
+    else economy.cityUpdates.push(cityUpdate);
 
-    writePreparedEconomy(transaction, economy, {
+    const profileOverrides = progress ? {
+      gold: progress.gold,
+      goldFloat: progress.goldFloat,
+      character: progress.character,
+      ...(cityUpgradeXpCalculation.dailyState
+        ? { cityUpgradeXpDaily: cityUpgradeXpCalculation.dailyState }
+        : {}),
+    } : {
       gold,
       goldFloat,
-    }, [{ ref: cityRef, city, patch: cityPatch }]);
+    };
+    writePreparedEconomy(transaction, economy, profileOverrides);
+    transaction.set(highWatermarkRef, {
+      uid,
+      cityId,
+      regionId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      modelVersion: CITY_UPGRADE_XP_MODEL_VERSION,
+      highestDevelopedCityLevel: cityUpgradeXpCalculation.highestDevelopedCityLevel,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(highWatermarkSnap.exists ? {} : {
+        baselineCityLevel: startingCityLevel,
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    }, { merge: true });
     enqueueDailyMissionEvent(transaction, {
       uid,
       eventId: `city_upgrade_${regionId}_${cityId}_${nowMs}_${city.level}`,
@@ -16077,13 +16510,34 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       goldSpent: spentGold,
     });
 
-    return createEconomyResponse(economy, {
-      gold,
-      goldFloat,
-      cityUpdates: [...economy.cityUpdates, cityUpdate],
+    const response = createEconomyResponse(economy, {
+      ...profileOverrides,
+      cityUpdates: economy.cityUpdates,
       spentGold,
       upgraded,
+      cityUpgradeXp,
+      levelUpReward,
+      legacyCityUpgradeRequest: legacyRequest,
     });
+    if (requestRef) {
+      transaction.set(requestRef, {
+        uid,
+        requestId,
+        cityId,
+        regionId,
+        requestedLevels,
+        acknowledgedCapSuppressedXp,
+        acknowledgedRebuildSuppressedXp,
+        resetGeneration: RESET_GENERATION,
+        worldId: ONLINE_WORLD_ID,
+        response,
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+        expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+        expiresAt: Timestamp.fromMillis(nowMs + 7 * 24 * 60 * 60 * 1000),
+      }, { merge: false });
+    }
+    return response;
   });
 });
 
@@ -28836,12 +29290,14 @@ exports.cleanupExpiredBulkOrderRequests = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const [result, notificationOutboxCleanup] = await Promise.all([
+  const [result, cityUpgrades, notificationOutboxCleanup] = await Promise.all([
     cleanupExpiredBulkOrderRequests(Date.now()),
+    cleanupExpiredChatCollectionGroup("cityUpgradeRequests", Date.now()),
     cleanupExpiredNotificationOutbox(Date.now()),
   ]);
   console.log("Expired Crownlands idempotency and notification records cleaned", {
     bulkOrders: result,
+    cityUpgrades,
     notificationOutbox: notificationOutboxCleanup,
   });
 });
