@@ -1755,6 +1755,7 @@ let bulkOrderActionRequestId = 0;
 let pendingBulkOrderAction = null;
 const bulkOrderRequestIds = new Map();
 const pendingDirectScoutTargets = new Set();
+const scoutVeilBlocksByTarget = new Map();
 let camera = { x: 0, y: 0 };
 let zoom = 1;
 let mapViewportWidth = 0;
@@ -5315,6 +5316,28 @@ function getPeaceShieldAttackBlockReason(target, attackerOwner = "player", attac
   if (!isCityProtectedByPeaceShield(target)) return "";
   const remaining = getPeaceShieldRemainingSeconds(getCityPeaceShieldExpiresAtMs(target));
   return `${target.name} is protected by a Royal Peace Shield for ${formatDuration(remaining)}.`;
+}
+
+function getCachedScoutVeilExpiresAtMs(target, nowMs = Date.now()) {
+  const targetId = String(target?.id || "").trim();
+  if (!targetId) return 0;
+  const block = scoutVeilBlocksByTarget.get(targetId);
+  if (!block) return 0;
+  const targetOwnerUid = String(target?.ownerUid || "").trim();
+  if ((block.ownerUid && targetOwnerUid && block.ownerUid !== targetOwnerUid) || block.expiresAtMs <= nowMs) {
+    scoutVeilBlocksByTarget.delete(targetId);
+    return 0;
+  }
+  return block.expiresAtMs;
+}
+
+function getVeilOfSilenceScoutBlockReason(target, scoutOwner = "player", scoutOwnerUid = "", nowMs = Date.now()) {
+  if (!target || isRewardCampTarget(target) || isSameAttackOwner(target, scoutOwner, scoutOwnerUid)) return "";
+  if (target.owner === "neutral" || (!target.ownerUid && target.ownerKind !== "player" && target.owner !== "enemy")) return "";
+  const expiresAtMs = getCachedScoutVeilExpiresAtMs(target, nowMs);
+  if (expiresAtMs <= nowMs) return "";
+  const remaining = Math.max(1, Math.ceil((expiresAtMs - nowMs) / 1000));
+  return `${target.name} is hidden by Veil of Silence for ${formatDuration(remaining)}.`;
 }
 
 function refreshOwnedCityItemEffectMetadata(syncNow = true) {
@@ -9294,9 +9317,11 @@ function scoutRewardCamp(campId) {
 
 async function scoutTarget(target) {
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return;
   }
   if (getPendingScoutMission(target.id)) {
@@ -9337,9 +9362,11 @@ function launchScoutMission(source, target, route, _options = {}) {
   const options = _options && typeof _options === "object" ? _options : {};
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return null;
   }
   if (!canUseOnlineArmyOrders()) return null;
@@ -9413,6 +9440,7 @@ function isNearbyScoutCandidate(source, city) {
     getCityRegionId(city) === getCityRegionId(source) &&
     city.owner !== "player" &&
     !getMainCityScoutBlockReason(city, "player") &&
+    !getVeilOfSilenceScoutBlockReason(city, "player") &&
     !getPendingScoutMission(city.id) &&
     Math.hypot(city.x - source.x, city.y - source.y) <= SCOUT_NEARBY_RADIUS
   );
@@ -9676,10 +9704,11 @@ async function toggleScoutNearby(cityId) {
       renderAll();
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
     } catch (error) {
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = rememberScoutVeilBlocksFromError(error);
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       finishBulkOrderAction(action);
       renderAll();
-      rejectGameAction(onlineLastError || "Scout Nearby could not be sent.");
+      rejectGameAction(error?.message || "Scout Nearby could not be sent.");
     }
     return;
   }
@@ -14070,6 +14099,7 @@ function disconnectOnlineWorld() {
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
+  scoutVeilBlocksByTarget.clear();
   clearEnemyPowerBandCache();
   onlineCampStates = new Map();
   onlineHeldCampStates = new Map();
@@ -16078,6 +16108,31 @@ function getChangedAttackProtectionFromError(error) {
   return normalizeAttackProtectionSnapshot(details.attackProtection);
 }
 
+function rememberScoutVeilBlocksFromError(error, fallbackTarget = null, nowMs = Date.now()) {
+  const details = error?.details || error?.customData?.details || error?.data || {};
+  if (details?.reason !== "veil_of_silence") return 0;
+  const fallbackTargetId = String(fallbackTarget?.id || "").trim();
+  const fallbackOwnerUid = String(fallbackTarget?.ownerUid || "").trim();
+  const rawTargets = Array.isArray(details.targets) && details.targets.length
+    ? details.targets
+    : (Array.isArray(details.targetCityIds) && details.targetCityIds.length
+        ? details.targetCityIds.map(cityId => ({ cityId, expiresAtMs: details.expiresAtMs }))
+        : fallbackTargetId ? [{ cityId: fallbackTargetId, ownerUid: fallbackOwnerUid, expiresAtMs: details.expiresAtMs }] : []);
+  let remembered = 0;
+  rawTargets.forEach(rawTarget => {
+    const cityId = String(rawTarget?.cityId || rawTarget?.id || "").trim();
+    const expiresAtMs = normalizeTimestampMs(rawTarget?.expiresAtMs || details.expiresAtMs);
+    if (!cityId || expiresAtMs <= nowMs) return;
+    const city = cityById(cityId);
+    scoutVeilBlocksByTarget.set(cityId, {
+      expiresAtMs,
+      ownerUid: String(rawTarget?.ownerUid || city?.ownerUid || "").trim(),
+    });
+    remembered += 1;
+  });
+  return remembered;
+}
+
 function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
   const sourceId = mission?.fromId;
   const targetId = mission?.toId;
@@ -16222,15 +16277,14 @@ function restoreRejectedArmyOrderSelection(mission) {
   const sourceId = String(mission?.fromId || "");
   const targetId = String(mission?.toId || "");
   if (!sourceId || !targetId) return;
+  // Scouts are one-click orders. Replaying a rejected scout makes permanent
+  // validation failures (such as Veil of Silence) retry indefinitely.
+  if (mission.kind === "scout") return;
   window.setTimeout(() => {
     if (modal.open || sendMode || selectedSourceId || selectedTargetId) return;
     const source = cityById(sourceId);
     const target = getArmyTargetById(targetId);
     if (!source || !target || source.owner !== "player" || source.troops < 1) return;
-    if (mission.kind === "scout") {
-      void scoutTarget(target);
-      return;
-    }
     selectedSourceId = source.id;
     selectedTargetId = target.id;
     sendMode = true;
@@ -16330,11 +16384,19 @@ function publishOnlineArmyMovement(mission, options = {}) {
       pendingOutgoingMissions.delete(movement.id);
       mission.serverPending = false;
       mission.serverRetrying = false;
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = mission.kind === "scout"
+        ? rememberScoutVeilBlocksFromError(error, target)
+        : 0;
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       console.warn("Server rejected army movement", error);
       const refreshedProtection = getChangedAttackProtectionFromError(error);
       if (refreshedProtection) {
         reopenAttackProtectionConfirmation(mission, refreshedProtection);
+        return false;
+      }
+      if (rememberedVeilBlocks) {
+        rejectGameAction(getVeilOfSilenceScoutBlockReason(target, "player") || error?.message);
+        renderAll();
         return false;
       }
       rejectServerArmyMission(mission, onlineLastError, options);
@@ -24946,6 +25008,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
       isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
+      getCachedScoutVeilExpiresAtMs(city),
       city.level,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
       clanAlly ? Math.max(0, Math.floor(Number(city.troops) || 0)) : "",
@@ -25410,7 +25473,8 @@ function renderSelectedForeignWheel(city) {
   const pendingScout = getPendingScoutMission(city.id);
   const friendlyBlockReason = getClanFriendlyBlockReason(city);
   const clanAlly = Boolean(friendlyBlockReason);
-  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
+  const veilBlockReason = getVeilOfSilenceScoutBlockReason(city, "player");
+  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player") || veilBlockReason;
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
   const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
@@ -25424,7 +25488,7 @@ function renderSelectedForeignWheel(city) {
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout${pendingScout ? " is-pending" : ""}" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" aria-busy="${Boolean(pendingScout)}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
-      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
+      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : veilBlockReason ? "Veiled" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
@@ -25467,8 +25531,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   const clanAlly = isClanAllyCity(stronghold);
   const report = owned ? null : getScoutReport(stronghold.id);
   const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
+  const veilBlockReason = owned ? "" : getVeilOfSilenceScoutBlockReason(stronghold, "player");
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
-  const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
+  const canScout = !owned && !clanAlly && !veilBlockReason && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
   const canRally = Boolean(canCurrentPlayerCreateClanRally() && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
@@ -25484,9 +25549,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : veilBlockReason ? escapeHtml(veilBlockReason) : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(owned ? "outgoing" : "scout")}</span>
-      <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+      <strong>${owned ? "Send" : veilBlockReason ? "Veiled" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
       <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
