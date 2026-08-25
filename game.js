@@ -6396,6 +6396,38 @@ function normalizeSingleMainCityAssignment(preferredCityId = "", { markDirty = f
   return { mainCityId, changed };
 }
 
+function clearSingleMainCityAssignment() {
+  if (!state) return { mainCityId: "", changed: false };
+  let changed = state.mainCityId !== "";
+  state.mainCityId = "";
+
+  if (state.online) {
+    for (const field of ["mainCityId", "mainRegionId", "mainIslandId"]) {
+      if (state.online[field] !== "") changed = true;
+      state.online[field] = "";
+    }
+  }
+
+  if (Array.isArray(state.cities)) {
+    state.cities.forEach(city => {
+      if (city?.owner !== "player" || !city.isMainCity) return;
+      city.isMainCity = false;
+      changed = true;
+    });
+  }
+
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => {
+      if (!city?.isMainCity) return city;
+      changed = true;
+      return { ...city, isMainCity: false };
+    });
+    updateIslandSummariesFromOwnedCityCache();
+  }
+
+  return { mainCityId: "", changed };
+}
+
 async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCityId || "", { refreshFirst = false } = {}) {
   if (!state || !mainCityId || !isOnlineWorldActive()) return false;
   const api = getOnlineApi();
@@ -6418,13 +6450,7 @@ async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCity
     throw error;
   }
   if (recovery.status === "claim-required") {
-    state.mainCityId = "";
-    if (state.online) {
-      state.online.mainCityId = "";
-      state.online.mainRegionId = "";
-      state.online.mainIslandId = "";
-    }
-    normalizeSingleMainCityAssignment("", { markDirty: false });
+    clearSingleMainCityAssignment();
     disconnectOnlineWorld();
     state.online = null;
     startOnlineSetupInBackground();
@@ -14543,22 +14569,24 @@ function resolveMainCityRecoveryResult(result = null) {
   }
   const recoveryStatus = result?.mainCityRecoveryStatus;
   const mainCityId = getKnownCityId(result?.currentUser?.mainCityId);
+  const mainRegionId = String(result?.currentUser?.mainRegionId || "");
+  const mainIslandId = String(result?.currentUser?.mainIslandId || "");
   if (
     result?.ok !== true
     || result?.requiresStartingCityClaim !== false
     || (recoveryStatus !== "valid" && recoveryStatus !== "repaired")
     || !mainCityId
+    || !getRegionIds().includes(mainRegionId)
+    || getCityRegionId(mainCityId) !== mainRegionId
+    || mainIslandId !== getOnlineIslandId(mainRegionId)
   ) {
     throw new Error("Main city verification did not return an authoritative recovery result.");
   }
-  const mainRegionId = normalizeRegionId(
-    result?.currentUser?.mainRegionId || getCityRegionId(mainCityId)
-  );
   return {
     status: recoveryStatus,
     mainCityId,
     mainRegionId,
-    mainIslandId: result?.currentUser?.mainIslandId || getOnlineIslandId(mainRegionId),
+    mainIslandId,
   };
 }
 
@@ -14664,10 +14692,8 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
       const { result: repair, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId);
       if (recovery.status === "claim-required") {
         needsMainCityClaim = true;
-        state.mainCityId = "";
-        state.online.mainCityId = "";
+        clearSingleMainCityAssignment();
         profile = { ...(profile || {}), mainCityId: "", mainIslandId: "", mainRegionId: "" };
-        normalizeSingleMainCityAssignment("", { markDirty: false });
       } else {
         applyServerEconomyResult(repair);
         serverEconomyLastSyncAt = Date.now();

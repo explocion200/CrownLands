@@ -26,7 +26,7 @@ const decisionSource = sourceBetween(
 );
 const decisionSandbox = {
   getKnownCityId: value => (/^[a-z0-9_-]+$/i.test(String(value || "")) ? String(value) : ""),
-  normalizeRegionId: value => String(value || "west"),
+  getRegionIds: () => ["west", "region_11", "region_12"],
   getCityRegionId: cityId => String(cityId || "").split("_city_")[0] || "west",
   getOnlineIslandId: regionId => `main-${regionId}`,
   withTimeout: (promise, timeoutMs, message) => Promise.race([
@@ -97,6 +97,62 @@ assert.throws(
   /authoritative recovery result/i,
   "An incomplete response could be accepted through a cached main-city pointer."
 );
+for (const [label, response] of [
+  ["missing main city", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainRegionId: "region_11", mainIslandId: "main-region_11" },
+  }],
+  ["missing main region", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainIslandId: "main-region_11" },
+  }],
+  ["unknown main region", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "unknown", mainIslandId: "main-unknown" },
+  }],
+  ["noncanonical main region", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: " region_11 ", mainIslandId: "main-region_11" },
+  }],
+  ["missing main island", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11" },
+  }],
+  ["island-region mismatch", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11", mainIslandId: "main-region_12" },
+  }],
+  ["noncanonical main island", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11", mainIslandId: " main-region_11 " },
+  }],
+  ["city-region mismatch", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_12", mainIslandId: "main-region_12" },
+  }],
+]) {
+  assert.throws(
+    () => decide(response),
+    /authoritative recovery result/i,
+    `The client accepted an authoritative result with ${label}.`
+  );
+}
 
 const setupSource = sourceBetween(gameSource, "async function setupOnlineWorld", "function startOnlineSetupInBackground");
 assert.match(
@@ -106,8 +162,13 @@ assert.match(
 );
 assert.match(
   setupSource,
-  /recovery\.status === "claim-required"[\s\S]*?needsMainCityClaim = true[\s\S]*?mainCityId: ""/,
+  /recovery\.status === "claim-required"[\s\S]*?needsMainCityClaim = true[\s\S]*?clearSingleMainCityAssignment\(\)[\s\S]*?mainCityId: ""/,
   "The client does not clear stale pointers before an authoritative replacement claim."
+);
+assert.doesNotMatch(
+  setupSource,
+  /recovery\.status === "claim-required"[\s\S]*?normalizeSingleMainCityAssignment\(""/,
+  "The setup claim path can repopulate a stale main city through normal fallback selection."
 );
 assert.match(
   setupSource,
@@ -120,6 +181,11 @@ const syncSource = sourceBetween(
   "async function syncSingleMainCityAssignmentToOnline",
   "function getMainCityChangeCooldownDurationMs"
 );
+const clearSource = sourceBetween(
+  gameSource,
+  "function clearSingleMainCityAssignment",
+  "async function syncSingleMainCityAssignmentToOnline"
+);
 assert.doesNotMatch(
   syncSource,
   /result\?\.currentUser\?\.mainCityId\) \|\| getKnownCityId\(mainCityId\)/,
@@ -127,8 +193,13 @@ assert.doesNotMatch(
 );
 assert.match(
   syncSource,
-  /requestAuthoritativeMainCityRecovery[\s\S]*?recovery\.status === "claim-required"[\s\S]*?disconnectOnlineWorld\(\)[\s\S]*?startOnlineSetupInBackground\(\)/,
+  /requestAuthoritativeMainCityRecovery[\s\S]*?recovery\.status === "claim-required"[\s\S]*?clearSingleMainCityAssignment\(\)[\s\S]*?disconnectOnlineWorld\(\)[\s\S]*?startOnlineSetupInBackground\(\)/,
   "The secondary recovery consumer does not fail closed through the normal setup flow."
+);
+assert.doesNotMatch(
+  syncSource,
+  /claimStartingCity|claimFreshStartingCity/,
+  "The secondary recovery consumer directly claims a starting city."
 );
 
 const serverRecoverySource = sourceBetween(
@@ -191,7 +262,11 @@ async function validateAuthoritativeRecoveryRequests() {
     ok: true,
     requiresStartingCityClaim: false,
     mainCityRecoveryStatus: "valid",
-    currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11" },
+    currentUser: {
+      mainCityId: "region_11_city_001",
+      mainRegionId: "region_11",
+      mainIslandId: "main-region_11",
+    },
   };
   const valid = await requestRecovery({ repairMainCityAssignment: async () => validResult }, "cached_city", 50);
   assert.equal(valid.recovery.status, "valid", "The shared request helper rejected a valid result.");
@@ -246,14 +321,19 @@ function createSyncSandbox() {
     restarts: 0,
     applied: 0,
     normalized: [],
+    islandSummaryUpdates: 0,
+    directClaims: 0,
+    onlineOwnedCitiesCache: [],
     isOnlineWorldActive: () => true,
     getKnownCityId: value => (/^[a-z0-9_-]+$/i.test(String(value || "")) ? String(value) : ""),
-    normalizeRegionId: value => String(value || "west"),
+    getRegionIds: () => ["west", "region_11", "region_12"],
     getCityRegionId: cityId => String(cityId || "").split("_city_")[0] || "west",
     getOnlineIslandId: regionId => `main-${regionId}`,
     refreshAllOwnedCities: async () => true,
     applyServerEconomyResult: () => { sandbox.applied += 1; },
     normalizeSingleMainCityAssignment: cityId => { sandbox.normalized.push(cityId); },
+    updateIslandSummariesFromOwnedCityCache: () => { sandbox.islandSummaryUpdates += 1; },
+    claimStartingCity: () => { sandbox.directClaims += 1; },
     disconnectOnlineWorld: () => { sandbox.disconnects += 1; },
     startOnlineSetupInBackground: () => { sandbox.restarts += 1; },
     withTimeout: async (promise, _timeoutMs, message) => {
@@ -268,7 +348,7 @@ function createSyncSandbox() {
   sandbox.getOnlineApi = () => sandbox.api;
   vm.createContext(sandbox);
   vm.runInContext(
-    `${decisionSource}\n${syncSource}; this.syncSingleMainCityAssignmentToOnline = syncSingleMainCityAssignmentToOnline;`,
+    `${decisionSource}\n${clearSource}\n${syncSource}; this.syncSingleMainCityAssignmentToOnline = syncSingleMainCityAssignmentToOnline;`,
     sandbox
   );
   return sandbox;
@@ -277,6 +357,12 @@ function createSyncSandbox() {
 function resetSyncSandbox(sandbox, response) {
   sandbox.state = {
     mainCityId: "cached_city",
+    cities: [
+      { id: "cached_city", owner: "player", isMainCity: true },
+      { id: "backup_city", owner: "player", isMainCity: false },
+      { id: "stronghold_city", owner: "player", isMainCity: true, stronghold: true },
+      { id: "enemy_city", owner: "enemy", isMainCity: true },
+    ],
     online: {
       mainCityId: "cached_city",
       mainRegionId: "west",
@@ -289,6 +375,12 @@ function resetSyncSandbox(sandbox, response) {
   sandbox.restarts = 0;
   sandbox.applied = 0;
   sandbox.normalized = [];
+  sandbox.islandSummaryUpdates = 0;
+  sandbox.directClaims = 0;
+  sandbox.onlineOwnedCitiesCache = [
+    { id: "cached_city", isMainCity: true },
+    { id: "backup_city", isMainCity: false },
+  ];
   sandbox.api.repairMainCityAssignment = async () => sandbox.response;
 }
 
@@ -322,17 +414,79 @@ async function validateSecondaryRecoveryConsumer() {
   );
   assert.equal(sandbox.state.mainCityId, "", "The no-city result retained a cached main city.");
   assert.equal(sandbox.state.online, null, "The no-city result retained an online world connection.");
+  assert.equal(
+    sandbox.state.cities.filter(city => city.owner === "player").some(city => city.isMainCity),
+    false,
+    "The no-city result retained a loaded player-city main flag."
+  );
+  assert.equal(
+    sandbox.onlineOwnedCitiesCache.some(city => city.isMainCity),
+    false,
+    "The no-city result retained a cached owned-city main flag."
+  );
+  assert.equal(
+    sandbox.state.cities.find(city => city.owner === "enemy")?.isMainCity,
+    true,
+    "Authoritative clearing changed another player's local main-city flag."
+  );
+  assert.equal(sandbox.directClaims, 0, "The secondary consumer directly claimed a starting city.");
   assert.equal(sandbox.disconnects, 1);
   assert.equal(sandbox.restarts, 1);
 
   for (const response of [
     {
       ok: false,
-      requiresStartingCityClaim: true,
-      mainCityRecoveryStatus: "claim-required",
-      recoveryReason: "no-valid-owned-regular-city",
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: {
+        mainCityId: "region_11_city_001",
+        mainRegionId: "region_11",
+        mainIslandId: "main-region_11",
+      },
     },
     { ok: true },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainRegionId: "region_11", mainIslandId: "main-region_11" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainCityId: "region_11_city_001", mainIslandId: "main-region_11" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainCityId: "region_11_city_001", mainRegionId: "unknown", mainIslandId: "main-unknown" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_11", mainIslandId: "main-region_12" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_12", mainIslandId: "main-region_12" },
+    },
+    {
+      ok: true,
+      requiresStartingCityClaim: true,
+      mainCityRecoveryStatus: "claim-required",
+      recoveryReason: "wrong-reason",
+    },
   ]) {
     resetSyncSandbox(sandbox, response);
     await assert.rejects(
@@ -340,6 +494,8 @@ async function validateSecondaryRecoveryConsumer() {
       /authoritative recovery result/i
     );
     assert.equal(sandbox.state.online, null, "A malformed result retained an online world connection.");
+    assert.equal(sandbox.applied, 0, "A malformed result applied server economy data.");
+    assert.equal(sandbox.directClaims, 0, "A malformed result directly claimed a starting city.");
     assert.equal(sandbox.disconnects, 1);
     assert.equal(sandbox.restarts, 1);
   }
