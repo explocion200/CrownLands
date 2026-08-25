@@ -352,7 +352,8 @@ assert.match(source, /const zoomTo = [\s\S]*?zoomAnchor = getIslandMapPickerZoom
 const islandPickerPanSource = extractFunction("attachIslandMapPickerPan");
 const islandPickerRenderSource = extractFunction("renderIslandSwitcherModalContent");
 assert.doesNotMatch(islandPickerPanSource, /switchOnlineIsland\(/, "Map picker pointer releases must not switch islands before the gesture's trailing click completes.");
-assert.match(islandPickerRenderSource, /button\.addEventListener\("click"[\s\S]*?switchOnlineIsland\(button\.dataset\.islandRegion, \{ fromMapPicker: true \}\)/, "Map picker tiles must activate through their completed click.");
+assert.match(islandPickerRenderSource, /picker\.addEventListener\("click"[\s\S]*?elementFromPoint\(event\.clientX, event\.clientY\)[\s\S]*?switchOnlineIsland\(button\.dataset\.islandRegion, \{ fromMapPicker: true \}\)/, "Map picker tiles must resolve pointer-captured clicks from their visual hit target.");
+assert.match(islandPickerPanSource, /pointerdown[\s\S]*?delete picker\.dataset\.justDragged[\s\S]*?setPointerCapture/, "A distinct pointer gesture must not inherit drag-click suppression from the previous gesture.");
 assert.match(source, /function setIslandMapPickerOpeningView[\s\S]*?getIslandMapPickerOpeningZoom[\s\S]*?position\.x \* zoom/, "Opening the map picker should center its camera on the active region.");
 assert.match(source, /renderIslandSwitcherModalContent[\s\S]*?setIslandMapPickerOpeningView\(picker, activeRegionId \|\| homeRegionId\)/, "Every map picker open should reset to the active region.");
 assert.doesNotMatch(source, /restoreIslandMapPickerView/, "The map picker must not restore a stale camera on reopen.");

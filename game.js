@@ -12867,12 +12867,16 @@ function renderIslandSwitcherModalContent() {
   attachIslandMapPickerPan(picker);
   attachIslandMapPickerZoom(picker);
   setIslandMapPickerOpeningView(picker, activeRegionId || homeRegionId);
-  modalBody.querySelectorAll("[data-island-region]").forEach(button => {
-    button.addEventListener("click", () => {
-      if (picker?.dataset.justDragged === "true") return;
-      rememberIslandMapPickerView(picker);
-      switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
-    });
+  picker.addEventListener("click", event => {
+    if (picker.dataset.justDragged === "true") return;
+    const directTile = event.target?.closest?.("[data-island-region]");
+    const hitTile = Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+      ? document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]")
+      : null;
+    const button = directTile || hitTile;
+    if (!button || !picker.contains(button)) return;
+    rememberIslandMapPickerView(picker);
+    switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
   });
 }
 
@@ -13260,6 +13264,7 @@ function attachIslandMapPickerPan(picker) {
   let pinchAnimationFrame = 0;
   let pickerViewportOriginX = 0;
   let pickerViewportOriginY = 0;
+  let tileActivationSuppressionTimeout = 0;
 
   const applyPendingPinch = () => {
     pinchAnimationFrame = 0;
@@ -13304,14 +13309,25 @@ function attachIslandMapPickerPan(picker) {
   };
 
   const suppressTileActivation = () => {
+    if (tileActivationSuppressionTimeout) {
+      window.clearTimeout(tileActivationSuppressionTimeout);
+    }
     picker.dataset.justDragged = "true";
-    window.setTimeout(() => {
+    tileActivationSuppressionTimeout = window.setTimeout(() => {
+      tileActivationSuppressionTimeout = 0;
       if (picker) delete picker.dataset.justDragged;
     }, 180);
   };
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
+    // A new pointerdown starts a distinct gesture. Preserve drag suppression for
+    // the trailing click from the completed drag, but never consume a later tap.
+    if (tileActivationSuppressionTimeout) {
+      window.clearTimeout(tileActivationSuppressionTimeout);
+      tileActivationSuppressionTimeout = 0;
+    }
+    delete picker.dataset.justDragged;
     picker.setPointerCapture?.(event.pointerId);
     if (event.pointerType === "touch") {
       if (touchPointers.size === 0) {
