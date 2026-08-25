@@ -194,9 +194,10 @@ assert.match(saveFlag, /Save failed — retry/);
 
 assert.doesNotMatch(game, /function applyFlagToElement\(/, "The duplicated legacy renderer still exists.");
 for (const context of [
-  "hud", "city", "profile", "public-profile", "clan-roster", "clan-application",
+  "hud", "city", "profile", "public-profile", "clan-roster", "public-clan-roster", "clan-application",
   "leaderboard", "scout-report", "battle-report-list", "battle-report-detail",
 ]) assert.ok(game.includes(`context: "${context}"`), `Missing shared renderer context ${context}.`);
+assert.match(game, /function showPublicClanDetails[\s\S]*?data-public-clan-member-flag[\s\S]*?FlagRenderer\.render[\s\S]*?member\.flag[\s\S]*?stableKey:\s*member\.uid \|\| member\.id \|\| member\.displayName[\s\S]*?context:\s*"public-clan-roster"/, "Public clan member flags are not hydrated from member snapshots with stable legacy fallbacks.");
 assert.match(game, /normalizeFlag\(report\.opponentFlag, report\.opponentUid \|\| report\.opponentName\)/, "Battle reports do not repair flags against the opponent identity.");
 assert.match(game, /stableKey:\s*report\.opponentUid \|\| report\.opponentName[\s\S]*context:\s*"battle-report-list"/, "Legacy battle-report cards do not derive missing flags from their opponent identity.");
 assert.match(game, /normalizeFlag\(participant\.ownerFlag, participant\.ownerUid \|\| participant\.ownerName\)/, "Detailed battle flags do not repair against the participant identity.");
@@ -223,7 +224,7 @@ for (const source of [index, worker]) {
   assert.match(source, /functions\/playerFlagConfig\.js\?v=20260825-player-flags-audit-r1/);
   assert.match(source, /functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1/);
   assert.match(source, /player-flag-editor\.css\?v=20260819-player-flags-v2-r1/);
-  assert.match(source, /game\.js\?v=20260825-player-flags-audit-r1/);
+  assert.match(source, /game\.js\?v=20260825-player-flags-audit-r2/);
 }
 for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /functions\/flagRenderer\.js/);

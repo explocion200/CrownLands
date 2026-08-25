@@ -11864,11 +11864,14 @@ async function showPublicClanDetails(clanId = "") {
           <div><dt>Admission</dt><dd>${clan.admissionMode === "open" ? "Open" : "Approval"}</dd></div>
         </dl>
         <div class="public-clan-roster-heading"><span>Roster</span><strong>${formatNumber(members.length)} members</strong></div>
-        <div class="public-clan-roster">${members.length ? members.map(member => `
+        <div class="public-clan-roster">${members.length ? members.map((member, index) => `
           <article class="public-clan-member">
-            <div>
-              ${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}
-              <small>${escapeHtml(clanRoleLabel(member.role))}</small>
+            <div class="public-clan-member-identity">
+              <span class="kingdom-flag kingdom-flag-small clan-member-flag" data-public-clan-member-flag="${index}" role="img" aria-label="${escapeHtml(member.displayName || "Ruler")} kingdom flag"><span class="flag-symbol"></span></span>
+              <div class="public-clan-member-copy">
+                ${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}
+                <small>${escapeHtml(clanRoleLabel(member.role))}</small>
+              </div>
             </div>
             <div class="public-clan-member-power">
               <strong>${formatNumber(member.kingPower || 0)}</strong>
@@ -11876,6 +11879,13 @@ async function showPublicClanDetails(clanId = "") {
             </div>
           </article>`).join("") : `<p class="public-profile-empty">No active members found.</p>`}</div>
       </section>`;
+    members.forEach((member, index) => {
+      FlagRenderer.render(modalBody.querySelector(`[data-public-clan-member-flag="${index}"]`), member.flag, {
+        stableKey: member.uid || member.id || member.displayName,
+        context: "public-clan-roster",
+        size: "small",
+      });
+    });
   } catch (error) {
     if (requestId === publicClanProfileRequestId && modal.open) {
       modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan profile.")}</p><button type="button" data-public-clan-id="${escapeHtml(id)}">Try again</button></div>`;

@@ -3687,8 +3687,18 @@ input {
   border-radius: 9px;
   background: rgba(255,255,255,.045);
 }
-.public-clan-member > div:first-child,
+.public-clan-member-identity,
 .public-clan-member-power {
+  min-width: 0;
+  display: grid;
+  gap: .08rem;
+}
+.public-clan-member-identity {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+}
+.public-clan-member-copy {
   min-width: 0;
   display: grid;
   gap: .08rem;
