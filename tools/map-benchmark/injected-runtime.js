@@ -15,6 +15,47 @@
     regionLoadLatencyMs: null,
     createdArmies: [],
   };
+  const mapPickerInputTelemetry = {
+    switchCalls: [],
+    events: [],
+  };
+  const mapPickerInputTelemetryEnabled = new URLSearchParams(location.search).has("mapPickerInput");
+  if (mapPickerInputTelemetryEnabled) {
+    const benchmarkOriginalSwitchOnlineIsland = switchOnlineIsland;
+    switchOnlineIsland = async function benchmarkTrackedSwitchOnlineIsland(regionId, options = {}) {
+      mapPickerInputTelemetry.switchCalls.push({
+        regionId: normalizeRegionId(regionId),
+        fromMapPicker: options?.fromMapPicker === true,
+        atMs: performance.now(),
+      });
+      return benchmarkOriginalSwitchOnlineIsland(regionId, options);
+    };
+    for (const eventType of ["pointerdown", "pointermove", "pointerup", "pointercancel", "click"]) {
+      document.addEventListener(eventType, event => {
+        if (!modal?.open || !modal.classList.contains("island-switcher-modal")) return;
+        const picker = getIslandMapPickerElement();
+        const targetTile = event.target?.closest?.("[data-island-region]");
+        const hitTarget = Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+          ? document.elementFromPoint(event.clientX, event.clientY)
+          : null;
+        mapPickerInputTelemetry.events.push({
+          type: event.type,
+          pointerType: String(event.pointerType || ""),
+          pointerId: Number.isFinite(event.pointerId) ? event.pointerId : null,
+          button: Number.isFinite(event.button) ? event.button : null,
+          detail: Number.isFinite(event.detail) ? event.detail : null,
+          targetTag: String(event.target?.tagName || "").toLowerCase(),
+          targetId: String(event.target?.id || ""),
+          targetClass: String(event.target?.className || ""),
+          targetRegionId: String(targetTile?.dataset?.islandRegion || ""),
+          hitRegionId: String(hitTarget?.closest?.("[data-island-region]")?.dataset?.islandRegion || ""),
+          pickerHasPointerCapture: Number.isFinite(event.pointerId)
+            ? Boolean(picker?.hasPointerCapture?.(event.pointerId))
+            : false,
+        });
+      }, true);
+    }
+  }
 
   const requestedProfile = new URLSearchParams(location.search).get("profile");
   const marchProfileEnabled = requestedProfile === "marches";
@@ -781,6 +822,22 @@
     return { neighborResult, returnResult, neighborLatencyMs, returnLatencyMs, before, atNeighbor, after };
   }
 
+  function resetMapPickerInputTelemetry() {
+    mapPickerInputTelemetry.switchCalls.length = 0;
+    mapPickerInputTelemetry.events.length = 0;
+  }
+
+  function getMapPickerInputTelemetry() {
+    return {
+      switchCalls: mapPickerInputTelemetry.switchCalls.map(call => ({ ...call })),
+      events: mapPickerInputTelemetry.events.map(event => ({ ...event })),
+      activeRegionId: normalizeRegionId(getActiveMapRegionId()),
+      modalOpen: Boolean(modal?.open),
+      mapInteractionBlocked: isMapInteractionBlocked(),
+      pickerOpen: Boolean(getIslandMapPickerElement()),
+    };
+  }
+
   const publicApi = {
     fixture: {
       benchmarkSeed: fixture.benchmarkSeed,
@@ -795,6 +852,8 @@
     endSample: instrumentation.endSample,
     selectAndOpenCities,
     switchNeighborAndReturn,
+    resetMapPickerInputTelemetry,
+    getMapPickerInputTelemetry,
     setVisualMarchCount,
     showVisualMissionKinds,
     setHudOperationState,
