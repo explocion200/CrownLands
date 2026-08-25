@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.10
+**Version:** 1.13
 **Effective date:** August 25, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 25, 2026
@@ -265,6 +265,43 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. Current Apply cost is documented as 1,000,000 Gold. **Status:** `LIVE — ALL PUBLISHED CHANNELS`; current backend value should be checked before balance changes.
+
+### Confirmed Hero level-up troop rewards
+
+The following Hero-progression reward curve is confirmed design and is `IN DEVELOPMENT` until its implementation is merged, deployed, and verified on a named release channel:
+
+- For the new Hero level `L`, reference victory points are `floor(6 + 4L + 2 × L^1.35)` and reference troop production is ten troops per hour for each reference victory point.
+- The troop reward is `floor(max(50, referenceTroopsPerHour × rewardHours))`.
+- Reward hours are `4 + 0.40L` through Level 50, `24 + 0.60(L - 50)` from Levels 51 through 100, and `min(108, 54 + 0.40(L - 100))` from Level 101 onward. The 108-hour maximum first binds at Level 235.
+- This is standardized reference production, not the player's actual raw city or kingdom production. The calculation does not inspect owned cities, the receiving city, buildings, city count, skills, Gear, objectives, production bonuses, timed items, or casualty recovery. Every player reaching the same Hero level receives the same calculated base reward.
+- The resulting troops continue to be credited once to the player's canonical Main City through the authoritative Hero reward transaction. Main City selection and fallback behavior are unchanged by this balance update.
+
+### Confirmed city-upgrade Hero XP
+
+The following city-progression reward model is confirmed design and is `IN DEVELOPMENT` until its implementation is merged, deployed, and verified on a named release channel:
+
+- Upgrading a regular owned city from Level `L` to Level `L + 1` offers `max(1, floor(HeroXpRequired(L) × 0.05))` Hero XP. The source city level is the only balance input; Gold cost, discounts, skills, Gear, objectives, items, production, and the receiving Hero level do not change the raw award.
+- A bulk upgrade evaluates every crossed city level independently and sums those fixed awards.
+- Each player has a seasonal high-watermark for each region-and-city identity. On the first encounter with this feature, the current pre-upgrade city level becomes the baseline and grants no retroactive XP. Only newly developed levels above the stored high-watermark are eligible. Capture, loss, relinquishment, recapture, or rebuilding does not reset the high-watermark. The high-watermark is generation-scoped and server-protected.
+- City-upgrade XP is uncapped while the Hero remains below Level 50. If one award crosses Level 50, the exact XP needed to reach Level 50 is uncapped and only the remainder consumes the Level-50 daily allowance.
+- From Hero Levels 50 through 99, the daily allowance rises linearly from one to two exact Hero level-equivalents: `1 + (capReferenceHeroLevel - 50) / 50`. At Hero Level 100 and above, the allowance is exactly two level-equivalents per UTC day.
+- A level-equivalent allowance is calculated from the exact successive Hero XP requirements beginning at the cap-reference level. Whole equivalents sum whole requirements; a fractional equivalent uses that fraction of the next requirement. The final allowance is floored once after summation.
+- The cap-reference Hero level and resulting XP allowance freeze when the player first consumes capped city-upgrade XP during that UTC day. Later Hero levels do not recalculate that day's allowance. The allowance resets at `00:00 UTC`.
+- Only city-upgrade XP consumes this allowance. Combat and all other XP sources remain governed by their own rules and do not consume it.
+- XP above the daily allowance and XP from rebuilding levels at or below the high-watermark are discarded, not banked. Before a bulk upgrade commits, the player must receive a clear warning when either rule would suppress XP and may reduce the upgrade or wait.
+- The authoritative upgrade compares its actual suppression with the amounts acknowledged from the preview. If cap or rebuild suppression has increased before commit, the transaction is rejected without changing the city or player so a refreshed warning can be reviewed.
+- City XP uses the normal Hero-level reward path. Every crossed Hero level continues to grant its skill point, Gold, and approved standardized Main City troop reward exactly once; the city-XP feature does not independently alter those rewards.
+- Upgrade affordability is resolved using the player's Gold before city XP and Hero-level rewards are applied. Gold awarded by a Hero level-up cannot fund more city levels within the same request.
+- The authoritative response records raw XP, awarded XP, daily-cap suppression, rebuild suppression, eligible and ineligible levels, the frozen allowance and reference level, daily usage and remainder, UTC day key, and model version. Upgrade requests are replay-safe under retry and concurrency.
+
+#### City-upgrade XP compatibility rollout
+
+- During the temporary cross-channel compatibility window, the server accepts an otherwise valid legacy city-upgrade request that omits the new request ID. The city upgrade, Gold spend, invested-Gold accounting, production collection, and city-upgrade progression event remain authoritative and atomic.
+- A legacy request awards zero city-upgrade Hero XP and therefore cannot trigger a Hero level, skill point, level-up Gold reward, or level-up troop reward. It does not consume or freeze the UTC city-XP allowance.
+- Every successful legacy request advances the seasonal per-player, per-region, per-city high-watermark through the highest city level completed by that request. Changing to an updated client cannot reclaim XP for those levels later. Legacy retries, duplicate calls, rebuilding, or client switching therefore cannot duplicate Hero XP.
+- Requests carrying a valid request ID remain on the complete updated path: preview, suppression acknowledgement, replay receipt, city XP, daily allowance, high-watermark, and normal Hero-level rewards all retain the confirmed behavior above.
+- The server economy setting `cityUpgradeXp.legacyRequestsEnabled` controls the compatibility window and defaults to an explicit configured value. Once set to `false`, a request without an ID is rejected before any transaction writes with reason `city-upgrade-client-update-required` and a player-facing instruction to update Crownlands.
+- Required rollout order is: (1) deploy the compatibility-capable backend; (2) publish the updated client to every supported web and itch.io channel; (3) verify adoption and successful request-ID-backed upgrades on every channel; (4) disable legacy requests through the server setting; and (5) remove the temporary legacy path in a later cleanup release. Functions or clients must not be released independently in the opposite order.
 
 **Confirmed season rule:** Hero level, Hero XP, unspent skill points, acquired skill upgrades, and saved skill presets reset each season. Hero progression is normal seasonal world progression and is not part of permanent Gear progression.
 
@@ -1131,6 +1168,27 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.13 — August 25, 2026
+
+- Confirmed the temporary request-ID-free city-upgrade compatibility window for coordinated backend, web, and itch.io rollout.
+- Required legacy upgrades to award zero Hero XP while advancing the seasonal city high-watermark through every completed level.
+- Added the server-controlled legacy shutdown setting, stable update-required rejection, and phased deployment order.
+
+## v1.12 — August 25, 2026
+
+- Confirmed the stronger post-Level-50 Hero troop-reward curve, including the 108-hour maximum that first binds at Level 235.
+- Confirmed that Hero level-up troops use standardized reference production at the new Hero level and never use the player's actual city or kingdom production.
+- Retained authoritative one-time credit to the canonical Main City and classified the balance update as `IN DEVELOPMENT` pending merge, deployment, and channel verification.
+
+## v1.11 — August 25, 2026
+
+- Confirmed fixed Hero XP for each regular-city level upgraded, based on 5% of the matching Hero XP requirement.
+- Confirmed seasonal per-player, per-region, per-city high-watermarks with no retroactive or rebuild farming awards.
+- Confirmed uncapped city-upgrade XP below Hero Level 50, a linear one-to-two level-equivalent daily allowance through Level 100, and a two-equivalent allowance thereafter.
+- Confirmed UTC cap freezing, exact successive-level calculations, discarded excess XP, pre-upgrade suppression warnings, normal Hero-level rewards, and Gold-affordability ordering.
+- Required the authoritative upgrade to reject unacknowledged or increased XP suppression caused by preview-to-commit state changes.
+- Classified the feature as `IN DEVELOPMENT` pending merge, deployment, and channel verification.
 
 ## v1.10 — August 25, 2026
 

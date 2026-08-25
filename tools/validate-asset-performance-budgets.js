@@ -41,7 +41,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // map metadata while the map rasters themselves remain lazy loaded.
 // Clan Heraldry v2 adds its shared config/render runtimes and two compact SVG
 // sprites while keeping all editable PNG/source artwork out of production.
-const MAX_INSTALL_PRECACHE_BYTES = 3440 * 1024;
+// Server-authoritative city XP previews and replay-safe upgrade handling add
+// under 13 KiB to the required offline shell. Allow one bounded 16 KiB step.
+const MAX_INSTALL_PRECACHE_BYTES = 3456 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;

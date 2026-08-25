@@ -22,6 +22,15 @@ let instantEconomyFlushTimer = 0;
 let instantEconomyGeneration = 1;
 let instantEconomyActionSequence = 0;
 let serverCityUpgradeInFlightIds = new Set();
+let serverCityUpgradePreviewIds = new Set();
+let serverCityUpgradePreviewLevels = new Map();
+
+function createCityUpgradeRequestId(cityId = "") {
+  const randomPart = typeof window.crypto?.randomUUID === "function"
+    ? window.crypto.randomUUID().replace(/-/g, "")
+    : Math.random().toString(36).slice(2, 14);
+  return `city_${String(cityId || "upgrade").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32)}_${Date.now().toString(36)}_${randomPart}`.slice(0, 88);
+}
 
 function supportsInstantEconomyActionBatching() {
   return Number(verifiedRealmInfo?.capabilities?.instantEconomyActionsVersion || 0) >= 1;
@@ -29,6 +38,12 @@ function supportsInstantEconomyActionBatching() {
 
 function getInstantEconomyPendingActions() {
   return [instantEconomyActiveAction, ...instantEconomyActions].filter(Boolean);
+}
+
+function hasPendingServerCityUpgrade(cityId = "") {
+  return getInstantEconomyPendingActions().some(action => (
+    action?.type === "city" && action.cityId === cityId
+  ));
 }
 
 function getInstantEconomyReservedGold() {
@@ -188,6 +203,8 @@ function clearInstantEconomyActions() {
   swiftMarchOrderRequests.clear();
   recallHornRequests.clear();
   serverCityUpgradeInFlightIds.clear();
+  serverCityUpgradePreviewIds.clear();
+  serverCityUpgradePreviewLevels.clear();
   instantEconomyActiveAction = null;
 }
 
@@ -395,8 +412,12 @@ function patchCityUpgradeUi() {
   if (selectedCity && wheel) {
     const projectedCity = getProjectedCityForInstantActions(selectedCity);
     const cost = getLevelCost(projectedCity);
-    wheel.disabled = cityHasIncomingUpgradeBlocker(selectedCity) || !Number.isFinite(cost) || getProjectedGold() < cost;
-    setTextIfChanged(wheel.querySelector(".wheel-cost"), Number.isFinite(cost) ? `${formatNumber(cost)}g` : "Unavailable");
+    const pending = hasPendingServerCityUpgrade(selectedCity.id);
+    wheel.disabled = pending || cityHasIncomingUpgradeBlocker(selectedCity) || !Number.isFinite(cost) || getProjectedGold() < cost;
+    setTextIfChanged(
+      wheel.querySelector(".wheel-cost"),
+      pending ? "Pending" : Number.isFinite(cost) ? `${formatNumber(cost)}g` : "Unavailable"
+    );
   }
   const panel = modalBody?.querySelector(".city-level-up-panel");
   if (!panel) return;
@@ -409,6 +430,12 @@ function patchCityUpgradeUi() {
   if (replacement) {
     panel.replaceWith(replacement);
     bindCityLevelUpButtons(city);
+    if (hasPendingServerCityUpgrade(city.id)) {
+      replacement.querySelectorAll("[data-city-upgrade-levels]").forEach(button => {
+        button.disabled = true;
+      });
+      setTextIfChanged(replacement.querySelector(".city-level-up-copy small"), "City upgrade pending...");
+    }
   }
 }
 
@@ -523,7 +550,12 @@ async function flushInstantEconomyActions() {
       renderProfileSkills();
     }
     console.warn(`Instant ${action.type} action failed`, error);
-    rejectGameAction(error?.message || "That action was not confirmed by the server.", { allowCrossMap: true });
+    rejectGameAction(
+      action.type === "city"
+        ? getCityUpgradeFailureMessage(error, "That city upgrade was not confirmed by the server.")
+        : error?.message || "That action was not confirmed by the server.",
+      { allowCrossMap: true }
+    );
     instantEconomyActiveAction = null;
     await refreshInstantEconomyAfterFailure(action);
     return false;
@@ -578,20 +610,150 @@ async function executeInstantCityUpgrade(action) {
   const chunkLevels = Math.min(action.levels, SERVER_CITY_UPGRADE_LEVEL_CHUNK);
   const chunkCosts = action.levelCosts.slice(0, chunkLevels);
   serverCityUpgradeInFlightIds.add(action.cityId);
-  const result = await getOnlineApi().upgradeCity({ cityId: city.id, regionId: action.regionId, levels: chunkLevels });
+  const requestChunk = Math.max(0, Math.floor(Number(action.requestChunk) || 0));
+  const requestId = `${action.requestIdBase || createCityUpgradeRequestId(city.id)}_${requestChunk}`.slice(0, 96);
+  const result = await getOnlineApi().upgradeCity({
+    cityId: city.id,
+    regionId: action.regionId,
+    levels: chunkLevels,
+    requestId,
+    acknowledgedCapSuppressedXp: Math.max(0, Math.floor(Number(action.acknowledgedCapSuppressedXp) || 0)),
+    acknowledgedRebuildSuppressedXp: Math.max(0, Math.floor(Number(action.acknowledgedRebuildSuppressedXp) || 0)),
+  });
   if (!isInstantEconomyActionCurrent(action)) return;
   const upgraded = Math.min(chunkLevels, Math.max(0, Math.floor(Number(result?.upgraded) || 0)));
   if (upgraded < 1) throw new Error("The city upgrade was not confirmed by the server.");
+  const xpReceipt = result?.cityUpgradeXp || {};
+  const capSuppressedXp = Math.max(0, Math.floor(Number(xpReceipt.capSuppressedXp) || 0));
+  const rebuildSuppressedXp = Math.max(0, Math.floor(Number(xpReceipt.rebuildSuppressedXp) || 0));
   action.levels -= upgraded;
+  action.requestIdBase = action.requestIdBase || requestId.replace(/_\d+$/, "");
+  action.requestChunk = requestChunk + 1;
+  action.acknowledgedCapSuppressedXp = Math.max(
+    0,
+    Math.floor(Number(action.acknowledgedCapSuppressedXp) || 0) - capSuppressedXp
+  );
+  action.acknowledgedRebuildSuppressedXp = Math.max(
+    0,
+    Math.floor(Number(action.acknowledgedRebuildSuppressedXp) || 0) - rebuildSuppressedXp
+  );
   action.levelCosts = action.levelCosts.slice(upgraded);
   action.reservedGold = Math.max(0, action.reservedGold - chunkCosts.slice(0, upgraded).reduce((sum, cost) => sum + cost, 0));
   applyServerEconomyResult(result);
   const updatedCity = cityById(city.id) || city;
-  addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.`);
-  showToast(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`}`);
+  const awardedXp = Math.max(0, Math.floor(Number(xpReceipt.awardedXp) || 0));
+  const suppressedXp = capSuppressedXp + rebuildSuppressedXp;
+  const xpLog = awardedXp > 0
+    ? ` Awarded ${formatNumber(awardedXp)} Hero XP${suppressedXp > 0 ? `; ${formatNumber(suppressedXp)} XP was suppressed` : ""}.`
+    : suppressedXp > 0
+      ? ` No Hero XP was awarded; ${formatNumber(suppressedXp)} XP was suppressed.`
+      : "";
+  addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.${xpLog}`);
+  showToast(`${updatedCity.name} upgraded${awardedXp > 0 ? ` · +${formatNumber(awardedXp)} Hero XP` : ""}`);
   playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
   playCityUpgradeAnimation(action.vfxBefore, getCityVfxSnapshot(updatedCity));
   if (action.levels > 0) queueInstantEconomyRemainder(action, { vfxBefore: getCityVfxSnapshot(updatedCity) });
+}
+
+function getCityUpgradeXpWarning(receipt = null) {
+  if (!receipt || typeof receipt !== "object") return "";
+  const capSuppressedXp = Math.max(0, Math.floor(Number(receipt.capSuppressedXp) || 0));
+  const rebuildSuppressedXp = Math.max(0, Math.floor(Number(receipt.rebuildSuppressedXp) || 0));
+  if (capSuppressedXp <= 0 && rebuildSuppressedXp <= 0) return "";
+  const rawXp = Math.max(0, Math.floor(Number(receipt.rawXp) || 0));
+  const awardedXp = Math.max(0, Math.floor(Number(receipt.awardedXp) || 0));
+  const reasons = [];
+  if (capSuppressedXp > 0) {
+    reasons.push(`${formatNumber(capSuppressedXp)} exceeds today's city-upgrade XP allowance`);
+  }
+  if (rebuildSuppressedXp > 0) {
+    reasons.push(`${formatNumber(rebuildSuppressedXp)} comes from city levels you already developed this season`);
+  }
+  return `Hero XP warning\n\nThis upgrade offers ${formatNumber(rawXp)} eligible Hero XP and will award ${formatNumber(awardedXp)} now. ${reasons.join("; ")}. Suppressed XP is not saved for later.\n\nContinue with the upgrade?`;
+}
+
+function getCityUpgradeFailureMessage(error = null, fallback = "Could not upgrade that city.") {
+  const details = error?.details || error?.customData?.details || error?.data || {};
+  if (details?.reason === "city-upgrade-client-update-required") {
+    return "Update Crownlands to the latest version to continue upgrading cities.";
+  }
+  return error?.message || fallback;
+}
+
+async function queueServerCityUpgradeWithPreview(cityId, enqueueUpgrade = null) {
+  const requestCity = cityById(cityId);
+  if (!requestCity) return false;
+  serverCityUpgradePreviewIds.add(cityId);
+  patchInstantEconomyUi();
+  try {
+    const api = getOnlineApi();
+    let initialAffordable = 0;
+    let preview = null;
+    while (true) {
+      const pendingLevels = Math.max(1, Math.floor(Number(serverCityUpgradePreviewLevels.get(cityId)) || 1));
+      initialAffordable = getProjectedAffordableCityUpgradeLevels(requestCity, pendingLevels);
+      if (initialAffordable < 1) {
+        rejectGameAction("Not enough gold");
+        return false;
+      }
+      preview = await api.getCityUpgradeXpPreview({
+        cityId: requestCity.id,
+        regionId: getCityRegionId(requestCity),
+        levels: initialAffordable,
+      });
+      if (pendingLevels === Math.max(1, Math.floor(Number(serverCityUpgradePreviewLevels.get(cityId)) || 1))) break;
+    }
+    const warning = getCityUpgradeXpWarning(preview?.cityUpgradeXp);
+    if (warning && !window.confirm(warning)) return false;
+    const previewReceipt = preview?.cityUpgradeXp || {};
+    const acknowledgedCapSuppressedXp = Math.max(
+      0,
+      Math.floor(Number(previewReceipt.capSuppressedXp) || 0)
+    );
+    const acknowledgedRebuildSuppressedXp = Math.max(
+      0,
+      Math.floor(Number(previewReceipt.rebuildSuppressedXp) || 0)
+    );
+
+    const currentCity = cityById(cityId);
+    if (!currentCity || currentCity.owner !== "player" || isStronghold(currentCity)) return false;
+    const blockers = getIncomingUpgradeBlockers(currentCity.id);
+    if (blockers.length) {
+      rejectGameAction(`${currentCity.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(blockers[0].remaining)}.`);
+      return false;
+    }
+    const affordable = getProjectedAffordableCityUpgradeLevels(currentCity, initialAffordable);
+    if (affordable < 1) {
+      rejectGameAction("Not enough gold");
+      return false;
+    }
+    const costs = getInstantCityLevelCosts(currentCity, affordable);
+    return (enqueueUpgrade || enqueueInstantEconomyAction)({
+      type: "city",
+      key: `${getCityRegionId(currentCity)}:${currentCity.id}`,
+      cityId: currentCity.id,
+      regionId: getCityRegionId(currentCity),
+      levels: costs.length,
+      levelCosts: costs,
+      reservedGold: costs.reduce((sum, cost) => sum + cost, 0),
+      vfxBefore: getCityVfxSnapshot(currentCity),
+      requestIdBase: createCityUpgradeRequestId(currentCity.id),
+      requestChunk: 0,
+      acknowledgedCapSuppressedXp,
+      acknowledgedRebuildSuppressedXp,
+    });
+  } catch (error) {
+    console.warn("City upgrade XP preview failed", error);
+    rejectGameAction(
+      getCityUpgradeFailureMessage(error, "The city upgrade preview could not be confirmed by the server."),
+      { allowCrossMap: true }
+    );
+    return false;
+  } finally {
+    serverCityUpgradePreviewIds.delete(cityId);
+    serverCityUpgradePreviewLevels.delete(cityId);
+    patchInstantEconomyUi();
+  }
 }
 
 async function executeInstantInventoryActivation(action) {
@@ -676,17 +838,18 @@ function upgradeCity(cityId, levels = 1) {
     return false;
   }
   if (usesServerEconomyAuthority()) {
-    const costs = getInstantCityLevelCosts(city, affordable);
-    return enqueueInstantEconomyAction({
-      type: "city",
-      key: `${getCityRegionId(city)}:${city.id}`,
-      cityId: city.id,
-      regionId: getCityRegionId(city),
-      levels: costs.length,
-      levelCosts: costs,
-      reservedGold: costs.reduce((sum, cost) => sum + cost, 0),
-      vfxBefore: getCityVfxSnapshot(city),
-    });
+    if (hasPendingServerCityUpgrade(city.id)) {
+      rejectGameAction(`${city.name} already has an upgrade pending.`);
+      patchInstantEconomyUi();
+      return false;
+    }
+    const pendingPreviewLevels = Math.max(0, Math.floor(Number(serverCityUpgradePreviewLevels.get(city.id)) || 0));
+    serverCityUpgradePreviewLevels.set(city.id, pendingPreviewLevels + affordable);
+    const enqueuePreviewedUpgrade = action => enqueueInstantEconomyAction(action);
+    if (!serverCityUpgradePreviewIds.has(city.id)) {
+      void queueServerCityUpgradeWithPreview(city.id, enqueuePreviewedUpgrade);
+    } else patchInstantEconomyUi();
+    return true;
   }
   const vfxBefore = getCityVfxSnapshot(city);
   for (let offset = 0; offset < affordable; offset += 1) {

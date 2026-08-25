@@ -119,6 +119,7 @@ service cloud.firestore {
           'skillPresets',
           'freeSkillResetGrantVersion',
           'freeSkillResetCredits',
+          'cityUpgradeXpDaily',
           'mainCityId',
            'mainIslandId',
            'mainRegionId',
@@ -253,6 +254,14 @@ service cloud.firestore {
       }
 
       match /protectedDefenseXpClaims/{attackerUid} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /cityUpgradeXp/{document=**} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /cityUpgradeRequests/{document=**} {
         allow read, create, update, delete: if false;
       }
 

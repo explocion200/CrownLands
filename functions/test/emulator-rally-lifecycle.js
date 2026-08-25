@@ -1252,6 +1252,9 @@ async function main() {
   });
 
   const ownedReturnArmyId = `rally_return_owned_${crypto.randomBytes(4).toString("hex")}`;
+  const ownedReturnBaseTroops = 100;
+  const ownedReturnTroops = 777;
+  const ownedReturnExpectedTroops = ownedReturnBaseTroops + ownedReturnTroops;
   await maxAssemblyRef.set({
     owner: "player",
     ownerKind: "player",
@@ -1260,27 +1263,37 @@ async function main() {
     ownerClanId: clanId,
     ownerShieldExpiresAtMs: 0,
     isMainCity: false,
-    troops: 100,
-    troopFloat: 100,
+    troops: ownedReturnBaseTroops,
+    troopFloat: ownedReturnBaseTroops,
+    // Keep passive production from obscuring the exact Rally return delta.
+    productionUpdatedAtMs: Date.now() + 60_000,
   }, { merge: true });
   await db.doc(`armies/${ownedReturnArmyId}`).set(rallyReturnArmy({
     id: ownedReturnArmyId,
     owner: { uid: clanLeader.uid, name: "Rally Clan Leader" },
     source: returnSafetySource,
     target: { ...returnSafetyTarget, ownerUid: clanLeader.uid },
-    troops: 777,
+    troops: ownedReturnTroops,
     clanId,
   }));
   await callFunction("resolveArmyOrder", clanLeader.token, {
     armyId: ownedReturnArmyId,
     regionIds: [...new Set([targetRegionId, leaderClaim.regionId])],
   });
-  assert(Number((await maxAssemblyRef.get()).data()?.troops || 0) === 877, "An owned Rally origin did not receive its returning troops.");
+  const ownedReturnTroopsAfterArrival = Number((await maxAssemblyRef.get()).data()?.troops || 0);
+  assert(
+    ownedReturnTroopsAfterArrival === ownedReturnExpectedTroops,
+    `An owned Rally origin did not receive its returning troops (expected ${ownedReturnExpectedTroops}, received ${ownedReturnTroopsAfterArrival}).`
+  );
   await callFunction("resolveArmyOrder", clanLeader.token, {
     armyId: ownedReturnArmyId,
     regionIds: [...new Set([targetRegionId, leaderClaim.regionId])],
   });
-  assert(Number((await maxAssemblyRef.get()).data()?.troops || 0) === 877, "Replaying an owned Rally return duplicated troops.");
+  const ownedReturnTroopsAfterReplay = Number((await maxAssemblyRef.get()).data()?.troops || 0);
+  assert(
+    ownedReturnTroopsAfterReplay === ownedReturnExpectedTroops,
+    `Replaying an owned Rally return duplicated troops (expected ${ownedReturnExpectedTroops}, received ${ownedReturnTroopsAfterReplay}).`
+  );
 
   const defeatedReturnArmyId = `rally_return_defeat_${crypto.randomBytes(4).toString("hex")}`;
   await Promise.all([

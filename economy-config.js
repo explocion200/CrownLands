@@ -292,10 +292,20 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "troopEarlyBaseHours": 4,
     "troopEarlyHoursPerLevel": 0.4,
     "troopMidBaseHours": 24,
-    "troopMidHoursPerLevel": 0.48,
-    "troopEndgameBaseHours": 48,
-    "troopEndgameHoursPerLevel": 0.32,
-    "troopMaximumHours": 96
+    "troopMidHoursPerLevel": 0.6,
+    "troopEndgameBaseHours": 54,
+    "troopEndgameHoursPerLevel": 0.4,
+    "troopMaximumHours": 108
+  },
+  "cityUpgradeXp": {
+    "enabled": true,
+    "modelVersion": 1,
+    "legacyRequestsEnabled": true,
+    "fixedXpRate": 0.05,
+    "capStartHeroLevel": 50,
+    "capMaximumHeroLevel": 100,
+    "capStartLevelEquivalents": 1,
+    "capMaximumLevelEquivalents": 2
   },
   "camps": {
     "gold": {
