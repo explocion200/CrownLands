@@ -8761,13 +8761,17 @@ function normalizeItemEffects(effects = {}) {
   };
 }
 
-function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
+function getVeilOfSilenceExpiresAtMs(profile = {}) {
   return timestampToMs(
     profile?.itemEffects?.veilOfSilenceExpiresAtMs ||
     profile?.itemEffects?.veilOfSilenceExpiresAt ||
     profile?.itemEffects?.antiScoutExpiresAtMs ||
     profile?.itemEffects?.antiScoutExpiresAt
-  ) > nowMs;
+  );
+}
+
+function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
+  return getVeilOfSilenceExpiresAtMs(profile) > nowMs;
 }
 
 function doesVeilOfSilenceBlock(kind = "", targetType = "city") {
@@ -21131,9 +21135,6 @@ exports.sendNearbyScouts = timedCallable(
         if (targetOwnerUid && attackerClanId && attackerClanId === safeString(defender.profile.clanId, 128)) {
           throw new HttpsError("failed-precondition", "You cannot scout a current clan ally.");
         }
-        if (targetOwnerUid && isVeilOfSilenceActive(defender.profile, nowMs)) {
-          throw new HttpsError("failed-precondition", "A selected city is hidden by Veil of Silence.");
-        }
         if (isProtectedMainCity(target, uid, getMainCityProtectionProfile(
           defender.profile,
           defender.globalStats,
@@ -21141,6 +21142,28 @@ exports.sendNearbyScouts = timedCallable(
         ))) {
           throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
         }
+      }
+      const veiledTargets = targets.flatMap(target => {
+        const targetOwnerUid = getOwnerUid(target);
+        const defender = defenderSnapshots.get(targetOwnerUid);
+        const expiresAtMs = defender ? getVeilOfSilenceExpiresAtMs(defender.profile) : 0;
+        return targetOwnerUid && expiresAtMs > nowMs
+          ? [{ cityId: target.id, ownerUid: targetOwnerUid, expiresAtMs }]
+          : [];
+      });
+      if (veiledTargets.length) {
+        throw new HttpsError(
+          "failed-precondition",
+          veiledTargets.length === 1
+            ? "A selected city is hidden by Veil of Silence."
+            : `${veiledTargets.length.toLocaleString("en-US")} selected cities are hidden by Veil of Silence.`,
+          {
+            reason: "veil_of_silence",
+            expiresAtMs: Math.max(...veiledTargets.map(target => target.expiresAtMs)),
+            targetCityIds: veiledTargets.map(target => target.cityId),
+            targets: veiledTargets,
+          }
+        );
       }
 
       const routes = targets.map(target => buildServerGeneratedArmyRoute(source, target));
@@ -21804,8 +21827,18 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
     }
-    if (doesVeilOfSilenceBlock(resolvedKind, order.targetType) && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
-      throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
+    const veilOfSilenceExpiresAtMs = getVeilOfSilenceExpiresAtMs(defenderPowerData);
+    if (doesVeilOfSilenceBlock(resolvedKind, order.targetType) && targetOwnerUid && targetOwnerUid !== uid && veilOfSilenceExpiresAtMs > nowMs) {
+      throw new HttpsError(
+        "failed-precondition",
+        "That city is hidden by Veil of Silence.",
+        {
+          reason: "veil_of_silence",
+          expiresAtMs: veilOfSilenceExpiresAtMs,
+          targetCityIds: [order.toId],
+          targets: [{ cityId: order.toId, ownerUid: targetOwnerUid, expiresAtMs: veilOfSilenceExpiresAtMs }],
+        }
+      );
     }
     if (resolvedKind === "attack" && order.targetType !== "camp") {
       if (isProtectedMainCity(target, uid, defenderMainCityProfile)) {
