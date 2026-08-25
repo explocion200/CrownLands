@@ -18,7 +18,9 @@ const releaseId = "20260823-item-bag-stacks-r1";
 const cacheVersion = "20260823-item-bag-stacks-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
-assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 40 * 1024, "The Crownlands palette exceeds its 40 KiB delivery budget.");
+// The v2 heraldry cascade boundary is intentionally kept in the global
+// palette so its broad legacy rules cannot override the dedicated editor.
+assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 42 * 1024, "The Crownlands palette exceeds its 42 KiB delivery budget.");
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, "The Crownlands palette has unbalanced braces.");
 assert.doesNotMatch(css, /font-family\s*:/i, "The palette pass must preserve the existing Crownlands typefaces.");
 assert.doesNotMatch(css, /url\s*\(/i, "The palette pass must not recolor or replace visual assets.");

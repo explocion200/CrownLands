@@ -112,7 +112,7 @@ assert.match(server, /const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;/);
 assert.match(server, /const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;/);
 assert.match(server, /CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0\.5;/);
 assert.match(server, /defenseCombatVersion: order\.targetType === "camp" \? 0 : DEFENSE_COMBAT_VERSION/);
-assert.match(server, /defenseCombatVersion: rally\.targetType === "camp" \? 0 : DEFENSE_COMBAT_VERSION/);
+assert.match(server, /rallyAttack:\s*true[\s\S]*?siegeCombatVersion:\s*SIEGE_COMBAT_VERSION[\s\S]*?defenseCombatVersion:\s*DEFENSE_COMBAT_VERSION/);
 assert.match(server, /Math\.floor\(safeNumber\(army\.defenseCombatVersion, 0\)\)/, "Unversioned in-flight armies do not settle with legacy defense.");
 assert.match(server, /effectiveKind === "attack" && safeString\(army\.kind, 24\) !== "attack"[\s\S]*?DEFENSE_COMBAT_VERSION/, "Reinforcement-to-attack conversion does not adopt the live defense model.");
 assert.match(extractFunction(server, "usesSoldierDefenseModel"), /!isRewardCamp\(city\)/, "Reward camps are not excluded from Version 1 defense.");

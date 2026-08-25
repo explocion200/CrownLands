@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Clan Heraldry Scroll QA</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="../../../styles.css">
   <link rel="stylesheet" href="../../../interface-theme.css">
   <link rel="stylesheet" href="../../../daily-rewards.css">
@@ -17,12 +18,11 @@
   <link rel="stylesheet" href="../../../mobile-viewport.css">
   <link rel="stylesheet" href="../../../player-flag-editor.css">
   <link rel="stylesheet" href="../../../chat.css">
+  <link rel="stylesheet" href="../../../clan-heraldry-v2.css">
   <style>
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     body { background: linear-gradient(135deg, #071b2c, #102d3c); }
-    .qa-shield { width: 100%; height: 100%; display: block; filter: drop-shadow(0 7px 8px rgba(0,0,0,.45)); }
-    .qa-shield path:first-child { fill: #7a2638; stroke: #d8bd78; stroke-width: 5; }
-    .qa-shield path:last-child { fill: #d8bd78; }
+    .qa-hidden { display: none; }
   </style>
 </head>
 <body>
@@ -39,19 +39,15 @@
     </header>
     <div class="clan-view shield-editor-active" role="tabpanel">
       <div class="clan-content shield-editor-open">
-        <section class="clan-shield-editor" aria-label="Clan shield editor">
+        <section class="clan-shield-editor" aria-label="Clan Heraldry editor" data-heraldry-editor-version="2">
           <header class="clan-shield-editor-preview" data-qa-preview>
             <div class="clan-shield-preview-stage">
-              <span class="clan-shield clan-shield-size-editor">
-                <svg class="qa-shield" viewBox="0 0 100 110" aria-label="Preview of QA clan shield">
-                  <path d="M8 6h84v49c0 25-16 41-42 50C24 96 8 80 8 55z"></path>
-                  <path d="M48 20h4v63h-4zM27 47h46v5H27z"></path>
-                </svg>
-              </span>
+              <div class="clan-shield-preview-full" data-qa-full-preview></div>
+              <div class="clan-shield-micro-preview"><span>Map size</span><span data-qa-micro-preview></span></div>
             </div>
             <div class="clan-shield-editor-intro">
               <span>House heraldry</span>
-              <h3>Clan Shield Editor</h3>
+              <h3>Clan Heraldry</h3>
               <p>Build a distinct coat of arms with historic field divisions and heraldic charges.</p>
               <small>Only the clan leader can publish changes.</small>
             </div>
@@ -65,8 +61,8 @@
             </nav>
             <div class="clan-shield-editor-controls" data-qa-controls tabindex="0">
               <section class="clan-shield-panel" data-qa-panel="field" role="tabpanel">
-                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Shield shape</legend><div class="clan-shield-choice-grid" data-options="4"></div></fieldset>
-                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Field division</legend><div class="clan-shield-choice-grid" data-options="8"></div></fieldset>
+                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Shield shape</legend><div class="clan-shield-choice-grid" data-options="shape"></div></fieldset>
+                <fieldset class="clan-shield-control clan-shield-control-wide"><legend>Field division</legend><div class="clan-shield-choice-grid" data-options="division"></div></fieldset>
               </section>
               <section class="clan-shield-panel" data-qa-panel="colors" role="tabpanel">
                 <section class="clan-shield-colors" aria-label="Heraldic colors">
@@ -78,32 +74,53 @@
                 </section>
               </section>
               <section class="clan-shield-panel active" data-qa-panel="charges" role="tabpanel">
-                <fieldset class="clan-shield-control"><legend>Primary charge</legend><div class="clan-shield-choice-grid" data-options="17"></div></fieldset>
-                <fieldset class="clan-shield-control"><legend>Secondary charge</legend><div class="clan-shield-choice-grid" data-options="17"></div></fieldset>
-                <fieldset class="clan-shield-control" data-qa-final-control><legend>Charge arrangement</legend><div class="clan-shield-choice-grid" data-options="4"></div></fieldset>
+                <fieldset class="clan-shield-control"><legend>Primary charge</legend><div class="clan-shield-choice-grid" data-options="charge"></div></fieldset>
+                <fieldset class="clan-shield-control"><legend>Secondary charge</legend><div class="clan-shield-choice-grid" data-options="charge"></div></fieldset>
+                <fieldset class="clan-shield-control" data-qa-final-control><legend>Charge arrangement</legend><div class="clan-shield-choice-grid" data-options="chargeLayout"></div></fieldset>
               </section>
               <section class="clan-shield-panel" data-qa-panel="details" role="tabpanel">
-                <fieldset class="clan-shield-control"><legend>Edge detail</legend><div class="clan-shield-choice-grid" data-options="3"></div></fieldset>
-                <fieldset class="clan-shield-control clan-shield-control-wide" data-qa-final-control><legend>Paint finish</legend><div class="clan-shield-choice-grid" data-options="3"></div></fieldset>
+                <fieldset class="clan-shield-control"><legend>Edge detail</legend><div class="clan-shield-choice-grid" data-options="trim"></div></fieldset>
+                <fieldset class="clan-shield-control clan-shield-control-wide" data-qa-final-control><legend>Paint finish</legend><div class="clan-shield-choice-grid" data-options="finish"></div></fieldset>
               </section>
             </div>
           </div>
           <footer class="clan-shield-editor-actions" data-qa-actions>
             <button class="profile-secondary-btn" type="button">Inspire Me</button>
             <button class="profile-secondary-btn" type="button">Cancel</button>
-            <button class="profile-primary-btn clan-shield-save" type="button">Save Clan Shield</button>
+            <button class="profile-primary-btn clan-shield-save" type="button">Save Clan Heraldry</button>
           </footer>
         </section>
       </div>
     </div>
   </section>
+  <script src="../../../functions/clanHeraldryConfig.js"></script>
+  <script src="../../../functions/clanHeraldryAssets.js"></script>
+  <script src="../../../functions/clanHeraldryLegacyV1.js"></script>
+  <script src="../../../functions/clanHeraldryRenderer.js"></script>
   <script>
-    const labels = ["None", "Crown", "Lion", "Eagle", "Dragon", "Wolf", "Stag", "Bear", "Crossed Swords", "Gauntlet", "Fleur-de-lis", "Oak Tree", "War Horn", "Battering Ram", "Fortress Keep", "Watchtower", "Portcullis"];
+    const config = window.CrownlandsClanHeraldryConfig;
+    const assets = window.CrownlandsClanHeraldryAssets;
+    const qaAssets = { ...assets, symbolHref(chargeId, variant) { return `../../../${assets.symbolHref(chargeId, variant)}`; } };
+    const renderer = window.CrownlandsClanHeraldryRenderer.create({ config, assets: qaAssets, legacyRenderer: window.CrownlandsClanHeraldryLegacyV1 });
+    const draft = { ...config.DEFAULT_V2, shape: "heater", division: "saltire", charge: "fortress-keep", secondaryCharge: "war-horn", chargeLayout: "paired", chargeColor: "#f2e2bf", secondaryChargeColor: "#d8bd78", primary: "#24445f", secondary: "#7a2638", borderColor: "#d8bd78", finish: "battleworn" };
+    assets.installSharedDefs(document);
+    document.querySelector("[data-qa-full-preview]").innerHTML = renderer.renderMarkup(draft, { size: "editor", variant: "full", label: "Customized v2 clan heraldry" });
+    document.querySelector("[data-qa-micro-preview]").innerHTML = renderer.renderMarkup(draft, { size: "mini", variant: "micro", label: "Micro v2 clan heraldry" });
+    const catalogs = { shape: config.SHAPES, division: config.DIVISIONS, charge: config.SELECTABLE_CHARGES, chargeLayout: config.CHARGE_LAYOUTS, trim: config.TRIMS, finish: config.FINISHES };
+    const visualDraft = (key, option) => ({ ...draft, [key]: option.key, ...(key === "shape" || key === "division" ? { charge: "none", secondaryCharge: "none", trim: "plain", finish: "polished" } : {}) });
     document.querySelectorAll("[data-options]").forEach(grid => {
-      const count = Number(grid.dataset.options);
-      grid.innerHTML = Array.from({ length: count }, (_, index) => `<button type="button" class="${index === 0 ? "active" : ""}"><span aria-hidden="true">◆</span><small>${labels[index] || `Choice ${index + 1}`}</small></button>`).join("");
+      const key = grid.dataset.options;
+      grid.classList.add(`clan-shield-choice-grid-${key}`);
+      grid.innerHTML = catalogs[key].map((option, index) => {
+        const icon = key === "charge"
+          ? option.key === "none"
+            ? `<span class="clan-shield-choice-icon clan-shield-choice-none" aria-hidden="true">—</span>`
+            : `<span class="clan-shield-choice-icon" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="${qaAssets.symbolHref(option.key, "full")}"></use></svg></span>`
+          : `<span class="clan-shield-choice-icon clan-shield-choice-mini" aria-hidden="true">${renderer.renderMarkup(visualDraft(key, option), { width: 36, variant: "full" })}</span>`;
+        return `<button type="button" class="${index === 0 ? "active" : ""}" aria-pressed="${index === 0}">${icon}<small>${option.label}</small></button>`;
+      }).join("");
     });
-    const colors = ["#7a2638", "#d8bd78", "#173e57", "#52633c", "#eee1bd"];
+    const colors = config.COLOR_VALUES;
     document.querySelectorAll("[data-swatches]").forEach(grid => {
       grid.innerHTML = colors.map((color, index) => `<button type="button" class="${index === 0 ? "active" : ""}" style="--shield-swatch:${color}" aria-label="Color ${index + 1}"></button>`).join("");
     });

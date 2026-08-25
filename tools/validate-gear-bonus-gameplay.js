@@ -668,6 +668,9 @@ async function main() {
     getSkillLevel() { return 0; },
     getSkillPercent(profile, skill) { return skill === "fieldMedics" ? Number(profile?.fieldMedicsPercent) || 0 : 0; },
     skillMultiplier() { return 1; },
+    addCommonGearMarchSpeed(profile, kind, multiplier) {
+      return multiplier + commonGear.getBonuses(profile).enemyMarchSpeed / 100;
+    },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
     getCasualtyRecoveryPercent(profile) {
       return Math.min(75, (Number(profile?.fieldMedicsPercent) || 0) + commonGear.getBonuses(profile).casualtyEfficiency);

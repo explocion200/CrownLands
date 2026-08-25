@@ -114,7 +114,7 @@ assert.doesNotMatch(
 );
 requires(
   between(client, "async function showPublicClanDetails", "function getPlayerIdentitySignature"),
-  /class="public-clan-identity"[\s\S]*?renderClanShield\([\s\S]*?<h3>\[\$\{escapeHtml\(clan\.tag/,
+  /class="public-clan-identity"[\s\S]*?renderClanHeraldry\([\s\S]*?<h3>\[\$\{escapeHtml\(clan\.tag/,
   "The public clan page's own heading should remain a plain destination heading."
 );
 

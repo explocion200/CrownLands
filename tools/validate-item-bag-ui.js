@@ -131,10 +131,12 @@ assert.doesNotMatch(bagTheme, /#173f5e|#0b263d|#1c4a6c|#285c79|#11324e/, "The ap
 assert.match(profileTheme, /:not\(\[aria-pressed="true"\]\):not\(\.inventory-slot,\.inventory-page-arrow\)/, "The legacy Profile button layer must not repaint Bag cards or arrows navy.");
 assert.match(mobile, /max-height: 440px[\s\S]*\.modal\.inventory-modal[\s\S]*\.inventory-selection/, "Landscape Bag compaction is missing.");
 assert.match(index, /crownlands-build" content="20260823-item-bag-stacks-r1"/);
-for (const asset of ["styles.css", "mobile-viewport.css", "instant-economy-actions.js", "game.js"]) {
+for (const asset of ["styles.css", "mobile-viewport.css", "instant-economy-actions.js"]) {
   assert(index.includes(`${asset}?v=20260823-item-bag-stacks-r1`), `${asset} has a stale page cache stamp.`);
   assert(worker.includes(`/${asset}?v=20260823-item-bag-stacks-r1`), `${asset} is missing from the refreshed offline shell.`);
 }
+assert(index.includes("game.js?v=20260823-clan-heraldry-live-ui-r2"), "game.js has a stale Clan Heraldry cache stamp.");
+assert(worker.includes("/game.js?v=20260823-clan-heraldry-live-ui-r2"), "game.js is missing from the refreshed offline shell.");
 assert(worker.includes('CACHE_VERSION = "20260823-item-bag-stacks-r1"'));
 
 console.log("Validated the Crownlands Item Bag: authoritative item-ID stacks, xN badges, unique 4x2 paging, zero-count selection, responsive layout, and cache delivery.");

@@ -6,20 +6,102 @@
       "clanViewOverflowY": "hidden",
       "clanViewScrollHeight": 200,
       "clanViewScrollTop": 0,
-      "clientHeight": 40,
+      "clientHeight": 85,
       "finalControlReachable": false,
       "horizontalOverflow": false,
       "minHeight": "0px",
       "overflowY": "auto",
       "pointerEvents": "auto",
       "previewVisible": true,
-      "scrollHeight": 2053,
+      "scrollHeight": 1916,
       "scrollTop": 0,
-      "touchAction": "auto"
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
     },
     "wheelScrollTop": 420,
-    "touchScrollTop": 19,
-    "middleScrollTop": 1006,
+    "touchScrollTop": 75,
+    "middleScrollTop": 915,
     "previewStayedFixed": true,
     "actionsStayedFixed": true,
     "bottom": {
@@ -28,17 +110,262 @@
       "clanViewOverflowY": "hidden",
       "clanViewScrollHeight": 200,
       "clanViewScrollTop": 0,
-      "clientHeight": 40,
+      "clientHeight": 85,
       "finalControlReachable": true,
       "horizontalOverflow": false,
       "minHeight": "0px",
       "overflowY": "auto",
       "pointerEvents": "auto",
       "previewVisible": true,
-      "scrollHeight": 2053,
-      "scrollTop": 2013,
-      "touchAction": "auto"
-    }
+      "scrollHeight": 1916,
+      "scrollTop": 1831,
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
+    },
+    "spriteProof": {
+      "hrefs": [
+        "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+        "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg"
+      ],
+      "results": [
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        },
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        }
+      ],
+      "selectorCatalogs": [
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ],
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ]
+      ],
+      "unresolvedUseCount": 0
+    },
+    "consoleErrors": [],
+    "requestFailures": []
   },
   "844x390": {
     "top": {
@@ -47,20 +374,102 @@
       "clanViewOverflowY": "hidden",
       "clanViewScrollHeight": 319,
       "clanViewScrollTop": 0,
-      "clientHeight": 159,
+      "clientHeight": 203,
       "finalControlReachable": false,
       "horizontalOverflow": false,
       "minHeight": "0px",
       "overflowY": "auto",
       "pointerEvents": "auto",
       "previewVisible": true,
-      "scrollHeight": 2053,
+      "scrollHeight": 1090,
       "scrollTop": 0,
-      "touchAction": "auto"
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
     },
     "wheelScrollTop": 420,
-    "touchScrollTop": 183,
-    "middleScrollTop": 947,
+    "touchScrollTop": 239,
+    "middleScrollTop": 443,
     "previewStayedFixed": true,
     "actionsStayedFixed": true,
     "bottom": {
@@ -69,52 +478,624 @@
       "clanViewOverflowY": "hidden",
       "clanViewScrollHeight": 319,
       "clanViewScrollTop": 0,
-      "clientHeight": 159,
+      "clientHeight": 203,
       "finalControlReachable": true,
       "horizontalOverflow": false,
       "minHeight": "0px",
       "overflowY": "auto",
       "pointerEvents": "auto",
       "previewVisible": true,
-      "scrollHeight": 2053,
-      "scrollTop": 1894,
-      "touchAction": "auto"
-    }
+      "scrollHeight": 1090,
+      "scrollTop": 887,
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
+    },
+    "spriteProof": {
+      "hrefs": [
+        "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+        "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg"
+      ],
+      "results": [
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        },
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        }
+      ],
+      "selectorCatalogs": [
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ],
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ]
+      ],
+      "unresolvedUseCount": 0
+    },
+    "consoleErrors": [],
+    "requestFailures": []
   },
   "1440x900": {
     "top": {
-      "actionsVisible": false,
+      "actionsVisible": true,
       "clanViewClientHeight": 452,
-      "clanViewOverflowY": "auto",
-      "clanViewScrollHeight": 1041,
+      "clanViewOverflowY": "hidden",
+      "clanViewScrollHeight": 452,
       "clanViewScrollTop": 0,
-      "clientHeight": 683,
-      "finalControlReachable": true,
+      "clientHeight": 293,
+      "finalControlReachable": false,
       "horizontalOverflow": false,
-      "minHeight": "auto",
-      "overflowY": "visible",
+      "minHeight": "0px",
+      "overflowY": "auto",
       "pointerEvents": "auto",
       "previewVisible": true,
-      "scrollHeight": 683,
+      "scrollHeight": 1117,
       "scrollTop": 0,
-      "touchAction": "auto"
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
     },
     "bottom": {
       "actionsVisible": true,
       "clanViewClientHeight": 452,
-      "clanViewOverflowY": "auto",
-      "clanViewScrollHeight": 1041,
-      "clanViewScrollTop": 589,
-      "clientHeight": 683,
+      "clanViewOverflowY": "hidden",
+      "clanViewScrollHeight": 452,
+      "clanViewScrollTop": 0,
+      "clientHeight": 293,
       "finalControlReachable": true,
       "horizontalOverflow": false,
-      "minHeight": "auto",
-      "overflowY": "visible",
+      "minHeight": "0px",
+      "overflowY": "auto",
       "pointerEvents": "auto",
-      "previewVisible": false,
-      "scrollHeight": 683,
-      "scrollTop": 0,
-      "touchAction": "auto"
-    }
+      "previewVisible": true,
+      "scrollHeight": 1117,
+      "scrollTop": 824,
+      "touchAction": "pan-y",
+      "readability": {
+        "fieldTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "colorsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "activeTab": {
+          "color": "rgb(255, 244, 215)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(122, 55, 59), rgb(81, 33, 41))",
+          "borderColor": "rgb(255, 227, 160)",
+          "opacity": "1",
+          "minContrast": 7.8672146167502985
+        },
+        "detailsTab": {
+          "color": "rgb(255, 240, 200)",
+          "backgroundColor": "rgb(23, 62, 87)",
+          "backgroundImage": "none",
+          "borderColor": "rgba(255, 234, 180, 0.28)",
+          "opacity": "1",
+          "minContrast": 9.95652804896109
+        },
+        "sectionLabel": {
+          "color": "rgb(255, 228, 160)",
+          "backgroundColor": "rgb(18, 50, 72)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(255, 228, 160)",
+          "opacity": "1",
+          "minContrast": 10.699196765002682
+        },
+        "chargeName": {
+          "color": "rgb(248, 233, 196)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "none",
+          "borderColor": "rgb(248, 233, 196)",
+          "opacity": "1",
+          "minContrast": 5.740618348249502
+        },
+        "selectedChoice": {
+          "color": "rgb(43, 33, 24)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(246, 223, 155), rgb(201, 149, 60))",
+          "borderColor": "rgb(255, 240, 189)",
+          "opacity": "1",
+          "minContrast": 5.885279725932176
+        },
+        "save": {
+          "color": "rgb(242, 226, 191)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(114, 54, 58), rgb(84, 39, 40))",
+          "borderColor": "rgb(181, 138, 59)",
+          "opacity": "1",
+          "minContrast": 7.120034137175072
+        },
+        "cancel": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        },
+        "inspire": {
+          "color": "rgb(43, 36, 28)",
+          "backgroundColor": "rgba(0, 0, 0, 0)",
+          "backgroundImage": "linear-gradient(rgb(244, 232, 205), rgb(221, 199, 158) 72%, rgb(199, 171, 121))",
+          "borderColor": "rgba(85, 58, 39, 0.82)",
+          "opacity": "1",
+          "minContrast": 6.946658402153092
+        }
+      }
+    },
+    "spriteProof": {
+      "hrefs": [
+        "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+        "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg"
+      ],
+      "results": [
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-full.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        },
+        {
+          "href": "../../../assets/clan-heraldry/art-set-v1/charges-micro.svg",
+          "status": 200,
+          "contentType": "image/svg+xml"
+        }
+      ],
+      "selectorCatalogs": [
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ],
+        [
+          {
+            "label": "None",
+            "iconCount": 0
+          },
+          {
+            "label": "Crown",
+            "iconCount": 1
+          },
+          {
+            "label": "Lion Rampant",
+            "iconCount": 1
+          },
+          {
+            "label": "Eagle Displayed",
+            "iconCount": 1
+          },
+          {
+            "label": "Dragon / Wyvern",
+            "iconCount": 1
+          },
+          {
+            "label": "Wolf Head",
+            "iconCount": 1
+          },
+          {
+            "label": "Stag",
+            "iconCount": 1
+          },
+          {
+            "label": "Bear",
+            "iconCount": 1
+          },
+          {
+            "label": "Crossed Swords",
+            "iconCount": 1
+          },
+          {
+            "label": "Armored Fist",
+            "iconCount": 1
+          },
+          {
+            "label": "Fleur-de-lis",
+            "iconCount": 1
+          },
+          {
+            "label": "Oak Tree",
+            "iconCount": 1
+          },
+          {
+            "label": "War Horn",
+            "iconCount": 1
+          },
+          {
+            "label": "Battering Ram",
+            "iconCount": 1
+          },
+          {
+            "label": "Fortress Keep",
+            "iconCount": 1
+          },
+          {
+            "label": "Watchtower",
+            "iconCount": 1
+          },
+          {
+            "label": "Portcullis Gate",
+            "iconCount": 1
+          }
+        ]
+      ],
+      "unresolvedUseCount": 0
+    },
+    "consoleErrors": [],
+    "requestFailures": []
   }
 }
