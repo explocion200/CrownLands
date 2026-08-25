@@ -1596,6 +1596,9 @@ function getInactiveCampNeutralPatch(camp = {}, nowMs = Date.now()) {
     payoutAtMs: 0,
     payoutPending: false,
     currentGarrison: combatMetadata.baseDefenders,
+    alliedReinforcementTroops: 0,
+    holdCycleId: "",
+    dailyRewardClaims: FieldValue.delete(),
     returnSourceCityId: "",
     returnSourceRegionId: "",
     returnSourceCityName: "",
@@ -5858,6 +5861,8 @@ function createNeutralRewardCampState(camp = {}) {
     payoutAtMs: 0,
     payoutPending: false,
     currentGarrison: seed.baseDefenders,
+    alliedReinforcementTroops: 0,
+    holdCycleId: "",
     returnSourceCityId: "",
     returnSourceRegionId: "",
     returnSourceCityName: "",
@@ -5865,10 +5870,33 @@ function createNeutralRewardCampState(camp = {}) {
     returnRouteRegionIds: [],
     returnPathLength: 0,
     activeArmyIds: [],
-    dailyRewardClaims: {},
     lastResetDate: "",
     state: "neutral",
   };
+}
+
+function getRewardCampHoldCycleId(camp = {}, holderUid = "", heldSinceMs = 0, payoutAtMs = 0) {
+  const storedCycleId = safeString(camp.holdCycleId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (storedCycleId) return storedCycleId;
+  const digest = crypto.createHash("sha256")
+    .update([
+      RESET_GENERATION,
+      normalizeRegionId(camp.regionId || camp.mapId),
+      safeString(camp.id || camp.campId, 96),
+      safeString(holderUid, 128),
+      Math.max(0, Math.floor(safeNumber(heldSinceMs, 0))),
+      Math.max(0, Math.floor(safeNumber(payoutAtMs, 0))),
+    ].join("|"))
+    .digest("hex")
+    .slice(0, 48);
+  return `camp_hold_${digest}`;
+}
+
+function rewardCampPayoutReceiptRef(holdCycleId = "") {
+  const safeCycleId = safeString(holdCycleId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeCycleId
+    ? db.doc(`rewardCampPayoutReceipts/${RESET_GENERATION}/entries/${safeCycleId}`)
+    : null;
 }
 
 function getRewardCampConfig(campOrType = {}) {
@@ -6007,7 +6035,7 @@ function removeActiveCampArmyId(camp = {}, armyId = "") {
 }
 
 function campUpdateForClient(campId, regionId, patch = {}) {
-  const { updatedAt, createdAt, ...safePatch } = patch;
+  const { updatedAt, createdAt, dailyRewardClaims, ...safePatch } = patch;
   return { id: campId, regionId: normalizeRegionId(regionId), ...safePatch };
 }
 
@@ -12847,8 +12875,14 @@ function getRewardedAdBaseRates(economy = null) {
       includeWarDrums: false,
       includeRoyalTaxDecree: false,
     });
-    totals.goldPerHour += Math.max(0, safeNumber(stats.baseGoldProductionPerHour, 0));
-    totals.troopsPerHour += Math.max(0, safeNumber(stats.baseTroopProductionPerHour, 0));
+    totals.goldPerHour = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      totals.goldPerHour + Math.max(0, safeNumber(stats.baseGoldProductionPerHour, 0))
+    );
+    totals.troopsPerHour = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      totals.troopsPerHour + Math.max(0, safeNumber(stats.baseTroopProductionPerHour, 0))
+    );
     return totals;
   }, { goldPerHour: 0, troopsPerHour: 0 });
 }
@@ -15197,6 +15231,8 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
         payoutAtMs: 0,
         payoutPending: false,
         currentGarrison: camp.baseDefenders,
+        alliedReinforcementTroops: 0,
+        holdCycleId: "",
         returnSourceCityId: "",
         returnSourceRegionId: "",
         returnSourceCityName: "",
@@ -15204,10 +15240,10 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
         returnRouteRegionIds: [],
         returnPathLength: 0,
         activeArmyIds: [],
-        dailyRewardClaims: {},
         lastResetDate: "",
         state: "neutral",
       }),
+      dailyRewardClaims: FieldValue.delete(),
       ...(alreadyExists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -23918,15 +23954,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       let targetUpdate;
       if (targetType === "camp") {
         const campConfig = getRewardCampConfig(target);
+        const heldSinceMs = nowMs;
+        const payoutAtMs = nowMs + campConfig.holdDurationMs;
         targetPatch = result.success
           ? {
             ...getRewardCampCombatMetadata(campConfig),
             holderUid: attackerUid,
             holderName: attackerName,
             holderFlag: attackerProfile.flag || army.ownerFlag || null,
-            heldSinceMs: nowMs,
-            payoutAtMs: nowMs + campConfig.holdDurationMs,
+            heldSinceMs,
+            payoutAtMs,
             payoutPending: true,
+            holdCycleId: getRewardCampHoldCycleId(
+              { id: target.id, regionId: targetRegionId },
+              attackerUid,
+              heldSinceMs,
+              payoutAtMs
+            ),
             currentGarrison: leaderAllocation.survivors,
             alliedReinforcementTroops: 0,
             returnSourceCityId: rallyAttack.assemblyCityId,
@@ -24480,14 +24524,22 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       let campPatch;
       if (battle.success) {
+        const heldSinceMs = nowMs;
+        const payoutAtMs = nowMs + campConfig.holdDurationMs;
         campPatch = {
           ...getRewardCampCombatMetadata(campConfig),
           holderUid: attackerUid,
           holderName: attackerName,
           holderFlag: attackerProfile.flag || army.ownerFlag || null,
-          heldSinceMs: nowMs,
-          payoutAtMs: nowMs + campConfig.holdDurationMs,
+          heldSinceMs,
+          payoutAtMs,
           payoutPending: true,
+          holdCycleId: getRewardCampHoldCycleId(
+            { id: target.id, regionId: targetRegionId },
+            attackerUid,
+            heldSinceMs,
+            payoutAtMs
+          ),
           currentGarrison: battle.survivors,
           alliedReinforcementTroops: 0,
           returnSourceCityId: army.fromId,
@@ -26969,13 +27021,19 @@ function getUtcDateKey(nowMs = Date.now()) {
 
 function getRewardCampDailyReward(config, claimIndex = 0, productionRates = {}) {
   const index = Math.max(0, Math.floor(safeNumber(claimIndex, 0)));
-  const minimumReward = Math.max(0, Math.floor(safeNumber(config?.dailyRewards?.[index], 0)));
+  const minimumReward = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.floor(safeNumber(config?.dailyRewards?.[index], 0)))
+  );
   const rewardHours = Math.max(0, safeNumber(config?.rewardHours?.[index], 0));
-  if (!minimumReward || !rewardHours) return minimumReward;
+  if (!rewardHours) return minimumReward;
   const hourlyRate = config.rewardType === "troops"
     ? Math.max(0, safeNumber(productionRates.baseTroopPerHour, 0))
     : Math.max(0, safeNumber(productionRates.baseGoldPerHour, 0));
-  return Math.max(minimumReward, Math.floor(hourlyRate * rewardHours));
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(minimumReward, Math.floor(hourlyRate * rewardHours))
+  );
 }
 
 function rollRelicCampItem(dropTable = RELIC_CAMP_DROP_TABLE) {
@@ -27072,13 +27130,48 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
   return runTransactionWithInfrastructureRetry(async transaction => {
     const campSnap = await transaction.get(campRef);
     if (!campSnap.exists) return { ok: true, status: "missing" };
-    const camp = getRewardCampCombatTarget({ id: campSnap.id, ...campSnap.data() });
+    const rawCamp = { id: campSnap.id, ...campSnap.data() };
+    const campRegionId = normalizeRegionId(
+      rawCamp.regionId || rawCamp.mapId || getRegionIdFromOnlineIslandId(campRef.parent?.parent?.id)
+    );
+    if (
+      safeString(rawCamp.worldId, 120) !== ONLINE_WORLD_ID
+      || safeString(rawCamp.resetGeneration, 120) !== RESET_GENERATION
+      || !getAuthoritativeRewardCampSeed(campRegionId, campSnap.id)
+    ) {
+      return { ok: true, status: "unsupported" };
+    }
+    const camp = getRewardCampCombatTarget({ ...rawCamp, regionId: campRegionId });
     const config = getRewardCampConfig(camp);
     if (!camp || !config) return { ok: true, status: "unsupported" };
     const holderUid = safeString(camp.holderUid || camp.ownerUid, 128);
     const payoutAtMs = Math.max(0, Math.floor(safeNumber(camp.payoutAtMs, 0)));
+    if (callerUid && holderUid && callerUid !== holderUid) {
+      throw new HttpsError("permission-denied", "Only the current camp holder can resolve this reward.");
+    }
     if (!camp.payoutPending || !holderUid || !payoutAtMs) return { ok: true, status: "not-pending" };
     if (payoutAtMs > nowMs) return { ok: true, status: "not-due", payoutAtMs };
+    const heldSinceMs = Math.max(0, timestampToMs(camp.heldSinceMs));
+    const lastCapturedAtMs = Math.max(0, timestampToMs(camp.lastCapturedAtMs));
+    const stationedTroops = Math.max(
+      0,
+      Math.floor(safeNumber(camp.currentGarrison, 0))
+        + Math.floor(safeNumber(camp.alliedReinforcementTroops, 0))
+    );
+    if (
+      !heldSinceMs
+      || payoutAtMs <= heldSinceMs
+      || (lastCapturedAtMs && lastCapturedAtMs !== heldSinceMs)
+      || stationedTroops <= 0
+    ) {
+      return { ok: true, status: "invalid-hold" };
+    }
+    const holdCycleId = getRewardCampHoldCycleId(camp, holderUid, heldSinceMs, payoutAtMs);
+    const payoutReceiptRef = rewardCampPayoutReceiptRef(holdCycleId);
+    const payoutReceiptSnap = payoutReceiptRef ? await transaction.get(payoutReceiptRef) : null;
+    if (!payoutReceiptRef || payoutReceiptSnap?.exists) {
+      return { ok: true, status: payoutReceiptSnap?.exists ? "duplicate" : "invalid-hold" };
+    }
 
     const isDeedCamp = config.rewardType === "city";
     const isRelicCamp = config.rewardType === "item";
@@ -27129,6 +27222,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
             baseGoldPerHour: baseProductionRates.goldPerHour,
             baseTroopPerHour: baseProductionRates.troopsPerHour,
           });
+    if (config.rewardType === "gold") {
+      const currentGoldFloat = Math.max(0, safeNumber(player.goldFloat, player.gold || 0));
+      reward = Math.min(reward, Math.max(0, Math.floor(Number.MAX_SAFE_INTEGER - currentGoldFloat)));
+    }
     let nextClaims = isDeedCamp || isRelicCamp
       ? priorClaims
       : Math.min(config.dailyRewards.length, priorClaims + 1);
@@ -27159,25 +27256,32 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     }
     const returnDestinationRegionId = normalizeRegionId(returnDestination.regionId);
     const returningTroops = Math.max(0, Math.floor(safeNumber(camp.currentGarrison, camp.troops)));
-    const troopReward = config.rewardType === "troops" ? reward : 0;
+    let troopReward = config.rewardType === "troops" ? reward : 0;
     let returnedTroops = 0;
     let rewardedTroops = 0;
     let mainCityPatch = null;
     const troopRewardDestination = ownedMainCity || returnDestination;
     const troopRewardDestinationRef = ownedMainCity ? mainCityInfo.ref : returnSourceRef;
     if (troopRewardDestination && troopRewardDestinationRef && troopReward > 0) {
-      const troopFloat = Math.max(0, safeNumber(troopRewardDestination.troopFloat, troopRewardDestination.troops || 0)) + troopReward;
+      const currentTroopFloat = Math.max(
+        0,
+        safeNumber(troopRewardDestination.troopFloat, troopRewardDestination.troops || 0)
+      );
+      troopReward = Math.min(
+        troopReward,
+        Math.max(0, Math.floor(Number.MAX_SAFE_INTEGER - currentTroopFloat))
+      );
+      reward = troopReward;
+      const troopFloat = currentTroopFloat + troopReward;
       mainCityPatch = {
         id: troopRewardDestination.id,
         regionId: normalizeRegionId(troopRewardDestination.regionId),
         troops: Math.floor(troopFloat),
         troopFloat,
-        productionUpdatedAtMs: nowMs,
       };
       transaction.set(troopRewardDestinationRef, cleanCityUpdate(troopRewardDestination, {
         troops: mainCityPatch.troops,
         troopFloat: mainCityPatch.troopFloat,
-        productionUpdatedAtMs: mainCityPatch.productionUpdatedAtMs,
       }), { merge: true });
       rewardedTroops = troopReward;
     }
@@ -27354,6 +27458,8 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       payoutAtMs: 0,
       payoutPending: false,
       currentGarrison: combatMetadata.baseDefenders,
+      alliedReinforcementTroops: 0,
+      holdCycleId: "",
       returnSourceCityId: "",
       returnSourceRegionId: "",
       returnSourceCityName: "",
@@ -27361,14 +27467,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       returnRouteRegionIds: [],
       returnPathLength: 0,
       activeArmyIds,
-      dailyRewardClaims: {
-        lastHolderUid: holderUid,
-        lastClaimDate: today,
-        lastClaimNumber: nextClaims,
-        lastReward: reward,
-        ...(deedCityPatch ? { lastAwardedCityId: deedCityPatch.id } : {}),
-        ...(relicRewardEntry ? { lastRewardItemId: relicRewardEntry.itemId } : {}),
-      },
+      dailyRewardClaims: FieldValue.delete(),
       lastResetDate: today,
       lastPaidAtMs: nowMs,
       state: getRewardCampState(activeArmyIds, ""),
@@ -27493,10 +27592,23 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ...(rewardedShopItems ? { shopItems: rewardedShopItems } : {}),
       ...(rewardedGear ? { gear: rewardedGear } : {}),
     });
-    transaction.set(islandReportRef(camp.regionId, report.id), {
-      ...report,
+    transaction.set(payoutReceiptRef, {
+      holdCycleId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      holderUid,
+      campId: camp.id,
+      campType: config.campType,
+      regionId: campRegionId,
+      heldSinceMs,
+      payoutAtMs,
+      completedAtMs: nowMs,
+      status: "completed",
+      result: isDeedCamp
+        ? deedDailyLimitReached ? "daily-limit" : deedCityPatch ? "paid" : "no-eligible-city"
+        : isRelicCamp && relicDailyLimitReached ? "daily-limit" : "paid",
       createdAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    }, { merge: false });
 
     return {
       ok: true,
@@ -27561,8 +27673,10 @@ exports.resolveRewardCampPayout = onCall({ region: "us-central1", maxInstances: 
   const callerUid = requireAuth(request);
   const data = request.data || {};
   const campId = safeString(data.campId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = normalizeRegionId(data.regionId || data.mapId);
-  if (!campId || !regionId) throw new HttpsError("invalid-argument", "Missing reward camp location.");
+  const regionId = requireKnownWorldRegionId(data.regionId || data.mapId);
+  if (!campId || !getServerWorldCampIds(regionId).has(campId)) {
+    throw new HttpsError("invalid-argument", "Choose a valid reward camp.");
+  }
   return resolveRewardCampPayoutAndStats(campRefForRegion(regionId, campId), Date.now(), callerUid);
 });
 
@@ -27692,6 +27806,9 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
       payoutAtMs: 0,
       payoutPending: false,
       currentGarrison: combatMetadata.baseDefenders,
+      alliedReinforcementTroops: 0,
+      holdCycleId: "",
+      dailyRewardClaims: FieldValue.delete(),
       returnSourceCityId: "",
       returnSourceRegionId: "",
       returnSourceCityName: "",
@@ -28584,6 +28701,43 @@ async function backfillActiveArmyVisibilityViews() {
   return { complete, processed: snapshot.size, cursor: nextCursor };
 }
 
+async function cleanupLegacyRewardCampPublicMetadata() {
+  const markerRef = db.doc(
+    `privacyMigrations/${RESET_GENERATION}/entries/rewardCampPublicMetadataV1`
+  );
+  const markerSnap = await markerRef.get();
+  if (markerSnap.exists && markerSnap.data()?.status === "complete") {
+    return { status: "complete", campsCleaned: 0 };
+  }
+  const campRefs = SERVER_WORLD_MAPS.flatMap(map => (
+    (Array.isArray(map?.camps) ? map.camps : [])
+      .map(camp => safeString(camp?.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
+      .filter(Boolean)
+      .map(campId => campRefForRegion(map.id, campId))
+  ));
+  const campSnaps = campRefs.length ? await db.getAll(...campRefs) : [];
+  const leakingCampSnaps = campSnaps.filter(campSnap => (
+    campSnap.exists
+    && Object.prototype.hasOwnProperty.call(campSnap.data() || {}, "dailyRewardClaims")
+  ));
+  const batch = db.batch();
+  leakingCampSnaps.forEach(campSnap => batch.set(campSnap.ref, {
+    dailyRewardClaims: FieldValue.delete(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true }));
+  batch.set(markerRef, {
+    status: "complete",
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    campsChecked: campSnaps.length,
+    campsCleaned: leakingCampSnaps.length,
+    completedAtMs: Date.now(),
+    completedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  await batch.commit();
+  return { status: "complete", campsCleaned: leakingCampSnaps.length };
+}
+
 exports.maintainGameServer = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
@@ -28592,17 +28746,25 @@ exports.maintainGameServer = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const [result, armyVisibilityBackfill, reinforcementCapacity, reportHistoryCleanup] = await Promise.all([
+  const [
+    result,
+    armyVisibilityBackfill,
+    reinforcementCapacity,
+    reportHistoryCleanup,
+    rewardCampPrivacyCleanup,
+  ] = await Promise.all([
     maintainGameServer(Date.now()),
     backfillActiveArmyVisibilityViews(),
     reconcileReinforcementCapacity(Date.now()),
     cleanupExpiredReportDocuments(Date.now()),
+    cleanupLegacyRewardCampPublicMetadata(),
   ]);
   console.log("Crownlands realm capacity maintained", {
     ...result,
     armyVisibilityBackfill,
     reinforcementCapacity,
     reportHistoryCleanup,
+    rewardCampPrivacyCleanup,
   });
 });
 

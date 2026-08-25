@@ -512,6 +512,10 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
+    match /rewardCampPayoutReceipts/{resetId}/entries/{receiptId} {
+      allow read, create, update, delete: if false;
+    }
+
     match /serverNotificationOutbox/{notificationId} {
       allow read, create, update, delete: if false;
     }
@@ -560,7 +564,9 @@ service cloud.firestore {
         allow create, update, delete: if false;
 
         match /rewardHistory/{entryId} {
-          allow read: if signedIn() && isCurrentIslandId(islandId);
+          allow read: if signedIn()
+            && isCurrentIslandId(islandId)
+            && resource.data.awardedToPlayerId == request.auth.uid;
           allow create, update, delete: if false;
         }
       }
@@ -571,7 +577,9 @@ service cloud.firestore {
       }
 
       match /reports/{reportId} {
-        allow read: if signedIn() && isCurrentIslandId(islandId);
+        allow read: if signedIn()
+          && isCurrentIslandId(islandId)
+          && !reportId.matches('.*_hold_.*');
         allow create, update: if false;
         allow delete: if false;
       }

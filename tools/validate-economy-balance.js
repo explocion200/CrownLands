@@ -110,7 +110,7 @@ for (const [campName, schedule] of [["Gold Camp", goldSchedule], ["Warband Camp"
     );
   }
 }
-requireMatch(serverSource, /function getRewardCampDailyReward[\s\S]*?Math\.max\(minimumReward,\s*Math\.floor\(hourlyRate \* rewardHours\)\)/, "Camp rewards are not production-scaled with a minimum.");
+requireMatch(serverSource, /function getRewardCampDailyReward[\s\S]*?Math\.min\(\s*Number\.MAX_SAFE_INTEGER,[\s\S]*?Math\.max\(minimumReward,\s*Math\.floor\(hourlyRate \* rewardHours\)\)/, "Camp rewards are not safely production-scaled with a minimum.");
 const campRewardSource = extractFunction(serverSource, "getRewardCampDailyReward");
 assert.doesNotMatch(
   campRewardSource,
@@ -152,6 +152,26 @@ assert.equal(
   campRewardContext.getRewardCampDailyReward({ rewardType: "troops", dailyRewards: [10_000], rewardHours: [0.5] }, 0, { baseTroopPerHour: 100 }),
   10_000,
   "Warband Camp minimum rewards must remain intact."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "gold", dailyRewards: [0], rewardHours: [1.25] }, 0, { baseGoldPerHour: 101 }),
+  126,
+  "A zero reward floor must not disable a valid raw-production reward."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "gold", dailyRewards: [-10], rewardHours: [-2] }, 0, { baseGoldPerHour: -100 }),
+  0,
+  "Negative Camp reward inputs must clamp to zero."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "gold", dailyRewards: [1], rewardHours: [Number.MAX_VALUE] }, 0, { baseGoldPerHour: Number.MAX_VALUE }),
+  Number.MAX_SAFE_INTEGER,
+  "Camp reward calculations must cap overflow at the largest safe integer."
+);
+assert.equal(
+  campRewardContext.getRewardCampDailyReward({ rewardType: "troops", dailyRewards: [100], rewardHours: [1] }, 9, { baseTroopPerHour: 500 }),
+  0,
+  "Claims beyond the configured reward ladder must award zero."
 );
 const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
 const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);

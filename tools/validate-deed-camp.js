@@ -102,7 +102,7 @@ const payoutSource = serverSource.slice(payoutStart, payoutEnd);
 if (!payoutSource) throw new Error("Missing reward camp payout transaction.");
 requireMatch(payoutSource, /deedCityPatch[\s\S]*?ownerUid:\s*holderUid[\s\S]*?isMainCity:\s*false/, "Deed Camp does not transfer a regular city to its holder.");
 requireMatch(payoutSource, /source:\s*"deed_camp"/, "Deed Camp payout history is missing its source marker.");
-requireMatch(payoutSource, /rewardHistory\//, "Deed Camp payout does not create a public history entry.");
+requireMatch(payoutSource, /rewardHistory\//, "Deed Camp payout does not create its holder-owned history entry.");
 requireMatch(payoutSource, /const deedCityName = getServerCanonicalCityName\(deedCityAward\.city,\s*deedCityAward\.regionId\)[\s\S]*?name:\s*deedCityName[\s\S]*?cityName:\s*safeString\(deedCityName/, "Deed Camp payouts expose numbered layout city names.");
 requireMatch(payoutSource, /campReportReward = deedCityPatch[\s\S]*?rewardType: "city"[\s\S]*?cityName: deedHistoryEntry\.cityName[\s\S]*?cityRegionName: deedHistoryEntry\.regionName[\s\S]*?campReward: campReportReward/, "Deed Camp reports do not record the awarded city and location.");
 requireMatch(payoutSource, /!deedCityPatch[\s\S]*?"no-eligible-city"/, "Deed Camp has no safe no-city payout result.");
@@ -110,10 +110,10 @@ if (/neutralCaptures/.test(payoutSource)) throw new Error("Deed Camp payout must
 if (/buildPlayerProgressPatch|xpAwarded:\s*[1-9]/.test(payoutSource)) throw new Error("Deed Camp payout must not award battle XP.");
 
 requireMatch(serverSource, /DEED_CAMP_HISTORY_LIMIT\s*=\s*10/, "Deed Camp server metadata does not cap reward history at 10 awards.");
-requireMatch(firebaseClientSource, /loadRewardCampHistory\(\{[\s\S]*?limitCount\s*=\s*10[\s\S]*?Math\.min\(10,[\s\S]*?orderBy\("awardedAtMs",\s*"desc"\)/, "Client history query is not ordered and capped at 10 awards.");
-requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\)(?:\s*&&\s*isCurrentIslandId\(islandId\))?;[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not publicly readable and server-owned.");
-requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public Reward History tab.");
-requireMatch(clientSource, /DEED_CAMP_HISTORY_DISPLAY_LIMIT\s*=\s*10[\s\S]*?function deedCampHistoryMarkup[\s\S]*?slice\(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT\)[\s\S]*?latest[\s\S]*?city awards/, "Deed Camp UI does not enforce or explain the latest-10 award cap.");
+requireMatch(firebaseClientSource, /loadRewardCampHistory\(\{[\s\S]*?limitCount\s*=\s*10[\s\S]*?where\("awardedToPlayerId",\s*"==",\s*uid\)[\s\S]*?sort\([\s\S]*?slice\(0, safeLimit\)/, "Client history query is not holder-filtered, ordered, and capped at 10 awards.");
+requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\)[\s\S]*?resource\.data\.awardedToPlayerId == request\.auth\.uid;[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not restricted to its awarded player.");
+requireMatch(clientSource, /Your Rewards/, "Deed Camp UI is missing its player-private rewards tab.");
+requireMatch(clientSource, /DEED_CAMP_HISTORY_DISPLAY_LIMIT\s*=\s*10[\s\S]*?function deedCampHistoryMarkup[\s\S]*?slice\(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT\)[\s\S]*?your latest[\s\S]*?city awards/i, "Deed Camp UI does not enforce or explain the private latest-10 award cap.");
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
 requireMatch(clientSource, /function getDeedCampHistoryCityName[\s\S]*?getCanonicalCityName[\s\S]*?const cityName = getDeedCampHistoryCityName\(entry\)/, "Existing Deed Camp history entries do not resolve canonical city names.");
 requireMatch(clientSource, /function renderCampReportRewardMetrics[\s\S]*?renderBattleMetric\("City"[\s\S]*?renderBattleMetric\("Location"/, "Deed Camp report rewards do not show the city and location.");

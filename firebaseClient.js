@@ -1706,13 +1706,13 @@
     const safeCampId = String(campId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
     if (!safeIslandId || !safeCampId) throw new Error("Missing Deed Camp location.");
     const safeLimit = Math.max(1, Math.min(10, Math.floor(Number(limitCount) || 10)));
-    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const { collection, getDocs, query: firestoreQuery, where } = client.modules.firestore;
     const historyRef = collection(client.db, "islands", safeIslandId, "camps", safeCampId, "rewardHistory");
-    const historyQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(historyRef, orderBy("awardedAtMs", "desc"), limit(safeLimit))
+    const historyQuery = firestoreQuery && where
+      ? firestoreQuery(historyRef, where("awardedToPlayerId", "==", uid))
       : historyRef;
     const snapshot = await getDocs(historyQuery);
-    return snapshot.docs.slice(0, safeLimit).map(historyDoc => {
+    return snapshot.docs.map(historyDoc => {
       const history = historyDoc.data() || {};
       return {
         id: historyDoc.id,
@@ -1726,7 +1726,12 @@
         awardedAtMs: Math.max(0, Math.floor(Number(history.awardedAtMs) || timestampToMs(history.awardedAt))),
         source: String(history.source || "").slice(0, 32),
       };
-    }).filter(history => history.cityId && history.regionId && history.source === "deed_camp");
+    }).filter(history => (
+      history.awardedToPlayerId === uid
+      && history.cityId
+      && history.regionId
+      && history.source === "deed_camp"
+    )).sort((left, right) => right.awardedAtMs - left.awardedAtMs).slice(0, safeLimit);
   }
 
   async function loadCrownCitadelReignLeaderboard(limitCount = 100) {

@@ -25939,10 +25939,13 @@ function getRewardCampEstimatedRewards(config) {
   const hourlyRate = config?.rewardType === "troops"
     ? Math.max(0, Number(localBaseRates?.troopsPerHour ?? globalStats?.baseTroopPerHour) || 0)
     : Math.max(0, Number(localBaseRates?.goldPerHour ?? globalStats?.baseGoldPerHour) || 0);
-  return minimums.map((minimum, index) => Math.max(
-    0,
-    Math.floor(Number(minimum) || 0),
-    Math.floor(hourlyRate * Math.max(0, Number(rewardHours[index]) || 0))
+  return minimums.map((minimum, index) => Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(
+      0,
+      Math.floor(Number(minimum) || 0),
+      Math.floor(hourlyRate * Math.max(0, Number(rewardHours[index]) || 0))
+    )
   ));
 }
 
@@ -26010,7 +26013,8 @@ function refreshRewardCampProgressPanel(campId, config) {
 }
 
 function getDeedCampHistoryCacheKey(camp = {}) {
-  return camp?.id ? `${normalizeRegionId(camp.regionId)}:${camp.id}` : "";
+  const uid = getCurrentOnlineUid();
+  return uid && camp?.id ? `${uid}:${normalizeRegionId(camp.regionId)}:${camp.id}` : "";
 }
 
 function getDeedCampHistoryCityName(entry = {}) {
@@ -26032,7 +26036,7 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
     .sort((left, right) => normalizeTimestampMs(right?.awardedAtMs) - normalizeTimestampMs(left?.awardedAtMs))
     .slice(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT);
   if (!recentHistory.length) {
-    return `<div class="camp-reward-loading deed-history-empty"><strong>No cities awarded yet</strong><p>Successful Deed Camp holds will appear here.</p></div>`;
+    return `<div class="camp-reward-loading deed-history-empty"><strong>No cities awarded to you yet</strong><p>Your successful Deed Camp holds will appear here.</p></div>`;
   }
   return `
     <ol class="deed-camp-history-list">
@@ -26046,13 +26050,13 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
             <span class="deed-history-copy">
               <strong>${escapeHtml(cityName)}</strong>
               <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
-              <small>Awarded to ${renderPlayerNameLink(entry.awardedToPlayerId, entry.awardedToDisplayName || "Ruler", "deed-history-player-link")} &middot; ${escapeHtml(awardedAt)}</small>
+              <small>Awarded to you &middot; ${escapeHtml(awardedAt)}</small>
             </span>
             <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">${renderCrownlandsIcon("locate")}</button>
           </li>`;
       }).join("")}
     </ol>
-    <p class="camp-reward-reset deed-history-limit-note">Showing the latest ${formatNumber(recentHistory.length)} of up to ${formatNumber(DEED_CAMP_HISTORY_DISPLAY_LIMIT)} city awards.</p>`;
+    <p class="camp-reward-reset deed-history-limit-note">Showing your latest ${formatNumber(recentHistory.length)} of up to ${formatNumber(DEED_CAMP_HISTORY_DISPLAY_LIMIT)} city awards.</p>`;
 }
 
 function findDeedCampHistoryPanel(campId) {
@@ -26188,7 +26192,7 @@ function showRewardCampInfoModal(campId) {
       <div class="gold-camp-description deed-camp-help">
         <strong>How it works</strong>
         <p>Capture and hold the Deed Camp for ${formatNumber(holdMinutes)} minutes. The holder gets a random neutral city from any map except Crownlands Heart, limited to one Deed Camp city per UTC day.</p>
-        <p>Another ruler can steal the camp, restarting its timer. Reward History lists past awards.</p>
+        <p>Another ruler can steal the camp, restarting its timer. Your Rewards lists only your past awards.</p>
         <p>No Deed Token or inventory item is given; selection is automatic and grants no battle XP.</p>
         <p>The normal neutral-city capture limit still applies to gray-city attacks; this reward is separate.</p>
         <p>After payout, troops return to their origin or main city, and the camp resets with its fixed defenders.</p>
@@ -26216,7 +26220,7 @@ function showRewardCampInfoModal(campId) {
     <div class="gold-camp-info-panel">
       <div class="camp-info-tabs" role="tablist" aria-label="${escapeHtml(camp.name)} information">
         <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">${isDeedCamp || isRelicCamp ? "Status" : "Stats"}</button>
-        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">${isDeedCamp ? "Reward History" : "Reward"}</button>
+        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">${isDeedCamp ? "Your Rewards" : "Reward"}</button>
         <button id="campRulesTab" class="camp-info-tab camp-rules-tab" type="button" role="tab" aria-label="How this camp works" aria-selected="false" aria-controls="campRulesPanel" data-camp-info-tab="rules">?</button>
       </div>
 

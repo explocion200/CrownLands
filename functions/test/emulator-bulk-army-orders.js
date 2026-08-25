@@ -112,18 +112,20 @@ async function findRequestRecords(uid, requestId) {
 }
 
 async function setFreshEconomy(profileRef, cityRefs, gold, troopsByCity = new Map()) {
-  const nowMs = Date.now();
+  // Keep production from changing the exact balances asserted by the concurrency
+  // cases while the Functions emulator is servicing simultaneous requests.
+  const checkpointMs = Date.now() + 60_000;
   await profileRef.set({
     gold,
     goldFloat: gold,
-    economyUpdatedAtMs: nowMs,
+    economyUpdatedAtMs: checkpointMs,
   }, { merge: true });
   await Promise.all(cityRefs.map(ref => {
     const troops = Math.max(0, Number(troopsByCity.get(ref.id) ?? 500));
     return ref.set({
       troops,
       troopFloat: troops,
-      productionUpdatedAtMs: nowMs,
+      productionUpdatedAtMs: checkpointMs,
     }, { merge: true });
   }));
 }
