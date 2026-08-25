@@ -12439,6 +12439,41 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
   return stats;
 }
 
+async function writeCurrentOwnerPatches(ownerUid = "", entries = [], operation = "writeCurrentOwnerPatches") {
+  const playerUid = safeString(ownerUid, 128);
+  if (!playerUid) return 0;
+  const byPath = new Map();
+  (Array.isArray(entries) ? entries : []).forEach(entry => {
+    const path = safeString(entry?.ref?.path, 240);
+    if (!path || !entry?.data) return;
+    const existing = byPath.get(path);
+    byPath.set(path, {
+      ref: entry.ref,
+      data: {
+        ...(existing?.data || {}),
+        ...entry.data,
+      },
+    });
+  });
+
+  let updated = 0;
+  const writes = [...byPath.values()];
+  for (let index = 0; index < writes.length; index += 25) {
+    const results = await Promise.all(writes.slice(index, index + 25).map(async entry => {
+      let wrote = false;
+      await runTransactionWithInfrastructureRetry(async transaction => {
+        const snapshot = await transaction.get(entry.ref);
+        if (!snapshot.exists || getOwnerUid(snapshot.data() || {}) !== playerUid) return;
+        transaction.set(entry.ref, entry.data, { merge: true });
+        wrote = true;
+      }, operation);
+      return wrote;
+    }));
+    updated += results.filter(Boolean).length;
+  }
+  return updated;
+}
+
 async function rebuildGlobalStatsForPlayer(uid = "") {
   const playerUid = safeString(uid, 128);
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
@@ -12571,22 +12606,17 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     },
   ];
 
-  cityEntries.forEach(entry => {
-    writes.push({
+  const cityProjectionWrites = cityEntries.map(entry => ({
       ref: entry.ref,
       data: {
-        ownerKind: "player",
-        ownerUid: playerUid,
         ownerName: identity.ownerName,
         ownerFlag: identity.ownerFlag,
         ownerKingPower: stats.kingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       },
-    });
-  });
-  activeArmyDocs.forEach(armyDoc => {
-    writes.push({
+    }));
+  const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
       ref: armyDoc.ref,
       data: {
         ownerName: identity.ownerName,
@@ -12596,10 +12626,9 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       },
-    });
-  });
+    }));
   mainRepair.cityPatches.forEach(entry => {
-    writes.push({
+    cityProjectionWrites.push({
       ref: entry.ref,
       data: cleanCityUpdate(entry.city, entry.patch),
     });
@@ -12612,12 +12641,19 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     });
     await batch.commit();
   }
+  // Stats and identity projections must never restore ownership from the stale query
+  // snapshot above. Re-read each asset in a transaction and only refresh metadata while
+  // the same player still owns it.
+  const [cityUpdates, armyUpdates] = await Promise.all([
+    writeCurrentOwnerPatches(playerUid, cityProjectionWrites, "writeCurrentOwnerCityProjections"),
+    writeCurrentOwnerPatches(playerUid, armyProjectionWrites, "writeCurrentOwnerArmyProjections"),
+  ]);
 
   return {
     uid: playerUid,
     stats: globalStatsForClient(stats),
-    cityUpdates: cityEntries.length,
-    armyUpdates: activeArmyDocs.length,
+    cityUpdates,
+    armyUpdates,
     mainCityRepairs: mainRepair.cityPatches.length,
   };
 }
