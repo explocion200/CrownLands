@@ -10725,6 +10725,10 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       changed = true;
     }
+    if (Number.isFinite(Number(update.alliedReinforcementTroops))) {
+      city.alliedReinforcementTroops = Math.max(0, Math.floor(Number(update.alliedReinforcementTroops) || 0));
+      changed = true;
+    }
     if (Number.isFinite(Number(update.productionUpdatedAtMs))) {
       city.productionUpdatedAtMs = normalizeTimestampMs(update.productionUpdatedAtMs);
       changed = true;
@@ -10766,6 +10770,9 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerFlag = ownerIdentity?.flag || update.ownerFlag || null;
       city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      city.ownerClanId = ownerUid ? String(update.ownerClanId ?? city.ownerClanId ?? "") : "";
+      city.ownerClanName = ownerUid ? String(update.ownerClanName ?? city.ownerClanName ?? "") : "";
+      city.ownerClanTag = ownerUid ? String(update.ownerClanTag ?? city.ownerClanTag ?? "") : "";
       city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
       if (ownerUid) {
         city.relinquishedAtMs = 0;
@@ -20746,6 +20753,11 @@ function resolveAttack(attack) {
     return;
   }
 
+  if (attack.relinquishTransfer && !cityBelongsToMarchOwner(target, attack)) {
+    resolveLocalReturningArmy(attack);
+    return;
+  }
+
   const attackRegionId = getCityRegionId(target);
   const attackOnActiveMap = attackRegionId === getActiveMapRegionId();
   if (claimBulkArrivalAudio(attack)) {
@@ -28562,10 +28574,14 @@ function applyLocalRelinquishCity(city, destination, mission = null) {
   city.ownerName = "";
   city.ownerFlag = null;
   city.ownerKingPower = 0;
+  city.ownerClanId = "";
+  city.ownerClanName = "";
+  city.ownerClanTag = "";
   city.ownerShieldExpiresAtMs = 0;
   city.isMainCity = false;
   city.troops = 0;
   city.troopFloat = 0;
+  city.alliedReinforcementTroops = 0;
   city.investedGold = 0;
   city.relinquishedAtMs = nowMs;
   city.relocatedAtMs = 0;
@@ -28602,60 +28618,19 @@ async function relinquishCity(cityId) {
   serverCityRelinquishInFlightIds.add(inFlightKey);
   try {
     const serverAuthority = usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity;
-    const destination = getRelinquishDestinationPreview(city, { loadedOnly: !serverAuthority });
-    if (!destination) {
-      showToast("You need another friendly city to receive the troops.");
-      return false;
-    }
-
     const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
-    let route = null;
-    let mission = null;
-    if (transferredTroops > 0) {
-      showToast(`Calculating march to ${destination.name}...`);
-      route = await findRouteAsync(city, destination);
-      if (!route?.points?.length) {
-        showToast("No land and portal route was found to the nearest friendly city.");
-        return false;
-      }
-      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: Boolean(serverAuthority) });
-      if (!mission) {
-        showToast("Could not prepare the relinquish march.");
-        return false;
-      }
-    }
-
     if (serverAuthority) {
-      const movement = mission ? toOnlineArmyMovement(mission) : null;
-      const destinationRegionId = getCityRegionId(destination);
-      if (mission && !movement) {
-        showToast("Could not prepare the online relinquish march.");
-        return false;
-      }
-      if (mission) mission.onlineRegionIds = movement.routeRegionIds;
+      showToast(`Relinquishing ${city.name}...`);
       const result = await getOnlineApi().relinquishCity({
         cityId: city.id,
         regionId,
-        destinationCityId: destination.id,
-        destinationRegionId,
-        army: movement ? {
-          ...movement,
-          sourceRegionId: regionId,
-          targetRegionId: destinationRegionId,
-          fromName: city.name,
-          toName: destination.name,
-        } : null,
-        routeRegionIds: movement?.routeRegionIds || [],
       });
       applyServerEconomyResult(result);
       applyCityRelinquishPolicy(result?.cityRelinquishPolicy);
-      if (mission && result?.movement) {
-        applyServerMovementToMission(mission, result.movement);
-        addServerAcceptedMission(mission);
-      }
+      if (result?.movement) adoptServerArmyMovement(result.movement);
       const acceptedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
-      const destinationName = result?.destinationCity?.name || destination.name || "the nearest friendly city";
-      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || mission?.total || 0)})` : "";
+      const destinationName = result?.destinationCity?.name || "the nearest friendly city";
+      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || 0)})` : "";
       addLog(acceptedTroops > 0
         ? `Relinquished ${city.name}. ${formatNumber(acceptedTroops)} troops are marching to ${destinationName}${travelText}.`
         : `Relinquished ${city.name}. No stationed troops needed to march.`);
@@ -28673,6 +28648,27 @@ async function relinquishCity(cityId) {
       renderAll();
       updateOutgoingAttackUi();
       return true;
+    }
+
+    const destination = getRelinquishDestinationPreview(city, { loadedOnly: true });
+    if (!destination) {
+      showToast("You need another friendly city to receive the troops.");
+      return false;
+    }
+
+    let mission = null;
+    if (transferredTroops > 0) {
+      showToast(`Calculating march to ${destination.name}...`);
+      const route = await findRouteAsync(city, destination);
+      if (!route?.points?.length) {
+        showToast("No land and portal route was found to the nearest friendly city.");
+        return false;
+      }
+      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: false });
+      if (!mission) {
+        showToast("Could not prepare the relinquish march.");
+        return false;
+      }
     }
 
     if (!applyLocalRelinquishCity(city, destination, mission)) {

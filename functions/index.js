@@ -6892,6 +6892,32 @@ function getNeutralClaimClearedPatch(nowMs = Date.now()) {
   };
 }
 
+function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
+  return {
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    ownerKingPower: 0,
+    ownerClanId: "",
+    ownerClanName: "",
+    ownerClanTag: "",
+    ownerClanIdentityRevision: 0,
+    ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    ownerShieldExpiresAtMs: 0,
+    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
+    troops: 0,
+    troopFloat: 0,
+    alliedReinforcementTroops: 0,
+    investedGold: 0,
+    isMainCity: false,
+    productionUpdatedAtMs: nowMs,
+    relinquishedAtMs: nowMs,
+    relocatedAtMs: 0,
+    ...getNeutralClaimClearedPatch(nowMs),
+  };
+}
+
 function normalizeAntiFarmPairState(data = {}, nowMs = Date.now()) {
   return {
     sharedInstallationLastSeenAtMs: Math.max(0, timestampToMs(data.sharedInstallationLastSeenAtMs)),
@@ -16019,26 +16045,16 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
     const destination = destinationEntry.city;
     const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool || regionId);
     let movement = null;
-    let armyRefs = [];
 
     if (transferredTroops > 0) {
-      if (
-        order.kind !== "transfer"
-        || order.fromId !== source.id
-        || order.toId !== destination.id
-        || order.sourceRegionId !== regionId
-        || order.targetRegionId !== destinationRegionId
-      ) {
-        throw new HttpsError("invalid-argument", "The relinquish march does not match the nearest friendly city.");
-      }
-      // The client still supplies route fields for payload compatibility, but relinquishment
-      // always persists geometry rebuilt from the authoritative world layout.
+      // Relinquishment is a city action, not a client-authored army order. The server chooses
+      // the destination and rebuilds the complete route so stale or unloaded client map data
+      // cannot prevent an otherwise valid relinquishment.
       const validatedRoute = buildServerGeneratedArmyRoute(source, destination);
-      armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
-      if (!armyRefs.length) {
+      if (!validatedRoute.routeRegionIds.length) {
         throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
       }
-      const existingArmySnap = await transaction.get(armyRefs[0]);
+      const existingArmySnap = await transaction.get(canonicalArmyRef(order.id));
       if (existingArmySnap.exists) {
         throw new HttpsError("already-exists", "That relinquish march has already been created.");
       }
@@ -16102,24 +16118,8 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       previousOwnerUid: uid,
       nextOwnerUid: "",
     });
-    const sourceLevel = isStronghold(source) ? getStrongholdDefenseLevel(source) : clampCityLevel(source.level);
-    const sourcePatch = {
-      ownerKind: "neutral",
-      ownerUid: null,
-      ownerName: "",
-      ownerFlag: null,
-      ownerKingPower: 0,
-      ownerShieldExpiresAtMs: 0,
-      level: sourceLevel,
-      troops: 0,
-      troopFloat: 0,
-      investedGold: 0,
-      isMainCity: false,
-      productionUpdatedAtMs: nowMs,
-      relinquishedAtMs: nowMs,
-      relocatedAtMs: 0,
-      ...getNeutralClaimClearedPatch(nowMs),
-    };
+    const sourcePatch = getCityRelinquishNeutralPatch(source, nowMs);
+    const sourceLevel = sourcePatch.level;
 
     const sourceUpdate = {
       id: source.id,
@@ -24725,6 +24725,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
+    if (army.relinquishTransfer && defenderUid !== attackerUid) {
+      const destinationEntry = findNearestOwnedCityDestination(
+        attackerEconomy,
+        { ...target, regionId: targetRegionId },
+        [targetRef.path]
+      );
+      if (!destinationEntry?.city) {
+        throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
+      }
+      return continueRelinquishMarch({
+        destinationEntry,
+        reason: defenderUid ? "captured_destination" : "released_destination",
+      });
+    }
+
     if (effectiveKind === "transfer") {
       const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
       const targetTroopPatch = {
@@ -24737,21 +24752,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       finalizeReinforcementReturn(troopCount);
       markResolved({ kind: "transfer", troops: troopCount });
       return { ok: true, status: "resolved", kind: "transfer", cityUpdates: withEconomyCityUpdates(cityUpdates) };
-    }
-
-    if (army.relinquishTransfer && !defenderUid) {
-      const destinationEntry = findNearestOwnedCityDestination(
-        attackerEconomy,
-        { ...target, regionId: targetRegionId },
-        [targetRef.path]
-      );
-      if (!destinationEntry?.city) {
-        throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
-      }
-      return continueRelinquishMarch({
-        destinationEntry,
-        reason: "released_destination",
-      });
     }
 
     const neutralCaptureBlockReason = getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target);
