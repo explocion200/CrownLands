@@ -1168,6 +1168,9 @@ const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
+const CLAN_RALLY_MIN_PARTICIPANTS = 2;
+const CLAN_RALLY_MAX_PARTICIPANTS = 20;
+const CLAN_ACTIVE_RALLY_LIMIT = 5;
 const CLAN_MEMBER_ROLE_ORDER = Object.freeze({ leader: 0, officer: 1, member: 2 });
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
@@ -6396,6 +6399,38 @@ function normalizeSingleMainCityAssignment(preferredCityId = "", { markDirty = f
   return { mainCityId, changed };
 }
 
+function clearSingleMainCityAssignment() {
+  if (!state) return { mainCityId: "", changed: false };
+  let changed = state.mainCityId !== "";
+  state.mainCityId = "";
+
+  if (state.online) {
+    for (const field of ["mainCityId", "mainRegionId", "mainIslandId"]) {
+      if (state.online[field] !== "") changed = true;
+      state.online[field] = "";
+    }
+  }
+
+  if (Array.isArray(state.cities)) {
+    state.cities.forEach(city => {
+      if (city?.owner !== "player" || !city.isMainCity) return;
+      city.isMainCity = false;
+      changed = true;
+    });
+  }
+
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => {
+      if (!city?.isMainCity) return city;
+      changed = true;
+      return { ...city, isMainCity: false };
+    });
+    updateIslandSummariesFromOwnedCityCache();
+  }
+
+  return { mainCityId: "", changed };
+}
+
 async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCityId || "", { refreshFirst = false } = {}) {
   if (!state || !mainCityId || !isOnlineWorldActive()) return false;
   const api = getOnlineApi();
@@ -6407,19 +6442,32 @@ async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCity
     });
   }
 
-  const result = await api.repairMainCityAssignment({ mainCityId: getKnownCityId(mainCityId) });
-  applyServerEconomyResult(result);
-  const repairedMainCityId = getKnownCityId(result?.currentUser?.mainCityId) || getKnownCityId(mainCityId);
-  if (repairedMainCityId) {
-    state.mainCityId = repairedMainCityId;
-    if (state.online) {
-      state.online.mainCityId = repairedMainCityId;
-      state.online.mainRegionId = normalizeRegionId(result?.currentUser?.mainRegionId || state.online.mainRegionId);
-      state.online.mainIslandId = result?.currentUser?.mainIslandId || state.online.mainIslandId || getOnlineIslandId(state.online.mainRegionId);
-    }
-    normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+  let result;
+  let recovery;
+  try {
+    ({ result, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId));
+  } catch (error) {
+    disconnectOnlineWorld();
+    if (state) state.online = null;
+    startOnlineSetupInBackground();
+    throw error;
   }
-  return Boolean(result?.ok ?? true);
+  if (recovery.status === "claim-required") {
+    clearSingleMainCityAssignment();
+    disconnectOnlineWorld();
+    state.online = null;
+    startOnlineSetupInBackground();
+    throw new Error("No valid current-season main city remains. Reconnecting to restore your kingdom.");
+  }
+  applyServerEconomyResult(result);
+  state.mainCityId = recovery.mainCityId;
+  if (state.online) {
+    state.online.mainCityId = recovery.mainCityId;
+    state.online.mainRegionId = recovery.mainRegionId;
+    state.online.mainIslandId = recovery.mainIslandId;
+  }
+  normalizeSingleMainCityAssignment(recovery.mainCityId, { markDirty: false });
+  return true;
 }
 
 function getMainCityChangeCooldownDurationMs(ownedCount = getOwnedRegularCityCountForDisplay()) {
@@ -8914,7 +8962,8 @@ function normalizeBattleReports(reports) {
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
-        casualtyRecovery: report.casualtyRecovery || null,
+        casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
+        gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
@@ -14176,8 +14225,11 @@ function handleServiceWorkerUpdateMessage(event) {
   if (event?.data?.type === "CROWNLANDS_NOTIFICATION_CLICK") {
     const notification = event.data.notification || {};
     if (notification.type === "incoming_army" && notification.cityId) {
-      if (!state) return;
-      void focusIncomingAttackCity(notification.cityId, notification.targetRegionId || "");
+      pendingPushNotificationTarget = {
+        cityId: String(notification.cityId).slice(0, 96),
+        regionId: String(notification.targetRegionId || "").slice(0, 80),
+      };
+      if (state) void focusPendingPushNotificationTarget();
     }
     return;
   }
@@ -14508,6 +14560,58 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   return realm;
 }
 
+function resolveMainCityRecoveryResult(result = null) {
+  if (
+    result?.ok === true
+    && result?.requiresStartingCityClaim === true
+    && result?.mainCityRecoveryStatus === "claim-required"
+    && result?.recoveryReason === "no-valid-owned-regular-city"
+  ) {
+    return {
+      status: "claim-required",
+      mainCityId: "",
+      mainRegionId: "",
+      mainIslandId: "",
+    };
+  }
+  const recoveryStatus = result?.mainCityRecoveryStatus;
+  const mainCityId = getKnownCityId(result?.currentUser?.mainCityId);
+  const mainRegionId = String(result?.currentUser?.mainRegionId || "");
+  const mainIslandId = String(result?.currentUser?.mainIslandId || "");
+  if (
+    result?.ok !== true
+    || result?.requiresStartingCityClaim !== false
+    || (recoveryStatus !== "valid" && recoveryStatus !== "repaired")
+    || !mainCityId
+    || !getRegionIds().includes(mainRegionId)
+    || getCityRegionId(mainCityId) !== mainRegionId
+    || mainIslandId !== getOnlineIslandId(mainRegionId)
+  ) {
+    throw new Error("Main city verification did not return an authoritative recovery result.");
+  }
+  return {
+    status: recoveryStatus,
+    mainCityId,
+    mainRegionId,
+    mainIslandId,
+  };
+}
+
+async function requestAuthoritativeMainCityRecovery(api, mainCityId = "", timeoutMs = 12000) {
+  if (!api?.repairMainCityAssignment) {
+    throw new Error("The Crownlands main-city verification service is unavailable.");
+  }
+  const result = await withTimeout(
+    api.repairMainCityAssignment({ mainCityId: getKnownCityId(mainCityId) }),
+    timeoutMs,
+    "Main city verification is taking too long."
+  );
+  return {
+    result,
+    recovery: resolveMainCityRecoveryResult(result),
+  };
+}
+
 async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -14584,36 +14688,37 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   };
   state.mainCityId = mainCityId || "";
   normalizeSingleMainCityAssignment(state.mainCityId);
-  let needsMainCityClaim = !storedMainCityId;
+  let needsMainCityClaim = !hasCurrentProfile;
 
-  const needsMainCityRepair = Number(profile?.mainCityAssignmentVersion || 0) < MAIN_CITY_ASSIGNMENT_VERSION;
-  if (api.repairMainCityAssignment && needsMainCityRepair && (mainCityId || hasCurrentProfile)) {
+  if (hasCurrentProfile && !api.repairMainCityAssignment) {
+    throw new Error("The Crownlands main-city verification service is still updating. Retry in a moment.");
+  }
+  if (api.repairMainCityAssignment && hasCurrentProfile) {
     onlineStatusDetail.textContent = "Verifying your main city...";
     try {
-      const repair = await withTimeout(
-        api.repairMainCityAssignment({ mainCityId }),
-        12000,
-        "Main city repair is taking too long."
-      );
-      applyServerEconomyResult(repair);
-      serverEconomyLastSyncAt = Date.now();
-      const repairedMainCityId = getKnownCityId(repair?.currentUser?.mainCityId) || mainCityId;
-      const repairedMainRegionId = normalizeRegionId(repair?.currentUser?.mainRegionId || homeRegionId);
-      if (repairedMainCityId) {
+      const { result: repair, recovery } = await requestAuthoritativeMainCityRecovery(api, mainCityId);
+      if (recovery.status === "claim-required") {
+        needsMainCityClaim = true;
+        clearSingleMainCityAssignment();
+        profile = { ...(profile || {}), mainCityId: "", mainIslandId: "", mainRegionId: "" };
+      } else {
+        applyServerEconomyResult(repair);
+        serverEconomyLastSyncAt = Date.now();
         needsMainCityClaim = false;
-        homeRegionId = repairedMainRegionId;
-        activeRegionId = repairedMainRegionId;
+        homeRegionId = recovery.mainRegionId;
+        activeRegionId = recovery.mainRegionId;
         state.activeRegionId = activeRegionId;
-        state.mainCityId = repairedMainCityId;
+        state.mainCityId = recovery.mainCityId;
         state.online.islandId = getOnlineIslandId(activeRegionId);
         state.online.activeRegionId = activeRegionId;
-        state.online.mainCityId = repairedMainCityId;
-        state.online.mainRegionId = repairedMainRegionId;
-        state.online.mainIslandId = repair?.currentUser?.mainIslandId || getOnlineIslandId(repairedMainRegionId);
-        normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+        state.online.mainCityId = recovery.mainCityId;
+        state.online.mainRegionId = recovery.mainRegionId;
+        state.online.mainIslandId = recovery.mainIslandId;
+        normalizeSingleMainCityAssignment(recovery.mainCityId, { markDirty: false });
       }
     } catch (error) {
       console.warn("Could not verify main city during online setup", error);
+      throw error;
     }
   }
 
@@ -17755,7 +17860,10 @@ async function startFromInput(forceFresh = false) {
     saveGame();
     renderAll();
     scheduleRouteWorkerWarmup();
-    requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+    requestAnimationFrame(() => {
+      if (readPendingPushNotificationTarget()) void focusPendingPushNotificationTarget();
+      else centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id);
+    });
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
@@ -21492,6 +21600,7 @@ function updatePushAlertsUi() {
   const supported = Boolean(api?.isPushSupported?.());
   const permission = api?.getNotificationPermission?.() || "unsupported";
   const enabledPreference = getPushNotificationsPreference();
+  const registration = api?.getPushRegistrationState?.() || null;
 
   if (!state || !signedIn) {
     setPushAlertsOptionState(false, true);
@@ -21512,8 +21621,18 @@ function updatePushAlertsUi() {
     return;
   }
   if (enabledPreference && permission === "granted") {
-    setPushAlertsOptionState(true, false);
-    setPushAlertsStatus("Notifications On", false);
+    if (!registration || registration.enabled) {
+      setPushAlertsOptionState(true, false);
+      setPushAlertsStatus("Notifications On", false);
+      return;
+    }
+    if (registration.status === "registering" || registration.status === "idle") {
+      setPushAlertsOptionState(false, true);
+      setPushAlertsStatus("Connecting…", true);
+      return;
+    }
+    setPushAlertsOptionState(false, false);
+    setPushAlertsStatus("Retry needed", true);
     return;
   }
   setPushAlertsOptionState(false, false);
@@ -21522,7 +21641,16 @@ function updatePushAlertsUi() {
 
 async function refreshPushAlertRegistration(silent = true) {
   const api = getOnlineApi();
-  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.() || !getPushNotificationsPreference()) {
+  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.()) {
+    updatePushAlertsUi();
+    return false;
+  }
+  if (!getPushNotificationsPreference()) {
+    if (api.getNotificationPermission?.() === "granted" && api.disablePushNotifications) {
+      await api.disablePushNotifications().catch(error => {
+        if (!silent) showToast(error?.message || "Could not turn notifications off.");
+      });
+    }
     updatePushAlertsUi();
     return false;
   }
@@ -21609,6 +21737,36 @@ function handlePushMessage(event) {
   const message = detail.body || (detail.kind === "scout" ? "Scout incoming." : "Attack incoming.");
   showToast(message);
   updateIncomingAttackUi();
+}
+
+let pendingPushNotificationTarget = null;
+
+function readPendingPushNotificationTarget() {
+  if (pendingPushNotificationTarget?.cityId) return pendingPushNotificationTarget;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("notification") !== "incoming_army") return null;
+  const cityId = String(url.searchParams.get("notificationCity") || "").slice(0, 96);
+  if (!cityId) return null;
+  pendingPushNotificationTarget = {
+    cityId,
+    regionId: String(url.searchParams.get("notificationRegion") || "").slice(0, 80),
+  };
+  return pendingPushNotificationTarget;
+}
+
+function clearPendingPushNotificationUrl() {
+  const url = new URL(window.location.href);
+  ["notification", "notificationCity", "notificationRegion"].forEach(key => url.searchParams.delete(key));
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+async function focusPendingPushNotificationTarget() {
+  const target = readPendingPushNotificationTarget();
+  if (!state || !target?.cityId) return false;
+  pendingPushNotificationTarget = null;
+  clearPendingPushNotificationUrl();
+  await focusIncomingAttackCity(target.cityId, target.regionId);
+  return true;
 }
 
 function handleOnlinePlayerClanSnapshot(event) {
@@ -23176,6 +23334,7 @@ function getClanRallyParticipantStatusLabel(rally, participant, nowMs = Date.now
   const rallyStatus = String(rally?.status || "");
   const participantStatus = String(participant?.status || "");
   if (rallyStatus === "recalling" || participantStatus === "returning") return "Returning";
+  if (participantStatus === "stationed") return "Stationed";
   if (rallyStatus === "launched") {
     if (participantStatus === "assembled") return "Marching";
     if (participantStatus === "inbound") return "Returning";
@@ -23206,6 +23365,8 @@ function renderClanRallyCard(rally) {
     .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
   const ownParticipant = getRallyParticipantForCurrentPlayer(rally);
   const leader = String(rally.leaderUid || "") === currentUid;
+  const clanLeader = String(state?.clanRole || "") === "leader";
+  const canManageFormingRally = leader || clanLeader;
   const forming = rally.status === "forming";
   const launched = rally.status === "launched";
   const recalling = rally.status === "recalling";
@@ -23223,13 +23384,15 @@ function renderClanRallyCard(rally) {
       </li>`;
   }).join("");
   let controls = "";
-  if (forming && leader) {
+  const allReady = activeParticipants.length >= CLAN_RALLY_MIN_PARTICIPANTS
+    && activeParticipants.every(participant => participant.status === "assembled");
+  if (forming && canManageFormingRally) {
     controls = `
-      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Launch</button>
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy || !allReady ? "disabled" : ""}>${allReady ? "Launch" : `Waiting for ${CLAN_RALLY_MIN_PARTICIPANTS}+ Ready`}</button>
       <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
   } else if (forming && ownParticipant) {
     controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
-  } else if (forming && activeParticipants.length < 3) {
+  } else if (forming && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
     controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
   } else if (launched && leader) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
@@ -23238,7 +23401,7 @@ function renderClanRallyCard(rally) {
     <article class="clan-rally-card ${escapeHtml(rally.status || "")}">
       <header>
         <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
-        <b>${activeParticipants.length || participants.length}/3</b>
+        <b>${activeParticipants.length || participants.length}/${CLAN_RALLY_MAX_PARTICIPANTS}</b>
       </header>
       <div class="clan-rally-summary">
         <span>Leader ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span>
@@ -23261,7 +23424,7 @@ function renderClanRallyPanel() {
       </div>
       <div class="clan-war-room-feature">
         <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
-        <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+        <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies. Every contribution must arrive and show Ready before the creator or Clan Leader can launch.</p>
         <div class="clan-rally-list">
           ${onlineClanRallies.length
             ? onlineClanRallies.map(renderClanRallyCard).join("")
@@ -23303,11 +23466,11 @@ function confirmClanRallyAction(rally, action) {
         <h3>${escapeHtml(rally.targetName || "Rally objective")}</h3>
       </div>
       ${launching
-        ? `<p>Only troops already assembled will attack. These inbound contributions will automatically turn around:</p>${inboundList}`
-        : `<p>Your waiting troops return to the assembly immediately. Assembled allies and inbound contributions will march home. Peace Shields are not restored.</p>`}
+        ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">Launch is blocked until these contributions arrive:</p>${inboundList}` : ""}`
+        : `<p>The creator's troops return to the assembly city. Assembled allies and inbound contributions will travel back normally.</p>`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
-        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Assembled Troops" : "Cancel Rally"}</button>
+        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept" ${launching && inbound.length ? "disabled" : ""}>${launching ? "Launch Rally" : "Cancel Rally"}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -23379,10 +23542,7 @@ async function runClanRallyAction(action, rally) {
         regionId: result?.movement?.sourceRegionId || rally.sourceRegionId || rally.targetRegionId,
         allowCrossMap: true,
       });
-      const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
-      showToast(returned
-        ? `Rally launched. ${formatNumber(returned)} inbound contribution${returned === 1 ? " is" : "s are"} returning.`
-        : "Rally launched.");
+      showToast("Rally launched with every Ready participant.");
     } else {
       showToast("Rally cancelled. Committed forces are returning.");
     }
@@ -25393,7 +25553,6 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
-  const canRally = Boolean(canCurrentPlayerCreateClanRally() && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -25415,12 +25574,6 @@ function renderSelectedRewardCampWheel(camp) {
       <span aria-hidden="true">${renderCrownlandsIcon(isHeldByPlayer || clanAlly ? "reinforcement" : "attack")}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
-    ${canRally ? `
-      <button class="gold-camp-wheel-action cl-action-button cl-action-rally camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
-        <span aria-hidden="true">${renderCrownlandsIcon("rally")}</span>
-        <strong>Rally</strong>
-      </button>
-    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
         <span aria-hidden="true">${renderCrownlandsIcon("reports")}</span>
@@ -25443,10 +25596,6 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showRewardCampInfoModal(camp.id);
-  });
-  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
-    event.stopPropagation();
-    beginCreateClanRally(camp);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -26323,7 +26472,7 @@ function canCurrentPlayerCreateClanRally() {
 
 function beginCreateClanRally(targetOrId) {
   const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
-  const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
+  const eligibleObjective = target && isStronghold(target);
   if (!state?.clanId) {
     rejectGameAction("Join a clan before forming a rally.");
     return;
@@ -27660,9 +27809,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
   const commandIcon = rallyOrder ? "rally" : isTransfer ? "transfer" : isReinforcement ? "reinforcement" : "attack";
   const shieldDropWarning = rallyOrder
-    ? getActivePeaceShieldExpiresAtMs() > Date.now()
-      ? "Committing rally troops immediately removes your Royal Peace Shield. It will not be restored if you withdraw or the rally is cancelled."
-      : ""
+    ? ""
     : isReinforcement
     ? getActivePeaceShieldExpiresAtMs() > Date.now()
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
@@ -27700,7 +27847,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
-      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>3 participant limit</strong><span>${orderKind === "rally_create" ? "You will lead this rally and choose when to launch." : "Your troops march visibly to the assembly city; the objective remains clan-private."}</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${CLAN_RALLY_MIN_PARTICIPANTS}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
@@ -27837,7 +27984,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
       <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
-      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Rally commitment does not remove an active Royal Peace Shield</small></div>
     `;
     return;
   }
@@ -34593,6 +34740,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
     attackers,
     defender,
     reinforcements,
+    gearEffects: normalizeBattleGearEffects(value.gearEffects),
     totals: {
       attackers: Math.max(0, Math.floor(Number(totals.attackers) || 0)),
       defenders: Math.max(0, Math.floor(Number(totals.defenders) || 0)),
@@ -34679,6 +34827,9 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const totals = snapshot?.totals || {};
   const defenseBreakdown = totals.defensePowerBreakdown || {};
   const attackBreakdown = totals.attackPowerBreakdown || {};
+  const explicitSideGear = attacker ? snapshot?.gearEffects?.attacker : snapshot?.gearEffects?.defender;
+  const explicitCombatGear = attacker ? explicitSideGear?.attackStrength : explicitSideGear?.defenderStrength;
+  const explicitWallGear = attacker ? null : explicitSideGear?.wallStrength;
   const modernDefense = Math.floor(Number(snapshot?.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const startingTroops = Math.max(0, Math.floor(Number(attacker ? totals.attackers : totals.defenders) || 0));
   const participantBasePower = attacker
@@ -34707,11 +34858,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     participants,
     attacker ? "gearAttackStrengthBonusPower" : "gearDefenderStrengthBonusPower"
   );
-  const gearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
+  const inferredGearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
     attacker
       ? attackBreakdown.gearAttackStrengthBonusPower
       : defenseBreakdown.gearDefenderStrengthBonusPower
   ) || 0));
+  const gearBonusPower = explicitCombatGear?.bonusPower || inferredGearBonusPower;
   const personalObjectiveBonusPower = attacker ? 0 : (
     sumDetailedBattleParticipantPower(participants, "personalObjectiveBonusPower")
     || Math.max(0, Math.floor(Number(defenseBreakdown.personalObjectiveBonusPower) || 0))
@@ -34736,11 +34888,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const gearPercents = [...new Set(participants.map(participant => Math.max(0, Number(
     attacker ? participant?.gearAttackStrengthPercent : participant?.gearDefenderStrengthPercent
   ) || 0)).filter(percent => percent > 0))];
-  const gearPercentText = gearPercents.length === 1
+  const inferredGearPercentText = gearPercents.length === 1
     ? `+${gearPercents[0].toFixed(2).replace(/\.00$/, "")}%`
     : gearPercents.length > 1
       ? "Mixed equipped-gear rates"
       : "";
+  const gearPercentText = formatBattleGearEffectPercent(explicitCombatGear) || inferredGearPercentText;
   const participantSummary = attacker
     ? participants.length > 1
       ? `${formatNumber(participants.length)} rally armies`
@@ -34762,9 +34915,10 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     skillPercentText,
-    gearLabel: attacker ? "War Captain gear" : "Defensive Commander gear",
+    gearLabel: explicitCombatGear?.sourceLabel || (attacker ? "War Captain gear" : "Defensive Commander gear"),
     gearBonusPower,
     gearPercentText,
+    casualtyRecovery: explicitSideGear?.casualtyRecovery || null,
     personalObjectiveBonusPower,
     sharedClanBonusPower,
     otherBonusPower,
@@ -34778,8 +34932,13 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     wallBasePower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.baseWallPower) || 0)),
     wallStoneworksPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)),
     wallStoneworksPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.stoneworksPercent) || 0),
-    wallGearPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
-    wallGearPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.gearWallStrengthPercent) || 0),
+    wallGearPower: attacker ? 0 : explicitWallGear?.bonusPower
+      || Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
+    wallGearPercent: attacker ? 0 : Math.max(0, Number(
+      explicitWallGear?.bonusPercent
+      || explicitWallGear?.bonusPercents?.[0]
+      || snapshot?.target?.fortifications?.gearWallStrengthPercent
+    ) || 0),
     wallHelp: attacker
       ? ""
       : [
@@ -34896,70 +35055,6 @@ function renderBattleSideDetails(side = {}) {
     </article>`;
 }
 
-function getBattleSideBonusEntries(side = {}) {
-  if (side.gearOnly) {
-    const entries = [];
-    if (side.gearBonusPower > 0) entries.push({ icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), label: side.gearLabel, value: `+${formatNumber(side.gearBonusPower)} power`, help: side.gearPercentText });
-    if (side.wallGearPower > 0) entries.push({ icon: renderCrownlandsIcon("city"), label: "Gatehouse wall gear", value: `+${formatNumber(side.wallGearPower)} wall power`, help: `+${side.wallGearPercent}% · separate from Stoneworks` });
-    const recovery = side.casualtyRecovery;
-    if (recovery?.gearRecoveredTroops > 0) entries.push({ icon: renderCrownlandsIcon("troops"), label: recovery.sourceLabel, value: `+${formatNumber(recovery.gearRecoveredTroops)} recovered`, help: `+${recovery.gearPercent}% gear · main city` });
-    return entries;
-  }
-  if (side.bonusRecorded === false) {
-    return [{ icon: "?", label: "Combat bonuses", value: "Not recorded", help: "Historical report" }];
-  }
-  const entries = [];
-  if (Number(side.skillBonusPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
-      label: side.skillLabel,
-      value: `+${formatNumber(side.skillBonusPower)} power`,
-      help: side.skillPercentText,
-    });
-  }
-  if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("clan"), label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon("city"),
-      label: "Stoneworks",
-      value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
-      help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
-    });
-  }
-  if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
-    entries.push({ icon: "+", label: "Other recorded defense", value: `+${formatNumber(side.otherBonusPower)} power`, help: "Authoritative battle snapshot" });
-  }
-  return entries;
-}
-
-function renderBattleBonusCard(side = {}) {
-  const entries = getBattleSideBonusEntries(side);
-  return `
-    <article class="battle-visual-bonus-card ${side.role}">
-      <h4>${side.gearOnly ? `${side.role === "attacker" ? "Attacker" : "Defender"} Gear` : side.role === "attacker" ? "Attack bonuses" : "Defense bonuses"}</h4>
-      ${entries.length
-        ? entries.map(entry => `
-          <div class="battle-visual-bonus-row">
-            <span aria-hidden="true">${entry.icon}</span>
-            <div><strong>${escapeHtml(entry.label)}</strong>${entry.help ? `<small>${escapeHtml(entry.help)}</small>` : ""}</div>
-            <b>${escapeHtml(entry.value)}</b>
-          </div>`).join("")
-        : `<div class="battle-visual-no-bonus">No additional combat bonuses</div>`}
-    </article>`;
-}
-
-function renderBattleGearEffectsSection(attacker = {}, defender = {}, report = null, viewerRole = "attacker") {
-  const cards = [attacker, defender].map(side => ({ ...side, gearOnly: true, casualtyRecovery: viewerRole === side.role ? report?.casualtyRecovery : null }))
-    .filter(side => getBattleSideBonusEntries(side).length).map(renderBattleBonusCard);
-  if (!cards.length) return "";
-  return `<section class="battle-visual-section"><div class="battle-visual-section-title"><h3>Gear Effects</h3></div><div class="battle-visual-two-column">${cards.join("")}</div></section>`;
-}
-
 function renderBattleWallResult(defender = {}, siege = null) {
   if (!siege) return "";
   const startingIntegrityBps = clamp(Math.floor(Number(siege.startingIntegrityBps) || 0), 0, 10_000);
@@ -35021,6 +35116,22 @@ function getDetailedBattleViewerRole(snapshot = null, report = null) {
   if (currentUid && attackers.some(participant => participant.ownerUid === currentUid)) return "attacker";
   if (currentUid && defenders.some(participant => participant.ownerUid === currentUid)) return "defender";
   return report?.type === "defense" ? "defender" : "attacker";
+}
+
+function renderRallyParticipantResults(snapshot = null) {
+  const participants = getDetailedBattleSideParticipants(snapshot, "attacker");
+  if (participants.length < 2) return "";
+  return `
+    <section class="battle-visual-section rally-battle-participants">
+      <div class="battle-visual-section-title"><h3>Rally participant results</h3><span>${formatNumber(participants.length)} players</span></div>
+      <div class="battle-visual-participant-list">
+        ${participants.map(participant => `
+          <article class="battle-visual-participant-row">
+            <span>${renderPlayerNameLink(participant.ownerUid, participant.ownerName || "Ruler")}<small>${participant.role === "leader" ? "Rally creator" : "Clan participant"}</small></span>
+            <div>${renderBattleMetric("Committed", formatNumber(participant.startingTroops || 0))}${renderBattleMetric("Losses", formatNumber(participant.losses || 0))}${renderBattleMetric("Survivors", formatNumber(participant.survivors || 0))}${renderBattleMetric("Attack power", formatNumber(participant.effectivePower || 0))}</div>
+          </article>`).join("")}
+      </div>
+    </section>`;
 }
 
 function getBattleRuleLabel(snapshot = null) {
@@ -35203,7 +35314,11 @@ function getLegacyBattleSides(report = null, siege = null) {
     wallStoneworksPower: 0,
     wallStoneworksPercent: 0,
   };
-  return { attacker, defender };
+  const gearEffects = normalizeBattleGearEffects(report?.gearEffects);
+  return {
+    attacker: applyRecordedGearEffectsToBattleSide(attacker, gearEffects, "attacker"),
+    defender: applyRecordedGearEffectsToBattleSide(defender, gearEffects, "defender"),
+  };
 }
 
 function renderLegacyBattleComparison(report = null, siege = null) {
@@ -35255,6 +35370,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       ${renderBattleReportNavigation(report, snapshot.target)}
       ${ruleLabel ? `<div class="battle-visual-rule">${escapeHtml(ruleLabel)}</div>` : ""}
       ${renderBattleReportHero(left, right, badge, getViewerBattleResultLabel(snapshot, viewerRole, report))}
+      ${renderRallyParticipantResults(snapshot)}
       ${renderBattleComparisonSections(
         left,
         right,
@@ -36711,6 +36827,7 @@ window.addEventListener("crownlands:auth", async () => {
   }
 });
 window.addEventListener("crownlands:push-message", handlePushMessage);
+window.addEventListener("crownlands:push-notifications", updatePushAlertsUi);
 window.addEventListener("crownlands:chat-player-profile", event => {
   const uid = String(event?.detail?.uid || "").trim();
   if (uid) showPublicPlayerProfile(uid);

@@ -265,6 +265,12 @@ service cloud.firestore {
         allow create, update: if ownsPlayerDoc(uid)
           && request.resource.data.uid == uid
           && request.resource.data.token is string
+          && request.resource.data.token.size() >= 20
+          && request.resource.data.token.size() <= 2048
+          && (!('installationId' in request.resource.data)
+            || (request.resource.data.installationId is string
+              && request.resource.data.installationId.size() >= 20
+              && request.resource.data.installationId.size() <= 160))
           && request.resource.data.enabled is bool;
         allow delete: if ownsPlayerDoc(uid);
       }

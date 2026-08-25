@@ -283,6 +283,7 @@ async function main() {
   assert(SKILL_ORDER.every(skill => Number(afterInsufficient.upgrades?.[skill] || 0) === alternateBuild[skill]), "A rejected application changed skills.");
 
   await profileRef.set({
+    createdAtMs: Date.parse("2026-08-07T23:59:59.000Z"),
     createdAt: Timestamp.fromMillis(Date.parse("2026-08-07T23:59:59.000Z")),
     freeSkillResetGrantVersion: FieldValue.delete(),
     freeSkillResetCredits: FieldValue.delete(),

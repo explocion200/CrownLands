@@ -82,7 +82,7 @@ function eventRef(eventId) {
   return db.doc(`realmEvents/${realm.resetGeneration}/activity/${eventId}`);
 }
 
-async function writeEvent(eventId, occurredAtMs, eventType = "STRONGHOLD_CAPTURED") {
+async function writeEvent(eventId, occurredAtMs, eventType = "STRONGHOLD_CAPTURED", attackerPlayerId = "attacker") {
   await eventRef(eventId).set({
     eventId,
     eventType,
@@ -91,7 +91,7 @@ async function writeEvent(eventId, occurredAtMs, eventType = "STRONGHOLD_CAPTURE
     occurredAtMs,
     createdAtMs: occurredAtMs,
     objectiveId: "defense-stronghold",
-    attackerPlayerId: "attacker",
+    attackerPlayerId,
   });
 }
 
@@ -103,9 +103,11 @@ async function main() {
     reportsViewedAtMs: 123,
     realmAnnouncementSeenThroughMs: 0,
   });
+  await invokeCallable("claimStartingCity", user.token, { playerName: "Realm Herald" });
+  await profileRef.set({ reportsViewedAtMs: 123 }, { merge: true });
 
   const baseMs = Date.now() - 60_000;
-  await writeEvent("realm-catch-up", baseMs, "CITADEL_CAPTURED");
+  await writeEvent("realm-catch-up", baseMs, "CITADEL_CAPTURED", user.uid);
   const seenThroughMs = baseMs + 5_000;
   const claims = await Promise.all([
     invokeCallable("markRealmAnnouncementSeen", user.token, { eventId: "realm-catch-up", seenThroughMs }),
@@ -119,7 +121,7 @@ async function main() {
   assert(profile.reportsViewedAtMs === 123, "Showing a Realm announcement changed the Reports unread cursor.");
 
   const futureEventMs = Date.now() - 5_000;
-  await writeEvent("realm-future-clamp", futureEventMs);
+  await writeEvent("realm-future-clamp", futureEventMs, "STRONGHOLD_CAPTURED", user.uid);
   const futureResult = await invokeCallable("markRealmAnnouncementSeen", user.token, {
     eventId: "realm-future-clamp",
     seenThroughMs: Date.now() + 86_400_000,

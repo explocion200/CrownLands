@@ -114,27 +114,24 @@ requireMatch(
 const rallyLaunchStart = serverSource.indexOf('exports.launchClanRally = timedCallable("launchClanRally"');
 const rallyLaunchEnd = serverSource.indexOf("exports.previewArmyProtection", rallyLaunchStart);
 const rallyLaunchSource = serverSource.slice(rallyLaunchStart, rallyLaunchEnd);
-requireMatch(
+assert.doesNotMatch(
   rallyLaunchSource,
-  /targetOwnerUid[\s\S]*?evaluateHostileAntiFarmPolicy[\s\S]*?status:\s*"blocked"/,
-  "Rally leaders are not checked against the current defender before launch."
+  /evaluateHostileAntiFarmPolicy/,
+  "Stronghold and Citadel Rallies must bypass ordinary anti-farming gates."
 );
+requireMatch(rallyLaunchSource, /isRallyTargetFriendly\(targetOwnerUid,\s*targetOwnerProfile,\s*rally\)/,
+  "Rally launch no longer blocks current clan allies.");
 
 const resolveSource = extractFunction(serverSource, "resolveArmyOrderById");
 requireMatch(
   resolveSource,
-  /effectiveKind === "attack"[\s\S]*?evaluateHostileAntiFarmPolicy[\s\S]*?phase:\s*rallyAttack\s*\?\s*"rally-arrival"\s*:\s*"arrival"/,
-  "Arrival enforcement does not cover direct, converted, and rally attacks."
+  /effectiveKind === "attack"[\s\S]*?&& !rallyAttack[\s\S]*?evaluateHostileAntiFarmPolicy/,
+  "Arrival anti-farming enforcement does not preserve the Rally objective exemption."
 );
 requireMatch(
   resolveSource,
   /antiFarmContext\.policy\.blocked[\s\S]*?returnRecalledTroops\(troopCount\)[\s\S]*?markResolved/,
   "Blocked direct arrivals do not return troops and resolve without combat."
-);
-requireMatch(
-  resolveSource,
-  /antiFarmContext\.policy\.blocked[\s\S]*?RALLY_STATUS_RECALLING[\s\S]*?antiFarmPolicy/,
-  "Blocked rally arrivals do not turn the combined army around."
 );
 requireMatch(
   resolveSource,
@@ -191,11 +188,6 @@ requireMatch(
   firebaseClientSource,
   /sendArmyOrder[\s\S]*?antiFarmPolicy\?\.blocked[\s\S]*?functions\/failed-precondition/,
   "Blocked launches are not surfaced to the existing order error UI."
-);
-requireMatch(
-  firebaseClientSource,
-  /launchClanRally[\s\S]*?antiFarmPolicy\?\.blocked[\s\S]*?functions\/failed-precondition/,
-  "Blocked rally launches are not surfaced to the clan UI."
 );
 requireMatch(
   gameSource,
