@@ -251,11 +251,12 @@ const RECALL_HORN_ITEM_ID = "recall_horn";
 const SHOP_MINIMUM_PRICE_GOLD = 50;
 const SHOP_PRICE_HOURS = Object.freeze({
   [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
-  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
-  [RECALL_HORN_ITEM_ID]: 1.25,
-  [WAR_DRUMS_ITEM_ID]: 1.5,
-  [VEIL_OF_SILENCE_ITEM_ID]: 2,
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 0.18,
+  [WAR_DRUMS_ITEM_ID]: 0.36,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 0.36,
+  [RECALL_HORN_ITEM_ID]: 0.54,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [COMMON_GEAR_BOX_ITEM.id]: Math.max(0, Number(COMMON_GEAR?.SHOP_PRICE_HOURS) || 1),
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
@@ -1755,6 +1756,7 @@ let bulkOrderActionRequestId = 0;
 let pendingBulkOrderAction = null;
 const bulkOrderRequestIds = new Map();
 const pendingDirectScoutTargets = new Set();
+const scoutVeilBlocksByTarget = new Map();
 let camera = { x: 0, y: 0 };
 let zoom = 1;
 let mapViewportWidth = 0;
@@ -5315,6 +5317,28 @@ function getPeaceShieldAttackBlockReason(target, attackerOwner = "player", attac
   if (!isCityProtectedByPeaceShield(target)) return "";
   const remaining = getPeaceShieldRemainingSeconds(getCityPeaceShieldExpiresAtMs(target));
   return `${target.name} is protected by a Royal Peace Shield for ${formatDuration(remaining)}.`;
+}
+
+function getCachedScoutVeilExpiresAtMs(target, nowMs = Date.now()) {
+  const targetId = String(target?.id || "").trim();
+  if (!targetId) return 0;
+  const block = scoutVeilBlocksByTarget.get(targetId);
+  if (!block) return 0;
+  const targetOwnerUid = String(target?.ownerUid || "").trim();
+  if ((block.ownerUid && targetOwnerUid && block.ownerUid !== targetOwnerUid) || block.expiresAtMs <= nowMs) {
+    scoutVeilBlocksByTarget.delete(targetId);
+    return 0;
+  }
+  return block.expiresAtMs;
+}
+
+function getVeilOfSilenceScoutBlockReason(target, scoutOwner = "player", scoutOwnerUid = "", nowMs = Date.now()) {
+  if (!target || isRewardCampTarget(target) || isSameAttackOwner(target, scoutOwner, scoutOwnerUid)) return "";
+  if (target.owner === "neutral" || (!target.ownerUid && target.ownerKind !== "player" && target.owner !== "enemy")) return "";
+  const expiresAtMs = getCachedScoutVeilExpiresAtMs(target, nowMs);
+  if (expiresAtMs <= nowMs) return "";
+  const remaining = Math.max(1, Math.ceil((expiresAtMs - nowMs) / 1000));
+  return `${target.name} is hidden by Veil of Silence for ${formatDuration(remaining)}.`;
 }
 
 function refreshOwnedCityItemEffectMetadata(syncNow = true) {
@@ -9294,9 +9318,11 @@ function scoutRewardCamp(campId) {
 
 async function scoutTarget(target) {
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return;
   }
   if (getPendingScoutMission(target.id)) {
@@ -9337,9 +9363,11 @@ function launchScoutMission(source, target, route, _options = {}) {
   const options = _options && typeof _options === "object" ? _options : {};
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return null;
   }
   if (!canUseOnlineArmyOrders()) return null;
@@ -9413,6 +9441,7 @@ function isNearbyScoutCandidate(source, city) {
     getCityRegionId(city) === getCityRegionId(source) &&
     city.owner !== "player" &&
     !getMainCityScoutBlockReason(city, "player") &&
+    !getVeilOfSilenceScoutBlockReason(city, "player") &&
     !getPendingScoutMission(city.id) &&
     Math.hypot(city.x - source.x, city.y - source.y) <= SCOUT_NEARBY_RADIUS
   );
@@ -9676,10 +9705,11 @@ async function toggleScoutNearby(cityId) {
       renderAll();
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
     } catch (error) {
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = rememberScoutVeilBlocksFromError(error);
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       finishBulkOrderAction(action);
       renderAll();
-      rejectGameAction(onlineLastError || "Scout Nearby could not be sent.");
+      rejectGameAction(error?.message || "Scout Nearby could not be sent.");
     }
     return;
   }
@@ -10696,6 +10726,10 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       changed = true;
     }
+    if (Number.isFinite(Number(update.alliedReinforcementTroops))) {
+      city.alliedReinforcementTroops = Math.max(0, Math.floor(Number(update.alliedReinforcementTroops) || 0));
+      changed = true;
+    }
     if (Number.isFinite(Number(update.productionUpdatedAtMs))) {
       city.productionUpdatedAtMs = normalizeTimestampMs(update.productionUpdatedAtMs);
       changed = true;
@@ -10737,6 +10771,9 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerFlag = ownerIdentity?.flag || update.ownerFlag || null;
       city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      city.ownerClanId = ownerUid ? String(update.ownerClanId ?? city.ownerClanId ?? "") : "";
+      city.ownerClanName = ownerUid ? String(update.ownerClanName ?? city.ownerClanName ?? "") : "";
+      city.ownerClanTag = ownerUid ? String(update.ownerClanTag ?? city.ownerClanTag ?? "") : "";
       city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
       if (ownerUid) {
         city.relinquishedAtMs = 0;
@@ -14063,6 +14100,7 @@ function disconnectOnlineWorld() {
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
+  scoutVeilBlocksByTarget.clear();
   clearEnemyPowerBandCache();
   onlineCampStates = new Map();
   onlineHeldCampStates = new Map();
@@ -16071,6 +16109,31 @@ function getChangedAttackProtectionFromError(error) {
   return normalizeAttackProtectionSnapshot(details.attackProtection);
 }
 
+function rememberScoutVeilBlocksFromError(error, fallbackTarget = null, nowMs = Date.now()) {
+  const details = error?.details || error?.customData?.details || error?.data || {};
+  if (details?.reason !== "veil_of_silence") return 0;
+  const fallbackTargetId = String(fallbackTarget?.id || "").trim();
+  const fallbackOwnerUid = String(fallbackTarget?.ownerUid || "").trim();
+  const rawTargets = Array.isArray(details.targets) && details.targets.length
+    ? details.targets
+    : (Array.isArray(details.targetCityIds) && details.targetCityIds.length
+        ? details.targetCityIds.map(cityId => ({ cityId, expiresAtMs: details.expiresAtMs }))
+        : fallbackTargetId ? [{ cityId: fallbackTargetId, ownerUid: fallbackOwnerUid, expiresAtMs: details.expiresAtMs }] : []);
+  let remembered = 0;
+  rawTargets.forEach(rawTarget => {
+    const cityId = String(rawTarget?.cityId || rawTarget?.id || "").trim();
+    const expiresAtMs = normalizeTimestampMs(rawTarget?.expiresAtMs || details.expiresAtMs);
+    if (!cityId || expiresAtMs <= nowMs) return;
+    const city = cityById(cityId);
+    scoutVeilBlocksByTarget.set(cityId, {
+      expiresAtMs,
+      ownerUid: String(rawTarget?.ownerUid || city?.ownerUid || "").trim(),
+    });
+    remembered += 1;
+  });
+  return remembered;
+}
+
 function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
   const sourceId = mission?.fromId;
   const targetId = mission?.toId;
@@ -16215,15 +16278,14 @@ function restoreRejectedArmyOrderSelection(mission) {
   const sourceId = String(mission?.fromId || "");
   const targetId = String(mission?.toId || "");
   if (!sourceId || !targetId) return;
+  // Scouts are one-click orders. Replaying a rejected scout makes permanent
+  // validation failures (such as Veil of Silence) retry indefinitely.
+  if (mission.kind === "scout") return;
   window.setTimeout(() => {
     if (modal.open || sendMode || selectedSourceId || selectedTargetId) return;
     const source = cityById(sourceId);
     const target = getArmyTargetById(targetId);
     if (!source || !target || source.owner !== "player" || source.troops < 1) return;
-    if (mission.kind === "scout") {
-      void scoutTarget(target);
-      return;
-    }
     selectedSourceId = source.id;
     selectedTargetId = target.id;
     sendMode = true;
@@ -16323,11 +16385,19 @@ function publishOnlineArmyMovement(mission, options = {}) {
       pendingOutgoingMissions.delete(movement.id);
       mission.serverPending = false;
       mission.serverRetrying = false;
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = mission.kind === "scout"
+        ? rememberScoutVeilBlocksFromError(error, target)
+        : 0;
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       console.warn("Server rejected army movement", error);
       const refreshedProtection = getChangedAttackProtectionFromError(error);
       if (refreshedProtection) {
         reopenAttackProtectionConfirmation(mission, refreshedProtection);
+        return false;
+      }
+      if (rememberedVeilBlocks) {
+        rejectGameAction(getVeilOfSilenceScoutBlockReason(target, "player") || error?.message);
+        renderAll();
         return false;
       }
       rejectServerArmyMission(mission, onlineLastError, options);
@@ -20684,6 +20754,11 @@ function resolveAttack(attack) {
     return;
   }
 
+  if (attack.relinquishTransfer && !cityBelongsToMarchOwner(target, attack)) {
+    resolveLocalReturningArmy(attack);
+    return;
+  }
+
   const attackRegionId = getCityRegionId(target);
   const attackOnActiveMap = attackRegionId === getActiveMapRegionId();
   if (claimBulkArrivalAudio(attack)) {
@@ -24936,6 +25011,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
       isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
+      getCachedScoutVeilExpiresAtMs(city),
       city.level,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
       clanAlly ? Math.max(0, Math.floor(Number(city.troops) || 0)) : "",
@@ -25400,7 +25476,8 @@ function renderSelectedForeignWheel(city) {
   const pendingScout = getPendingScoutMission(city.id);
   const friendlyBlockReason = getClanFriendlyBlockReason(city);
   const clanAlly = Boolean(friendlyBlockReason);
-  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
+  const veilBlockReason = getVeilOfSilenceScoutBlockReason(city, "player");
+  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player") || veilBlockReason;
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
   const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
@@ -25414,7 +25491,7 @@ function renderSelectedForeignWheel(city) {
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout${pendingScout ? " is-pending" : ""}" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" aria-busy="${Boolean(pendingScout)}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
-      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
+      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : veilBlockReason ? "Veiled" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
@@ -25457,8 +25534,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   const clanAlly = isClanAllyCity(stronghold);
   const report = owned ? null : getScoutReport(stronghold.id);
   const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
+  const veilBlockReason = owned ? "" : getVeilOfSilenceScoutBlockReason(stronghold, "player");
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
-  const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
+  const canScout = !owned && !clanAlly && !veilBlockReason && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
   const canRally = Boolean(canCurrentPlayerCreateClanRally() && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
@@ -25474,9 +25552,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : veilBlockReason ? escapeHtml(veilBlockReason) : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(owned ? "outgoing" : "scout")}</span>
-      <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+      <strong>${owned ? "Send" : veilBlockReason ? "Veiled" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
       <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
@@ -28499,10 +28577,14 @@ function applyLocalRelinquishCity(city, destination, mission = null) {
   city.ownerName = "";
   city.ownerFlag = null;
   city.ownerKingPower = 0;
+  city.ownerClanId = "";
+  city.ownerClanName = "";
+  city.ownerClanTag = "";
   city.ownerShieldExpiresAtMs = 0;
   city.isMainCity = false;
   city.troops = 0;
   city.troopFloat = 0;
+  city.alliedReinforcementTroops = 0;
   city.investedGold = 0;
   city.relinquishedAtMs = nowMs;
   city.relocatedAtMs = 0;
@@ -28539,60 +28621,19 @@ async function relinquishCity(cityId) {
   serverCityRelinquishInFlightIds.add(inFlightKey);
   try {
     const serverAuthority = usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity;
-    const destination = getRelinquishDestinationPreview(city, { loadedOnly: !serverAuthority });
-    if (!destination) {
-      showToast("You need another friendly city to receive the troops.");
-      return false;
-    }
-
     const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
-    let route = null;
-    let mission = null;
-    if (transferredTroops > 0) {
-      showToast(`Calculating march to ${destination.name}...`);
-      route = await findRouteAsync(city, destination);
-      if (!route?.points?.length) {
-        showToast("No land and portal route was found to the nearest friendly city.");
-        return false;
-      }
-      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: Boolean(serverAuthority) });
-      if (!mission) {
-        showToast("Could not prepare the relinquish march.");
-        return false;
-      }
-    }
-
     if (serverAuthority) {
-      const movement = mission ? toOnlineArmyMovement(mission) : null;
-      const destinationRegionId = getCityRegionId(destination);
-      if (mission && !movement) {
-        showToast("Could not prepare the online relinquish march.");
-        return false;
-      }
-      if (mission) mission.onlineRegionIds = movement.routeRegionIds;
+      showToast(`Relinquishing ${city.name}...`);
       const result = await getOnlineApi().relinquishCity({
         cityId: city.id,
         regionId,
-        destinationCityId: destination.id,
-        destinationRegionId,
-        army: movement ? {
-          ...movement,
-          sourceRegionId: regionId,
-          targetRegionId: destinationRegionId,
-          fromName: city.name,
-          toName: destination.name,
-        } : null,
-        routeRegionIds: movement?.routeRegionIds || [],
       });
       applyServerEconomyResult(result);
       applyCityRelinquishPolicy(result?.cityRelinquishPolicy);
-      if (mission && result?.movement) {
-        applyServerMovementToMission(mission, result.movement);
-        addServerAcceptedMission(mission);
-      }
+      if (result?.movement) adoptServerArmyMovement(result.movement);
       const acceptedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
-      const destinationName = result?.destinationCity?.name || destination.name || "the nearest friendly city";
-      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || mission?.total || 0)})` : "";
+      const destinationName = result?.destinationCity?.name || "the nearest friendly city";
+      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || 0)})` : "";
       addLog(acceptedTroops > 0
         ? `Relinquished ${city.name}. ${formatNumber(acceptedTroops)} troops are marching to ${destinationName}${travelText}.`
         : `Relinquished ${city.name}. No stationed troops needed to march.`);
@@ -28610,6 +28651,27 @@ async function relinquishCity(cityId) {
       renderAll();
       updateOutgoingAttackUi();
       return true;
+    }
+
+    const destination = getRelinquishDestinationPreview(city, { loadedOnly: true });
+    if (!destination) {
+      showToast("You need another friendly city to receive the troops.");
+      return false;
+    }
+
+    let mission = null;
+    if (transferredTroops > 0) {
+      showToast(`Calculating march to ${destination.name}...`);
+      const route = await findRouteAsync(city, destination);
+      if (!route?.points?.length) {
+        showToast("No land and portal route was found to the nearest friendly city.");
+        return false;
+      }
+      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: false });
+      if (!mission) {
+        showToast("Could not prepare the relinquish march.");
+        return false;
+      }
     }
 
     if (!applyLocalRelinquishCity(city, destination, mission)) {
@@ -31906,7 +31968,11 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const id = String(itemId || "");
   if (id === COMMON_GEAR_BOX_ITEM.id && COMMON_GEAR) {
     const purchase = state?.gear?.shopPurchase || {};
-    const unavailable = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
+    const purchaseCount = purchase.utcDate === currentDailyDateKey()
+      ? Math.min(1, Math.max(0, Math.floor(Number(purchase.purchaseCount) || 0)))
+      : 0;
+    const purchaseLimit = 1;
+    const unavailable = purchaseCount >= purchaseLimit;
     const price = getCommonGearBoxShopPrice();
     const affordable = getProjectedGold() >= price;
     return {
@@ -31915,6 +31981,8 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
       description: getShopShortDescription(id),
       price,
       owned: Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)),
+      purchaseCount,
+      purchaseLimit,
       canBuy: !unavailable && affordable,
       buttonLabel: unavailable ? "Purchased" : affordable ? "Buy" : "Not Enough Gold",
       status: unavailable
@@ -31930,7 +31998,7 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
   const purchaseCount = getProjectedItemPurchaseCount(item.id);
   const cooldownText = getItemPurchaseCooldownText(item.id);
-  const pending = getInstantPendingItemDelta(item.id) > 0;
+  const pendingQuantity = Math.max(0, getInstantPendingItemDelta(item.id));
   const affordable = getProjectedGold() >= price;
   const available = !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit);
   return {
@@ -31939,13 +32007,17 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
     description: getShopShortDescription(item.id),
     price,
     owned,
-    canBuy: !pending && available && affordable,
-    buttonLabel: pending ? "Queued" : !available ? "Unavailable" : affordable ? "Buy" : "Not Enough Gold",
-    status: pending
-      ? "Purchase pending."
-      : cooldownText
-        ? `Daily limit reached. Available in ${cooldownText}.`
-        : affordable ? "" : "Not enough Gold.",
+    purchaseCount,
+    purchaseLimit,
+    canBuy: available && affordable,
+    buttonLabel: !available ? "Daily Limit Reached" : !affordable ? "Not Enough Gold" : pendingQuantity > 0 ? "Buy Again" : "Buy",
+    status: cooldownText
+      ? `Daily limit reached. Available in ${cooldownText}.`
+      : purchaseLimit > 0 && purchaseCount >= purchaseLimit
+        ? "Daily limit queued. Purchases are being confirmed."
+        : pendingQuantity > 0
+          ? `${formatNumber(pendingQuantity)} purchase${pendingQuantity === 1 ? "" : "s"} queued.`
+          : affordable ? "" : "Not enough Gold.",
   };
 }
 
@@ -31956,6 +32028,7 @@ function renderShopPurchaseBar(itemId = selectedShopItemId) {
     <section class="shop-purchase-bar" data-shop-purchase-bar data-selected-shop-item="${escapeHtml(purchase.id)}" aria-live="polite">
       <div class="shop-purchase-selected"><strong>${escapeHtml(purchase.label)}</strong><small class="shop-purchase-description">${escapeHtml(purchase.description)}</small>${purchase.status ? `<small class="shop-purchase-status">${escapeHtml(purchase.status)}</small>` : ""}</div>
       <div class="shop-purchase-stat"><span>Owned</span><strong data-shop-selected-owned>${formatNumber(purchase.owned)}</strong></div>
+      <div class="shop-purchase-stat"><span>Daily</span><strong data-shop-selected-daily>${purchase.purchaseLimit > 0 ? `${formatNumber(purchase.purchaseCount)} / ${formatNumber(purchase.purchaseLimit)}` : "Unlimited"}</strong></div>
       <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
       <button class="shop-buy-btn shop-purchase-buy" data-shop-purchase-selected="${escapeHtml(purchase.id)}" type="button" ${purchase.canBuy ? "" : "disabled"}>${escapeHtml(purchase.buttonLabel)}</button>
     </section>`;
