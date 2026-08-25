@@ -98,6 +98,45 @@ for (const getPolicy of [
   assert.equal(secondDayUse.utcDate, "2026-07-30");
 }
 
+const cleanupContext = {
+  CLAN_IDENTITY_REVISION_VERSION: 1,
+  Date,
+  clampCityLevel: value => Math.max(1, Math.floor(Number(value) || 1)),
+  getStrongholdDefenseLevel: city => Math.max(1, Math.floor(Number(city.level) || 50)),
+  isStronghold: city => Boolean(city?.kind === "stronghold" || city?.strongholdType),
+};
+vm.createContext(cleanupContext);
+vm.runInContext([
+  extractFunction(serverSource, "getNeutralClaimClearedPatch"),
+  extractFunction(serverSource, "getCityRelinquishNeutralPatch"),
+].join("\n"), cleanupContext, { filename: serverPath });
+
+const cleanupAtMs = Date.parse("2026-07-29T10:30:00.000Z");
+const cleanupPatch = cleanupContext.getCityRelinquishNeutralPatch({
+  level: 17,
+  ownerUid: "owner",
+  ownerClanId: "clan",
+  ownerClanName: "Old Clan",
+  ownerClanTag: "OLD",
+  alliedReinforcementTroops: 500,
+}, cleanupAtMs);
+assert.equal(cleanupPatch.ownerKind, "neutral");
+assert.equal(cleanupPatch.ownerUid, null);
+assert.equal(cleanupPatch.ownerName, "");
+assert.equal(cleanupPatch.ownerClanId, "");
+assert.equal(cleanupPatch.ownerClanName, "");
+assert.equal(cleanupPatch.ownerClanTag, "");
+assert.equal(cleanupPatch.ownerClanIdentityRevision, 0);
+assert.equal(cleanupPatch.ownerShieldExpiresAtMs, 0);
+assert.equal(cleanupPatch.alliedReinforcementTroops, 0);
+assert.equal(cleanupPatch.troops, 0);
+assert.equal(cleanupPatch.troopFloat, 0);
+assert.equal(cleanupPatch.investedGold, 0);
+assert.equal(cleanupPatch.isMainCity, false);
+assert.equal(cleanupPatch.level, 17);
+assert.equal(cleanupPatch.relinquishedAtMs, cleanupAtMs);
+assert.equal(cleanupPatch.neutralClaimOpen, false);
+
 const relinquishStart = serverSource.indexOf("exports.relinquishCity = onCall");
 const relinquishEnd = serverSource.indexOf("exports.relocateMainCity", relinquishStart);
 assert.ok(relinquishStart >= 0 && relinquishEnd > relinquishStart, "Missing relinquishCity callable.");
@@ -112,6 +151,21 @@ assert.match(
   relinquishSource,
   /if \(movement\) writeArmyMovementCopies\(transaction,\s*movement,/,
   "Zero-garrison relinquishments still try to write a null movement."
+);
+assert.match(
+  relinquishSource,
+  /buildServerGeneratedArmyRoute\(source, destination\)[\s\S]*?transaction\.get\(canonicalArmyRef\(order\.id\)\)/,
+  "Relinquishment does not build and deduplicate its march from authoritative server data."
+);
+assert.doesNotMatch(
+  relinquishSource,
+  /order\.(?:kind|fromId|toId|sourceRegionId|targetRegionId)\s*!==/,
+  "Relinquishment still requires a client-authored march to match the server destination."
+);
+assert.match(
+  relinquishSource,
+  /const sourcePatch = getCityRelinquishNeutralPatch\(source, nowMs\)/,
+  "Relinquishment bypasses the complete ownership cleanup patch."
 );
 assert.match(
   relinquishSource,
@@ -154,6 +208,48 @@ assert.match(
   /getCityRelinquishUnavailableMessage\(\)[\s\S]*?getOnlineApi\(\)\?\.relinquishCity/,
   "The confirmation path does not recheck the local UTC-day state."
 );
+const clientRelinquishSource = extractFunction(gameSource, "relinquishCity");
+const onlineRelinquishIndex = clientRelinquishSource.indexOf("getOnlineApi().relinquishCity({");
+const localRouteIndex = clientRelinquishSource.indexOf("findRouteAsync(city, destination)");
+assert.ok(
+  onlineRelinquishIndex >= 0 && localRouteIndex > onlineRelinquishIndex,
+  "Online relinquishment still waits for a client route before asking the authoritative server."
+);
+assert.doesNotMatch(
+  clientRelinquishSource.slice(onlineRelinquishIndex, localRouteIndex),
+  /army:|destinationCityId|destinationRegionId|routeRegionIds/,
+  "The online city action still submits client destination or route authority."
+);
+assert.match(
+  clientRelinquishSource,
+  /if \(result\?\.movement\) adoptServerArmyMovement\(result\.movement\)/,
+  "The client does not adopt the server-generated relinquishment march."
+);
+assert.match(
+  extractFunction(gameSource, "applyLocalRelinquishCity"),
+  /ownerClanId = ""[\s\S]*?alliedReinforcementTroops = 0/,
+  "Local relinquishment leaves stale ownership or reinforcement metadata."
+);
+assert.match(
+  extractFunction(gameSource, "resolveAttack"),
+  /attack\.relinquishTransfer && !cityBelongsToMarchOwner\(target, attack\)[\s\S]*?resolveLocalReturningArmy\(attack\)[\s\S]*?return;/,
+  "A local relinquishment march can still attack a destination after its ownership changes."
+);
+
+const resolveStart = serverSource.indexOf("async function resolveArmyOrderById");
+const resolveEnd = serverSource.indexOf("exports.resolveArmyOrder", resolveStart);
+const resolveSource = serverSource.slice(resolveStart, resolveEnd);
+const relinquishRedirectIndex = resolveSource.indexOf("army.relinquishTransfer && defenderUid !== attackerUid");
+const ordinaryTransferIndex = resolveSource.indexOf('effectiveKind === "transfer"');
+assert.ok(
+  relinquishRedirectIndex >= 0 && ordinaryTransferIndex > relinquishRedirectIndex,
+  "A relinquishment march can still transfer into or attack a city after its ownership changes."
+);
+assert.match(
+  resolveSource,
+  /reason: defenderUid \? "captured_destination" : "released_destination"/,
+  "Relinquishment reroutes do not distinguish captured and neutral destinations."
+);
 assert.match(
   firebaseClientSource,
   /delete cleanProfile\.lastCityRelinquishedAtMs;/,
@@ -175,4 +271,4 @@ assert.match(
   "The public rules do not explain the shared UTC-day relinquishment allowance."
 );
 
-console.log("Validated the one-holding-per-UTC-day relinquishment policy, UI, and protected profile state.");
+console.log("Validated authoritative city relinquishment, ownership cleanup, movement rerouting, invalid cases, and the UTC-day policy.");
