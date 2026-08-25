@@ -919,7 +919,13 @@ function openInnerCastle(cityId) {
 }
 
 function getCommonGearBoxShopPrice() {
-  return Math.max(0, Math.floor(Number(COMMON_GEAR?.SHOP_PRICE_GOLD) || 1_000_000_000));
+  const pricing = getShopPricingContext();
+  return calculateScalableShopPrice(
+    COMMON_GEAR_BOX_ITEM.id,
+    pricing.rawBaseGoldPerHour,
+    pricing.cityCount,
+    SHOP_MINIMUM_PRICE_GOLD
+  );
 }
 
 function renderCommonGearShopItem(selectedItemId = "") {
@@ -933,10 +939,11 @@ function renderCommonGearShopItem(selectedItemId = "") {
 async function buyCommonGearBox() {
   const api = getOnlineApi();
   if (!api?.purchaseCommonGearBox) return showToast("Connect to the realm to purchase server-secured Gear Boxes.");
+  const quotedPrice = getCommonGearBoxShopPrice();
   const button = modalBody.querySelector('[data-shop-purchase-selected="common_gear_box"]');
   if (button) button.disabled = true;
   try {
-    const result = await api.purchaseCommonGearBox();
+    const result = await api.purchaseCommonGearBox({ cost: quotedPrice });
     applyServerEconomyResult(result);
     showToast("Common Gear Box added to your Bag.");
   } catch (error) {

@@ -9,17 +9,19 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf
 const client = read("game.js");
 const controller = read("instant-economy-actions.js");
 const commonGear = read("common-gear-ui.js");
+const commonGearConfig = read("common-gear.js");
 const server = read("functions/index.js");
 const palette = read("crownlands-palette.css");
 const visualQa = read("docs/visual-qa/scalable-shop-pricing/index.html");
 
 const hours = Object.freeze({
   royal_tax_decree_30m: 0.18,
-  swift_march_order: 1,
-  recall_horn: 1.25,
-  war_drums_30m: 1.5,
-  veil_of_silence_30m: 2,
-  shield_12h: 3.5,
+  veil_of_silence_30m: 0.18,
+  war_drums_30m: 0.36,
+  swift_march_order: 0.36,
+  recall_horn: 0.54,
+  shield_12h: 1,
+  common_gear_box: 1,
 });
 
 function roundNice(value) {
@@ -40,24 +42,28 @@ assert.equal(price("royal_tax_decree_30m", 10_000, 250), 2_400);
 assert.equal(price("royal_tax_decree_30m", 10_000, 500), 2_400, "The 35% city premium cap changed.");
 assert.equal(price("royal_tax_decree_30m", 10_000, 5_000), 2_400, "The city premium must remain capped for large kingdoms.");
 assert.equal(price("royal_tax_decree_30m", 0, 0), 50, "New players must not receive free Shop items.");
-assert.equal(price("swift_march_order", 10_000, 0), 10_000);
-assert.equal(price("recall_horn", 10_000, 0), 13_000);
-assert.equal(price("war_drums_30m", 10_000, 0), 15_000);
-assert.equal(price("veil_of_silence_30m", 10_000, 0), 20_000);
-assert.equal(price("shield_12h", 10_000, 0), 35_000);
+assert.equal(price("veil_of_silence_30m", 10_000, 0), 1_800);
+assert.equal(price("war_drums_30m", 10_000, 0), 3_600);
+assert.equal(price("swift_march_order", 10_000, 0), 3_600);
+assert.equal(price("recall_horn", 10_000, 0), 5_400);
+assert.equal(price("shield_12h", 10_000, 0), 10_000);
+assert.equal(price("common_gear_box", 10_000, 0), 10_000);
 
 const rawPrice = price("royal_tax_decree_30m", 10_000, 100);
 assert.equal(rawPrice, price("royal_tax_decree_30m", 10_000, 100), "Price must depend only on raw production and city count.");
 assert.notEqual(rawPrice, price("royal_tax_decree_30m", 19_000, 100), "A boosted rate would incorrectly change the price.");
 assert.equal(Math.floor(10_000 * 0.5 * 30 / 60), 2_500, "Royal Tax value must remain 25% of raw hourly Gold.");
 
-for (const [itemId, multiplier] of Object.entries(hours)) {
+for (const [itemId, multiplier] of Object.entries(hours).filter(([itemId]) => itemId !== "common_gear_box")) {
   const escapedId = itemId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const escapedMultiplier = String(multiplier).replace(".", "\\.");
   const entryPattern = new RegExp(`\\[?(?:[A-Z_]+|${escapedId})\\]?:\\s*${escapedMultiplier}`);
   assert.match(client, entryPattern, `Client pricing is missing ${itemId} = ${multiplier} hours.`);
   assert.match(server, entryPattern, `Server pricing is missing ${itemId} = ${multiplier} hours.`);
 }
+assert.match(commonGearConfig, /const SHOP_PRICE_HOURS = 1;/, "The shared Common Gear Box cost must remain one raw Gold-production hour.");
+assert.match(client, /\[COMMON_GEAR_BOX_ITEM\.id\]: Math\.max\(0, Number\(COMMON_GEAR\?\.SHOP_PRICE_HOURS\) \|\| 1\)/, "Client Gear Box pricing must use the shared one-hour multiplier.");
+assert.match(server, /\[COMMON_GEAR_BOX_ITEM_ID\]: Math\.max\(0, safeNumber\(COMMON_GEAR\.SHOP_PRICE_HOURS, 1\)\)/, "Server Gear Box pricing must use the shared one-hour multiplier.");
 
 assert.match(client, /function getHarvestBonusBaseRates\(\)[\s\S]*?playerRegularCities\(\)[\s\S]*?includeSkillBoosts:\s*false[\s\S]*?includeStrongholdBoosts:\s*false[\s\S]*?includeTimedItemBoosts:\s*false/);
 assert.match(server, /function getShopPricingContext\(economy = null\)[\s\S]*?getRewardedAdBaseRates\(economy\)[\s\S]*?isStronghold\(city\)/);
@@ -88,6 +94,9 @@ for (const description of [
 }
 assert.doesNotMatch(client.match(/function getShopPurchaseState[\s\S]*?\n}/)?.[0] || "", /Scales from raw|raw base gold|city premium|30m value/);
 assert.match(commonGear, /function renderCommonGearShopItem[\s\S]*?data-shop-select="common_gear_box"/);
+assert.match(commonGear, /function getCommonGearBoxShopPrice\(\)[\s\S]{0,320}getShopPricingContext\(\)[\s\S]{0,320}calculateScalableShopPrice\(/, "The Gear Box must display its hour-scaled price.");
+assert.match(server, /function getCommonGearBoxPriceForEconomy[\s\S]{0,400}calculateScalableShopPrice\([\s\S]{0,200}COMMON_GEAR_BOX_ITEM_ID/, "The Gear Box price must be server-authoritative.");
+assert.match(server, /Math\.floor\(safeNumber\(data\.cost, 0\)\) !== status\.shop\.price[\s\S]{0,160}Gear Box price changed/, "A stale quoted Gear Box price must be rejected.");
 const commonGearRenderer = commonGear.match(/function renderCommonGearShopItem[\s\S]*?\n}/)?.[0] || "";
 assert.match(commonGearRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
 assert.doesNotMatch(commonGearRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|data-common-gear-buy|>Buy</);

@@ -1848,8 +1848,8 @@
     return callServerFunction("getCommonGearStatus", {});
   }
 
-  async function purchaseCommonGearBox() {
-    return callServerFunction("purchaseCommonGearBox", {});
+  async function purchaseCommonGearBox({ cost = 0 } = {}) {
+    return callServerFunction("purchaseCommonGearBox", { cost });
   }
 
   async function openCommonGearBox({ requestId = "" } = {}) {
