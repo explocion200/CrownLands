@@ -8574,7 +8574,7 @@ function normalizeScoutReports(reports) {
       reinforcementTroops,
       reinforcements,
       ownerFlag: report?.ownerFlag && typeof report.ownerFlag === "object"
-        ? normalizeFlag(report.ownerFlag)
+        ? normalizeFlag(report.ownerFlag, report.ownerUid || cityId)
         : null,
       totalDefense,
       baseTotalDefense,
@@ -8597,7 +8597,9 @@ function normalizeScoutReportReinforcements(rows) {
     .map(row => ({
       ownerUid: String(row?.ownerUid || "").slice(0, 128),
       ownerName: cleanName(row?.ownerName || "Ruler") || "Ruler",
-      ownerFlag: row?.ownerFlag && typeof row.ownerFlag === "object" ? normalizeFlag(row.ownerFlag) : null,
+      ownerFlag: row?.ownerFlag && typeof row.ownerFlag === "object"
+        ? normalizeFlag(row.ownerFlag, row.ownerUid)
+        : null,
       troops: Math.max(0, Math.floor(Number(row?.troops) || 0)),
       defenseCombatVersion: Math.max(0, Math.floor(Number(row?.defenseCombatVersion) || 0)),
       baseDefensePowerPerTroop: Math.max(1, Number(row?.baseDefensePowerPerTroop) || 1),
@@ -8943,7 +8945,7 @@ function normalizeBattleReports(reports) {
         opponentUid: String(report.opponentUid || "").slice(0, 128),
         opponentName: String(report.opponentName || "").slice(0, 40),
         opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
-          ? normalizeFlag(report.opponentFlag)
+          ? normalizeFlag(report.opponentFlag, report.opponentUid || report.opponentName)
           : null,
         scoutPerspective: report.scoutPerspective === "defender" ? "defender" : "",
         sourceCityId: String(report.sourceCityId || "").slice(0, 96),
@@ -10331,7 +10333,7 @@ function normalizeServerScoutReport(report = null) {
     reinforcementTroops,
     reinforcements,
     ownerFlag: report.ownerFlag && typeof report.ownerFlag === "object"
-      ? normalizeFlag(report.ownerFlag)
+      ? normalizeFlag(report.ownerFlag, report.ownerUid || report.cityId)
       : null,
     totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
     baseTotalDefense: Math.min(
@@ -23087,14 +23089,14 @@ function renderClanApplicantFlag(index) {
 
 function applyClanRosterFlags() {
   clanMembers.forEach((member, index) => {
-    FlagRenderer.render(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag(), {
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag, {
       stableKey: member.uid,
       context: "clan-roster",
       size: "small",
     });
   });
   clanApplications.forEach((application, index) => {
-    FlagRenderer.render(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag(), {
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag, {
       stableKey: application.uid,
       context: "clan-application",
       size: "small",
@@ -26184,7 +26186,7 @@ function showScoutReportModal(cityId) {
   const age = getScoutReportAgeSeconds(report);
   const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
-  const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
+  const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city);
   const currentPlayerUid = getCurrentOnlineUid();
   const rewardCampTarget = report.targetType === "camp" || isRewardCampTarget(city);
   const cityLevel = rewardCampTarget ? 0 : clampCityLevel(report.cityLevel || city.level);
@@ -34096,7 +34098,7 @@ function renderLeaderboardRows(rows) {
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
   entries.forEach((entry, index) => {
-    FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag(), {
+    FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag, {
       stableKey: entry.uid,
       context: "leaderboard",
       size: "small",
@@ -34341,7 +34343,7 @@ function renderBattleReportCard(report, index = 0) {
     ? report.troopCount
     : (report.sentTroops || report.troopCount || report.defendersLeft);
   const opponent = report.opponentName || report.ownerName || "Unknown";
-  const opponentFlag = report.opponentFlag
+  const opponentFlag = report.opponentFlag || report.opponentUid || report.opponentName
     ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
     : "";
   const troopLabel = defenderScout ? "troops seen" : report.type === "scout" ? "reported" : "sent";
@@ -34379,9 +34381,13 @@ function renderBattleReportCard(report, index = 0) {
 
 function applyBattleReportTargetFlags(reports = []) {
   reports.forEach((report, index) => {
-    if (!report?.opponentFlag) return;
     const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
-    FlagRenderer.render(flag, report.opponentFlag, { stableKey: report.opponentUid, context: "battle-report-list", size: "small" });
+    if (!flag) return;
+    FlagRenderer.render(flag, report.opponentFlag, {
+      stableKey: report.opponentUid || report.opponentName,
+      context: "battle-report-list",
+      size: "small",
+    });
   });
 }
 
@@ -34577,7 +34583,7 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
   const normalized = {
     ownerUid: String(participant.ownerUid || "").slice(0, 128),
     ownerName: String(participant.ownerName || "Unknown ruler").slice(0, 40),
-    ownerFlag: normalizeFlag(participant.ownerFlag || createDefaultFlag()),
+    ownerFlag: normalizeFlag(participant.ownerFlag, participant.ownerUid || participant.ownerName),
     clan: clan?.clanId ? clan : null,
     reinforcementId: reinforcement ? String(participant.reinforcementId || "").slice(0, 180) : "",
     role: participant.role === "leader" ? "leader" : participant.role === "ally" ? "ally" : "",
@@ -35387,7 +35393,7 @@ function applyDetailedBattleFlags(snapshot) {
   ]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
     const side = element.dataset.battleParticipantFlag;
-    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), {
+    FlagRenderer.render(element, flags.get(side), {
       stableKey: snapshot[side]?.ownerUid || side,
       context: "battle-report-detail",
     });
@@ -35395,8 +35401,8 @@ function applyDetailedBattleFlags(snapshot) {
 }
 
 function applyLegacyBattleFlags(report = null) {
-  const playerFlag = state?.flag || createDefaultFlag();
-  const opponentFlag = report?.opponentFlag || createDefaultFlag();
+  const playerFlag = state?.flag;
+  const opponentFlag = report?.opponentFlag;
   const flags = report?.type === "defense"
     ? new Map([["attacker", opponentFlag], ["defender", playerFlag]])
     : new Map([["attacker", playerFlag], ["defender", opponentFlag]]);
@@ -35404,8 +35410,8 @@ function applyLegacyBattleFlags(report = null) {
     const side = element.dataset.battleParticipantFlag;
     const stableKey = side === (report?.type === "defense" ? "defender" : "attacker")
       ? getCurrentOnlineUid()
-      : report?.opponentUid || side;
-    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), { stableKey, context: "battle-report-legacy" });
+      : report?.opponentUid || report?.opponentName || side;
+    FlagRenderer.render(element, flags.get(side), { stableKey, context: "battle-report-legacy" });
   });
 }
 
@@ -35483,8 +35489,8 @@ async function showBattleReportDetail(reportId) {
     if (isDefenderScoutReport(report)) {
       FlagRenderer.render(
         modalBody.querySelector("#scoutedReportAttackerFlag"),
-        report.opponentFlag || createDefaultFlag(),
-        { stableKey: report.opponentUid, context: "scout-report-detail" }
+        report.opponentFlag,
+        { stableKey: report.opponentUid || report.opponentName, context: "scout-report-detail" }
       );
     }
     return;
@@ -35810,7 +35816,7 @@ function renderCrownlandsIcon(name, className = "") {
   const extraClass = String(className || "").trim();
   const classes = extraClass ? `cl-icon ${escapeHtml(extraClass)}` : "cl-icon";
   const href = EXTERNAL_FLAG_ICON_KEYS.has(iconKey)
-    ? `/assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
+    ? `assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
     : `#cl-icon-${iconKey}`;
   return `<svg class="${classes}" aria-hidden="true" focusable="false"><use href="${href}"></use></svg>`;
 }
