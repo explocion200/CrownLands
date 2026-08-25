@@ -22,6 +22,15 @@ assert.match(controller, /refreshServerEconomy\(true[\s\S]*?revalidateInstantEco
 assert.match(controller, /action\.generation !== instantEconomyGeneration/, "Late responses from an old session are not ignored.");
 assert.match(game, /clearInstantEconomyActions\(\)[\s\S]*?onlineSaveAuthUid = nextUid/, "Auth generation changes do not clear queued actions.");
 assert.match(server, /instantEconomyActionsVersion: 1/, "Realm capabilities do not advertise instant economy actions.");
+assert.match(server, /cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION/, "Realm capabilities do not advertise authoritative city-upgrade modes.");
+assert.match(server, /mode === "exact"[\s\S]*?!plan\.exactSatisfied[\s\S]*?reason: "insufficient-gold"/, "Exact city upgrades are not enforced as all-or-nothing server transactions.");
+assert.match(server, /mode === "max"[\s\S]*?Number\.MAX_SAFE_INTEGER[\s\S]*?createCityUpgradePlan/, "MAX city upgrades are not calculated authoritatively without a client level cap.");
+assert.match(server, /cityUpgradeReceipts[\s\S]*?priorReceipt[\s\S]*?replayed: true/, "City upgrade requests are not idempotently replayed.");
+assert.match(server, /activeArmiesTargetingPlayerQuery\(uid\)[\s\S]*?isIncomingCityUpgradeAttack[\s\S]*?reason: "incoming-attack"/, "City upgrades do not revalidate incoming attacks on the server.");
+assert.match(controller, /supportsAuthoritativeCityUpgradeModes[\s\S]*?cityUpgradeModesVersion/, "The client does not gate authoritative city-upgrade modes on realm capability.");
+assert.match(controller, /action\.mode === "exact" \|\| action\.mode === "max"[\s\S]*?requestId: action\.requestId/, "Exact/MAX upgrades do not use one request-id-backed server call.");
+assert.match(controller, /action\.mode === "exact" \? \{ levels: action\.requestedLevels \} : \{\}/, "MAX requests must not send a client-computed level target.");
+assert.match(controller, /getPendingCityUpgradeAction[\s\S]*?coalesce: (?:requestedMode|mode) === "legacy"/, "Authoritative city upgrades must lock per city instead of coalescing repeated taps.");
 assert.match(server, /requestedQuantity = data\.quantity === undefined \? 1[\s\S]*?unitPrice = getShopItemPriceForEconomy\(economy, itemId\)[\s\S]*?purchasedQuantity: requestedQuantity[\s\S]*?unitPrice,[\s\S]*?spentGold: totalCost/, "Shop quantity purchases are not atomically priced and backward compatible.");
 assert.match(server, /const maxQuantity = stackable \? 25 : 1;[\s\S]*?activatedQuantity: requestedQuantity[\s\S]*?effectDurationAddedMs:[\s\S]*?requestedQuantity/, "Timed-item quantity activation is not bounded and aggregated.");
 assert.match(firebase, /purchaseShopItem\(\{ itemId = "", cost = 0, quantity = 1 \}[\s\S]*?\{ itemId, cost, quantity \}/, "The client wrapper drops Shop purchase quantities.");

@@ -15218,7 +15218,7 @@ function emitOnlineCityStateAnimations(previousById, nextCities, hydrated) {
       playCityCaptureAnimation(before, after);
       return;
     }
-    if (after.stage > before.stage && !serverCityUpgradeInFlightIds.has(city.id)) {
+    if (after.stage > before.stage && !isServerCityUpgradeInFlight(city)) {
       playCityUpgradeAnimation(before, after);
     }
   });
@@ -18223,6 +18223,17 @@ function getOwnedCitySnapshotById(cityId) {
   const id = getKnownCityId(cityId);
   if (!id) return null;
   return getAllOwnedCitiesForDisplay().find(city => city.id === id) || null;
+}
+
+function getOwnedCitySnapshotForUpgrade(cityId, regionId = "") {
+  const id = getKnownCityId(cityId);
+  if (!id) return null;
+  const normalizedRegionId = regionId ? normalizeRegionId(regionId) : "";
+  const activeCity = cityById(id);
+  if (activeCity && (!normalizedRegionId || getCityRegionId(activeCity) === normalizedRegionId)) return activeCity;
+  return getAllOwnedCitiesForDisplay().find(city => (
+    city.id === id && (!normalizedRegionId || getCityRegionId(city) === normalizedRegionId)
+  )) || null;
 }
 
 function ownedCities(owner) {
@@ -25517,11 +25528,15 @@ function renderSelectedCityWheel(city) {
   const projectedCity = getProjectedCityForInstantActions(city);
   const levelCost = getLevelCost(projectedCity);
   const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
-  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || getProjectedGold() < levelCost;
+  const upgradePending = Boolean(getPendingCityUpgradeAction(city, getCityRegionId(city)));
+  const levelDisabled = upgradePending || incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || getProjectedGold() < levelCost;
   const levelButtonLabel = incomingUpgradeLocked
     ? `${city.name} cannot be leveled while an attack is incoming`
+    : upgradePending ? `${city.name} already has an upgrade pending`
     : `Level up ${city.name}`;
-  const levelCostLabel = incomingUpgradeLocked
+  const levelCostLabel = upgradePending
+    ? "Pending"
+    : incomingUpgradeLocked
     ? "Incoming"
     : isStronghold(city) ? "Fixed" : Number.isFinite(levelCost) ? `${formatNumber(levelCost)}g` : "Unavailable";
   const scoutNearbyActive = bulkOrdersSupported && scoutNearbySourceId === city.id;
@@ -25534,7 +25549,7 @@ function renderSelectedCityWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action cl-action-button cl-action-royal wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" ${levelDisabled ? "disabled" : ""}>
+    <button class="city-wheel-action cl-action-button cl-action-royal wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" aria-busy="${upgradePending}" ${levelDisabled ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("upgrade")}</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${levelCostLabel}</span>
@@ -25562,7 +25577,7 @@ function renderSelectedCityWheel(city) {
   wheel.querySelector(".wheel-level").addEventListener("click", event => {
     event.stopPropagation();
     primeCityUpgradeAudio();
-    upgradeCity(city.id, 1);
+    upgradeCity(city.id, 1, { mode: "exact", regionId: getCityRegionId(city) });
   });
   wheel.querySelector(".wheel-send").addEventListener("click", event => {
     event.stopPropagation();
@@ -29709,49 +29724,50 @@ function renderCityListModal() {
 
   modalBody.querySelectorAll("[data-city-list-jump]").forEach(button => {
     button.addEventListener("click", () => {
-      focusCityListLocation(button.dataset.cityListJump);
+      focusCityListLocation(button.dataset.cityListJump, button.dataset.cityListRegion);
     });
   });
 
   modalBody.querySelectorAll("[data-city-list-info]").forEach(button => {
     button.addEventListener("click", async () => {
       modal.classList.remove("city-list-modal");
-      await openCityListInfo(button.dataset.cityListInfo);
+      await openCityListInfo(button.dataset.cityListInfo, button.dataset.cityListRegion);
     });
   });
+  bindCityLevelUpButtons(null, modalBody);
 }
 
-async function focusCityListLocation(cityId) {
-  const city = cityById(cityId) || getOwnedCitySnapshotById(cityId);
+async function focusCityListLocation(cityId, regionId = "") {
+  const city = getOwnedCitySnapshotForUpgrade(cityId, regionId);
   if (!city) {
     showToast("That city is no longer available.");
     return;
   }
-  const regionId = getCityRegionId(city);
+  const targetRegionId = getCityRegionId(city);
   if (modal.open) modal.close();
   scoutNearbySourceId = null;
   regroupSourceId = null;
   sendMode = false;
   selectedTargetId = null;
-  if (regionId !== getActiveMapRegionId()) {
-    await switchOnlineIsland(regionId);
-    if (regionId !== getActiveMapRegionId()) return;
+  if (targetRegionId !== getActiveMapRegionId()) {
+    await switchOnlineIsland(targetRegionId);
+    if (targetRegionId !== getActiveMapRegionId()) return;
   }
   selectCity(city.id);
   showToast(`Viewing ${city.name}`);
 }
 
-async function openCityListInfo(cityId) {
-  const city = cityById(cityId) || getOwnedCitySnapshotById(cityId);
+async function openCityListInfo(cityId, regionId = "") {
+  const city = getOwnedCitySnapshotForUpgrade(cityId, regionId);
   if (!city) {
     showToast("That city is no longer available.");
     return;
   }
-  const regionId = getCityRegionId(city);
-  if (regionId !== getActiveMapRegionId()) {
+  const targetRegionId = getCityRegionId(city);
+  if (targetRegionId !== getActiveMapRegionId()) {
     if (modal.open) modal.close();
-    const switched = await switchOnlineIsland(regionId);
-    if (!switched || regionId !== getActiveMapRegionId()) return;
+    const switched = await switchOnlineIsland(targetRegionId);
+    if (!switched || targetRegionId !== getActiveMapRegionId()) return;
   }
   showCityInfoModal(city.id);
 }
@@ -29789,6 +29805,14 @@ function getCityListSortLabel(key) {
   return cityListSortDirection === "desc" ? "Most" : "Fewest";
 }
 
+function renderCityListUpgradeButton(city, option) {
+  const pending = option.reason === "Pending";
+  const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
+  const label = pending && pendingAction?.mode === option.mode ? `${option.label}…` : option.label;
+  const details = option.reason || `${formatNumber(option.levels)} level${option.levels === 1 ? "" : "s"} · ${formatNumber(option.cost)} gold`;
+  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" aria-busy="${pending}" ${option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+}
+
 function renderCityListRow(city) {
   const isMain = isMainCityForList(city);
   const stronghold = isStronghold(city);
@@ -29796,15 +29820,20 @@ function renderCityListRow(city) {
   const regionLabel = getRegionLabel(getCityRegionId(city));
   const statusLabel = stronghold ? getStrongholdShortBonusLabel(city) : isMain ? "Main city" : "";
   const locationLabel = statusLabel ? `${statusLabel} - ${regionLabel}` : regionLabel;
+  const optionState = stronghold ? null : getCityUpgradeOptionState(city);
+  const regionId = getCityRegionId(city);
   return `
-    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}">
-      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
+    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}" ${optionState?.pendingAction ? `aria-busy="true"` : ""}>
+      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
       <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : renderCrownlandsIcon("city")}</span>
       <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">${renderCrownlandsIcon("troops")}</span></strong>
       <span class="city-list-name">${escapeHtml(city.name)}</span>
       <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
-      <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">${renderCrownlandsIcon("information")}</button>
+      <div class="city-list-actions">
+        ${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : ""}
+        <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">${renderCrownlandsIcon("information")}</button>
+      </div>
     </article>
   `;
 }
@@ -32919,83 +32948,86 @@ function getAffordableCityUpgradeLevels(city, levelLimit = Number.POSITIVE_INFIN
   return affordableLevels;
 }
 
-function renderCityLevelUpButton({ label, levels, cost, xp = 0, disabled, reason }) {
-  const safeLevels = Math.max(0, Math.floor(Number(levels) || 0));
-  const safeXp = Math.max(0, Math.floor(Number(xp) || 0));
-  const costLabel = Number.isFinite(cost) && cost > 0
-    ? `${formatNumber(cost)}g${safeXp > 0 ? ` · +${formatNumber(safeXp)} XP` : ""}`
-    : (reason || "Unavailable");
-  return `
-    <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" data-audio-effect="none" type="button" ${disabled ? "disabled" : ""}>
-      <span>${escapeHtml(label)}</span>
-      <small>${escapeHtml(reason || costLabel)}</small>
-    </button>`;
-}
-
-function renderCityLevelUpAction(city) {
-  if (!city || city.owner !== "player" || isStronghold(city)) return "";
+function getCityUpgradeOptionState(city) {
+  if (!city || city.owner !== "player" || isStronghold(city)) return null;
+  const regionId = getCityRegionId(city);
+  const pendingAction = getPendingCityUpgradeAction(city, regionId)
+    || (isServerCityUpgradePreviewPending(city, regionId) ? { mode: "" } : null);
   const projectedCity = getProjectedCityForInstantActions(city);
   const currentLevel = clampCityLevel(projectedCity?.level || 1);
-  const incomingBlockers = city ? getIncomingUpgradeBlockers(city.id) : [];
-  const baseDisabledReason = incomingBlockers.length
-    ? "Incoming"
-    : "";
+  const availableGold = getProjectedGold();
+  const incoming = getIncomingUpgradeBlockers(city.id).length > 0;
+  const unsupported = usesServerEconomyAuthority() && !supportsAuthoritativeCityUpgradeModes();
+  const baseReason = pendingAction ? "Pending" : incoming ? "Incoming" : unsupported ? "Refresh" : "";
   const oneCost = getMultiLevelCost(projectedCity, 1);
   const fiveCost = getMultiLevelCost(projectedCity, 5);
   const showCityUpgradeXp = CITY_UPGRADE_XP_ENABLED && usesServerEconomyAuthority();
   const oneXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 1) : 0;
   const fiveXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 5) : 0;
-  const affordableMax = baseDisabledReason ? 0 : getProjectedAffordableCityUpgradeLevels(city);
+  const affordableMax = baseReason ? 0 : getProjectedAffordableCityUpgradeLevels(city);
   const maxCost = affordableMax > 0 ? getMultiLevelCost(projectedCity, affordableMax) : Infinity;
   const maxXp = showCityUpgradeXp && affordableMax > 0 ? getCityUpgradeRawXp(currentLevel, affordableMax) : 0;
-  const nextLevelLabel = `Next: Lv ${formatNumber(currentLevel + 1)}`;
-  const availableGold = getProjectedGold();
-  const insufficientReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
-
-  return `
-    <section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}">
-      <div class="city-level-up-copy">
-        <strong>Level up city</strong>
-        <small>${escapeHtml(nextLevelLabel)}${oneXp > 0 ? ` · up to +${formatNumber(oneXp)} Hero XP` : ""} · Gold ${formatNumber(availableGold)}</small>
-      </div>
-      <div class="city-level-up-actions">
-        ${renderCityLevelUpButton({
-          label: "1 lvl",
-          levels: 1,
-          cost: oneCost,
-          xp: oneXp,
-          disabled: Boolean(baseDisabledReason) || availableGold < oneCost,
-          reason: baseDisabledReason || (availableGold < oneCost ? insufficientReason : ""),
-        })}
-        ${renderCityLevelUpButton({
-          label: "5 lvls",
-          levels: 5,
-          cost: fiveCost,
-          xp: fiveXp,
-          disabled: Boolean(baseDisabledReason) || !Number.isFinite(fiveCost) || availableGold < fiveCost,
-          reason: baseDisabledReason || (!Number.isFinite(fiveCost) ? "Unavailable" : availableGold < fiveCost ? `Need ${formatNumber(fiveCost)}g` : ""),
-        })}
-        ${renderCityLevelUpButton({
-          label: "Max",
-          levels: affordableMax,
-          cost: maxCost,
-          xp: maxXp,
-          disabled: Boolean(baseDisabledReason) || affordableMax < 1,
-          reason: baseDisabledReason || (affordableMax < 1
-            ? insufficientReason
-            : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g${maxXp > 0 ? ` · up to +${formatNumber(maxXp)} XP` : ""}`),
-        })}
-      </div>
-    </section>`;
+  const unavailableReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
+  const makeExactOption = (label, levels, cost, xp) => ({
+    label,
+    mode: "exact",
+    levels,
+    cost,
+    xp,
+    disabled: Boolean(baseReason) || !Number.isFinite(cost) || availableGold < cost,
+    reason: baseReason || (!Number.isFinite(cost) ? "Unavailable" : availableGold < cost ? `Need ${formatNumber(cost)}g` : ""),
+  });
+  return {
+    regionId,
+    currentLevel,
+    availableGold,
+    pendingAction,
+    options: [
+      makeExactOption("+1", 1, oneCost, oneXp),
+      makeExactOption("+5", 5, fiveCost, fiveXp),
+      {
+        label: "MAX",
+        mode: "max",
+        levels: affordableMax,
+        cost: maxCost,
+        xp: maxXp,
+        disabled: Boolean(baseReason) || affordableMax < 1,
+        reason: baseReason || (affordableMax < 1
+          ? unavailableReason
+          : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g${maxXp > 0 ? ` · +${formatNumber(maxXp)} XP` : ""}`),
+      },
+    ],
+  };
 }
 
-function bindCityLevelUpButtons(city) {
-  modalBody.querySelectorAll("[data-city-upgrade-levels]").forEach(button => {
+function renderCityLevelUpButton(city, option) {
+  const xp = normalizePowerValue(option.xp);
+  const details = Number.isFinite(option.cost) && option.cost > 0
+    ? `${formatNumber(option.cost)}g${xp > 0 ? ` · +${formatNumber(xp)} XP` : ""}`
+    : (option.reason || "Unavailable");
+  const pending = option.reason === "Pending";
+  const label = pending && option.mode === getPendingCityUpgradeAction(city, getCityRegionId(city))?.mode
+    ? `${option.label}…`
+    : option.label;
+  return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-busy="${pending}" ${option.disabled ? "disabled" : ""}><span>${escapeHtml(label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
+}
+
+function renderCityLevelUpAction(city) {
+  if (!city || city.owner !== "player" || isStronghold(city)) return "";
+  const optionState = getCityUpgradeOptionState(city);
+  if (!optionState) return "";
+  return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)}${optionState.options[0]?.xp > 0 ? ` · up to +${formatNumber(optionState.options[0].xp)} Hero XP` : ""} · Gold ${formatNumber(optionState.availableGold)}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
+}
+
+function bindCityLevelUpButtons(fallbackCity = null, root = modalBody) {
+  root?.querySelectorAll("[data-city-upgrade-mode]").forEach(button => {
     button.addEventListener("click", () => {
-      const levels = Math.max(0, Math.floor(Number(button.dataset.cityUpgradeLevels) || 0));
-      if (levels < 1) return;
+      const cityId = button.dataset.cityUpgradeCity || fallbackCity?.id || "";
+      const regionId = button.dataset.cityUpgradeRegion || (fallbackCity ? getCityRegionId(fallbackCity) : "");
+      const mode = button.dataset.cityUpgradeMode === "max" ? "max" : "exact";
+      const levels = mode === "max" ? 0 : Math.max(1, Math.floor(Number(button.dataset.cityUpgradeLevels) || 1));
       primeCityUpgradeAudio();
-      upgradeCity(city.id, levels);
+      upgradeCity(cityId, levels, { mode, regionId });
     });
   });
 }

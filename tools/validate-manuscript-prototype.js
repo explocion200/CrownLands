@@ -98,8 +98,9 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // current world adds canonical map metadata, while map rasters remain lazy.
 // Heraldry v2 adds four small runtime modules, its stylesheet, and the two
 // optimized charge sprites so the editor remains usable after installation.
-// City XP previews and replay-safe upgrades use the same bounded 16 KiB step.
-assert.ok(staticCacheBytes <= 3456 * 1024, "The service-worker installation cache exceeds 3.38 MiB.");
+// City XP previews, replay-safe upgrades, and the City List controls use the
+// same bounded 16 KiB step as the main asset-performance validator.
+assert.ok(staticCacheBytes <= 3472 * 1024, "The service-worker installation cache exceeds 3.39 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

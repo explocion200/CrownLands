@@ -855,10 +855,16 @@ function validateCityUpgradeCueContract(gameSource) {
   );
 
   const queuedUpgrade = extractFunction(gameSource, "upgradeCity");
+  const previewQueue = extractFunction(gameSource, "queueServerCityUpgradeWithPreview");
+  const actionKey = extractFunction(gameSource, "getCityUpgradeActionKey");
   const confirmedSettlement = extractFunction(gameSource, "executeInstantCityUpgrade");
   check(
-    /enqueueInstantEconomyAction/.test(queuedUpgrade) && !/serverCityUpgradeInFlightIds\.has/.test(queuedUpgrade),
-    "rapid city-upgrade taps must enqueue instead of being rejected by an in-flight lock"
+    /getPendingCityUpgradeAction/.test(queuedUpgrade)
+      && /already has an upgrade pending/.test(queuedUpgrade)
+      && /queueServerCityUpgradeWithPreview/.test(queuedUpgrade)
+      && /enqueueInstantEconomyAction/.test(previewQueue)
+      && /regionId/.test(actionKey),
+    "city upgrades must use one per-city pending lock while retaining queued settlement"
   );
   check(
     /if \(upgraded < 1\) throw/.test(confirmedSettlement)

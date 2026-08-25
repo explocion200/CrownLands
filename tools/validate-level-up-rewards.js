@@ -269,7 +269,7 @@ requireMatch(
 );
 requireMatch(
   serverUpgradeCitySource,
-  /while \(upgraded < requestedLevels\)[\s\S]*?const cityUpgradeXpCalculation[\s\S]*?buildPlayerProgressPatch/,
+  /createCityUpgradePlan\(city, goldFloat[\s\S]*?const cityUpgradeXpCalculation[\s\S]*?buildPlayerProgressPatch/,
   "Hero level-up Gold could affect affordability inside the same city-upgrade request."
 );
 requireMatch(
@@ -324,7 +324,7 @@ requireMatch(
 );
 requireMatch(
   serverUpgradeCitySource,
-  /type:\s*"CITY_UPGRADED"[\s\S]*?levelsGained:\s*upgraded/,
+  /type:\s*"CITY_UPGRADED"[\s\S]*?levelsGained:\s*(?:plan\.)?upgraded/,
   "City-upgrade mission and achievement events no longer carry the upgraded level count."
 );
 requireMatch(

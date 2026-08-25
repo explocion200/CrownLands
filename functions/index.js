@@ -141,6 +141,9 @@ const CITY_UPGRADE_EARLY_END_HOURS = economyNumber("cityEconomy.upgradeEarlyEndH
 const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours", 36);
 const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
 const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
+const CITY_UPGRADE_MODES_VERSION = 1;
+const CITY_UPGRADE_EXACT_LEVEL_LIMIT = 25;
+const CITY_UPGRADE_RECEIPT_LIMIT = 20;
 const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
 const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
 const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
@@ -11094,6 +11097,87 @@ function getCityUpgradeCost(city = {}, bonuses = {}) {
   return Math.max(10, Math.floor(totalCost * (1 - Math.min(85, reduction) / 100) + 0.000001));
 }
 
+function normalizeCityUpgradeMode(value = "") {
+  const mode = safeString(value, 16).toLowerCase();
+  return mode === "exact" || mode === "max" ? mode : "legacy";
+}
+
+function normalizeCityUpgradeRequestId(value = "") {
+  const requestId = safeString(value, 96);
+  return /^[a-zA-Z0-9_-]{8,96}$/.test(requestId) ? requestId : "";
+}
+
+function normalizeCityUpgradeReceipts(raw = []) {
+  return (Array.isArray(raw) ? raw : [])
+    .map(receipt => {
+      const requestId = normalizeCityUpgradeRequestId(receipt?.requestId);
+      const signature = safeString(receipt?.signature, 240);
+      if (!requestId || !signature) return null;
+      return {
+        requestId,
+        signature,
+        mode: normalizeCityUpgradeMode(receipt?.mode),
+        upgraded: Math.max(0, Math.floor(safeNumber(receipt?.upgraded, 0))),
+        spentGold: Math.max(0, Math.floor(safeNumber(receipt?.spentGold, 0))),
+        finalLevel: clampCityLevel(receipt?.finalLevel),
+        createdAtMs: Math.max(0, timestampToMs(receipt?.createdAtMs)),
+      };
+    })
+    .filter(Boolean)
+    .slice(-CITY_UPGRADE_RECEIPT_LIMIT);
+}
+
+function createCityUpgradeRequestSignature({ mode = "legacy", regionId = "", cityId = "", requestedLevels = 1 } = {}) {
+  return [
+    normalizeCityUpgradeMode(mode),
+    normalizeRegionId(regionId),
+    safeString(cityId, 96),
+    mode === "exact" ? Math.max(1, Math.floor(safeNumber(requestedLevels, 1))) : 0,
+  ].join(":");
+}
+
+function createCityUpgradePlan(city = {}, availableGoldFloat = 0, bonuses = {}, options = {}) {
+  const mode = normalizeCityUpgradeMode(options.mode);
+  const requestedLevels = mode === "max"
+    ? Number.MAX_SAFE_INTEGER
+    : clampInt(options.requestedLevels || 1, 1, CITY_UPGRADE_EXACT_LEVEL_LIMIT);
+  const plannedCity = { ...city };
+  const availableGold = Math.max(0, Math.floor(safeNumber(availableGoldFloat, 0)));
+  let remainingGold = availableGold;
+  let upgraded = 0;
+  let spentGold = 0;
+
+  while (upgraded < requestedLevels) {
+    const cost = getCityUpgradeCost(plannedCity, bonuses);
+    if (!Number.isFinite(cost) || cost > remainingGold) break;
+    const currentLevel = clampCityLevel(plannedCity.level);
+    const nextLevel = clampCityLevel(currentLevel + 1);
+    if (nextLevel <= currentLevel) break;
+    plannedCity.level = nextLevel;
+    remainingGold -= cost;
+    spentGold += cost;
+    upgraded += 1;
+  }
+
+  return {
+    mode,
+    requestedLevels: mode === "max" ? 0 : requestedLevels,
+    upgraded,
+    spentGold,
+    finalLevel: clampCityLevel(plannedCity.level),
+    nextCost: getCityUpgradeCost(plannedCity, bonuses),
+    exactSatisfied: mode !== "exact" || upgraded === requestedLevels,
+  };
+}
+
+function isIncomingCityUpgradeAttack(army = {}, cityId = "", regionId = "", nowMs = Date.now()) {
+  if (!army || army.returning || safeString(army.kind, 32).toLowerCase() !== "attack") return false;
+  if (safeString(army.toId || army.targetId, 96) !== safeString(cityId, 96)) return false;
+  const targetRegionId = normalizeRegionId(army.targetRegionId || army.regionId || getRegionIdFromOnlineIslandId(army.islandId));
+  if (targetRegionId !== normalizeRegionId(regionId)) return false;
+  return timestampToMs(army.arrivesAtMs || army.resolveAtMs) > nowMs;
+}
+
 function getEconomyCityByRef(economy = null, ref = null) {
   if (!economy || !ref) return null;
   return economy.cityEntries.find(entry => entry.ref.path === ref.path) || null;
@@ -13681,6 +13765,7 @@ exports.getRealmInfo = timedCallable(
       capabilities: {
         shardedGameServerHeartbeats: true,
         instantEconomyActionsVersion: 1,
+        cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION,
         commonGearVersion: COMMON_GEAR.SCHEMA_VERSION,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
         bulkOrdersVersion: BULK_ORDERS_VERSION,
@@ -16345,8 +16430,13 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
   const uid = requireAuth(request);
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
-  const requestedLevels = clampInt(data.levels || 1, 1, 25);
+  const regionId = requireKnownWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
+  const rawMode = safeString(data.mode, 16).toLowerCase();
+  if (rawMode && rawMode !== "exact" && rawMode !== "max") {
+    throw new HttpsError("invalid-argument", "That city upgrade mode is not supported.");
+  }
+  const mode = normalizeCityUpgradeMode(rawMode);
+  const requestedLevels = mode === "max" ? 0 : Number(data.levels ?? 1);
   const upgradeRequestCompatibility = resolveCityUpgradeRequestCompatibility(data.requestId);
   const { requestId, legacyRequest } = upgradeRequestCompatibility;
   const acknowledgedCapSuppressedXp = Math.min(
@@ -16368,6 +16458,21 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       }
     );
   }
+  if (mode === "exact" && (!Number.isInteger(requestedLevels) || requestedLevels < 1 || requestedLevels > CITY_UPGRADE_EXACT_LEVEL_LIMIT)) {
+    throw new HttpsError("invalid-argument", `Exact city upgrades must request 1 to ${CITY_UPGRADE_EXACT_LEVEL_LIMIT} whole levels.`);
+  }
+  if (mode !== "legacy" && !requestId) {
+    throw new HttpsError("invalid-argument", "A city upgrade request id is required.");
+  }
+  const normalizedRequestedLevels = mode === "legacy"
+    ? clampInt(requestedLevels, 1, CITY_UPGRADE_EXACT_LEVEL_LIMIT)
+    : requestedLevels;
+  const requestSignature = createCityUpgradeRequestSignature({
+    mode,
+    regionId,
+    cityId,
+    requestedLevels: normalizedRequestedLevels,
+  });
 
   return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
@@ -16376,14 +16481,25 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     const requestSnap = requestRef ? await transaction.get(requestRef) : null;
     if (requestSnap?.exists && requestSnap.data()?.response) {
       const priorRequest = requestSnap.data() || {};
-      if (
-        safeString(priorRequest.cityId, 96) !== cityId
-        || normalizeRegionId(priorRequest.regionId) !== regionId
-        || clampInt(priorRequest.requestedLevels, 1, 25) !== requestedLevels
-      ) {
-        throw new HttpsError("failed-precondition", "That city upgrade request ID was already used.");
+      const priorRequestSignature = safeString(priorRequest.requestSignature, 240);
+      const priorRequestMatches = priorRequestSignature
+        ? priorRequestSignature === requestSignature
+        : (
+          safeString(priorRequest.cityId, 96) === cityId
+          && normalizeRegionId(priorRequest.regionId) === regionId
+          && normalizeCityUpgradeMode(priorRequest.mode) === mode
+          && (
+            mode === "max"
+            || clampInt(priorRequest.requestedLevels, 1, CITY_UPGRADE_EXACT_LEVEL_LIMIT) === normalizedRequestedLevels
+          )
+        );
+      if (!priorRequestMatches) {
+        throw new HttpsError("invalid-argument", "That city upgrade request ID was already used for another action.");
       }
-      return priorRequest.response;
+      return {
+        ...priorRequest.response,
+        replayed: true,
+      };
     }
     const cityRef = cityRefForRegion(regionId, cityId);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
@@ -16395,6 +16511,48 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       throw new HttpsError("failed-precondition", "Strongholds cannot be upgraded.");
     }
 
+    const receipts = normalizeCityUpgradeReceipts(economy.profileAfter.cityUpgradeReceipts);
+    const priorReceipt = mode !== "legacy"
+      ? receipts.find(receipt => receipt.requestId === requestId)
+      : null;
+    if (priorReceipt && priorReceipt.signature !== requestSignature) {
+      throw new HttpsError("invalid-argument", "That city upgrade request id was already used for another action.");
+    }
+    if (priorReceipt) {
+      const currentCity = cityEntry.city;
+      const cityUpdate = {
+        id: currentCity.id,
+        regionId: currentCity.regionId || regionId,
+        level: clampCityLevel(currentCity.level),
+        investedGold: Math.max(0, Math.floor(safeNumber(currentCity.investedGold, 0))),
+        troops: Math.max(0, Math.floor(safeNumber(currentCity.troops, 0))),
+        troopFloat: Math.max(0, safeNumber(currentCity.troopFloat, currentCity.troops || 0)),
+        productionUpdatedAtMs: timestampToMs(currentCity.productionUpdatedAtMs) || nowMs,
+      };
+      writePreparedEconomy(transaction, economy);
+      return createEconomyResponse(economy, {
+        cityUpdates: [...economy.cityUpdates, cityUpdate],
+        mode: priorReceipt.mode,
+        requestedLevels: priorReceipt.mode === "max" ? 0 : normalizedRequestedLevels,
+        upgraded: priorReceipt.upgraded,
+        spentGold: priorReceipt.spentGold,
+        finalLevel: priorReceipt.finalLevel,
+        replayed: true,
+      });
+    }
+
+    const incomingArmiesSnap = await transaction.get(activeArmiesTargetingPlayerQuery(uid));
+    const incomingAttack = incomingArmiesSnap.docs.some(doc => (
+      isIncomingCityUpgradeAttack({ id: doc.id, ...doc.data() }, cityId, regionId, nowMs)
+    ));
+    if (incomingAttack) {
+      throw new HttpsError(
+        "failed-precondition",
+        "That city cannot be upgraded while an attack is incoming.",
+        { reason: "incoming-attack", cityId, regionId }
+      );
+    }
+
     const city = { ...cityEntry.city };
     const startingCityLevel = clampCityLevel(city.level);
     const highWatermarkRef = cityUpgradeXpHighWatermarkRef(uid, regionId, cityId);
@@ -16402,8 +16560,6 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     let goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold));
     let gold = Math.max(0, Math.floor(goldFloat));
     let investedGold = Math.max(0, Math.floor(safeNumber(city.investedGold, 0)));
-    let upgraded = 0;
-    let spentGold = 0;
     const upgradeBonuses = {
       ...economy.bonuses,
       upgradeCostReductionPercent: Math.min(
@@ -16413,27 +16569,40 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       ),
     };
 
-    while (upgraded < requestedLevels) {
-      const cost = getCityUpgradeCost(city, upgradeBonuses);
-      if (!Number.isFinite(cost) || gold < cost) break;
-      const nextLevel = clampCityLevel(city.level + 1);
-      if (nextLevel <= clampCityLevel(city.level)) break;
-      goldFloat = Math.max(0, goldFloat - cost);
-      gold = Math.max(0, Math.floor(goldFloat));
-      investedGold += cost;
-      city.level = nextLevel;
-      spentGold += cost;
-      upgraded += 1;
-    }
+    const plan = createCityUpgradePlan(city, goldFloat, upgradeBonuses, {
+      mode,
+      requestedLevels: normalizedRequestedLevels,
+    });
 
-    if (!upgraded) {
+    if (mode === "exact" && !plan.exactSatisfied) {
+      const requiredPlan = createCityUpgradePlan(city, Number.MAX_SAFE_INTEGER, upgradeBonuses, {
+        mode: "exact",
+        requestedLevels: normalizedRequestedLevels,
+      });
       throw new HttpsError(
         "failed-precondition",
-        Number.isFinite(getCityUpgradeCost(city, upgradeBonuses))
+        `Not enough gold to upgrade that city by ${normalizedRequestedLevels} levels.`,
+        {
+          reason: "insufficient-gold",
+          requiredGold: requiredPlan.spentGold,
+          availableGold: gold,
+          requestedLevels: normalizedRequestedLevels,
+        }
+      );
+    }
+    if (!plan.upgraded) {
+      throw new HttpsError(
+        "failed-precondition",
+        Number.isFinite(plan.nextCost)
           ? "Not enough gold to upgrade that city."
           : "That upgrade is outside the supported number range."
       );
     }
+
+    city.level = plan.finalLevel;
+    investedGold += plan.spentGold;
+    goldFloat = Math.max(0, goldFloat - plan.spentGold);
+    gold = Math.max(0, Math.floor(goldFloat));
 
     const cityPatch = {
       level: city.level,
@@ -16512,6 +16681,18 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     if (existingCityUpdate) Object.assign(existingCityUpdate, cityUpdate);
     else economy.cityUpdates.push(cityUpdate);
 
+    const nextReceipts = mode === "legacy" ? receipts : [
+      ...receipts.filter(receipt => receipt.requestId !== requestId),
+      {
+        requestId,
+        signature: requestSignature,
+        mode,
+        upgraded: plan.upgraded,
+        spentGold: plan.spentGold,
+        finalLevel: plan.finalLevel,
+        createdAtMs: nowMs,
+      },
+    ].slice(-CITY_UPGRADE_RECEIPT_LIMIT);
     const profileOverrides = progress ? {
       gold: progress.gold,
       goldFloat: progress.goldFloat,
@@ -16519,9 +16700,11 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       ...(cityUpgradeXpCalculation.dailyState
         ? { cityUpgradeXpDaily: cityUpgradeXpCalculation.dailyState }
         : {}),
+      ...(mode === "legacy" ? {} : { cityUpgradeReceipts: nextReceipts }),
     } : {
       gold,
       goldFloat,
+      ...(mode === "legacy" ? {} : { cityUpgradeReceipts: nextReceipts }),
     };
     writePreparedEconomy(transaction, economy, profileOverrides);
     transaction.set(highWatermarkRef, {
@@ -16542,19 +16725,25 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     }, { merge: true });
     enqueueDailyMissionEvent(transaction, {
       uid,
-      eventId: `city_upgrade_${regionId}_${cityId}_${nowMs}_${city.level}`,
+      eventId: legacyRequest
+        ? `city_upgrade_${regionId}_${cityId}_${nowMs}_${city.level}`
+        : `city_upgrade_${uid}_${requestId}`,
       type: "CITY_UPGRADED",
       occurredAtMs: nowMs,
       cityId,
-      levelsGained: upgraded,
-      goldSpent: spentGold,
+      levelsGained: plan.upgraded,
+      goldSpent: plan.spentGold,
     });
 
     const response = createEconomyResponse(economy, {
       ...profileOverrides,
       cityUpdates: economy.cityUpdates,
-      spentGold,
-      upgraded,
+      mode,
+      requestedLevels: mode === "max" ? 0 : normalizedRequestedLevels,
+      spentGold: plan.spentGold,
+      upgraded: plan.upgraded,
+      finalLevel: plan.finalLevel,
+      replayed: false,
       cityUpgradeXp,
       levelUpReward,
       legacyCityUpgradeRequest: legacyRequest,
@@ -16565,7 +16754,9 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
         requestId,
         cityId,
         regionId,
-        requestedLevels,
+        mode,
+        requestedLevels: normalizedRequestedLevels,
+        requestSignature,
         acknowledgedCapSuppressedXp,
         acknowledgedRebuildSuppressedXp,
         resetGeneration: RESET_GENERATION,
