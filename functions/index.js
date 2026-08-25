@@ -958,13 +958,17 @@ function requireCompatibleClient(data = {}) {
   const identity = refreshActiveRealmIdentity(Date.now());
   const clientReleaseId = safeString(data.clientReleaseId, 120);
   const currentRealmShardId = getCurrentRealmShardId();
-  const realmScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
-    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID
+  const resetWorldScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID;
+  const realmScopeMatches = resetWorldScopeMatches
     && REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === currentRealmShardId;
   const legacyClientMatches = identity.mode === "legacy"
     && currentRealmShardId === LEGACY_REALM_SHARD_ID
+    && resetWorldScopeMatches
+    && (!safeString(data.clientRealmShardId, 120)
+      || REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === LEGACY_REALM_SHARD_ID)
     && LEGACY_COMPATIBLE_CLIENTS.some(entry => entry.releaseId === clientReleaseId);
-  if (!realmScopeMatches || (clientReleaseId !== REALM_RELEASE_ID && !legacyClientMatches)) {
+  if ((!realmScopeMatches || clientReleaseId !== REALM_RELEASE_ID) && !legacyClientMatches) {
     throw new HttpsError("failed-precondition", "Crownlands was updated. Refresh before continuing.");
   }
 }
@@ -972,12 +976,14 @@ function requireCompatibleClient(data = {}) {
 function getRealmInfoResponseContract(data = {}) {
   const clientReleaseId = safeString(data.clientReleaseId, 120);
   const currentRealmShardId = getCurrentRealmShardId();
-  const realmScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
-    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID
-    && REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === currentRealmShardId;
+  const resetWorldScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID;
+  const legacyRealmScopeMatches = resetWorldScopeMatches
+    && (!safeString(data.clientRealmShardId, 120)
+      || REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === LEGACY_REALM_SHARD_ID);
   const legacyClient = ACTIVE_REALM_IDENTITY.mode === "legacy"
     && currentRealmShardId === LEGACY_REALM_SHARD_ID
-    && realmScopeMatches
+    && legacyRealmScopeMatches
     ? LEGACY_COMPATIBLE_CLIENTS.find(entry => entry.releaseId === clientReleaseId)
     : null;
   return legacyClient || {

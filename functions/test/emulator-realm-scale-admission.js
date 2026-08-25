@@ -65,7 +65,9 @@ async function callFunction(name, token, data = {}, clientIdentity = {}) {
         clientReleaseId: clientIdentity.releaseId || realm.releaseId,
         clientResetGeneration: clientIdentity.resetGeneration || realm.resetGeneration,
         clientWorldId: clientIdentity.worldId || realm.worldId,
-        clientRealmShardId: clientIdentity.realmShardId || "legacy",
+        ...(clientIdentity.omitRealmShardId
+          ? {}
+          : { clientRealmShardId: clientIdentity.realmShardId || "legacy" }),
       },
     }),
   });
@@ -99,7 +101,7 @@ async function main() {
     releaseId: legacyClient.releaseId,
     resetGeneration: realm.resetGeneration,
     worldId: realm.worldId,
-    realmShardId: "legacy",
+    omitRealmShardId: true,
   };
   const legacyRealmInfo = await callFunction("getRealmInfo", users[0].token, {}, legacyIdentity);
   assert(legacyRealmInfo?.releaseId === legacyClient.releaseId, "The legacy client did not receive its compatible release ID.");
