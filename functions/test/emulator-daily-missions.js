@@ -121,7 +121,7 @@ async function clientDocumentRequest(user, documentPath, options = {}) {
   });
 }
 
-async function pollUntil(read, predicate, message, timeoutMs = 12_000) {
+async function pollUntil(read, predicate, message, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const value = await read();

@@ -76,7 +76,13 @@ requires(
   ["function renderBattleHeroSide", "function renderBattleReportHero", /renderPlayerNameLink\(primary\.ownerUid,\s*primary\.ownerName/, "Visual battle sides do not link their primary rulers."],
 ].forEach(([start, end, pattern, message]) => requires(between(client, start, end), pattern, message));
 
-requires(client, /function deedCampHistoryMarkup[\s\S]*?renderPlayerNameLink\(entry\.awardedToPlayerId/, "Deed Camp reward recipients are not linked.");
+const deedHistory = between(client, "function deedCampHistoryMarkup", "function findDeedCampHistoryPanel");
+assert.doesNotMatch(
+  deedHistory,
+  /awardedToPlayerId|renderPlayerNameLink/,
+  "Player-private Deed Camp history must not expose or link reward-recipient identities."
+);
+requires(deedHistory, /Awarded to you/, "Player-private Deed Camp history does not identify awards as the viewer's own.");
 requires(client, /function showCityInfoModal[\s\S]*?renderPlayerNameLink\(city\.ownerUid/, "City and objective owners are not linked.");
 requires(client, /function renderLeaderboardRow[\s\S]*?renderPlayerNameLink\(entry\.uid/, "Player leaderboard names are not linked.");
 

@@ -290,6 +290,7 @@ async function main() {
         currentGarrison: 0,
         troops: 0,
         troopFloat: 0,
+        alliedReinforcementTroops: 1,
         activeArmyIds: [],
         returnSourceCityId: claim.cityId,
         returnSourceRegionId: mainRegionId,
