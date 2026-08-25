@@ -314,14 +314,16 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const COMMON_GEAR_BOX_ITEM_ID = "common_gear_box";
 const SHOP_MINIMUM_PRICE_GOLD = 50;
 const SHOP_PRICE_HOURS = Object.freeze({
   [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
-  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
-  [RECALL_HORN_ITEM_ID]: 1.25,
-  [WAR_DRUMS_ITEM_ID]: 1.5,
-  [VEIL_OF_SILENCE_ITEM_ID]: 2,
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 0.18,
+  [WAR_DRUMS_ITEM_ID]: 0.36,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 0.36,
+  [RECALL_HORN_ITEM_ID]: 0.54,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [COMMON_GEAR_BOX_ITEM_ID]: Math.max(0, safeNumber(COMMON_GEAR.SHOP_PRICE_HOURS, 1)),
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const ALLIED_TARGET_RETURN_REASON = "target_became_clan_ally";
@@ -13097,7 +13099,16 @@ function requireCommonGearInstance(gear, instanceId) {
   return instance;
 }
 
-function createCommonGearClientStatus(profile = {}, nowMs = Date.now()) {
+function getCommonGearBoxPriceForEconomy(economy = null) {
+  const context = getShopPricingContext(economy);
+  return calculateScalableShopPrice(
+    COMMON_GEAR_BOX_ITEM_ID,
+    context.rawBaseGoldPerHour,
+    context.cityCount
+  );
+}
+
+function createCommonGearClientStatus(profile = {}, nowMs = Date.now(), economy = null) {
   const gear = normalizeCommonGear(profile);
   const today = getUtcDateKey(nowMs);
   const purchasedToday = gear.shopPurchase.utcDate === today ? gear.shopPurchase.purchaseCount : 0;
@@ -13109,7 +13120,7 @@ function createCommonGearClientStatus(profile = {}, nowMs = Date.now()) {
       purchaseCount: purchasedToday,
       dailyLimit: COMMON_GEAR.SHOP_DAILY_LIMIT,
       available: purchasedToday < COMMON_GEAR.SHOP_DAILY_LIMIT,
-      price: COMMON_GEAR.SHOP_PRICE_GOLD,
+      price: getCommonGearBoxPriceForEconomy(economy),
       resetsAtMs: getNextUtcDayStartMs(nowMs),
     },
   };
@@ -13121,16 +13132,20 @@ exports.getCommonGearStatus = onCall({ region: "us-central1", maxInstances: 30, 
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy);
-    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, nowMs), ...createEconomyResponse(economy) };
+    return { ok: true, ...createCommonGearClientStatus(economy.profileAfter, nowMs, economy), ...createEconomyResponse(economy) };
   });
 });
 
 exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  const data = request.data || {};
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    const status = createCommonGearClientStatus(economy.profileAfter, nowMs);
+    const status = createCommonGearClientStatus(economy.profileAfter, nowMs, economy);
+    if (Number.isFinite(Number(data.cost)) && Math.floor(safeNumber(data.cost, 0)) !== status.shop.price) {
+      throw new HttpsError("failed-precondition", "Gear Box price changed. Refresh the Shop and try again.");
+    }
     if (!status.shop.available) throw new HttpsError("resource-exhausted", "You already bought today's Common Gear Box.");
     if (economy.goldFloat < status.shop.price) throw new HttpsError("failed-precondition", "Not enough gold for today's Common Gear Box.");
     const gear = status.gear;
@@ -13142,7 +13157,7 @@ exports.purchaseCommonGearBox = onCall({ region: "us-central1", maxInstances: 30
     writePreparedEconomy(transaction, economy, { gear, gold, goldFloat });
     return createEconomyResponse(economy, {
       gear, gold, goldFloat, purchased: true, spentGold: status.shop.price,
-      commonGearStatus: createCommonGearClientStatus({ gear }, nowMs),
+      commonGearStatus: createCommonGearClientStatus({ gear }, nowMs, economy),
     });
   });
 });
