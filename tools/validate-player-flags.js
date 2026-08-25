@@ -21,6 +21,7 @@ const rules = read("firestore.rules");
 const productionBuilder = read("tools/build-production-client.js");
 const productionValidator = read("tools/validate-production-artifact.js");
 const qaPage = read("docs/visual-qa/player-flags/index.html");
+const hudResponsiveQaPage = read("docs/visual-qa/player-flags/hud-frame-responsive.html");
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -165,6 +166,21 @@ assert.match(editorStyles, /background-color:\s*var\(--flag-swatch\)/);
 assert.match(editorStyles, /player-flag-editor__swatch::after/);
 assert.doesNotMatch(editorStyles.match(/player-flag-editor__swatch\s*\{[\s\S]*?\n\}/)?.[0] || "", /!important/);
 
+const hudProfileButtonRule = styles.match(/\.profile-button\s*\{[\s\S]*?\n\}/)?.[0] || "";
+const hudFlagRule = styles.match(/\.profile-button \.kingdom-flag-small\s*\{[\s\S]*?\n\}/)?.[0] || "";
+assert.match(hudFlagRule, /--hud-flag-aperture-inset:\s*\d+%/,
+  "The HUD flag no longer defines a frame-aperture inset.");
+assert.match(hudFlagRule, /--hud-flag-aperture-radius:\s*\d+%/,
+  "The HUD flag no longer defines a responsive frame-aperture radius.");
+assert.match(hudFlagRule, /clip-path:\s*inset\(var\(--hud-flag-aperture-inset\) round var\(--hud-flag-aperture-radius\)\)/,
+  "The HUD flag is not clipped to the profile frame's rounded inner window.");
+assert.match(hudFlagRule, /contain:\s*paint/,
+  "HUD flag pattern and symbol paint can escape its dedicated aperture.");
+assert.doesNotMatch(styles, /\.profile-button \.kingdom-flag-small\s*\{[^}]*border-radius:\s*0(?:\D|$)/,
+  "A responsive HUD rule restores square flag corners inside the rounded frame.");
+assert.doesNotMatch(hudProfileButtonRule, /overflow:\s*(?:hidden|clip)/,
+  "The profile button must not clip the ornate frame, shadow, level badge, or focus ring.");
+
 const swatchRenderer = extractFunction(game, "renderFlagSwatches");
 assert.match(swatchRenderer, /Current saved color/);
 assert.match(swatchRenderer, /background-color:var\(--flag-swatch\)/);
@@ -231,8 +247,17 @@ for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /player-flag-editor\.css/);
   assert.match(source, /assets\/flag-symbols\/runtime\.svg/);
 }
-for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "21 selectable symbol cards", "legacy-only symbols hidden from selector", "14 pattern cards", "computed visual checks"]) {
+for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "21 selectable symbol cards", "legacy-only symbols hidden from selector", "14 pattern cards", "HUD profile frame aperture", "14 HUD frame pattern cases", "HUD flag aperture clips rounded frame corners", "HUD frame art remains unclipped", "computed visual checks"]) {
   assert.ok(qaPage.includes(token), `Player-flag visual QA is missing ${token}.`);
+}
+assert.match(qaPage, /version:\s*index % 2 \? 2 : 1/, "HUD visual QA no longer alternates stored v1 and v2 flags.");
+assert.match(qaPage, /data-hud-case/, "HUD visual QA no longer renders flags inside the production profile frame.");
+for (const token of ["Desktop · 1180 × 390", "Narrow landscape · 760 × 470", "Mobile portrait · 390 × 1080", "index.html?state=hud"]) {
+  assert.ok(hudResponsiveQaPage.includes(token), `Responsive HUD-frame visual QA is missing ${token}.`);
+}
+for (const screenshot of ["hud-frame-before-live.png", "hud-frame-after-desktop.png", "hud-frame-after-narrow.png", "hud-frame-after-mobile.png"]) {
+  const screenshotPath = path.join(root, "docs", "visual-qa", "player-flags", "screenshots", screenshot);
+  assert.ok(fs.existsSync(screenshotPath) && fs.statSync(screenshotPath).size > 10000, `HUD-frame visual QA screenshot is missing or empty: ${screenshot}`);
 }
 assert.match(qaPage, /function renderSymbolOptions\(\)/, "Player-flag visual QA lacks live symbol selection wiring.");
 assert.match(qaPage, /draft\.symbol = button\.dataset\.qaSymbol;[\s\S]*renderPreview\(\);[\s\S]*renderSymbolOptions\(\);/, "Player-flag visual QA does not repaint both previews and selected controls after a symbol change.");
