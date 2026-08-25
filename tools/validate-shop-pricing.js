@@ -71,7 +71,11 @@ const paidRenderer = client.match(/function renderShopItem[\s\S]*?\n}/)?.[0] || 
 assert.match(paidRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
 assert.doesNotMatch(paidRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|item\.description|shop-item-value|data-shop-buy|>Buy</);
 assert.match(paidRenderer, /aria-label="\$\{escapeHtml\(item\.label\)\}"/);
-assert.match(client, /function renderShopPurchaseBar[\s\S]*?shop-purchase-description[\s\S]*?data-shop-selected-owned[\s\S]*?data-shop-selected-price[\s\S]*?data-shop-purchase-selected/);
+assert.match(client, /function renderShopPurchaseBar[\s\S]*?shop-purchase-description[\s\S]*?data-shop-selected-owned[\s\S]*?data-shop-selected-daily[\s\S]*?data-shop-selected-price[\s\S]*?data-shop-purchase-selected/);
+const purchaseStateRenderer = client.match(/function getShopPurchaseState[\s\S]*?\n}/)?.[0] || "";
+assert.match(purchaseStateRenderer, /purchaseCount[\s\S]*?purchaseLimit/, "The selected Shop item must expose today's purchase count and cap.");
+assert.match(purchaseStateRenderer, /canBuy:\s*available && affordable/, "A pending purchase must not disable rapid repeat buying.");
+assert.doesNotMatch(purchaseStateRenderer, /canBuy:\s*!pending/, "The Shop still waits for each server response before accepting another purchase.");
 for (const description of [
   "Boosts Gold production for 30 minutes.",
   "Protects your city for a limited time.",

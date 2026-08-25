@@ -31904,7 +31904,11 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const id = String(itemId || "");
   if (id === COMMON_GEAR_BOX_ITEM.id && COMMON_GEAR) {
     const purchase = state?.gear?.shopPurchase || {};
-    const unavailable = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
+    const purchaseCount = purchase.utcDate === currentDailyDateKey()
+      ? Math.min(1, Math.max(0, Math.floor(Number(purchase.purchaseCount) || 0)))
+      : 0;
+    const purchaseLimit = 1;
+    const unavailable = purchaseCount >= purchaseLimit;
     const price = getCommonGearBoxShopPrice();
     const affordable = getProjectedGold() >= price;
     return {
@@ -31913,6 +31917,8 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
       description: getShopShortDescription(id),
       price,
       owned: Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)),
+      purchaseCount,
+      purchaseLimit,
       canBuy: !unavailable && affordable,
       buttonLabel: unavailable ? "Purchased" : affordable ? "Buy" : "Not Enough Gold",
       status: unavailable
@@ -31928,7 +31934,7 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
   const purchaseCount = getProjectedItemPurchaseCount(item.id);
   const cooldownText = getItemPurchaseCooldownText(item.id);
-  const pending = getInstantPendingItemDelta(item.id) > 0;
+  const pendingQuantity = Math.max(0, getInstantPendingItemDelta(item.id));
   const affordable = getProjectedGold() >= price;
   const available = !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit);
   return {
@@ -31937,13 +31943,17 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
     description: getShopShortDescription(item.id),
     price,
     owned,
-    canBuy: !pending && available && affordable,
-    buttonLabel: pending ? "Queued" : !available ? "Unavailable" : affordable ? "Buy" : "Not Enough Gold",
-    status: pending
-      ? "Purchase pending."
-      : cooldownText
-        ? `Daily limit reached. Available in ${cooldownText}.`
-        : affordable ? "" : "Not enough Gold.",
+    purchaseCount,
+    purchaseLimit,
+    canBuy: available && affordable,
+    buttonLabel: !available ? "Daily Limit Reached" : !affordable ? "Not Enough Gold" : pendingQuantity > 0 ? "Buy Again" : "Buy",
+    status: cooldownText
+      ? `Daily limit reached. Available in ${cooldownText}.`
+      : purchaseLimit > 0 && purchaseCount >= purchaseLimit
+        ? "Daily limit queued. Purchases are being confirmed."
+        : pendingQuantity > 0
+          ? `${formatNumber(pendingQuantity)} purchase${pendingQuantity === 1 ? "" : "s"} queued.`
+          : affordable ? "" : "Not enough Gold.",
   };
 }
 
@@ -31954,6 +31964,7 @@ function renderShopPurchaseBar(itemId = selectedShopItemId) {
     <section class="shop-purchase-bar" data-shop-purchase-bar data-selected-shop-item="${escapeHtml(purchase.id)}" aria-live="polite">
       <div class="shop-purchase-selected"><strong>${escapeHtml(purchase.label)}</strong><small class="shop-purchase-description">${escapeHtml(purchase.description)}</small>${purchase.status ? `<small class="shop-purchase-status">${escapeHtml(purchase.status)}</small>` : ""}</div>
       <div class="shop-purchase-stat"><span>Owned</span><strong data-shop-selected-owned>${formatNumber(purchase.owned)}</strong></div>
+      <div class="shop-purchase-stat"><span>Daily</span><strong data-shop-selected-daily>${purchase.purchaseLimit > 0 ? `${formatNumber(purchase.purchaseCount)} / ${formatNumber(purchase.purchaseLimit)}` : "Unlimited"}</strong></div>
       <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
       <button class="shop-buy-btn shop-purchase-buy" data-shop-purchase-selected="${escapeHtml(purchase.id)}" type="button" ${purchase.canBuy ? "" : "disabled"}>${escapeHtml(purchase.buttonLabel)}</button>
     </section>`;

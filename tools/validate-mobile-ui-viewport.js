@@ -52,8 +52,8 @@ const modalClasses = new Set([
 assert.ok(modalClasses.size >= 20, "The reusable modal audit no longer covers the complete UI family.");
 assert.ok(css.includes(".modal:not(.level-up-reward-modal)"), "Dynamic modal classes are not protected by the shared mobile rule.");
 
-const releaseId = "20260823-item-bag-stacks-r1";
-const cacheVersion = "20260823-item-bag-stacks-r1";
+const releaseId = "20260825-shop-fast-buy-r1";
+const cacheVersion = "20260825-shop-fast-buy-r1";
 const styleTag = `mobile-viewport.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The mobile viewport layer is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("action-buttons.css"), "The mobile viewport layer must load after every existing game theme.");
