@@ -16,9 +16,9 @@ The status banner must report `PASS`, the document must have no horizontal overf
 
 The production profile frame has a rounded transparent aperture, while the HUD flag previously painted to a larger square box beneath it. The renderer already contained oversized pattern layers inside the flag box, but that box did not match the aperture, so color remained visible in the frame's antialiased inner corners.
 
-The HUD-only rule now clips the flag to a percentage-based rounded inset. The outer `.profile-button` remains unclipped so the ornate frame, drop shadow, level badge, and focus treatment keep their full paint area. Generic flags on cities, profiles, reports, and leaderboards are unchanged.
+The HUD-only rule now clips the flag to a percentage-based rounded inset. The final `interface-theme.css` geometry deliberately enlarges the flag beneath the frame, so it overrides the base inset with asymmetric percentages calibrated to the actual transparent aperture. The outer `.profile-button` remains unclipped so the ornate frame, drop shadow, level badge, and focus treatment keep their full paint area. Generic flags on cities, profiles, reports, and leaderboards are unchanged.
 
-Open `hud-frame-responsive.html` to review all 14 patterns with alternating stored v1/v2 flags at desktop, narrow landscape, and mobile portrait sizes. The production visual fixture reports `PASS · 69 computed visual checks`.
+Open `hud-frame-responsive.html` to review all 14 patterns with alternating stored v1/v2 flags at desktop, narrow landscape, and mobile portrait sizes. The production visual fixture reports `PASS · 70 computed visual checks`, including resolved visible-paint bounds against the frame aperture.
 
 - `screenshots/hud-frame-before-live.png`: live-game HUD before the fix.
 - `screenshots/hud-frame-after-desktop.png`: production renderer and frame after the fix, all patterns and both stored versions.

@@ -13,6 +13,7 @@ const index = read("index.html");
 const runtimeSprite = read("assets/flag-symbols/runtime.svg");
 const worker = read("service-worker.js");
 const styles = read("styles.css");
+const interfaceTheme = read("interface-theme.css");
 const editorStyles = read("player-flag-editor.css");
 const manuscript = read("manuscript-prototype.css");
 const profileTheme = read("profile-theme.css");
@@ -168,6 +169,7 @@ assert.doesNotMatch(editorStyles.match(/player-flag-editor__swatch\s*\{[\s\S]*?\
 
 const hudProfileButtonRule = styles.match(/\.profile-button\s*\{[\s\S]*?\n\}/)?.[0] || "";
 const hudFlagRule = styles.match(/\.profile-button \.kingdom-flag-small\s*\{[\s\S]*?\n\}/)?.[0] || "";
+const hudThemeFlagRule = interfaceTheme.match(/\.profile-button \.kingdom-flag-small\s*\{[\s\S]*?\n\}/)?.[0] || "";
 assert.match(hudFlagRule, /--hud-flag-aperture-inset:\s*\d+%/,
   "The HUD flag no longer defines a frame-aperture inset.");
 assert.match(hudFlagRule, /--hud-flag-aperture-radius:\s*\d+%/,
@@ -180,6 +182,10 @@ assert.doesNotMatch(styles, /\.profile-button \.kingdom-flag-small\s*\{[^}]*bord
   "A responsive HUD rule restores square flag corners inside the rounded frame.");
 assert.doesNotMatch(hudProfileButtonRule, /overflow:\s*(?:hidden|clip)/,
   "The profile button must not clip the ornate frame, shadow, level badge, or focus ring.");
+assert.match(hudThemeFlagRule, /--hud-flag-aperture-inset:\s*15% 9% 12%/,
+  "The final production theme does not compensate for its enlarged HUD flag underlay.");
+assert.match(hudThemeFlagRule, /--hud-flag-aperture-radius:\s*12%/,
+  "The final production theme no longer matches the frame aperture corners.");
 
 const swatchRenderer = extractFunction(game, "renderFlagSwatches");
 assert.match(swatchRenderer, /Current saved color/);
@@ -247,7 +253,7 @@ for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /player-flag-editor\.css/);
   assert.match(source, /assets\/flag-symbols\/runtime\.svg/);
 }
-for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "21 selectable symbol cards", "legacy-only symbols hidden from selector", "14 pattern cards", "HUD profile frame aperture", "14 HUD frame pattern cases", "HUD flag aperture clips rounded frame corners", "HUD frame art remains unclipped", "computed visual checks"]) {
+for (const token of ["Background Color", "Pattern Color", "Symbol Color", "30 symbol cards", "21 selectable symbol cards", "legacy-only symbols hidden from selector", "14 pattern cards", "HUD profile frame aperture", "14 HUD frame pattern cases", "HUD flag aperture clips rounded frame corners", "HUD visible paint resolves inside frame aperture", "HUD frame art remains unclipped", "computed visual checks"]) {
   assert.ok(qaPage.includes(token), `Player-flag visual QA is missing ${token}.`);
 }
 assert.match(qaPage, /version:\s*index % 2 \? 2 : 1/, "HUD visual QA no longer alternates stored v1 and v2 flags.");
