@@ -251,11 +251,12 @@ const RECALL_HORN_ITEM_ID = "recall_horn";
 const SHOP_MINIMUM_PRICE_GOLD = 50;
 const SHOP_PRICE_HOURS = Object.freeze({
   [ROYAL_TAX_DECREE_ITEM_ID]: 0.18,
-  [SWIFT_MARCH_ORDER_ITEM_ID]: 1,
-  [RECALL_HORN_ITEM_ID]: 1.25,
-  [WAR_DRUMS_ITEM_ID]: 1.5,
-  [VEIL_OF_SILENCE_ITEM_ID]: 2,
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: 3.5,
+  [VEIL_OF_SILENCE_ITEM_ID]: 0.18,
+  [WAR_DRUMS_ITEM_ID]: 0.36,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 0.36,
+  [RECALL_HORN_ITEM_ID]: 0.54,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [COMMON_GEAR_BOX_ITEM.id]: Math.max(0, Number(COMMON_GEAR?.SHOP_PRICE_HOURS) || 1),
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
@@ -1755,6 +1756,7 @@ let bulkOrderActionRequestId = 0;
 let pendingBulkOrderAction = null;
 const bulkOrderRequestIds = new Map();
 const pendingDirectScoutTargets = new Set();
+const scoutVeilBlocksByTarget = new Map();
 let camera = { x: 0, y: 0 };
 let zoom = 1;
 let mapViewportWidth = 0;
@@ -5317,6 +5319,28 @@ function getPeaceShieldAttackBlockReason(target, attackerOwner = "player", attac
   return `${target.name} is protected by a Royal Peace Shield for ${formatDuration(remaining)}.`;
 }
 
+function getCachedScoutVeilExpiresAtMs(target, nowMs = Date.now()) {
+  const targetId = String(target?.id || "").trim();
+  if (!targetId) return 0;
+  const block = scoutVeilBlocksByTarget.get(targetId);
+  if (!block) return 0;
+  const targetOwnerUid = String(target?.ownerUid || "").trim();
+  if ((block.ownerUid && targetOwnerUid && block.ownerUid !== targetOwnerUid) || block.expiresAtMs <= nowMs) {
+    scoutVeilBlocksByTarget.delete(targetId);
+    return 0;
+  }
+  return block.expiresAtMs;
+}
+
+function getVeilOfSilenceScoutBlockReason(target, scoutOwner = "player", scoutOwnerUid = "", nowMs = Date.now()) {
+  if (!target || isRewardCampTarget(target) || isSameAttackOwner(target, scoutOwner, scoutOwnerUid)) return "";
+  if (target.owner === "neutral" || (!target.ownerUid && target.ownerKind !== "player" && target.owner !== "enemy")) return "";
+  const expiresAtMs = getCachedScoutVeilExpiresAtMs(target, nowMs);
+  if (expiresAtMs <= nowMs) return "";
+  const remaining = Math.max(1, Math.ceil((expiresAtMs - nowMs) / 1000));
+  return `${target.name} is hidden by Veil of Silence for ${formatDuration(remaining)}.`;
+}
+
 function refreshOwnedCityItemEffectMetadata(syncNow = true) {
   if (!state) return;
   const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
@@ -8574,7 +8598,7 @@ function normalizeScoutReports(reports) {
       reinforcementTroops,
       reinforcements,
       ownerFlag: report?.ownerFlag && typeof report.ownerFlag === "object"
-        ? normalizeFlag(report.ownerFlag)
+        ? normalizeFlag(report.ownerFlag, report.ownerUid || cityId)
         : null,
       totalDefense,
       baseTotalDefense,
@@ -8597,7 +8621,9 @@ function normalizeScoutReportReinforcements(rows) {
     .map(row => ({
       ownerUid: String(row?.ownerUid || "").slice(0, 128),
       ownerName: cleanName(row?.ownerName || "Ruler") || "Ruler",
-      ownerFlag: row?.ownerFlag && typeof row.ownerFlag === "object" ? normalizeFlag(row.ownerFlag) : null,
+      ownerFlag: row?.ownerFlag && typeof row.ownerFlag === "object"
+        ? normalizeFlag(row.ownerFlag, row.ownerUid)
+        : null,
       troops: Math.max(0, Math.floor(Number(row?.troops) || 0)),
       defenseCombatVersion: Math.max(0, Math.floor(Number(row?.defenseCombatVersion) || 0)),
       baseDefensePowerPerTroop: Math.max(1, Number(row?.baseDefensePowerPerTroop) || 1),
@@ -8943,7 +8969,7 @@ function normalizeBattleReports(reports) {
         opponentUid: String(report.opponentUid || "").slice(0, 128),
         opponentName: String(report.opponentName || "").slice(0, 40),
         opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
-          ? normalizeFlag(report.opponentFlag)
+          ? normalizeFlag(report.opponentFlag, report.opponentUid || report.opponentName)
           : null,
         scoutPerspective: report.scoutPerspective === "defender" ? "defender" : "",
         sourceCityId: String(report.sourceCityId || "").slice(0, 96),
@@ -8962,7 +8988,8 @@ function normalizeBattleReports(reports) {
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
-        casualtyRecovery: report.casualtyRecovery || null,
+        casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
+        gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
@@ -9293,9 +9320,11 @@ function scoutRewardCamp(campId) {
 
 async function scoutTarget(target) {
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return;
   }
   if (getPendingScoutMission(target.id)) {
@@ -9336,9 +9365,11 @@ function launchScoutMission(source, target, route, _options = {}) {
   const options = _options && typeof _options === "object" ? _options : {};
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
-  if (mainCityBlockReason) {
-    rejectGameAction(mainCityBlockReason);
+  const scoutBlockReason = campTarget
+    ? ""
+    : getMainCityScoutBlockReason(target, "player") || getVeilOfSilenceScoutBlockReason(target, "player");
+  if (scoutBlockReason) {
+    rejectGameAction(scoutBlockReason);
     return null;
   }
   if (!canUseOnlineArmyOrders()) return null;
@@ -9412,6 +9443,7 @@ function isNearbyScoutCandidate(source, city) {
     getCityRegionId(city) === getCityRegionId(source) &&
     city.owner !== "player" &&
     !getMainCityScoutBlockReason(city, "player") &&
+    !getVeilOfSilenceScoutBlockReason(city, "player") &&
     !getPendingScoutMission(city.id) &&
     Math.hypot(city.x - source.x, city.y - source.y) <= SCOUT_NEARBY_RADIUS
   );
@@ -9675,10 +9707,11 @@ async function toggleScoutNearby(cityId) {
       renderAll();
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
     } catch (error) {
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = rememberScoutVeilBlocksFromError(error);
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       finishBulkOrderAction(action);
       renderAll();
-      rejectGameAction(onlineLastError || "Scout Nearby could not be sent.");
+      rejectGameAction(error?.message || "Scout Nearby could not be sent.");
     }
     return;
   }
@@ -10330,7 +10363,7 @@ function normalizeServerScoutReport(report = null) {
     reinforcementTroops,
     reinforcements,
     ownerFlag: report.ownerFlag && typeof report.ownerFlag === "object"
-      ? normalizeFlag(report.ownerFlag)
+      ? normalizeFlag(report.ownerFlag, report.ownerUid || report.cityId)
       : null,
     totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
     baseTotalDefense: Math.min(
@@ -10695,6 +10728,10 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       changed = true;
     }
+    if (Number.isFinite(Number(update.alliedReinforcementTroops))) {
+      city.alliedReinforcementTroops = Math.max(0, Math.floor(Number(update.alliedReinforcementTroops) || 0));
+      changed = true;
+    }
     if (Number.isFinite(Number(update.productionUpdatedAtMs))) {
       city.productionUpdatedAtMs = normalizeTimestampMs(update.productionUpdatedAtMs);
       changed = true;
@@ -10736,6 +10773,9 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerFlag = ownerIdentity?.flag || update.ownerFlag || null;
       city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      city.ownerClanId = ownerUid ? String(update.ownerClanId ?? city.ownerClanId ?? "") : "";
+      city.ownerClanName = ownerUid ? String(update.ownerClanName ?? city.ownerClanName ?? "") : "";
+      city.ownerClanTag = ownerUid ? String(update.ownerClanTag ?? city.ownerClanTag ?? "") : "";
       city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
       if (ownerUid) {
         city.relinquishedAtMs = 0;
@@ -11861,11 +11901,14 @@ async function showPublicClanDetails(clanId = "") {
           <div><dt>Admission</dt><dd>${clan.admissionMode === "open" ? "Open" : "Approval"}</dd></div>
         </dl>
         <div class="public-clan-roster-heading"><span>Roster</span><strong>${formatNumber(members.length)} members</strong></div>
-        <div class="public-clan-roster">${members.length ? members.map(member => `
+        <div class="public-clan-roster">${members.length ? members.map((member, index) => `
           <article class="public-clan-member">
-            <div>
-              ${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}
-              <small>${escapeHtml(clanRoleLabel(member.role))}</small>
+            <div class="public-clan-member-identity">
+              <span class="kingdom-flag kingdom-flag-small clan-member-flag" data-public-clan-member-flag="${index}" role="img" aria-label="${escapeHtml(member.displayName || "Ruler")} kingdom flag"><span class="flag-symbol"></span></span>
+              <div class="public-clan-member-copy">
+                ${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}
+                <small>${escapeHtml(clanRoleLabel(member.role))}</small>
+              </div>
             </div>
             <div class="public-clan-member-power">
               <strong>${formatNumber(member.kingPower || 0)}</strong>
@@ -11873,6 +11916,13 @@ async function showPublicClanDetails(clanId = "") {
             </div>
           </article>`).join("") : `<p class="public-profile-empty">No active members found.</p>`}</div>
       </section>`;
+    members.forEach((member, index) => {
+      FlagRenderer.render(modalBody.querySelector(`[data-public-clan-member-flag="${index}"]`), member.flag, {
+        stableKey: member.uid || member.id || member.displayName,
+        context: "public-clan-roster",
+        size: "small",
+      });
+    });
   } catch (error) {
     if (requestId === publicClanProfileRequestId && modal.open) {
       modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan profile.")}</p><button type="button" data-public-clan-id="${escapeHtml(id)}">Try again</button></div>`;
@@ -14062,6 +14112,7 @@ function disconnectOnlineWorld() {
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
+  scoutVeilBlocksByTarget.clear();
   clearEnemyPowerBandCache();
   onlineCampStates = new Map();
   onlineHeldCampStates = new Map();
@@ -14224,8 +14275,11 @@ function handleServiceWorkerUpdateMessage(event) {
   if (event?.data?.type === "CROWNLANDS_NOTIFICATION_CLICK") {
     const notification = event.data.notification || {};
     if (notification.type === "incoming_army" && notification.cityId) {
-      if (!state) return;
-      void focusIncomingAttackCity(notification.cityId, notification.targetRegionId || "");
+      pendingPushNotificationTarget = {
+        cityId: String(notification.cityId).slice(0, 96),
+        regionId: String(notification.targetRegionId || "").slice(0, 80),
+      };
+      if (state) void focusPendingPushNotificationTarget();
     }
     return;
   }
@@ -16067,6 +16121,31 @@ function getChangedAttackProtectionFromError(error) {
   return normalizeAttackProtectionSnapshot(details.attackProtection);
 }
 
+function rememberScoutVeilBlocksFromError(error, fallbackTarget = null, nowMs = Date.now()) {
+  const details = error?.details || error?.customData?.details || error?.data || {};
+  if (details?.reason !== "veil_of_silence") return 0;
+  const fallbackTargetId = String(fallbackTarget?.id || "").trim();
+  const fallbackOwnerUid = String(fallbackTarget?.ownerUid || "").trim();
+  const rawTargets = Array.isArray(details.targets) && details.targets.length
+    ? details.targets
+    : (Array.isArray(details.targetCityIds) && details.targetCityIds.length
+        ? details.targetCityIds.map(cityId => ({ cityId, expiresAtMs: details.expiresAtMs }))
+        : fallbackTargetId ? [{ cityId: fallbackTargetId, ownerUid: fallbackOwnerUid, expiresAtMs: details.expiresAtMs }] : []);
+  let remembered = 0;
+  rawTargets.forEach(rawTarget => {
+    const cityId = String(rawTarget?.cityId || rawTarget?.id || "").trim();
+    const expiresAtMs = normalizeTimestampMs(rawTarget?.expiresAtMs || details.expiresAtMs);
+    if (!cityId || expiresAtMs <= nowMs) return;
+    const city = cityById(cityId);
+    scoutVeilBlocksByTarget.set(cityId, {
+      expiresAtMs,
+      ownerUid: String(rawTarget?.ownerUid || city?.ownerUid || "").trim(),
+    });
+    remembered += 1;
+  });
+  return remembered;
+}
+
 function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
   const sourceId = mission?.fromId;
   const targetId = mission?.toId;
@@ -16211,15 +16290,14 @@ function restoreRejectedArmyOrderSelection(mission) {
   const sourceId = String(mission?.fromId || "");
   const targetId = String(mission?.toId || "");
   if (!sourceId || !targetId) return;
+  // Scouts are one-click orders. Replaying a rejected scout makes permanent
+  // validation failures (such as Veil of Silence) retry indefinitely.
+  if (mission.kind === "scout") return;
   window.setTimeout(() => {
     if (modal.open || sendMode || selectedSourceId || selectedTargetId) return;
     const source = cityById(sourceId);
     const target = getArmyTargetById(targetId);
     if (!source || !target || source.owner !== "player" || source.troops < 1) return;
-    if (mission.kind === "scout") {
-      void scoutTarget(target);
-      return;
-    }
     selectedSourceId = source.id;
     selectedTargetId = target.id;
     sendMode = true;
@@ -16319,11 +16397,19 @@ function publishOnlineArmyMovement(mission, options = {}) {
       pendingOutgoingMissions.delete(movement.id);
       mission.serverPending = false;
       mission.serverRetrying = false;
-      onlineLastError = error?.message || String(error);
+      const rememberedVeilBlocks = mission.kind === "scout"
+        ? rememberScoutVeilBlocksFromError(error, target)
+        : 0;
+      onlineLastError = rememberedVeilBlocks ? "" : error?.message || String(error);
       console.warn("Server rejected army movement", error);
       const refreshedProtection = getChangedAttackProtectionFromError(error);
       if (refreshedProtection) {
         reopenAttackProtectionConfirmation(mission, refreshedProtection);
+        return false;
+      }
+      if (rememberedVeilBlocks) {
+        rejectGameAction(getVeilOfSilenceScoutBlockReason(target, "player") || error?.message);
+        renderAll();
         return false;
       }
       rejectServerArmyMission(mission, onlineLastError, options);
@@ -17856,7 +17942,10 @@ async function startFromInput(forceFresh = false) {
     saveGame();
     renderAll();
     scheduleRouteWorkerWarmup();
-    requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+    requestAnimationFrame(() => {
+      if (readPendingPushNotificationTarget()) void focusPendingPushNotificationTarget();
+      else centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id);
+    });
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
@@ -20677,6 +20766,11 @@ function resolveAttack(attack) {
     return;
   }
 
+  if (attack.relinquishTransfer && !cityBelongsToMarchOwner(target, attack)) {
+    resolveLocalReturningArmy(attack);
+    return;
+  }
+
   const attackRegionId = getCityRegionId(target);
   const attackOnActiveMap = attackRegionId === getActiveMapRegionId();
   if (claimBulkArrivalAudio(attack)) {
@@ -21593,6 +21687,7 @@ function updatePushAlertsUi() {
   const supported = Boolean(api?.isPushSupported?.());
   const permission = api?.getNotificationPermission?.() || "unsupported";
   const enabledPreference = getPushNotificationsPreference();
+  const registration = api?.getPushRegistrationState?.() || null;
 
   if (!state || !signedIn) {
     setPushAlertsOptionState(false, true);
@@ -21613,8 +21708,18 @@ function updatePushAlertsUi() {
     return;
   }
   if (enabledPreference && permission === "granted") {
-    setPushAlertsOptionState(true, false);
-    setPushAlertsStatus("Notifications On", false);
+    if (!registration || registration.enabled) {
+      setPushAlertsOptionState(true, false);
+      setPushAlertsStatus("Notifications On", false);
+      return;
+    }
+    if (registration.status === "registering" || registration.status === "idle") {
+      setPushAlertsOptionState(false, true);
+      setPushAlertsStatus("Connecting…", true);
+      return;
+    }
+    setPushAlertsOptionState(false, false);
+    setPushAlertsStatus("Retry needed", true);
     return;
   }
   setPushAlertsOptionState(false, false);
@@ -21623,7 +21728,16 @@ function updatePushAlertsUi() {
 
 async function refreshPushAlertRegistration(silent = true) {
   const api = getOnlineApi();
-  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.() || !getPushNotificationsPreference()) {
+  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.()) {
+    updatePushAlertsUi();
+    return false;
+  }
+  if (!getPushNotificationsPreference()) {
+    if (api.getNotificationPermission?.() === "granted" && api.disablePushNotifications) {
+      await api.disablePushNotifications().catch(error => {
+        if (!silent) showToast(error?.message || "Could not turn notifications off.");
+      });
+    }
     updatePushAlertsUi();
     return false;
   }
@@ -21710,6 +21824,36 @@ function handlePushMessage(event) {
   const message = detail.body || (detail.kind === "scout" ? "Scout incoming." : "Attack incoming.");
   showToast(message);
   updateIncomingAttackUi();
+}
+
+let pendingPushNotificationTarget = null;
+
+function readPendingPushNotificationTarget() {
+  if (pendingPushNotificationTarget?.cityId) return pendingPushNotificationTarget;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("notification") !== "incoming_army") return null;
+  const cityId = String(url.searchParams.get("notificationCity") || "").slice(0, 96);
+  if (!cityId) return null;
+  pendingPushNotificationTarget = {
+    cityId,
+    regionId: String(url.searchParams.get("notificationRegion") || "").slice(0, 80),
+  };
+  return pendingPushNotificationTarget;
+}
+
+function clearPendingPushNotificationUrl() {
+  const url = new URL(window.location.href);
+  ["notification", "notificationCity", "notificationRegion"].forEach(key => url.searchParams.delete(key));
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+async function focusPendingPushNotificationTarget() {
+  const target = readPendingPushNotificationTarget();
+  if (!state || !target?.cityId) return false;
+  pendingPushNotificationTarget = null;
+  clearPendingPushNotificationUrl();
+  await focusIncomingAttackCity(target.cityId, target.regionId);
+  return true;
 }
 
 function handleOnlinePlayerClanSnapshot(event) {
@@ -22844,6 +22988,8 @@ async function saveClanShieldEditor() {
     if (savedShield.version !== CLAN_HERALDRY_CONFIG.CURRENT_VERSION) throw new Error("The server returned legacy heraldry after a v2 save.");
     if (Math.max(0, Number(result.clan.heraldryRevision) || 0) <= previousRevision) throw new Error("The server did not advance the heraldry revision.");
     clanSnapshot = { ...clanSnapshot, ...result.clan, shield: savedShield };
+    renderClanHudAccess();
+    renderProfileClanAffiliation();
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
@@ -23030,14 +23176,14 @@ function renderClanApplicantFlag(index) {
 
 function applyClanRosterFlags() {
   clanMembers.forEach((member, index) => {
-    FlagRenderer.render(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag(), {
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag, {
       stableKey: member.uid,
       context: "clan-roster",
       size: "small",
     });
   });
   clanApplications.forEach((application, index) => {
-    FlagRenderer.render(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag(), {
+    FlagRenderer.render(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag, {
       stableKey: application.uid,
       context: "clan-application",
       size: "small",
@@ -24877,6 +25023,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
       isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
+      getCachedScoutVeilExpiresAtMs(city),
       city.level,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
       clanAlly ? Math.max(0, Math.floor(Number(city.troops) || 0)) : "",
@@ -25341,7 +25488,8 @@ function renderSelectedForeignWheel(city) {
   const pendingScout = getPendingScoutMission(city.id);
   const friendlyBlockReason = getClanFriendlyBlockReason(city);
   const clanAlly = Boolean(friendlyBlockReason);
-  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
+  const veilBlockReason = getVeilOfSilenceScoutBlockReason(city, "player");
+  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player") || veilBlockReason;
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
   const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
@@ -25355,7 +25503,7 @@ function renderSelectedForeignWheel(city) {
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action cl-action-button cl-action-scout wheel-scout${pendingScout ? " is-pending" : ""}" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" aria-busy="${Boolean(pendingScout)}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
-      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
+      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : veilBlockReason ? "Veiled" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
@@ -25398,8 +25546,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   const clanAlly = isClanAllyCity(stronghold);
   const report = owned ? null : getScoutReport(stronghold.id);
   const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
+  const veilBlockReason = owned ? "" : getVeilOfSilenceScoutBlockReason(stronghold, "player");
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
-  const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
+  const canScout = !owned && !clanAlly && !veilBlockReason && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
   const canRally = Boolean(canCurrentPlayerCreateClanRally() && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
@@ -25415,9 +25564,9 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action cl-action-button ${owned ? "cl-action-send" : "cl-action-scout"} camp-scout-action${pendingScout ? " is-pending" : ""}" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : veilBlockReason ? escapeHtml(veilBlockReason) : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" aria-busy="${Boolean(!owned && pendingScout)}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${renderCrownlandsIcon(owned ? "outgoing" : "scout")}</span>
-      <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+      <strong>${owned ? "Send" : veilBlockReason ? "Veiled" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action cl-action-button cl-action-info camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
       <span aria-hidden="true">${renderCrownlandsIcon("information")}</span>
@@ -26131,7 +26280,7 @@ function showScoutReportModal(cityId) {
   const age = getScoutReportAgeSeconds(report);
   const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
-  const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
+  const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city);
   const currentPlayerUid = getCurrentOnlineUid();
   const rewardCampTarget = report.targetType === "camp" || isRewardCampTarget(city);
   const cityLevel = rewardCampTarget ? 0 : clampCityLevel(report.cityLevel || city.level);
@@ -28444,10 +28593,14 @@ function applyLocalRelinquishCity(city, destination, mission = null) {
   city.ownerName = "";
   city.ownerFlag = null;
   city.ownerKingPower = 0;
+  city.ownerClanId = "";
+  city.ownerClanName = "";
+  city.ownerClanTag = "";
   city.ownerShieldExpiresAtMs = 0;
   city.isMainCity = false;
   city.troops = 0;
   city.troopFloat = 0;
+  city.alliedReinforcementTroops = 0;
   city.investedGold = 0;
   city.relinquishedAtMs = nowMs;
   city.relocatedAtMs = 0;
@@ -28484,60 +28637,19 @@ async function relinquishCity(cityId) {
   serverCityRelinquishInFlightIds.add(inFlightKey);
   try {
     const serverAuthority = usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity;
-    const destination = getRelinquishDestinationPreview(city, { loadedOnly: !serverAuthority });
-    if (!destination) {
-      showToast("You need another friendly city to receive the troops.");
-      return false;
-    }
-
     const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
-    let route = null;
-    let mission = null;
-    if (transferredTroops > 0) {
-      showToast(`Calculating march to ${destination.name}...`);
-      route = await findRouteAsync(city, destination);
-      if (!route?.points?.length) {
-        showToast("No land and portal route was found to the nearest friendly city.");
-        return false;
-      }
-      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: Boolean(serverAuthority) });
-      if (!mission) {
-        showToast("Could not prepare the relinquish march.");
-        return false;
-      }
-    }
-
     if (serverAuthority) {
-      const movement = mission ? toOnlineArmyMovement(mission) : null;
-      const destinationRegionId = getCityRegionId(destination);
-      if (mission && !movement) {
-        showToast("Could not prepare the online relinquish march.");
-        return false;
-      }
-      if (mission) mission.onlineRegionIds = movement.routeRegionIds;
+      showToast(`Relinquishing ${city.name}...`);
       const result = await getOnlineApi().relinquishCity({
         cityId: city.id,
         regionId,
-        destinationCityId: destination.id,
-        destinationRegionId,
-        army: movement ? {
-          ...movement,
-          sourceRegionId: regionId,
-          targetRegionId: destinationRegionId,
-          fromName: city.name,
-          toName: destination.name,
-        } : null,
-        routeRegionIds: movement?.routeRegionIds || [],
       });
       applyServerEconomyResult(result);
       applyCityRelinquishPolicy(result?.cityRelinquishPolicy);
-      if (mission && result?.movement) {
-        applyServerMovementToMission(mission, result.movement);
-        addServerAcceptedMission(mission);
-      }
+      if (result?.movement) adoptServerArmyMovement(result.movement);
       const acceptedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
-      const destinationName = result?.destinationCity?.name || destination.name || "the nearest friendly city";
-      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || mission?.total || 0)})` : "";
+      const destinationName = result?.destinationCity?.name || "the nearest friendly city";
+      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || 0)})` : "";
       addLog(acceptedTroops > 0
         ? `Relinquished ${city.name}. ${formatNumber(acceptedTroops)} troops are marching to ${destinationName}${travelText}.`
         : `Relinquished ${city.name}. No stationed troops needed to march.`);
@@ -28555,6 +28667,27 @@ async function relinquishCity(cityId) {
       renderAll();
       updateOutgoingAttackUi();
       return true;
+    }
+
+    const destination = getRelinquishDestinationPreview(city, { loadedOnly: true });
+    if (!destination) {
+      showToast("You need another friendly city to receive the troops.");
+      return false;
+    }
+
+    let mission = null;
+    if (transferredTroops > 0) {
+      showToast(`Calculating march to ${destination.name}...`);
+      const route = await findRouteAsync(city, destination);
+      if (!route?.points?.length) {
+        showToast("No land and portal route was found to the nearest friendly city.");
+        return false;
+      }
+      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: false });
+      if (!mission) {
+        showToast("Could not prepare the relinquish march.");
+        return false;
+      }
     }
 
     if (!applyLocalRelinquishCity(city, destination, mission)) {
@@ -31851,7 +31984,11 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const id = String(itemId || "");
   if (id === COMMON_GEAR_BOX_ITEM.id && COMMON_GEAR) {
     const purchase = state?.gear?.shopPurchase || {};
-    const unavailable = purchase.utcDate === currentDailyDateKey() && Number(purchase.purchaseCount) >= 1;
+    const purchaseCount = purchase.utcDate === currentDailyDateKey()
+      ? Math.min(1, Math.max(0, Math.floor(Number(purchase.purchaseCount) || 0)))
+      : 0;
+    const purchaseLimit = 1;
+    const unavailable = purchaseCount >= purchaseLimit;
     const price = getCommonGearBoxShopPrice();
     const affordable = getProjectedGold() >= price;
     return {
@@ -31860,6 +31997,8 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
       description: getShopShortDescription(id),
       price,
       owned: Math.max(0, Math.floor(Number(state?.gear?.commonGearBoxes) || 0)),
+      purchaseCount,
+      purchaseLimit,
       canBuy: !unavailable && affordable,
       buttonLabel: unavailable ? "Purchased" : affordable ? "Buy" : "Not Enough Gold",
       status: unavailable
@@ -31875,7 +32014,7 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
   const purchaseLimit = getItemDailyPurchaseLimit(item.id);
   const purchaseCount = getProjectedItemPurchaseCount(item.id);
   const cooldownText = getItemPurchaseCooldownText(item.id);
-  const pending = getInstantPendingItemDelta(item.id) > 0;
+  const pendingQuantity = Math.max(0, getInstantPendingItemDelta(item.id));
   const affordable = getProjectedGold() >= price;
   const available = !cooldownText && (purchaseLimit <= 0 || purchaseCount < purchaseLimit);
   return {
@@ -31884,13 +32023,17 @@ function getShopPurchaseState(itemId = selectedShopItemId) {
     description: getShopShortDescription(item.id),
     price,
     owned,
-    canBuy: !pending && available && affordable,
-    buttonLabel: pending ? "Queued" : !available ? "Unavailable" : affordable ? "Buy" : "Not Enough Gold",
-    status: pending
-      ? "Purchase pending."
-      : cooldownText
-        ? `Daily limit reached. Available in ${cooldownText}.`
-        : affordable ? "" : "Not enough Gold.",
+    purchaseCount,
+    purchaseLimit,
+    canBuy: available && affordable,
+    buttonLabel: !available ? "Daily Limit Reached" : !affordable ? "Not Enough Gold" : pendingQuantity > 0 ? "Buy Again" : "Buy",
+    status: cooldownText
+      ? `Daily limit reached. Available in ${cooldownText}.`
+      : purchaseLimit > 0 && purchaseCount >= purchaseLimit
+        ? "Daily limit queued. Purchases are being confirmed."
+        : pendingQuantity > 0
+          ? `${formatNumber(pendingQuantity)} purchase${pendingQuantity === 1 ? "" : "s"} queued.`
+          : affordable ? "" : "Not enough Gold.",
   };
 }
 
@@ -31901,6 +32044,7 @@ function renderShopPurchaseBar(itemId = selectedShopItemId) {
     <section class="shop-purchase-bar" data-shop-purchase-bar data-selected-shop-item="${escapeHtml(purchase.id)}" aria-live="polite">
       <div class="shop-purchase-selected"><strong>${escapeHtml(purchase.label)}</strong><small class="shop-purchase-description">${escapeHtml(purchase.description)}</small>${purchase.status ? `<small class="shop-purchase-status">${escapeHtml(purchase.status)}</small>` : ""}</div>
       <div class="shop-purchase-stat"><span>Owned</span><strong data-shop-selected-owned>${formatNumber(purchase.owned)}</strong></div>
+      <div class="shop-purchase-stat"><span>Daily</span><strong data-shop-selected-daily>${purchase.purchaseLimit > 0 ? `${formatNumber(purchase.purchaseCount)} / ${formatNumber(purchase.purchaseLimit)}` : "Unlimited"}</strong></div>
       <div class="shop-purchase-stat"><span>Price</span><strong data-shop-selected-price>${formatNumber(purchase.price)} gold</strong></div>
       <button class="shop-buy-btn shop-purchase-buy" data-shop-purchase-selected="${escapeHtml(purchase.id)}" type="button" ${purchase.canBuy ? "" : "disabled"}>${escapeHtml(purchase.buttonLabel)}</button>
     </section>`;
@@ -34043,7 +34187,7 @@ function renderLeaderboardRows(rows) {
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
   entries.forEach((entry, index) => {
-    FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag(), {
+    FlagRenderer.render(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag, {
       stableKey: entry.uid,
       context: "leaderboard",
       size: "small",
@@ -34288,7 +34432,7 @@ function renderBattleReportCard(report, index = 0) {
     ? report.troopCount
     : (report.sentTroops || report.troopCount || report.defendersLeft);
   const opponent = report.opponentName || report.ownerName || "Unknown";
-  const opponentFlag = report.opponentFlag
+  const opponentFlag = report.opponentFlag || report.opponentUid || report.opponentName
     ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
     : "";
   const troopLabel = defenderScout ? "troops seen" : report.type === "scout" ? "reported" : "sent";
@@ -34326,9 +34470,13 @@ function renderBattleReportCard(report, index = 0) {
 
 function applyBattleReportTargetFlags(reports = []) {
   reports.forEach((report, index) => {
-    if (!report?.opponentFlag) return;
     const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
-    FlagRenderer.render(flag, report.opponentFlag, { stableKey: report.opponentUid, context: "battle-report-list", size: "small" });
+    if (!flag) return;
+    FlagRenderer.render(flag, report.opponentFlag, {
+      stableKey: report.opponentUid || report.opponentName,
+      context: "battle-report-list",
+      size: "small",
+    });
   });
 }
 
@@ -34524,7 +34672,7 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
   const normalized = {
     ownerUid: String(participant.ownerUid || "").slice(0, 128),
     ownerName: String(participant.ownerName || "Unknown ruler").slice(0, 40),
-    ownerFlag: normalizeFlag(participant.ownerFlag || createDefaultFlag()),
+    ownerFlag: normalizeFlag(participant.ownerFlag, participant.ownerUid || participant.ownerName),
     clan: clan?.clanId ? clan : null,
     reinforcementId: reinforcement ? String(participant.reinforcementId || "").slice(0, 180) : "",
     role: participant.role === "leader" ? "leader" : participant.role === "ally" ? "ally" : "",
@@ -34685,6 +34833,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
     attackers,
     defender,
     reinforcements,
+    gearEffects: normalizeBattleGearEffects(value.gearEffects),
     totals: {
       attackers: Math.max(0, Math.floor(Number(totals.attackers) || 0)),
       defenders: Math.max(0, Math.floor(Number(totals.defenders) || 0)),
@@ -34771,6 +34920,9 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const totals = snapshot?.totals || {};
   const defenseBreakdown = totals.defensePowerBreakdown || {};
   const attackBreakdown = totals.attackPowerBreakdown || {};
+  const explicitSideGear = attacker ? snapshot?.gearEffects?.attacker : snapshot?.gearEffects?.defender;
+  const explicitCombatGear = attacker ? explicitSideGear?.attackStrength : explicitSideGear?.defenderStrength;
+  const explicitWallGear = attacker ? null : explicitSideGear?.wallStrength;
   const modernDefense = Math.floor(Number(snapshot?.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const startingTroops = Math.max(0, Math.floor(Number(attacker ? totals.attackers : totals.defenders) || 0));
   const participantBasePower = attacker
@@ -34799,11 +34951,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     participants,
     attacker ? "gearAttackStrengthBonusPower" : "gearDefenderStrengthBonusPower"
   );
-  const gearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
+  const inferredGearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
     attacker
       ? attackBreakdown.gearAttackStrengthBonusPower
       : defenseBreakdown.gearDefenderStrengthBonusPower
   ) || 0));
+  const gearBonusPower = explicitCombatGear?.bonusPower || inferredGearBonusPower;
   const personalObjectiveBonusPower = attacker ? 0 : (
     sumDetailedBattleParticipantPower(participants, "personalObjectiveBonusPower")
     || Math.max(0, Math.floor(Number(defenseBreakdown.personalObjectiveBonusPower) || 0))
@@ -34828,11 +34981,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const gearPercents = [...new Set(participants.map(participant => Math.max(0, Number(
     attacker ? participant?.gearAttackStrengthPercent : participant?.gearDefenderStrengthPercent
   ) || 0)).filter(percent => percent > 0))];
-  const gearPercentText = gearPercents.length === 1
+  const inferredGearPercentText = gearPercents.length === 1
     ? `+${gearPercents[0].toFixed(2).replace(/\.00$/, "")}%`
     : gearPercents.length > 1
       ? "Mixed equipped-gear rates"
       : "";
+  const gearPercentText = formatBattleGearEffectPercent(explicitCombatGear) || inferredGearPercentText;
   const participantSummary = attacker
     ? participants.length > 1
       ? `${formatNumber(participants.length)} rally armies`
@@ -34854,9 +35008,10 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     skillPercentText,
-    gearLabel: attacker ? "War Captain gear" : "Defensive Commander gear",
+    gearLabel: explicitCombatGear?.sourceLabel || (attacker ? "War Captain gear" : "Defensive Commander gear"),
     gearBonusPower,
     gearPercentText,
+    casualtyRecovery: explicitSideGear?.casualtyRecovery || null,
     personalObjectiveBonusPower,
     sharedClanBonusPower,
     otherBonusPower,
@@ -34870,8 +35025,13 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     wallBasePower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.baseWallPower) || 0)),
     wallStoneworksPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)),
     wallStoneworksPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.stoneworksPercent) || 0),
-    wallGearPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
-    wallGearPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.gearWallStrengthPercent) || 0),
+    wallGearPower: attacker ? 0 : explicitWallGear?.bonusPower
+      || Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
+    wallGearPercent: attacker ? 0 : Math.max(0, Number(
+      explicitWallGear?.bonusPercent
+      || explicitWallGear?.bonusPercents?.[0]
+      || snapshot?.target?.fortifications?.gearWallStrengthPercent
+    ) || 0),
     wallHelp: attacker
       ? ""
       : [
@@ -34986,70 +35146,6 @@ function renderBattleSideDetails(side = {}) {
         ? renderBattleDetailRow(renderCrownlandsIcon("reinforcement"), "Allied reinforcements", side.reinforcementTroops, `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}`)
         : ""}
     </article>`;
-}
-
-function getBattleSideBonusEntries(side = {}) {
-  if (side.gearOnly) {
-    const entries = [];
-    if (side.gearBonusPower > 0) entries.push({ icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), label: side.gearLabel, value: `+${formatNumber(side.gearBonusPower)} power`, help: side.gearPercentText });
-    if (side.wallGearPower > 0) entries.push({ icon: renderCrownlandsIcon("city"), label: "Gatehouse wall gear", value: `+${formatNumber(side.wallGearPower)} wall power`, help: `+${side.wallGearPercent}% · separate from Stoneworks` });
-    const recovery = side.casualtyRecovery;
-    if (recovery?.gearRecoveredTroops > 0) entries.push({ icon: renderCrownlandsIcon("troops"), label: recovery.sourceLabel, value: `+${formatNumber(recovery.gearRecoveredTroops)} recovered`, help: `+${recovery.gearPercent}% gear · main city` });
-    return entries;
-  }
-  if (side.bonusRecorded === false) {
-    return [{ icon: "?", label: "Combat bonuses", value: "Not recorded", help: "Historical report" }];
-  }
-  const entries = [];
-  if (Number(side.skillBonusPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
-      label: side.skillLabel,
-      value: `+${formatNumber(side.skillBonusPower)} power`,
-      help: side.skillPercentText,
-    });
-  }
-  if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("clan"), label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon("city"),
-      label: "Stoneworks",
-      value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
-      help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
-    });
-  }
-  if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
-    entries.push({ icon: "+", label: "Other recorded defense", value: `+${formatNumber(side.otherBonusPower)} power`, help: "Authoritative battle snapshot" });
-  }
-  return entries;
-}
-
-function renderBattleBonusCard(side = {}) {
-  const entries = getBattleSideBonusEntries(side);
-  return `
-    <article class="battle-visual-bonus-card ${side.role}">
-      <h4>${side.gearOnly ? `${side.role === "attacker" ? "Attacker" : "Defender"} Gear` : side.role === "attacker" ? "Attack bonuses" : "Defense bonuses"}</h4>
-      ${entries.length
-        ? entries.map(entry => `
-          <div class="battle-visual-bonus-row">
-            <span aria-hidden="true">${entry.icon}</span>
-            <div><strong>${escapeHtml(entry.label)}</strong>${entry.help ? `<small>${escapeHtml(entry.help)}</small>` : ""}</div>
-            <b>${escapeHtml(entry.value)}</b>
-          </div>`).join("")
-        : `<div class="battle-visual-no-bonus">No additional combat bonuses</div>`}
-    </article>`;
-}
-
-function renderBattleGearEffectsSection(attacker = {}, defender = {}, report = null, viewerRole = "attacker") {
-  const cards = [attacker, defender].map(side => ({ ...side, gearOnly: true, casualtyRecovery: viewerRole === side.role ? report?.casualtyRecovery : null }))
-    .filter(side => getBattleSideBonusEntries(side).length).map(renderBattleBonusCard);
-  if (!cards.length) return "";
-  return `<section class="battle-visual-section"><div class="battle-visual-section-title"><h3>Gear Effects</h3></div><div class="battle-visual-two-column">${cards.join("")}</div></section>`;
 }
 
 function renderBattleWallResult(defender = {}, siege = null) {
@@ -35311,7 +35407,11 @@ function getLegacyBattleSides(report = null, siege = null) {
     wallStoneworksPower: 0,
     wallStoneworksPercent: 0,
   };
-  return { attacker, defender };
+  const gearEffects = normalizeBattleGearEffects(report?.gearEffects);
+  return {
+    attacker: applyRecordedGearEffectsToBattleSide(attacker, gearEffects, "attacker"),
+    defender: applyRecordedGearEffectsToBattleSide(defender, gearEffects, "defender"),
+  };
 }
 
 function renderLegacyBattleComparison(report = null, siege = null) {
@@ -35382,7 +35482,7 @@ function applyDetailedBattleFlags(snapshot) {
   ]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
     const side = element.dataset.battleParticipantFlag;
-    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), {
+    FlagRenderer.render(element, flags.get(side), {
       stableKey: snapshot[side]?.ownerUid || side,
       context: "battle-report-detail",
     });
@@ -35390,8 +35490,8 @@ function applyDetailedBattleFlags(snapshot) {
 }
 
 function applyLegacyBattleFlags(report = null) {
-  const playerFlag = state?.flag || createDefaultFlag();
-  const opponentFlag = report?.opponentFlag || createDefaultFlag();
+  const playerFlag = state?.flag;
+  const opponentFlag = report?.opponentFlag;
   const flags = report?.type === "defense"
     ? new Map([["attacker", opponentFlag], ["defender", playerFlag]])
     : new Map([["attacker", playerFlag], ["defender", opponentFlag]]);
@@ -35399,8 +35499,8 @@ function applyLegacyBattleFlags(report = null) {
     const side = element.dataset.battleParticipantFlag;
     const stableKey = side === (report?.type === "defense" ? "defender" : "attacker")
       ? getCurrentOnlineUid()
-      : report?.opponentUid || side;
-    FlagRenderer.render(element, flags.get(side) || createDefaultFlag(), { stableKey, context: "battle-report-legacy" });
+      : report?.opponentUid || report?.opponentName || side;
+    FlagRenderer.render(element, flags.get(side), { stableKey, context: "battle-report-legacy" });
   });
 }
 
@@ -35478,8 +35578,8 @@ async function showBattleReportDetail(reportId) {
     if (isDefenderScoutReport(report)) {
       FlagRenderer.render(
         modalBody.querySelector("#scoutedReportAttackerFlag"),
-        report.opponentFlag || createDefaultFlag(),
-        { stableKey: report.opponentUid, context: "scout-report-detail" }
+        report.opponentFlag,
+        { stableKey: report.opponentUid || report.opponentName, context: "scout-report-detail" }
       );
     }
     return;
@@ -35805,7 +35905,7 @@ function renderCrownlandsIcon(name, className = "") {
   const extraClass = String(className || "").trim();
   const classes = extraClass ? `cl-icon ${escapeHtml(extraClass)}` : "cl-icon";
   const href = EXTERNAL_FLAG_ICON_KEYS.has(iconKey)
-    ? `/assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
+    ? `assets/flag-symbols/runtime.svg#cl-icon-${iconKey}`
     : `#cl-icon-${iconKey}`;
   return `<svg class="${classes}" aria-hidden="true" focusable="false"><use href="${href}"></use></svg>`;
 }
@@ -36820,6 +36920,7 @@ window.addEventListener("crownlands:auth", async () => {
   }
 });
 window.addEventListener("crownlands:push-message", handlePushMessage);
+window.addEventListener("crownlands:push-notifications", updatePushAlertsUi);
 window.addEventListener("crownlands:chat-player-profile", event => {
   const uid = String(event?.detail?.uid || "").trim();
   if (uid) showPublicPlayerProfile(uid);

@@ -20,6 +20,9 @@ const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "
 const serviceWorkerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const editorCss = fs.readFileSync(path.join(root, "clan-heraldry-v2.css"), "utf8");
 const scrollProof = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-scroll", "index.html"), "utf8");
+const scrollQa = fs.readFileSync(path.join(root, "tools", "qa-clan-heraldry-scroll.js"), "utf8");
+const contextProof = fs.readFileSync(path.join(root, "docs", "visual-qa", "clan-heraldry-contexts", "index.html"), "utf8");
+const contextQa = fs.readFileSync(path.join(root, "tools", "qa-clan-heraldry-contexts.js"), "utf8");
 
 const expectedIds = [
   "none", "crown", "lion", "eagle", "dragon", "wolf", "stag", "bear",
@@ -136,6 +139,10 @@ for (const runtimeFile of ["clanHeraldryConfig.js", "clanHeraldryAssets.js", "cl
   assert.match(serviceWorkerSource, new RegExp(`functions/${runtimeFile.replace(".", "\\.")}`), `${runtimeFile} is not precached by the service worker.`);
 }
 assert.match(indexHtml, /clan-heraldry-v2\.css/);
+assert.match(indexHtml, /clan-heraldry-v2\.css\?v=20260825-clan-shield-colors-r1/, "The corrected swatch stylesheet is not cache-busted in the page shell.");
+assert.match(serviceWorkerSource, /clan-heraldry-v2\.css\?v=20260825-clan-shield-colors-r1/, "The corrected swatch stylesheet is not precached for offline play.");
+assert.match(indexHtml, /game\.js\?v=20260825-clan-shield-colors-r1/, "The immediate post-save shield refresh is not cache-busted in the page shell.");
+assert.match(serviceWorkerSource, /game\.js\?v=20260825-clan-shield-colors-r1/, "The immediate post-save shield refresh is not precached for offline play.");
 assert.ok(indexHtml.indexOf("clanHeraldryRenderer.js") < indexHtml.indexOf("game.js"), "The heraldry renderer must load before game.js.");
 assert.match(serviceWorkerSource, /charges-full\.svg[\s\S]*?charges-micro\.svg/);
 assert.match(gameSource, /CLAN_HERALDRY_CHARGES\s*=\s*CLAN_HERALDRY_CONFIG\.SELECTABLE_CHARGES/);
@@ -143,13 +150,37 @@ assert.match(gameSource, /function renderClanHeraldry[\s\S]*?ClanHeraldryRendere
 assert.match(gameSource, /function renderClanShieldChoiceIcon[\s\S]*?CLAN_HERALDRY_ASSETS\.symbolHref[\s\S]*?<use href=/);
 assert.match(gameSource, /function renderClanShieldEditor[\s\S]*?Clan Heraldry[\s\S]*?Save Clan Heraldry/);
 assert.match(gameSource, /createV2DraftFromV1[\s\S]*?clanShieldMigrationNotice/);
-assert.match(gameSource, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{ shield \}\)[\s\S]*?heraldryRevision/);
+assert.match(gameSource, /function saveClanShieldEditor[\s\S]*?validateV2Write[\s\S]*?updateClanProfile\(\{ shield \}\)[\s\S]*?heraldryRevision[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?renderClanHudAccess\(\);[\s\S]*?renderProfileClanAffiliation\(\);/, "A confirmed shield save must refresh every persistent local identity surface immediately.");
+assert.match(gameSource, /function randomizeClanShieldDraft[\s\S]*?primary[\s\S]*?secondary[\s\S]*?borderColor[\s\S]*?chargeColor[\s\S]*?secondaryChargeColor[\s\S]*?normalizeClanHeraldryDraft/, "Inspire Me must randomize and normalize all saved color channels.");
+assert.match(gameSource, /action === "randomize-shield"[\s\S]*?randomizeClanShieldDraft\(\);[\s\S]*?rerenderClanShieldEditor\(\);/, "Inspire Me must refresh the editor preview immediately.");
+assert.match(gameSource, /action === "cancel-shield"[\s\S]*?clanShieldDraft\s*=\s*null[\s\S]*?renderClanView\(\);/, "Cancel must discard the draft without replacing the saved shield.");
 assert.match(serverSource, /exports\.updateClanProfile[\s\S]*?CLAN_HERALDRY_CONFIG\.validateV2Write[\s\S]*?heraldryRevision/);
 assert.match(editorCss, /data-heraldry-editor-version="2"[\s\S]*?overflow-y:auto[\s\S]*?touch-action:pan-y/);
+assert.match(editorCss, /data-heraldry-editor-version="2"[\s\S]*?\.clan-shield-swatch-grid button\{[\s\S]*?background:[\s\S]*?var\(--shield-swatch\)/, "Clan Heraldry swatches must paint their configured dye above shared button themes.");
+assert.match(editorCss, /\.clan-shield-swatch-grid button:is\(\.active,\[aria-pressed="true"\]\)/, "Clan Heraldry swatches must expose a visible selected state.");
+assert.match(editorCss, /\.clan-shield-micro-preview>span:not\(\.clan-heraldry-v2\)\{display:none\}/, "Compact layout must hide only the micro-preview label, not the shield.");
+assert.match(editorCss, /\.clan-hud-btn\.has-clan[\s\S]*?\):not\(:disabled\):hover\{filter:drop-shadow/, "Shared hover filters must not recolor saved Clan Heraldry.");
+assert.match(editorCss, /\.clan-hud-btn\.has-clan[\s\S]*?\):not\(:disabled\):active\{filter:drop-shadow/, "Shared active filters must not recolor saved Clan Heraldry.");
 assert.doesNotMatch(editorCss, /orientation\s*:\s*portrait/i, "No portrait Clan Heraldry CSS is allowed.");
 assert.match(scrollProof, /data-options="charge"/);
 assert.match(scrollProof, /symbolHref/);
 assert.match(scrollProof, /Save Clan Heraldry/);
+assert.match(scrollProof, /data-color-value[\s\S]*?aria-pressed[\s\S]*?renderPreviews\(\)/, "The live-style proof must exercise swatch selection and preview updates.");
+assert.match(scrollQa, /async function verifyColorSelector[\s\S]*?backgroundColor[\s\S]*?aria-pressed/, "Browser QA must inspect computed dye colors and selection state.");
+for (const token of ["primary", "secondary", "chargeColor", "secondaryChargeColor", "borderColor", "--clan-heraldry-primary", "--clan-heraldry-secondary", "--clan-heraldry-charge", "--clan-heraldry-secondary-charge", "--clan-heraldry-border", "distinctComputedColors", "renderedColor"]) {
+  assert.ok(scrollQa.includes(token), `Browser color-selector QA is missing ${token}.`);
+}
+for (const stylesheet of ["styles.css", "interface-theme.css", "daily-rewards.css", "common-gear-ui.css", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "chat.css", "clan-heraldry-v2.css"]) {
+  assert.ok(contextProof.includes(stylesheet), `Production-context proof is missing ${stylesheet}.`);
+}
+for (const context of ["editor-full", "editor-micro", "editor-option", "public-player", "public-clan", "objective", "hud", "own-profile", "overview", "discovery", "leaderboard-current", "objective-citadel"]) {
+  assert.ok(contextProof.includes(`data-shield-context="${context}"`), `Production-context proof is missing ${context}.`);
+  assert.ok(contextQa.includes(`"${context}"`), `Production-context QA is missing ${context}.`);
+}
+for (const token of ["--clan-heraldry-primary", "--clan-heraldry-secondary", "--clan-heraldry-charge", "--clan-heraldry-secondary-charge", "--clan-heraldry-border", "getComputedStyle(field).fill", "getComputedStyle(division).fill", "getComputedStyle(border).stroke", "getComputedStyle(rivets).fill", "getComputedStyle(innerTrim).stroke", "clipPath", "brightness|saturate|grayscale|contrast"]) {
+  assert.ok(contextQa.includes(token), `Production-context computed-style QA is missing ${token}.`);
+}
+assert.match(contextQa, /name: "568x320"[\s\S]*?name: "844x390"[\s\S]*?name: "1440x900"/, "Production-context QA must cover all approved landscape and desktop viewports.");
 assert.doesNotMatch(scrollProof, />◆</, "The runtime proof still contains placeholder charge diamonds.");
 
 function loadProductionV1Renderer() {
@@ -174,6 +205,38 @@ for (const [index, fixture] of fixtures.entries()) {
 
 const strictDefault = config.validateV2Write({ ...config.DEFAULT_V2 });
 assert.equal(strictDefault.ok, true, strictDefault.errors.join(" "));
+const colorVariableByField = {
+  primary: "--clan-heraldry-primary",
+  secondary: "--clan-heraldry-secondary",
+  chargeColor: "--clan-heraldry-charge",
+  secondaryChargeColor: "--clan-heraldry-secondary-charge",
+  borderColor: "--clan-heraldry-border",
+};
+for (const [field, variable] of Object.entries(colorVariableByField)) {
+  for (const color of config.COLOR_VALUES) {
+    assert.match(renderer.renderMarkup({ ...config.DEFAULT_V2, [field]: color }, { width: 96 }), new RegExp(`${variable}:${color}`), `${field} ${color} is not mapped to ${variable}.`);
+  }
+}
+for (const option of config.SHAPES) {
+  assert.match(renderer.renderMarkup({ ...config.DEFAULT_V2, shape: option.key }, { width: 96 }), new RegExp(`clip-${option.key}`), `${option.key} shape clipping is missing.`);
+}
+for (const option of config.DIVISIONS) {
+  const markup = renderer.renderMarkup({ ...config.DEFAULT_V2, division: option.key }, { width: 96 });
+  if (option.key === "solid") assert.doesNotMatch(markup, /clan-heraldry-division/, "Solid fields must not emit a division overlay.");
+  else assert.match(markup, /clan-heraldry-division/, `${option.key} division is missing.`);
+}
+for (const option of config.CHARGE_LAYOUTS) {
+  assert.match(renderer.renderMarkup({ ...config.DEFAULT_V2, chargeLayout: option.key }, { width: 96 }), /clan-heraldry-charge/, `${option.key} charge layout is missing.`);
+}
+for (const option of config.TRIMS) {
+  const markup = renderer.renderMarkup({ ...config.DEFAULT_V2, trim: option.key }, { width: 96 });
+  if (option.key === "double") assert.match(markup, /clan-heraldry-inner-trim/, "Double trim is missing its inner border.");
+  if (option.key === "riveted") assert.match(markup, /clan-heraldry-rivets/, "Riveted trim is missing its rivets.");
+  if (option.key === "plain") assert.doesNotMatch(markup, /clan-heraldry-(?:inner-trim|rivets)/, "Plain trim emits extra trim geometry.");
+}
+for (const option of config.FINISHES) {
+  assert.match(renderer.renderMarkup({ ...config.DEFAULT_V2, finish: option.key }, { width: 96 }), new RegExp(`clan-heraldry-${option.key}`), `${option.key} finish class is missing.`);
+}
 for (const removedId of removedV2Ids) {
   assert.doesNotMatch(renderer.renderMarkup({ ...config.DEFAULT_V2, charge: removedId }, { width: 96 }), new RegExp(`clan-charge-v1-full-${removedId}`), "Removed charges must not emit sprite references.");
 }

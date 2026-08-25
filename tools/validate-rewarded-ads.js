@@ -174,7 +174,7 @@ assert.match(paidRenderer, /shop-item-image-placeholder[\s\S]*renderItemIcon/);
 assert.doesNotMatch(paidRenderer, /shop-item-copy|data-shop-card-price|data-shop-owned|shop-item-value/);
 assert.doesNotMatch(paidRenderer, /data-shop-buy|<button[\s\S]*?>Buy<\/button>/);
 assert.doesNotMatch(paidRenderer, /data-rewarded-ad-watch/);
-assert.match(gameSource, /function renderShopPurchaseBar[\s\S]*shop-purchase-description[\s\S]*data-shop-selected-owned[\s\S]*data-shop-selected-price[\s\S]*data-shop-purchase-selected/);
+assert.match(gameSource, /function renderShopPurchaseBar[\s\S]*shop-purchase-description[\s\S]*data-shop-selected-owned[\s\S]*data-shop-selected-daily[\s\S]*data-shop-selected-price[\s\S]*data-shop-purchase-selected/);
 
 const rewardedFlow = extractFunction(gameSource, "requestGoogleRewardedAd");
 assert.match(rewardedFlow, /OutOfPageFormat\.REWARDED/);

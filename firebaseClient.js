@@ -36,6 +36,9 @@
     serviceWorkerRegistration: null,
     notificationToken: "",
     notificationTokenId: "",
+    pushRegistrationStatus: "idle",
+    pushRegistrationError: "",
+    pushRegistrationUpdatedAtMs: 0,
     foregroundPushListenerReady: false,
     activeSessionId: "",
     activeSessionUnsubscribe: null,
@@ -1209,6 +1212,30 @@
     };
   }
 
+  function setPushRegistrationState(status = "idle", detail = {}) {
+    const normalizedStatus = ["idle", "registering", "enabled", "disabled", "error"].includes(status)
+      ? status
+      : "idle";
+    client.pushRegistrationStatus = normalizedStatus;
+    client.pushRegistrationError = normalizedStatus === "error"
+      ? String(detail.error || "Could not register this browser for notifications.").slice(0, 240)
+      : "";
+    client.pushRegistrationUpdatedAtMs = Date.now();
+    const state = getPushRegistrationState();
+    dispatch("push-notifications", state);
+    return state;
+  }
+
+  function getPushRegistrationState() {
+    return {
+      status: client.pushRegistrationStatus,
+      enabled: client.pushRegistrationStatus === "enabled" && Boolean(client.notificationTokenId),
+      tokenId: client.notificationTokenId,
+      error: client.pushRegistrationError,
+      updatedAtMs: client.pushRegistrationUpdatedAtMs,
+    };
+  }
+
   async function getServiceWorkerRegistration() {
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
@@ -1242,9 +1269,11 @@
     if (!uid || !token) return null;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
     const tokenId = await hashText(token);
+    const installationId = getGameInstallationId();
     await setDoc(doc(client.db, "players", uid, "notificationTokens", tokenId), {
       uid,
       token,
+      installationId,
       platform: "web",
       userAgent: String(navigator.userAgent || "").slice(0, 240),
       playerName: cleanPlayerName(options.playerName || client.user?.displayName),
@@ -1255,7 +1284,24 @@
     }, { merge: true });
     client.notificationToken = token;
     client.notificationTokenId = tokenId;
+    await removeInstallationNotificationTokenDocs(uid, { keepTokenId: tokenId }).catch(error => {
+      console.warn("Could not remove a superseded notification token", error);
+    });
     return tokenId;
+  }
+
+  async function removeInstallationNotificationTokenDocs(uid, { keepTokenId = "" } = {}) {
+    const playerUid = String(uid || "");
+    if (!playerUid) return 0;
+    const { collection, deleteDoc, getDocs } = client.modules.firestore;
+    const installationId = getGameInstallationId();
+    const snapshot = await getDocs(collection(client.db, "players", playerUid, "notificationTokens"));
+    const staleDocs = snapshot.docs.filter(tokenDoc => (
+      tokenDoc.id !== keepTokenId
+      && String(tokenDoc.data()?.installationId || "") === installationId
+    ));
+    await Promise.all(staleDocs.map(tokenDoc => deleteDoc(tokenDoc.ref)));
+    return staleDocs.length;
   }
 
   async function removeNotificationToken(token = client.notificationToken, tokenId = client.notificationTokenId) {
@@ -1263,49 +1309,69 @@
     const uid = requireSignedIn();
     if (!uid) return false;
     const safeTokenId = tokenId || (token ? await hashText(token) : "");
-    if (!safeTokenId) return false;
     const { deleteDoc, doc } = client.modules.firestore;
-    await deleteDoc(doc(client.db, "players", uid, "notificationTokens", safeTokenId));
+    if (safeTokenId) {
+      await deleteDoc(doc(client.db, "players", uid, "notificationTokens", safeTokenId));
+    }
+    const removedInstallationTokens = await removeInstallationNotificationTokenDocs(uid);
     if (safeTokenId === client.notificationTokenId) {
       client.notificationToken = "";
       client.notificationTokenId = "";
     }
-    return true;
+    return Boolean(safeTokenId || removedInstallationTokens);
   }
 
   async function enablePushNotifications(options = {}) {
-    if (!window.isSecureContext) throw new Error("Open the game with HTTPS to enable notifications.");
-    if (!("Notification" in window)) throw new Error("This browser cannot receive notifications.");
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("This browser cannot receive push notifications.");
-    const vapidKey = getNotificationVapidKey();
-    if (!vapidKey) throw new Error("Notifications are missing the web push key.");
-    let permission = getNotificationPermission();
-    if (permission === "default" && !options.skipPermissionRequest) {
-      permission = await requestNotificationPermission();
+    if (client.pushPromise) return client.pushPromise;
+    const pushPromise = (async () => {
+      setPushRegistrationState("registering");
+      try {
+        if (!window.isSecureContext) throw new Error("Open the game with HTTPS to enable notifications.");
+        if (!("Notification" in window)) throw new Error("This browser cannot receive notifications.");
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("This browser cannot receive push notifications.");
+        const vapidKey = getNotificationVapidKey();
+        if (!vapidKey) throw new Error("Notifications are missing the web push key.");
+        let permission = getNotificationPermission();
+        if (permission === "default" && !options.skipPermissionRequest) {
+          permission = await requestNotificationPermission();
+        }
+        if (permission !== "granted") throw new Error("Notifications are blocked in this browser.");
+        await init();
+        const uid = requireSignedIn();
+        if (!uid) throw new Error("Sign in to enable notifications.");
+        if (!isPushSupported()) throw new Error("This browser cannot receive notifications.");
+        const messagingModule = await loadMessagingModule();
+        const messaging = await ensureMessaging();
+        const registration = await getServiceWorkerRegistration();
+        const tokenOptions = { serviceWorkerRegistration: registration, vapidKey };
+        const token = await messagingModule.getToken(messaging, tokenOptions);
+        if (!token) throw new Error("Could not register this browser for notifications.");
+        await saveNotificationToken(token, options);
+        const state = setPushRegistrationState("enabled");
+        return { ...state, permission };
+      } catch (error) {
+        setPushRegistrationState("error", { error: error?.message || error });
+        throw error;
+      }
+    })();
+    client.pushPromise = pushPromise;
+    try {
+      return await pushPromise;
+    } finally {
+      if (client.pushPromise === pushPromise) client.pushPromise = null;
     }
-    if (permission !== "granted") throw new Error("Notifications are blocked in this browser.");
-    await init();
-    const uid = requireSignedIn();
-    if (!uid) throw new Error("Sign in to enable notifications.");
-    if (!isPushSupported()) throw new Error("This browser cannot receive notifications.");
-    const messagingModule = await loadMessagingModule();
-    const messaging = await ensureMessaging();
-    const registration = await getServiceWorkerRegistration();
-    const tokenOptions = { serviceWorkerRegistration: registration };
-    if (vapidKey) tokenOptions.vapidKey = vapidKey;
-    const token = await messagingModule.getToken(messaging, tokenOptions);
-    if (!token) throw new Error("Could not register this browser for notifications.");
-    const tokenId = await saveNotificationToken(token, options);
-    dispatch("push-notifications", { enabled: true, tokenId });
-    return { enabled: true, tokenId, permission };
   }
 
   async function registerPushNotifications(options = {}) {
-    if (getNotificationPermission() !== "granted") return { enabled: false, permission: getNotificationPermission() };
+    if (getNotificationPermission() !== "granted") {
+      const state = setPushRegistrationState("disabled");
+      return { ...state, permission: getNotificationPermission() };
+    }
     return enablePushNotifications(options);
   }
 
   async function disablePushNotifications() {
+    if (client.pushPromise) await client.pushPromise.catch(() => null);
     await init();
     try {
       if (client.messaging && client.modules?.messaging?.deleteToken) {
@@ -1317,7 +1383,9 @@
     await removeNotificationToken().catch(error => {
       console.warn("Could not remove stored push token", error);
     });
-    dispatch("push-notifications", { enabled: false });
+    client.notificationToken = "";
+    client.notificationTokenId = "";
+    setPushRegistrationState("disabled");
     return true;
   }
 
@@ -1785,8 +1853,8 @@
     return callServerFunction("getCommonGearStatus", {});
   }
 
-  async function purchaseCommonGearBox() {
-    return callServerFunction("purchaseCommonGearBox", {});
+  async function purchaseCommonGearBox({ cost = 0 } = {}) {
+    return callServerFunction("purchaseCommonGearBox", { cost });
   }
 
   async function openCommonGearBox({ requestId = "" } = {}) {
@@ -2817,6 +2885,7 @@
     isPushSupported,
     getNotificationPermission,
     requestNotificationPermission,
+    getPushRegistrationState,
     hasNotificationVapidKey: () => Boolean(getNotificationVapidKey()),
     usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
     usesServerEconomyAuthority,

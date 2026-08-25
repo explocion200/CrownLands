@@ -172,6 +172,15 @@
     return undefined;
   }
 
+  function firstNormalizedValue(source, keys, normalize) {
+    for (const key of keys) {
+      if (!source || !Object.prototype.hasOwnProperty.call(source, key)) continue;
+      const normalized = normalize(source[key]);
+      if (normalized) return normalized;
+    }
+    return "";
+  }
+
   function normalizePattern(value, stableKey = "") {
     const candidate = String(value || "").trim();
     return PATTERN_KEYS.includes(candidate)
@@ -179,12 +188,18 @@
       : selectStable(PATTERN_KEYS, stableKey, `pattern:${candidate}`) || DEFAULT_FLAG.pattern;
   }
 
-  function normalizeSymbol(value, stableKey = "") {
+  function resolveKnownSymbol(value) {
     const candidate = String(value || "").trim();
     if (SYMBOL_KEYS.includes(candidate)) return candidate;
     const legacy = LEGACY_SYMBOL_MAP[candidate.toLowerCase()];
-    if (legacy && SYMBOL_KEYS.includes(legacy)) return legacy;
-    return selectStable(SYMBOL_KEYS, stableKey, `symbol:${candidate}`) || DEFAULT_FLAG.symbol;
+    return legacy && SYMBOL_KEYS.includes(legacy) ? legacy : "";
+  }
+
+  function normalizeSymbol(value, stableKey = "") {
+    const candidate = resolveKnownSymbol(value);
+    if (candidate) return candidate;
+    const rawValue = String(value || "").trim();
+    return selectStable(SELECTABLE_SYMBOL_KEYS, stableKey, `symbol:${rawValue}`) || DEFAULT_FLAG.symbol;
   }
 
   function createDeterministicFlag(stableKey = "", version = CURRENT_VERSION) {
@@ -204,11 +219,20 @@
     const source = flag && typeof flag === "object" && !Array.isArray(flag) ? flag : {};
     const version = getFlagVersion(source);
     const fallback = createDeterministicFlag(stableKey, version);
-    const primary = normalizeHexColor(firstValue(source, ["primary", "primaryColor", "fieldColor", "background"])) || fallback.primary;
-    const secondary = normalizeHexColor(firstValue(source, ["secondary", "accent", "accentColor", "secondaryColor", "patternColor"])) || fallback.secondary;
-    const symbolColor = normalizeHexColor(firstValue(source, ["symbolColor", "iconColor", "chargeColor", "emblemColor"])) || DEFAULT_FLAG.symbolColor;
-    const pattern = normalizePattern(firstValue(source, ["pattern", "patternId"]), stableKey);
-    const symbol = normalizeSymbol(firstValue(source, ["symbol", "symbolId", "icon", "emblem"]), stableKey);
+    const primaryKeys = ["primary", "primaryColor", "fieldColor", "background"];
+    const secondaryKeys = ["secondary", "accent", "accentColor", "secondaryColor", "patternColor"];
+    const symbolColorKeys = ["symbolColor", "iconColor", "chargeColor", "emblemColor"];
+    const patternKeys = ["pattern", "patternId"];
+    const symbolKeys = ["symbol", "symbolId", "icon", "emblem"];
+    const primary = firstNormalizedValue(source, primaryKeys, normalizeHexColor) || fallback.primary;
+    const secondary = firstNormalizedValue(source, secondaryKeys, normalizeHexColor) || fallback.secondary;
+    const symbolColor = firstNormalizedValue(source, symbolColorKeys, normalizeHexColor) || DEFAULT_FLAG.symbolColor;
+    const pattern = firstNormalizedValue(source, patternKeys, value => {
+      const candidate = String(value || "").trim();
+      return PATTERN_KEYS.includes(candidate) ? candidate : "";
+    }) || normalizePattern(firstValue(source, patternKeys), stableKey);
+    const symbol = firstNormalizedValue(source, symbolKeys, resolveKnownSymbol)
+      || normalizeSymbol(firstValue(source, symbolKeys), stableKey);
     return { version, primary, secondary, symbolColor, pattern, symbol };
   }
 

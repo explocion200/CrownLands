@@ -58,7 +58,7 @@ for (const symbol of config.SYMBOLS) {
   assert.equal((source.match(new RegExp(`id="cl-icon-${symbol.icon}"`, "g")) || []).length, 1, `${symbol.label} must have exactly one SVG sprite symbol.`);
 }
 
-assert.match(index, /functions\/playerFlagConfig\.js\?v=20260819-player-flags-v2-r1[\s\S]*functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1[\s\S]*firebaseClient\.js[\s\S]*game\.js/, "The shared flag config and renderer must load before persistence and gameplay.");
+assert.match(index, /functions\/playerFlagConfig\.js\?v=20260825-player-flags-audit-r1[\s\S]*functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1[\s\S]*firebaseClient\.js[\s\S]*game\.js/, "The shared flag config and renderer must load before persistence and gameplay.");
 assert.match(game, /const PLAYER_FLAG_CONFIG = globalThis\.CrownlandsPlayerFlags/);
 assert.match(server, /require\("\.\/playerFlagConfig\.js"\)/);
 assert.match(game, /function createRandomFlag\(\)[\s\S]*PLAYER_FLAG_CONFIG\.createRandomFlag\(\)/);

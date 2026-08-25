@@ -6,12 +6,13 @@ const realm = require("../release-config.json");
 const commonGear = require("../common-gear.js");
 
 const SHOP_PRICE_HOURS = Object.freeze({
-  shield_12h: 3.5,
-  war_drums_30m: 1.5,
+  shield_12h: 1,
+  war_drums_30m: 0.36,
   royal_tax_decree_30m: 0.18,
-  veil_of_silence_30m: 2,
-  swift_march_order: 1,
-  recall_horn: 1.25,
+  veil_of_silence_30m: 0.18,
+  swift_march_order: 0.36,
+  recall_horn: 0.54,
+  common_gear_box: 1,
 });
 
 function getExpectedShopPrice(itemId, pricing = {}) {
@@ -411,7 +412,8 @@ async function main() {
 
   const gearStatus = await callFunction("getCommonGearStatus", user.token);
   const gearBoxPrice = Number(gearStatus.shop?.price || 0);
-  assert(gearBoxPrice === 1_000_000_000, `Common Gear Box price must be exactly 1 billion gold, got ${gearBoxPrice}.`);
+  const expectedGearBoxPrice = getExpectedShopPrice("common_gear_box", gearStatus.shopPricing);
+  assert(gearBoxPrice === expectedGearBoxPrice, `Common Gear Box price must equal one raw Gold-production hour, got ${gearBoxPrice}; expected ${expectedGearBoxPrice}.`);
   await profileRef.set({
     gold: gearBoxPrice * 2 + 1000,
     goldFloat: gearBoxPrice * 2 + 1000,
@@ -419,8 +421,8 @@ async function main() {
     economyUpdatedAtMs: Date.now(),
   }, { merge: true });
   const concurrentGearPurchases = await Promise.all([
-    invokeFunction("purchaseCommonGearBox", user.token),
-    invokeFunction("purchaseCommonGearBox", user.token),
+    invokeFunction("purchaseCommonGearBox", user.token, { cost: gearBoxPrice }),
+    invokeFunction("purchaseCommonGearBox", user.token, { cost: gearBoxPrice }),
   ]);
   assert(
     concurrentGearPurchases.filter(result => result.ok).length === 1

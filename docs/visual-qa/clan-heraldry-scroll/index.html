@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="../../../mobile-viewport.css">
   <link rel="stylesheet" href="../../../player-flag-editor.css">
   <link rel="stylesheet" href="../../../chat.css">
-  <link rel="stylesheet" href="../../../clan-heraldry-v2.css">
+  <link rel="stylesheet" href="../../../clan-heraldry-v2.css?v=20260825-clan-shield-colors-r1">
   <style>
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     body { background: linear-gradient(135deg, #071b2c, #102d3c); }
@@ -104,8 +104,11 @@
     const renderer = window.CrownlandsClanHeraldryRenderer.create({ config, assets: qaAssets, legacyRenderer: window.CrownlandsClanHeraldryLegacyV1 });
     const draft = { ...config.DEFAULT_V2, shape: "heater", division: "saltire", charge: "fortress-keep", secondaryCharge: "war-horn", chargeLayout: "paired", chargeColor: "#f2e2bf", secondaryChargeColor: "#d8bd78", primary: "#24445f", secondary: "#7a2638", borderColor: "#d8bd78", finish: "battleworn" };
     assets.installSharedDefs(document);
-    document.querySelector("[data-qa-full-preview]").innerHTML = renderer.renderMarkup(draft, { size: "editor", variant: "full", label: "Customized v2 clan heraldry" });
-    document.querySelector("[data-qa-micro-preview]").innerHTML = renderer.renderMarkup(draft, { size: "mini", variant: "micro", label: "Micro v2 clan heraldry" });
+    const renderPreviews = () => {
+      document.querySelector("[data-qa-full-preview]").innerHTML = renderer.renderMarkup(draft, { size: "editor", variant: "full", label: "Customized v2 clan heraldry" });
+      document.querySelector("[data-qa-micro-preview]").innerHTML = renderer.renderMarkup(draft, { size: "mini", variant: "micro", label: "Micro v2 clan heraldry" });
+    };
+    renderPreviews();
     const catalogs = { shape: config.SHAPES, division: config.DIVISIONS, charge: config.SELECTABLE_CHARGES, chargeLayout: config.CHARGE_LAYOUTS, trim: config.TRIMS, finish: config.FINISHES };
     const visualDraft = (key, option) => ({ ...draft, [key]: option.key, ...(key === "shape" || key === "division" ? { charge: "none", secondaryCharge: "none", trim: "plain", finish: "polished" } : {}) });
     document.querySelectorAll("[data-options]").forEach(grid => {
@@ -121,8 +124,22 @@
       }).join("");
     });
     const colors = config.COLOR_VALUES;
-    document.querySelectorAll("[data-swatches]").forEach(grid => {
-      grid.innerHTML = colors.map((color, index) => `<button type="button" class="${index === 0 ? "active" : ""}" style="--shield-swatch:${color}" aria-label="Color ${index + 1}"></button>`).join("");
+    const colorKeys = ["primary", "secondary", "chargeColor", "secondaryChargeColor", "borderColor"];
+    document.querySelectorAll("[data-swatches]").forEach((grid, groupIndex) => {
+      const key = colorKeys[groupIndex];
+      grid.dataset.colorKey = key;
+      grid.innerHTML = colors.map((color, index) => `<button type="button" class="${draft[key] === color ? "active" : ""}" style="--shield-swatch:${color}" data-color-value="${color}" aria-label="Color ${index + 1}" aria-pressed="${draft[key] === color}"></button>`).join("");
+      grid.addEventListener("click", event => {
+        const button = event.target.closest("[data-color-value]");
+        if (!button) return;
+        draft[key] = button.dataset.colorValue;
+        grid.querySelectorAll("[data-color-value]").forEach(item => {
+          const selected = item === button;
+          item.classList.toggle("active", selected);
+          item.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        renderPreviews();
+      });
     });
     document.querySelectorAll("[data-qa-tab]").forEach(button => button.addEventListener("click", () => {
       document.querySelectorAll("[data-qa-tab]").forEach(item => { item.classList.toggle("active", item === button); item.setAttribute("aria-selected", item === button ? "true" : "false"); });

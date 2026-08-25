@@ -81,6 +81,22 @@ assert.deepEqual(
   { version: 1, primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" }
 );
 assert.equal(config.normalizeFlag({ ...legacy, primary: "#12abEF" }, "owner-a").primary, "#12ABEF");
+assert.deepEqual(
+  config.normalizeFlag({
+    primary: "invalid",
+    background: "#17324d",
+    secondary: null,
+    patternColor: "#d8bd78",
+    symbolColor: "transparent",
+    emblemColor: "#ffffff",
+    pattern: "missing-pattern",
+    patternId: "split",
+    symbol: "missing-symbol",
+    emblem: "crown",
+  }, "mixed-legacy-owner"),
+  { version: 1, primary: "#17324D", secondary: "#D8BD78", symbolColor: "#FFFFFF", pattern: "split", symbol: "crown" },
+  "Invalid canonical fields must not hide valid legacy aliases."
+);
 
 const selectableSymbols = [
   "crown", "lion", "eagle", "wolf", "stag", "boar", "bear", "horse", "dragon",
@@ -92,6 +108,10 @@ assert.equal(config.SYMBOL_KEYS.length, 30, "The v2 catalog must contain exactly
 assert.deepEqual(config.SELECTABLE_SYMBOL_KEYS, selectableSymbols, "The editor must expose exactly the 21 approved symbols.");
 assert.deepEqual(config.LEGACY_ONLY_SYMBOL_KEYS, legacyOnlySymbols, "The legacy-only compatibility set changed.");
 for (const symbol of legacyOnlySymbols) assert.ok(config.SYMBOL_KEYS.includes(symbol), `Missing readable legacy-only ${symbol} ID.`);
+for (let index = 0; index < 100; index += 1) {
+  const repaired = config.normalizeFlag({ symbol: "future-or-corrupt-symbol" }, `repair-owner-${index}`);
+  assert.ok(config.SELECTABLE_SYMBOL_KEYS.includes(repaired.symbol), "Corrupt symbol repair exposed a legacy-only editor fallback.");
+}
 assert.equal(config.PATTERN_KEYS.length, 14);
 for (const pattern of config.PATTERN_KEYS) assert.ok(styles.includes(`pattern-${pattern}`), `Missing ${pattern} CSS geometry.`);
 for (const symbol of config.SYMBOLS) {
@@ -154,7 +174,11 @@ assert.match(editorRenderer, /FlagRenderer\.render\(flagEditorPreview/);
 assert.match(editorRenderer, /FlagRenderer\.render\(flagEditorSmallPreview/);
 assert.match(editorRenderer, /hideSymbol:\s*true/);
 assert.match(game, /const FLAG_SYMBOLS = PLAYER_FLAG_CONFIG\.SELECTABLE_SYMBOLS;/, "The editor does not use the 21-symbol selectable catalog.");
-assert.match(game, /EXTERNAL_FLAG_ICON_KEYS\.has\(iconKey\)[\s\S]*?\/assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}/, "Approved flag icons are not routed to the same-origin runtime sprite.");
+assert.match(game, /EXTERNAL_FLAG_ICON_KEYS\.has\(iconKey\)[\s\S]*?`assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}`/, "Approved flag icons are not routed through the app-relative runtime sprite.");
+assert.doesNotMatch(game, /`\/assets\/flag-symbols\/runtime\.svg#cl-icon-\$\{iconKey\}`/, "Flag symbols still use a deployment-root-only sprite URL.");
+assert.match(worker, /function isStaticAssetRequest[\s\S]*?svg/, "SVG assets must be handled as cacheable static requests.");
+assert.match(worker, /event\.respondWith\(\s*cacheFirst\(request\)/, "Static SVG assets must use runtime caching after their first successful load.");
+assert.doesNotMatch(worker, /"\/assets\/flag-symbols\/runtime\.svg"/, "The 81 KiB flag symbol sprite must not inflate the install-time cache.");
 assert.match(game, /function isFlagEditorDirty\(\)/);
 assert.match(game, /flagDiscardDialog\.addEventListener\("close"/);
 
@@ -170,9 +194,17 @@ assert.match(saveFlag, /Save failed — retry/);
 
 assert.doesNotMatch(game, /function applyFlagToElement\(/, "The duplicated legacy renderer still exists.");
 for (const context of [
-  "hud", "city", "profile", "public-profile", "clan-roster", "clan-application",
+  "hud", "city", "profile", "public-profile", "clan-roster", "public-clan-roster", "clan-application",
   "leaderboard", "scout-report", "battle-report-list", "battle-report-detail",
 ]) assert.ok(game.includes(`context: "${context}"`), `Missing shared renderer context ${context}.`);
+assert.match(game, /function showPublicClanDetails[\s\S]*?data-public-clan-member-flag[\s\S]*?FlagRenderer\.render[\s\S]*?member\.flag[\s\S]*?stableKey:\s*member\.uid \|\| member\.id \|\| member\.displayName[\s\S]*?context:\s*"public-clan-roster"/, "Public clan member flags are not hydrated from member snapshots with stable legacy fallbacks.");
+assert.match(game, /normalizeFlag\(report\.opponentFlag, report\.opponentUid \|\| report\.opponentName\)/, "Battle reports do not repair flags against the opponent identity.");
+assert.match(game, /stableKey:\s*report\.opponentUid \|\| report\.opponentName[\s\S]*context:\s*"battle-report-list"/, "Legacy battle-report cards do not derive missing flags from their opponent identity.");
+assert.match(game, /normalizeFlag\(participant\.ownerFlag, participant\.ownerUid \|\| participant\.ownerName\)/, "Detailed battle flags do not repair against the participant identity.");
+assert.match(game, /normalizeFlag\(row\.ownerFlag, row\.ownerUid\)/, "Scout reinforcement flags do not repair against their owner identity.");
+assert.doesNotMatch(extractFunction(game, "applyClanRosterFlags"), /\|\| createDefaultFlag\(\)/, "Clan flag fallbacks collapse missing flags to one default.");
+assert.doesNotMatch(extractFunction(game, "renderLeaderboardRows"), /\|\| createDefaultFlag\(\)/, "Leaderboard flag fallbacks collapse missing flags to one default.");
+assert.doesNotMatch(extractFunction(game, "applyLegacyBattleFlags"), /\|\| createDefaultFlag\(\)/, "Legacy report flag fallbacks collapse missing flags to one default.");
 assert.doesNotMatch(read("chat-ui.js"), /FlagRenderer|applyFlagToElement/, "Chat flags are outside this feature scope.");
 
 assert.match(server, /function normalizeServerFlag\(flag = null, stableKey = ""\)[\s\S]*PLAYER_FLAG_CONFIG\.toStoredFlag\(flag, stableKey\)/);
@@ -189,9 +221,10 @@ assert.match(index, /id="flagResetBtn"/);
 assert.match(index, /id="flagRandomizeBtn"/);
 assert.match(index, /id="flagDiscardDialog"/);
 for (const source of [index, worker]) {
-  assert.match(source, /functions\/playerFlagConfig\.js\?v=20260819-player-flags-v2-r1/);
+  assert.match(source, /functions\/playerFlagConfig\.js\?v=20260825-player-flags-audit-r1/);
   assert.match(source, /functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1/);
   assert.match(source, /player-flag-editor\.css\?v=20260819-player-flags-v2-r1/);
+  assert.match(source, /game\.js\?v=20260825-player-flags-audit-r2/);
 }
 for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /functions\/flagRenderer\.js/);

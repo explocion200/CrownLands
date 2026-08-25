@@ -364,6 +364,50 @@
       ],
       "unresolvedUseCount": 0
     },
+    "colorProof": {
+      "channels": [
+        {
+          "key": "primary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#d8bd78",
+          "restoredValue": "#24445f",
+          "renderedColor": "rgb(216, 189, 120)"
+        },
+        {
+          "key": "secondary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#547a9a",
+          "restoredValue": "#7a2638",
+          "renderedColor": "rgb(84, 122, 154)"
+        },
+        {
+          "key": "chargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#c69a45",
+          "restoredValue": "#f2e2bf",
+          "renderedColor": "rgb(198, 154, 69)"
+        },
+        {
+          "key": "secondaryChargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#b7c3bf",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(183, 195, 191)"
+        },
+        {
+          "key": "borderColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#253f3a",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(37, 63, 58)"
+        }
+      ]
+    },
     "consoleErrors": [],
     "requestFailures": []
   },
@@ -468,7 +512,7 @@
       }
     },
     "wheelScrollTop": 420,
-    "touchScrollTop": 239,
+    "touchScrollTop": 240,
     "middleScrollTop": 443,
     "previewStayedFixed": true,
     "actionsStayedFixed": true,
@@ -731,6 +775,50 @@
         ]
       ],
       "unresolvedUseCount": 0
+    },
+    "colorProof": {
+      "channels": [
+        {
+          "key": "primary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#d8bd78",
+          "restoredValue": "#24445f",
+          "renderedColor": "rgb(216, 189, 120)"
+        },
+        {
+          "key": "secondary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#547a9a",
+          "restoredValue": "#7a2638",
+          "renderedColor": "rgb(84, 122, 154)"
+        },
+        {
+          "key": "chargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#c69a45",
+          "restoredValue": "#f2e2bf",
+          "renderedColor": "rgb(198, 154, 69)"
+        },
+        {
+          "key": "secondaryChargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#b7c3bf",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(183, 195, 191)"
+        },
+        {
+          "key": "borderColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#253f3a",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(37, 63, 58)"
+        }
+      ]
     },
     "consoleErrors": [],
     "requestFailures": []
@@ -1094,6 +1182,50 @@
         ]
       ],
       "unresolvedUseCount": 0
+    },
+    "colorProof": {
+      "channels": [
+        {
+          "key": "primary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#d8bd78",
+          "restoredValue": "#24445f",
+          "renderedColor": "rgb(216, 189, 120)"
+        },
+        {
+          "key": "secondary",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#547a9a",
+          "restoredValue": "#7a2638",
+          "renderedColor": "rgb(84, 122, 154)"
+        },
+        {
+          "key": "chargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#c69a45",
+          "restoredValue": "#f2e2bf",
+          "renderedColor": "rgb(198, 154, 69)"
+        },
+        {
+          "key": "secondaryChargeColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#b7c3bf",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(183, 195, 191)"
+        },
+        {
+          "key": "borderColor",
+          "swatchCount": 16,
+          "distinctComputedColors": 16,
+          "selectedValue": "#253f3a",
+          "restoredValue": "#d8bd78",
+          "renderedColor": "rgb(37, 63, 58)"
+        }
+      ]
     },
     "consoleErrors": [],
     "requestFailures": []

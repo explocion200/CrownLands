@@ -359,12 +359,18 @@ async function main() {
       if (scenario.boostsGold) {
         assert(Number(stats.goldPerHour) > expectedRaw.gold, `${scenario.name} failed to increase normal Gold production.`);
       } else {
-        assert(Number(stats.goldPerHour) === expectedRaw.gold, `${scenario.name} unexpectedly changed normal Gold production.`);
+        assert(
+          Number(stats.goldPerHour) === expectedRaw.gold,
+          `${scenario.name} unexpectedly changed normal Gold production (${stats.goldPerHour}; expected ${expectedRaw.gold}; source ${stats.strongholdBonusSource || "unknown"}; personal ${stats.personalStrongholdGoldBonusPercent || 0}%; shared ${stats.sharedClanGoldBonusPercent || 0}%).`
+        );
       }
       if (scenario.boostsTroops) {
         assert(Number(stats.troopPerHour) > expectedRaw.troops, `${scenario.name} failed to increase normal troop production.`);
       } else {
-        assert(Number(stats.troopPerHour) === expectedRaw.troops, `${scenario.name} unexpectedly changed normal troop production.`);
+        assert(
+          Number(stats.troopPerHour) === expectedRaw.troops,
+          `${scenario.name} unexpectedly changed normal troop production (${stats.troopPerHour}; expected ${expectedRaw.troops}; source ${stats.strongholdBonusSource || "unknown"}; personal ${stats.personalStrongholdTroopBonusPercent || 0}%; shared ${stats.sharedClanTroopBonusPercent || 0}%).`
+        );
       }
       if (scenario.boostsRaw) {
         assert(expectedRaw.gold > baselineRaw.gold, `${scenario.name} did not increase raw Gold production.`);

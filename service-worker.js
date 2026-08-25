@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260823-item-bag-stacks-r1";
+const CACHE_VERSION = "20260825-shop-hourly-prices-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -8,38 +8,55 @@ function resolveAppUrl(path = "") {
   return new URL(value.replace(/^\/+/, ""), APP_BASE_URL).href;
 }
 
+function resolveNotificationUrl(path = "") {
+  const value = String(path || "").trim();
+  return resolveAppUrl(!value || value === "/" ? "play/" : value);
+}
+
+function getNotificationOpenUrl(notificationData = {}) {
+  const url = new URL(resolveNotificationUrl(notificationData.url));
+  if (notificationData.type === "incoming_army" && notificationData.cityId) {
+    url.searchParams.set("notification", "incoming_army");
+    url.searchParams.set("notificationCity", String(notificationData.cityId).slice(0, 96));
+    if (notificationData.targetRegionId) {
+      url.searchParams.set("notificationRegion", String(notificationData.targetRegionId).slice(0, 80));
+    }
+  }
+  return url.href;
+}
+
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260823-item-bag-stacks-r1",
+  "/styles.css?v=20260825-player-flags-audit-r2",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
   "/ui-contrast-correction.css?v=20260819-player-flags-v2-r1",
   "/profile-theme.css?v=20260819-player-flags-v2-r1",
-  "/crownlands-palette.css?v=20260823-item-bag-stacks-r1",
+  "/crownlands-palette.css?v=20260825-shop-hourly-prices-r1",
   "/action-buttons.css?v=20260814-readability-r38",
-  "/mobile-viewport.css?v=20260823-item-bag-stacks-r1",
+  "/mobile-viewport.css?v=20260825-shop-hourly-prices-r1",
   "/player-flag-editor.css?v=20260819-player-flags-v2-r1",
   "/chat.css?v=20260818-global-clan-chat-r1",
-  "/clan-heraldry-v2.css?v=20260823-clan-heraldry-live-ui-r1",
+  "/clan-heraldry-v2.css?v=20260825-clan-shield-colors-r1",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260805-linear-walls-v1",
-  "/common-gear.js?v=20260812-visual-correction-pass-4a-r1",
+  "/common-gear.js?v=20260825-shop-hourly-prices-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
-  "/functions/playerFlagConfig.js?v=20260819-player-flags-v2-r1",
+  "/functions/playerFlagConfig.js?v=20260825-player-flags-audit-r1",
   "/functions/flagRenderer.js?v=20260819-player-flags-v2-r1",
   "/functions/clanHeraldryConfig.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryAssets.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryLegacyV1.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1",
-  "/firebaseClient.js?v=20260819-player-flags-v2-r1",
+  "/firebaseClient.js?v=20260825-shop-hourly-prices-r1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
-  "/instant-economy-actions.js?v=20260823-item-bag-stacks-r1",
+  "/instant-economy-actions.js?v=20260825-shop-hourly-prices-r1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260823-clan-heraldry-live-ui-r2",
+  "/game.js?v=20260825-player-flags-audit-r2",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
@@ -75,7 +92,7 @@ try {
         ? `crownlands-${data.armyId}`
         : "crownlands-incoming-army";
 
-      self.registration.showNotification(title, {
+      return self.registration.showNotification(title, {
         body,
         tag,
         renotify: true,
@@ -84,7 +101,7 @@ try {
         badge: resolveAppUrl("assets/icons/crownlands-icon-192.png"),
         data: {
           ...data,
-          url: resolveAppUrl(data.url || ""),
+          url: resolveNotificationUrl(data.url),
         },
       });
     });
@@ -264,19 +281,27 @@ self.addEventListener("message", event => {
 self.addEventListener("notificationclick", event => {
   const notificationData = event.notification?.data || {};
   event.notification.close();
-  const url = resolveAppUrl(notificationData.url || "play/");
+  const url = getNotificationOpenUrl(notificationData);
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-    const sameOriginClient = windowClients.find(client => {
+    const targetUrl = new URL(url);
+    const gameClient = windowClients.find(client => {
       try {
-        return new URL(client.url).origin === self.location.origin;
+        const clientUrl = new URL(client.url);
+        const normalizedClientPath = clientUrl.pathname.replace(/\/+$/, "") || "/";
+        const normalizedTargetPath = targetUrl.pathname.replace(/\/+$/, "") || "/";
+        return clientUrl.origin === targetUrl.origin
+          && (
+            normalizedClientPath === normalizedTargetPath
+            || (normalizedTargetPath === "/play" && normalizedClientPath === "/index.html")
+          );
       } catch (_error) {
         return false;
       }
     });
-    if (sameOriginClient) {
-      await sameOriginClient.focus();
-      sameOriginClient.postMessage({
+    if (gameClient) {
+      await gameClient.focus();
+      gameClient.postMessage({
         type: "CROWNLANDS_NOTIFICATION_CLICK",
         notification: notificationData,
       });

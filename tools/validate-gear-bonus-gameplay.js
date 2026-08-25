@@ -714,7 +714,7 @@ async function main() {
   assert.match(citySourceContext.getCityStatBonusSources({ taxStewardshipPercent: 75, gearGoldProductionMainCityPercent: 10.5, gearGoldProductionAllCitiesPercent: 1.5 }, "gold"), /Tax Stewardship \+75%[\s\S]*Treasury main-city gear \+10\.5%[\s\S]*Treasury all-city gear \+1\.5%/);
   assert.match(clientUiSource, /Attack sources: Swordmastery[\s\S]*?War Captain gear/);
   assert.match(clientUiSource, /March Orders[\s\S]*?Royal Stables gear[\s\S]*?combined speed/);
-  assert.match(clientSource, /function getBattleSideBonusEntries[\s\S]*?gearRecoveredTroops[\s\S]*?recovery\.sourceLabel[\s\S]*?gear · main city/);
+  assert.match(clientUiSource, /function getBattleSideBonusEntries[\s\S]*?gearRecoveredTroops[\s\S]*?recovery\.sourceLabel[\s\S]*?gear · main city/);
   assert.match(clientSource, /function renderBattleRewards[\s\S]*?Field Medics \+ Barracks gear · 75% combined cap · returned to the main city/);
 
   assert.match(commonGear.getDefinition(gearKeys["gatehouse:necklace"]).statLabel, /new wall damage/i);

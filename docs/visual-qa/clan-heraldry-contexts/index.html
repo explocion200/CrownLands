@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-animation-mode="off">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Clan Heraldry Production Context QA</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../../../styles.css">
+  <link rel="stylesheet" href="../../../interface-theme.css">
+  <link rel="stylesheet" href="../../../daily-rewards.css">
+  <link rel="stylesheet" href="../../../common-gear-ui.css">
+  <link rel="stylesheet" href="../../../readability.css">
+  <link rel="stylesheet" href="../../../manuscript-prototype.css">
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css">
+  <link rel="stylesheet" href="../../../profile-theme.css">
+  <link rel="stylesheet" href="../../../crownlands-palette.css">
+  <link rel="stylesheet" href="../../../action-buttons.css">
+  <link rel="stylesheet" href="../../../mobile-viewport.css">
+  <link rel="stylesheet" href="../../../player-flag-editor.css">
+  <link rel="stylesheet" href="../../../chat.css">
+  <link rel="stylesheet" href="../../../clan-heraldry-v2.css?v=20260825-clan-shield-colors-r1">
+  <style>
+    html,body{min-width:100%;min-height:100%;margin:0;overflow:auto;background:#110f0c}
+    body{padding:16px;color:#eee1bd;font-family:Inter,"Segoe UI",sans-serif}
+    #qa-contexts{width:min(1180px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    #qa-contexts>.qa-card{position:relative!important;inset:auto!important;z-index:auto!important;width:auto!important;height:auto!important;min-width:0;min-height:132px;display:grid!important;align-content:start;gap:10px;padding:12px;transform:none!important;border:1px solid rgba(216,189,120,.44);border-radius:10px;background:#142c3a}
+    .qa-card>h2{margin:0;color:#f2e2bf;font:800 .72rem/1.2 Cinzel,serif;letter-spacing:.04em}
+    .qa-card :is(button,.modal-card,.profile-screen,.clan-view,.clan-content){position:static;inset:auto;visibility:visible}
+    .qa-card .modal-card{width:auto;max-width:none;padding:8px;transform:none}
+    .qa-card .profile-screen{display:block;width:auto;height:auto;min-height:0;padding:0;background:transparent}
+    .qa-card .clan-view,.qa-card .clan-content{display:block;width:auto;height:auto;min-height:0;overflow:visible}
+    .qa-card .clan-shield-editor{width:auto;height:auto;min-height:0;padding:0;background:transparent;border:0;box-shadow:none}
+    .qa-card .clan-shield-editor-preview{display:block;min-height:0;padding:0;background:transparent;border:0}
+    .qa-card .clan-shield-preview-stage{min-height:112px}
+    .qa-card .clan-shield-preview-full{width:96px;height:102px;margin:auto}
+    .qa-card .clan-shield-micro-preview{position:static;width:max-content;margin:auto}
+    .qa-card .clan-shield-choice-grid{display:block}
+    .qa-card .clan-shield-choice-grid button{width:94px;min-height:58px}
+    .qa-card .public-profile-clan,.qa-card .objective-clan-link,.qa-card .profile-clan-affiliation{max-width:280px}
+    .qa-card .public-clan-identity,.qa-card .clan-hero,.qa-card .clan-list-row,.qa-card .leaderboard-row{grid-template-columns:auto minmax(0,1fr);min-width:0}
+    .qa-card .clan-hud-btn{width:58px;height:58px;margin:auto}
+    .qa-card .clan-list-row,.qa-card .leaderboard-row{padding:8px}
+    .qa-card .leaderboard-row>.leaderboard-rank,.qa-card .leaderboard-row>.leaderboard-ruler{display:none}
+    [data-shield-context]{display:inline-grid;place-items:center;min-width:28px;min-height:30px}
+    @media(max-width:900px){body{padding:8px}#qa-contexts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.qa-card{min-height:116px;padding:8px}}
+    @media(max-width:620px){#qa-contexts{grid-template-columns:1fr}.qa-card{min-height:108px}}
+  </style>
+</head>
+<body>
+  <main id="qa-contexts" aria-label="Clan Heraldry production context matrix">
+    <section class="qa-card profile-screen open clan-active"><h2>Editor full preview</h2><div class="clan-view shield-editor-active"><div class="clan-content shield-editor-open"><section class="clan-shield-editor" data-heraldry-editor-version="2"><header class="clan-shield-editor-preview"><div class="clan-shield-preview-stage"><div class="clan-shield-preview-full" data-shield-context="editor-full" data-width="240" data-variant="full" data-trim="riveted"></div></div></header></section></div></div></section>
+
+    <section class="qa-card profile-screen open clan-active"><h2>Editor map-size preview</h2><div class="clan-view shield-editor-active"><div class="clan-content shield-editor-open"><section class="clan-shield-editor" data-heraldry-editor-version="2"><div class="clan-shield-micro-preview"><span>Map size</span><span data-shield-context="editor-micro" data-width="27" data-variant="micro" data-trim="riveted"></span></div></section></div></div></section>
+
+    <section class="qa-card profile-screen open clan-active"><h2>Editor option thumbnail</h2><div class="clan-view shield-editor-active"><div class="clan-content shield-editor-open"><section class="clan-shield-editor" data-heraldry-editor-version="2"><div class="clan-shield-choice-grid"><button type="button"><span class="clan-shield-choice-icon clan-shield-choice-mini" data-shield-context="editor-option" data-width="36" data-variant="full" data-trim="riveted" data-keep-host="true"></span><small>Choice</small></button></div></section></div></div></section>
+
+    <section class="qa-card modal"><h2>Public player profile</h2><div class="modal-card"><section class="public-profile-section"><button class="public-profile-clan" type="button"><span data-shield-context="public-player" data-width="40" data-variant="micro" data-trim="riveted"></span><span class="public-profile-clan-copy"><strong>[QA] House</strong><small>View clan public profile</small></span></button></section></div></section>
+
+    <section class="qa-card modal"><h2>Public clan profile</h2><div class="modal-card"><section class="public-clan-details"><div class="public-clan-identity"><span data-shield-context="public-clan" data-width="96" data-variant="full" data-trim="double"></span><div><span>Public Clan Profile</span><h3>[QA] House</h3></div></div></section></div></section>
+
+    <section class="qa-card stronghold-legacy-info-panel"><h2>Objective holding clan</h2><div class="objective-clan-affiliation"><button class="objective-clan-link" type="button"><span data-shield-context="objective" data-width="27" data-variant="micro" data-trim="riveted"></span><span><strong>[QA] House</strong><small>View clan profile</small></span></button></div></section>
+
+    <section class="qa-card"><h2>Persistent HUD</h2><button class="profile-rank-btn clan-hud-btn has-clan" type="button"><span class="clan-hud-icon" aria-hidden="true"><span data-shield-context="hud" data-width="40" data-variant="micro" data-trim="riveted"></span></span></button></section>
+
+    <section class="qa-card profile-screen open"><h2>Own profile affiliation</h2><section class="profile-identity"><button class="profile-clan-affiliation" type="button"><span class="profile-clan-shield" aria-hidden="true"><span data-shield-context="own-profile" data-width="27" data-variant="micro" data-trim="riveted"></span></span><span><small>Clan</small><strong>[QA] House</strong></span></button></section></section>
+
+    <section class="qa-card profile-screen open clan-active"><h2>Clan Overview</h2><div class="clan-view"><div class="clan-content"><section class="clan-overview-panel active"><section class="clan-hero"><div class="clan-hero-shield"><button type="button" class="clan-shield-link clan-hero-shield-link"><span data-shield-context="overview" data-width="96" data-variant="full" data-trim="riveted"></span></button></div><div class="clan-hero-copy"><h3>[QA] House</h3></div></section></section></div></div></section>
+
+    <section class="qa-card profile-screen open clan-active"><h2>Clan discovery row</h2><div class="clan-view"><div class="clan-content"><section class="clan-discovery active"><div class="clan-list"><article class="clan-list-row"><button class="clan-shield-link" type="button"><span data-shield-context="discovery" data-width="27" data-variant="micro" data-trim="riveted"></span></button><div class="clan-list-copy"><strong>[QA] House</strong><small>Discovery</small></div></article></div></section></div></div></section>
+
+    <section class="qa-card modal leaderboard-modal"><h2>Clan leaderboard current row</h2><div class="modal-card"><div class="leaderboard-list"><article class="leaderboard-row clan-leaderboard-row current"><span class="leaderboard-rank">#1</span><button class="clan-shield-link clan-leaderboard-shield-link" type="button"><span data-shield-context="leaderboard-current" data-width="27" data-variant="micro" data-trim="riveted"></span></button><div class="leaderboard-ruler">House</div></article></div></div></section>
+
+    <section class="qa-card modal crown-citadel-info-panel"><h2>Crown Citadel objective state</h2><div class="modal-card"><div class="objective-clan-affiliation"><button class="objective-clan-link" type="button"><span data-shield-context="objective-citadel" data-width="27" data-variant="micro" data-trim="riveted"></span><span><strong>[QA] House</strong><small>Current holder</small></span></button></div></div></section>
+  </main>
+
+  <script src="../../../functions/clanHeraldryConfig.js"></script>
+  <script src="../../../functions/clanHeraldryAssets.js"></script>
+  <script src="../../../functions/clanHeraldryLegacyV1.js"></script>
+  <script src="../../../functions/clanHeraldryRenderer.js"></script>
+  <script>
+    (() => {
+      const config = window.CrownlandsClanHeraldryConfig;
+      const assets = window.CrownlandsClanHeraldryAssets;
+      const qaAssets = { ...assets, symbolHref(chargeId, variant) { return `../../../${assets.symbolHref(chargeId, variant)}`; } };
+      const renderer = window.CrownlandsClanHeraldryRenderer.create({ config, assets: qaAssets, legacyRenderer: window.CrownlandsClanHeraldryLegacyV1 });
+      const testShield = {
+        ...config.DEFAULT_V2,
+        shape: "heater",
+        division: "quartered",
+        primary: "#7a2638",
+        secondary: "#24445f",
+        charge: "lion",
+        secondaryCharge: "eagle",
+        chargeColor: "#d8bd78",
+        secondaryChargeColor: "#b7c3bf",
+        borderColor: "#253f3a",
+        chargeLayout: "quartered",
+        finish: "polished",
+      };
+      assets.installSharedDefs(document);
+      document.querySelectorAll("[data-shield-context]").forEach(slot => {
+        const context = slot.dataset.shieldContext;
+        const width = Number(slot.dataset.width);
+        const variant = slot.dataset.variant;
+        const trim = slot.dataset.trim;
+        const shield = { ...testShield, trim };
+        const markup = renderer.renderMarkup(shield, { width, variant, label: `${context} Clan Heraldry QA` });
+        if (slot.dataset.keepHost === "true") {
+          slot.innerHTML = markup;
+          return;
+        }
+        const template = document.createElement("template");
+        template.innerHTML = markup;
+        const rendered = template.content.firstElementChild;
+        rendered.dataset.shieldContext = context;
+        rendered.dataset.width = String(width);
+        rendered.dataset.variant = variant;
+        rendered.dataset.trim = trim;
+        slot.replaceWith(rendered);
+      });
+      document.documentElement.dataset.contextProofReady = "true";
+    })();
+  </script>
+</body>
+</html>
