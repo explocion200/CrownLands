@@ -85,7 +85,7 @@ function getWebpMetadata(buffer) {
 }
 
 const BUILD_ID = "20260825-shop-hourly-prices-r1";
-const GAME_BUILD_ID = "20260825-shop-hourly-prices-r1";
+const GAME_BUILD_ID = "20260825-clan-shield-colors-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {

@@ -22976,6 +22976,8 @@ async function saveClanShieldEditor() {
     if (savedShield.version !== CLAN_HERALDRY_CONFIG.CURRENT_VERSION) throw new Error("The server returned legacy heraldry after a v2 save.");
     if (Math.max(0, Number(result.clan.heraldryRevision) || 0) <= previousRevision) throw new Error("The server did not advance the heraldry revision.");
     clanSnapshot = { ...clanSnapshot, ...result.clan, shield: savedShield };
+    renderClanHudAccess();
+    renderProfileClanAffiliation();
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
