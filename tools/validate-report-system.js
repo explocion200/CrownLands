@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
-const client = read("game.js");
+const client = `${read("common-gear-ui.js")}\n${read("game.js")}`;
 const api = read("firebaseClient.js");
 const server = read("functions/index.js");
 const rules = read("firestore.rules");
@@ -125,6 +125,7 @@ vm.createContext(battleSandbox);
   "sumDetailedBattleParticipantPower",
   "formatBattleBasePowerHelp",
   "formatBattleWallAfterStatus",
+  "formatBattleGearEffectPercent",
   "getBattleSidePresentationModel",
   "getDetailedBattleViewerRole",
 ].forEach(name => vm.runInContext(`${functionBody(client, name)}; this.${name} = ${name};`, battleSandbox));
@@ -207,6 +208,7 @@ const detailedSnapshotServer = functionBody(server, "createDetailedBattleSnapsho
 assert.match(detailedSnapshotServer, /createBattleGearEffectsSnapshot[\s\S]*?gearEffects:\s*battleGearEffects/, "Detailed battle snapshots do not persist explicit gear-effect fields.");
 assert.match(detailedSnapshotServer, /attackerParticipants:\s*rallyAttackers\.length\s*\?\s*rallyAttackers\s*:\s*\[attackerSnapshot\]/, "Rally and ordinary attacker gear are not snapshotted from their authoritative battle participants.");
 assert.match(server, /fieldMedicsSkillPercent:[\s\S]*?casualtyGearPercent:/, "Battle casualty receipts do not separate Field Medics from Barracks casualty gear.");
+assert.ok((server.match(/gearEffects:\s*battleGearEffects/g) || []).length >= 9, "Attack and defense report fallbacks do not retain authoritative gear effects.");
 const getBattleAttackerBasePower = new Function(
   "safeNumber",
   `${functionBody(server, "getBattleAttackerBasePower")}; return getBattleAttackerBasePower;`
@@ -224,6 +226,9 @@ assert.equal(
 assert.match(server, /defensePowerBreakdown[\s\S]*?otherDefensePower/, "Battle snapshots do not preserve named defense-power components.");
 assert.match(server, /reinforcements:\s*reinforcementRows[\s\S]*?occurredAtMs:\s*nowMs/, "Battle snapshots do not preserve reinforcements and occurrence time.");
 assert.match(client, /historicalWallDetailsAvailable:\s*hasHistoricalWallSnapshot/, "Older battle snapshots do not safely normalize wall details.");
+assert.match(functionBody(client, "normalizeBattleReports"), /gearEffects:\s*normalizeBattleGearEffects\(report\.gearEffects\)/, "Stored report gear effects are discarded during client normalization.");
+assert.match(functionBody(client, "normalizeDetailedBattleSnapshot"), /gearEffects:\s*normalizeBattleGearEffects\(value\.gearEffects\)/, "Detailed snapshots discard their authoritative gear-effect payload.");
+assert.match(functionBody(client, "getLegacyBattleSides"), /applyRecordedGearEffectsToBattleSide\(attacker[\s\S]*?applyRecordedGearEffectsToBattleSide\(defender/, "Snapshot-free reports do not project recorded attack and defense gear into the report UI.");
 
 const serverGearSandbox = {
   Math,

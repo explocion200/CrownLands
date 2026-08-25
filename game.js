@@ -8924,7 +8924,8 @@ function normalizeBattleReports(reports) {
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
-        casualtyRecovery: report.casualtyRecovery || null,
+        casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
+        gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
@@ -14198,8 +14199,11 @@ function handleServiceWorkerUpdateMessage(event) {
   if (event?.data?.type === "CROWNLANDS_NOTIFICATION_CLICK") {
     const notification = event.data.notification || {};
     if (notification.type === "incoming_army" && notification.cityId) {
-      if (!state) return;
-      void focusIncomingAttackCity(notification.cityId, notification.targetRegionId || "");
+      pendingPushNotificationTarget = {
+        cityId: String(notification.cityId).slice(0, 96),
+        regionId: String(notification.targetRegionId || "").slice(0, 80),
+      };
+      if (state) void focusPendingPushNotificationTarget();
     }
     return;
   }
@@ -17777,7 +17781,10 @@ async function startFromInput(forceFresh = false) {
     saveGame();
     renderAll();
     scheduleRouteWorkerWarmup();
-    requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+    requestAnimationFrame(() => {
+      if (readPendingPushNotificationTarget()) void focusPendingPushNotificationTarget();
+      else centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id);
+    });
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
@@ -21514,6 +21521,7 @@ function updatePushAlertsUi() {
   const supported = Boolean(api?.isPushSupported?.());
   const permission = api?.getNotificationPermission?.() || "unsupported";
   const enabledPreference = getPushNotificationsPreference();
+  const registration = api?.getPushRegistrationState?.() || null;
 
   if (!state || !signedIn) {
     setPushAlertsOptionState(false, true);
@@ -21534,8 +21542,18 @@ function updatePushAlertsUi() {
     return;
   }
   if (enabledPreference && permission === "granted") {
-    setPushAlertsOptionState(true, false);
-    setPushAlertsStatus("Notifications On", false);
+    if (!registration || registration.enabled) {
+      setPushAlertsOptionState(true, false);
+      setPushAlertsStatus("Notifications On", false);
+      return;
+    }
+    if (registration.status === "registering" || registration.status === "idle") {
+      setPushAlertsOptionState(false, true);
+      setPushAlertsStatus("Connecting…", true);
+      return;
+    }
+    setPushAlertsOptionState(false, false);
+    setPushAlertsStatus("Retry needed", true);
     return;
   }
   setPushAlertsOptionState(false, false);
@@ -21544,7 +21562,16 @@ function updatePushAlertsUi() {
 
 async function refreshPushAlertRegistration(silent = true) {
   const api = getOnlineApi();
-  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.() || !getPushNotificationsPreference()) {
+  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.()) {
+    updatePushAlertsUi();
+    return false;
+  }
+  if (!getPushNotificationsPreference()) {
+    if (api.getNotificationPermission?.() === "granted" && api.disablePushNotifications) {
+      await api.disablePushNotifications().catch(error => {
+        if (!silent) showToast(error?.message || "Could not turn notifications off.");
+      });
+    }
     updatePushAlertsUi();
     return false;
   }
@@ -21631,6 +21658,36 @@ function handlePushMessage(event) {
   const message = detail.body || (detail.kind === "scout" ? "Scout incoming." : "Attack incoming.");
   showToast(message);
   updateIncomingAttackUi();
+}
+
+let pendingPushNotificationTarget = null;
+
+function readPendingPushNotificationTarget() {
+  if (pendingPushNotificationTarget?.cityId) return pendingPushNotificationTarget;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("notification") !== "incoming_army") return null;
+  const cityId = String(url.searchParams.get("notificationCity") || "").slice(0, 96);
+  if (!cityId) return null;
+  pendingPushNotificationTarget = {
+    cityId,
+    regionId: String(url.searchParams.get("notificationRegion") || "").slice(0, 80),
+  };
+  return pendingPushNotificationTarget;
+}
+
+function clearPendingPushNotificationUrl() {
+  const url = new URL(window.location.href);
+  ["notification", "notificationCity", "notificationRegion"].forEach(key => url.searchParams.delete(key));
+  window.history.replaceState(window.history.state, "", url.href);
+}
+
+async function focusPendingPushNotificationTarget() {
+  const target = readPendingPushNotificationTarget();
+  if (!state || !target?.cityId) return false;
+  pendingPushNotificationTarget = null;
+  clearPendingPushNotificationUrl();
+  await focusIncomingAttackCity(target.cityId, target.regionId);
+  return true;
 }
 
 function handleOnlinePlayerClanSnapshot(event) {
@@ -34568,6 +34625,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
     attackers,
     defender,
     reinforcements,
+    gearEffects: normalizeBattleGearEffects(value.gearEffects),
     totals: {
       attackers: Math.max(0, Math.floor(Number(totals.attackers) || 0)),
       defenders: Math.max(0, Math.floor(Number(totals.defenders) || 0)),
@@ -34654,6 +34712,9 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const totals = snapshot?.totals || {};
   const defenseBreakdown = totals.defensePowerBreakdown || {};
   const attackBreakdown = totals.attackPowerBreakdown || {};
+  const explicitSideGear = attacker ? snapshot?.gearEffects?.attacker : snapshot?.gearEffects?.defender;
+  const explicitCombatGear = attacker ? explicitSideGear?.attackStrength : explicitSideGear?.defenderStrength;
+  const explicitWallGear = attacker ? null : explicitSideGear?.wallStrength;
   const modernDefense = Math.floor(Number(snapshot?.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const startingTroops = Math.max(0, Math.floor(Number(attacker ? totals.attackers : totals.defenders) || 0));
   const participantBasePower = attacker
@@ -34682,11 +34743,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     participants,
     attacker ? "gearAttackStrengthBonusPower" : "gearDefenderStrengthBonusPower"
   );
-  const gearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
+  const inferredGearBonusPower = participantGearBonusPower || Math.max(0, Math.floor(Number(
     attacker
       ? attackBreakdown.gearAttackStrengthBonusPower
       : defenseBreakdown.gearDefenderStrengthBonusPower
   ) || 0));
+  const gearBonusPower = explicitCombatGear?.bonusPower || inferredGearBonusPower;
   const personalObjectiveBonusPower = attacker ? 0 : (
     sumDetailedBattleParticipantPower(participants, "personalObjectiveBonusPower")
     || Math.max(0, Math.floor(Number(defenseBreakdown.personalObjectiveBonusPower) || 0))
@@ -34711,11 +34773,12 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
   const gearPercents = [...new Set(participants.map(participant => Math.max(0, Number(
     attacker ? participant?.gearAttackStrengthPercent : participant?.gearDefenderStrengthPercent
   ) || 0)).filter(percent => percent > 0))];
-  const gearPercentText = gearPercents.length === 1
+  const inferredGearPercentText = gearPercents.length === 1
     ? `+${gearPercents[0].toFixed(2).replace(/\.00$/, "")}%`
     : gearPercents.length > 1
       ? "Mixed equipped-gear rates"
       : "";
+  const gearPercentText = formatBattleGearEffectPercent(explicitCombatGear) || inferredGearPercentText;
   const participantSummary = attacker
     ? participants.length > 1
       ? `${formatNumber(participants.length)} rally armies`
@@ -34737,9 +34800,10 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
     skillBonusPower: trainingBonusPower,
     skillPercentText,
-    gearLabel: attacker ? "War Captain gear" : "Defensive Commander gear",
+    gearLabel: explicitCombatGear?.sourceLabel || (attacker ? "War Captain gear" : "Defensive Commander gear"),
     gearBonusPower,
     gearPercentText,
+    casualtyRecovery: explicitSideGear?.casualtyRecovery || null,
     personalObjectiveBonusPower,
     sharedClanBonusPower,
     otherBonusPower,
@@ -34753,8 +34817,13 @@ function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
     wallBasePower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.baseWallPower) || 0)),
     wallStoneworksPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)),
     wallStoneworksPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.stoneworksPercent) || 0),
-    wallGearPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
-    wallGearPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.gearWallStrengthPercent) || 0),
+    wallGearPower: attacker ? 0 : explicitWallGear?.bonusPower
+      || Math.max(0, Math.floor(Number(defenseBreakdown.gearWallStrengthBonusPower) || 0)),
+    wallGearPercent: attacker ? 0 : Math.max(0, Number(
+      explicitWallGear?.bonusPercent
+      || explicitWallGear?.bonusPercents?.[0]
+      || snapshot?.target?.fortifications?.gearWallStrengthPercent
+    ) || 0),
     wallHelp: attacker
       ? ""
       : [
@@ -34869,70 +34938,6 @@ function renderBattleSideDetails(side = {}) {
         ? renderBattleDetailRow(renderCrownlandsIcon("reinforcement"), "Allied reinforcements", side.reinforcementTroops, `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}`)
         : ""}
     </article>`;
-}
-
-function getBattleSideBonusEntries(side = {}) {
-  if (side.gearOnly) {
-    const entries = [];
-    if (side.gearBonusPower > 0) entries.push({ icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), label: side.gearLabel, value: `+${formatNumber(side.gearBonusPower)} power`, help: side.gearPercentText });
-    if (side.wallGearPower > 0) entries.push({ icon: renderCrownlandsIcon("city"), label: "Gatehouse wall gear", value: `+${formatNumber(side.wallGearPower)} wall power`, help: `+${side.wallGearPercent}% · separate from Stoneworks` });
-    const recovery = side.casualtyRecovery;
-    if (recovery?.gearRecoveredTroops > 0) entries.push({ icon: renderCrownlandsIcon("troops"), label: recovery.sourceLabel, value: `+${formatNumber(recovery.gearRecoveredTroops)} recovered`, help: `+${recovery.gearPercent}% gear · main city` });
-    return entries;
-  }
-  if (side.bonusRecorded === false) {
-    return [{ icon: "?", label: "Combat bonuses", value: "Not recorded", help: "Historical report" }];
-  }
-  const entries = [];
-  if (Number(side.skillBonusPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
-      label: side.skillLabel,
-      value: `+${formatNumber(side.skillBonusPower)} power`,
-      help: side.skillPercentText,
-    });
-  }
-  if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
-    entries.push({ icon: renderCrownlandsIcon("clan"), label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
-  }
-  if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
-    entries.push({
-      icon: renderCrownlandsIcon("city"),
-      label: "Stoneworks",
-      value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
-      help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
-    });
-  }
-  if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
-    entries.push({ icon: "+", label: "Other recorded defense", value: `+${formatNumber(side.otherBonusPower)} power`, help: "Authoritative battle snapshot" });
-  }
-  return entries;
-}
-
-function renderBattleBonusCard(side = {}) {
-  const entries = getBattleSideBonusEntries(side);
-  return `
-    <article class="battle-visual-bonus-card ${side.role}">
-      <h4>${side.gearOnly ? `${side.role === "attacker" ? "Attacker" : "Defender"} Gear` : side.role === "attacker" ? "Attack bonuses" : "Defense bonuses"}</h4>
-      ${entries.length
-        ? entries.map(entry => `
-          <div class="battle-visual-bonus-row">
-            <span aria-hidden="true">${entry.icon}</span>
-            <div><strong>${escapeHtml(entry.label)}</strong>${entry.help ? `<small>${escapeHtml(entry.help)}</small>` : ""}</div>
-            <b>${escapeHtml(entry.value)}</b>
-          </div>`).join("")
-        : `<div class="battle-visual-no-bonus">No additional combat bonuses</div>`}
-    </article>`;
-}
-
-function renderBattleGearEffectsSection(attacker = {}, defender = {}, report = null, viewerRole = "attacker") {
-  const cards = [attacker, defender].map(side => ({ ...side, gearOnly: true, casualtyRecovery: viewerRole === side.role ? report?.casualtyRecovery : null }))
-    .filter(side => getBattleSideBonusEntries(side).length).map(renderBattleBonusCard);
-  if (!cards.length) return "";
-  return `<section class="battle-visual-section"><div class="battle-visual-section-title"><h3>Gear Effects</h3></div><div class="battle-visual-two-column">${cards.join("")}</div></section>`;
 }
 
 function renderBattleWallResult(defender = {}, siege = null) {
@@ -35178,7 +35183,11 @@ function getLegacyBattleSides(report = null, siege = null) {
     wallStoneworksPower: 0,
     wallStoneworksPercent: 0,
   };
-  return { attacker, defender };
+  const gearEffects = normalizeBattleGearEffects(report?.gearEffects);
+  return {
+    attacker: applyRecordedGearEffectsToBattleSide(attacker, gearEffects, "attacker"),
+    defender: applyRecordedGearEffectsToBattleSide(defender, gearEffects, "defender"),
+  };
 }
 
 function renderLegacyBattleComparison(report = null, siege = null) {
@@ -36686,6 +36695,7 @@ window.addEventListener("crownlands:auth", async () => {
   }
 });
 window.addEventListener("crownlands:push-message", handlePushMessage);
+window.addEventListener("crownlands:push-notifications", updatePushAlertsUi);
 window.addEventListener("crownlands:chat-player-profile", event => {
   const uid = String(event?.detail?.uid || "").trim();
   if (uid) showPublicPlayerProfile(uid);

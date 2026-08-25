@@ -12559,7 +12559,7 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
     troopEstimateMax: troopEstimate ? String(troopEstimate.max) : "",
     troopEstimateLabel: troopEstimate?.label || "",
     arrivesAtMs: String(Math.max(0, Math.floor(safeNumber(movement.arrivesAtMs, 0)))),
-    url: "/",
+    url: "/play/",
   };
   return notification;
 }
@@ -12568,7 +12568,10 @@ function isInvalidMessagingTokenError(error = {}) {
   const code = String(error.code || error.errorInfo?.code || "");
   return code === "messaging/registration-token-not-registered"
     || code === "messaging/invalid-registration-token"
-    || code === "messaging/invalid-argument";
+    || (
+      code === "messaging/invalid-argument"
+      && /registration token/i.test(String(error.message || error.errorInfo?.message || ""))
+    );
 }
 
 async function removeNotificationTokenDocs(uid, tokenDocIds = []) {
@@ -12613,7 +12616,7 @@ async function sendIncomingArmyNotification(notification = {}) {
     troopEstimateMax: safeString(notification.troopEstimateMax, 32),
     troopEstimateLabel: safeString(notification.troopEstimateLabel, 40),
     arrivesAtMs: safeString(notification.arrivesAtMs, 32),
-    url: safeString(notification.url || "/", 160),
+    url: safeString(notification.url || "/play/", 160),
   };
   if (notification.troops !== undefined) {
     data.troops = safeString(notification.troops, 32);
@@ -12627,17 +12630,17 @@ async function sendIncomingArmyNotification(notification = {}) {
         TTL: "1800",
         Urgency: data.kind === "attack" ? "high" : "normal",
       },
-      fcmOptions: {
-        link: data.url,
-      },
     },
   }));
 
   const result = await messaging.sendEach(messages);
   const invalidTokenDocIds = [];
+  const deliveryErrors = [];
   result.responses.forEach((response, index) => {
     if (!response.success && isInvalidMessagingTokenError(response.error)) {
       invalidTokenDocIds.push(tokenDocs[index]?.id);
+    } else if (!response.success && response.error) {
+      deliveryErrors.push(response.error);
     }
   });
   if (invalidTokenDocIds.length) {
@@ -12645,13 +12648,15 @@ async function sendIncomingArmyNotification(notification = {}) {
       console.warn("Could not remove invalid notification tokens", error);
     });
   }
+  if (result.successCount === 0 && deliveryErrors.length) throw deliveryErrors[0];
   return result.successCount > 0;
 }
 
-function queueIncomingArmyNotification(transaction, armyId = "", notification = null, nowMs = Date.now()) {
-  const notificationId = safeString(`incoming_${armyId}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
-  if (!transaction || !notificationId || !notification?.defenderUid) return false;
-  transaction.set(db.doc(`serverNotificationOutbox/${notificationId}`), {
+function queueIncomingArmyNotification(writer, armyId = "", notification = null, nowMs = Date.now()) {
+  const defenderUid = safeString(notification?.defenderUid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const notificationId = safeString(`incoming_${armyId}_${defenderUid}`, 360).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!writer || !notificationId || !defenderUid) return false;
+  writer.set(db.doc(`serverNotificationOutbox/${notificationId}`), {
     type: "incoming_army",
     armyId: safeString(armyId, 96),
     notification,
@@ -20349,6 +20354,16 @@ exports.sendNearbyScouts = timedCallable(
       reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs, armies.length);
 
       const currentUser = bulkOrderCurrentUser(economy, profile, goldPatch);
+      const notifications = targets.map((target, index) => createIncomingArmyNotification({
+        defenderUid: getOwnerUid(target),
+        attackerUid: uid,
+        movement: armies[index],
+        source,
+        target,
+      })).filter(Boolean);
+      notifications.forEach(notification => {
+        queueIncomingArmyNotification(transaction, notification.armyId, notification, nowMs);
+      });
       const response = {
         ok: true,
         requestId,
@@ -20363,13 +20378,6 @@ exports.sendNearbyScouts = timedCallable(
         sourceCity,
         cityUpdates: [sourceCity],
         currentUser,
-        notifications: targets.map((target, index) => createIncomingArmyNotification({
-          defenderUid: getOwnerUid(target),
-          attackerUid: uid,
-          movement: armies[index],
-          source,
-          target,
-        })).filter(Boolean),
       };
       transaction.set(requestRef, {
         version: BULK_ORDERS_VERSION,
@@ -20390,12 +20398,6 @@ exports.sendNearbyScouts = timedCallable(
       return response;
     }, "sendNearbyScouts");
 
-    const notifications = Array.isArray(result.notifications) ? result.notifications : [];
-    delete result.notifications;
-    await Promise.all(notifications.map(notification => sendIncomingArmyNotification(notification).catch(error => {
-      console.warn("Could not send bulk scout notification", error);
-      return false;
-    })));
     return result;
   }
 );
@@ -22734,7 +22736,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: defenseAllocation.ownerLosses,
         recoveredTroops: defenderRecoveredTroops,
       });
-      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+      const detailedBattleSnapshot = createDetailedBattleSnapshot({
         battleId: currentBattleId,
         armyId,
         target,
@@ -22753,7 +22755,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackerCasualtyRecovery,
         defenderCasualtyRecovery,
         nowMs,
-      }));
+      });
+      writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
+      const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
       const remainingActiveArmyIds = targetType === "camp"
         ? removeActiveCampArmyId(target, armyId)
         : [];
@@ -22858,6 +22862,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         battleId: currentBattleId,
         fieldMedicsRecovered: attackerRecoveredTroops,
         casualtyRecovery: attackerCasualtyRecovery,
+        gearEffects: battleGearEffects,
         nowMs,
       });
       const alliedReceiptIds = [];
@@ -22936,6 +22941,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
           casualtyRecovery: defenderCasualtyRecovery,
+          gearEffects: battleGearEffects,
           nowMs,
         })
         : null;
@@ -23206,7 +23212,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: defenseAllocation.ownerLosses,
         recoveredTroops: defenderRecoveredTroops,
       });
-      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+      const detailedBattleSnapshot = createDetailedBattleSnapshot({
         battleId: currentBattleId,
         armyId,
         target: campTarget,
@@ -23225,7 +23231,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackerCasualtyRecovery,
         defenderCasualtyRecovery,
         nowMs,
-      }));
+      });
+      writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
+      const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
       const attackerReport = makeReport({
         id: `${armyId}_${campTarget.campType}_camp_attack_${attackerUid}`,
         uid: attackerUid,
@@ -23247,6 +23255,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         launchCombatForecast: army.launchCombatForecast,
         fieldMedicsRecovered: attackerRecoveredTroops,
         casualtyRecovery: attackerCasualtyRecovery,
+        gearEffects: battleGearEffects,
         nowMs,
       });
 
@@ -23336,6 +23345,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
           casualtyRecovery: defenderCasualtyRecovery,
+          gearEffects: battleGearEffects,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
@@ -23886,10 +23896,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: defenseAllocation.ownerLosses,
         recoveredTroops: defenderRecoveredTroops,
       });
-      writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+      const detailedBattleSnapshot = createResolvedBattleSnapshot({
         attackerRecoveredTroops,
         defenderRecoveredTroops,
-      }));
+      });
+      writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
+      const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
       if (protectedAssaultBreachDocumentRef) {
         transaction.set(protectedAssaultBreachDocumentRef, {
           version: PROTECTED_ASSAULT_BREACH_VERSION,
@@ -23952,6 +23964,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         battleId: currentBattleId,
         fieldMedicsRecovered: attackerRecoveredTroops,
         casualtyRecovery: attackerCasualtyRecovery,
+        gearEffects: battleGearEffects,
         nowMs,
       });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
@@ -23989,6 +24002,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
           casualtyRecovery: defenderCasualtyRecovery,
+          gearEffects: battleGearEffects,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -24171,10 +24185,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: defenseAllocation.ownerLosses,
         recoveredTroops: defenderRecoveredTroops,
       });
-      writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+      const detailedBattleSnapshot = createResolvedBattleSnapshot({
         attackerRecoveredTroops,
         defenderRecoveredTroops,
-      }));
+      });
+      writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
+      const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
       const participantStats = writeParticipantEconomies({
         character: attackerProgress.character,
         gold: attackerProgress.gold,
@@ -24200,6 +24216,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
       attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
       attackerReport.casualtyRecovery = attackerCasualtyRecovery;
+      attackerReport.gearEffects = battleGearEffects;
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
         character: attackerProgress.character,
@@ -24237,6 +24254,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
           casualtyRecovery: defenderCasualtyRecovery,
+          gearEffects: battleGearEffects,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -24331,10 +24349,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       losses: defenseAllocation.ownerLosses,
       recoveredTroops: defenderRecoveredTroops,
     });
-    writeDetailedBattleSnapshot(transaction, createResolvedBattleSnapshot({
+    const detailedBattleSnapshot = createResolvedBattleSnapshot({
       attackerRecoveredTroops,
       defenderRecoveredTroops,
-    }));
+    });
+    writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
+    const battleGearEffects = detailedBattleSnapshot?.gearEffects || null;
     writeParticipantEconomies({
       character: attackerProgress.character,
       gold: attackerProgress.gold,
@@ -24351,6 +24371,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
     attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
     attackerReport.casualtyRecovery = attackerCasualtyRecovery;
+    attackerReport.gearEffects = battleGearEffects;
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
     writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
       character: attackerProgress.character,
@@ -24387,6 +24408,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         battleId: currentBattleId,
         fieldMedicsRecovered: defenderRecoveredTroops,
         casualtyRecovery: defenderCasualtyRecovery,
+        gearEffects: battleGearEffects,
         nowMs,
       });
       writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -24462,7 +24484,7 @@ function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
 
 async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "") {
   const safeTargetKey = safeString(targetKey, 180);
-  if (!safeTargetKey) return { updated: 0, convertedToAttacks: 0, notifications: [] };
+  if (!safeTargetKey) return { updated: 0, convertedToAttacks: 0, notificationsQueued: 0 };
   const snapshot = await db.collection("armies")
     .where("targetKey", "==", safeTargetKey)
     .where("resetGeneration", "==", RESET_GENERATION)
@@ -24470,7 +24492,7 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     .where("status", "==", "active")
     .limit(400)
     .get();
-  const notifications = [];
+  let notificationsQueued = 0;
   let convertedToAttacks = 0;
   const allianceCache = new Map();
   await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
@@ -24553,7 +24575,6 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     writeArmyMovementCopies(batch, { ...army, ...patch, id: armyDoc.id }, {
       previousTargetOwnerUid: army.targetOwnerUid,
     });
-    await batch.commit();
     if (shouldNotify) {
       const notification = createIncomingArmyNotification({
         defenderUid: disposition.targetOwnerUid,
@@ -24562,10 +24583,11 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
         source: { name: army.fromName },
         target: { name: army.toName },
       });
-      if (notification) notifications.push(notification);
+      if (queueIncomingArmyNotification(batch, armyDoc.id, notification, nowMs)) notificationsQueued += 1;
     }
+    await batch.commit();
   });
-  return { updated: snapshot.size, convertedToAttacks, notifications };
+  return { updated: snapshot.size, convertedToAttacks, notificationsQueued };
 }
 
 async function getCurrentClanAlliance(ownerUid = "", holderUid = "", cache = new Map()) {
@@ -24633,7 +24655,6 @@ async function reconcileActiveClanReinforcementArmy(armyDoc, cache = new Map()) 
   writeArmyMovementCopies(batch, { ...army, ...patch, id: armyDoc.id }, {
     previousTargetOwnerUid: army.targetOwnerUid,
   });
-  await batch.commit();
   const notification = shouldNotify
     ? createIncomingArmyNotification({
       defenderUid: targetOwnerUid,
@@ -24643,8 +24664,9 @@ async function reconcileActiveClanReinforcementArmy(armyDoc, cache = new Map()) 
       target: { name: army.toName },
     })
     : null;
-  if (notification) await sendIncomingArmyNotification(notification);
-  return { updated: true, convertedToAttack, notification };
+  const notificationQueued = queueIncomingArmyNotification(batch, armyDoc.id, notification, nowMs);
+  await batch.commit();
+  return { updated: true, convertedToAttack, notification, notificationQueued };
 }
 
 async function reconcileClanReinforcementsForPlayer(uid = "") {
@@ -24922,16 +24944,6 @@ async function processOwnershipChangeEvent(event) {
   const beforeOwnerUid = safeString(change.beforeOwnerUid, 128);
   const afterOwnerUid = safeString(change.afterOwnerUid, 128);
   const armyRefresh = await refreshActiveArmyTargetOwner(change.targetKey, afterOwnerUid);
-  const notificationResults = await Promise.allSettled(
-    armyRefresh.notifications.map(notification => sendIncomingArmyNotification(notification))
-  );
-  const notificationFailures = notificationResults.filter(result => result.status === "rejected").length;
-  if (notificationFailures) {
-    console.warn("Could not send some retargeted incoming army notifications", {
-      failed: notificationFailures,
-      attempted: notificationResults.length,
-    });
-  }
   const armyUpdates = armyRefresh.updated;
   const reinforcementReturns = await returnReinforcementsAfterOwnershipChange(change);
   let statsUpdates = 0;
@@ -24978,8 +24990,7 @@ async function processOwnershipChangeEvent(event) {
     targetType,
     armyUpdates,
     convertedToAttacks: armyRefresh.convertedToAttacks,
-    notificationsAttempted: notificationResults.length,
-    notificationFailures,
+    notificationsQueued: armyRefresh.notificationsQueued,
     reinforcementReturnsStarted: reinforcementReturns.started,
     reinforcementReturnFailures: reinforcementReturns.failed,
     statsUpdates,

@@ -1,6 +1,155 @@
 /* Crownlands officer equipment view model, renderer, and interaction flow. */
 let commonGearBagFilterOpen = false;
 
+function normalizeBattleCasualtyRecovery(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const gearPercent = Math.max(0, Number(value.gearPercent) || 0);
+  const appliedGearPercent = Math.max(0, Number(value.appliedGearPercent) || 0);
+  const gearRecoveredTroops = Math.max(0, Math.floor(Number(value.gearRecoveredTroops) || 0));
+  return {
+    sourceLabel: String(value.sourceLabel || "Barracks casualty gear").slice(0, 64),
+    skillLabel: String(value.skillLabel || "Field Medics").slice(0, 64),
+    fieldMedicsPercent: Math.max(0, Number(value.fieldMedicsPercent) || 0),
+    gearPercent,
+    appliedGearPercent,
+    combinedPercent: Math.max(0, Number(value.combinedPercent) || 0),
+    capPercent: Math.max(0, Number(value.capPercent) || 0),
+    losses: Math.max(0, Math.floor(Number(value.losses) || 0)),
+    recoveredTroops: Math.max(0, Math.floor(Number(value.recoveredTroops) || 0)),
+    gearRecoveredTroops,
+    returnsToMainCity: value.returnsToMainCity !== false,
+  };
+}
+
+function normalizeBattlePowerGearEffect(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const bonusPercents = [...new Set((Array.isArray(value.bonusPercents) ? value.bonusPercents : [value.bonusPercent])
+    .map(percent => Math.max(0, Number(percent) || 0))
+    .filter(percent => percent > 0))]
+    .sort((left, right) => left - right)
+    .slice(0, 16);
+  const bonusPower = Math.max(0, Math.floor(Number(value.bonusPower) || 0));
+  if (!bonusPower || !bonusPercents.length) return null;
+  return {
+    sourceLabel: String(value.sourceLabel || "Officer gear").slice(0, 64),
+    statLabel: String(value.statLabel || "Gear bonus").slice(0, 64),
+    bonusPercent: bonusPercents.length === 1 ? bonusPercents[0] : 0,
+    bonusPercents,
+    mixedParticipantRates: value.mixedParticipantRates === true || bonusPercents.length > 1,
+    bonusPower,
+  };
+}
+
+function normalizeBattleGearEffects(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const attackerValue = value.attacker && typeof value.attacker === "object" ? value.attacker : {};
+  const defenderValue = value.defender && typeof value.defender === "object" ? value.defender : {};
+  const attacker = {
+    attackStrength: normalizeBattlePowerGearEffect(attackerValue.attackStrength),
+    casualtyRecovery: normalizeBattleCasualtyRecovery(attackerValue.casualtyRecovery),
+  };
+  const defender = {
+    defenderStrength: normalizeBattlePowerGearEffect(defenderValue.defenderStrength),
+    wallStrength: normalizeBattlePowerGearEffect(defenderValue.wallStrength),
+    casualtyRecovery: normalizeBattleCasualtyRecovery(defenderValue.casualtyRecovery),
+  };
+  return attacker.attackStrength || attacker.casualtyRecovery
+    || defender.defenderStrength || defender.wallStrength || defender.casualtyRecovery
+    ? { attacker, defender }
+    : null;
+}
+
+function formatBattleGearEffectPercent(effect = null) {
+  if (!effect) return "";
+  if (effect.mixedParticipantRates || effect.bonusPercents?.length > 1) return "Mixed equipped-gear rates";
+  const percent = Math.max(0, Number(effect.bonusPercent || effect.bonusPercents?.[0]) || 0);
+  return percent > 0 ? `+${percent.toFixed(2).replace(/\.00$/, "")}%` : "";
+}
+
+function applyRecordedGearEffectsToBattleSide(side = {}, gearEffects = null, role = "attacker") {
+  const sideEffects = role === "attacker" ? gearEffects?.attacker : gearEffects?.defender;
+  if (!sideEffects) return side;
+  const combatEffect = role === "attacker" ? sideEffects.attackStrength : sideEffects.defenderStrength;
+  const wallEffect = role === "defender" ? sideEffects.wallStrength : null;
+  return {
+    ...side,
+    gearLabel: combatEffect?.sourceLabel || side.gearLabel,
+    gearBonusPower: combatEffect?.bonusPower || 0,
+    gearPercentText: formatBattleGearEffectPercent(combatEffect),
+    casualtyRecovery: sideEffects.casualtyRecovery || null,
+    wallGearPower: wallEffect?.bonusPower || 0,
+    wallGearPercent: Math.max(0, Number(wallEffect?.bonusPercent || wallEffect?.bonusPercents?.[0]) || 0),
+  };
+}
+
+function getBattleSideBonusEntries(side = {}) {
+  if (side.gearOnly) {
+    const entries = [];
+    if (side.gearBonusPower > 0) entries.push({ icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"), label: side.gearLabel, value: `+${formatNumber(side.gearBonusPower)} power`, help: side.gearPercentText });
+    if (side.wallGearPower > 0) entries.push({ icon: renderCrownlandsIcon("city"), label: "Gatehouse wall gear", value: `+${formatNumber(side.wallGearPower)} wall power`, help: `+${side.wallGearPercent}% · separate from Stoneworks` });
+    const recovery = side.casualtyRecovery;
+    if (recovery?.gearRecoveredTroops > 0) entries.push({ icon: renderCrownlandsIcon("troops"), label: recovery.sourceLabel, value: `+${formatNumber(recovery.gearRecoveredTroops)} recovered`, help: `+${recovery.gearPercent}% gear · main city` });
+    return entries;
+  }
+  if (side.bonusRecorded === false) {
+    return [{ icon: "?", label: "Combat bonuses", value: "Not recorded", help: "Historical report" }];
+  }
+  const entries = [];
+  if (Number(side.skillBonusPower) > 0) {
+    entries.push({
+      icon: renderCrownlandsIcon(side.role === "attacker" ? "attack" : "shield"),
+      label: side.skillLabel,
+      value: `+${formatNumber(side.skillBonusPower)} power`,
+      help: side.skillPercentText,
+    });
+  }
+  if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
+    entries.push({ icon: renderCrownlandsIcon("crown"), label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
+  }
+  if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
+    entries.push({ icon: renderCrownlandsIcon("clan"), label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
+  }
+  if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
+    entries.push({
+      icon: renderCrownlandsIcon("city"),
+      label: "Stoneworks",
+      value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
+      help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
+    });
+  }
+  if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
+    entries.push({ icon: "+", label: "Other recorded defense", value: `+${formatNumber(side.otherBonusPower)} power`, help: "Authoritative battle snapshot" });
+  }
+  return entries;
+}
+
+function renderBattleBonusCard(side = {}) {
+  const entries = getBattleSideBonusEntries(side);
+  return `
+    <article class="battle-visual-bonus-card ${side.role}">
+      <h4>${side.gearOnly ? `${side.role === "attacker" ? "Attacker" : "Defender"} Gear` : side.role === "attacker" ? "Attack bonuses" : "Defense bonuses"}</h4>
+      ${entries.length
+        ? entries.map(entry => `
+          <div class="battle-visual-bonus-row">
+            <span aria-hidden="true">${entry.icon}</span>
+            <div><strong>${escapeHtml(entry.label)}</strong>${entry.help ? `<small>${escapeHtml(entry.help)}</small>` : ""}</div>
+            <b>${escapeHtml(entry.value)}</b>
+          </div>`).join("")
+        : `<div class="battle-visual-no-bonus">No additional combat bonuses</div>`}
+    </article>`;
+}
+
+function renderBattleGearEffectsSection(attacker = {}, defender = {}, report = null, viewerRole = "attacker") {
+  const cards = [attacker, defender].map(side => ({
+    ...side,
+    gearOnly: true,
+    casualtyRecovery: side.casualtyRecovery || (viewerRole === side.role ? report?.casualtyRecovery : null),
+  }))
+    .filter(side => getBattleSideBonusEntries(side).length).map(renderBattleBonusCard);
+  if (!cards.length) return "";
+  return `<section class="battle-visual-section"><div class="battle-visual-section-title"><h3>Gear Effects</h3></div><div class="battle-visual-two-column">${cards.join("")}</div></section>`;
+}
+
 function getControlledObjectiveBonusBreakdown(statType = "troops", owner = "player") {
   const type = ["gold", "troops", "speed"].includes(statType) ? statType : "troops";
   const totals = {
