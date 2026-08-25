@@ -1,10 +1,20 @@
 .clan-heraldry-shared-defs{position:absolute!important;width:0!important;height:0!important;overflow:hidden!important;pointer-events:none!important}
-.clan-heraldry-v2{display:inline-grid;place-items:center;isolation:isolate;width:100%;height:100%;aspect-ratio:100/106;max-width:100%;overflow:hidden;vertical-align:middle}
+.clan-heraldry-v2{display:inline-grid;flex:0 0 auto;place-items:center;isolation:isolate;width:100%;height:100%;aspect-ratio:100/106;max-width:100%;overflow:hidden;vertical-align:middle}
 .clan-heraldry-v2>svg{display:block;width:100%;height:100%;overflow:hidden}
 .clan-heraldry-size-mini{width:27px;height:29px}
 .clan-heraldry-size-small{width:40px;height:43px}
 .clan-heraldry-size-large{width:96px;height:102px}
 .clan-heraldry-size-editor{width:100%;height:100%}
+
+/* Keep v1 and v2 shields on the same layout contract. The original context
+   rules targeted only .clan-shield-* and allowed v2 roots to shrink or render
+   at their generic named size inside production controls. */
+.public-profile-clan>:is(.clan-shield-size-small,.clan-heraldry-size-small){flex:0 0 auto;width:40px;height:42.4px}
+.clan-hud-icon>:is(.clan-shield-size-small,.clan-heraldry-size-small){width:52px;height:55.12px}
+.profile-clan-shield>:is(.clan-shield-size-mini,.clan-heraldry-size-mini){width:40px;height:42.4px}
+.clan-leaderboard-shield-link>:is(.clan-shield-size-mini,.clan-heraldry-size-mini),
+.clan-list-row>.clan-shield-link>:is(.clan-shield-size-mini,.clan-heraldry-size-mini),
+.objective-clan-link>:is(.clan-shield-size-mini,.clan-heraldry-size-mini){width:38px;height:40.28px}
 .clan-heraldry-backplate{fill:#241811;stroke:#110d0a;stroke-width:7;stroke-linejoin:round}
 .clan-heraldry-field{fill:var(--clan-heraldry-primary)}
 .clan-heraldry-charge{fill:currentColor}
@@ -184,6 +194,23 @@
 
 @media (min-width:901px){
   .clan-shield-editor[data-heraldry-editor-version="2"] .clan-shield-choice-grid-charge{grid-template-columns:1fr}
+}
+
+@media (max-width:900px){
+  .clan-overview-panel .clan-shield-link>:is(.clan-shield-size-large,.clan-heraldry-size-large){width:62px;height:65.72px}
+}
+
+@media (max-width:780px) and (orientation:landscape){
+  .clan-hud-icon>:is(.clan-shield-size-small,.clan-heraldry-size-small){width:40px;height:42.4px}
+}
+
+@media (max-width:640px){
+  .profile-clan-shield>:is(.clan-shield-size-mini,.clan-heraldry-size-mini){width:27px;height:28.62px}
+}
+
+@media (max-width:580px){
+  .clan-overview-panel .clan-shield-link>:is(.clan-shield-size-large,.clan-heraldry-size-large){width:54px;height:57.24px}
+  .clan-leaderboard-shield-link>:is(.clan-shield-size-mini,.clan-heraldry-size-mini){width:34px;height:36.04px}
 }
 
 @media (max-width:900px) and (orientation:landscape){

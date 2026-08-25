@@ -139,10 +139,10 @@ for (const runtimeFile of ["clanHeraldryConfig.js", "clanHeraldryAssets.js", "cl
   assert.match(serviceWorkerSource, new RegExp(`functions/${runtimeFile.replace(".", "\\.")}`), `${runtimeFile} is not precached by the service worker.`);
 }
 assert.match(indexHtml, /clan-heraldry-v2\.css/);
-assert.match(indexHtml, /clan-heraldry-v2\.css\?v=20260825-clan-shield-colors-r1/, "The corrected swatch stylesheet is not cache-busted in the page shell.");
-assert.match(serviceWorkerSource, /clan-heraldry-v2\.css\?v=20260825-clan-shield-colors-r1/, "The corrected swatch stylesheet is not precached for offline play.");
-assert.match(indexHtml, /game\.js\?v=20260825-clan-shield-colors-r1/, "The immediate post-save shield refresh is not cache-busted in the page shell.");
-assert.match(serviceWorkerSource, /game\.js\?v=20260825-clan-shield-colors-r1/, "The immediate post-save shield refresh is not precached for offline play.");
+assert.match(indexHtml, /clan-heraldry-v2\.css\?v=20260825-clan-shield-surfaces-r1/, "The corrected shield-surface stylesheet is not cache-busted in the page shell.");
+assert.match(serviceWorkerSource, /clan-heraldry-v2\.css\?v=20260825-clan-shield-surfaces-r1/, "The corrected shield-surface stylesheet is not precached for offline play.");
+assert.match(indexHtml, /game\.js\?v=20260825-player-flags-audit-r2/, "The current game bundle containing the immediate post-save shield refresh is not cache-busted in the page shell.");
+assert.match(serviceWorkerSource, /game\.js\?v=20260825-player-flags-audit-r2/, "The current game bundle containing the immediate post-save shield refresh is not precached for offline play.");
 assert.ok(indexHtml.indexOf("clanHeraldryRenderer.js") < indexHtml.indexOf("game.js"), "The heraldry renderer must load before game.js.");
 assert.match(serviceWorkerSource, /charges-full\.svg[\s\S]*?charges-micro\.svg/);
 assert.match(gameSource, /CLAN_HERALDRY_CHARGES\s*=\s*CLAN_HERALDRY_CONFIG\.SELECTABLE_CHARGES/);
@@ -161,6 +161,10 @@ assert.match(editorCss, /\.clan-shield-swatch-grid button:is\(\.active,\[aria-pr
 assert.match(editorCss, /\.clan-shield-micro-preview>span:not\(\.clan-heraldry-v2\)\{display:none\}/, "Compact layout must hide only the micro-preview label, not the shield.");
 assert.match(editorCss, /\.clan-hud-btn\.has-clan[\s\S]*?\):not\(:disabled\):hover\{filter:drop-shadow/, "Shared hover filters must not recolor saved Clan Heraldry.");
 assert.match(editorCss, /\.clan-hud-btn\.has-clan[\s\S]*?\):not\(:disabled\):active\{filter:drop-shadow/, "Shared active filters must not recolor saved Clan Heraldry.");
+assert.match(editorCss, /\.clan-heraldry-v2\{[^}]*flex:0 0 auto/, "V2 shields must not flex-shrink inside public identity controls.");
+for (const selectorToken of ["public-profile-clan", "clan-hud-icon", "profile-clan-shield", "clan-leaderboard-shield-link"]) {
+  assert.ok(editorCss.includes(selectorToken), `The shared v1/v2 surface sizing contract is missing ${selectorToken}.`);
+}
 assert.doesNotMatch(editorCss, /orientation\s*:\s*portrait/i, "No portrait Clan Heraldry CSS is allowed.");
 assert.match(scrollProof, /data-options="charge"/);
 assert.match(scrollProof, /symbolHref/);
@@ -177,6 +181,14 @@ for (const context of ["editor-full", "editor-micro", "editor-option", "public-p
   assert.ok(contextProof.includes(`data-shield-context="${context}"`), `Production-context proof is missing ${context}.`);
   assert.ok(contextQa.includes(`"${context}"`), `Production-context QA is missing ${context}.`);
 }
+for (const context of ["public-player", "hud", "leaderboard-current"]) {
+  assert.ok(contextProof.includes(`data-legacy-shield-context="${context}"`), `Production-context proof is missing the ${context} legacy comparison.`);
+}
+assert.match(contextProof, /data-shield-context="public-player"[^>]*data-size="small"/, "Public-profile QA must invoke the production small-size renderer contract.");
+assert.match(contextProof, /data-shield-context="hud"[^>]*data-size="small"/, "HUD QA must invoke the production small-size renderer contract.");
+assert.match(contextProof, /data-shield-context="leaderboard-current"[^>]*data-size="mini"/, "Leaderboard QA must invoke the production mini-size renderer contract.");
+assert.match(contextQa, /readVersionFootprints[\s\S]*?assertVersionFootprints/, "Browser QA must compare v1 and v2 production footprints.");
+assert.match(contextQa, /shield aspect ratio is distorted/, "Browser QA must reject compressed or stretched shields.");
 for (const token of ["--clan-heraldry-primary", "--clan-heraldry-secondary", "--clan-heraldry-charge", "--clan-heraldry-secondary-charge", "--clan-heraldry-border", "getComputedStyle(field).fill", "getComputedStyle(division).fill", "getComputedStyle(border).stroke", "getComputedStyle(rivets).fill", "getComputedStyle(innerTrim).stroke", "clipPath", "brightness|saturate|grayscale|contrast"]) {
   assert.ok(contextQa.includes(token), `Production-context computed-style QA is missing ${token}.`);
 }
