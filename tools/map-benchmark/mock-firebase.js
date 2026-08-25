@@ -6,6 +6,15 @@
     throw new Error("The Crownlands benchmark Firebase adapter is loopback-only.");
   }
 
+  const benchmarkMainRegionId = fixture.primaryRegionId;
+  const benchmarkMainCity = (fixture.citiesByRegion[benchmarkMainRegionId] || [])
+    .find(city => city.ownerUid === fixture.player.uid && city.isMainCity === true);
+  if (!benchmarkMainCity?.id) {
+    throw new Error("The Crownlands benchmark fixture is missing its player-owned main city.");
+  }
+  const benchmarkMainCityId = benchmarkMainCity.id;
+  const benchmarkMainIslandId = `${fixture.releaseConfig.worldId}-${benchmarkMainRegionId}`;
+
   const activeListeners = new Map();
   const lifecycle = [];
   const eventTraffic = [];
@@ -150,9 +159,9 @@
       displayName: fixture.player.displayName,
       resetGeneration: fixture.releaseConfig.resetGeneration,
       worldId: fixture.releaseConfig.worldId,
-      mainRegionId: fixture.primaryRegionId,
-      mainIslandId: `${fixture.releaseConfig.worldId}-${fixture.primaryRegionId}`,
-      mainCityId: `${fixture.primaryRegionId}_bench_001`,
+      mainRegionId: benchmarkMainRegionId,
+      mainIslandId: benchmarkMainIslandId,
+      mainCityId: benchmarkMainCityId,
       mainCityAssignmentVersion: 2,
       gold: 5000000,
       lastSeenAtMs: fixture.fixedEpochMs,
@@ -169,7 +178,17 @@
     loadPlayerIdentities: async () => [],
     loadServerReports: async () => [],
     ensureMainIsland: async () => ({ seeded: true }),
-    repairMainCityAssignment: async () => ({ currentUser: { mainCityId: `${fixture.primaryRegionId}_bench_001`, mainRegionId: fixture.primaryRegionId } }),
+    repairMainCityAssignment: async () => ({
+      ok: true,
+      repairedMainCity: false,
+      requiresStartingCityClaim: false,
+      mainCityRecoveryStatus: "valid",
+      currentUser: {
+        mainCityId: benchmarkMainCityId,
+        mainRegionId: benchmarkMainRegionId,
+        mainIslandId: benchmarkMainIslandId,
+      },
+    }),
 
     subscribeIsland(islandId, handlers = {}) {
       const regionId = regionIdFromIsland(islandId);
@@ -184,7 +203,7 @@
         handlers.onCamps?.(campRows);
         recordEvent(`region.${regionId}.armies`, []);
         handlers.onArmies?.([]);
-        const presence = [{ uid: fixture.player.uid, playerName: fixture.player.displayName, displayName: fixture.player.displayName, updatedAtMs: Date.now(), mainCityId: `${fixture.primaryRegionId}_bench_001` }];
+        const presence = [{ uid: fixture.player.uid, playerName: fixture.player.displayName, displayName: fixture.player.displayName, updatedAtMs: Date.now(), mainCityId: benchmarkMainCityId }];
         recordEvent(`region.${regionId}.presence`, presence);
         handlers.onPresence?.(presence, []);
       });

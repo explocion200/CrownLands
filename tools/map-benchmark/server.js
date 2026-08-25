@@ -90,6 +90,7 @@ function createBenchmarkIndex(scenarioId, fixture) {
   if (fixture.scenario.visualQa) queryParams.set("visualMarches", String(fixture.scenario.marchCount));
   if (fixture.scenario.visualKinds) queryParams.set("visualKinds", "true");
   const query = queryParams.toString();
+  source = source.replace('<base id="crownlandsBase" href="./" />', '<base id="crownlandsBase" href="/" />');
   source = source.replace(
     /<script src="assets\/map-editor-data\.js[^>]*><\/script>/,
     `<script src="/__benchmark__/early-instrumentation.js?${query}"></script>\n  <script src="/__benchmark__/map-editor-data.js?${query}"></script>`
