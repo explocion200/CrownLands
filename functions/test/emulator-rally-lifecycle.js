@@ -678,6 +678,8 @@ async function main() {
     .where("status", "==", "stationed")
     .get();
   assert(!reinforcementSnapshot.empty, "The ally's surviving troops were not stationed as recallable reinforcements.");
+  // Keep passive production from obscuring the exact 10,000-troop return delta.
+  await allyCityRef.set({ productionUpdatedAtMs: Date.now() + 60_000 }, { merge: true });
   const allyTroopsBeforeStaleReturn = Number((await allyCityRef.get()).data()?.troops || 0);
   await db.doc(`armies/${staleReturnArmyId}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
   await callFunction("resolveArmyOrder", ally.token, {
@@ -689,7 +691,7 @@ async function main() {
   assert(stationAfterStaleReturn.status === "stationed", "An older return movement overwrote newly stationed Rally survivors.");
   assert(
     allyTroopsAfterStaleReturn - allyTroopsBeforeStaleReturn === 10_000,
-    "The older reinforcement return did not conserve its separately marching troops."
+    `The older reinforcement return did not conserve its separately marching troops (${allyTroopsBeforeStaleReturn} -> ${allyTroopsAfterStaleReturn}).`
   );
   await callFunction("resolveArmyOrder", ally.token, {
     armyId: staleReturnArmyId,
