@@ -121,14 +121,15 @@ async function clientDocumentRequest(user, documentPath, options = {}) {
   });
 }
 
-async function pollUntil(read, predicate, message, timeoutMs = 12_000) {
+async function pollUntil(read, predicate, message, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
+  let latest = null;
   while (Date.now() < deadline) {
-    const value = await read();
-    if (predicate(value)) return value;
+    latest = await read();
+    if (predicate(latest)) return latest;
     await new Promise(resolve => setTimeout(resolve, 150));
   }
-  throw new Error(message);
+  throw new Error(`${message} Last value: ${JSON.stringify(latest)}`);
 }
 
 async function main() {

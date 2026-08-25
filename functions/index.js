@@ -14795,39 +14795,33 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     });
   }
 
-  cityDocs.forEach(cityDoc => {
-    writes.push({
-      ref: cityDoc.ref,
-      data: {
-        ownerKind: "player",
-        ownerUid: uid,
-        ownerName: identity.ownerName,
-        ownerFlag: identity.ownerFlag,
-        ownerKingPower: serverKingPower,
-        ownerClanId: identity.clanId,
-        ownerClanName: identity.clanName,
-        ownerClanTag: identity.clanTag,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  });
-  activeArmyDocs.forEach(armyDoc => {
-    writes.push({
-      ref: armyDoc.ref,
-      data: {
-        ownerName: identity.ownerName,
-        ownerFlag: identity.ownerFlag,
-        ownerKingPower: serverKingPower,
-        attackerKingPower: serverKingPower,
-        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
-        ownerClanId: identity.clanId,
-        ownerClanName: identity.clanName,
-        ownerClanTag: identity.clanTag,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  });
+  const cityProjectionWrites = cityDocs.map(cityDoc => ({
+    ref: cityDoc.ref,
+    data: {
+      ownerName: identity.ownerName,
+      ownerFlag: identity.ownerFlag,
+      ownerKingPower: serverKingPower,
+      ownerClanId: identity.clanId,
+      ownerClanName: identity.clanName,
+      ownerClanTag: identity.clanTag,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+  }));
+  const armyProjectionWrites = activeArmyDocs.map(armyDoc => ({
+    ref: armyDoc.ref,
+    data: {
+      ownerName: identity.ownerName,
+      ownerFlag: identity.ownerFlag,
+      ownerKingPower: serverKingPower,
+      attackerKingPower: serverKingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      ownerClanId: identity.clanId,
+      ownerClanName: identity.clanName,
+      ownerClanTag: identity.clanTag,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+  }));
   if (crownReignSnap.exists) {
     writes.push({
       ref: crownReignSnap.ref,
@@ -14851,7 +14845,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     });
   });
   mainCityRepair.cityPatches.forEach(entry => {
-    writes.push({
+    cityProjectionWrites.push({
       ref: entry.ref,
       data: cleanCityUpdate(entry.city, entry.patch),
     });
@@ -14864,6 +14858,12 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     });
     await batch.commit();
   }
+  // Identity projections come from collection-query snapshots. Re-read each asset
+  // transactionally so a concurrent capture, return, or relinquishment wins.
+  const [cityUpdates, armyUpdates] = await Promise.all([
+    writeCurrentOwnerPatches(uid, cityProjectionWrites, "writeCurrentOwnerIdentityCityProjections"),
+    writeCurrentOwnerPatches(uid, armyProjectionWrites, "writeCurrentOwnerIdentityArmyProjections"),
+  ]);
 
   return {
     ok: true,
@@ -14872,8 +14872,8 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     ownerKingPower: serverKingPower,
     cityCount,
     globalStats: globalStatsForClient(globalStats),
-    cityUpdates: cityDocs.length,
-    armyUpdates: activeArmyDocs.length,
+    cityUpdates,
+    armyUpdates,
     presenceUpdates: 0,
   };
 });

@@ -137,6 +137,57 @@ assert.equal(cleanupPatch.level, 17);
 assert.equal(cleanupPatch.relinquishedAtMs, cleanupAtMs);
 assert.equal(cleanupPatch.neutralClaimOpen, false);
 
+const statsRebuildSource = extractFunction(serverSource, "rebuildGlobalStatsForPlayer");
+const statsCityRefreshStart = statsRebuildSource.indexOf("const cityProjectionWrites = cityEntries.map");
+const statsArmyRefreshStart = statsRebuildSource.indexOf("const armyProjectionWrites", statsCityRefreshStart);
+assert.ok(
+  statsCityRefreshStart >= 0 && statsArmyRefreshStart > statsCityRefreshStart,
+  "Missing the stats-rebuild city identity refresh."
+);
+assert.doesNotMatch(
+  statsRebuildSource.slice(statsCityRefreshStart, statsArmyRefreshStart),
+  /owner(?:Kind|Uid)\s*:/,
+  "A stats rebuild can restore city ownership from a stale query snapshot."
+);
+assert.match(
+  statsRebuildSource,
+  /writeCurrentOwnerPatches\(playerUid, cityProjectionWrites/,
+  "Stats-rebuild city projections do not re-check their current owner."
+);
+assert.match(
+  statsRebuildSource,
+  /writeCurrentOwnerPatches\(playerUid, armyProjectionWrites/,
+  "Stats-rebuild army projections do not re-check their current owner."
+);
+
+const identitySyncStart = serverSource.indexOf("exports.syncPlayerIdentity = onCall");
+const identitySyncEnd = serverSource.indexOf("exports.recalculatePlayerGlobalStats", identitySyncStart);
+const identitySyncSource = serverSource.slice(identitySyncStart, identitySyncEnd);
+const identityCityRefreshStart = identitySyncSource.indexOf("const cityProjectionWrites = cityDocs.map");
+const identityArmyRefreshStart = identitySyncSource.indexOf("const armyProjectionWrites", identityCityRefreshStart);
+assert.ok(
+  identitySyncStart >= 0
+    && identitySyncEnd > identitySyncStart
+    && identityCityRefreshStart >= 0
+    && identityArmyRefreshStart > identityCityRefreshStart,
+  "Missing the player-identity city refresh."
+);
+assert.doesNotMatch(
+  identitySyncSource.slice(identityCityRefreshStart, identityArmyRefreshStart),
+  /owner(?:Kind|Uid)\s*:/,
+  "An identity sync can restore city ownership from a stale query snapshot."
+);
+assert.match(
+  identitySyncSource,
+  /writeCurrentOwnerPatches\(uid, cityProjectionWrites/,
+  "Identity-sync city projections do not re-check their current owner."
+);
+assert.match(
+  identitySyncSource,
+  /writeCurrentOwnerPatches\(uid, armyProjectionWrites/,
+  "Identity-sync army projections do not re-check their current owner."
+);
+
 const relinquishStart = serverSource.indexOf("exports.relinquishCity = onCall");
 const relinquishEnd = serverSource.indexOf("exports.relocateMainCity", relinquishStart);
 assert.ok(relinquishStart >= 0 && relinquishEnd > relinquishStart, "Missing relinquishCity callable.");

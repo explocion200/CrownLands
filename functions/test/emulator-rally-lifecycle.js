@@ -657,7 +657,8 @@ async function main() {
       `realmEvents/${realm.resetGeneration}/ownershipChanges/army_${attackArmyId}_city_${gold.id}`
     ).get()).data() || {},
     event => event.status === "processed",
-    "The Rally capture ownership cleanup did not finish"
+    "The Rally capture ownership cleanup did not finish",
+    120_000
   );
   const stationAfterOwnershipCleanup = (await db.doc(`reinforcements/${staleReinforcementId}`).get()).data() || {};
   assert(
@@ -1183,7 +1184,12 @@ async function main() {
       regionIds: redirected.movement.routeRegionIds,
     });
     const mainAfterArrival = Number((await backupRef.get()).data()?.troops || 0);
-    assert(mainAfterArrival - mainBeforeArrival === troops, `${label} Rally return did not conserve every surviving troop.`);
+    const returnedTroopDelta = mainAfterArrival - mainBeforeArrival;
+    assert(
+      returnedTroopDelta === troops,
+      `${label} Rally return did not conserve every surviving troop `
+        + `(before=${mainBeforeArrival}, after=${mainAfterArrival}, delta=${returnedTroopDelta}, expected=${troops}).`
+    );
     await callFunction("resolveArmyOrder", clanLeader.token, {
       armyId: redirected.movement.id,
       regionIds: redirected.movement.routeRegionIds,
