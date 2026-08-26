@@ -11379,6 +11379,66 @@ select:focus {
   box-shadow: var(--ui-inset), 0 5px 10px rgba(0, 0, 0, .24);
 }
 
+.city-list-name {
+  display: grid;
+  align-content: center;
+}
+
+.city-list-name-text,
+.city-list-upgrade-result {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.city-list-upgrade-result {
+  color: #ffe08a;
+  font-size: .66rem;
+  font-weight: 950;
+  line-height: 1.15;
+  letter-spacing: .01em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .82);
+}
+
+.city-list-upgrade[aria-disabled="true"],
+.city-level-up-btn[aria-disabled="true"] {
+  cursor: wait;
+  opacity: .72;
+  filter: saturate(.7);
+}
+
+.city-list-row.upgrade-confirmed {
+  border-color: rgba(255, 224, 128, .96);
+  background: linear-gradient(90deg, rgba(42, 91, 68, .98), rgba(10, 44, 49, .98));
+  animation: crownlandsCityListUpgradeConfirmed 680ms ease-out both;
+}
+
+@keyframes crownlandsCityListUpgradeConfirmed {
+  0% {
+    transform: scale(.992);
+    box-shadow: 0 0 0 0 rgba(255, 224, 128, .08), var(--ui-inset);
+  }
+  45% {
+    transform: scale(1.006);
+    box-shadow: 0 0 0 4px rgba(255, 224, 128, .2), 0 0 24px rgba(255, 201, 82, .34), var(--ui-inset);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 1px rgba(255, 224, 128, .16), var(--ui-inset);
+  }
+}
+
+html[data-animation-mode="off"] .city-list-row.upgrade-confirmed {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-animation-mode]) .city-list-row.upgrade-confirmed {
+    animation: none;
+  }
+}
+
 .battle-report-card.victory {
   border-color: rgba(147, 199, 68, .82);
 }

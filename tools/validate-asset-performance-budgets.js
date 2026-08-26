@@ -44,7 +44,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Server-authoritative city XP previews and replay-safe upgrade handling add
 // under 13 KiB, including the City List upgrade controls across the three
 // touched client files. Advance the offline shell by one bounded 16 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3472 * 1024;
+// Confirmed City List row reconciliation, focus retention, and accessible
+// feedback add under 13 KiB. Advance the offline shell by one bounded 16 KiB step.
+const MAX_INSTALL_PRECACHE_BYTES = 3488 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;

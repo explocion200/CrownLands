@@ -99,8 +99,9 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Heraldry v2 adds four small runtime modules, its stylesheet, and the two
 // optimized charge sprites so the editor remains usable after installation.
 // City XP previews, replay-safe upgrades, and the City List controls use the
-// same bounded 16 KiB step as the main asset-performance validator.
-assert.ok(staticCacheBytes <= 3472 * 1024, "The service-worker installation cache exceeds 3.39 MiB.");
+// same bounded steps as the main asset-performance validator, including the
+// confirmed-row feedback and focus-retention client update.
+assert.ok(staticCacheBytes <= 3488 * 1024, "The service-worker installation cache exceeds 3.41 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);
