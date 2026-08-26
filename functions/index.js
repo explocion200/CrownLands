@@ -16282,7 +16282,11 @@ async function claimFreshStartingCityInAssignedShard(request) {
       break;
     }
     if (!chosenCityRef || !chosenCity) {
-      throw new HttpsError("resource-exhausted", "No unclaimed starting city is available.");
+      return {
+        starterIslandExhausted: true,
+        regionId: chosenIsland.regionId,
+        islandId: chosenIsland.islandId,
+      };
     }
 
     const freshProfile = createFreshResetPlayerProfile({
@@ -16484,6 +16488,7 @@ async function claimFreshStartingCityInAssignedShard(request) {
     }, { maxAttempts: 3 });
   };
 
+  const exhaustedStarterRegionIds = new Set();
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
     const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
@@ -16501,8 +16506,26 @@ async function claimFreshStartingCityInAssignedShard(request) {
     if (!islandEntries.length) {
       throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
     }
-    const minimumPopulation = Math.min(...islandEntries.map(entry => entry.playerCount));
-    const leastPopulated = islandEntries.filter(entry => entry.playerCount === minimumPopulation);
+    const availableIslandEntries = islandEntries.filter(
+      entry => !exhaustedStarterRegionIds.has(entry.regionId)
+    );
+    if (!availableIslandEntries.length) {
+      if (islandEntries.length < STARTER_REGION_IDS.length) {
+        throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
+      }
+      throw new HttpsError(
+        "resource-exhausted",
+        "No unclaimed starting city is available in this realm.",
+        {
+          reason: "starter-realm-exhausted",
+          exhaustedRegionIds: [...exhaustedStarterRegionIds].sort(),
+        }
+      );
+    }
+    const minimumPopulation = Math.min(...availableIslandEntries.map(entry => entry.playerCount));
+    const leastPopulated = availableIslandEntries.filter(
+      entry => entry.playerCount === minimumPopulation
+    );
     const chosenIsland = leastPopulated[crypto.randomInt(0, leastPopulated.length)];
     const placement = {
       island: chosenIsland,
@@ -16526,6 +16549,18 @@ async function claimFreshStartingCityInAssignedShard(request) {
         transaction => runClaimTransaction(transaction, placement),
         { maxAttempts: 1 }
       );
+      if (result?.starterIslandExhausted) {
+        await releasePlacementReservation(placement);
+        exhaustedStarterRegionIds.add(chosenIsland.regionId);
+        logOperation("claimStartingCityIslandExhausted", Date.now(), request, "retry", {
+          reason: "starter-island-exhausted",
+          regionId: chosenIsland.regionId,
+          islandId: chosenIsland.islandId,
+          exhaustedRegionCount: exhaustedStarterRegionIds.size,
+          remainingRegionCount: Math.max(0, STARTER_REGION_IDS.length - exhaustedStarterRegionIds.size),
+        });
+        continue;
+      }
       if (result?.alreadyClaimed) await releasePlacementReservation(placement);
       return result;
     } catch (error) {
