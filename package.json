@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "description": "Development-only Crownlands benchmark entry points",
   "scripts": {
+    "start-feature": "node tools/start-feature.js",
+    "prepare-pr": "node tools/prepare-pr.js",
+    "setup:hooks": "node tools/install-git-hooks.js",
+    "test:safe-update": "node tools/test-safe-update-pipeline.js",
     "benchmark:map": "node tools/map-benchmark/run-map-benchmark.js",
     "benchmark:map:phase1": "node tools/map-benchmark/run-map-benchmark.js --phase-1-after",
     "benchmark:map:phase1:verify": "node tools/map-benchmark/run-map-benchmark.js --verify-phase-1 --fresh",

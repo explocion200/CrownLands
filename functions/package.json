@@ -16,7 +16,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "node --check index.js && node --check realmTopology.js && node --check chat.js && node --check playerFlagConfig.js && node --check flagRenderer.js && node --check dailyMissions.js && node --check seasonalAchievements.js && node --check ../instant-economy-actions.js && node --check ../base-cities.js && node --check ../common-gear-ui.js && node --check ../game.js && node --check ../firebaseClient.js && node --check ../chat-ui.js && node --check ../animation-manager.js && node --check ../audio-manager.js && pnpm exec eslint index.js realmTopology.js chat.js playerFlagConfig.js flagRenderer.js dailyMissions.js seasonalAchievements.js authoritative-route-planner.js authoritative-route-policy.js clanQuestPeriod.js ../instant-economy-actions.js ../common-gear-ui.js ../game.js ../firebaseClient.js ../chat-ui.js ../animation-manager.js ../audio-manager.js ../route-worker.js",
-    "setup:hooks": "git config core.hooksPath .githooks",
+    "setup:hooks": "node ../tools/install-git-hooks.js",
     "test:clan-heraldry": "node --check clanHeraldryConfig.js && node --check clanHeraldryLegacyV1.js && node --check clanHeraldryAssets.js && node --check clanHeraldryRenderer.js && node ../tools/validate-clan-heraldry-v2.js",
     "test:route-parity": "node ../tools/validate-server-route-parity.js",
     "test:realm-sharding": "node ../tools/validate-realm-sharding.js",

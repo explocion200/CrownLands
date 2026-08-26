@@ -10,6 +10,12 @@ const packageJson = JSON.parse(read("functions/package.json"));
 const workflow = read(".github/workflows/crownlands-release-gate.yml");
 const emulatorRunner = read("functions/test/run-emulator-gates.js");
 const prePushHook = read(".githooks/pre-push");
+const rootPackageJson = JSON.parse(read("package.json"));
+const startFeature = read("tools/start-feature.js");
+const preparePr = read("tools/prepare-pr.js");
+const prePushCheck = read("tools/pre-push-check.js");
+const safeUpdateTests = read("tools/test-safe-update-pipeline.js");
+const safeUpdateDocs = read("docs/SAFE_UPDATE_WORKFLOW.md");
 
 assert.equal(packageJson.packageManager, "pnpm@11.9.0", "The repository pnpm version must match CI.");
 assert.equal(packageJson.engines?.node, "22", "The Functions runtime must remain pinned to Node 22.");
@@ -36,9 +42,15 @@ requireMatch(emulatorRunner, /resetGate,[\s\S]*discoveredGates\.filter/, "Reset 
 requireMatch(emulatorRunner, /node_modules["'],\s*["']firebase-tools["'],\s*["']lib["'],\s*["']bin["'],\s*["']firebase\.js["']/, "Emulator gate must launch the pinned CLI without a detachable Windows shim.");
 requireMatch(emulatorRunner, /for \(const fileName of orderedGates\)[\s\S]*emulators:exec/, "Each emulator gate must run in an isolated emulator lifecycle.");
 requireMatch(emulatorRunner, /--log-verbosity["'],\s*["']QUIET/, "Emulator gate must keep CI output bounded.");
-requireMatch(prePushHook, /package_manager[\s\S]*pnpm\.cmd/, "Pre-push hook does not support Git Bash on Windows.");
-requireMatch(prePushHook, /node_modules\/pnpm\/bin\/pnpm\.cjs/, "Pre-push hook does not prefer the repository-pinned pnpm runtime.");
-requireMatch(prePushHook, /package_manager_cli[\s\S]*run gate:release/, "Pre-push hook does not run the complete release gate.");
+requireMatch(prePushHook, /node tools\/pre-push-check\.js/, "Pre-push hook does not use the shared safety check.");
+requireMatch(startFeature, /fetchOrigin[\s\S]*switch[\s\S]*main[\s\S]*--ff-only[\s\S]*origin\/main/, "start-feature does not safely synchronize main.");
+requireMatch(preparePr, /runReleaseGate[\s\S]*writePreparationReceipt[\s\S]*push[\s\S]*pr/, "prepare-pr does not validate, receipt, push, and create or update a PR.");
+requireMatch(prePushCheck, /refs\/heads\/main[\s\S]*assertClean[\s\S]*fetchOrigin[\s\S]*verifyPreparationReceipt/, "Pre-push protection is incomplete.");
+requireMatch(safeUpdateTests, /mkdtempSync[\s\S]*init[\s\S]*--bare[\s\S]*Unfinished tracked or untracked work[\s\S]*behind origin\\\/main/, "Safe-update integration coverage is incomplete.");
+requireMatch(safeUpdateDocs, /start-feature[\s\S]*prepare-pr[\s\S]*Pull-request checks are pending/, "Safe-update recovery documentation is incomplete.");
+assert.equal(rootPackageJson.scripts?.["start-feature"], "node tools/start-feature.js", "Root start-feature command is missing.");
+assert.equal(rootPackageJson.scripts?.["prepare-pr"], "node tools/prepare-pr.js", "Root prepare-pr command is missing.");
+assert.equal(rootPackageJson.scripts?.["test:safe-update"], "node tools/test-safe-update-pipeline.js", "Safe-update test command is missing.");
 
 const emulatorFiles = fs.readdirSync(path.join(root, "functions/test"))
   .filter(fileName => /^emulator-.*\.js$/.test(fileName));
