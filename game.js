@@ -1059,6 +1059,7 @@ const SKILL_GROUPS = Object.freeze([
   Object.freeze({ id: "utility", label: "Utility", skills: Object.freeze(["taxStewardship", "royalGranaries", "guildCharters"]) }),
 ]);
 const SKILL_PRESET_MODEL_VERSION = 5;
+const SKILL_POINT_SYSTEM_VERSION = 2;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 25 }),
@@ -5049,6 +5050,8 @@ function newGame(playerName) {
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
     skillPresets: createDefaultSkillPresets(),
+    skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+    skillPointSystemResetAtMs: Date.now(),
     freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
@@ -5668,7 +5671,7 @@ function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
   return total;
 }
 
-function normalizeUpgrades(upgrades, sourceVersion = 6) {
+function normalizeUpgrades(upgrades, _sourceVersion = 6) {
   const normalized = createDefaultSkills();
 
   for (const key of SKILL_ORDER) {
@@ -5676,21 +5679,6 @@ function normalizeUpgrades(upgrades, sourceVersion = 6) {
     if (Number.isFinite(value) && value >= 0) normalized[key] = Math.floor(value);
   }
 
-  const oldAttack = normalizeLegacySkillLevel(upgrades?.attack, sourceVersion, 0.08);
-  const oldIncome = normalizeLegacySkillLevel(upgrades?.income, sourceVersion, 0.14);
-  const oldDefense = normalizeLegacySkillLevel(upgrades?.defense, sourceVersion, 0.08);
-  const oldSpeed = normalizeLegacySkillLevel(upgrades?.speed, sourceVersion, 0.06);
-
-  normalized.swordmastery = Math.max(normalized.swordmastery, oldAttack, Math.floor(Number(upgrades?.striker) || 0));
-  normalized.taxStewardship = Math.max(normalized.taxStewardship, oldIncome, Math.floor(Number(upgrades?.prosperous) || 0));
-  normalized.royalGranaries = Math.max(normalized.royalGranaries, oldIncome, Math.floor(Number(upgrades?.recruiter) || 0));
-  normalized.stoneworks = Math.max(normalized.stoneworks, oldDefense, Math.floor(Number(upgrades?.guardian) || 0));
-  normalized.marchOrders = Math.max(normalized.marchOrders, oldSpeed, Math.floor(Number(upgrades?.rusher) || 0));
-  normalized.fieldMedics = Math.max(
-    normalized.fieldMedics,
-    Math.floor(Number(upgrades?.fearless) || 0),
-    Math.floor(Number(upgrades?.brave) || 0),
-  );
   SKILL_ORDER.forEach(key => {
     normalized[key] = normalizeSkillUpgradeLevel(key, normalized[key]);
   });
@@ -5800,14 +5788,6 @@ function isValidLocalSkillPresetAllocation(upgrades = null, character = state?.c
   return !invalid && spent <= getEarnedSkillPoints(character);
 }
 
-function normalizeLegacySkillLevel(value, sourceVersion, multiplierGain) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric < 0) return 0;
-  if (Number(sourceVersion) <= 3 && numeric >= 1) {
-    return Math.max(0, Math.round((numeric - 1) / multiplierGain));
-  }
-  return Math.floor(numeric);
-}
 function normalizeMarchPercent(value) {
   const percent = Number(value);
   const allowed = [0.25, 0.5, 0.8, 1];
@@ -6091,6 +6071,27 @@ function getSpentSkillPoints(upgrades = state?.upgrades) {
 
 function getAvailableSkillPoints(character = state?.character, upgrades = state?.upgrades) {
   return Math.max(0, getEarnedSkillPoints(character) - getSpentSkillPoints(upgrades));
+}
+
+function getSkillPointSystemVersion(profile = {}) {
+  return Math.max(0, Math.floor(Number(profile?.skillPointSystemVersion) || 0));
+}
+
+function hasCurrentSkillPointSystem(profile = {}) {
+  return getSkillPointSystemVersion(profile) >= SKILL_POINT_SYSTEM_VERSION;
+}
+
+function createResetLocalSkillState(character = {}) {
+  const nextCharacter = normalizeCharacterProgress(character);
+  nextCharacter.skillPoints = getEarnedSkillPoints(nextCharacter);
+  return {
+    character: nextCharacter,
+    upgrades: createDefaultSkills(),
+    skillPresets: createDefaultSkillPresets(),
+    skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+    freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
+    freeSkillResetCredits: 0,
+  };
 }
 
 function reconcileSkillPoints(character = state?.character, upgrades = state?.upgrades) {
@@ -10710,17 +10711,34 @@ function applyServerProfilePatch(patch = null, options = {}) {
     return changed;
   }
   if (revisionMs > 0) lastAuthoritativeProfileRevisionMs = Math.max(lastAuthoritativeProfileRevisionMs, revisionMs);
-  if (patch.character) {
+  const patchHasSkillPointSystemVersion = Number.isFinite(Number(patch.skillPointSystemVersion));
+  const patchSkillPointSystemVersion = patchHasSkillPointSystemVersion
+    ? Math.max(0, Math.floor(Number(patch.skillPointSystemVersion) || 0))
+    : getSkillPointSystemVersion(state);
+  const acceptPatchedSkillState = patchSkillPointSystemVersion >= SKILL_POINT_SYSTEM_VERSION;
+  if (patchHasSkillPointSystemVersion) {
+    state.skillPointSystemVersion = acceptPatchedSkillState
+      ? patchSkillPointSystemVersion
+      : SKILL_POINT_SYSTEM_VERSION;
+    state.skillPointSystemResetAtMs = normalizeTimestampMs(patch.skillPointSystemResetAtMs)
+      || state.skillPointSystemResetAtMs;
+    changed = true;
+  }
+  if (patchHasSkillPointSystemVersion && !acceptPatchedSkillState) {
+    Object.assign(state, createResetLocalSkillState(patch.character || state.character));
+    changed = true;
+  }
+  if (patch.character && acceptPatchedSkillState) {
     state.character = normalizeCharacterProgress(patch.character);
     syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
     changed = true;
   }
-  if (patch.upgrades && typeof patch.upgrades === "object") {
+  if (acceptPatchedSkillState && patch.upgrades && typeof patch.upgrades === "object") {
     state.upgrades = normalizeUpgrades(patch.upgrades, state.version);
     syncCharacterSkillPoints(state.character, state.upgrades, state.character?.skillPoints);
     changed = true;
   }
-  if (patch.skillPresets && typeof patch.skillPresets === "object") {
+  if (acceptPatchedSkillState && patch.skillPresets && typeof patch.skillPresets === "object") {
     state.skillPresets = normalizeSkillPresets(patch.skillPresets);
     changed = true;
   }
@@ -11324,6 +11342,8 @@ function getPlayerProfileSnapshot() {
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     skillPresets: state ? normalizeSkillPresets(state.skillPresets) : createDefaultSkillPresets(),
+    skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+    skillPointSystemResetAtMs: normalizeTimestampMs(state?.skillPointSystemResetAtMs),
     freeSkillResetGrantVersion: Math.max(0, Math.floor(Number(state?.freeSkillResetGrantVersion) || 0)),
     freeSkillResetCredits: Math.max(0, Math.floor(Number(state?.freeSkillResetCredits) || 0)),
     shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
@@ -11373,6 +11393,8 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
       "character",
       "upgrades",
       "skillPresets",
+      "skillPointSystemVersion",
+      "skillPointSystemResetAtMs",
       "shopItems",
       "gear",
       "itemEffects",
@@ -11406,11 +11428,17 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.clanJoinCooldownUntilMs = normalizeTimestampMs(profile.clanJoinCooldownUntilMs);
   state.pendingClanApplicationId = String(profile.pendingClanApplicationId || "");
   state.flag = normalizeFlag(profile.flag, getCurrentOnlineUid() || profile.uid || profile.playerName);
-  state.character = normalizeCharacterProgress(profile.character);
-  state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
-  state.skillPresets = normalizeSkillPresets(profile.skillPresets);
-  state.freeSkillResetGrantVersion = Math.max(0, Math.floor(Number(profile.freeSkillResetGrantVersion) || 0));
-  state.freeSkillResetCredits = Math.max(0, Math.floor(Number(profile.freeSkillResetCredits) || 0));
+  if (hasCurrentSkillPointSystem(profile)) {
+    state.character = normalizeCharacterProgress(profile.character);
+    state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
+    state.skillPresets = normalizeSkillPresets(profile.skillPresets);
+    state.skillPointSystemVersion = getSkillPointSystemVersion(profile);
+    state.freeSkillResetGrantVersion = Math.max(0, Math.floor(Number(profile.freeSkillResetGrantVersion) || 0));
+    state.freeSkillResetCredits = Math.max(0, Math.floor(Number(profile.freeSkillResetCredits) || 0));
+  } else {
+    Object.assign(state, createResetLocalSkillState(profile.character));
+  }
+  state.skillPointSystemResetAtMs = normalizeTimestampMs(profile.skillPointSystemResetAtMs);
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.gear = normalizeCommonGearState(profile.gear);
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
@@ -14766,13 +14794,16 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   const releaseMatches = String(realm?.releaseId || "") === APP_RELEASE_ID;
   const generationMatches = String(realm?.resetGeneration || "") === RESET_GENERATION;
   const worldMatches = String(realm?.worldId || "") === ONLINE_WORLD_ID;
+  const skillPointSystemMatches = Math.floor(Number(
+    realm?.skillPointSystemVersion ?? realm?.capabilities?.skillPointSystemVersion
+  ) || 0) >= SKILL_POINT_SYSTEM_VERSION;
   const clientManifest = window.CROWNLANDS_RELEASE_MANIFEST || {};
   const expectedContractHash = String(clientManifest.contractHash || "");
   const serverContractHash = String(realm?.contractHash || "");
   const contractMatches = Boolean(expectedContractHash)
     && Boolean(serverContractHash)
     && serverContractHash === expectedContractHash;
-  if (!releaseMatches || !generationMatches || !worldMatches || !contractMatches) {
+  if (!releaseMatches || !generationMatches || !worldMatches || !contractMatches || !skillPointSystemMatches) {
     if (!generationMatches || !worldMatches) clearInstantEconomyActions();
     throw new Error("A Crownlands update is still deploying. Refresh before entering the kingdom.");
   }
@@ -14859,6 +14890,19 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   updateOnlineUi();
   onlineStatusDetail.textContent = "Checking the Crownlands realm...";
   await verifyRealmCompatibility(api);
+  let skillPointSyncResult = null;
+  if (api.syncSkillPointSystem) {
+    onlineStatusDetail.textContent = "Updating skill points...";
+    try {
+      skillPointSyncResult = await withTimeout(
+        api.syncSkillPointSystem(),
+        12000,
+        "The skill point update is taking too long."
+      );
+    } catch (error) {
+      console.warn("Could not finish the skill point update before loading the profile", error);
+    }
+  }
   onlineStatusDetail.textContent = "Finding your home island...";
   let profile = null;
   let cloudSnapshot = null;
@@ -14892,8 +14936,13 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   profile = mergeOnlineProfileSources(profile, cloudSnapshot);
 
   const hasCurrentProfile = Boolean(profile && isCurrentResetProfile(profile));
-  if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
-  else if (archivedProfileIdentity) {
+  if (hasCurrentProfile) {
+    applyOnlineProfileSnapshot(profile, state.playerName);
+    if (skillPointSyncResult?.skillPointSystemReset?.applied) {
+      addLog("Skills and saved presets were reset for the new skill point system. All earned points are ready to spend again.");
+      showToast("Skills reset for the new point system");
+    }
+  } else if (archivedProfileIdentity) {
     state.playerName = archivedProfileIdentity.playerName || state.playerName;
     if (archivedProfileIdentity.flag) state.flag = archivedProfileIdentity.flag;
   }
