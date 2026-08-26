@@ -97,6 +97,16 @@ const sandbox = {
   INACTIVITY_REMOVAL_MS: 20 * dayMs,
   Number,
   Math,
+  Date,
+  isStronghold(city = {}) {
+    return city.kind === "stronghold" || Boolean(city.strongholdType);
+  },
+  getStrongholdDefenseLevel(city = {}) {
+    return Math.max(1, Math.floor(Number(city.level) || 50));
+  },
+  clampCityLevel(value) {
+    return Math.max(1, Math.floor(Number(value) || 1));
+  },
   safeNumber(value, fallback = 0) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
@@ -106,8 +116,11 @@ vm.createContext(sandbox);
 vm.runInContext(
   `${extractFunction(serverSource, "getInactivityTargetStage")};`
   + `${extractFunction(serverSource, "getInactiveHomeTroopPatch")};`
+  + `${extractFunction(serverSource, "getNeutralClaimClearedPatch")};`
+  + `${extractFunction(serverSource, "getInactiveCityNeutralPatch")};`
   + "this.getInactivityTargetStage = getInactivityTargetStage;"
-  + "this.getInactiveHomeTroopPatch = getInactiveHomeTroopPatch;",
+  + "this.getInactiveHomeTroopPatch = getInactiveHomeTroopPatch;"
+  + "this.getInactiveCityNeutralPatch = getInactiveCityNeutralPatch;",
   sandbox,
   { filename: serverPath }
 );
@@ -122,6 +135,23 @@ assert.deepEqual(
   { troops: 1000, troopFloat: 1000, productionUpdatedAtMs: nowMs },
   "Troop consolidation does not preserve the exact total."
 );
+const inactiveCityPatch = sandbox.getInactiveCityNeutralPatch({
+  level: 32,
+  defense: 32,
+  fortificationState: { damageShare: 0.25 },
+}, nowMs);
+assert.equal(inactiveCityPatch.level, 1, "Inactive ordinary cities do not return to level 1.");
+assert.equal(inactiveCityPatch.defense, 1, "Inactive ordinary-city defense does not return to level 1.");
+assert.equal(
+  Object.prototype.hasOwnProperty.call(inactiveCityPatch, "fortificationState"),
+  false,
+  "Inactive neutralization must preserve fortification state through the merge."
+);
+const inactiveStrongholdPatch = sandbox.getInactiveCityNeutralPatch({
+  kind: "stronghold",
+  level: 50,
+}, nowMs);
+assert.equal(inactiveStrongholdPatch.level, 50, "Inactivity cleanup changed a stronghold's designed level.");
 
 assert.ok(
   indexes.indexes.some(index => (

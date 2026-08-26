@@ -10,7 +10,6 @@ const WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).fi
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const STARTER_REGION_TYPE = "starter";
-const NEW_PLAYER_SPAWN_REGION_TYPE_ORDER = [STARTER_REGION_TYPE, "midgame", "endgame"];
 const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = 10;
 let RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
 let REALM_SHARD_ID = "legacy";
@@ -350,6 +349,12 @@ function isStarterRegion(region = null) {
   return cleanRegionType(region?.type) === STARTER_REGION_TYPE;
 }
 
+function isNewPlayerSpawnRegion(region = null) {
+  if (!region || typeof region !== "object") return false;
+  if (typeof region.newPlayerSpawnEligible === "boolean") return region.newPlayerSpawnEligible;
+  return isStarterRegion(region);
+}
+
 function labelFromEditorRegionId(regionId) {
   return String(regionId || "island")
     .split(/[-_]+/)
@@ -416,9 +421,16 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
     const fallback = buildDefaultEditorRegion(map, baseRegions.length + index, config);
     const label = map.label || map.name || regionPatch.label || existing?.label || fallback.label;
     const type = cleanRegionType(map.type || regionPatch.type || existing?.type || fallback.type);
+    const newPlayerSpawnEligible = typeof map.newPlayerSpawnEligible === "boolean"
+      ? map.newPlayerSpawnEligible
+      : typeof regionPatch.newPlayerSpawnEligible === "boolean"
+        ? regionPatch.newPlayerSpawnEligible
+        : typeof existing?.newPlayerSpawnEligible === "boolean"
+          ? existing.newPlayerSpawnEligible
+          : type === STARTER_REGION_TYPE;
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, type, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label, type };
+      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
@@ -3174,27 +3186,11 @@ function getStarterRegionIds() {
   return getRegionIds().filter(regionId => isStarterRegion(getRegionById(regionId)));
 }
 
-function getRegionIdsByType(regionType) {
-  const targetType = cleanRegionType(regionType);
-  return getRegionIds().filter(regionId => cleanRegionType(getRegionById(regionId)?.type) === targetType);
-}
-
-function getOrderedNewPlayerSpawnRegionIds() {
-  const seen = new Set();
-  const ordered = [];
-  NEW_PLAYER_SPAWN_REGION_TYPE_ORDER.forEach(regionType => {
-    getRegionIdsByType(regionType).forEach(regionId => {
-      if (seen.has(regionId)) return;
-      seen.add(regionId);
-      ordered.push(regionId);
-    });
-  });
-  return ordered;
-}
-
 function getNewPlayerSpawnRegionIds() {
-  const orderedRegionIds = getOrderedNewPlayerSpawnRegionIds();
-  return orderedRegionIds.length ? orderedRegionIds : getOuterRegionIds();
+  const eligibleRegionIds = getRegionIds().filter(regionId => (
+    isNewPlayerSpawnRegion(getRegionById(regionId))
+  ));
+  return eligibleRegionIds.length ? eligibleRegionIds : getOuterRegionIds();
 }
 
 function getNeutralCityCountFromSummary(regionId, summary = null) {
@@ -3244,17 +3240,20 @@ async function pickAvailableStartingRegionId() {
   if (!api?.loadIslandCitySummary || !api?.isSignedIn?.()) return pickStartingRegionId();
 
   let summariesLoaded = 0;
+  let fallbackRegionId = "";
   for (const regionId of orderedRegionIds) {
     try {
       const summary = await loadNewPlayerSpawnSummary(regionId);
       summariesLoaded += summary ? 1 : 0;
       const neutralCityCount = getNeutralCityCountFromSummary(regionId, summary);
       if (neutralCityCount >= MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES) return regionId;
+      if (!fallbackRegionId && neutralCityCount > 0) fallbackRegionId = regionId;
     } catch (error) {
       console.warn(`Could not check ${getRegionLabel(regionId)} spawn availability`, error);
     }
   }
 
+  if (fallbackRegionId) return fallbackRegionId;
   return summariesLoaded > 0 ? "" : pickStartingRegionId();
 }
 
@@ -3286,7 +3285,7 @@ async function resolveHomeRegionIdForSetup(profile = null, { trustLocalState = t
   if (storedHomeRegionId) return storedHomeRegionId;
   const availableRegionId = await pickAvailableStartingRegionId();
   if (availableRegionId) return availableRegionId;
-  throw new Error(`No starter, midgame, or endgame map has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
+  throw new Error("No designated new-player map has an unclaimed neutral city available.");
 }
 
 function createWorldTerrainBlockers() {
@@ -35900,7 +35899,7 @@ function showHelpModal() {
       <li>Normal cities have no level cap. Upgrade cost rises 20% per level, with an extra doubling for each ten-level band above Level 100.</li>
       <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
-      <li>New online players claim starting cities on starter maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities, then midgame maps, then endgame maps.</li>
+      <li>New online players use designated spawn maps. Maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities are preferred, with any remaining eligible neutral city used as a fallback.</li>
       <li>Your main city starts with 200 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>

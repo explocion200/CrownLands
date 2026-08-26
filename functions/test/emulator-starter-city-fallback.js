@@ -16,10 +16,18 @@ initializeApp({ projectId });
 const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });
 
-const starterRegionIds = (worldLayout.maps || [])
-  .filter(map => String(map?.type || "").toLowerCase() === "starter")
+const mapsById = new Map((worldLayout.maps || []).map(map => [String(map.id || ""), map]));
+const spawnRegionIds = (worldLayout.maps || [])
+  .filter(map => typeof map?.newPlayerSpawnEligible === "boolean"
+    ? map.newPlayerSpawnEligible
+    : String(map?.type || "").toLowerCase() === "starter")
   .map(map => String(map.id || ""))
   .filter(Boolean);
+const southernSpawnRegionIds = ["region_16", "region_17", "region_19", "region_21", "region_22"];
+const regularCityIdsByRegion = new Map(spawnRegionIds.map(regionId => [
+  regionId,
+  new Set((mapsById.get(regionId)?.cities || []).map(city => String(city.id || ""))),
+]));
 let functionsHostPromise = null;
 
 function assert(condition, message) {
@@ -90,11 +98,7 @@ async function invokeFunction(name, token, data = {}) {
     }),
   });
   const body = await response.json();
-  return {
-    ok: response.ok && !body.error,
-    result: body.result || null,
-    error: body.error || null,
-  };
+  return { ok: response.ok && !body.error, result: body.result || null, error: body.error || null };
 }
 
 async function callFunction(name, token, data = {}) {
@@ -107,35 +111,52 @@ function islandId(regionId) {
   return `${realm.worldId}-${regionId}`;
 }
 
-async function seedStarterIslands(token) {
-  await Promise.all(starterRegionIds.map(regionId => callFunction("ensureMainIsland", token, {
+async function seedSpawnIslands(token) {
+  await Promise.all(spawnRegionIds.map(regionId => callFunction("ensureMainIsland", token, {
     islandId: islandId(regionId),
     regionId,
   })));
 }
 
-async function setStarterRegionState(regionId, { playerCount, exhausted }) {
+async function setSpawnRegionState(regionId, { playerCount, neutralCount }) {
   const id = islandId(regionId);
   const snapshot = await db.collection(`islands/${id}/cities`).get();
-  assert(snapshot.size > 0, `${regionId} was not seeded.`);
+  const regularCityIds = regularCityIdsByRegion.get(regionId) || new Set();
+  const regularCityDocs = snapshot.docs.filter(citySnapshot => regularCityIds.has(citySnapshot.id));
+  assert(regularCityDocs.length > 0, `${regionId} was not seeded with ordinary cities.`);
+  const safeNeutralCount = Math.max(0, Math.min(regularCityDocs.length, Math.floor(Number(neutralCount) || 0)));
   const batch = db.batch();
-  snapshot.docs.forEach((citySnapshot, index) => {
-    batch.set(citySnapshot.ref, exhausted ? {
+  regularCityDocs.forEach((citySnapshot, index) => {
+    batch.set(citySnapshot.ref, index < safeNeutralCount ? {
+      ownerKind: "neutral",
+      ownerUid: null,
+      ownerName: "",
+      ownerFlag: null,
+      isMainCity: false,
+    } : {
       ownerKind: "player",
       ownerUid: `fixture-owner-${regionId}-${index}`,
       ownerName: `Fixture ${regionId}`,
-      isMainCity: false,
-    } : {
-      ownerKind: "neutral",
-      ownerUid: "",
-      ownerName: "",
-      ownerFlag: null,
       isMainCity: false,
     }, { merge: true });
   });
   batch.set(db.doc(`islands/${id}`), { playerCount }, { merge: true });
   await batch.commit();
-  return snapshot.size;
+  return regularCityDocs.length;
+}
+
+async function setAllSpawnStates(overrides = {}) {
+  const slotSnapshot = await db.collection(`realmSeeds/${realm.resetGeneration}/startingSlots`).get();
+  if (!slotSnapshot.empty) {
+    const cleanup = db.batch();
+    slotSnapshot.docs.forEach(doc => cleanup.delete(doc.ref));
+    await cleanup.commit();
+  }
+  await Promise.all(spawnRegionIds.map((regionId, index) => setSpawnRegionState(regionId, {
+    playerCount: 100 + index,
+    neutralCount: 0,
+    ...(overrides[regionId] || {}),
+  })));
 }
 
 async function getPlayerCount(regionId) {
@@ -157,61 +178,89 @@ async function assertNoReservedSlotsFor(userIds, label) {
 }
 
 async function main() {
-  assert(starterRegionIds.length >= 5, "The fallback gate requires the five configured starter regions.");
-  const [seedUser, firstUser, secondUser, exhaustedUser] = await Promise.all([
+  assert(spawnRegionIds.length === 10, `Expected 10 designated spawn maps, found ${spawnRegionIds.length}.`);
+  assert(southernSpawnRegionIds.every(regionId => spawnRegionIds.includes(regionId)), "A southern map is not spawn eligible.");
+  southernSpawnRegionIds.forEach(regionId => {
+    const map = mapsById.get(regionId);
+    assert(map?.type === "midgame", `${regionId} lost its midgame progression type.`);
+    assert(map?.newPlayerSpawnEligible === true, `${regionId} lacks explicit spawn eligibility.`);
+    assert((map.cities || []).every(city => Number(city.level) === 1), `${regionId} contains a non-level-1 seed city.`);
+  });
+
+  const users = await Promise.all([
     createAuthUser("seed"),
-    createAuthUser("first"),
-    createAuthUser("second"),
+    ...southernSpawnRegionIds.map(regionId => createAuthUser(`south-${regionId}`)),
+    createAuthUser("preferred"),
+    createAuthUser("fallback"),
+    createAuthUser("concurrent-a"),
+    createAuthUser("concurrent-b"),
     createAuthUser("exhausted"),
   ]);
-  await seedStarterIslands(seedUser.token);
+  const [seedUser, ...claimUsers] = users;
+  await seedSpawnIslands(seedUser.token);
 
-  const [region11, region12, region13, region14, region15] = starterRegionIds;
-  await Promise.all([
-    setStarterRegionState(region11, { playerCount: 1, exhausted: false }),
-    setStarterRegionState(region12, { playerCount: 2, exhausted: false }),
-    setStarterRegionState(region13, { playerCount: 2, exhausted: false }),
-    setStarterRegionState(region14, { playerCount: 0, exhausted: true }),
-    setStarterRegionState(region15, { playerCount: 1, exhausted: true }),
-  ]);
-  const countsBefore = Object.fromEntries(await Promise.all(starterRegionIds.map(async regionId => (
-    [regionId, await getPlayerCount(regionId)]
-  ))));
+  for (let index = 0; index < southernSpawnRegionIds.length; index += 1) {
+    const targetRegionId = southernSpawnRegionIds[index];
+    const overrides = Object.fromEntries(spawnRegionIds.map((regionId, regionIndex) => [regionId, {
+      playerCount: regionId === targetRegionId ? 0 : 50 + regionIndex,
+      neutralCount: Number.MAX_SAFE_INTEGER,
+    }]));
+    await setAllSpawnStates(overrides);
+    const claim = await callFunction("claimStartingCity", claimUsers[index].token, {
+      playerName: `Southern ${targetRegionId}`,
+    });
+    assert(claimRegionId(claim) === targetRegionId, `${targetRegionId} was not selected when it was the balanced choice.`);
+    await assertNoReservedSlotsFor([claimUsers[index].uid], `${targetRegionId} claim`);
+  }
 
+  const preferredUser = claimUsers[5];
+  await setAllSpawnStates({
+    region_16: { playerCount: 10, neutralCount: 10 },
+    region_17: { playerCount: 0, neutralCount: 1 },
+  });
+  const preferredClaim = await callFunction("claimStartingCity", preferredUser.token, { playerName: "Ready-map preference" });
+  assert(claimRegionId(preferredClaim) === "region_16", "A below-threshold map displaced a map with 10 neutral cities.");
+
+  const fallbackUser = claimUsers[6];
+  await setAllSpawnStates({ region_21: { playerCount: 0, neutralCount: 1 } });
+  const fallbackClaim = await callFunction("claimStartingCity", fallbackUser.token, { playerName: "Last neutral fallback" });
+  assert(claimRegionId(fallbackClaim) === "region_21", "A valid final neutral city was unavailable to a new player.");
+
+  const concurrentUsers = [claimUsers[7], claimUsers[8]];
+  await setAllSpawnStates({
+    region_11: { playerCount: 1, neutralCount: Number.MAX_SAFE_INTEGER },
+    region_12: { playerCount: 1, neutralCount: Number.MAX_SAFE_INTEGER },
+  });
+  const countsBefore = {
+    region_11: await getPlayerCount("region_11"),
+    region_12: await getPlayerCount("region_12"),
+  };
   const [firstClaim, secondClaim] = await Promise.all([
-    callFunction("claimStartingCity", firstUser.token, { playerName: "Fallback First" }),
-    callFunction("claimStartingCity", secondUser.token, { playerName: "Fallback Second" }),
+    callFunction("claimStartingCity", concurrentUsers[0].token, { playerName: "Concurrent First" }),
+    callFunction("claimStartingCity", concurrentUsers[1].token, { playerName: "Concurrent Second" }),
   ]);
-  assert(firstClaim.cityId && secondClaim.cityId, "Fallback claims did not return starting cities.");
-  assert(firstClaim.cityId !== secondClaim.cityId, "Concurrent fallback claims collided on one city.");
-  assert(claimRegionId(firstClaim) !== region14 && claimRegionId(firstClaim) !== region15, "First claim used an exhausted region.");
-  assert(claimRegionId(secondClaim) !== region14 && claimRegionId(secondClaim) !== region15, "Second claim used an exhausted region.");
-
-  const countsAfter = Object.fromEntries(await Promise.all(starterRegionIds.map(async regionId => (
-    [regionId, await getPlayerCount(regionId)]
-  ))));
-  assert(countsAfter[region14] === countsBefore[region14], "The least-populated exhausted region changed playerCount.");
-  assert(countsAfter[region15] === countsBefore[region15], "The second exhausted region changed playerCount.");
-  for (const regionId of starterRegionIds) {
+  assert(firstClaim.cityId !== secondClaim.cityId, "Concurrent claims collided on one city.");
+  assert(
+    ["region_11", "region_12"].includes(claimRegionId(firstClaim))
+      && ["region_11", "region_12"].includes(claimRegionId(secondClaim)),
+    "Concurrent claims escaped the only available spawn maps."
+  );
+  for (const regionId of ["region_11", "region_12"]) {
     const expectedClaims = [firstClaim, secondClaim].filter(claim => claimRegionId(claim) === regionId).length;
     assert(
-      countsAfter[regionId] === countsBefore[regionId] + expectedClaims,
-      `${regionId} playerCount did not increment exactly once per successful fallback claim.`
+      await getPlayerCount(regionId) === countsBefore[regionId] + expectedClaims,
+      `${regionId} playerCount did not increment exactly once per successful claim.`
     );
   }
-  await assertNoReservedSlotsFor([firstUser.uid, secondUser.uid], "Successful fallback");
+  await assertNoReservedSlotsFor(concurrentUsers.map(user => user.uid), "Concurrent claims");
 
-  const replay = await callFunction("claimStartingCity", firstUser.token, { playerName: "Fallback Replay" });
-  assert(replay.alreadyClaimed === true && replay.cityId === firstClaim.cityId, "A replay changed the fallback city.");
-  await assertNoReservedSlotsFor([firstUser.uid], "Fallback replay");
+  const replay = await callFunction("claimStartingCity", concurrentUsers[0].token, { playerName: "Concurrent Replay" });
+  assert(replay.alreadyClaimed === true && replay.cityId === firstClaim.cityId, "A replay changed the claimed city.");
+  await assertNoReservedSlotsFor([concurrentUsers[0].uid], "Claim replay");
 
-  await Promise.all(starterRegionIds.map((regionId, index) => setStarterRegionState(regionId, {
-    playerCount: 10 + index,
-    exhausted: true,
-  })));
-  const exhaustedClaim = await invokeFunction("claimStartingCity", exhaustedUser.token, {
-    playerName: "No City Available",
-  });
+  await setAllSpawnStates({});
+  const exhaustedUser = claimUsers[9];
+  const exhaustedClaim = await invokeFunction("claimStartingCity", exhaustedUser.token, { playerName: "No City Available" });
   assert(
     !exhaustedClaim.ok
       && exhaustedClaim.error?.status === "RESOURCE_EXHAUSTED"
@@ -221,7 +270,7 @@ async function main() {
   assert(!(await db.doc(`players/${exhaustedUser.uid}`).get()).exists, "An exhausted claim created a player profile.");
   await assertNoReservedSlotsFor([exhaustedUser.uid], "All-region exhaustion");
 
-  console.log("Starter-city fallback passed: exhausted low-population regions were skipped without claim collisions or reservation leaks.");
+  console.log("New-player admission passed for all southern maps, readiness preference, final-city fallback, concurrency, and exhaustion.");
 }
 
 main().catch(error => {
