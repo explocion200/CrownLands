@@ -680,13 +680,16 @@ const SKILL_ORDER = [
   "marchOrders",
   "fieldMedics",
 ];
+const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
+const SKILL_STANDARD_POINT_COST = 1;
+const SKILL_FINAL_POINT_COST = 2;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
-const DEFENSE_SKILL_FREE_RESET_GRANT_VERSION = 1;
+const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
 const REGROUP_GOLD_COST = economyNumber("playerCosts.regroupGold", 150_000);
-const SKILL_PRESET_MODEL_VERSION = 4;
+const SKILL_PRESET_MODEL_VERSION = 5;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 25 }),
@@ -3165,6 +3168,26 @@ function normalizeSkillLevelForSkill(skill = "", value = 0) {
   return Math.min(normalizeSkillLevel(value), getSkillMaxLevel(skill));
 }
 
+function getSkillPointCost(skill = "", currentLevel = 0) {
+  const maxLevel = getSkillMaxLevel(skill);
+  const level = normalizeSkillLevelForSkill(skill, currentLevel);
+  if (level >= maxLevel) return 0;
+  const nextLevel = level + 1;
+  const finalTierStart = Math.max(1, maxLevel - SKILL_FINAL_DOUBLE_COST_LEVELS + 1);
+  return nextLevel >= finalTierStart ? SKILL_FINAL_POINT_COST : SKILL_STANDARD_POINT_COST;
+}
+
+function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
+  const startLevel = normalizeSkillLevelForSkill(skill, currentLevel);
+  const requestedLevels = normalizeSkillLevel(levels);
+  const maximumLevels = Math.max(0, getSkillMaxLevel(skill) - startLevel);
+  let total = 0;
+  for (let offset = 0; offset < Math.min(requestedLevels, maximumLevels); offset += 1) {
+    total += getSkillPointCost(skill, startLevel + offset);
+  }
+  return total;
+}
+
 function normalizeSkillUpgrades(upgrades = {}) {
   const source = upgrades && typeof upgrades === "object" ? upgrades : {};
   const normalized = SKILL_ORDER.reduce((skills, key) => {
@@ -3193,7 +3216,9 @@ function normalizeSkillUpgrades(upgrades = {}) {
 
 function getSpentSkillPoints(upgrades = {}) {
   const normalized = normalizeSkillUpgrades(upgrades);
-  return SKILL_ORDER.reduce((total, key) => total + normalizeSkillLevel(normalized[key]), 0);
+  return SKILL_ORDER.reduce((total, key) => (
+    total + getSkillUpgradePointCost(key, 0, normalizeSkillLevel(normalized[key]))
+  ), 0);
 }
 
 function getEarnedSkillPoints(character = {}) {
@@ -3207,14 +3232,18 @@ function getAvailableSkillPoints(character = {}, upgrades = {}) {
 function normalizeFreeSkillResetState(profile = {}) {
   const storedVersion = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0)));
   const storedCredits = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0)));
-  if (storedVersion >= DEFENSE_SKILL_FREE_RESET_GRANT_VERSION) {
+  if (storedVersion >= SKILL_FREE_RESET_GRANT_VERSION) {
     return { version: storedVersion, credits: storedCredits };
   }
   const createdAtMs = timestampToMs(profile.createdAtMs || profile.createdAt);
-  const eligible = !createdAtMs || createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS;
+  const defenseRolloutCredit = storedVersion < 1
+    && (!createdAtMs || createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS)
+    ? 1
+    : 0;
+  const finalTierBalanceCredit = storedVersion < 2 ? 1 : 0;
   return {
-    version: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
-    credits: storedCredits + (eligible ? 1 : 0),
+    version: SKILL_FREE_RESET_GRANT_VERSION,
+    credits: storedCredits + defenseRolloutCredit + finalTierBalanceCredit,
   };
 }
 
@@ -14924,18 +14953,28 @@ async function spendSkillAllocations(uid, allocations, legacySkillId = "") {
     if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const upgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
     const character = reconcileSkillPoints(economy.profileAfter.character, upgrades);
-    const totalPoints = allocations.reduce((total, allocation) => total + allocation.points, 0);
-    if (character.skillPoints < totalPoints) {
-      throw new HttpsError("failed-precondition", "Earn a hero level for another skill point.");
-    }
-    const appliedAllocations = allocations.map(allocation => {
+    const plannedAllocations = allocations.map(allocation => {
       const currentLevel = normalizeSkillLevelForSkill(allocation.skillId, upgrades[allocation.skillId]);
       const nextLevel = currentLevel + allocation.points;
       if (nextLevel > getSkillMaxLevel(allocation.skillId)) {
         throw new HttpsError("failed-precondition", "That skill is already capped.");
       }
+      const pointCost = getSkillUpgradePointCost(allocation.skillId, currentLevel, allocation.points);
+      return { ...allocation, currentLevel, nextLevel, pointCost };
+    });
+    const totalPointCost = plannedAllocations.reduce((total, allocation) => total + allocation.pointCost, 0);
+    if (character.skillPoints < totalPointCost) {
+      throw new HttpsError(
+        "failed-precondition",
+        totalPointCost > 1
+          ? `This upgrade requires ${totalPointCost} skill points.`
+          : "Earn a hero level for another skill point."
+      );
+    }
+    const appliedAllocations = plannedAllocations.map(allocation => {
+      const { currentLevel, nextLevel, ...applied } = allocation;
       upgrades[allocation.skillId] = nextLevel;
-      return { ...allocation, level: nextLevel };
+      return { ...applied, level: nextLevel };
     });
     character.skillPoints = getAvailableSkillPoints(character, upgrades);
     const skillPresets = setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0);
@@ -14947,6 +14986,7 @@ async function spendSkillAllocations(uid, allocations, legacySkillId = "") {
     return createEconomyResponse(economy, {
       skillId: legacySkillId || (appliedAllocations.length === 1 ? appliedAllocations[0].skillId : ""),
       skillAllocations: appliedAllocations,
+      spentSkillPoints: totalPointCost,
       character,
       upgrades,
       skillPresets,
@@ -14968,7 +15008,7 @@ exports.spendSkillPoints = onCall({ region: "us-central1", maxInstances: 20, inv
   return spendSkillAllocations(uid, allocations);
 });
 
-exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, timeoutSeconds: 120, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
@@ -16104,7 +16144,7 @@ function createFreshResetPlayerProfile({
     character: normalizeCharacterProgress({ level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 }),
     upgrades: normalizeSkillUpgrades({}),
     skillPresets: normalizeSkillPresets(),
-    freeSkillResetGrantVersion: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
+    freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
     gear: createPersistentCommonGearForSeasonReset(previous),

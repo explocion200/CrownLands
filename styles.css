@@ -9196,6 +9196,17 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   font-weight: 850;
 }
 .profile-skill-summary [data-skill-sync-status][hidden] { display: none; }
+.profile-skill-cost-note {
+  margin: -.2rem 0 .7rem;
+  padding: .42rem .58rem;
+  border: 1px solid rgba(246,190,82,.28);
+  border-radius: 7px;
+  color: #f1ddb2;
+  background: rgba(66,47,24,.38);
+  font-size: .66rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
 .profile-skill-list .skill-row.syncing {
   border-color: rgba(137,215,126,.48);
   box-shadow: inset 0 0 0 1px rgba(137,215,126,.08);
@@ -9434,7 +9445,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 }
 .profile-skill-list .skill-row:first-child { border-top: 1px solid rgba(158,213,255,.15); }
 .profile-skill-list .skill-row strong { color: #fff4c8; }
-.profile-skill-list .skill-row button { min-width: 42px; }
+.profile-skill-list .skill-row button { min-width: 78px; }
 .profile-identity {
   display: grid;
   justify-items: center;

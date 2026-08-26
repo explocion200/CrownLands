@@ -1032,10 +1032,17 @@ function trimPendingSkillSpendAllocations() {
   let trimmed = false;
   const next = new Map();
   pendingSkillSpendAllocations.forEach((points, skill) => {
-    const kept = Math.min(points, Math.max(0, getSkillMaxLevel(skill) - getSkillLevel(skill)), available);
+    const currentLevel = getSkillLevel(skill);
+    const requestedLevels = Math.min(points, Math.max(0, getSkillMaxLevel(skill) - currentLevel));
+    let kept = 0;
+    while (kept < requestedLevels) {
+      const nextCost = getSkillPointCost(skill, currentLevel + kept);
+      if (nextCost < 1 || available < nextCost) break;
+      available -= nextCost;
+      kept += 1;
+    }
     if (kept > 0) {
       next.set(skill, kept);
-      available -= kept;
     }
     if (kept !== points) trimmed = true;
   });
@@ -1055,10 +1062,14 @@ async function spendSkillBatchWithLegacyFallback(allocations = []) {
     }
   }
   let result = null;
+  let spentSkillPoints = 0;
   for (const allocation of allocations) {
-    for (let point = 0; point < allocation.points; point += 1) result = await api.spendSkillPoint({ skillId: allocation.skillId });
+    for (let point = 0; point < allocation.points; point += 1) {
+      result = await api.spendSkillPoint({ skillId: allocation.skillId });
+      spentSkillPoints += Math.max(0, Math.floor(Number(result?.spentSkillPoints) || 0));
+    }
   }
-  return result;
+  return result ? { ...result, spentSkillPoints } : result;
 }
 
 function flushSkillSpendQueue() {
@@ -1077,8 +1088,9 @@ async function executeInstantSkillSpend(action) {
   activeSkillSpendBatch = null;
   const trimmed = trimPendingSkillSpendAllocations();
   action.allocations.forEach(allocation => addLog(`${SKILL_CONFIG[allocation.skillId].label} improved by ${formatNumber(allocation.points)} to level ${getSkillLevel(allocation.skillId)}.`));
-  const total = action.allocations.reduce((sum, allocation) => sum + allocation.points, 0);
-  showToast(`${formatNumber(total)} skill ${total === 1 ? "point" : "points"} applied`);
+  const totalLevels = action.allocations.reduce((sum, allocation) => sum + allocation.points, 0);
+  const spentSkillPoints = Math.max(0, Math.floor(Number(result?.spentSkillPoints) || totalLevels));
+  showToast(`${formatNumber(totalLevels)} skill ${totalLevels === 1 ? "level" : "levels"} improved · ${formatNumber(spentSkillPoints)} ${spentSkillPoints === 1 ? "point" : "points"} spent`);
   if (trimmed) showToast("Some queued skill points were no longer available.");
   skillPresetMarkupSignature = "";
   renderProfileSkills();
@@ -1094,8 +1106,12 @@ function buySkill(skill) {
     rejectGameAction(`${config.label} is capped at ${config.maxPercent}%.`);
     return false;
   }
-  if (getDisplayedSkillPoints() < 1) {
-    rejectGameAction("Earn a hero level for another skill point.");
+  const displayedLevel = getDisplayedSkillLevel(skill);
+  const pointCost = getSkillPointCost(skill, displayedLevel);
+  if (getDisplayedSkillPoints() < pointCost) {
+    rejectGameAction(pointCost > 1
+      ? `This final-tier upgrade costs ${pointCost} skill points.`
+      : "Earn a hero level for another skill point.");
     return false;
   }
   if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
@@ -1105,7 +1121,7 @@ function buySkill(skill) {
     scheduleSkillSpendFlush();
     return true;
   }
-  state.character.skillPoints -= 1;
+  state.character.skillPoints -= pointCost;
   state.upgrades[skill] = getSkillLevel(skill) + 1;
   state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   addLog(`${config.label} improved to level ${state.upgrades[skill]}.`);

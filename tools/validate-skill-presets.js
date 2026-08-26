@@ -71,16 +71,30 @@ const context = {
   Number,
   String,
   SKILL_ORDER,
-  SKILL_PRESET_MODEL_VERSION: 4,
+  SKILL_FINAL_DOUBLE_COST_LEVELS: 5,
+  SKILL_STANDARD_POINT_COST: 1,
+  SKILL_FINAL_POINT_COST: 2,
+  SKILL_PRESET_MODEL_VERSION: 5,
   SKILL_PRESET_NAME_MAX_LENGTH: 24,
   SKILL_PRESET_SLOTS,
   normalizeTimestampMs: value => Math.max(0, Math.floor(Number(value) || 0)),
   getSkillMaxLevel: skill => maxLevels[skill] || 0,
+  normalizeSkillUpgradeLevel: (skill, value) => Math.min(
+    Math.max(0, Math.floor(Number(value) || 0)),
+    maxLevels[skill] || 0
+  ),
+  normalizeUpgrades: upgrades => Object.fromEntries(SKILL_ORDER.map(skill => [
+    skill,
+    Math.min(Math.max(0, Math.floor(Number(upgrades?.[skill]) || 0)), maxLevels[skill] || 0),
+  ])),
   getEarnedSkillPoints: character => Math.max(0, Math.floor(Number(character?.level) || 1) - 1),
   state: { character: { level: 1 } },
 };
 vm.createContext(context);
 vm.runInContext([
+  extractFunction(gameSource, "getSkillPointCost"),
+  extractFunction(gameSource, "getSkillUpgradePointCost"),
+  extractFunction(gameSource, "getSpentSkillPoints"),
   extractFunction(gameSource, "normalizeSkillPresetName"),
   extractFunction(gameSource, "normalizeSkillPresetAllocation"),
   extractFunction(gameSource, "createDefaultSkillPresets"),
@@ -90,6 +104,15 @@ vm.runInContext([
   extractFunction(gameSource, "skillPresetAllocationsMatch"),
   extractFunction(gameSource, "isValidLocalSkillPresetAllocation"),
 ].join("\n"), context, { filename: gamePath });
+
+for (const skill of SKILL_ORDER) {
+  const maxLevel = maxLevels[skill];
+  assert.equal(context.getSkillPointCost(skill, maxLevel - 6), 1, `${skill}'s pre-final-tier upgrade must cost 1 point.`);
+  assert.equal(context.getSkillPointCost(skill, maxLevel - 5), 2, `${skill}'s final five upgrades must begin at a 2-point cost.`);
+  assert.equal(context.getSkillPointCost(skill, maxLevel - 1), 2, `${skill}'s cap upgrade must cost 2 points.`);
+  assert.equal(context.getSkillPointCost(skill, maxLevel), 0, `${skill} must have no cost after its cap.`);
+  assert.equal(context.getSkillUpgradePointCost(skill, 0, maxLevel), maxLevel + 5, `${skill}'s complete point cost must include five extra points.`);
+}
 
 const defaults = context.createDefaultSkillPresets();
 assert.deepEqual(Array.from(defaults.slots, slot => slot.unlockLevel), [25, 50, 75, 100]);
@@ -134,7 +157,7 @@ const upgradedV3 = context.normalizeSkillPresets({
   activeSlot: secondActive.activeSlot,
   slots: secondActive.slots.slice(0, 3),
 });
-assert.equal(upgradedV3.modelVersion, 4);
+assert.equal(upgradedV3.modelVersion, 5);
 assert.equal(upgradedV3.slots.length, 4);
 assert.equal(upgradedV3.slots[0].name, "War Build");
 assert.equal(upgradedV3.slots[1].name, "Duplicate Build");
@@ -179,6 +202,7 @@ const spendStart = serverSource.indexOf("exports.spendSkillPoint");
 const resetStart = serverSource.indexOf("exports.resetSkills", spendStart);
 const spendHelper = extractFunction(serverSource, "spendSkillAllocations");
 assert.match(spendHelper, /prepareEconomyCollection[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?writePreparedEconomy/, "Skill spending does not settle production and clear the active preset atomically.");
+assert.match(spendHelper, /getSkillUpgradePointCost[\s\S]*?totalPointCost[\s\S]*?character\.skillPoints < totalPointCost/, "Server skill spending does not enforce the final-tier point cost.");
 assert.doesNotMatch(spendHelper, /replaceSkillPresetSlot/, "Spending points overwrites a saved preset.");
 assert.match(serverSource.slice(spendStart, resetStart), /exports\.spendSkillPoints[\s\S]*?normalizeSkillSpendAllocations[\s\S]*?spendSkillAllocations/, "The batched skill callable is missing its shared authoritative path.");
 assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
@@ -216,6 +240,8 @@ assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillS
 assert.match(extractFunction(gameSource, "executeInstantSkillSpend"), /spendSkillBatchWithLegacyFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false/, "Skill settlement is not batched or is forcing broad renders.");
 assert.doesNotMatch(extractFunction(gameSource, "buySkill"), /skillActionInFlight = true|renderAll\(/, "A skill-point click still blocks the full Skills UI or forces a full map render.");
 assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfChanged[\s\S]*?button\.disabled[\s\S]*?row\?\.classList\.toggle/, "Skill clicks are not patched into stable row nodes.");
+assert.match(extractFunction(gameSource, "updateProfileSkillState"), /getSkillPointCost[\s\S]*?points < nextPointCost[\s\S]*?nextPointCost === 1 \? "pt" : "pts"/, "Skills UI does not display and enforce the next upgrade's point cost.");
+assert.match(extractFunction(gameSource, "buySkill"), /getSkillPointCost[\s\S]*?getDisplayedSkillPoints\(\) < pointCost[\s\S]*?state\.character\.skillPoints -= pointCost/, "Skill purchase paths do not spend the displayed tier cost.");
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed Apply costs 1,000,000 gold[\s\S]*?never overwrites a preset automatically/i);
@@ -226,4 +252,4 @@ assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId 
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Reset Skills is not using the configured 1,000,000-gold cost.");
 assert.equal(Number(economyConfig.playerCosts.skillPresetApplyGold), 1_000_000, "Preset Apply is not using its dedicated 1,000,000-gold cost.");
 
-console.log("Validated four private v4 skill presets, role grouping, unconditional paid application, legacy-credit isolation, mobile UI, rules, and release IDs.");
+console.log("Validated final-five double-cost skills, four private v5 skill presets, role grouping, unconditional paid application, migration-credit isolation, mobile UI, rules, and release IDs.");

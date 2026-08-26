@@ -1036,12 +1036,16 @@ const SKILL_CONFIG = {
 };
 
 const SKILL_ORDER = ["swordmastery", "shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
+const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
+const SKILL_STANDARD_POINT_COST = 1;
+const SKILL_FINAL_POINT_COST = 2;
+const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const SKILL_GROUPS = Object.freeze([
   Object.freeze({ id: "attack", label: "Attack", skills: Object.freeze(["swordmastery", "marchOrders", "fieldMedics"]) }),
   Object.freeze({ id: "defense", label: "Defense", skills: Object.freeze(["shieldwallDiscipline", "stoneworks"]) }),
   Object.freeze({ id: "utility", label: "Utility", skills: Object.freeze(["taxStewardship", "royalGranaries", "guildCharters"]) }),
 ]);
-const SKILL_PRESET_MODEL_VERSION = 4;
+const SKILL_PRESET_MODEL_VERSION = 5;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 25 }),
@@ -5043,7 +5047,7 @@ function newGame(playerName) {
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
     skillPresets: createDefaultSkillPresets(),
-    freeSkillResetGrantVersion: 0,
+    freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
     gear: normalizeCommonGearState(),
@@ -5642,6 +5646,26 @@ function normalizeSkillUpgradeLevel(skill = "", value = 0) {
   return Math.min(Math.max(0, Math.floor(Number(value) || 0)), getSkillMaxLevel(skill));
 }
 
+function getSkillPointCost(skill = "", currentLevel = 0) {
+  const maxLevel = getSkillMaxLevel(skill);
+  const level = normalizeSkillUpgradeLevel(skill, currentLevel);
+  if (level >= maxLevel) return 0;
+  const nextLevel = level + 1;
+  const finalTierStart = Math.max(1, maxLevel - SKILL_FINAL_DOUBLE_COST_LEVELS + 1);
+  return nextLevel >= finalTierStart ? SKILL_FINAL_POINT_COST : SKILL_STANDARD_POINT_COST;
+}
+
+function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
+  const startLevel = normalizeSkillUpgradeLevel(skill, currentLevel);
+  const requestedLevels = Math.max(0, Math.floor(Number(levels) || 0));
+  const maximumLevels = Math.max(0, getSkillMaxLevel(skill) - startLevel);
+  let total = 0;
+  for (let offset = 0; offset < Math.min(requestedLevels, maximumLevels); offset += 1) {
+    total += getSkillPointCost(skill, startLevel + offset);
+  }
+  return total;
+}
+
 function normalizeUpgrades(upgrades, sourceVersion = 6) {
   const normalized = createDefaultSkills();
 
@@ -5725,7 +5749,7 @@ function normalizeSkillPresets(value = {}) {
       name: normalizeSkillPresetName(raw.name, definition.slot),
       saved,
       upgrades,
-      spentPoints: saved ? SKILL_ORDER.reduce((total, skill) => total + upgrades[skill], 0) : 0,
+      spentPoints: saved ? getSpentSkillPoints(upgrades) : 0,
       savedAtMs: saved ? normalizeTimestampMs(raw.savedAtMs) : 0,
     };
   });
@@ -5770,7 +5794,7 @@ function isValidLocalSkillPresetAllocation(upgrades = null, character = state?.c
       || Math.floor(rawLevel) !== rawLevel
       || allocation[skill] > getSkillMaxLevel(skill);
   });
-  const spent = SKILL_ORDER.reduce((total, skill) => total + allocation[skill], 0);
+  const spent = getSpentSkillPoints(allocation);
   return !invalid && spent <= getEarnedSkillPoints(character);
 }
 
@@ -6058,7 +6082,9 @@ function getEarnedSkillPoints(character = state?.character) {
 
 function getSpentSkillPoints(upgrades = state?.upgrades) {
   const normalized = normalizeUpgrades(upgrades);
-  return SKILL_ORDER.reduce((total, key) => total + normalizeSkillUpgradeLevel(key, normalized[key]), 0);
+  return SKILL_ORDER.reduce((total, key) => (
+    total + getSkillUpgradePointCost(key, 0, normalizeSkillUpgradeLevel(key, normalized[key]))
+  ), 0);
 }
 
 function getAvailableSkillPoints(character = state?.character, upgrades = state?.upgrades) {
@@ -24531,7 +24557,7 @@ function updateProfileSkillState() {
   const spentPoints = getSpentSkillPoints(displayedUpgrades);
   const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
   const resetPriceText = freeSkillResetCredits > 0
-    ? `Your legacy balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
+    ? `Your next balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
     : `Costs ${formatNumber(SKILL_RESET_COST)} gold.`;
   const syncing = isSkillSpendSyncing();
   setTextIfChanged(skillsView.querySelector("[data-skill-points]"), formatNumber(points));
@@ -24551,13 +24577,14 @@ function updateProfileSkillState() {
     const rawPercent = level * config.percentPerLevel;
     const percent = Number.isFinite(config.maxPercent) ? Math.min(rawPercent, config.maxPercent) : rawPercent;
     const capped = level >= getSkillMaxLevel(skill);
+    const nextPointCost = getSkillPointCost(skill, level);
     const row = skillsView.querySelector(`[data-skill-row="${skill}"]`);
     const label = row?.querySelector("[data-skill-level]");
     const button = row?.querySelector("button[data-skill]");
     setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
     if (button) {
-      button.disabled = skillActionInFlight || points < 1 || capped;
-      setTextIfChanged(button, capped ? "Max" : "+1");
+      button.disabled = skillActionInFlight || points < nextPointCost || capped;
+      setTextIfChanged(button, capped ? "Max" : `+1 · ${nextPointCost} ${nextPointCost === 1 ? "pt" : "pts"}`);
     }
     row?.classList.toggle("syncing", getSkillSpendOverlayPoints(skill) > 0);
   });
@@ -24576,6 +24603,7 @@ function renderProfileSkills() {
       <div><span>Skill points</span><strong data-skill-points></strong><small data-skill-sync-status hidden></small></div>
       <div><span>Points spent</span><strong data-skill-spent></strong></div>
     </div>
+    <p class="profile-skill-cost-note">Each skill's final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} skill points per level. Earlier levels cost ${SKILL_STANDARD_POINT_COST}.</p>
     <div data-skill-preset-panel-root>${renderSkillPresetPanel()}</div>
     <section class="profile-skill-reset">
       <div>
@@ -33241,7 +33269,7 @@ function skillRow(key) {
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
   return `
     <div class="skill-row" data-skill-row="${key}">
-      <div><strong data-skill-level></strong><br><small>${config.description}${capText}</small></div>
+      <div><strong data-skill-level></strong><br><small>${config.description}${capText}. Final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} points each.</small></div>
       <button data-skill="${key}">+1</button>
     </div>
   `;
@@ -33472,7 +33500,7 @@ async function resetSkills() {
       const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
       const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
       if (refundedPoints > 0) {
-        addLog(`Skills reset${result?.freeResetConsumed ? " using the free legacy reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
+        addLog(`Skills reset${result?.freeResetConsumed ? " using a free balance reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
         showToast(`Skills reset: +${formatNumber(refundedPoints)} points`);
       } else {
         addLog("Skill points repaired to match hero level.");
@@ -33503,7 +33531,7 @@ async function resetSkills() {
   state.upgrades = createDefaultSkills();
   if (spentPoints > 0) state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   if (spentPoints > 0) {
-    addLog(`Skills reset${freeResetAvailable ? " using the free legacy reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+    addLog(`Skills reset${freeResetAvailable ? " using a free balance reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   } else {
     addLog("Skill points repaired to match hero level.");
   }

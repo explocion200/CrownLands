@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.14
+**Version:** 1.15
 **Effective date:** August 25, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 25, 2026
@@ -261,7 +261,7 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Hero and skill progression
 
-- Hero XP awards Hero Levels, and Hero Levels award skill points. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Existing rulers receive one idempotent free Reset Skills credit for this balance migration, while profiles created on the revised ledger begin at migration version 2 without a free migration credit. **Status:** base Hero progression is `LIVE — ALL PUBLISHED CHANNELS`; the weighted final-tier ledger and migration credit are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. Current Apply cost is documented as 1,000,000 Gold. **Status:** `LIVE — ALL PUBLISHED CHANNELS`; current backend value should be checked before balance changes.
@@ -423,7 +423,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Each production-scaled Gold or troop Camp payout is `max(minimum reward, floor(raw kingdom production per hour × reward hours))`.
 - A Relic Camp uses a 30-minute hold and permits five item rewards per player per UTC day. Its item weights are War Drums 35, Veil of Silence 25, Swift March Order 18, Royal Tax Decree 12, Recall Horn 8, and Royal Peace Shield 2, plus a separate 1% Common Gear Box chance.
 - A Deed Camp uses a 60-minute hold and permits one reward per player per UTC day. It grants one eligible neutral regular non-center city at that city’s existing level with zero troops.
-- World pickups spawn every three minutes, expire after 20 minutes, and grant one hour of raw Gold or troop production with a minimum of 250. Daily caps are 50 total, 25 Gold, and 25 troop pickups, with at most one active pickup per player.
+- A ruler's first world pickup appears after three minutes. Each successful collection starts a one-minute respawn, while rejected or failed collections preserve the active pickup and its existing deadline. Pickups favor terrain-safe positions toward the center of the active map, expire after 20 minutes, and grant one hour of raw Gold or troop production with a minimum of 250. Daily caps are 50 total, 25 Gold, and 25 troop pickups, with at most one active pickup per player. **Status:** the base pickup system is live; the one-minute post-collection cadence and center-biased placement are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 
 These are verified repository facts for commit `27105ae...`; exact deployed backend parity remains **NEEDS VERIFICATION**.
 
@@ -1170,6 +1170,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.15 — August 25, 2026
+
+- Confirmed one-point skill costs before each skill's final five levels and two-point costs for every final-tier level.
+- Added one replay-safe Reset Skills migration credit for existing rulers while preventing fresh profiles from receiving a migration credit.
+- Required client, server, preset, and queued-spend accounting to use the same weighted skill-point ledger.
+- Confirmed a three-minute first pickup, one-minute post-collection respawns, preserved state after rejected claims, and center-biased terrain-safe placement.
 
 ## v1.14 — August 25, 2026
 
