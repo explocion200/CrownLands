@@ -1,4 +1,5 @@
 const { initializeApp } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
@@ -64,18 +65,37 @@ async function resolveFunctionsHost() {
 
 async function createAuthUser() {
   const nonce = crypto.randomBytes(6).toString("hex");
+  const email = `skill-reset-${nonce}@example.test`;
+  const password = `Skill-Reset-${nonce}-Pass!`;
   const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      email: `skill-reset-${nonce}@example.test`,
-      password: `Skill-Reset-${nonce}-Pass!`,
+      email,
+      password,
       returnSecureToken: true,
     }),
   });
   const body = await response.json();
   if (!response.ok) throw new Error(`Auth emulator signup failed: ${JSON.stringify(body)}`);
-  return { uid: body.localId, token: body.idToken };
+  return { uid: body.localId, token: body.idToken, email, password };
+}
+
+async function createStatsAdmin() {
+  const user = await createAuthUser();
+  await getAuth().setCustomUserClaims(user.uid, { statsAdmin: true });
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake-api-key`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      email: user.email,
+      password: user.password,
+      returnSecureToken: true,
+    }),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(`Auth emulator admin sign-in failed: ${JSON.stringify(body)}`);
+  return { uid: user.uid, token: body.idToken };
 }
 
 async function callFunction(name, token, data = {}) {
@@ -194,7 +214,27 @@ async function main() {
   const secondBackup = (await backupRef.get()).data() || {};
   assert(Number(secondBackup.backedUpAtMs || 0) === Number(firstBackup.backedUpAtMs || 0), "A repeated sync overwrote the original rollback backup.");
 
-  console.log("Validated the versioned skill reset, point refund, preset clearing, legacy cleanup, backup, and idempotency.");
+  const statsAdmin = await createStatsAdmin();
+  const rollback = await callFunction("rollbackPlayerSkillPointSystem", statsAdmin.token, {
+    uid: user.uid,
+    confirm: SKILL_POINT_SYSTEM_RESET_ID,
+  });
+  assert(Number(rollback.currentUser?.skillPointSystemVersion || 0) === SKILL_POINT_SYSTEM_VERSION, "Rollback removed the current system marker.");
+  assert(Number(rollback.currentUser?.freeSkillResetCredits || 0) === 0, "Rollback response revived a legacy reset credit.");
+
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.upgrades?.swordmastery || 0) === 23, "Rollback did not restore the normalized pre-reset allocation.");
+  assert(profile.skillPresets?.slots?.[0]?.saved === true && profile.skillPresets.slots[0].name === "Attack", "Rollback did not restore the backed-up presets.");
+  assert(Number(profile.freeSkillResetCredits || 0) === 0, "Rollback persisted a legacy reset credit on a v2 profile.");
+  assert(profile.migrationSentinel?.inventoryKept === true && Number(profile.gold || 0) >= 12_345, "Rollback changed unrelated player data.");
+
+  const postRollbackSync = await callFunction("syncSkillPointSystem", user.token);
+  assert(postRollbackSync.skillPointSystemReset?.applied === false, "A sync reset the player again after rollback.");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.upgrades?.swordmastery || 0) === 23, "Post-rollback sync removed the restored allocation.");
+  assert(Number(profile.freeSkillResetCredits || 0) === 0, "Post-rollback sync revived a legacy reset credit.");
+
+  console.log("Validated the versioned skill reset, point refund, preset clearing, legacy cleanup, backup, rollback, and idempotency.");
 }
 
 main().catch(error => {

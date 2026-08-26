@@ -27,6 +27,6 @@ Players who sign in before the bulk pass reaches them are migrated by `syncSkill
 
 ## Rollback
 
-Use the admin-only `rollbackPlayerSkillPointSystem` callable with the player UID and `confirm: "skill-point-system-v2"`. It settles current production, restores the normalized backed-up allocation and presets, recalculates remaining points, and records `skillPointSystemRollbackAtMs`. Rollback is intentionally per player so a backup can be inspected before it is restored.
+Use the admin-only `rollbackPlayerSkillPointSystem` callable with the player UID and `confirm: "skill-point-system-v2"`. It settles current production, restores the normalized backed-up allocation and presets, recalculates remaining points, keeps legacy reset credits at zero, and records `skillPointSystemRollbackAtMs`. Rollback is intentionally per player so a backup can be inspected before it is restored.
 
 The backup contains only skill-related fields. Inventory, currency, cities, account identity, achievements, settings, and other progression are never part of the reset patch.

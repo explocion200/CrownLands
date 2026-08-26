@@ -15869,7 +15869,7 @@ exports.rollbackPlayerSkillPointSystem = onCall({
       SKILL_FREE_RESET_GRANT_VERSION,
       Math.floor(safeNumber(backup.freeSkillResetGrantVersion, 0))
     );
-    const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(backup.freeSkillResetCredits, 0)));
+    const freeSkillResetCredits = 0;
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
