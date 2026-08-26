@@ -52,7 +52,7 @@ The game currently writes private account data here:
 
 - `players/{uid}`: display name, email, ruler name, flag, character, skill data, city count, gold.
 - `players/{uid}/notificationTokens/{tokenId}`: browser push tokens for incoming scout/attack alerts.
-- `players/{uid}/saves/default-fresh-2026-07-26-server-reset`: the current full game state snapshot for the fresh reset.
+- `players/{uid}/saves/default-{resetGeneration}`: the current full game state snapshot for the server-selected reset.
 - `players/{uid}/serverReports/{reportId}`: server-written attack, defense, and scout reports that survive stale browser saves.
 - `clans/{clanId}/rallies/{rallyId}`: clan-private rally state, including the forming target, participant commitments, assembly progress, and lifecycle status shown in the Clan War Room and Kingdom Activity.
 
@@ -60,20 +60,25 @@ After Google sign-in, the game tries the current reset slot in Firebase first an
 
 ## Phase 2 Multiplayer Shape
 
-The game now creates one shared island document per world region and subscribes to only one active island at a time:
+The game creates one island document per world region and realm shard, and subscribes to only one active island at a time:
 
 - `islands/main-fresh-2026-07-26-server-reset-west`: one region metadata document for the current reset.
+- `islands/main-realm-2026-09--shard_0001--west`: the equivalent monthly sharded island format.
 - `islands/main-fresh-2026-07-26-server-reset-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
 - `islands/{islandId}/armies/{armyId}`: server-written moving troops, route, owner, arrival time, and mission type.
 - `islands/{islandId}/reports/{reportId}`: server-written shared report records.
 - `islands/{islandId}/presence/{uid}`: who is online.
-- `gameServers/crown-marches-{resetGeneration}`: the server-only 50-player capacity and FIFO waiting-queue projection.
-- `gameServers/crown-marches-{resetGeneration}/members/{uid}`: one server-only heartbeat shard per active or waiting player.
+- `realmGenerations/{resetGeneration}/assignments/{uid}`: the retry-safe, server-owned monthly shard assignment.
+- `realmGenerations/{resetGeneration}/shards/{shardId}`: bounded assignment counters for each 50-kingdom shard.
+- `gameServers/crown-marches-{resetGeneration}`: bounded server-only admission metadata; it contains no player map or waiting queue.
+- `gameServers/crown-marches-{resetGeneration}/members/{uid}`: one server-only heartbeat document per active player.
 - `players/{uid}/serverMembership/current`: the private membership status watched by that player.
 
-On first kingdom entry, the server seeds starter regions when needed and transactionally claims one unowned starting city for the signed-in player. The active island's city docs are watched in realtime, so ownership changes from Firestore update the loaded island without refreshing. Switching islands unsubscribes from the previous island before loading the next one.
+On first kingdom entry, the server assigns the player to a 50-kingdom shard, seeds that shard's starter regions when needed, and transactionally claims one unowned starting city. Player 51 opens the next shard instead of waiting for another player to leave. The active island's city docs are watched in realtime, so ownership changes from Firestore update the loaded island without refreshing. Switching islands unsubscribes from the previous island before loading the next one.
 
-Admission mutations use a short server-owned coordination lease so simultaneous joins cannot oversubscribe the exact 50-player limit across Functions workers. Heartbeats bypass that shared root and update only the player's member shard and private membership document. The scheduled realm maintainer merges fresh shard timestamps into the capacity projection, removes stale sessions and stale heartbeat shards in bounded batches, and promotes the oldest valid waiting ticket.
+The per-generation allocator uses one short Firestore transaction and a permanent assignment document, so retries cannot move a player or consume two sequence numbers. Online admission itself has no global cap or waiting room. Heartbeats update only the player's member document and private membership document; the scheduled realm maintainer removes stale member documents in bounded batches.
+
+Monthly rollover, recovery, verification, and rollback procedures are documented in [docs/monthly-realm-operations.md](docs/monthly-realm-operations.md).
 
 Troop orders and online economy updates now go through Firebase callable functions:
 

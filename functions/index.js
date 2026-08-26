@@ -1,10 +1,11 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall: firebaseOnCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
+const { AsyncLocalStorage } = require("node:async_hooks");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
@@ -12,6 +13,7 @@ const COMMON_GEAR = require("./common-gear.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
 const CLAN_HERALDRY_CONFIG = require("./clanHeraldryConfig.js");
 const CHAT = require("./chat.js");
+const REALM_TOPOLOGY = require("./realmTopology.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -124,8 +126,59 @@ function economyRewardSchedule(campType, fallback = []) {
 }
 
 const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-camp-hours-v2");
-const RESET_GENERATION = safeConfigString(REALM_CONFIG.resetGeneration, "fresh-2026-07-26-server-reset");
-const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GENERATION}`);
+const LEGACY_COMPATIBLE_CLIENTS = Object.freeze(
+  (Array.isArray(REALM_CONFIG.legacyCompatibleClients) ? REALM_CONFIG.legacyCompatibleClients : [])
+    .map(entry => Object.freeze({
+      releaseId: safeConfigString(entry?.releaseId),
+      apiContractHash: safeConfigString(entry?.apiContractHash),
+    }))
+    .filter(entry => entry.releaseId && /^[a-f0-9]{64}$/.test(entry.apiContractHash))
+);
+const REALM_REQUEST_CONTEXT = new AsyncLocalStorage();
+const LEGACY_REALM_SHARD_ID = REALM_TOPOLOGY.LEGACY_REALM_SHARD_ID;
+let ACTIVE_REALM_IDENTITY = REALM_TOPOLOGY.getRealmIdentity(REALM_CONFIG, Date.now());
+let RESET_GENERATION = ACTIVE_REALM_IDENTITY.resetGeneration;
+let ONLINE_WORLD_ID = ACTIVE_REALM_IDENTITY.worldId;
+
+function refreshActiveRealmIdentity(nowMs = Date.now()) {
+  const next = REALM_TOPOLOGY.getRealmIdentity(REALM_CONFIG, nowMs);
+  ACTIVE_REALM_IDENTITY = next;
+  RESET_GENERATION = next.resetGeneration;
+  ONLINE_WORLD_ID = next.worldId;
+  GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
+  return next;
+}
+
+function getCurrentRealmShardId() {
+  return REALM_TOPOLOGY.normalizeRealmShardId(
+    REALM_REQUEST_CONTEXT.getStore()?.realmShardId || LEGACY_REALM_SHARD_ID
+  );
+}
+
+function getRealmStorageId(
+  resetGeneration = RESET_GENERATION,
+  realmShardId = getCurrentRealmShardId()
+) {
+  const normalizedShardId = REALM_TOPOLOGY.normalizeRealmShardId(realmShardId);
+  return normalizedShardId === LEGACY_REALM_SHARD_ID
+    ? resetGeneration
+    : `${resetGeneration}--${normalizedShardId}`;
+}
+
+function scopeQueryToCurrentRealmShard(query) {
+  const realmShardId = getCurrentRealmShardId();
+  return realmShardId === LEGACY_REALM_SHARD_ID
+    ? query
+    : query.where("realmShardId", "==", realmShardId);
+}
+
+function runWithRealmShard(realmShardId, operation) {
+  const identity = refreshActiveRealmIdentity(Date.now());
+  return REALM_REQUEST_CONTEXT.run({
+    ...identity,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(realmShardId),
+  }, operation);
+}
 const TEST_STARTING_GOLD = 100;
 const PLAYER_STARTING_TROOPS = 200;
 const PLAYER_NAME_MAX_LENGTH = 18;
@@ -359,11 +412,9 @@ const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
-const GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
-const GAME_SERVER_CAPACITY = 50;
-const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
+let GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
+const GAME_SERVER_CAPACITY = REALM_TOPOLOGY.getRealmShardCapacity(REALM_CONFIG);
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
-const GAME_SERVER_MAX_WAITING = 500;
 const WELCOME_BACK_SUMMARY_VERSION = 1;
 const WELCOME_BACK_MIN_AWAY_MS = 60 * 1000;
 const PENDING_AWAY_PRODUCTION_CITY_LIMIT = 320;
@@ -377,9 +428,6 @@ const INACTIVITY_POLICY_MODE = safeString(REALM_CONFIG.inactivityPolicyMode, 16)
   ? "audit"
   : "enforce";
 const GAME_SERVER_HEARTBEAT_MODEL_VERSION = 2;
-const GAME_SERVER_ADMISSION_LEASE_MS = 15 * 1000;
-const GAME_SERVER_ADMISSION_WAIT_MS = 55 * 1000;
-let gameServerAdmissionQueue = Promise.resolve();
 const CLAN_UNLOCK_LEVEL = 10;
 const CLAN_CREATE_GOLD_COST = 100_000;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
@@ -689,15 +737,266 @@ const STRONGHOLD_LEVELS = {
   [CROWN_CITADEL_ID]: 100,
 };
 
+function realmAssignmentRef(resetGeneration = RESET_GENERATION, uid = "") {
+  const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid ? db.doc(`realmGenerations/${resetGeneration}/assignments/${safeUid}`) : null;
+}
+
+function realmGenerationRef(resetGeneration = RESET_GENERATION) {
+  return db.doc(`realmGenerations/${resetGeneration}`);
+}
+
+function realmShardRef(realmShardId = getCurrentRealmShardId(), resetGeneration = RESET_GENERATION) {
+  return db.doc(`realmGenerations/${resetGeneration}/shards/${REALM_TOPOLOGY.normalizeRealmShardId(realmShardId)}`);
+}
+
+async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
+  const identity = refreshActiveRealmIdentity(nowMs);
+  const assignmentRef = realmAssignmentRef(identity.resetGeneration, uid);
+  if (!assignmentRef) throw new HttpsError("invalid-argument", "A valid player is required for realm assignment.");
+  const playerRef = db.doc(`players/${uid}`);
+  const generationRef = realmGenerationRef(identity.resetGeneration);
+
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [assignmentSnap, playerSnap, generationSnap] = await Promise.all([
+      transaction.get(assignmentRef),
+      transaction.get(playerRef),
+      transaction.get(generationRef),
+    ]);
+    const assignment = assignmentSnap.exists ? assignmentSnap.data() || {} : {};
+    const player = playerSnap.exists ? playerSnap.data() || {} : {};
+    const assignmentIsCurrent = safeString(assignment.resetGeneration, 120) === identity.resetGeneration
+      && safeString(assignment.worldId, 120) === identity.worldId;
+    if (assignmentIsCurrent) {
+      return {
+        ...assignment,
+        realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(assignment.realmShardId),
+        newlyAssigned: false,
+      };
+    }
+
+    const playerIsCurrent = safeString(player.resetGeneration, 120) === identity.resetGeneration
+      && safeString(player.worldId, 120) === identity.worldId;
+    const preserveLegacyPlacement = identity.mode !== "monthly-sharded"
+      || (playerIsCurrent && !safeString(player.realmShardId, 48));
+    const generation = generationSnap.exists ? generationSnap.data() || {} : {};
+    const sequence = Math.max(0, Math.floor(safeNumber(generation.nextPlayerSequence, 0)));
+    const placement = preserveLegacyPlacement
+      ? {
+          realmShardId: LEGACY_REALM_SHARD_ID,
+          shardOrdinal: 0,
+          slotIndex: -1,
+          sequence: -1,
+        }
+      : REALM_TOPOLOGY.getRealmShardForSequence(sequence, GAME_SERVER_CAPACITY);
+    const shardRef = realmShardRef(placement.realmShardId, identity.resetGeneration);
+    const assignmentPatch = {
+      uid,
+      releaseId: REALM_RELEASE_ID,
+      resetGeneration: identity.resetGeneration,
+      worldId: identity.worldId,
+      realmShardId: placement.realmShardId,
+      shardOrdinal: placement.shardOrdinal,
+      slotIndex: placement.slotIndex,
+      sequence: placement.sequence,
+      status: playerIsCurrent ? "claimed" : "reserved",
+      assignedAtMs: nowMs,
+      assignedAt: FieldValue.serverTimestamp(),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (!preserveLegacyPlacement) {
+      transaction.set(generationRef, {
+        releaseId: REALM_RELEASE_ID,
+        resetGeneration: identity.resetGeneration,
+        worldId: identity.worldId,
+        mode: identity.mode,
+        monthKey: identity.monthKey,
+        startsAtMs: identity.startsAtMs,
+        endsAtMs: identity.endsAtMs,
+        realmShardCapacity: GAME_SERVER_CAPACITY,
+        nextPlayerSequence: sequence + 1,
+        assignedCount: FieldValue.increment(1),
+        highestShardOrdinal: Math.max(
+          placement.shardOrdinal,
+          Math.max(0, Math.floor(safeNumber(generation.highestShardOrdinal, 0)))
+        ),
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+        ...(generationSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      }, { merge: true });
+      transaction.set(shardRef, {
+        realmShardId: placement.realmShardId,
+        shardOrdinal: placement.shardOrdinal,
+        releaseId: REALM_RELEASE_ID,
+        resetGeneration: identity.resetGeneration,
+        worldId: identity.worldId,
+        capacity: GAME_SERVER_CAPACITY,
+        assignedCount: FieldValue.increment(1),
+        status: "active",
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    transaction.set(assignmentRef, assignmentPatch);
+    return { ...assignmentPatch, newlyAssigned: true };
+  });
+}
+
+async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
+  const identity = refreshActiveRealmIdentity(nowMs);
+  const configRef = db.doc("realmConfig/current");
+  const configSnap = await configRef.get();
+  const current = configSnap.exists ? configSnap.data() || {} : {};
+  const alreadyCurrent = safeString(current.releaseId, 120) === REALM_RELEASE_ID
+    && safeString(current.resetGeneration, 120) === identity.resetGeneration
+    && safeString(current.worldId, 120) === identity.worldId
+    && safeString(current.mode, 40) === identity.mode
+    && safeNumber(current.realmShardCapacity, 0) === GAME_SERVER_CAPACITY
+    && safeNumber(current.startsAtMs, -1) === identity.startsAtMs
+    && safeNumber(current.endsAtMs, -1) === identity.endsAtMs;
+  if (!alreadyCurrent) {
+    await configRef.set({
+      schemaVersion: 1,
+      releaseId: REALM_RELEASE_ID,
+      mode: identity.mode,
+      monthKey: identity.monthKey,
+      resetGeneration: identity.resetGeneration,
+      worldId: identity.worldId,
+      startsAtMs: identity.startsAtMs,
+      endsAtMs: identity.endsAtMs,
+      realmShardCapacity: GAME_SERVER_CAPACITY,
+      islandIdFormat: "world--shard--region",
+      legacyRealmShardId: LEGACY_REALM_SHARD_ID,
+      reconciledAtMs: nowMs,
+      reconciledAt: FieldValue.serverTimestamp(),
+      ...(configSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+    }, { merge: true });
+  }
+  return { ...identity, realmShardCapacity: GAME_SERVER_CAPACITY };
+}
+
+async function listCurrentRealmShardIds(nowMs = Date.now()) {
+  const identity = refreshActiveRealmIdentity(nowMs);
+  if (identity.mode !== "monthly-sharded") return [LEGACY_REALM_SHARD_ID];
+  const snapshot = await realmGenerationRef(identity.resetGeneration).collection("shards")
+    .where("status", "==", "active")
+    .get();
+  return [...new Set(snapshot.docs
+    .map(doc => REALM_TOPOLOGY.normalizeRealmShardId(doc.id))
+    .filter(shardId => shardId !== LEGACY_REALM_SHARD_ID))]
+    .sort();
+}
+
+async function runForCurrentRealmShards(operation, nowMs = Date.now()) {
+  const shardIds = await listCurrentRealmShardIds(nowMs);
+  const results = [];
+  await processWithConcurrency(shardIds, 4, async realmShardId => {
+    results.push({
+      realmShardId,
+      result: await runWithRealmShard(realmShardId, () => operation(realmShardId)),
+    });
+  });
+  return results.sort((left, right) => left.realmShardId.localeCompare(right.realmShardId));
+}
+
+function getDocumentEventData(event = {}) {
+  if (event.data?.after?.exists) return event.data.after.data() || {};
+  if (event.data?.before?.exists) return event.data.before.data() || {};
+  if (event.data?.exists) return event.data.data() || {};
+  return {};
+}
+
+function withDocumentRealmShard(handler) {
+  return async event => {
+    const data = getDocumentEventData(event);
+    let realmShardId = safeString(data.realmShardId, 48);
+    if (!realmShardId) {
+      const uid = safeString(event.params?.uid || data.uid || data.contributorUid, 128);
+      if (uid) {
+        const profileSnap = await db.doc(`players/${uid}`).get();
+        realmShardId = safeString(profileSnap.data()?.realmShardId, 48);
+      }
+    }
+    return runWithRealmShard(realmShardId || LEGACY_REALM_SHARD_ID, () => handler(event));
+  };
+}
+
+async function resolveCallableRealmContext(request = {}) {
+  const identity = refreshActiveRealmIdentity(Date.now());
+  const uid = safeString(request.auth?.uid, 128);
+  let realmShardId = LEGACY_REALM_SHARD_ID;
+  if (uid) {
+    const assignmentRef = realmAssignmentRef(identity.resetGeneration, uid);
+    const [profileSnap, assignmentSnap] = await Promise.all([
+      db.doc(`players/${uid}`).get(),
+      assignmentRef ? assignmentRef.get() : Promise.resolve(null),
+    ]);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const assignment = assignmentSnap?.exists ? assignmentSnap.data() || {} : {};
+    const profileIsCurrent = safeString(profile.resetGeneration, 120) === identity.resetGeneration
+      && safeString(profile.worldId, 120) === identity.worldId;
+    const assignmentIsCurrent = safeString(assignment.resetGeneration, 120) === identity.resetGeneration
+      && safeString(assignment.worldId, 120) === identity.worldId;
+    if (profileIsCurrent) {
+      realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(
+        profile.realmShardId || assignment.realmShardId || LEGACY_REALM_SHARD_ID
+      );
+    } else if (assignmentIsCurrent) {
+      realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(assignment.realmShardId);
+    }
+  }
+  return { ...identity, realmShardId };
+}
+
+function onCall(options, handler) {
+  return firebaseOnCall(options, async request => {
+    const context = await resolveCallableRealmContext(request);
+    return REALM_REQUEST_CONTEXT.run(context, () => handler(request));
+  });
+}
+
 function requireCompatibleClient(data = {}) {
-  if (safeString(data.clientReleaseId, 120) !== REALM_RELEASE_ID
-    || safeString(data.clientResetGeneration, 120) !== RESET_GENERATION
-    || safeString(data.clientWorldId, 120) !== ONLINE_WORLD_ID) {
+  const identity = refreshActiveRealmIdentity(Date.now());
+  const clientReleaseId = safeString(data.clientReleaseId, 120);
+  const currentRealmShardId = getCurrentRealmShardId();
+  const resetWorldScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID;
+  const realmScopeMatches = resetWorldScopeMatches
+    && REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === currentRealmShardId;
+  const legacyClientMatches = identity.mode === "legacy"
+    && currentRealmShardId === LEGACY_REALM_SHARD_ID
+    && resetWorldScopeMatches
+    && (!safeString(data.clientRealmShardId, 120)
+      || REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === LEGACY_REALM_SHARD_ID)
+    && LEGACY_COMPATIBLE_CLIENTS.some(entry => entry.releaseId === clientReleaseId);
+  if ((!realmScopeMatches || clientReleaseId !== REALM_RELEASE_ID) && !legacyClientMatches) {
     throw new HttpsError("failed-precondition", "Crownlands was updated. Refresh before continuing.");
   }
 }
 
+function getRealmInfoResponseContract(data = {}) {
+  const clientReleaseId = safeString(data.clientReleaseId, 120);
+  const currentRealmShardId = getCurrentRealmShardId();
+  const resetWorldScopeMatches = safeString(data.clientResetGeneration, 120) === RESET_GENERATION
+    && safeString(data.clientWorldId, 120) === ONLINE_WORLD_ID;
+  const legacyRealmScopeMatches = resetWorldScopeMatches
+    && (!safeString(data.clientRealmShardId, 120)
+      || REALM_TOPOLOGY.normalizeRealmShardId(data.clientRealmShardId) === LEGACY_REALM_SHARD_ID);
+  const legacyClient = ACTIVE_REALM_IDENTITY.mode === "legacy"
+    && currentRealmShardId === LEGACY_REALM_SHARD_ID
+    && legacyRealmScopeMatches
+    ? LEGACY_COMPATIBLE_CLIENTS.find(entry => entry.releaseId === clientReleaseId)
+    : null;
+  return legacyClient || {
+    releaseId: REALM_RELEASE_ID,
+    apiContractHash: String(RELEASE_MANIFEST.contractHash || ""),
+  };
+}
+
 function requireAuth(request, { allowRealmMismatch = false } = {}) {
+  refreshActiveRealmIdentity(Date.now());
   const uid = request.auth?.uid || "";
   if (!uid) throw new HttpsError("unauthenticated", "Sign in before sending troops.");
   if (!allowRealmMismatch) requireCompatibleClient(request.data || {});
@@ -732,7 +1031,11 @@ function normalizeRegionId(value = "") {
 }
 
 function getOnlineIslandId(regionId = "west") {
-  return `${ONLINE_WORLD_ID}-${normalizeRegionId(regionId)}`;
+  return REALM_TOPOLOGY.buildIslandId(
+    ONLINE_WORLD_ID,
+    normalizeRegionId(regionId),
+    getCurrentRealmShardId()
+  );
 }
 
 function safeString(value, max = 80) {
@@ -854,6 +1157,9 @@ function cleanGameServerEntry(raw = {}, fallback = {}) {
     admittedAtMs: Math.max(0, Math.floor(safeNumber(raw.admittedAtMs, fallback.admittedAtMs || 0))),
     lastSeenAtMs: Math.max(0, Math.floor(safeNumber(raw.lastSeenAtMs, fallback.lastSeenAtMs || 0))),
     ticket: Math.max(0, Math.floor(safeNumber(raw.ticket, fallback.ticket || 0))),
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
+      raw.realmShardId || fallback.realmShardId || getCurrentRealmShardId()
+    ),
   };
 }
 
@@ -907,91 +1213,6 @@ function createWelcomeBackSession(priorMembership = {}, sessionId = "", nowMs = 
   };
 }
 
-function normalizeGameServerEntries(raw = {}, nowMs = Date.now(), staleMs = 0) {
-  const entries = {};
-  Object.entries(raw && typeof raw === "object" ? raw : {}).forEach(([rawUid, value]) => {
-    const uid = safeString(value?.uid || rawUid, 128);
-    if (!uid || uid.includes("/")) return;
-    const entry = cleanGameServerEntry(value, { uid });
-    if (!entry.sessionId || !entry.lastSeenAtMs) return;
-    if (staleMs > 0 && nowMs - entry.lastSeenAtMs > staleMs) return;
-    entries[uid] = entry;
-  });
-  return entries;
-}
-
-function createGameServerState(raw = {}, nowMs = Date.now(), { pruneStale = true } = {}) {
-  return {
-    id: GAME_SERVER_ID,
-    name: GAME_SERVER_NAME,
-    capacity: GAME_SERVER_CAPACITY,
-    nextTicket: Math.max(1, Math.floor(safeNumber(raw.nextTicket, 1))),
-    activeSlots: normalizeGameServerEntries(
-      raw.activeSlots,
-      nowMs,
-      pruneStale ? GAME_SERVER_ACTIVE_STALE_MS : 0
-    ),
-    waitingQueue: normalizeGameServerEntries(
-      raw.waitingQueue,
-      nowMs,
-      pruneStale ? GAME_SERVER_WAITING_STALE_MS : 0
-    ),
-  };
-}
-
-function applyGameServerMemberHeartbeats(raw = {}, memberRows = []) {
-  const activeSlots = { ...(raw.activeSlots && typeof raw.activeSlots === "object" ? raw.activeSlots : {}) };
-  const waitingQueue = { ...(raw.waitingQueue && typeof raw.waitingQueue === "object" ? raw.waitingQueue : {}) };
-  (Array.isArray(memberRows) ? memberRows : []).forEach(row => {
-    const uid = safeString(row?.uid, 128);
-    const sessionId = safeString(row?.sessionId, 128);
-    const lastSeenAtMs = Math.max(0, Math.floor(safeNumber(row?.lastSeenAtMs, 0)));
-    if (!uid || !sessionId || !lastSeenAtMs) return;
-    const current = activeSlots[uid] || waitingQueue[uid];
-    if (!current || safeString(current.sessionId, 128) !== sessionId) return;
-    const next = {
-      ...current,
-      lastSeenAtMs: Math.max(
-        Math.max(0, Math.floor(safeNumber(current.lastSeenAtMs, 0))),
-        lastSeenAtMs
-      ),
-    };
-    if (activeSlots[uid]) activeSlots[uid] = next;
-    else waitingQueue[uid] = next;
-  });
-  return { ...raw, activeSlots, waitingQueue };
-}
-
-function getOrderedGameServerWaiters(state) {
-  return Object.values(state.waitingQueue || {}).sort((a, b) => (
-    (a.ticket - b.ticket)
-    || (a.queuedAtMs - b.queuedAtMs)
-    || a.uid.localeCompare(b.uid)
-  ));
-}
-
-function promoteGameServerWaiters(state, nowMs = Date.now()) {
-  const promoted = [];
-  const waiters = getOrderedGameServerWaiters(state);
-  while (Object.keys(state.activeSlots).length < GAME_SERVER_CAPACITY && waiters.length) {
-    const waiter = waiters.shift();
-    if (!waiter?.uid || !state.waitingQueue[waiter.uid]) continue;
-    delete state.waitingQueue[waiter.uid];
-    const activeEntry = cleanGameServerEntry(waiter, {
-      uid: waiter.uid,
-      admittedAtMs: nowMs,
-      joinedAtMs: nowMs,
-    });
-    activeEntry.admittedAtMs = nowMs;
-    activeEntry.joinedAtMs = activeEntry.joinedAtMs || nowMs;
-    activeEntry.lastSeenAtMs = nowMs;
-    activeEntry.ticket = 0;
-    state.activeSlots[waiter.uid] = activeEntry;
-    promoted.push(activeEntry);
-  }
-  return promoted;
-}
-
 function inactivityMaintenanceRef(uid = "") {
   const playerUid = safeString(uid, 128);
   return playerUid
@@ -1036,6 +1257,7 @@ function writeGameServerMembership(transaction, entry, status, nowMs = Date.now(
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     releaseId: REALM_RELEASE_ID,
+    realmShardId: entry.realmShardId || getCurrentRealmShardId(),
     status,
     sessionId: entry.sessionId || "",
     displayName: entry.displayName || "Ruler",
@@ -1059,6 +1281,7 @@ function writeGameServerMember(transaction, entry, status, nowMs = Date.now()) {
     resetGeneration: RESET_GENERATION,
     releaseId: REALM_RELEASE_ID,
     heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
+    realmShardId: entry.realmShardId || getCurrentRealmShardId(),
     status,
     sessionId: entry.sessionId || "",
     displayName: entry.displayName || "Ruler",
@@ -1070,118 +1293,12 @@ function writeGameServerMember(transaction, entry, status, nowMs = Date.now()) {
   }, { merge: true });
 }
 
-function writeGameServerState(transaction, serverRef, state, nowMs = Date.now()) {
-  const serverState = {
-    id: GAME_SERVER_ID,
-    name: GAME_SERVER_NAME,
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    releaseId: REALM_RELEASE_ID,
-    capacity: GAME_SERVER_CAPACITY,
-    heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
-    activeCount: Object.keys(state.activeSlots).length,
-    waitingCount: Object.keys(state.waitingQueue).length,
-    activeSlots: state.activeSlots,
-    waitingQueue: state.waitingQueue,
-    nextTicket: state.nextTicket,
-    updatedAtMs: nowMs,
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  transaction.set(serverRef, serverState, { mergeFields: Object.keys(serverState) });
-}
-
-function serializeGameServerAdmission(operation) {
-  const result = gameServerAdmissionQueue.then(operation, operation);
-  gameServerAdmissionQueue = result.then(
-    () => undefined,
-    () => undefined
-  );
-  return result;
-}
-
-function isGameServerLeaseAlreadyHeld(error) {
-  const code = String(error?.code || "").toLowerCase();
-  const message = String(error?.message || error?.details || "").toLowerCase();
-  return code === "6"
-    || code === "already-exists"
-    || code.endsWith("/already-exists")
-    || message.includes("already exists");
-}
-
-function isGameServerLeaseRace(error) {
-  const code = String(error?.code || "").toLowerCase();
-  return isGameServerLeaseAlreadyHeld(error)
-    || code === "5"
-    || code === "9"
-    || code === "not-found"
-    || code === "failed-precondition"
-    || code.endsWith("/not-found")
-    || code.endsWith("/failed-precondition");
-}
-
-function waitForGameServerAdmission(attempt = 0) {
-  const backoffMs = Math.min(300, 20 * (1.35 ** Math.min(12, attempt)));
-  const jitterMs = Math.floor(Math.random() * 40);
-  return new Promise(resolve => setTimeout(resolve, Math.ceil(backoffMs + jitterMs)));
-}
-
-async function withGameServerAdmissionLease(operation) {
-  const leaseRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}/coordination/admission`);
-  const ownerId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const deadlineMs = Date.now() + GAME_SERVER_ADMISSION_WAIT_MS;
-  let leaseWrite = null;
-  let attempt = 0;
-
-  while (!leaseWrite) {
-    const nowMs = Date.now();
-    try {
-      leaseWrite = await leaseRef.create({
-        ownerId,
-        acquiredAtMs: nowMs,
-        expiresAtMs: nowMs + GAME_SERVER_ADMISSION_LEASE_MS,
-        resetGeneration: RESET_GENERATION,
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-    } catch (error) {
-      if (!isGameServerLeaseAlreadyHeld(error)) throw error;
-      const leaseSnap = await leaseRef.get();
-      if (leaseSnap.exists && safeNumber(leaseSnap.data()?.expiresAtMs, 0) <= Date.now()) {
-        try {
-          await leaseRef.delete({ lastUpdateTime: leaseSnap.updateTime });
-        } catch (deleteError) {
-          if (!isGameServerLeaseRace(deleteError)) throw deleteError;
-        }
-      }
-      if (Date.now() >= deadlineMs) {
-        throw new HttpsError("resource-exhausted", "Realm admission is busy. Try entering again shortly.");
-      }
-      await waitForGameServerAdmission(attempt);
-      attempt += 1;
-    }
-  }
-
-  try {
-    return await operation();
-  } finally {
-    try {
-      await leaseRef.delete({ lastUpdateTime: leaseWrite.updateTime });
-    } catch (error) {
-      if (!isGameServerLeaseRace(error)) {
-        console.error("Failed to release Crownlands realm admission lease", {
-          code: safeString(error?.code || "internal", 48),
-        });
-      }
-    }
-  }
-}
-
 async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
-    const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
-      transaction.get(serverRef),
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [membershipSnap, maintenanceSnap] = await Promise.all([
       transaction.get(membershipRef),
       transaction.get(maintenanceRef),
     ]);
@@ -1192,89 +1309,57 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
     }
     const inactivityNotice = getInactivityNotice(priorMembership);
     const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
-    const promoted = promoteGameServerWaiters(state, nowMs);
-    let activeEntry = state.activeSlots[uid] || null;
-    let waitingEntry = state.waitingQueue[uid] || null;
-
-    if (activeEntry) {
-      activeEntry = cleanGameServerEntry(activeEntry, { uid });
-      activeEntry.sessionId = sessionId;
-      activeEntry.displayName = displayName;
-      activeEntry.lastSeenAtMs = nowMs;
-      activeEntry.joinedAtMs = activeEntry.joinedAtMs || nowMs;
-      activeEntry.admittedAtMs = activeEntry.admittedAtMs || nowMs;
-      state.activeSlots[uid] = activeEntry;
-      delete state.waitingQueue[uid];
-      waitingEntry = null;
-    } else if (waitingEntry) {
-      waitingEntry = cleanGameServerEntry(waitingEntry, { uid });
-      waitingEntry.sessionId = sessionId;
-      waitingEntry.displayName = displayName;
-      waitingEntry.lastSeenAtMs = nowMs;
-      waitingEntry.queuedAtMs = waitingEntry.queuedAtMs || nowMs;
-      state.waitingQueue[uid] = waitingEntry;
-    } else if (Object.keys(state.activeSlots).length < GAME_SERVER_CAPACITY && !getOrderedGameServerWaiters(state).length) {
-      activeEntry = cleanGameServerEntry({
-        uid,
-        sessionId,
-        displayName,
-        joinedAtMs: nowMs,
-        admittedAtMs: nowMs,
-        lastSeenAtMs: nowMs,
-      });
-      state.activeSlots[uid] = activeEntry;
-    } else {
-      if (Object.keys(state.waitingQueue).length >= GAME_SERVER_MAX_WAITING) {
-        throw new HttpsError("resource-exhausted", "The Crown Marches waiting list is full. Try again shortly.");
-      }
-      waitingEntry = cleanGameServerEntry({
-        uid,
-        sessionId,
-        displayName,
-        queuedAtMs: nowMs,
-        lastSeenAtMs: nowMs,
-        ticket: state.nextTicket,
-      });
-      state.nextTicket += 1;
-      state.waitingQueue[uid] = waitingEntry;
-    }
-
-    const newlyPromoted = promoteGameServerWaiters(state, nowMs);
-    promoted.push(...newlyPromoted);
-    activeEntry = state.activeSlots[uid] || null;
-    waitingEntry = state.waitingQueue[uid] || null;
-
-    writeGameServerState(transaction, serverRef, state, nowMs);
-    const membershipWrites = new Map(promoted.map(entry => [entry.uid, { entry, status: "active" }]));
-    if (activeEntry) membershipWrites.set(uid, { entry: activeEntry, status: "active" });
-    else if (waitingEntry) membershipWrites.set(uid, { entry: waitingEntry, status: "waiting" });
-    membershipWrites.forEach(({ entry, status }) => {
-      writeGameServerMember(transaction, entry, status, nowMs);
-      writeGameServerMembership(transaction, entry, status, nowMs);
+    const realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(
+      priorMembership.realmShardId || getCurrentRealmShardId()
+    );
+    const activeEntry = cleanGameServerEntry({
+      uid,
+      sessionId,
+      displayName,
+      realmShardId,
+      joinedAtMs: Math.max(0, safeNumber(priorMembership.joinedAtMs, 0)) || nowMs,
+      admittedAtMs: nowMs,
+      lastSeenAtMs: nowMs,
     });
+    writeGameServerMember(transaction, activeEntry, "active", nowMs);
+    writeGameServerMembership(transaction, activeEntry, "active", nowMs);
     transaction.set(membershipRef, { welcomeBack }, { merge: true });
+    transaction.set(serverRef, {
+      id: GAME_SERVER_ID,
+      name: GAME_SERVER_NAME,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
+      releaseId: REALM_RELEASE_ID,
+      admissionModel: "sharded-members-v3",
+      perShardCapacity: GAME_SERVER_CAPACITY,
+      waitingCount: 0,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
 
     return {
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
-      status: activeEntry ? "active" : "waiting",
+      status: "active",
+      realmShardId,
       admittedAtMs: activeEntry?.admittedAtMs || 0,
-      queuedAtMs: waitingEntry?.queuedAtMs || 0,
+      queuedAtMs: 0,
       inactivityNotice,
       welcomeBack,
     };
-  })));
+  });
 }
 
 async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
+  const memberRef = serverRef.collection("members").doc(uid);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
   const profileRef = db.doc(`players/${uid}`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
-      transaction.get(serverRef),
+    const [memberSnap, membershipSnap, maintenanceSnap] = await Promise.all([
+      transaction.get(memberRef),
       transaction.get(membershipRef),
       transaction.get(maintenanceRef),
     ]);
@@ -1285,20 +1370,18 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     const currentMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
     const inactivityNotice = getInactivityNotice(currentMembership);
     const welcomeBack = normalizeWelcomeBackSession(currentMembership);
-    const state = createGameServerState(
-      serverSnap.exists ? serverSnap.data() : {},
-      nowMs,
-      { pruneStale: false }
-    );
-    const activeEntry = state.activeSlots[uid] || null;
-    const waitingEntry = state.waitingQueue[uid] || null;
-    const currentEntry = activeEntry || waitingEntry;
+    const currentEntry = memberSnap.exists ? memberSnap.data() || {} : null;
     if (!currentEntry) return { status: "missing" };
     if (currentEntry.sessionId !== sessionId) {
       return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
     }
-    const status = activeEntry ? "active" : "waiting";
-    const entry = cleanGameServerEntry(currentEntry, { uid, sessionId, displayName });
+    const status = "active";
+    const entry = cleanGameServerEntry(currentEntry, {
+      uid,
+      sessionId,
+      displayName,
+      realmShardId: currentMembership.realmShardId || getCurrentRealmShardId(),
+    });
     entry.displayName = displayName;
     entry.lastSeenAtMs = nowMs;
     writeGameServerMember(transaction, entry, status, nowMs);
@@ -1312,8 +1395,9 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
       status,
+      realmShardId: entry.realmShardId,
       admittedAtMs: status === "active" ? entry.admittedAtMs || 0 : 0,
-      queuedAtMs: status === "waiting" ? entry.queuedAtMs || 0 : 0,
+      queuedAtMs: 0,
       inactivityNotice,
       welcomeBack,
     };
@@ -1324,67 +1408,54 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
 
 async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
-    const serverSnap = await transaction.get(serverRef);
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
-    const activeEntry = state.activeSlots[uid] || null;
-    const waitingEntry = state.waitingQueue[uid] || null;
-    const currentEntry = activeEntry || waitingEntry;
+  const memberRef = serverRef.collection("members").doc(uid);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const memberSnap = await transaction.get(memberRef);
+    const currentEntry = memberSnap.exists ? memberSnap.data() || {} : null;
     if (currentEntry && currentEntry.sessionId !== sessionId) {
       return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
     }
 
-    delete state.activeSlots[uid];
-    delete state.waitingQueue[uid];
-    const promoted = promoteGameServerWaiters(state, nowMs);
-    writeGameServerState(transaction, serverRef, state, nowMs);
-    promoted.forEach(entry => {
-      writeGameServerMember(transaction, entry, "active", nowMs);
-      writeGameServerMembership(transaction, entry, "active", nowMs);
-    });
-    transaction.delete(db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}/members/${uid}`));
+    transaction.delete(memberRef);
     writeGameServerMembership(transaction, {
       uid,
       sessionId,
       displayName: currentEntry?.displayName || "Ruler",
+      realmShardId: currentEntry?.realmShardId || getCurrentRealmShardId(),
     }, "left", nowMs);
-    return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "left" };
-  })));
+    return {
+      serverId: GAME_SERVER_ID,
+      serverName: GAME_SERVER_NAME,
+      status: "left",
+      realmShardId: currentEntry?.realmShardId || getCurrentRealmShardId(),
+    };
+  });
 }
 
 async function maintainGameServer(nowMs = Date.now()) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
-    const staleBeforeMs = nowMs - GAME_SERVER_WAITING_STALE_MS;
-    const memberQuery = serverRef.collection("members")
-      .where("lastSeenAtMs", ">=", staleBeforeMs);
-    const staleMemberQuery = serverRef.collection("members")
+  const staleBeforeMs = nowMs - GAME_SERVER_WAITING_STALE_MS;
+  const staleMemberSnap = await serverRef.collection("members")
       .where("lastSeenAtMs", "<", staleBeforeMs)
-      .limit(100);
-    const [serverSnap, memberSnap, staleMemberSnap] = await Promise.all([
-      transaction.get(serverRef),
-      transaction.get(memberQuery),
-      transaction.get(staleMemberQuery),
-    ]);
-    const rawState = applyGameServerMemberHeartbeats(
-      serverSnap.exists ? serverSnap.data() : {},
-      memberSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
-    );
-    const state = createGameServerState(rawState, nowMs);
-    const promoted = promoteGameServerWaiters(state, nowMs);
-    writeGameServerState(transaction, serverRef, state, nowMs);
-    promoted.forEach(entry => {
-      writeGameServerMember(transaction, entry, "active", nowMs);
-      writeGameServerMembership(transaction, entry, "active", nowMs);
-    });
-    staleMemberSnap.docs.forEach(doc => transaction.delete(doc.ref));
-    return {
-      active: Object.keys(state.activeSlots).length,
-      waiting: Object.keys(state.waitingQueue).length,
-      promoted: promoted.length,
-      staleMembersDeleted: staleMemberSnap.size,
-    };
-  })));
+      .limit(400)
+      .get();
+  if (staleMemberSnap.size) {
+    const batch = db.batch();
+    staleMemberSnap.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  }
+  await serverRef.set({
+    admissionModel: "sharded-members-v3",
+    waitingCount: 0,
+    lastMaintenanceAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return {
+    active: null,
+    waiting: 0,
+    promoted: 0,
+    staleMembersDeleted: staleMemberSnap.size,
+  };
 }
 
 function getInactivePlayerUidFromMembershipDoc(membershipDoc = null) {
@@ -2247,10 +2318,9 @@ async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.no
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [receiptSnap, membershipSnap, serverSnap] = await Promise.all([
+    const [receiptSnap, membershipSnap] = await Promise.all([
       transaction.get(run.receiptRef),
       transaction.get(membershipRef),
-      transaction.get(serverRef),
     ]);
     const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
     const membership = membershipSnap.exists ? membershipSnap.data() || {} : {};
@@ -2267,12 +2337,13 @@ async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.no
     ) {
       throw new HttpsError("aborted", "The player returned before inactive-player removal completed.");
     }
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
-    delete state.activeSlots[playerUid];
-    delete state.waitingQueue[playerUid];
-    const promoted = promoteGameServerWaiters(state, nowMs);
-    writeGameServerState(transaction, serverRef, state, nowMs);
-    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    transaction.delete(serverRef.collection("members").doc(playerUid));
+    transaction.set(serverRef, {
+      admissionModel: "sharded-members-v3",
+      waitingCount: 0,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     const releasedCities = Math.max(0, Math.floor(safeNumber(receipt.releasedCities, 0)));
     const releasedCamps = Math.max(0, Math.floor(safeNumber(receipt.releasedCamps, 0)));
     transaction.set(membershipRef, {
@@ -2302,7 +2373,7 @@ async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.no
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    return { releasedCities, releasedCamps, promoted: promoted.length };
+    return { releasedCities, releasedCamps, promoted: 0 };
   });
 }
 
@@ -2366,7 +2437,11 @@ async function maintainInactivePlayers(nowMs = Date.now()) {
   const results = [];
   await processWithConcurrency(candidates, INACTIVITY_PROCESS_CONCURRENCY, async candidate => {
     try {
-      results.push(await processInactivePlayerCandidate(candidate, nowMs));
+      const realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(candidate.membership?.realmShardId);
+      results.push(await runWithRealmShard(
+        realmShardId,
+        () => processInactivePlayerCandidate(candidate, nowMs)
+      ));
     } catch (error) {
       console.error("Inactive-player maintenance failed", {
         uid: candidate.uid,
@@ -2741,7 +2816,7 @@ function getPublicStrongholdSnapshot(city = {}) {
 
 function crownCitadelReignRef(uid = "") {
   const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
-  return safeUid ? db.doc(`crownCitadelReigns/${RESET_GENERATION}/entries/${safeUid}`) : null;
+  return safeUid ? db.doc(`crownCitadelReigns/${getRealmStorageId()}/entries/${safeUid}`) : null;
 }
 
 function getCrownCitadelReignChangeRefs({
@@ -2809,6 +2884,7 @@ function recordCrownCitadelControlChange(transaction, {
       playerFlag: oldData.playerFlag || citadel.ownerFlag || null,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       totalHeldMs: (isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(oldData.totalHeldMs, 0))) : 0) + completedReignMs,
       currentHeldSinceMs: 0,
       isCurrentHolder: false,
@@ -2828,6 +2904,7 @@ function recordCrownCitadelControlChange(transaction, {
       playerFlag: nextOwnerFlag || newData.playerFlag || null,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       totalHeldMs: isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(newData.totalHeldMs, 0))) : 0,
       currentHeldSinceMs: nowMs,
       isCurrentHolder: true,
@@ -2847,7 +2924,7 @@ function strongholdLegacyRef(stronghold = {}, uid = "") {
   const strongholdId = safeString(stronghold.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
   return strongholdId && safeUid
-    ? db.doc(`strongholdLegacies/${RESET_GENERATION}/entries/${strongholdId}__${safeUid}`)
+    ? db.doc(`strongholdLegacies/${getRealmStorageId()}/entries/${strongholdId}__${safeUid}`)
     : null;
 }
 
@@ -2912,6 +2989,7 @@ function recordStrongholdLegacyControlChange(transaction, {
     regionId: normalizeRegionId(publicStronghold.regionId || stronghold.regionId),
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
   };
 
   if (oldRef) {
@@ -2965,7 +3043,7 @@ function recordStrongholdLegacyControlChange(transaction, {
 function realmActivityEventRef(eventId = "") {
   const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
   return safeEventId
-    ? db.doc(`realmEvents/${RESET_GENERATION}/activity/${safeEventId}`)
+    ? db.doc(`realmEvents/${getRealmStorageId()}/activity/${safeEventId}`)
     : null;
 }
 
@@ -3028,6 +3106,7 @@ function writeRealmActivityCaptureEvent(transaction, {
     sourceResolutionId: safeString(sourceResolutionId, 160),
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     releaseId: REALM_RELEASE_ID,
     occurredAtMs: nowMs,
     createdAtMs: nowMs,
@@ -3815,7 +3894,7 @@ function rewardedAdServerConfigRef() {
 }
 
 function leaderboardEntryRef(uid = "") {
-  return db.doc(`leaderboards/${RESET_GENERATION}/entries/${safeString(uid, 128)}`);
+  return db.doc(`leaderboards/${getRealmStorageId()}/entries/${safeString(uid, 128)}`);
 }
 
 function getArmyStatsKey(army = {}) {
@@ -3839,26 +3918,29 @@ function createActiveArmiesFromSnapshot(uid = "", activeArmiesSnap = null) {
 }
 
 function activeArmiesQueryForPlayer(uid = "") {
-  return db.collection("armies")
+  const query = db.collection("armies")
     .where("ownerUid", "==", safeString(uid, 128))
     .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  return scopeQueryToCurrentRealmShard(query)
     .where("status", "==", "active");
 }
 
 function activeArmiesTargetingPlayerQuery(uid = "") {
-  return db.collection("armies")
+  const query = db.collection("armies")
     .where("targetOwnerUid", "==", safeString(uid, 128))
     .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  return scopeQueryToCurrentRealmShard(query)
     .where("status", "==", "active");
 }
 
 function heldRewardCampsQueryForPlayer(uid = "") {
-  return db.collectionGroup("camps")
+  const query = db.collectionGroup("camps")
     .where("holderUid", "==", safeString(uid, 128))
     .where("resetGeneration", "==", RESET_GENERATION)
     .where("worldId", "==", ONLINE_WORLD_ID);
+  return scopeQueryToCurrentRealmShard(query);
 }
 
 function createHeldCampEntriesFromSnapshot(uid = "", heldCampsSnap = null) {
@@ -3884,6 +3966,7 @@ function createHeldCampEntriesFromSnapshot(uid = "", heldCampsSnap = null) {
 function isCurrentWorldArmy(army = {}) {
   if (army.worldId && safeString(army.worldId, 120) !== ONLINE_WORLD_ID) return false;
   if (army.resetGeneration && safeString(army.resetGeneration, 120) !== RESET_GENERATION) return false;
+  if (REALM_TOPOLOGY.normalizeRealmShardId(army.realmShardId) !== getCurrentRealmShardId()) return false;
   const routeRegionIds = normalizeRegionIds(army.routeRegionIds || []);
   if (routeRegionIds.some(regionId => isCurrentWorldIslandId(getOnlineIslandId(regionId)))) return true;
   const sourceRegionId = normalizeRegionId(army.sourceRegionId || "");
@@ -4027,6 +4110,7 @@ function createGlobalStatsSnapshot({
     uid: playerUid,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     version: GLOBAL_PLAYER_STATS_VERSION,
     totalCities,
     totalTroops,
@@ -5343,10 +5427,11 @@ function reinforcementRef(ownerUid = "", targetKey = "") {
 }
 
 function stationedReinforcementsForTargetQuery(targetKey = "") {
-  return db.collection("reinforcements")
+  const query = db.collection("reinforcements")
     .where("targetKey", "==", safeString(targetKey, 220))
     .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  return scopeQueryToCurrentRealmShard(query)
     .where("status", "==", REINFORCEMENT_STATUS_STATIONED);
 }
 
@@ -5356,6 +5441,7 @@ function normalizeReinforcementContribution(doc = null) {
   if (
     safeString(data.resetGeneration, 120) !== RESET_GENERATION
     || safeString(data.worldId, 120) !== ONLINE_WORLD_ID
+    || REALM_TOPOLOGY.normalizeRealmShardId(data.realmShardId) !== getCurrentRealmShardId()
     || data.status !== REINFORCEMENT_STATUS_STATIONED
   ) return null;
   const troops = Math.max(0, Math.floor(safeNumber(data.troops, 0)));
@@ -5478,14 +5564,14 @@ function releaseClanReinforcementAssignment(
 
 function getReinforcementCapacityId(targetKey = "") {
   return crypto.createHash("sha256")
-    .update(`${RESET_GENERATION}|${safeString(targetKey, 220)}`)
+    .update(`${getRealmStorageId()}|${safeString(targetKey, 220)}`)
     .digest("hex")
     .slice(0, 40);
 }
 
 function reinforcementCapacityRef(targetKey = "") {
   return db.doc(
-    `reinforcementCapacity/${RESET_GENERATION}/cities/${getReinforcementCapacityId(targetKey)}`
+    `reinforcementCapacity/${getRealmStorageId()}/cities/${getReinforcementCapacityId(targetKey)}`
   );
 }
 
@@ -5621,7 +5707,7 @@ function clanRallyStateRef(clanId = "") {
 
 function rallyBattleReceiptRef(armyId = "", contributorUid = "") {
   const receiptId = safeString(`${armyId}_${contributorUid}`, 190).replace(/[^a-zA-Z0-9_-]/g, "_");
-  return db.doc(`rallyBattleReceipts/${RESET_GENERATION}/entries/${receiptId}`);
+  return db.doc(`rallyBattleReceipts/${getRealmStorageId()}/entries/${receiptId}`);
 }
 
 function rallyCancellationReceiptRef(rallyId = "", contributorUid = "") {
@@ -6488,8 +6574,16 @@ function writeArmyMovementCopies(writer, movement = {}, {
     ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   };
-  const canonicalMovement = {
+  const scopedMovement = {
     ...movement,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
+      movement.realmShardId || getCurrentRealmShardId()
+    ),
+  };
+  const canonicalMovement = {
+    ...scopedMovement,
     armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
     ...timestampPatch,
   };
@@ -6497,15 +6591,15 @@ function writeArmyMovementCopies(writer, movement = {}, {
   writer.set(canonicalArmyRef(armyId), canonicalMovement, { merge: true });
 
   const publicMovement = {
-    ...createArmyPublicProjection(movement),
+    ...createArmyPublicProjection(scopedMovement),
     ...timestampPatch,
   };
-  armyViewRefsForRegions(movement.viewRegionIds || movement.routeRegionIds || [], armyId)
+  armyViewRefsForRegions(scopedMovement.viewRegionIds || scopedMovement.routeRegionIds || [], armyId)
     .forEach(ref => writer.set(ref, publicMovement, { merge: true }));
 
-  const priorTargetUid = safeString(previousTargetOwnerUid || movement.targetOwnerUid, 128);
-  const nextTargetUid = shouldWriteIncomingArmyView(movement)
-    ? safeString(movement.targetOwnerUid, 128)
+  const priorTargetUid = safeString(previousTargetOwnerUid || scopedMovement.targetOwnerUid, 128);
+  const nextTargetUid = shouldWriteIncomingArmyView(scopedMovement)
+    ? safeString(scopedMovement.targetOwnerUid, 128)
     : "";
   if (priorTargetUid && priorTargetUid !== nextTargetUid) {
     const oldViewRef = incomingArmyViewRef(priorTargetUid, armyId);
@@ -6513,7 +6607,7 @@ function writeArmyMovementCopies(writer, movement = {}, {
   }
   if (nextTargetUid) {
     const incomingView = {
-      ...createArmyPublicProjection(movement),
+      ...createArmyPublicProjection(scopedMovement),
       id: armyId,
       viewerAccess: "target",
       ...timestampPatch,
@@ -6768,7 +6862,7 @@ function reportRef(uid, reportId) {
 function battleSnapshotRef(battleId = "") {
   const safeBattleId = safeString(battleId, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
   return safeBattleId
-    ? db.doc(`battleSnapshots/${RESET_GENERATION}/entries/${safeBattleId}`)
+    ? db.doc(`battleSnapshots/${getRealmStorageId()}/entries/${safeBattleId}`)
     : null;
 }
 
@@ -6827,7 +6921,8 @@ function normalizeServerFlag(flag = null, stableKey = "") {
 }
 
 function isCurrentWorldIslandId(islandId = "") {
-  return String(islandId || "").startsWith(`${ONLINE_WORLD_ID}-`);
+  const parsed = REALM_TOPOLOGY.parseIslandId(islandId, ONLINE_WORLD_ID);
+  return Boolean(parsed && parsed.realmShardId === getCurrentRealmShardId());
 }
 
 function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken = {}) {
@@ -8708,7 +8803,10 @@ function createDetailedBattleSnapshot({
 function writeDetailedBattleSnapshot(transaction, snapshot = null) {
   const ref = battleSnapshotRef(snapshot?.battleId);
   if (!transaction || !ref || !snapshot) return null;
-  transaction.set(ref, snapshot, { merge: false });
+  transaction.set(ref, {
+    ...snapshot,
+    realmShardId: getCurrentRealmShardId(),
+  }, { merge: false });
   return ref;
 }
 
@@ -8773,6 +8871,7 @@ function writeReport(transaction, uid, report, profileSnap = null, extraProfileP
   const nextReports = [...retainedReports, report].slice(-120);
   const reportDocument = {
     ...report,
+    realmShardId: getCurrentRealmShardId(),
     createdAt: FieldValue.serverTimestamp(),
   };
   if (successfulScout) transaction.set(reportRef(uid, report.id), reportDocument, { merge: false });
@@ -8812,7 +8911,7 @@ async function cleanupExpiredReportDocuments(nowMs = Date.now()) {
       .where("createdAtMs", "<=", battleCutoffMs)
       .limit(400)
       .get(),
-    db.collection(`battleSnapshots/${RESET_GENERATION}/entries`)
+    db.collection(`battleSnapshots/${getRealmStorageId()}/entries`)
       .where("occurredAtMs", "<=", battleCutoffMs)
       .limit(400)
       .get(),
@@ -8823,6 +8922,7 @@ async function cleanupExpiredReportDocuments(nowMs = Date.now()) {
     if (
       safeString(report.worldId, 120) !== ONLINE_WORLD_ID
       || safeString(report.resetGeneration, 120) !== RESET_GENERATION
+      || REALM_TOPOLOGY.normalizeRealmShardId(report.realmShardId) !== getCurrentRealmShardId()
       || !isBattleReportHistoryExpired(report, nowMs)
     ) return;
     expiredReportsByPath.set(doc.ref.path, doc);
@@ -8831,6 +8931,7 @@ async function cleanupExpiredReportDocuments(nowMs = Date.now()) {
     const snapshot = doc.data() || {};
     return safeString(snapshot.worldId, 120) === ONLINE_WORLD_ID
       && safeString(snapshot.resetGeneration, 120) === RESET_GENERATION
+      && REALM_TOPOLOGY.normalizeRealmShardId(snapshot.realmShardId) === getCurrentRealmShardId()
       && timestampToMs(snapshot.occurredAtMs) <= battleCutoffMs;
   });
   const expiredReports = [...expiredReportsByPath.values()];
@@ -8984,8 +9085,8 @@ function getProfileLastSeenMs(profile = {}) {
 
 function getRegionIdFromOnlineIslandId(islandId = "") {
   const raw = String(islandId || "");
-  const prefix = `${ONLINE_WORLD_ID}-`;
-  if (raw.startsWith(prefix)) return normalizeRegionId(raw.slice(prefix.length));
+  const parsed = REALM_TOPOLOGY.parseIslandId(raw, ONLINE_WORLD_ID);
+  if (parsed?.regionId) return normalizeRegionId(parsed.regionId);
   const parts = raw.split("-");
   return normalizeRegionId(parts[parts.length - 1] || raw);
 }
@@ -9122,6 +9223,7 @@ function enqueueDailyMissionEvent(transaction, {
     type: normalizedType,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     cycleKey: cycle.cycleKey,
     occurredAtMs: nowMs,
     targetCategory: safeString(details.targetCategory, 32).toLowerCase(),
@@ -9217,6 +9319,7 @@ async function ensureSeasonalAchievementStateForPlayer(uid = "", nowMs = Date.no
     if (needsWrite) {
       transaction.set(stateRef, {
         ...state,
+        realmShardId: getCurrentRealmShardId(),
         ...(stateSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: stateSnap.exists });
@@ -9689,7 +9792,7 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     Math.floor(launchableTroops + troopPerHour * Math.min(12, cycle.remainingHours))
   );
 
-  const leaderboardQuery = db.collection(`leaderboards/${RESET_GENERATION}/entries`).limit(GAME_SERVER_CAPACITY);
+  const leaderboardQuery = db.collection(`leaderboards/${getRealmStorageId()}/entries`).limit(GAME_SERVER_CAPACITY);
   const campSeeds = getConfiguredRewardCampSeeds();
   const strongholdSeeds = getConfiguredStrongholdSeeds();
   const clanId = safeString(profile.clanId, 128);
@@ -9863,6 +9966,7 @@ async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now(), op
       const migratedState = migrateDailyMissionState(existingState, capacity, nowMs);
       transaction.set(stateRef, {
         ...migratedState,
+        realmShardId: getCurrentRealmShardId(),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       writePreparedEconomy(transaction, economy, {}, [], {
@@ -9888,6 +9992,7 @@ async function ensureDailyMissionStateForPlayer(uid = "", nowMs = Date.now(), op
     }
     transaction.create(stateRef, {
       ...state,
+      realmShardId: getCurrentRealmShardId(),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       expiresAt: Timestamp.fromMillis(state.expiresAtMs),
@@ -12717,6 +12822,7 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     uid: economy.uid,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     displayName: normalizePlayerName(profile.playerName || profile.displayName),
     playerName: normalizePlayerName(profile.playerName || profile.displayName),
     flag: normalizeServerFlag(profile.flag, economy.uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(economy.uid),
@@ -13739,13 +13845,23 @@ exports.getRealmInfo = timedCallable(
   async request => {
     requireAuth(request, { allowRealmMismatch: true });
     const serverTimeMs = Date.now();
+    const realm = await ensureCurrentRealmConfiguration(serverTimeMs);
+    const responseContract = getRealmInfoResponseContract(request.data || {});
     return {
       ok: true,
-      releaseId: REALM_RELEASE_ID,
+      releaseId: responseContract.releaseId,
+      currentReleaseId: REALM_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
+      realmMode: realm.mode,
+      realmMonthKey: realm.monthKey,
+      realmStartsAtMs: realm.startsAtMs,
+      realmEndsAtMs: realm.endsAtMs,
+      realmShardId: getCurrentRealmShardId(),
+      realmShardCapacity: GAME_SERVER_CAPACITY,
       serverBuildId: String(RELEASE_MANIFEST.buildId || "development"),
-      contractHash: String(RELEASE_MANIFEST.contractHash || ""),
+      contractHash: responseContract.apiContractHash,
+      currentContractHash: String(RELEASE_MANIFEST.contractHash || ""),
       releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       serverTimeMs,
       clanQuestPeriod: getClanQuestPeriod(serverTimeMs, RESET_GENERATION),
@@ -13764,6 +13880,7 @@ exports.getRealmInfo = timedCallable(
       seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
+        monthlyShardedRealms: true,
         instantEconomyActionsVersion: 1,
         cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION,
         commonGearVersion: COMMON_GEAR.SCHEMA_VERSION,
@@ -13963,7 +14080,7 @@ exports.collectEconomy = timedCallable("collectEconomy", { region: "us-central1"
     let lossSnapshot = null;
     if (validWelcomeSession && !welcomeBack.summary) {
       lossSnapshot = await transaction.get(
-        db.collection(`realmEvents/${RESET_GENERATION}/ownershipChanges`)
+        db.collection(`realmEvents/${getRealmStorageId()}/ownershipChanges`)
           .where("beforeOwnerUid", "==", uid)
           .where("createdAtMs", ">", welcomeBack.awayStartedAtMs)
           .where("createdAtMs", "<=", welcomeBack.sessionStartedAtMs)
@@ -15469,6 +15586,7 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
   const needsGenerationStamp = islandSnap.exists && (
     safeString(islandData.worldId, 120) !== ONLINE_WORLD_ID
     || safeString(islandData.resetGeneration, 120) !== RESET_GENERATION
+    || REALM_TOPOLOGY.normalizeRealmShardId(islandData.realmShardId) !== getCurrentRealmShardId()
   );
   const safeMeta = seed.meta;
 
@@ -15480,10 +15598,13 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
       cityCount: targetCityCount,
       campCount: targetCampCount,
       version: targetVersion,
+      realmShardId: getCurrentRealmShardId(),
     };
   }
 
-  const seedLockRef = db.doc(`realmSeeds/${RESET_GENERATION}/islands/${seed.regionId}`);
+  const seedLockRef = db.doc(
+    `realmSeeds/${RESET_GENERATION}/islands/${getCurrentRealmShardId()}_${seed.regionId}`
+  );
   const seedOwnerToken = crypto.randomBytes(12).toString("hex");
   const seedLeaseMs = 60 * 1000;
   const acquiredSeedLease = await runTransactionWithInfrastructureRetry(async transaction => {
@@ -15498,6 +15619,7 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
     transaction.set(seedLockRef, {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       regionId: seed.regionId,
       islandId,
       status: "seeding",
@@ -15551,6 +15673,7 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
   batch.set(islandRef, {
     id: islandId,
     ...safeMeta,
+    realmShardId: getCurrentRealmShardId(),
     regularCityCount: targetRegularCityCount,
     seededCityCount: targetCityCount,
     seededCampCount: targetCampCount,
@@ -15574,6 +15697,9 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
     batch.set(citiesRef.doc(city.id), {
       // Layout refreshes must never rewrite live city progression for existing towns.
       ...staticPatch,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       ...(alreadyExists ? {} : {
         ownerKind: "neutral",
         ownerUid: null,
@@ -15604,6 +15730,9 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
     const alreadyExists = existingCampIds.has(camp.id);
     batch.set(campsRef.doc(camp.id), {
       ...camp,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       ...(alreadyExists ? {} : {
         holderUid: "",
         holderName: "",
@@ -15639,6 +15768,7 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
     cityCount: targetCityCount,
     campCount: targetCampCount,
     version: targetVersion,
+    realmShardId: getCurrentRealmShardId(),
   };
 }
 
@@ -15939,6 +16069,7 @@ function createFreshResetPlayerProfile({
   cityId = "",
   islandId = "",
   regionId = "",
+  realmShardId = getCurrentRealmShardId(),
   nowMs = Date.now(),
 } = {}) {
   const displayName = safeString(
@@ -15959,6 +16090,7 @@ function createFreshResetPlayerProfile({
     flag,
     resetGeneration: RESET_GENERATION,
     worldId: ONLINE_WORLD_ID,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(realmShardId),
     releaseId: REALM_RELEASE_ID,
     cloudSaveSlot: `default-${RESET_GENERATION}`,
     mainIslandId: islandId,
@@ -16033,6 +16165,9 @@ function createStartingCityCurrentUser(profile = {}, {
     mainRegionId: regionId || normalizeRegionId(profile.mainRegionId),
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(
+      profile.realmShardId || getCurrentRealmShardId()
+    ),
   };
   if (clanId) {
     Object.assign(currentUser, {
@@ -16048,6 +16183,15 @@ function createStartingCityCurrentUser(profile = {}, {
 
 async function claimFreshStartingCity(request) {
   const uid = requireAuth(request);
+  const realmAssignment = await ensureRealmShardAssignment(uid, Date.now());
+  return runWithRealmShard(
+    realmAssignment.realmShardId,
+    () => claimFreshStartingCityInAssignedShard(request)
+  );
+}
+
+async function claimFreshStartingCityInAssignedShard(request) {
+  const uid = request.auth?.uid || "";
   const data = request.data || {};
   const authToken = request.auth?.token || {};
   if (!STARTER_REGION_IDS.length) {
@@ -16062,8 +16206,20 @@ async function claimFreshStartingCity(request) {
 
   const runClaimTransaction = async (transaction, placement) => {
     const nowMs = Date.now();
-    const playerSnap = await transaction.get(playerRef);
+    const assignmentRef = realmAssignmentRef(RESET_GENERATION, uid);
+    const [playerSnap, assignmentSnap] = await Promise.all([
+      transaction.get(playerRef),
+      transaction.get(assignmentRef),
+    ]);
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
+    const currentAssignment = assignmentSnap.exists ? assignmentSnap.data() || {} : {};
+    if (
+      safeString(currentAssignment.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(currentAssignment.worldId, 120) !== ONLINE_WORLD_ID
+      || REALM_TOPOLOGY.normalizeRealmShardId(currentAssignment.realmShardId) !== getCurrentRealmShardId()
+    ) {
+      throw new HttpsError("failed-precondition", "Your realm assignment changed. Refresh before continuing.");
+    }
     const currentProfile = safeString(previous.resetGeneration, 120) === RESET_GENERATION
       && safeString(previous.worldId, 120) === ONLINE_WORLD_ID;
 
@@ -16082,6 +16238,7 @@ async function claimFreshStartingCity(request) {
           mainRegionId: recovery.currentUser.mainRegionId,
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
+          realmShardId: getCurrentRealmShardId(),
           releaseId: REALM_RELEASE_ID,
           alreadyClaimed: true,
         };
@@ -16136,11 +16293,13 @@ async function claimFreshStartingCity(request) {
       cityId: chosenCity.id,
       islandId: chosenIsland.islandId,
       regionId: chosenIsland.regionId,
+      realmShardId: getCurrentRealmShardId(),
       nowMs,
     });
     const cityPatch = {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       ownerKind: "player",
       ownerUid: uid,
       ownerName: freshProfile.playerName,
@@ -16188,6 +16347,7 @@ async function claimFreshStartingCity(request) {
     transaction.set(chosenCityRef, cityPatch, { merge: true });
     transaction.set(chosenIsland.ref, {
       playerCount: placement.expectedPopulation + 1,
+      realmShardId: getCurrentRealmShardId(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     transaction.set(placement.slotRef, {
@@ -16196,6 +16356,24 @@ async function claimFreshStartingCity(request) {
       claimedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+    transaction.set(assignmentRef, {
+      status: "claimed",
+      claimedCityId: chosenCity.id,
+      claimedIslandId: chosenIsland.islandId,
+      claimedRegionId: chosenIsland.regionId,
+      claimedAtMs: nowMs,
+      claimedAt: FieldValue.serverTimestamp(),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    if (safeString(currentAssignment.status, 24) !== "claimed"
+      && getCurrentRealmShardId() !== LEGACY_REALM_SHARD_ID) {
+      transaction.set(realmShardRef(getCurrentRealmShardId()), {
+        claimedCount: FieldValue.increment(1),
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     transaction.set(playerGlobalStatsRef(uid), stats);
     transaction.set(leaderboardEntryRef(uid), {
       uid,
@@ -16204,6 +16382,7 @@ async function claimFreshStartingCity(request) {
       flag: freshProfile.flag,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       kingPower: stats.kingPower,
       kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
       kingPowerUpdatedAtMs: nowMs,
@@ -16234,6 +16413,7 @@ async function claimFreshStartingCity(request) {
       mainRegionId: chosenIsland.regionId,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
       alreadyClaimed: false,
       currentUser: createStartingCityCurrentUser(freshProfile, {
@@ -16269,6 +16449,7 @@ async function claimFreshStartingCity(request) {
     const reservation = {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       regionId: placement.island.regionId,
       islandId: placement.island.islandId,
       populationOrdinal: placement.expectedPopulation,
@@ -16328,7 +16509,8 @@ async function claimFreshStartingCity(request) {
       expectedPopulation: minimumPopulation,
       reservationId: crypto.randomUUID(),
       slotRef: db.doc(
-        `realmSeeds/${RESET_GENERATION}/startingSlots/${chosenIsland.regionId}_${minimumPopulation}`
+        `realmSeeds/${RESET_GENERATION}/startingSlots/`
+        + `${getCurrentRealmShardId()}_${chosenIsland.regionId}_${minimumPopulation}`
       ),
     };
 
@@ -17410,11 +17592,11 @@ function normalizeClanTag(value = "") {
 }
 
 function clanNameReservationRef(normalizedName = "") {
-  return db.doc(`clanNameReservations/${RESET_GENERATION}_${safeString(normalizedName, 40)}`);
+  return db.doc(`clanNameReservations/${getRealmStorageId()}_${safeString(normalizedName, 40)}`);
 }
 
 function clanTagReservationRef(normalizedTag = "") {
-  return db.doc(`clanTagReservations/${RESET_GENERATION}_${safeString(normalizedTag, 40)}`);
+  return db.doc(`clanTagReservations/${getRealmStorageId()}_${safeString(normalizedTag, 40)}`);
 }
 
 function persistentClanNameOwnersQuery(normalizedName = "") {
@@ -17480,6 +17662,7 @@ function clanPublicSnapshot(id = "", clan = {}) {
     id,
     worldId: safeString(clan.worldId, 120),
     resetGeneration: safeString(clan.resetGeneration, 120),
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(clan.realmShardId),
     name: safeString(clan.name, 24),
     normalizedName: safeString(clan.normalizedName, 40),
     tag: safeString(clan.tag, 5),
@@ -17539,6 +17722,7 @@ function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Dat
     uid,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     role,
     displayName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
     flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
@@ -17568,6 +17752,7 @@ function createClanQuestProgress(clanId = "", period = null, nowMs = Date.now())
     clanId,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     questPeriodId: questPeriod.questPeriodId,
     periodId: questPeriod.questPeriodId,
     weekKey: questPeriod.weekKey,
@@ -17587,7 +17772,7 @@ function createClanQuestProgress(clanId = "", period = null, nowMs = Date.now())
 
 function clanWorldBenefitsRef(clanId = "") {
   const safeClanId = safeString(clanId, 128);
-  return safeClanId ? db.doc(`clans/${safeClanId}/worldBenefits/${RESET_GENERATION}`) : null;
+  return safeClanId ? db.doc(`clans/${safeClanId}/worldBenefits/${getRealmStorageId()}`) : null;
 }
 
 function clanQuestCaptureReceiptRef(clanId = "", eventId = "") {
@@ -17600,7 +17785,7 @@ function clanMemberRewardsRef(clanId = "", uid = "") {
 }
 
 function clanGiftActivityRef(clanId = "") {
-  return db.doc(`clans/${clanId}/giftActivity/${RESET_GENERATION}`);
+  return db.doc(`clans/${clanId}/giftActivity/${getRealmStorageId()}`);
 }
 
 function clanQuestClaimHistoryRef(clanId = "", uid = "", questPeriodId = "") {
@@ -17617,6 +17802,7 @@ function createClanMemberRewards(uid = "", nowMs = Date.now()) {
     uid,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     pendingGiftGoldMinutes: 0,
     giftCountReceived: 0,
     giftCountSent: 0,
@@ -17704,7 +17890,8 @@ function assertClanRole(member = {}, allowedRoles = []) {
 
 function assertCurrentClan(clan = {}) {
   if (safeString(clan.resetGeneration, 120) !== RESET_GENERATION
-    || safeString(clan.worldId, 120) !== ONLINE_WORLD_ID) {
+    || safeString(clan.worldId, 120) !== ONLINE_WORLD_ID
+    || REALM_TOPOLOGY.normalizeRealmShardId(clan.realmShardId) !== getCurrentRealmShardId()) {
     throw new HttpsError("failed-precondition", "That clan belongs to an archived Crownlands generation.");
   }
 }
@@ -17713,6 +17900,7 @@ function assertCurrentClanActorProfile(profile = {}, expectedClanId = null) {
   if (
     safeString(profile.resetGeneration, 120) !== RESET_GENERATION
     || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
+    || REALM_TOPOLOGY.normalizeRealmShardId(profile.realmShardId) !== getCurrentRealmShardId()
     || !safeString(profile.mainCityId, 96)
     || !isCurrentWorldIslandId(profile.mainIslandId)
   ) {
@@ -17738,6 +17926,7 @@ function writeClanAudit(transaction, clanId, actorUid, action, details = {}, now
   transaction.set(clanAuditRef(clanId), {
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     actorUid,
     action: safeString(action, 64),
     details,
@@ -17749,7 +17938,7 @@ function writeClanAudit(transaction, clanId, actorUid, action, details = {}, now
 function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
   const combined = { ...clan, ...patch };
   const shield = normalizeClanShield(combined.shield || combined.banner);
-  transaction.set(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`), {
+  transaction.set(db.doc(`clanLeaderboards/${getRealmStorageId()}/entries/${clanId}`), {
     clanId,
     name: safeString(combined.name, 24),
     tag: safeString(combined.tag, 5),
@@ -17760,6 +17949,7 @@ function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
     totalKingPower: Math.max(0, Math.floor(safeNumber(combined.totalKingPower, 0))),
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     updatedAtMs: Date.now(),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -17778,7 +17968,7 @@ function chatRestrictionRef(uid = "") {
 }
 
 function globalChatMessageRef(messageId = "") {
-  return db.doc(`globalChat/${RESET_GENERATION}/messages/${safeString(messageId, 64)}`);
+  return db.doc(`globalChat/${getRealmStorageId()}/messages/${safeString(messageId, 64)}`);
 }
 
 function clanChatMessageRef(clanId = "", messageId = "") {
@@ -17916,6 +18106,7 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       status: "visible",
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       createdAtMs: nowMs,
       createdAt: FieldValue.serverTimestamp(),
       expiresAtMs,
@@ -17931,6 +18122,7 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       clanId,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       createdAtMs: nowMs,
       cooldownUntilMs: cooldown.cooldownUntilMs,
       expiresAtMs: requestExpiresAtMs,
@@ -18001,6 +18193,7 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
     const clan = {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
       name: name.display,
       normalizedName: name.normalized,
@@ -18035,6 +18228,7 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       clanId,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
       status: "active",
       objectives: [],
@@ -18340,6 +18534,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
       clanId,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       displayName: normalizePlayerName(profile.playerName || profile.displayName),
       flag: normalizeServerFlag(profile.flag, uid) || PLAYER_FLAG_CONFIG.createDeterministicFlag(uid),
       kingPower: Math.max(0, Math.floor(safeNumber(statsSnap.data()?.kingPower || profile.kingPower, 0))),
@@ -18693,7 +18888,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
       }, { merge: true });
       transaction.set(clanNameReservationRef(clan.normalizedName), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
       transaction.set(clanTagReservationRef(clan.normalizedTag), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
-      transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
+      transaction.delete(db.doc(`clanLeaderboards/${getRealmStorageId()}/entries/${clanId}`));
     } else {
       transaction.set(clanSnap.ref, { memberCount: nextCount, totalKingPower: nextPower, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       writeClanLeaderboard(transaction, clanId, clan, { memberCount: nextCount, totalKingPower: nextPower });
@@ -18974,7 +19169,7 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
       reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
+    transaction.delete(db.doc(`clanLeaderboards/${getRealmStorageId()}/entries/${clanId}`));
     writeClanAudit(transaction, clanId, uid, "clan_disbanded", {
       memberCount: membersSnap.size,
       applicationCount: applicationsSnap.size,
@@ -19386,7 +19581,7 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
   region: "us-central1",
   document: "players/{uid}",
   maxInstances: 20,
-}, async event => {
+}, withDocumentRealmShard(async event => {
   const uid = safeString(event.params?.uid, 128);
   const before = event.data?.before?.exists ? event.data.before.data() || {} : {};
   const after = event.data?.after?.exists ? event.data.after.data() || {} : {};
@@ -19468,13 +19663,13 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
     timestampToMs(before.clanIdentityUpdatedAtMs)
   ) || Date.now();
   await Promise.all(affectedClanIds.map(clanId => rebuildClanBenefitsAndMemberStats(clanId, effectiveAtMs)));
-});
+}));
 
 exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   region: "us-central1",
   document: "players/{uid}/stats/global",
   maxInstances: 20,
-}, async event => {
+}, withDocumentRealmShard(async event => {
   const uid = safeString(event.params?.uid, 128);
   const beforeStats = event.data?.before?.exists ? event.data.before.data() || {} : {};
   const afterStats = event.data?.after?.exists ? event.data.after.data() || {} : {};
@@ -19500,7 +19695,7 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
     transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, memberSnap.data()?.role), { merge: true });
     writeClanLeaderboard(transaction, clanId, clan, { totalKingPower });
   });
-});
+}));
 
 exports.createClanRally = timedCallable("createClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -19633,6 +19828,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       modelVersion: RALLY_MODEL_VERSION,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       clanId,
       status: RALLY_STATUS_FORMING,
       leaderUid: uid,
@@ -20042,6 +20238,7 @@ async function cancelClanRallyRequest(request) {
         status: "pending",
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         rallyId: rally.id,
         clanId: rally.clanId,
         contributorUid: participant.uid,
@@ -21455,7 +21652,7 @@ exports.applyDailyMissionEvent = onDocumentCreated({
   document: "dailyMissionEvents/{eventId}",
   maxInstances: 30,
   retry: true,
-}, async event => {
+}, withDocumentRealmShard(async event => {
   try {
     return await processDailyMissionEvent(event);
   } catch (error) {
@@ -21465,14 +21662,14 @@ exports.applyDailyMissionEvent = onDocumentCreated({
     });
     throw error;
   }
-});
+}));
 
 exports.applySeasonalAchievementEvent = onDocumentCreated({
   region: "us-central1",
   document: "dailyMissionEvents/{eventId}",
   maxInstances: 30,
   retry: true,
-}, async event => {
+}, withDocumentRealmShard(async event => {
   try {
     return await processSeasonalAchievementActionEvent(event);
   } catch (error) {
@@ -21482,15 +21679,15 @@ exports.applySeasonalAchievementEvent = onDocumentCreated({
     });
     throw error;
   }
-});
+}));
 
 exports.applySeasonalRealmAchievementEvent = onDocumentCreated({
   region: "us-central1",
-  document: "realmEvents/{resetGeneration}/activity/{eventId}",
+  document: "realmEvents/{realmStorageId}/activity/{eventId}",
   maxInstances: 20,
   retry: true,
-}, async event => {
-  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+}, withDocumentRealmShard(async event => {
+  if (safeString(event.data?.data()?.resetGeneration, 120) !== RESET_GENERATION) return null;
   try {
     return await processSeasonalAchievementRealmEvent(event);
   } catch (error) {
@@ -21500,7 +21697,7 @@ exports.applySeasonalRealmAchievementEvent = onDocumentCreated({
     });
     throw error;
   }
-});
+}));
 
 exports.evaluateSeasonalAchievementReigns = onSchedule({
   region: "us-central1",
@@ -21509,14 +21706,22 @@ exports.evaluateSeasonalAchievementReigns = onSchedule({
   timeoutSeconds: 120,
   maxInstances: 1,
 }, async () => {
-  const currentHolders = await db.collection(`crownCitadelReigns/${RESET_GENERATION}/entries`)
-    .where("isCurrentHolder", "==", true)
-    .limit(5)
-    .get();
-  const results = await Promise.allSettled(currentHolders.docs.map(doc => applyLongReignProgressForPlayer(doc.id, Date.now())));
-  const failed = results.filter(result => result.status === "rejected");
-  if (failed.length) throw failed[0].reason;
-  return { evaluated: results.length };
+  const shardResults = await runForCurrentRealmShards(async () => {
+    const currentHolders = await db.collection(`crownCitadelReigns/${getRealmStorageId()}/entries`)
+      .where("isCurrentHolder", "==", true)
+      .limit(5)
+      .get();
+    const results = await Promise.allSettled(
+      currentHolders.docs.map(doc => applyLongReignProgressForPlayer(doc.id, Date.now()))
+    );
+    const failed = results.filter(result => result.status === "rejected");
+    if (failed.length) throw failed[0].reason;
+    return { evaluated: results.length };
+  });
+  return {
+    shards: shardResults.length,
+    evaluated: shardResults.reduce((total, entry) => total + entry.result.evaluated, 0),
+  };
 });
 
 exports.cleanupExpiredDailyMissions = onSchedule({
@@ -23905,13 +24110,14 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           }, { merge: true });
         }
         const receiptRef = db.doc(
-          `reinforcementBattleReceipts/${RESET_GENERATION}/entries/${safeString(`${armyId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`
+          `reinforcementBattleReceipts/${getRealmStorageId()}/entries/${safeString(`${armyId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`
         );
         transaction.set(receiptRef, {
           id: receiptRef.id,
           status: "pending",
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
+          realmShardId: getCurrentRealmShardId(),
           armyId,
           battleId: currentBattleId,
           reinforcementId: entry.id,
@@ -24048,6 +24254,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         modelVersion: REINFORCEMENT_MODEL_VERSION,
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         ownerUid: attackerUid,
         ownerName: attackerName,
         ownerFlag: attackerProfile.flag || army.ownerFlag || null,
@@ -24205,6 +24412,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             status: "pending",
             worldId: ONLINE_WORLD_ID,
             resetGeneration: RESET_GENERATION,
+            realmShardId: getCurrentRealmShardId(),
             rallyId: rallyAttack.id,
             clanId: rallyAttack.clanId,
             armyId,
@@ -24762,6 +24970,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
               modelVersion: REINFORCEMENT_MODEL_VERSION,
               worldId: ONLINE_WORLD_ID,
               resetGeneration: RESET_GENERATION,
+              realmShardId: getCurrentRealmShardId(),
               ownerUid: entry.uid,
               ownerName: normalizePlayerName(contributorProfile.playerName || entry.ownerName, "Ruler"),
               ownerFlag: contributorProfile.flag || entry.ownerFlag || null,
@@ -24813,6 +25022,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             status: "pending",
             worldId: ONLINE_WORLD_ID,
             resetGeneration: RESET_GENERATION,
+            realmShardId: getCurrentRealmShardId(),
             rallyId: rallyAttack.id,
             clanId: rallyAttack.clanId,
             armyId,
@@ -26447,10 +26657,11 @@ function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
 async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "") {
   const safeTargetKey = safeString(targetKey, 180);
   if (!safeTargetKey) return { updated: 0, convertedToAttacks: 0, notificationsQueued: 0 };
-  const snapshot = await db.collection("armies")
+  const query = db.collection("armies")
     .where("targetKey", "==", safeTargetKey)
     .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  const snapshot = await scopeQueryToCurrentRealmShard(query)
     .where("status", "==", "active")
     .limit(400)
     .get();
@@ -26703,7 +26914,7 @@ async function reconcileClanReinforcementsForPlayer(uid = "") {
 function ownershipChangeRef(eventId = "") {
   const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
   return safeEventId
-    ? db.doc(`realmEvents/${RESET_GENERATION}/ownershipChanges/${safeEventId}`)
+    ? db.doc(`realmEvents/${getRealmStorageId()}/ownershipChanges/${safeEventId}`)
     : null;
 }
 
@@ -26729,6 +26940,7 @@ function writeOwnershipChangeEvent(transaction, {
     eventId: ref.id,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     releaseId: REALM_RELEASE_ID,
     targetType: normalizedTargetType,
     targetId: normalizedTargetId,
@@ -26922,7 +27134,7 @@ async function processOwnershipChangeEvent(event) {
   const snapshot = event.data;
   if (!snapshot?.exists) return null;
   const change = snapshot.data() || {};
-  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+  if (safeString(snapshot.data()?.resetGeneration, 120) !== RESET_GENERATION) return null;
   if (safeString(change.worldId, 120) !== ONLINE_WORLD_ID) return null;
   if (change.status === "processed") return null;
   const targetType = change.targetType === "camp" ? "camp" : "city";
@@ -26996,15 +27208,15 @@ async function processOwnershipChangeEvent(event) {
 
 exports.processOwnershipChange = onDocumentCreated({
   region: "us-central1",
-  document: "realmEvents/{resetGeneration}/ownershipChanges/{eventId}",
+  document: "realmEvents/{realmStorageId}/ownershipChanges/{eventId}",
   maxInstances: 20,
   retry: true,
-}, processOwnershipChangeEvent);
+}, withDocumentRealmShard(processOwnershipChangeEvent));
 
 async function settleReinforcementBattleReceipt(event) {
   const snapshot = event.data;
   if (!snapshot?.exists) return null;
-  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+  if (safeString(snapshot.data()?.resetGeneration, 120) !== RESET_GENERATION) return null;
   const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
   if (!contributorUid) return null;
   const nowMs = Date.now();
@@ -27130,14 +27342,14 @@ async function settleReinforcementBattleReceipt(event) {
 
 exports.settleReinforcementBattle = onDocumentCreated({
   region: "us-central1",
-  document: "reinforcementBattleReceipts/{resetGeneration}/entries/{receiptId}",
+  document: "reinforcementBattleReceipts/{realmStorageId}/entries/{receiptId}",
   maxInstances: 20,
   retry: true,
-}, settleReinforcementBattleReceipt);
+}, withDocumentRealmShard(settleReinforcementBattleReceipt));
 
 async function settleRallyCancellationReceipt(event) {
   const snapshot = event.data;
-  if (!snapshot?.exists || event.params?.resetGeneration !== RESET_GENERATION) return null;
+  if (!snapshot?.exists || safeString(snapshot.data()?.resetGeneration, 120) !== RESET_GENERATION) return null;
   const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
   if (!contributorUid) return null;
   const nowMs = Date.now();
@@ -27338,7 +27550,7 @@ async function settleRallyCancellationReceipt(event) {
 
 async function settleRallyBattleReceipt(event) {
   const snapshot = event.data;
-  if (!snapshot?.exists || event.params?.resetGeneration !== RESET_GENERATION) return null;
+  if (!snapshot?.exists || safeString(snapshot.data()?.resetGeneration, 120) !== RESET_GENERATION) return null;
   if (snapshot.data()?.receiptKind === "rally_cancel") {
     return settleRallyCancellationReceipt(event);
   }
@@ -27695,10 +27907,10 @@ async function settleRallyBattleReceipt(event) {
 
 exports.settleRallyBattle = onDocumentCreated({
   region: "us-central1",
-  document: "rallyBattleReceipts/{resetGeneration}/entries/{receiptId}",
+  document: "rallyBattleReceipts/{realmStorageId}/entries/{receiptId}",
   maxInstances: 20,
   retry: true,
-}, settleRallyBattleReceipt);
+}, withDocumentRealmShard(settleRallyBattleReceipt));
 
 function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
@@ -28546,6 +28758,7 @@ function getScheduledArmyTarget(doc = null) {
   if (!armyId || !routeRegionIds.length) return null;
   return {
     armyId,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(data.realmShardId),
     requestedRegions: [...new Set(routeRegionIds)],
     ownerUid: getOwnerUid(data),
     arrivesAtMs: Math.max(0, Math.floor(safeNumber(data.arrivesAtMs, 0))),
@@ -28643,7 +28856,7 @@ function getCitadelAssaultWaveAtMs(value = Date.now(), selectionPhase = false) {
 
 function citadelAssaultWaveRef(waveId = "") {
   const id = safeString(waveId, 40).replace(/[^a-zA-Z0-9_-]/g, "_");
-  return db.doc(`realmEvents/${RESET_GENERATION}/citadelAssaults/${id}`);
+  return db.doc(`realmEvents/${getRealmStorageId()}/citadelAssaults/${id}`);
 }
 
 function citadelAssaultTargetRef(waveId = "", cityId = "") {
@@ -28681,6 +28894,7 @@ function createCitadelAssaultIncomingView({ wave, city, ownerUid, selectedAtMs }
     id,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     releaseId: REALM_RELEASE_ID,
     eventKind: CITADEL_ASSAULT_EVENT_KIND,
     waveId: wave.id,
@@ -28731,6 +28945,7 @@ async function selectCitadelAssaultTargets(wave, nowMs = Date.now()) {
       eventKind: CITADEL_ASSAULT_EVENT_KIND,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
       regionId: CITADEL_ASSAULT_REGION_ID,
       scheduledAtMs: wave.scheduledAtMs,
@@ -28753,6 +28968,7 @@ async function selectCitadelAssaultTargets(wave, nowMs = Date.now()) {
         eventKind: CITADEL_ASSAULT_EVENT_KIND,
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         releaseId: REALM_RELEASE_ID,
         regionId: CITADEL_ASSAULT_REGION_ID,
         cityId: safeString(city.id, 96),
@@ -28996,12 +29212,13 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
       }
-      const reinforcementReceiptRef = db.doc(`reinforcementBattleReceipts/${RESET_GENERATION}/entries/${safeString(`${incomingId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
+      const reinforcementReceiptRef = db.doc(`reinforcementBattleReceipts/${getRealmStorageId()}/entries/${safeString(`${incomingId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
       transaction.set(reinforcementReceiptRef, {
         id: reinforcementReceiptRef.id,
         status: "pending",
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         armyId: incomingId,
         battleId: "",
         reinforcementId: entry.id,
@@ -29272,13 +29489,13 @@ async function reconcileReinforcementTargetCapacity(targetKey = "", nowMs = Date
 }
 
 async function reconcileReinforcementCapacity(nowMs = Date.now()) {
-  const markerRef = db.doc(`maintenance/reinforcementCapacity_${RESET_GENERATION}`);
+  const markerRef = db.doc(`maintenance/reinforcementCapacity_${getRealmStorageId()}`);
   const markerSnap = await markerRef.get();
   const marker = markerSnap.exists ? markerSnap.data() || {} : {};
   const buildQuery = (collectionName, cursor = "") => {
-    let query = db.collection(collectionName)
+    let query = scopeQueryToCurrentRealmShard(db.collection(collectionName)
       .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("worldId", "==", ONLINE_WORLD_ID))
       .orderBy(FieldPath.documentId())
       .limit(REINFORCEMENT_CAPACITY_RECONCILE_PAGE_SIZE);
     if (cursor) query = query.startAfter(cursor);
@@ -29323,6 +29540,7 @@ async function reconcileReinforcementCapacity(nowMs = Date.now()) {
     modelVersion: REINFORCEMENT_MODEL_VERSION,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     contributionCursor: contributionComplete ? "" : contributionsSnap.docs.at(-1)?.id || contributionCursor,
     armyCursor: armyComplete ? "" : armiesSnap.docs.at(-1)?.id || armyCursor,
     processedTargets: targetKeys.size,
@@ -29334,7 +29552,7 @@ async function reconcileReinforcementCapacity(nowMs = Date.now()) {
 }
 
 async function backfillActiveArmyVisibilityViews() {
-  const markerRef = db.doc(`serverConfig/armyTroopVisibilityV${ARMY_TROOP_VISIBILITY_VERSION}-${RESET_GENERATION}`);
+  const markerRef = db.doc(`serverConfig/armyTroopVisibilityV${ARMY_TROOP_VISIBILITY_VERSION}-${getRealmStorageId()}`);
   const markerSnap = await markerRef.get();
   const marker = markerSnap.exists ? markerSnap.data() || {} : {};
   if (
@@ -29345,10 +29563,10 @@ async function backfillActiveArmyVisibilityViews() {
     return { complete: true, processed: 0, cursor: safeString(marker.cursor, 96) };
   }
 
-  let query = db.collection("armies")
+  let query = scopeQueryToCurrentRealmShard(db.collection("armies")
     .where("status", "==", "active")
     .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("worldId", "==", ONLINE_WORLD_ID))
     .orderBy(FieldPath.documentId())
     .limit(ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE);
   const cursor = safeString(marker.cursor, 96);
@@ -29364,6 +29582,7 @@ async function backfillActiveArmyVisibilityViews() {
         army.status !== "active"
         || safeString(army.worldId, 128) !== ONLINE_WORLD_ID
         || safeString(army.resetGeneration, 128) !== RESET_GENERATION
+        || REALM_TOPOLOGY.normalizeRealmShardId(army.realmShardId) !== getCurrentRealmShardId()
       ) return;
       writeArmyMovementCopies(transaction, army, {
         previousTargetOwnerUid: army.targetOwnerUid,
@@ -29377,6 +29596,7 @@ async function backfillActiveArmyVisibilityViews() {
     version: ARMY_TROOP_VISIBILITY_VERSION,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     cursor: nextCursor,
     complete,
     processed: Math.max(0, Math.floor(safeNumber(marker.processed, 0))) + snapshot.size,
@@ -29388,7 +29608,7 @@ async function backfillActiveArmyVisibilityViews() {
 
 async function cleanupLegacyRewardCampPublicMetadata() {
   const markerRef = db.doc(
-    `privacyMigrations/${RESET_GENERATION}/entries/rewardCampPublicMetadataV1`
+    `privacyMigrations/${getRealmStorageId()}/entries/rewardCampPublicMetadataV1`
   );
   const markerSnap = await markerRef.get();
   if (markerSnap.exists && markerSnap.data()?.status === "complete") {
@@ -29414,6 +29634,7 @@ async function cleanupLegacyRewardCampPublicMetadata() {
     status: "complete",
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     campsChecked: campSnaps.length,
     campsCleaned: leakingCampSnaps.length,
     completedAtMs: Date.now(),
@@ -29423,6 +29644,33 @@ async function cleanupLegacyRewardCampPublicMetadata() {
   return { status: "complete", campsCleaned: leakingCampSnaps.length };
 }
 
+exports.activateMonthlyRealm = onSchedule({
+  region: "us-central1",
+  schedule: "0 0 1 * *",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, async event => {
+  const scheduledAtMs = Date.parse(event.scheduleTime || "") || Date.now();
+  const realm = await ensureCurrentRealmConfiguration(scheduledAtMs);
+  console.log("Crownlands monthly realm reconciled", realm);
+  return realm;
+});
+
+exports.reconcileRealmConfig = onCall(
+  { region: "us-central1", maxInstances: 5, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request, { allowRealmMismatch: true });
+    const token = request.auth?.token || {};
+    if (!token.admin && !token.developer && !token.statsAdmin) {
+      throw new HttpsError("permission-denied", "Admin access is required to reconcile realm configuration.");
+    }
+    const realm = await ensureCurrentRealmConfiguration(Date.now());
+    return { ok: true, reconciledByUid: uid, ...realm };
+  }
+);
+
 exports.maintainGameServer = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
@@ -29431,25 +29679,32 @@ exports.maintainGameServer = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const [
-    result,
-    armyVisibilityBackfill,
-    reinforcementCapacity,
-    reportHistoryCleanup,
-    rewardCampPrivacyCleanup,
-  ] = await Promise.all([
-    maintainGameServer(Date.now()),
-    backfillActiveArmyVisibilityViews(),
-    reconcileReinforcementCapacity(Date.now()),
-    cleanupExpiredReportDocuments(Date.now()),
-    cleanupLegacyRewardCampPublicMetadata(),
+  const nowMs = Date.now();
+  const [result, shardMaintenance] = await Promise.all([
+    maintainGameServer(nowMs),
+    runForCurrentRealmShards(async () => {
+      const [
+        armyVisibilityBackfill,
+        reinforcementCapacity,
+        reportHistoryCleanup,
+        rewardCampPrivacyCleanup,
+      ] = await Promise.all([
+        backfillActiveArmyVisibilityViews(),
+        reconcileReinforcementCapacity(nowMs),
+        cleanupExpiredReportDocuments(nowMs),
+        cleanupLegacyRewardCampPublicMetadata(),
+      ]);
+      return {
+        armyVisibilityBackfill,
+        reinforcementCapacity,
+        reportHistoryCleanup,
+        rewardCampPrivacyCleanup,
+      };
+    }, nowMs),
   ]);
   console.log("Crownlands realm capacity maintained", {
     ...result,
-    armyVisibilityBackfill,
-    reinforcementCapacity,
-    reportHistoryCleanup,
-    rewardCampPrivacyCleanup,
+    shardMaintenance,
   });
 });
 
@@ -29569,12 +29824,12 @@ exports.resolveDueArmyOrders = onSchedule({
 
     await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => {
       try {
-        const result = await resolveArmyOrderById({
+        const result = await runWithRealmShard(target.realmShardId, () => resolveArmyOrderById({
           armyId: target.armyId,
           requestedRegions: target.requestedRegions,
           callerUid: "",
           nowMs,
-        });
+        }));
         if (result?.status === "resolved") resolved += 1;
         else skipped += 1;
       } catch (error) {
@@ -29618,16 +29873,27 @@ exports.resolveDueArmyOrders = onSchedule({
 async function handleCitadelAssaultSelection(event) {
   const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
   const wave = getCitadelAssaultWaveAtMs(scheduledMs, true);
-  const result = await selectCitadelAssaultTargets(wave, Date.now());
-  console.log("Citadel assault targets selected", result);
+  const results = await runForCurrentRealmShards(
+    () => selectCitadelAssaultTargets(wave, Date.now()),
+    scheduledMs
+  );
+  console.log("Citadel assault targets selected", { waveId: wave.id, shards: results });
 }
 
 async function handleCitadelAssaultResolution(event) {
   const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
   const wave = getCitadelAssaultWaveAtMs(scheduledMs, false);
-  const result = await resolveCitadelAssaultWave(wave, Date.now());
-  console.log("Citadel assault wave resolved", result);
-  if (result.status === "partial") throw new Error(`Citadel assault wave ${wave.id} has ${result.failed} unresolved targets.`);
+  const results = await runForCurrentRealmShards(
+    () => resolveCitadelAssaultWave(wave, Date.now()),
+    scheduledMs
+  );
+  console.log("Citadel assault wave resolved", { waveId: wave.id, shards: results });
+  const partial = results.find(entry => entry.result.status === "partial");
+  if (partial) {
+    throw new Error(
+      `Citadel assault wave ${wave.id} has ${partial.result.failed} unresolved targets in ${partial.realmShardId}.`
+    );
+  }
 }
 
 exports.selectCitadelAssaultTargets = onSchedule({
@@ -29687,7 +29953,11 @@ exports.resolveDueRewardCampPayouts = onSchedule({
   let failed = 0;
   for (const campDoc of due.docs) {
     try {
-      const result = await resolveRewardCampPayoutAndStats(campDoc.ref, nowMs, "");
+      const realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(campDoc.data()?.realmShardId);
+      const result = await runWithRealmShard(
+        realmShardId,
+        () => resolveRewardCampPayoutAndStats(campDoc.ref, nowMs, "")
+      );
       if (result?.status === "paid") paid += 1;
       else {
         skipped += 1;

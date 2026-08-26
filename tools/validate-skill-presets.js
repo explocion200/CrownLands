@@ -220,7 +220,7 @@ assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfC
 assert.match(howToSource, /preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed Apply costs 1,000,000 gold[\s\S]*?never overwrites a preset automatically/i);
 const expectedBuild = "20260810-daily-mission-camp-fix-v1";
-const expectedRelease = "crownlands-2026-08-02-single-active-skill-preset-v1";
+const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Reset Skills is not using the configured 1,000,000-gold cost.");

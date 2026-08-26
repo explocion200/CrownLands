@@ -40,7 +40,7 @@ assert.doesNotMatch(writer, /liveMessage|Hear ye|All hail/, "The server stores p
 assert.match(api, /function subscribeRealmActivity[\s\S]*?realmEvents[\s\S]*?activity[\s\S]*?orderBy\("occurredAtMs", "desc"\)[\s\S]*?limit\(250\)/, "The bounded realtime Realm Activity subscription is missing.");
 assert.match(api, /snapshot\.docChanges\(\)/, "Realtime Realm Activity changes are not exposed for live announcements.");
 assert.match(api, /function markRealmAnnouncementSeen[\s\S]*?callServerFunction\("markRealmAnnouncementSeen"/, "The Realm announcement cursor callable is not exposed by the Firebase client.");
-assert.match(rules, /match \/realmEvents\/\{resetGeneration\}\/activity\/\{eventId\}[\s\S]*?allow read:[\s\S]*?signedIn\(\)[\s\S]*?allow create, update, delete: if false;/, "Realm Activity rules are not authenticated and server-owned.");
+assert.match(rules, /match \/realmEvents\/\{realmStorageId\}\/activity\/\{eventId\}[\s\S]*?allow read:[\s\S]*?signedIn\(\)[\s\S]*?realmStorageId == currentRealmStorageId\(\)[\s\S]*?allow create, update, delete: if false;/, "Realm Activity rules are not authenticated, shard-scoped, and server-owned.");
 assert.doesNotMatch(
   rules.slice(rules.indexOf("function validPlayerProfileUpdate"), rules.indexOf("function ownsCityOwnerIdentity")),
   /'realmAnnouncementSeenThroughMs'|'lastRealmAnnouncementEventId'/,
