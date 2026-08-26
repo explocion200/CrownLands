@@ -191,6 +191,7 @@ function createMapBenchmarkServer() {
       let gameSource = fs.readFileSync(path.join(ROOT_DIR, "game.js"), "utf8");
       gameSource = gameSource.replace("registerCrownlandsServiceWorker();", "/* Phase 0 benchmark: service worker registration disabled in loopback fixture. */");
       gameSource += fs.readFileSync(path.join(__dirname, "injected-runtime.js"), "utf8");
+      gameSource += fs.readFileSync(path.join(__dirname, "pickup-qa-runtime.js"), "utf8");
       send(response, 200, gameSource, "text/javascript; charset=utf-8");
       return;
     }

@@ -279,7 +279,8 @@ function sanitizeEconomyConfig(config = {}) {
       return [itemId, safe];
     })),
     pickups: {
-      spawnIntervalMinutes: cleanSectionNumber("pickups", "spawnIntervalMinutes", 0.1, 1440),
+      initialSpawnDelayMinutes: cleanSectionNumber("pickups", "initialSpawnDelayMinutes", 0.1, 1440),
+      respawnAfterCollectionMinutes: cleanSectionNumber("pickups", "respawnAfterCollectionMinutes", 0.1, 1440),
       expireMinutes: cleanSectionNumber("pickups", "expireMinutes", 0.1, 1440),
       goldAwardProductionMinutes: cleanSectionNumber("pickups", "goldAwardProductionMinutes", 0, 1440),
       troopAwardProductionMinutes: cleanSectionNumber("pickups", "troopAwardProductionMinutes", 0, 1440),

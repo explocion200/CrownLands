@@ -223,7 +223,9 @@ const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 50);
 const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 10) * 60;
 const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 10);
 const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = economyNumber("pickups.spawnIntervalMinutes", 3) * 60;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 3) * 60;
+const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 1) * 60;
+const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
 const REWARDED_AD_REWARD_MINUTES = 30;
@@ -7596,13 +7598,13 @@ function getHarvestNextSpawnAtMs(profile = {}, nowMs = Date.now()) {
   const explicit = timestampToMs(profile.harvestNextSpawnAtMs);
   if (explicit) return explicit;
   if (Number.isFinite(Number(profile.harvestSpawnTimer))) {
-    return nowMs + clampInt(profile.harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) * 1000;
+    return nowMs + clampInt(profile.harvestSpawnTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS) * 1000;
   }
-  return nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
+  return nowMs + HARVEST_BONUS_INITIAL_SPAWN_SECONDS * 1000;
 }
 
 function getHarvestSpawnTimerFromNextAt(nextSpawnAtMs = 0, nowMs = Date.now()) {
-  return clampInt(Math.ceil(Math.max(0, nextSpawnAtMs - nowMs) / 1000), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  return clampInt(Math.ceil(Math.max(0, nextSpawnAtMs - nowMs) / 1000), 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
 }
 
 function createHarvestBonusFromPayload(data = {}, uid = "", nowMs = Date.now()) {
@@ -13200,7 +13202,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
   }
   if (resolvedHarvestBonuses !== undefined) currentUser.harvestBonuses = enforceHarvestBonusActiveLimit(resolvedHarvestBonuses);
   if (harvestSpawnTimer !== undefined) {
-    currentUser.harvestSpawnTimer = clampInt(harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+    currentUser.harvestSpawnTimer = clampInt(harvestSpawnTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
   }
   if (resolvedHarvestNextSpawnAtMs) {
     currentUser.harvestNextSpawnAtMs = resolvedHarvestNextSpawnAtMs;
@@ -14684,7 +14686,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
     if (!bonus) throw new HttpsError("invalid-argument", "Pickup spawn location is invalid.");
     bonus.type = spawnType;
     const harvestBonuses = enforceHarvestBonusActiveLimit([...activeBonuses, bonus], nowMs);
-    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
+    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_RESPAWN_SECONDS * 1000;
     return writeProfileState({
       spawned: true,
       harvestBonuses,
@@ -14836,11 +14838,11 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
     const reward = getHarvestBonusReward(economy, type);
     daily = incrementHarvestDailyTracker(type, daily);
     const harvestBonuses = removeHarvestBonusFromProfile({ harvestBonuses: activeHarvestBonuses }, bonusId);
-    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
+    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_RESPAWN_SECONDS * 1000;
     const profileOverrides = {
       daily,
       harvestBonuses,
-      harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
+      harvestSpawnTimer: HARVEST_BONUS_RESPAWN_SECONDS,
       harvestNextSpawnAtMs,
       harvestNextBonusType: type === "troops" ? "gold" : "troops",
     };
@@ -16111,8 +16113,8 @@ function createFreshResetPlayerProfile({
     dailyLoginReward: createDefaultDailyLoginRewardState(),
     daily: normalizeDaily({}, new Date(nowMs)),
     harvestBonuses: [],
-    harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
-    harvestNextSpawnAtMs: nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000,
+    harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    harvestNextSpawnAtMs: nowMs + HARVEST_BONUS_INITIAL_SPAWN_SECONDS * 1000,
     harvestNextBonusType: "gold",
     scoutReports: {},
     battleReports: [],

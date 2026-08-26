@@ -322,10 +322,12 @@ async function main() {
   for (const scenario of scenarios) {
     for (const type of ["gold", "troops"]) {
       const pickupId = await configureScenario(scenario, type);
+      const collectionStartedAtMs = Date.now();
       const result = await callFunction("collectHarvestBonus", user.token, {
         bonusId: pickupId,
         type,
       });
+      const collectionCompletedAtMs = Date.now();
       const expectedRaw = {
         gold: baseGoldPerHourForLevel(scenario.mainLevel || baseLevel)
           + (scenario.secondCityOwned ? baseGoldPerHourForLevel(secondCityLevel) : 0),
@@ -340,6 +342,33 @@ async function main() {
       assert(
         Number(result.reward) === expectedReward,
         `${scenario.name} ${type} pickup used a boosted rate: ${result.reward}; expected raw ${expectedReward}.`
+      );
+      const respawnSeconds = Number(economyConfig.pickups?.respawnAfterCollectionMinutes || 1) * 60;
+      const nextSpawnAtMs = Number(result.currentUser?.harvestNextSpawnAtMs || result.harvestNextSpawnAtMs);
+      assert(
+        Number(result.currentUser?.harvestSpawnTimer) === respawnSeconds,
+        `${scenario.name} ${type} pickup did not return the ${respawnSeconds}-second collection respawn timer.`
+      );
+      assert(
+        nextSpawnAtMs >= collectionStartedAtMs + respawnSeconds * 1000
+          && nextSpawnAtMs <= collectionCompletedAtMs + respawnSeconds * 1000,
+        `${scenario.name} ${type} pickup did not anchor its next spawn deadline to the successful server collection.`
+      );
+      const storedAfterCollection = (await profileRef.get()).data() || {};
+      const storedNextSpawnAtMs = typeof storedAfterCollection.harvestNextSpawnAtMs?.toMillis === "function"
+        ? storedAfterCollection.harvestNextSpawnAtMs.toMillis()
+        : Number(storedAfterCollection.harvestNextSpawnAtMs);
+      assert(
+        storedNextSpawnAtMs === nextSpawnAtMs,
+        `${scenario.name} ${type} pickup did not persist its collection deadline for refresh and reconnect recovery.`
+      );
+      assert(
+        Number(storedAfterCollection.harvestSpawnTimer) === respawnSeconds,
+        `${scenario.name} ${type} pickup did not persist its one-minute timer.`
+      );
+      assert(
+        !(storedAfterCollection.harvestBonuses || []).some(bonus => bonus.id === pickupId),
+        `${scenario.name} ${type} pickup remained active after its successful collection.`
       );
       assert(
         Number(stats.baseGoldPerHour) === expectedRaw.gold,
@@ -379,8 +408,93 @@ async function main() {
     }
   }
 
+  async function assertRejectedCollectionPreservesPickup({ name, bonusId, type = "gold", deadlineMs, timerSeconds }) {
+    let rejected = false;
+    try {
+      await callFunction("collectHarvestBonus", user.token, { bonusId, type });
+    } catch (error) {
+      rejected = /failed-precondition|pickup expired|limit reached/i.test(String(error?.message || error));
+    }
+    assert(rejected, `${name} collection was not rejected by the authoritative endpoint.`);
+    const profile = (await profileRef.get()).data() || {};
+    const storedDeadline = typeof profile.harvestNextSpawnAtMs?.toMillis === "function"
+      ? profile.harvestNextSpawnAtMs.toMillis()
+      : Number(profile.harvestNextSpawnAtMs);
+    assert(storedDeadline === deadlineMs, `${name} collection changed the existing pickup deadline.`);
+    assert(Number(profile.harvestSpawnTimer) === timerSeconds, `${name} collection changed the existing pickup timer.`);
+    return profile;
+  }
+
+  const failureTimerSeconds = 47;
+  const missingPickupId = await configureScenario({ name: "missing pickup rejection" }, "gold");
+  const missingDeadlineMs = Date.now() + 47_000;
+  await profileRef.set({
+    harvestSpawnTimer: failureTimerSeconds,
+    harvestNextSpawnAtMs: missingDeadlineMs,
+  }, { merge: true });
+  const missingProfile = await assertRejectedCollectionPreservesPickup({
+    name: "Missing pickup",
+    bonusId: `${missingPickupId}-unknown`,
+    deadlineMs: missingDeadlineMs,
+    timerSeconds: failureTimerSeconds,
+  });
+  assert(
+    (missingProfile.harvestBonuses || []).some(bonus => bonus.id === missingPickupId),
+    "A failed missing-pickup claim removed the active pickup."
+  );
+
+  const cappedPickupId = await configureScenario({ name: "daily cap rejection" }, "gold");
+  const cappedDeadlineMs = Date.now() + 48_000;
+  await profileRef.set({
+    daily: {
+      date: new Date().toISOString().slice(0, 10),
+      neutralCaptures: 0,
+      harvestedBonuses: Number(economyConfig.pickups.dailyGoldCap),
+      harvestedGoldBonuses: Number(economyConfig.pickups.dailyGoldCap),
+      harvestedTroopBonuses: 0,
+    },
+    harvestSpawnTimer: 48,
+    harvestNextSpawnAtMs: cappedDeadlineMs,
+  }, { merge: true });
+  const cappedProfile = await assertRejectedCollectionPreservesPickup({
+    name: "Daily-cap",
+    bonusId: cappedPickupId,
+    deadlineMs: cappedDeadlineMs,
+    timerSeconds: 48,
+  });
+  assert(
+    (cappedProfile.harvestBonuses || []).some(bonus => bonus.id === cappedPickupId),
+    "A daily-cap rejection removed the active pickup."
+  );
+
+  const expiredPickupId = await configureScenario({ name: "expired pickup rejection" }, "gold");
+  const expiredDeadlineMs = Date.now() + 49_000;
+  const expiredCreatedAtMs = Date.now() - (Number(economyConfig.pickups.expireMinutes) * 60 + 2) * 1000;
+  await profileRef.set({
+    harvestBonuses: [{
+      id: expiredPickupId,
+      type: "gold",
+      regionId: mainRegionId,
+      x: 500,
+      y: 500,
+      createdAtMs: expiredCreatedAtMs,
+    }],
+    harvestSpawnTimer: 49,
+    harvestNextSpawnAtMs: expiredDeadlineMs,
+  }, { merge: true });
+  const expiredProfile = await assertRejectedCollectionPreservesPickup({
+    name: "Expired pickup",
+    bonusId: expiredPickupId,
+    deadlineMs: expiredDeadlineMs,
+    timerSeconds: 49,
+  });
+  assert(
+    (expiredProfile.harvestBonuses || []).some(bonus => bonus.id === expiredPickupId),
+    "An expired-claim rejection mutated the stored pickup before the normal cleanup path."
+  );
+
   console.log(
-    "Emulator harvest pickup rewards passed: raw city rates stay authoritative across skills, Gear, objectives, clan sharing, timed items, stacking, and normal-city growth."
+    "Emulator harvest pickup rewards passed: raw city rates stay authoritative, successful claims start the one-minute timer, and rejected claims preserve pickup state and deadlines."
   );
 }
 

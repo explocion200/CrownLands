@@ -10,7 +10,10 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
 const root = path.resolve(__dirname, "..");
 const productionGame = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const benchmarkEarlySource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "early-instrumentation.js"), "utf8");
 const benchmarkMockSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "mock-firebase.js"), "utf8");
+const benchmarkRuntimeSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "injected-runtime.js"), "utf8");
+const pickupQaSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "pickup-qa-runtime.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 assert.equal(BENCHMARK_SEED, "crownlands-map-phase-0-v1");
@@ -35,12 +38,32 @@ for (const [id, [cityCount, marchCount]] of Object.entries(expected)) {
   assert.equal(first.scenario.marchCount, marchCount);
   assert.equal(first.primaryRegionId, "region_11");
   assert.equal(first.neighborRegionId, "region_6");
+  const mapIds = first.mapData.maps.map(map => map.id);
+  assert.deepEqual(Object.keys(first.citiesByRegion).sort(), [...mapIds].sort(), `Scenario ${id} does not expose city fixtures for every map.`);
+  assert.deepEqual(Object.keys(first.campsByRegion).sort(), [...mapIds].sort(), `Scenario ${id} does not expose camp fixtures for every map.`);
 }
 
-for (const file of ["early-instrumentation.js", "injected-runtime.js", "mock-firebase.js", "server.js"]) {
+for (const file of ["early-instrumentation.js", "injected-runtime.js", "mock-firebase.js", "pickup-qa-runtime.js", "server.js"]) {
   const source = fs.readFileSync(path.join(root, "tools", "map-benchmark", file), "utf8");
   assert.ok(source.includes("127.0.0.1"), `${file} does not contain its loopback safety gate.`);
 }
+assert.match(pickupQaSource, /query\.get\("pickupQa"\) !== "true"/, "Pickup QA must require its explicit development query flag.");
+assert.match(pickupQaSource, /runAllMaps/, "Pickup QA must retain its all-map sweep.");
+assert.match(pickupQaSource, /runLifecycleChecks/, "Pickup QA must retain timer, legacy, expiry, duplicate, and relocation coverage.");
+assert.match(benchmarkRuntimeSource, /getPickupSoakState/, "The loopback benchmark must expose pickup soak diagnostics.");
+assert.match(benchmarkRuntimeSource, /preparePickupSoak/, "The loopback benchmark must expose a fresh pickup timer setup.");
+assert.match(benchmarkRuntimeSource, /advancePickupSoakTimer/, "The loopback benchmark must expose a deterministic pickup timer advance.");
+assert.match(benchmarkRuntimeSource, /dataset\.pickupSoakState/, "Pickup soak diagnostics must be observable without changing gameplay camera state.");
+assert.match(benchmarkRuntimeSource, /pickupSoakDelay/, "The loopback benchmark must support a query-gated ordinary-play pickup setup.");
+assert.match(benchmarkRuntimeSource, /rawPickupSoakDelay === null \? Number\.NaN/, "A missing soak delay must not reset pickup state during refresh testing.");
+assert.match(benchmarkRuntimeSource, /pickupSoakRegion/, "The loopback benchmark must support pickup relocation checks without focusing the pickup camera.");
+assert.match(benchmarkRuntimeSource, /centerFraction/, "Pickup soak diagnostics must report center bias without moving the camera.");
+assert.match(benchmarkMockSource, /benchmarkProfileStorageKey/, "The loopback Firebase mock must preserve pickup state across same-tab reloads for soak testing.");
+assert.match(benchmarkMockSource, /loadGameSnapshot:\s*async \(\) => readStoredProfile\(\)/, "The loopback Firebase mock must restore its saved gameplay snapshot after a reload.");
+assert.match(benchmarkMockSource, /storedProfile:\s*readStoredProfile\(\)/, "Pickup soak diagnostics must report the profile persisted by the loopback Firebase mock.");
+assert.match(benchmarkEarlySource, /pickupSoakClock/, "The loopback benchmark must support a reload-stable clock for pickup soak testing.");
+assert.ok(!productionGame.includes("pickup-qa-panel"), "Pickup QA controls leaked into production game.js.");
+assert.ok(!productionGame.includes("getPickupSoakState"), "Pickup soak diagnostics leaked into production game.js.");
 
 function createBenchmarkMockSandbox(fixture, hostname = "127.0.0.1") {
   let networkRequests = 0;
@@ -100,6 +123,9 @@ async function validateBenchmarkServerAssetBase() {
       /<base id="crownlandsBase" href="\/" \/>/,
       "The benchmark page did not resolve production assets from the loopback root."
     );
+    const gameResponse = await fetch(`${address.url}/__benchmark__/game.js?scenario=A&pickupQa=true`);
+    assert.equal(gameResponse.status, 200, "The benchmark game bundle was not served.");
+    assert.match(await gameResponse.text(), /installCrownlandsPickupQaRuntime/, "The loopback bundle did not include pickup QA diagnostics.");
   } finally {
     await server.close();
   }

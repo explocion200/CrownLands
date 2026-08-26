@@ -1529,8 +1529,8 @@ input {
 }
 .harvest-bonus-node {
   position: absolute;
-  width: 66px;
-  height: 66px;
+  width: var(--map-hit-size, 66px);
+  height: var(--map-hit-size, 66px);
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
