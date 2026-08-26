@@ -14,6 +14,27 @@
   }
   const benchmarkMainCityId = benchmarkMainCity.id;
   const benchmarkMainIslandId = `${fixture.releaseConfig.worldId}-${benchmarkMainRegionId}`;
+  const benchmarkProfileStorageKey = `crownlands-benchmark-profile-${fixture.benchmarkSeed}-${fixture.scenario.id}`;
+
+  function readStoredProfile() {
+    try {
+      const raw = window.sessionStorage?.getItem(benchmarkProfileStorageKey);
+      return raw ? JSON.parse(raw) : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function writeStoredProfile(profile = null) {
+    if (!profile || typeof profile !== "object") return false;
+    try {
+      const merged = { ...(readStoredProfile() || {}), ...profile };
+      window.sessionStorage?.setItem(benchmarkProfileStorageKey, JSON.stringify(merged));
+      return true;
+    } catch (_error) {
+      return false;
+    }
+  }
 
   const activeListeners = new Map();
   const lifecycle = [];
@@ -165,8 +186,9 @@
       mainCityAssignmentVersion: 2,
       gold: 5000000,
       lastSeenAtMs: fixture.fixedEpochMs,
+      ...(readStoredProfile() || {}),
     }),
-    loadGameSnapshot: async () => null,
+    loadGameSnapshot: async () => readStoredProfile(),
     loadPlayerGlobalStats: async () => ({ victories: 12, defeats: 3, citiesCaptured: 20 }),
     loadIslandCitySummary: async islandId => {
       const regionId = regionIdFromIsland(islandId);
@@ -269,8 +291,8 @@
       writes.push({ atMs: Date.now(), source: "presence", islandId, payloadSize: JSON.stringify(payload || {}).length });
       return true;
     },
-    saveGameSnapshot: async () => true,
-    savePlayerProfile: async () => true,
+    saveGameSnapshot: async profile => writeStoredProfile(profile),
+    savePlayerProfile: async profile => writeStoredProfile(profile),
     savePlayerCities: async () => true,
     saveCityState: async () => true,
     saveKingPowerLeaderboardEntry: async () => true,
@@ -299,6 +321,7 @@
         lifecycle: [...lifecycle],
         eventTraffic: [...eventTraffic],
         writes: [...writes],
+        storedProfile: readStoredProfile(),
       };
     },
     __closeBaselineListeners() {

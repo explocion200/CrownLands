@@ -149,6 +149,23 @@ function createCampSnapshots(camps) {
   }));
 }
 
+function createRegionCitySnapshots(map, { playerOwnedCount = 0 } = {}) {
+  return (map?.cities || []).map((city, index) => {
+    const playerOwned = index < playerOwnedCount;
+    return {
+      id: city.id,
+      ownerKind: playerOwned ? "player" : "neutral",
+      ownerUid: playerOwned ? "benchmark-player" : "",
+      ownerName: playerOwned ? "Benchmark Ruler" : "",
+      level: 1 + index % 20,
+      troops: 2500 + index * 125,
+      troopFloat: 2500 + index * 125,
+      isMainCity: false,
+      updatedAtMs: FIXED_EPOCH_MS,
+    };
+  });
+}
+
 function createFixture(scenarioId = "A") {
   const scenario = SCENARIOS[String(scenarioId || "A").toUpperCase()] || SCENARIOS.A;
   const mapData = loadMapEditorData();
@@ -165,17 +182,16 @@ function createFixture(scenarioId = "A") {
   primaryMap.camps = campDefinitions;
   primaryMap.objectives = [];
 
-  const neighborSnapshots = (neighborMap.cities || []).map((city, index) => ({
-    id: city.id,
-    ownerKind: index < 3 ? "player" : "neutral",
-    ownerUid: index < 3 ? "benchmark-player" : "",
-    ownerName: index < 3 ? "Benchmark Ruler" : "",
-    level: 1 + index % 20,
-    troops: 2500 + index * 125,
-    troopFloat: 2500 + index * 125,
-    isMainCity: false,
-    updatedAtMs: FIXED_EPOCH_MS,
-  }));
+  const citiesByRegion = Object.fromEntries(mapData.maps.map(map => [
+    map.id,
+    map.id === PRIMARY_REGION_ID
+      ? createCitySnapshots(cityDefinitions)
+      : createRegionCitySnapshots(map, { playerOwnedCount: map.id === NEIGHBOR_REGION_ID ? 3 : 0 }),
+  ]));
+  const campsByRegion = Object.fromEntries(mapData.maps.map(map => [
+    map.id,
+    map.id === PRIMARY_REGION_ID ? createCampSnapshots(campDefinitions) : [],
+  ]));
 
   return {
     schemaVersion: 1,
@@ -191,14 +207,8 @@ function createFixture(scenarioId = "A") {
     },
     releaseConfig,
     mapData,
-    citiesByRegion: {
-      [PRIMARY_REGION_ID]: createCitySnapshots(cityDefinitions),
-      [NEIGHBOR_REGION_ID]: neighborSnapshots,
-    },
-    campsByRegion: {
-      [PRIMARY_REGION_ID]: createCampSnapshots(campDefinitions),
-      [NEIGHBOR_REGION_ID]: [],
-    },
+    citiesByRegion,
+    campsByRegion,
   };
 }
 

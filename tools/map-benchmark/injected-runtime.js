@@ -838,6 +838,87 @@
     };
   }
 
+  function getPickupSoakState() {
+    const daily = ensureDailyCaptureTracker();
+    const bonuses = getAllActiveHarvestBonuses();
+    const storedProfile = getOnlineApi()?.__getBenchmarkTelemetry?.().storedProfile || null;
+    return {
+      nowMs: Date.now(),
+      activeRegionId: getActiveMapRegionId(),
+      onlineWorldLoading: Boolean(onlineWorldLoading),
+      gamePaused: Boolean(isGamePausedByOutcome()),
+      serverAuthority: Boolean(usesServerEconomyAuthority()),
+      serverSpawnApiAvailable: Boolean(getOnlineApi()?.reserveHarvestBonusSpawn),
+      spawnRequestInFlight: Boolean(harvestSpawnRequestInFlight),
+      relocationRetryAtMs: Math.max(0, Number(harvestRelocationRetryAtMs) || 0),
+      delaySeconds: getHarvestSpawnDelaySeconds(),
+      nextSpawnAtMs: normalizeTimestampMs(state?.harvestNextSpawnAtMs),
+      activeCount: bonuses.length,
+      bonuses: bonuses.map(bonus => {
+        const regionId = normalizeRegionId(bonus.regionId);
+        const bounds = getIslandMapBounds(regionId);
+        const centerX = bounds.left + bounds.width / 2;
+        const centerY = bounds.top + bounds.height / 2;
+        const shortestDimension = Math.max(1, Math.min(bounds.width, bounds.height));
+        return {
+          id: bonus.id,
+          type: bonus.type,
+          regionId,
+          x: bonus.x,
+          y: bonus.y,
+          centerFraction: Number((Math.hypot(bonus.x - centerX, bonus.y - centerY) / shortestDimension).toFixed(4)),
+          terrainSafe: isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, regionId),
+          citiesSafe: isHarvestBonusFarFromCities(bonus.x, bonus.y, regionId),
+          campsSafe: isHarvestBonusFarFromCamps(bonus.x, bonus.y, regionId),
+          transitionsSafe: isHarvestBonusFarFromTransitions(bonus.x, bonus.y, regionId),
+        };
+      }),
+      daily: {
+        total: daily.harvestedBonuses,
+        gold: daily.harvestedGoldBonuses,
+        troops: daily.harvestedTroopBonuses,
+      },
+      storedProfile: storedProfile ? {
+        nextSpawnAtMs: normalizeTimestampMs(storedProfile.harvestNextSpawnAtMs),
+        activeCount: normalizeHarvestBonuses(storedProfile.harvestBonuses).length,
+        dailyTotal: normalizeDailyCaptureTracker(storedProfile.daily).harvestedBonuses,
+      } : null,
+    };
+  }
+
+  function preparePickupSoak({
+    delaySeconds = HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    clearDaily = true,
+  } = {}) {
+    state.harvestBonuses = [];
+    if (clearDaily) {
+      const daily = ensureDailyCaptureTracker();
+      daily.harvestedBonuses = 0;
+      daily.harvestedGoldBonuses = 0;
+      daily.harvestedTroopBonuses = 0;
+    }
+    setHarvestSpawnDelay(delaySeconds);
+    harvestRelocationRetryAtMs = 0;
+    centerOnRegion(getActiveMapRegionId());
+    renderHarvestBonuses();
+    updateCameraTransform();
+    return getPickupSoakState();
+  }
+
+  function advancePickupSoakTimer() {
+    setHarvestSpawnDelay(0);
+    updateHarvestBonuses();
+    renderHarvestBonuses();
+    return getPickupSoakState();
+  }
+
+  function publishPickupSoakState() {
+    document.documentElement.dataset.pickupSoakState = JSON.stringify(getPickupSoakState());
+  }
+
+  window.setInterval(publishPickupSoakState, 250);
+  publishPickupSoakState();
+
   const publicApi = {
     fixture: {
       benchmarkSeed: fixture.benchmarkSeed,
@@ -854,6 +935,9 @@
     switchNeighborAndReturn,
     resetMapPickerInputTelemetry,
     getMapPickerInputTelemetry,
+    getPickupSoakState,
+    preparePickupSoak,
+    advancePickupSoakTimer,
     setVisualMarchCount,
     showVisualMissionKinds,
     setHudOperationState,
@@ -885,9 +969,21 @@
         : MIN_ZOOM;
       centerOnRegion(fixture.primaryRegionId);
       renderAll();
+      const rawPickupSoakDelay = new URLSearchParams(location.search).get("pickupSoakDelay");
+      const requestedPickupSoakDelay = rawPickupSoakDelay === null ? Number.NaN : Number(rawPickupSoakDelay);
+      if (Number.isFinite(requestedPickupSoakDelay)) {
+        preparePickupSoak({ delaySeconds: requestedPickupSoakDelay });
+        if (requestedPickupSoakDelay <= 0) advancePickupSoakTimer();
+      }
+      const requestedPickupSoakRegion = normalizeRegionId(new URLSearchParams(location.search).get("pickupSoakRegion"));
+      if (requestedPickupSoakRegion && requestedPickupSoakRegion !== getActiveMapRegionId()) {
+        await switchOnlineIsland(requestedPickupSoakRegion, { fromMapPicker: true });
+        await waitForMapInteractionReady();
+      }
       await wait(600);
       benchmarkState.status = "ready";
       document.documentElement.dataset.crownlandsBenchmarkReady = "true";
+      publishPickupSoakState();
     } catch (error) {
       benchmarkState.status = "error";
       benchmarkState.error = error?.stack || error?.message || String(error);

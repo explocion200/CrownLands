@@ -16,7 +16,35 @@
     clearInterval: window.clearInterval.bind(window),
   };
   const startedAt = performance.now();
-  Date.now = () => bootstrap.fixedEpochMs + Math.floor(performance.now() - startedAt);
+  const preservePickupSoakClock = new URLSearchParams(location.search).get("pickupSoakClock") === "true";
+  const pickupSoakClockStorageKey = `crownlands-benchmark-clock-${bootstrap.benchmarkSeed}`;
+  let benchmarkClockBaseMs = bootstrap.fixedEpochMs;
+  if (preservePickupSoakClock) {
+    try {
+      const storedClock = JSON.parse(window.sessionStorage?.getItem(pickupSoakClockStorageKey) || "null");
+      if (Number.isFinite(storedClock?.clockMs) && Number.isFinite(storedClock?.nativeMs)) {
+        benchmarkClockBaseMs = Math.max(
+          bootstrap.fixedEpochMs,
+          storedClock.clockMs + Math.max(0, native.dateNow() - storedClock.nativeMs)
+        );
+      }
+    } catch (_error) {
+      benchmarkClockBaseMs = bootstrap.fixedEpochMs;
+    }
+  }
+  Date.now = () => benchmarkClockBaseMs + Math.floor(performance.now() - startedAt);
+  if (preservePickupSoakClock) {
+    native.setInterval(() => {
+      try {
+        window.sessionStorage?.setItem(pickupSoakClockStorageKey, JSON.stringify({
+          clockMs: Date.now(),
+          nativeMs: native.dateNow(),
+        }));
+      } catch (_error) {
+        // Session persistence is a soak-test convenience; benchmark execution remains usable without it.
+      }
+    }, 250);
+  }
 
   const activeTimeouts = new Map();
   const activeIntervals = new Map();

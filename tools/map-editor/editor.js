@@ -1296,7 +1296,8 @@
           <p>Award production minutes multiply the player's permanent production rate. Daily caps reset at UTC midnight.</p>
         </div>
         <div class="economy-grid">
-          ${economyNumberInput("pickups.spawnIntervalMinutes", "Spawn timer (minutes)", economy.pickups.spawnIntervalMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.initialSpawnDelayMinutes", "Initial spawn delay (minutes)", economy.pickups.initialSpawnDelayMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.respawnAfterCollectionMinutes", "Respawn after collection (minutes)", economy.pickups.respawnAfterCollectionMinutes, { step: 0.1 })}
           ${economyNumberInput("pickups.expireMinutes", "Pickup expires after (minutes)", economy.pickups.expireMinutes, { step: 0.1 })}
           ${economyNumberInput("pickups.goldAwardProductionMinutes", "Gold award production (minutes)", economy.pickups.goldAwardProductionMinutes, { step: 0.1 })}
           ${economyNumberInput("pickups.troopAwardProductionMinutes", "Troop award production (minutes)", economy.pickups.troopAwardProductionMinutes, { step: 0.1 })}
@@ -3042,7 +3043,8 @@
       if (item.bonus && Number(config.bonusPercent) < 0) results.push({ level: "error", text: `${item.label} bonus cannot be negative.` });
     });
     const pickups = economy.pickups || {};
-    if (Number(pickups.spawnIntervalMinutes) <= 0) results.push({ level: "error", text: "Pickup spawn timer must be positive." });
+    if (Number(pickups.initialSpawnDelayMinutes) <= 0) results.push({ level: "error", text: "Pickup initial spawn delay must be positive." });
+    if (Number(pickups.respawnAfterCollectionMinutes) <= 0) results.push({ level: "error", text: "Pickup collection respawn delay must be positive." });
     if (Number(pickups.goldAwardProductionMinutes) <= 0 || Number(pickups.troopAwardProductionMinutes) <= 0) {
       results.push({ level: "error", text: "Pickup production awards must be positive." });
     }

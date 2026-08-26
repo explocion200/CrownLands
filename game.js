@@ -880,8 +880,9 @@ const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = economyNumber("pickups.spawnIntervalMinutes", 3) * 60;
-const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 3) * 60;
+const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 1) * 60;
+const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
 const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 10) * 60;
@@ -894,8 +895,9 @@ const HARVEST_BONUS_TRANSITION_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
 const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const HARVEST_BONUS_LAND_CLEARANCE = 64;
-const HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE = 170;
-const HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE = 420;
+const HARVEST_BONUS_CENTER_SEARCH_FRACTIONS = [0.15, 0.25, 0.35];
+const HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE = 300;
+const HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 const HARVEST_BONUS_STRONGHOLD_CLEARANCE_EXTRA = 72;
 const HARVEST_BONUS_CAMP_CLEARANCE_EXTRA = 64;
 const HARVEST_BONUS_SERVER_RETRY_SECONDS = 5;
@@ -1034,12 +1036,16 @@ const SKILL_CONFIG = {
 };
 
 const SKILL_ORDER = ["swordmastery", "shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
+const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
+const SKILL_STANDARD_POINT_COST = 1;
+const SKILL_FINAL_POINT_COST = 2;
+const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const SKILL_GROUPS = Object.freeze([
   Object.freeze({ id: "attack", label: "Attack", skills: Object.freeze(["swordmastery", "marchOrders", "fieldMedics"]) }),
   Object.freeze({ id: "defense", label: "Defense", skills: Object.freeze(["shieldwallDiscipline", "stoneworks"]) }),
   Object.freeze({ id: "utility", label: "Utility", skills: Object.freeze(["taxStewardship", "royalGranaries", "guildCharters"]) }),
 ]);
-const SKILL_PRESET_MODEL_VERSION = 4;
+const SKILL_PRESET_MODEL_VERSION = 5;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 25 }),
@@ -5041,7 +5047,7 @@ function newGame(playerName) {
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
     skillPresets: createDefaultSkillPresets(),
-    freeSkillResetGrantVersion: 0,
+    freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
     gear: normalizeCommonGearState(),
@@ -5640,6 +5646,26 @@ function normalizeSkillUpgradeLevel(skill = "", value = 0) {
   return Math.min(Math.max(0, Math.floor(Number(value) || 0)), getSkillMaxLevel(skill));
 }
 
+function getSkillPointCost(skill = "", currentLevel = 0) {
+  const maxLevel = getSkillMaxLevel(skill);
+  const level = normalizeSkillUpgradeLevel(skill, currentLevel);
+  if (level >= maxLevel) return 0;
+  const nextLevel = level + 1;
+  const finalTierStart = Math.max(1, maxLevel - SKILL_FINAL_DOUBLE_COST_LEVELS + 1);
+  return nextLevel >= finalTierStart ? SKILL_FINAL_POINT_COST : SKILL_STANDARD_POINT_COST;
+}
+
+function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
+  const startLevel = normalizeSkillUpgradeLevel(skill, currentLevel);
+  const requestedLevels = Math.max(0, Math.floor(Number(levels) || 0));
+  const maximumLevels = Math.max(0, getSkillMaxLevel(skill) - startLevel);
+  let total = 0;
+  for (let offset = 0; offset < Math.min(requestedLevels, maximumLevels); offset += 1) {
+    total += getSkillPointCost(skill, startLevel + offset);
+  }
+  return total;
+}
+
 function normalizeUpgrades(upgrades, sourceVersion = 6) {
   const normalized = createDefaultSkills();
 
@@ -5723,7 +5749,7 @@ function normalizeSkillPresets(value = {}) {
       name: normalizeSkillPresetName(raw.name, definition.slot),
       saved,
       upgrades,
-      spentPoints: saved ? SKILL_ORDER.reduce((total, skill) => total + upgrades[skill], 0) : 0,
+      spentPoints: saved ? getSpentSkillPoints(upgrades) : 0,
       savedAtMs: saved ? normalizeTimestampMs(raw.savedAtMs) : 0,
     };
   });
@@ -5768,7 +5794,7 @@ function isValidLocalSkillPresetAllocation(upgrades = null, character = state?.c
       || Math.floor(rawLevel) !== rawLevel
       || allocation[skill] > getSkillMaxLevel(skill);
   });
-  const spent = SKILL_ORDER.reduce((total, skill) => total + allocation[skill], 0);
+  const spent = getSpentSkillPoints(allocation);
   return !invalid && spent <= getEarnedSkillPoints(character);
 }
 
@@ -6056,7 +6082,9 @@ function getEarnedSkillPoints(character = state?.character) {
 
 function getSpentSkillPoints(upgrades = state?.upgrades) {
   const normalized = normalizeUpgrades(upgrades);
-  return SKILL_ORDER.reduce((total, key) => total + normalizeSkillUpgradeLevel(key, normalized[key]), 0);
+  return SKILL_ORDER.reduce((total, key) => (
+    total + getSkillUpgradePointCost(key, 0, normalizeSkillUpgradeLevel(key, normalized[key]))
+  ), 0);
 }
 
 function getAvailableSkillPoints(character = state?.character, upgrades = state?.upgrades) {
@@ -8649,7 +8677,7 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestBonuses = enforceHarvestBonusActiveLimit(snapshot.harvestBonuses);
   const timer = Number(snapshot.harvestSpawnTimer);
   snapshot.harvestSpawnTimer = Number.isFinite(timer)
-    ? clamp(timer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+    ? clamp(timer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
   snapshot.harvestNextSpawnAtMs = normalizeTimestampMs(snapshot.harvestNextSpawnAtMs)
     || (Date.now() + snapshot.harvestSpawnTimer * 1000);
@@ -10726,14 +10754,14 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.harvestSpawnTimer = clamp(
       Math.floor(Number(patch.harvestSpawnTimer) || 0),
       0,
-      HARVEST_BONUS_SPAWN_INTERVAL_SECONDS
+      HARVEST_BONUS_MAX_TIMER_SECONDS
     );
     changed = true;
   }
   if (Number.isFinite(Number(patch.harvestNextSpawnAtMs))) {
     state.harvestNextSpawnAtMs = normalizeTimestampMs(patch.harvestNextSpawnAtMs);
     const remainingSeconds = Math.ceil(Math.max(0, state.harvestNextSpawnAtMs - Date.now()) / 1000);
-    state.harvestSpawnTimer = clamp(remainingSeconds, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+    state.harvestSpawnTimer = clamp(remainingSeconds, 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
     changed = true;
   }
   if (patch.harvestNextBonusType) {
@@ -11303,10 +11331,10 @@ function getPlayerProfileSnapshot() {
     daily: state ? normalizeDailyCaptureTracker(state.daily) : normalizeDailyCaptureTracker(null),
     harvestBonuses: state ? normalizeHarvestBonuses(state.harvestBonuses) : [],
     harvestSpawnTimer: Number.isFinite(harvestTimer)
-      ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+      ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
       : HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
     harvestNextSpawnAtMs: normalizeTimestampMs(state?.harvestNextSpawnAtMs)
-      || Date.now() + (Number.isFinite(harvestTimer) ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) : HARVEST_BONUS_INITIAL_SPAWN_SECONDS) * 1000,
+      || Date.now() + (Number.isFinite(harvestTimer) ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS) : HARVEST_BONUS_INITIAL_SPAWN_SECONDS) * 1000,
     harvestNextBonusType: normalizeHarvestBonusType(state?.harvestNextBonusType),
     scoutReports: state ? normalizeScoutReports(state.scoutReports) : {},
     battleReports: state ? normalizeBattleReports(state.battleReports) : [],
@@ -11392,7 +11420,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.harvestBonuses = enforceHarvestBonusActiveLimit(normalizeHarvestBonuses(profile.harvestBonuses));
   const harvestTimer = Number(profile.harvestSpawnTimer);
   state.harvestSpawnTimer = Number.isFinite(harvestTimer)
-    ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+    ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
   state.harvestNextSpawnAtMs = normalizeTimestampMs(profile.harvestNextSpawnAtMs)
     || Date.now() + state.harvestSpawnTimer * 1000;
@@ -19510,7 +19538,7 @@ function frame(now) {
 function updateGame(dt) {
   state.gameSeconds += dt;
   updateEconomy(dt);
-  updateHarvestBonuses(dt);
+  updateHarvestBonuses();
   updateAttacks(dt);
   checkGameOver();
 }
@@ -19698,18 +19726,6 @@ function enforceHarvestBonusActiveLimit(bonuses) {
     .sort((a, b) => (a.createdAtMs || a.createdAt) - (b.createdAtMs || b.createdAt));
 }
 
-function getHarvestBonusOwnedCityAnchors(regionId) {
-  const activeRegionId = normalizeRegionId(regionId);
-  if (!state || !Array.isArray(state.cities)) return [];
-  return state.cities
-    .filter(city => city.owner === "player" && !isStronghold(city) && getCityRegionId(city) === activeRegionId);
-}
-
-function isHarvestBonusNearOwnedCity(x, y, regionId) {
-  return getHarvestBonusOwnedCityAnchors(regionId)
-    .some(city => Math.hypot(city.x - x, city.y - y) <= HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE);
-}
-
 function pruneExpiredHarvestBonuses() {
   if (!state) return;
   const now = Math.max(0, Number(state.gameSeconds) || 0);
@@ -19722,10 +19738,7 @@ function pruneExpiredHarvestBonuses() {
         : now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS)
       && (
         normalizeRegionId(bonus.regionId) !== activeRegionId
-        || (
-          isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
-          && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
-        )
+        || isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
       )
     ));
   state.harvestBonuses = enforceHarvestBonusActiveLimit(state.harvestBonuses);
@@ -19810,7 +19823,6 @@ function isHarvestBonusTerrainSafePoint(x, y, regionId) {
 
 function isValidHarvestBonusPoint(x, y, regionId) {
   const activeRegionId = normalizeRegionId(regionId);
-  if (!isHarvestBonusNearOwnedCity(x, y, activeRegionId)) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCamps(x, y, activeRegionId)) return false;
@@ -19821,16 +19833,31 @@ function isValidHarvestBonusPoint(x, y, regionId) {
 
 function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
-  const anchors = getHarvestBonusOwnedCityAnchors(activeRegionId);
-  if (!anchors.length) return null;
-  const radiusRange = HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE - HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE;
-  for (let attempt = 0; attempt < 900; attempt += 1) {
-    const city = anchors[Math.floor(Math.random() * anchors.length)];
-    const angle = Math.random() * Math.PI * 2;
-    const radius = HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE + Math.random() * Math.max(1, radiusRange);
-    const x = city.x + Math.cos(angle) * radius;
-    const y = city.y + Math.sin(angle) * radius;
-    if (isValidHarvestBonusPoint(x, y, activeRegionId)) return { x, y };
+  const bounds = getIslandMapBounds(activeRegionId);
+  const center = {
+    x: bounds.left + bounds.width / 2,
+    y: bounds.top + bounds.height / 2,
+  };
+  if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId)) return center;
+
+  const shortestDimension = Math.max(1, Math.min(bounds.width, bounds.height));
+  for (const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS) {
+    const maximumRadius = shortestDimension * fraction;
+    const angleOffset = Math.random() * Math.PI * 2;
+    let closestPoint = null;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    for (let attempt = 0; attempt < HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE; attempt += 1) {
+      const angle = angleOffset + attempt * HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
+      const radiusFraction = (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;
+      const radius = maximumRadius * Math.sqrt(radiusFraction);
+      const x = center.x + Math.cos(angle) * radius;
+      const y = center.y + Math.sin(angle) * radius;
+      if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
+      if (radius >= closestDistance) continue;
+      closestPoint = { x, y };
+      closestDistance = radius;
+    }
+    if (closestPoint) return closestPoint;
   }
   return null;
 }
@@ -19841,15 +19868,15 @@ function getHarvestSpawnDelaySeconds() {
   if (!nextSpawnAtMs) {
     const timer = Number(state.harvestSpawnTimer);
     return Number.isFinite(timer)
-      ? clamp(Math.ceil(timer), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+      ? clamp(Math.ceil(timer), 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
       : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
   }
-  return clamp(Math.ceil(Math.max(0, nextSpawnAtMs - Date.now()) / 1000), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  return clamp(Math.ceil(Math.max(0, nextSpawnAtMs - Date.now()) / 1000), 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
 }
 
-function setHarvestSpawnDelay(seconds = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) {
+function setHarvestSpawnDelay(seconds = HARVEST_BONUS_RESPAWN_SECONDS) {
   if (!state) return;
-  const delay = clamp(Math.ceil(Number(seconds) || 0), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  const delay = clamp(Math.ceil(Number(seconds) || 0), 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
   state.harvestSpawnTimer = delay;
   state.harvestNextSpawnAtMs = Date.now() + delay * 1000;
 }
@@ -19960,7 +19987,7 @@ function updateServerHarvestBonuses() {
   });
 }
 
-function updateHarvestBonuses(dt) {
+function updateHarvestBonuses() {
   if (!state || isGamePausedByOutcome() || onlineWorldLoading) return;
   const daily = ensureDailyCaptureTracker();
   pruneExpiredHarvestBonuses();
@@ -19993,20 +20020,28 @@ function updateHarvestBonuses(dt) {
   if (!nextType) return;
   if (hasAnyActiveHarvestBonus()) return;
   const activeRegionId = getActiveMapRegionId();
-  state.harvestSpawnTimer = Math.max(0, Number(state.harvestSpawnTimer) || 0) - dt;
-  state.harvestNextSpawnAtMs = Date.now() + state.harvestSpawnTimer * 1000;
-  if (state.harvestSpawnTimer > 0) return;
+  const delay = getHarvestSpawnDelaySeconds();
+  state.harvestSpawnTimer = delay;
+  if (delay > 0) return;
   const spawned = spawnHarvestBonus(activeRegionId, nextType);
-  setHarvestSpawnDelay(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  setHarvestSpawnDelay(spawned ? HARVEST_BONUS_RESPAWN_SECONDS : HARVEST_BONUS_SERVER_RETRY_SECONDS);
   if (spawned) {
     state.harvestNextBonusType = getAlternateHarvestBonusType(nextType);
     renderHarvestBonuses();
   }
 }
 
-function resetHarvestSpawnTimer() {
+function resetHarvestRespawnTimer() {
   if (!state) return;
-  setHarvestSpawnDelay(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  setHarvestSpawnDelay(HARVEST_BONUS_RESPAWN_SECONDS);
+}
+
+function getHarvestBonusRespawnToastSuffix(daily = ensureDailyCaptureTracker()) {
+  if (!getNextAvailableHarvestBonusType(daily)) return "";
+  const seconds = Math.max(1, Math.ceil(HARVEST_BONUS_RESPAWN_SECONDS));
+  if (seconds % 60 !== 0) return ` · Next pickup in ${formatDuration(seconds)}`;
+  const minutes = seconds / 60;
+  return ` · Next pickup in ${formatNumber(minutes)} minute${minutes === 1 ? "" : "s"}`;
 }
 
 async function collectHarvestBonus(bonusId, sourceElement = null) {
@@ -20052,9 +20087,9 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       if (type === "troops") {
         const targetName = result?.targetCityName || getHarvestBonusTroopTargetCity()?.name || "main city";
         addLog(`Harvested stored troop production: ${formatNumber(reward)} troops to ${targetName}.`);
-        showToast(`Harvested +${formatNumber(reward)} troops (${formatNumber(serverDaily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
+        showToast(`Harvested +${formatNumber(reward)} troops (${formatNumber(serverDaily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
       } else {
-        showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
+        showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})${getHarvestBonusRespawnToastSuffix(serverDaily)}`);
       }
       playRewardSound(type, { regionId: bonus.regionId });
       if (reward > 0) {
@@ -20093,14 +20128,14 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
     rewardCity.troops = Math.floor(rewardCity.troopFloat);
     markOwnedCityChanged(rewardCity, getCityRegionId(rewardCity) === getActiveOnlineRegionId());
     incrementHarvestBonusDailyCount(type, daily);
-    resetHarvestSpawnTimer();
+    resetHarvestRespawnTimer();
     addLog(`Harvested stored troop production: ${formatNumber(troopReward)} troops to ${rewardCity.name}.`);
     saveGame();
     renderHud();
     renderCities();
     renderPanel();
     renderHarvestBonuses();
-    showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
+    showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})${getHarvestBonusRespawnToastSuffix(daily)}`);
     playRewardSound("troops", { regionId: bonus.regionId });
     playRewardAnimation("troops", {
       id: `harvest:${bonus.id}:troops`,
@@ -20115,11 +20150,11 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
   const goldReward = getHarvestBonusGoldReward();
   state.gold += goldReward;
   incrementHarvestBonusDailyCount(type, daily);
-  resetHarvestSpawnTimer();
+  resetHarvestRespawnTimer();
   saveGame();
   renderHud();
   renderHarvestBonuses();
-  showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
+  showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})${getHarvestBonusRespawnToastSuffix(daily)}`);
   playRewardSound("gold", { regionId: bonus.regionId });
   playRewardAnimation("gold", {
     id: `harvest:${bonus.id}:gold`,
@@ -24522,7 +24557,7 @@ function updateProfileSkillState() {
   const spentPoints = getSpentSkillPoints(displayedUpgrades);
   const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
   const resetPriceText = freeSkillResetCredits > 0
-    ? `Your legacy balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
+    ? `Your next balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
     : `Costs ${formatNumber(SKILL_RESET_COST)} gold.`;
   const syncing = isSkillSpendSyncing();
   setTextIfChanged(skillsView.querySelector("[data-skill-points]"), formatNumber(points));
@@ -24542,13 +24577,14 @@ function updateProfileSkillState() {
     const rawPercent = level * config.percentPerLevel;
     const percent = Number.isFinite(config.maxPercent) ? Math.min(rawPercent, config.maxPercent) : rawPercent;
     const capped = level >= getSkillMaxLevel(skill);
+    const nextPointCost = getSkillPointCost(skill, level);
     const row = skillsView.querySelector(`[data-skill-row="${skill}"]`);
     const label = row?.querySelector("[data-skill-level]");
     const button = row?.querySelector("button[data-skill]");
     setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
     if (button) {
-      button.disabled = skillActionInFlight || points < 1 || capped;
-      setTextIfChanged(button, capped ? "Max" : "+1");
+      button.disabled = skillActionInFlight || points < nextPointCost || capped;
+      setTextIfChanged(button, capped ? "Max" : `+1 · ${nextPointCost} ${nextPointCost === 1 ? "pt" : "pts"}`);
     }
     row?.classList.toggle("syncing", getSkillSpendOverlayPoints(skill) > 0);
   });
@@ -24567,6 +24603,7 @@ function renderProfileSkills() {
       <div><span>Skill points</span><strong data-skill-points></strong><small data-skill-sync-status hidden></small></div>
       <div><span>Points spent</span><strong data-skill-spent></strong></div>
     </div>
+    <p class="profile-skill-cost-note">Each skill's final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} skill points per level. Earlier levels cost ${SKILL_STANDARD_POINT_COST}.</p>
     <div data-skill-preset-panel-root>${renderSkillPresetPanel()}</div>
     <section class="profile-skill-reset">
       <div>
@@ -33232,7 +33269,7 @@ function skillRow(key) {
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
   return `
     <div class="skill-row" data-skill-row="${key}">
-      <div><strong data-skill-level></strong><br><small>${config.description}${capText}</small></div>
+      <div><strong data-skill-level></strong><br><small>${config.description}${capText}. Final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} points each.</small></div>
       <button data-skill="${key}">+1</button>
     </div>
   `;
@@ -33463,7 +33500,7 @@ async function resetSkills() {
       const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
       const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
       if (refundedPoints > 0) {
-        addLog(`Skills reset${result?.freeResetConsumed ? " using the free legacy reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
+        addLog(`Skills reset${result?.freeResetConsumed ? " using a free balance reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
         showToast(`Skills reset: +${formatNumber(refundedPoints)} points`);
       } else {
         addLog("Skill points repaired to match hero level.");
@@ -33494,7 +33531,7 @@ async function resetSkills() {
   state.upgrades = createDefaultSkills();
   if (spentPoints > 0) state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   if (spentPoints > 0) {
-    addLog(`Skills reset${freeResetAvailable ? " using the free legacy reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+    addLog(`Skills reset${freeResetAvailable ? " using a free balance reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   } else {
     addLog("Skill points repaired to match hero level.");
   }
@@ -35892,7 +35929,7 @@ function showHelpModal() {
         <li>Troop production bonuses do not compound: Royal Granaries, Stronghold or Citadel benefits, and War Drums each add their listed percentage of raw base city troops.</li>
         <li>Gold production bonuses do not compound: Tax Stewardship, Stronghold or Citadel benefits, and Royal Tax each add their listed percentage of raw base city gold.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
-      <li>Glowing pickups appear near your owned cities on the current island during active play every ${formatNumber(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS / 60)} minutes, alternating between ${formatNumber(HARVEST_BONUS_GOLD_SECONDS / 60)} minutes of gold production and ${formatNumber(HARVEST_BONUS_TROOP_SECONDS / 60)} minutes of troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Glowing pickups appear toward the center of the current island. The first arrives after ${formatNumber(HARVEST_BONUS_INITIAL_SPAWN_SECONDS / 60)} minutes, then the next arrives ${formatNumber(HARVEST_BONUS_RESPAWN_SECONDS / 60)} minute${HARVEST_BONUS_RESPAWN_SECONDS === 60 ? "" : "s"} after each successful collection, alternating between ${formatNumber(HARVEST_BONUS_GOLD_SECONDS / 60)} minutes of gold production and ${formatNumber(HARVEST_BONUS_TROOP_SECONDS / 60)} minutes of troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Daily login rewards follow the current UTC calendar month. Missing a day pauses progress instead of skipping a reward, up to two earned rewards may wait for collection, and unclaimed rewards expire when the next UTC month begins.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>

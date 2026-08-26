@@ -314,7 +314,7 @@
 
   function renderStaticValues() {
     const pickups = config.pickups || {};
-    $("pickupEconomyText").textContent = `Every ${format(pickups.spawnIntervalMinutes)} minutes during active play · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} gold and ${format(pickups.dailyTroopCap)} troop pickups`;
+    $("pickupEconomyText").textContent = `First pickup after ${format(pickups.initialSpawnDelayMinutes)} minutes · then ${format(pickups.respawnAfterCollectionMinutes)} minute after each collection · center-biased placement · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} gold and ${format(pickups.dailyTroopCap)} troop pickups`;
     const repairExamples = [
       { label: "Level 1 city", level: 1 },
       { label: "Level 25 city", level: 25 },

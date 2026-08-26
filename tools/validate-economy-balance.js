@@ -59,7 +59,8 @@ assert.equal(
   1_500,
   "Daily troop pickup production-time budget changed unexpectedly."
 );
-assert.equal(serverConfig.pickups.spawnIntervalMinutes, 3);
+assert.equal(serverConfig.pickups.initialSpawnDelayMinutes, 3);
+assert.equal(serverConfig.pickups.respawnAfterCollectionMinutes, 1);
 
 const expectedItemLimits = {
   shield_12h: 1,

@@ -28,6 +28,14 @@ const SKILL_ORDER = [
 const zeroBuild = () => Object.fromEntries(SKILL_ORDER.map(skill => [skill, 0]));
 const savedBuild = { ...zeroBuild(), swordmastery: 12, stoneworks: 7 };
 const alternateBuild = { ...zeroBuild(), taxStewardship: 8, royalGranaries: 6 };
+const getSkillMaxLevel = skill => Math.ceil(
+  Number(economyConfig.skills[skill].maxPercent) / Number(economyConfig.skills[skill].percentPerLevel)
+);
+const getSpentSkillPoints = upgrades => SKILL_ORDER.reduce((total, skill) => {
+  const level = Math.max(0, Math.min(getSkillMaxLevel(skill), Math.floor(Number(upgrades[skill]) || 0)));
+  const finalTierLevels = Math.max(0, level - (getSkillMaxLevel(skill) - 5));
+  return total + level + finalTierLevels;
+}, 0);
 let functionsHostPromise = null;
 
 function assert(condition, message) {
@@ -114,7 +122,7 @@ async function callFunction(name, token, data = {}) {
 async function setBuild(profileRef, cityRef, { level, upgrades, gold }) {
   const nowMs = Date.now();
   const earned = Math.max(0, level - 1);
-  const spent = SKILL_ORDER.reduce((total, skill) => total + Number(upgrades[skill] || 0), 0);
+  const spent = getSpentSkillPoints(upgrades);
   await Promise.all([
     profileRef.set({
       character: { level, xp: 0, skillPoints: Math.max(0, earned - spent) },
@@ -131,7 +139,7 @@ function presetMapValue() {
   return {
     mapValue: {
       fields: {
-        modelVersion: { integerValue: "4" },
+        modelVersion: { integerValue: "5" },
         activeSlot: { integerValue: "0" },
         slots: { arrayValue: { values: [] } },
       },
@@ -177,7 +185,7 @@ async function main() {
   assert(profile.skillPresets.slots.every(slot => slot.saved === false), "A new profile began with a populated preset.");
   assert(Number(profile.skillPresets.activeSlot || 0) === 0, "A new profile began with an active preset.");
   assert(Number(profile.upgrades?.shieldwallDiscipline || 0) === 0, "A new profile did not normalize Shieldwall Discipline to Level 0.");
-  assert(Number(profile.freeSkillResetGrantVersion || 0) === 1 && Number(profile.freeSkillResetCredits || 0) === 0, "A new profile incorrectly received a legacy reset credit.");
+  assert(Number(profile.freeSkillResetGrantVersion || 0) === 2 && Number(profile.freeSkillResetCredits || 0) === 0, "A new profile incorrectly received a migration reset credit.");
 
   const clientMutation = await attemptClientPresetMutation(user);
   assert(clientMutation.status === 403, `A client directly changed skillPresets (HTTP ${clientMutation.status}).`);
@@ -265,6 +273,19 @@ async function main() {
   assert(Number(spent.currentUser?.skillPresets?.activeSlot || 0) === 0, "Spending a skill point did not clear the active preset.");
   assert(spent.currentUser?.skillPresets?.slots?.filter(slot => slot.saved).length === 4, "Spending a skill point overwrote a saved preset.");
 
+  const finalTierBuild = { ...zeroBuild(), guildCharters: 20 };
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: finalTierBuild, gold: 2_000_000 });
+  const finalTierSpend = await callFunction("spendSkillPoint", user.token, { skillId: "guildCharters" });
+  assert(Number(finalTierSpend.spentSkillPoints || 0) === 2, "The first of Guild Charters' final five levels did not cost 2 points.");
+  assert(Number(finalTierSpend.currentUser?.upgrades?.guildCharters || 0) === 21, "The final-tier purchase did not improve Guild Charters by one level.");
+  assert(Number(finalTierSpend.currentUser?.character?.skillPoints || 0) === 77, "The final-tier purchase did not deduct its weighted point cost.");
+  await setBuild(profileRef, cityRef, { level: 22, upgrades: finalTierBuild, gold: 2_000_000 });
+  assertRejected(
+    await invokeFunction("spendSkillPoint", user.token, { skillId: "guildCharters" }),
+    "FAILED_PRECONDITION",
+    "A final-tier skill upgrade was accepted with only one available point"
+  );
+
   await setBuild(profileRef, cityRef, { level: 6, upgrades: zeroBuild(), gold: 2_000_000 });
   const competingBatches = await Promise.all([
     invokeFunction("spendSkillPoints", user.token, { allocations: [{ skillId: "swordmastery", points: 5 }] }),
@@ -292,10 +313,10 @@ async function main() {
   const paidLegacyApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(paidLegacyApply.skillPreset?.changed === true && paidLegacyApply.skillPreset?.freeResetConsumed === false, "A preset application reported consuming a legacy credit.");
   assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === 1_000_000 && Number(paidLegacyApply.currentUser?.gold || 0) === 0, "A legacy profile did not pay the preset price.");
-  assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 1, "A preset application consumed the Reset Skills credit.");
+  assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 2, "A preset application consumed a legacy or final-tier Reset Skills credit.");
 
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 0 });
-  await profileRef.set({ freeSkillResetGrantVersion: 1, freeSkillResetCredits: 1 }, { merge: true });
+  await profileRef.set({ freeSkillResetGrantVersion: 2, freeSkillResetCredits: 1 }, { merge: true });
   const concurrentResets = await Promise.all([
     invokeFunction("resetSkills", user.token),
     invokeFunction("resetSkills", user.token),
@@ -321,7 +342,7 @@ async function main() {
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
 
-  console.log("Emulator skill presets passed: four unlocks, unconditional paid applies, protected reset credits, one active slot, concurrency, and rejection safety.");
+  console.log("Emulator skill presets passed: final-tier double costs, four unlocks, unconditional paid applies, protected reset credits, one active slot, concurrency, and rejection safety.");
 }
 
 main().then(() => process.exit(0)).catch(error => {

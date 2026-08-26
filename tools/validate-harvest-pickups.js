@@ -6,11 +6,26 @@ const vm = require("node:vm");
 const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "utf8");
 const serverSource = fs.readFileSync(path.resolve(__dirname, "..", "functions", "index.js"), "utf8");
 const styleSource = `${fs.readFileSync(path.resolve(__dirname, "..", "styles.css"), "utf8")}\n${fs.readFileSync(path.resolve(__dirname, "..", "interface-theme.css"), "utf8")}`;
+const economyConfigContext = { window: {} };
+vm.createContext(economyConfigContext);
+vm.runInContext(fs.readFileSync(path.resolve(__dirname, "..", "economy-config.js"), "utf8"), economyConfigContext);
+const economyConfig = economyConfigContext.window.CROWNLANDS_ECONOMY_CONFIG;
+const serverEconomyConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "functions", "economy-config.json"), "utf8"));
+
+assert.deepEqual(serverEconomyConfig.pickups, JSON.parse(JSON.stringify(economyConfig.pickups)), "Client and server pickup timing configuration must remain identical.");
+assert.equal(economyConfig.pickups.initialSpawnDelayMinutes, 3, "The first pickup must retain its three-minute delay.");
+assert.equal(economyConfig.pickups.respawnAfterCollectionMinutes, 1, "Successful collections must start a one-minute respawn.");
+assert.equal(economyConfig.pickups.expireMinutes, 20, "Pickup expiration must remain twenty minutes.");
 
 assert.match(
   styleSource,
   /\.harvest-bonus-node\s*\{[\s\S]{0,280}?--pickup-glow-core:\s*rgba\(255, 205, 54, \.88\);/,
   "Gold pickups must define a bright gold map glow.",
+);
+assert.match(
+  styleSource,
+  /\.harvest-bonus-node\s*\{[\s\S]{0,260}?width:\s*var\(--map-hit-size, 66px\);[\s\S]{0,80}?height:\s*var\(--map-hit-size, 66px\);/,
+  "Pickup hit targets must use the zoom-aware map hit size at low, medium, and high zoom.",
 );
 assert.match(
   styleSource,
@@ -31,7 +46,19 @@ assert.match(
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `Missing ${name}.`);
-  const bodyStart = source.indexOf("{", start);
+  const paramsStart = source.indexOf("(", start);
+  let paramsDepth = 0;
+  let paramsEnd = -1;
+  for (let index = paramsStart; index < source.length; index += 1) {
+    if (source[index] === "(") paramsDepth += 1;
+    if (source[index] === ")") paramsDepth -= 1;
+    if (paramsDepth === 0) {
+      paramsEnd = index;
+      break;
+    }
+  }
+  assert.ok(paramsEnd > paramsStart, `Could not parse ${name} parameters.`);
+  const bodyStart = source.indexOf("{", paramsEnd);
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     if (source[index] === "{") depth += 1;
@@ -59,6 +86,173 @@ assert.doesNotMatch(collectSource, /renderCities\(true\)/, "Pickup claims must n
 assert.match(collectSource, /result\?\.currentUser\?\.daily/, "Pickup count messages must use the authoritative server counter.");
 assert.match(collectSource, /destinationRegionId:\s*type === "troops" \? String\(result\?\.targetRegionId/, "Troop pickups must use the server-confirmed Main City region for their animation.");
 assert.match(serverSource, /targetRegionId:\s*normalizeRegionId\(mainEntry\.city\.regionId \|\| mainInfo\.regionId\)/, "The pickup response must identify the credited Main City region.");
+assert.match(collectSource, /resetHarvestRespawnTimer\(\)/, "Local pickup claims must start the dedicated collection respawn timer.");
+assert.match(collectSource, /getHarvestBonusRespawnToastSuffix/, "Successful pickup messages must include the collection respawn notice.");
+assert.match(extractFunction(gameSource, "getHarvestBonusRespawnToastSuffix"), /Next pickup in/, "The collection respawn notice must tell the player when the next pickup arrives.");
+assert.match(
+  collectSource,
+  /catch \(error\) \{[\s\S]*?state\.harvestBonuses\.splice\(Math\.min\(index, state\.harvestBonuses\.length\), 0, bonus\);[\s\S]*?Could not collect harvest bonus/,
+  "Failed server collections must restore the pickup instead of consuming it or restarting its timer."
+);
+
+const reserveStart = serverSource.indexOf("exports.reserveHarvestBonusSpawn =");
+const reserveEnd = serverSource.indexOf("exports.repairMainCityAssignment =", reserveStart);
+const reserveSource = serverSource.slice(reserveStart, reserveEnd);
+assert.match(reserveSource, /if \(nowMs < currentNextSpawnAtMs\)/, "The server must reject early pickup spawn reservations.");
+assert.match(reserveSource, /activeBonuses\.length >= HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER/, "The server must retain the one-active-pickup gate.");
+
+const serverCollectStart = serverSource.indexOf("exports.collectHarvestBonus =");
+const serverCollectEnd = serverSource.indexOf("function normalizeSkillSpendAllocations", serverCollectStart);
+const serverCollectSource = serverSource.slice(serverCollectStart, serverCollectEnd);
+assert.match(
+  serverCollectSource,
+  /const harvestNextSpawnAtMs = nowMs \+ HARVEST_BONUS_RESPAWN_SECONDS \* 1000;/,
+  "The server must anchor the next pickup to the successful collection time."
+);
+assert.match(
+  serverCollectSource,
+  /harvestSpawnTimer: HARVEST_BONUS_RESPAWN_SECONDS/,
+  "The authoritative collection response must return the one-minute respawn timer."
+);
+assert.match(
+  serverCollectSource,
+  /if \(!activeBonus\) \{[\s\S]*?throw new HttpsError[\s\S]*?if \(getHarvestBonusRemaining\(type, daily\) <= 0\) \{[\s\S]*?throw new HttpsError[\s\S]*?const harvestNextSpawnAtMs/,
+  "Expired pickups and daily-cap failures must stop before the collection timer is changed."
+);
+
+const initialStateSource = extractFunction(gameSource, "newGame");
+assert.match(initialStateSource, /harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS/, "New local games must start with the initial delay.");
+assert.match(initialStateSource, /HARVEST_BONUS_INITIAL_SPAWN_SECONDS \* 1000/, "The local initial deadline must use the three-minute setting.");
+assert.match(serverSource, /harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,[\s\S]*?harvestNextSpawnAtMs: nowMs \+ HARVEST_BONUS_INITIAL_SPAWN_SECONDS \* 1000/, "New server profiles must start with the initial delay.");
+
+const timerContext = {
+  HARVEST_BONUS_INITIAL_SPAWN_SECONDS: 180,
+  HARVEST_BONUS_MAX_TIMER_SECONDS: 180,
+  timestampToMs(value) { return Math.max(0, Number(value) || 0); },
+  clampInt(value, minimum, maximum) { return Math.min(maximum, Math.max(minimum, Math.floor(Number(value) || 0))); },
+};
+vm.createContext(timerContext);
+vm.runInContext(extractFunction(serverSource, "getHarvestNextSpawnAtMs"), timerContext);
+vm.runInContext(extractFunction(serverSource, "getHarvestSpawnTimerFromNextAt"), timerContext);
+assert.equal(timerContext.getHarvestNextSpawnAtMs({}, 10_000), 190_000, "A profile without pickup timing state must receive the three-minute initial delay.");
+assert.equal(timerContext.getHarvestNextSpawnAtMs({ harvestSpawnTimer: 60 }, 10_000), 70_000, "Legacy timer state must preserve a one-minute remaining cooldown.");
+assert.equal(timerContext.getHarvestSpawnTimerFromNextAt(70_000, 10_000), 60, "The server response must report one minute remaining from its absolute deadline.");
+
+const createPointSource = extractFunction(gameSource, "createHarvestBonusPoint");
+const pruneSource = extractFunction(gameSource, "pruneExpiredHarvestBonuses");
+assert.match(createPointSource, /getIslandMapBounds\(activeRegionId\)/, "Pickup placement must use the destination map's own bounds.");
+assert.match(createPointSource, /bounds\.left \+ bounds\.width \/ 2/, "Pickup placement must calculate the map's horizontal center.");
+assert.match(createPointSource, /bounds\.top \+ bounds\.height \/ 2/, "Pickup placement must calculate the map's vertical center.");
+assert.match(createPointSource, /HARVEST_BONUS_CENTER_SEARCH_FRACTIONS/, "Pickup placement must expand through center-biased search zones.");
+assert.match(createPointSource, /HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE/, "Each center search zone must distribute attempts around the full map center instead of relying on random clustering.");
+assert.match(createPointSource, /\(attempt \+ 0\.5\) \/ HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE/, "Each center search zone must distribute attempts across its full radius.");
+assert.doesNotMatch(createPointSource, /OwnedCity|owned city|anchors/, "New pickup placement must not depend on an owned-city anchor.");
+assert.doesNotMatch(pruneSource, /NearOwnedCity|OwnedCity/, "Cleanup must not delete centered or legacy pickups merely because they are away from an owned city.");
+assert.match(pruneSource, /isHarvestBonusTerrainSafePoint/, "Cleanup must retain terrain safety validation.");
+
+const mapEditorContext = { window: {} };
+vm.createContext(mapEditorContext);
+vm.runInContext(fs.readFileSync(path.resolve(__dirname, "..", "assets", "map-editor-data.js"), "utf8"), mapEditorContext);
+const currentMaps = mapEditorContext.window.CROWNLANDS_MAP_EDITOR_DATA.maps;
+assert.ok(currentMaps.length >= 5, "Pickup placement validation needs the current map catalog.");
+const currentMapBounds = Object.fromEntries(currentMaps.map(map => {
+  const region = map.region;
+  return [map.id, {
+    left: region.x - region.rx,
+    top: region.y - region.ry,
+    width: region.rx * 2,
+    height: region.ry * 2,
+  }];
+}));
+const centerPlacementContext = {
+  HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
+  HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
+  HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
+  normalizeRegionId: value => String(value || ""),
+  getIslandMapBounds: regionId => currentMapBounds[regionId],
+  isValidHarvestBonusPoint: () => true,
+};
+vm.createContext(centerPlacementContext);
+vm.runInContext(createPointSource, centerPlacementContext);
+for (const map of currentMaps) {
+  const point = centerPlacementContext.createHarvestBonusPoint(map.id);
+  const bounds = currentMapBounds[map.id];
+  assert.equal(point.x, bounds.left + bounds.width / 2, `${map.id} did not choose its own horizontal map center.`);
+  assert.equal(point.y, bounds.top + bounds.height / 2, `${map.id} did not choose its own vertical map center.`);
+}
+
+let randomSeed = 0x5f3759df;
+const deterministicMath = {
+  PI: Math.PI,
+  cos: Math.cos,
+  sin: Math.sin,
+  sqrt: Math.sqrt,
+  max: Math.max,
+  min: Math.min,
+  random() {
+    randomSeed = (randomSeed * 1664525 + 1013904223) >>> 0;
+    return randomSeed / 0x100000000;
+  },
+};
+const obstructedCenterContext = {
+  Math: deterministicMath,
+  Number,
+  HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
+  HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
+  HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
+  normalizeRegionId: value => String(value || ""),
+  getIslandMapBounds: () => ({ left: 0, top: 0, width: 1000, height: 800 }),
+  isValidHarvestBonusPoint(x, y) {
+    const distance = Math.hypot(x - 500, y - 400);
+    return distance >= 140 && distance <= 170;
+  },
+};
+vm.createContext(obstructedCenterContext);
+vm.runInContext(createPointSource, obstructedCenterContext);
+const expandedPoint = obstructedCenterContext.createHarvestBonusPoint("obstructed");
+const expandedDistance = Math.hypot(expandedPoint.x - 500, expandedPoint.y - 400);
+assert.ok(expandedDistance >= 140 && expandedDistance <= 170, "An obstructed center did not expand outward to the nearest safe center zone.");
+assert.ok(expandedDistance <= 800 * 0.25, "Center placement expanded beyond the second search zone unnecessarily.");
+
+const thirdZoneContext = {
+  Math: deterministicMath,
+  Number,
+  HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
+  HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
+  HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
+  normalizeRegionId: value => String(value || ""),
+  getIslandMapBounds: () => ({ left: 0, top: 0, width: 1000, height: 800 }),
+  isValidHarvestBonusPoint(x, y) {
+    const distance = Math.hypot(x - 500, y - 400);
+    return distance >= 225 && distance <= 255;
+  },
+};
+vm.createContext(thirdZoneContext);
+vm.runInContext(createPointSource, thirdZoneContext);
+const thirdZonePoint = thirdZoneContext.createHarvestBonusPoint("third-zone");
+const thirdZoneDistance = Math.hypot(thirdZonePoint.x - 500, thirdZonePoint.y - 400);
+assert.ok(thirdZoneDistance >= 225 && thirdZoneDistance <= 255, "An obstructed center did not expand into the 35% search zone.");
+assert.ok(thirdZoneDistance > 800 * 0.25 && thirdZoneDistance <= 800 * 0.35, "The third-zone fallback escaped the 35% center boundary.");
+
+const noSafePointContext = {
+  Math: deterministicMath,
+  Number,
+  HARVEST_BONUS_CENTER_SEARCH_FRACTIONS: [0.15, 0.25, 0.35],
+  HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE: 300,
+  HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE: Math.PI * (3 - Math.sqrt(5)),
+  normalizeRegionId: value => String(value || ""),
+  getIslandMapBounds: () => ({ left: 0, top: 0, width: 1000, height: 800 }),
+  isValidHarvestBonusPoint: () => false,
+};
+vm.createContext(noSafePointContext);
+vm.runInContext(createPointSource, noSafePointContext);
+assert.equal(noSafePointContext.createHarvestBonusPoint("blocked"), null, "A fully blocked center search must return null for the five-second retry path.");
+
+const serverUpdateSource = extractFunction(gameSource, "updateServerHarvestBonuses");
+const localUpdateSource = extractFunction(gameSource, "updateHarvestBonuses");
+assert.match(serverUpdateSource, /relocateActive:[\s\S]*?createHarvestBonusPoint\(activeRegionId\)/, "Server-backed map relocation must use center-biased placement.");
+assert.match(localUpdateSource, /createHarvestBonusPoint\(activeRegionId\)/, "Local map relocation must use center-biased placement.");
+assert.match(localUpdateSource, /spawned \? HARVEST_BONUS_RESPAWN_SECONDS : HARVEST_BONUS_SERVER_RETRY_SECONDS/, "A failed local placement must use the short retry rather than the collection cooldown.");
 
 const serverRewardSource = extractFunction(serverSource, "getHarvestBonusReward");
 assert.match(
