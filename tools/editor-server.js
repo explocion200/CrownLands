@@ -578,6 +578,7 @@ function cleanWorldRegionSummary(region) {
     id,
     name: cleanString(region.name || region.label, titleCase(id)),
     type: cleanId(region.type, "starter"),
+    newPlayerSpawnEligible: Boolean(region.newPlayerSpawnEligible),
     gridX: Math.round(number(region.gridX, 0, -1000, 1000)),
     gridY: Math.round(number(region.gridY, 0, -1000, 1000)),
     width: dimensions.width,
@@ -876,6 +877,9 @@ async function buildWorldDataFromMapEditorData() {
       gridX: Math.round(number(map.gridX, id === "west" ? -1 : id === "east" ? 1 : 0)),
       gridY: Math.round(number(map.gridY, id === "north" ? -1 : id === "south" ? 1 : 0)),
       type: id === "center" ? "crownlands_main" : "starter",
+      newPlayerSpawnEligible: Boolean(
+        map.newPlayerSpawnEligible ?? (id !== "center" && cleanId(map.type, "starter") === "starter")
+      ),
       cityCapacity: id === "center" ? 100 : 50,
       width: dimensions.width,
       height: dimensions.height,
@@ -999,6 +1003,7 @@ function buildCompatibilityMapData(layout, regions) {
       gridX: region.gridX,
       gridY: region.gridY,
       type: region.type,
+      newPlayerSpawnEligible: Boolean(region.newPlayerSpawnEligible),
       cityCapacity: region.cityCapacity,
       imageSrc: region.imagePath,
       thumbnailSrc: region.thumbnailPath || "",

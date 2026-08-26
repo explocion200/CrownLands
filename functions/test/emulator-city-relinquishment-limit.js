@@ -208,6 +208,9 @@ async function main() {
       y: mainCityY,
       troops: 137,
       troopFloat: 137,
+      level: 17,
+      defense: 17,
+      fortificationState: { damageShare: 0.25, repairAtMs: Date.now() + 60_000 },
       ownerClanId: "stale-clan",
       ownerClanName: "Stale Clan",
       ownerClanTag: "OLD",
@@ -219,6 +222,9 @@ async function main() {
       y: mainCityY,
       troops: 137,
       troopFloat: 137,
+      level: 17,
+      defense: 17,
+      fortificationState: { damageShare: 0.25, repairAtMs: Date.now() + 60_000 },
       ownerClanId: "stale-clan",
       ownerClanName: "Stale Clan",
       ownerClanTag: "OLD",
@@ -269,6 +275,9 @@ async function main() {
       && Number(relinquishedCity.troopFloat || 0) === 0
       && Number(relinquishedCity.alliedReinforcementTroops || 0) === 0
       && Number(relinquishedCity.investedGold || 0) === 0
+      && Number(relinquishedCity.level || 0) === 1
+      && Number(relinquishedCity.defense || 0) === 1
+      && Number(relinquishedCity.fortificationState?.damageShare || 0) === 0.25
       && relinquishedCity.isMainCity === false,
     `Relinquishment left stale ownership or garrison data: ${JSON.stringify(relinquishedCity)}`
   );

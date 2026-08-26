@@ -114,6 +114,7 @@ vm.runInContext([
 const cleanupAtMs = Date.parse("2026-07-29T10:30:00.000Z");
 const cleanupPatch = cleanupContext.getCityRelinquishNeutralPatch({
   level: 17,
+  defense: 17,
   ownerUid: "owner",
   ownerClanId: "clan",
   ownerClanName: "Old Clan",
@@ -133,7 +134,26 @@ assert.equal(cleanupPatch.troops, 0);
 assert.equal(cleanupPatch.troopFloat, 0);
 assert.equal(cleanupPatch.investedGold, 0);
 assert.equal(cleanupPatch.isMainCity, false);
-assert.equal(cleanupPatch.level, 17);
+assert.equal(cleanupPatch.level, 1);
+assert.equal(cleanupPatch.defense, 1);
+
+const strongholdCleanupPatch = cleanupContext.getCityRelinquishNeutralPatch({
+  kind: "stronghold",
+  level: 50,
+  defense: 50,
+  fortificationState: { damageShare: 0.4 },
+}, cleanupAtMs);
+assert.equal(strongholdCleanupPatch.level, 50);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(strongholdCleanupPatch, "defense"),
+  false,
+  "Stronghold defense fields must not be replaced by the ordinary-city reset."
+);
+assert.equal(
+  Object.prototype.hasOwnProperty.call(strongholdCleanupPatch, "fortificationState"),
+  false,
+  "Relinquishment must preserve the existing fortification state through the merge."
+);
 assert.equal(cleanupPatch.relinquishedAtMs, cleanupAtMs);
 assert.equal(cleanupPatch.neutralClaimOpen, false);
 

@@ -497,6 +497,7 @@
       id: region.id,
       name: region.name,
       type: region.type,
+      newPlayerSpawnEligible: Boolean(region.newPlayerSpawnEligible),
       gridX: Math.round(Number(region.gridX) || 0),
       gridY: Math.round(Number(region.gridY) || 0),
       width: dimensions.width,
@@ -539,6 +540,9 @@
       id,
       name: String(rawRegion.name || rawRegion.label || titleFromId(id)),
       type,
+      newPlayerSpawnEligible: Boolean(
+        rawRegion.newPlayerSpawnEligible ?? (type === "starter")
+      ),
       gridX: Math.round(Number(rawRegion.gridX) || 0),
       gridY: Math.round(Number(rawRegion.gridY) || 0),
       width: dimensions.width,
@@ -2611,6 +2615,7 @@
         <label class="wide"><span>Region ID</span><input data-field="id" data-commit="change" value="${escapeHtml(region.id)}" /></label>
         <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(region.name)}" /></label>
         <label><span>Type</span><select data-field="type">${optionList(REGION_TYPES, region.type)}</select></label>
+        <label><span>New-player spawn</span><input data-field="newPlayerSpawnEligible" type="checkbox" ${region.newPlayerSpawnEligible ? "checked" : ""} /></label>
         <label><span>Cities Placed</span><input value="${region.cities.length}" readonly /></label>
         <label><span>Camps Placed</span><input value="${region.camps.length}" readonly /></label>
         <label><span>City Capacity</span><input data-field="cityCapacity" type="number" min="0" value="${region.cityCapacity}" /></label>
@@ -2825,7 +2830,9 @@
       renameRegion(region, nextId);
       return;
     }
-    if (["gridX", "gridY", "cityCapacity", "width", "height"].includes(field)) {
+    if (field === "newPlayerSpawnEligible") {
+      region[field] = Boolean(value);
+    } else if (["gridX", "gridY", "cityCapacity", "width", "height"].includes(field)) {
       region[field] = Math.max(field === "cityCapacity" ? 0 : 1, Math.floor(Number(value) || 0));
       if (field === "width" || field === "height") {
         syncRegionAspectFromField(region, field);

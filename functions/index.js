@@ -1652,6 +1652,7 @@ async function loadInactivePlayerHoldings(uid = "") {
 }
 
 function getInactiveCityNeutralPatch(city = {}, nowMs = Date.now()) {
+  const stronghold = isStronghold(city);
   return {
     ownerKind: "neutral",
     ownerUid: null,
@@ -1659,7 +1660,8 @@ function getInactiveCityNeutralPatch(city = {}, nowMs = Date.now()) {
     ownerFlag: null,
     ownerKingPower: 0,
     ownerShieldExpiresAtMs: 0,
-    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
+    level: stronghold ? getStrongholdDefenseLevel(city) : 1,
+    ...(stronghold ? {} : { defense: 1 }),
     troops: 0,
     troopFloat: 0,
     investedGold: 0,
@@ -2491,9 +2493,17 @@ const SERVER_WORLD_OBJECTIVE_TARGET_KEYS = new Set(
     `${normalizeRegionId(objective.regionId)}:${objective.id}`
   ))
 );
-const STARTER_REGION_IDS = Object.freeze(
+const NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES = 10;
+
+function isNewPlayerSpawnMap(map = null) {
+  if (!map || typeof map !== "object") return false;
+  if (typeof map.newPlayerSpawnEligible === "boolean") return map.newPlayerSpawnEligible;
+  return safeString(map.type, 32).toLowerCase() === "starter";
+}
+
+const NEW_PLAYER_SPAWN_REGION_IDS = Object.freeze(
   SERVER_WORLD_MAPS
-    .filter(map => safeString(map?.type, 32).toLowerCase() === "starter")
+    .filter(isNewPlayerSpawnMap)
     .map(map => normalizeRegionId(map.id))
 );
 
@@ -7304,6 +7314,7 @@ function getNeutralClaimClearedPatch(nowMs = Date.now()) {
 }
 
 function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
+  const stronghold = isStronghold(city);
   return {
     ownerKind: "neutral",
     ownerUid: null,
@@ -7316,7 +7327,8 @@ function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
     ownerClanIdentityRevision: 0,
     ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
     ownerShieldExpiresAtMs: 0,
-    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
+    level: stronghold ? getStrongholdDefenseLevel(city) : 1,
+    ...(stronghold ? {} : { defense: 1 }),
     troops: 0,
     troopFloat: 0,
     alliedReinforcementTroops: 0,
@@ -15829,6 +15841,46 @@ function shuffleStartingCityIds(regionId = "") {
   return values;
 }
 
+async function loadNewPlayerSpawnAvailability(regionIds = NEW_PLAYER_SPAWN_REGION_IDS) {
+  return Promise.all(regionIds.map(async regionId => {
+    const islandRef = db.doc(`islands/${getOnlineIslandId(regionId)}`);
+    const map = getServerWorldMap(regionId);
+    const objectiveCount = Array.isArray(map?.objectives) ? map.objectives.length : 0;
+    const queryLimit = NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES + objectiveCount + 5;
+    const [islandSnap, neutralSnap] = await Promise.all([
+      islandRef.get(),
+      islandRef.collection("cities")
+        .where("ownerKind", "==", "neutral")
+        .limit(queryLimit)
+        .get(),
+    ]);
+    const island = islandSnap.exists ? islandSnap.data() || {} : {};
+    const currentIsland = islandSnap.exists
+      && safeString(island.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(island.resetGeneration, 120) === RESET_GENERATION
+      && REALM_TOPOLOGY.normalizeRealmShardId(island.realmShardId) === getCurrentRealmShardId();
+    const regularCityIds = getServerWorldRegularCityIds(regionId);
+    const neutralCityCount = currentIsland ? neutralSnap.docs.filter(citySnap => {
+      const city = { id: citySnap.id, ...citySnap.data() };
+      return regularCityIds.has(citySnap.id)
+        && safeString(city.worldId, 120) === ONLINE_WORLD_ID
+        && safeString(city.resetGeneration, 120) === RESET_GENERATION
+        && REALM_TOPOLOGY.normalizeRealmShardId(city.realmShardId) === getCurrentRealmShardId()
+        && safeString(city.ownerKind, 24).toLowerCase() === "neutral"
+        && !getOwnerUid(city)
+        && !isStronghold(city);
+    }).length : 0;
+    return {
+      ref: islandRef,
+      regionId,
+      islandId: islandRef.id,
+      currentIsland,
+      neutralCityCount,
+      ready: neutralCityCount >= NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES,
+    };
+  }));
+}
+
 function createRandomPlayerFlag() {
   return PLAYER_FLAG_CONFIG.createRandomFlag(max => crypto.randomInt(0, max));
 }
@@ -16236,13 +16288,17 @@ async function claimFreshStartingCityInAssignedShard(request) {
   const uid = request.auth?.uid || "";
   const data = request.data || {};
   const authToken = request.auth?.token || {};
-  if (!STARTER_REGION_IDS.length) {
-    throw new HttpsError("failed-precondition", "No starter islands are configured.");
+  if (!NEW_PLAYER_SPAWN_REGION_IDS.length) {
+    throw new HttpsError("failed-precondition", "No new-player islands are configured.");
   }
 
-  await Promise.all(STARTER_REGION_IDS.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
+  await Promise.all(NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
   const shuffledCityIdsByRegion = new Map(
-    STARTER_REGION_IDS.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
+    NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
+  );
+  const spawnAvailability = await loadNewPlayerSpawnAvailability();
+  const spawnAvailabilityByRegion = new Map(
+    spawnAvailability.map(entry => [entry.regionId, entry])
   );
   const playerRef = db.doc(`players/${uid}`);
 
@@ -16297,7 +16353,9 @@ async function claimFreshStartingCityInAssignedShard(request) {
       : -1;
     if (
       !chosenIslandSnap.exists
+      || safeString(chosenIslandSnap.data()?.worldId, 120) !== ONLINE_WORLD_ID
       || safeString(chosenIslandSnap.data()?.resetGeneration, 120) !== RESET_GENERATION
+      || REALM_TOPOLOGY.normalizeRealmShardId(chosenIslandSnap.data()?.realmShardId) !== getCurrentRealmShardId()
       || currentPopulation !== placement.expectedPopulation
       || !placementSlotSnap.exists
       || safeString(placementSlot.status, 24) !== "reserved"
@@ -16318,6 +16376,9 @@ async function claimFreshStartingCityInAssignedShard(request) {
       if (!citySnap.exists) continue;
       const city = { id: citySnap.id, ...citySnap.data() };
       if (safeString(city.resetGeneration, 120) !== RESET_GENERATION) continue;
+      if (safeString(city.worldId, 120) !== ONLINE_WORLD_ID) continue;
+      if (REALM_TOPOLOGY.normalizeRealmShardId(city.realmShardId) !== getCurrentRealmShardId()) continue;
+      if (safeString(city.ownerKind, 24).toLowerCase() !== "neutral") continue;
       if (getOwnerUid(city) || isStronghold(city)) continue;
       chosenCityRef = cityRef;
       chosenCity = city;
@@ -16530,42 +16591,63 @@ async function claimFreshStartingCityInAssignedShard(request) {
     }, { maxAttempts: 3 });
   };
 
-  const exhaustedStarterRegionIds = new Set();
+  const exhaustedSpawnRegionIds = new Set();
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
-    const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
+    const islandRefs = NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
     const islandSnapshots = await db.getAll(...islandRefs);
     const islandEntries = islandSnapshots.flatMap((snap, index) => {
       const island = snap.exists ? snap.data() || {} : {};
-      if (!snap.exists || safeString(island.resetGeneration, 120) !== RESET_GENERATION) return [];
+      const regionId = NEW_PLAYER_SPAWN_REGION_IDS[index];
+      const availability = spawnAvailabilityByRegion.get(regionId);
+      if (
+        !snap.exists
+        || !availability?.currentIsland
+        || availability.neutralCityCount < 1
+        || safeString(island.worldId, 120) !== ONLINE_WORLD_ID
+        || safeString(island.resetGeneration, 120) !== RESET_GENERATION
+        || REALM_TOPOLOGY.normalizeRealmShardId(island.realmShardId) !== getCurrentRealmShardId()
+      ) return [];
       return [{
         ref: snap.ref,
-        regionId: STARTER_REGION_IDS[index],
+        regionId,
         islandId: snap.id,
         playerCount: Math.max(0, Math.floor(safeNumber(island.playerCount, 0))),
+        neutralCityCount: availability.neutralCityCount,
+        ready: availability.ready,
       }];
     });
     if (!islandEntries.length) {
-      throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
-    }
-    const availableIslandEntries = islandEntries.filter(
-      entry => !exhaustedStarterRegionIds.has(entry.regionId)
-    );
-    if (!availableIslandEntries.length) {
-      if (islandEntries.length < STARTER_REGION_IDS.length) {
-        throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
+      const seededRegionCount = spawnAvailability.filter(entry => entry.currentIsland).length;
+      if (seededRegionCount < NEW_PLAYER_SPAWN_REGION_IDS.length) {
+        throw new HttpsError("failed-precondition", "New-player islands are still being prepared.");
       }
       throw new HttpsError(
         "resource-exhausted",
         "No unclaimed starting city is available in this realm.",
         {
           reason: "starter-realm-exhausted",
-          exhaustedRegionIds: [...exhaustedStarterRegionIds].sort(),
+          exhaustedRegionIds: [...NEW_PLAYER_SPAWN_REGION_IDS].sort(),
         }
       );
     }
-    const minimumPopulation = Math.min(...availableIslandEntries.map(entry => entry.playerCount));
-    const leastPopulated = availableIslandEntries.filter(
+    const availableIslandEntries = islandEntries.filter(
+      entry => !exhaustedSpawnRegionIds.has(entry.regionId)
+    );
+    if (!availableIslandEntries.length) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "No unclaimed starting city is available in this realm.",
+        {
+          reason: "starter-realm-exhausted",
+          exhaustedRegionIds: [...exhaustedSpawnRegionIds].sort(),
+        }
+      );
+    }
+    const readyIslandEntries = availableIslandEntries.filter(entry => entry.ready);
+    const candidateIslandEntries = readyIslandEntries.length ? readyIslandEntries : availableIslandEntries;
+    const minimumPopulation = Math.min(...candidateIslandEntries.map(entry => entry.playerCount));
+    const leastPopulated = candidateIslandEntries.filter(
       entry => entry.playerCount === minimumPopulation
     );
     const chosenIsland = leastPopulated[crypto.randomInt(0, leastPopulated.length)];
@@ -16593,13 +16675,13 @@ async function claimFreshStartingCityInAssignedShard(request) {
       );
       if (result?.starterIslandExhausted) {
         await releasePlacementReservation(placement);
-        exhaustedStarterRegionIds.add(chosenIsland.regionId);
+        exhaustedSpawnRegionIds.add(chosenIsland.regionId);
         logOperation("claimStartingCityIslandExhausted", Date.now(), request, "retry", {
           reason: "starter-island-exhausted",
           regionId: chosenIsland.regionId,
           islandId: chosenIsland.islandId,
-          exhaustedRegionCount: exhaustedStarterRegionIds.size,
-          remainingRegionCount: Math.max(0, STARTER_REGION_IDS.length - exhaustedStarterRegionIds.size),
+          exhaustedRegionCount: exhaustedSpawnRegionIds.size,
+          remainingRegionCount: Math.max(0, NEW_PLAYER_SPAWN_REGION_IDS.length - exhaustedSpawnRegionIds.size),
         });
         continue;
       }

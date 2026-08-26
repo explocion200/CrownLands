@@ -130,4 +130,6 @@ assert.match(editorServer, /flipX: Boolean\(camp\.flipX\)/);
 assert.match(gameStyles, /\.map-art-flip-x\s*\{[^}]*scaleX\(-1\)/s);
 assert.match(editorStyles, /\.map-marker img\.editor-art-flip-x\s*\{[^}]*scaleX\(-1\)/s);
 
+require("./validate-new-player-spawn-policy.js");
+
 console.log(`Validated ${positionedObjects} editor positions and ${sizedObjects} editor-controlled object sizes with horizontal flip persistence.`);

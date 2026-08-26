@@ -15,6 +15,7 @@ const indexes = JSON.parse(read("firestore.indexes.json"));
 const browserRealm = read("release-config.js");
 const serverRealm = JSON.parse(read("functions/release-config.json"));
 const manifestGenerator = read("tools/generate-release-manifest.js");
+const worldLayout = JSON.parse(read("assets/worlds/world_01/world-layout.json"));
 const topology = require("../functions/realmTopology.js");
 
 for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId, serverRealm.apiContractHash]) {
@@ -34,7 +35,11 @@ if (/\.update\(serverSourceHash\)[\s\S]*JSON\.stringify\(callableNames\)/.test(m
   throw new Error("Build implementation files must not silently redefine the public API contract.");
 }
 
-requireMatch(server, /STARTER_REGION_IDS[\s\S]*type[\s\S]*starter/, "Starter islands are not derived from authoritative map metadata.");
+requireMatch(
+  server,
+  /isNewPlayerSpawnMap[\s\S]*newPlayerSpawnEligible[\s\S]*type[\s\S]*starter[\s\S]*NEW_PLAYER_SPAWN_REGION_IDS/,
+  "New-player spawn maps are not derived from authoritative map metadata.",
+);
 requireMatch(server, /claimFreshStartingCity[\s\S]*leastPopulated[\s\S]*crypto\.randomInt/, "Starting islands are not balanced with random tie breaking.");
 requireMatch(server, /transaction\.set\(playerRef,[\s\S]*freshProfile[\s\S]*\}\);/, "Reset profiles must replace old gameplay state.");
 requireMatch(server, /writeOwnershipChangeEvent[\s\S]*processOwnershipChangeEvent/, "Ownership changes are not using the durable event pipeline.");
@@ -85,8 +90,12 @@ for (const [label, source] of [["server", server], ["client", client]]) {
   }
 }
 
+const newPlayerSpawnMapCount = worldLayout.regions.filter(map => map.newPlayerSpawnEligible === true).length;
+if (newPlayerSpawnMapCount !== 10) {
+  throw new Error(`Expected 10 designated new-player spawn maps, found ${newPlayerSpawnMapCount}.`);
+}
 for (let trial = 0; trial < 500; trial += 1) {
-  const counts = [0, 0, 0, 0, 0];
+  const counts = Array(newPlayerSpawnMapCount).fill(0);
   for (let player = 0; player < 50; player += 1) {
     const minimum = Math.min(...counts);
     const candidates = counts.map((count, index) => count === minimum ? index : -1).filter(index => index >= 0);

@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const realm = require("../release-config.json");
 const economyConfig = require("../economy-config.json");
+const worldLayout = require("../world-layout.json");
 const { getClanQuestPeriod } = require("../clanQuestPeriod.js");
 const playerFlagConfig = require("../playerFlagConfig.js");
 const CHAT = require("../chat.js");
@@ -1139,13 +1140,18 @@ async function main() {
     "Concurrent new players all received the same generated flag."
   );
 
-  const starterRegions = ["region_11", "region_12", "region_13", "region_14", "region_15"];
-  const islandSnapshots = await Promise.all(starterRegions.map(regionId => (
+  const spawnRegions = (worldLayout.maps || [])
+    .filter(map => typeof map?.newPlayerSpawnEligible === "boolean"
+      ? map.newPlayerSpawnEligible
+      : String(map?.type || "").toLowerCase() === "starter")
+    .map(map => String(map.id || ""))
+    .filter(Boolean);
+  const islandSnapshots = await Promise.all(spawnRegions.map(regionId => (
     db.doc(`islands/${realm.worldId}-${regionId}`).get()
   )));
   const counts = islandSnapshots.map(snapshot => Number(snapshot.data()?.playerCount) || 0);
-  assert(counts.reduce((sum, count) => sum + count, 0) === 50, `Starter counts do not total 50: ${counts.join(",")}`);
-  assert(Math.max(...counts) - Math.min(...counts) <= 1, `Starter islands are imbalanced: ${counts.join(",")}`);
+  assert(counts.reduce((sum, count) => sum + count, 0) === 50, `Spawn-map counts do not total 50: ${counts.join(",")}`);
+  assert(Math.max(...counts) - Math.min(...counts) <= 1, `Spawn maps are imbalanced: ${counts.join(",")}`);
 
   const idempotentResults = await mapWithConcurrency(
     users,
@@ -1215,7 +1221,7 @@ async function main() {
       && retriedPersistentUser.globalStats?.kingPower === profile.kingPower,
     "The alreadyClaimed response did not reflect persistent and reset state from authoritative documents."
   );
-  const countsAfterRetry = await Promise.all(starterRegions.map(async regionId => (
+  const countsAfterRetry = await Promise.all(spawnRegions.map(async regionId => (
     Number((await db.doc(`islands/${realm.worldId}-${regionId}`).get()).data()?.playerCount) || 0
   )));
   assert(countsAfterRetry.join(",") === counts.join(","), "Repeated claims changed island populations.");
@@ -3789,7 +3795,7 @@ async function main() {
     "A removed archived clan membership incorrectly persisted onto a fresh-season profile."
   );
 
-  console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, conquest quests, and leader clan disbanding: ${counts.join("/")} across starter islands.`);
+  console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, conquest quests, and leader clan disbanding: ${counts.join("/")} across designated spawn maps.`);
 }
 
 main().catch(error => {
