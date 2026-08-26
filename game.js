@@ -73,6 +73,7 @@ const CROWDED_MAP_ARMY_THRESHOLD = 24;
 const CROWDED_MAP_CITY_EXIT_THRESHOLD = 58;
 const CROWDED_MAP_ARMY_EXIT_THRESHOLD = 18;
 const CITY_LIST_PAGE_SIZE = 5;
+const CITY_LIST_UPGRADE_FEEDBACK_MS = 2800;
 const INVENTORY_SLOT_COUNT = 8;
 const ECONOMY_CONFIG = window.CROWNLANDS_ECONOMY_CONFIG || {};
 const COMMON_GEAR = window.CROWNLANDS_COMMON_GEAR || null;
@@ -2109,6 +2110,8 @@ const clanPublicSnapshotCache = new Map();
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
 let cityListPage = 0;
+let cityListUpgradeFeedback = null;
+let cityListUpgradeFeedbackTimer = 0;
 let innerCastleSelectedBuildingKey = "";
 let selectedCommonGearSlot = "head";
 let selectedCommonGearInstanceId = "";
@@ -11112,6 +11115,9 @@ function applyServerEconomyResult(result = null, options = {}) {
     }) || changed;
   }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  if (options.cityUpgradeFeedback && result.replayed !== true) {
+    setCityListUpgradeFeedback(options.cityUpgradeFeedback);
+  }
   const awaySummary = options.requestWelcomeBack === true
     && result.awaySummary
     && typeof result.awaySummary === "object"
@@ -11148,7 +11154,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     renderHarvestBonuses();
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
-    if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+    if (options.renderCityList !== false && modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
     if (options.renderProfile !== false && profileScreen?.classList.contains("open")) renderProfileScreen();
   }
   return changed;
@@ -29738,8 +29744,152 @@ function showCityListModal() {
   void refreshPromise;
 }
 
+function getCityListRowKey(cityOrId = "", regionId = "") {
+  const city = typeof cityOrId === "object" ? cityOrId : null;
+  const cityId = getKnownCityId(city?.id || cityOrId);
+  if (!cityId) return "";
+  const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
+  return `${resolvedRegionId}:${cityId}`;
+}
+
+function clearCityListUpgradeFeedback(options = {}) {
+  const hadFeedback = Boolean(cityListUpgradeFeedback);
+  if (cityListUpgradeFeedbackTimer) window.clearTimeout(cityListUpgradeFeedbackTimer);
+  cityListUpgradeFeedbackTimer = 0;
+  cityListUpgradeFeedback = null;
+  if (hadFeedback && options.render !== false && modal?.open && modal.classList.contains("city-list-modal")) {
+    renderCityListModal();
+  }
+}
+
+function setCityListUpgradeFeedback(raw = {}) {
+  const cityId = getKnownCityId(raw.cityId);
+  const regionId = normalizeRegionId(raw.regionId || (cityId ? getCityRegionId(cityId) : ""));
+  const finalLevel = clampCityLevel(raw.finalLevel);
+  const upgraded = Math.max(0, Math.floor(Number(raw.upgraded) || 0));
+  const startingLevel = clampCityLevel(
+    Number.isFinite(Number(raw.startingLevel)) ? raw.startingLevel : finalLevel - upgraded
+  );
+  const key = getCityListRowKey(cityId, regionId);
+  if (!key || upgraded < 1 || finalLevel <= startingLevel) return null;
+
+  if (cityListUpgradeFeedbackTimer) window.clearTimeout(cityListUpgradeFeedbackTimer);
+  cityListUpgradeFeedback = {
+    key,
+    cityId,
+    regionId,
+    mode: raw.mode === "max" ? "max" : "exact",
+    startingLevel,
+    finalLevel,
+    upgraded,
+    spentGold: Math.max(0, Math.floor(Number(raw.spentGold) || 0)),
+    reveal: true,
+    animate: true,
+    expiresAtMs: Date.now() + CITY_LIST_UPGRADE_FEEDBACK_MS,
+  };
+  const feedbackKey = key;
+  cityListUpgradeFeedbackTimer = window.setTimeout(() => {
+    cityListUpgradeFeedbackTimer = 0;
+    if (cityListUpgradeFeedback?.key !== feedbackKey) return;
+    cityListUpgradeFeedback = null;
+    if (modal?.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+  }, CITY_LIST_UPGRADE_FEEDBACK_MS);
+  return cityListUpgradeFeedback;
+}
+
+function getCityListUpgradeFeedback(city) {
+  if (!cityListUpgradeFeedback) return null;
+  if (cityListUpgradeFeedback.expiresAtMs <= Date.now()) {
+    clearCityListUpgradeFeedback({ render: false });
+    return null;
+  }
+  if (cityListUpgradeFeedback.key !== getCityListRowKey(city)) return null;
+  return clampCityLevel(city?.level) === cityListUpgradeFeedback.finalLevel ? cityListUpgradeFeedback : null;
+}
+
+function consumeCityListUpgradeRevealKey() {
+  if (!cityListUpgradeFeedback?.reveal || cityListUpgradeFeedback.expiresAtMs <= Date.now()) return "";
+  cityListUpgradeFeedback.reveal = false;
+  return cityListUpgradeFeedback.key;
+}
+
+function captureCityListFocus() {
+  const active = document.activeElement;
+  if (!active || !modalBody?.contains(active)) return null;
+  if (active.matches("[data-city-upgrade-mode]")) {
+    return {
+      kind: "upgrade",
+      cityKey: getCityListRowKey(active.dataset.cityUpgradeCity, active.dataset.cityUpgradeRegion),
+      mode: active.dataset.cityUpgradeMode || "",
+    };
+  }
+  if (active.matches("[data-city-list-info]")) {
+    return { kind: "info", cityKey: getCityListRowKey(active.dataset.cityListInfo, active.dataset.cityListRegion) };
+  }
+  if (active.matches("[data-city-list-jump]")) {
+    return { kind: "jump", cityKey: getCityListRowKey(active.dataset.cityListJump, active.dataset.cityListRegion) };
+  }
+  if (active.matches("[data-city-list-sort]")) return { kind: "sort", value: active.dataset.cityListSort || "" };
+  if (active.matches("[data-city-list-page]")) return { kind: "page", value: active.dataset.cityListPage || "" };
+  return null;
+}
+
+function restoreCityListFocus(snapshot) {
+  if (!snapshot) return false;
+  let target = null;
+  if (snapshot.kind === "upgrade") {
+    target = [...modalBody.querySelectorAll("[data-city-upgrade-mode]")].find(button => (
+      getCityListRowKey(button.dataset.cityUpgradeCity, button.dataset.cityUpgradeRegion) === snapshot.cityKey
+      && button.dataset.cityUpgradeMode === snapshot.mode
+    ));
+  } else if (snapshot.kind === "info") {
+    target = [...modalBody.querySelectorAll("[data-city-list-info]")].find(button => (
+      getCityListRowKey(button.dataset.cityListInfo, button.dataset.cityListRegion) === snapshot.cityKey
+    ));
+  } else if (snapshot.kind === "jump") {
+    target = [...modalBody.querySelectorAll("[data-city-list-jump]")].find(button => (
+      getCityListRowKey(button.dataset.cityListJump, button.dataset.cityListRegion) === snapshot.cityKey
+    ));
+  } else if (snapshot.kind === "sort") {
+    target = [...modalBody.querySelectorAll("[data-city-list-sort]")].find(button => button.dataset.cityListSort === snapshot.value);
+  } else if (snapshot.kind === "page") {
+    target = [...modalBody.querySelectorAll("[data-city-list-page]")].find(button => button.dataset.cityListPage === snapshot.value);
+  }
+  if (target && !target.disabled) {
+    target.focus({ preventScroll: true });
+    return true;
+  }
+  const fallbackRow = snapshot.cityKey
+    ? [...modalBody.querySelectorAll("[data-city-list-row-key]")].find(row => row.dataset.cityListRowKey === snapshot.cityKey)
+    : null;
+  fallbackRow?.focus({ preventScroll: true });
+  return Boolean(fallbackRow);
+}
+
+function ensureCityListRowVisible(cityKey = "") {
+  if (!cityKey) return;
+  const row = [...modalBody.querySelectorAll("[data-city-list-row-key]")].find(entry => entry.dataset.cityListRowKey === cityKey);
+  if (!row) return;
+  const bodyRect = modalBody.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const margin = 8;
+  if (rowRect.top < bodyRect.top + margin) {
+    modalBody.scrollTop -= bodyRect.top + margin - rowRect.top;
+  } else if (rowRect.bottom > bodyRect.bottom - margin) {
+    modalBody.scrollTop += rowRect.bottom - bodyRect.bottom + margin;
+  }
+}
+
 function renderCityListModal() {
+  const preserveUiState = Boolean(modal?.open && modal.classList.contains("city-list-modal"));
+  const previousScrollTop = preserveUiState ? modalBody.scrollTop : 0;
+  const focusSnapshot = preserveUiState ? captureCityListFocus() : null;
+  const revealCityKey = consumeCityListUpgradeRevealKey();
   const cities = getSortedCityList();
+  if (revealCityKey) {
+    const revealIndex = cities.findIndex(city => getCityListRowKey(city) === revealCityKey);
+    if (revealIndex >= 0) cityListPage = Math.floor(revealIndex / CITY_LIST_PAGE_SIZE);
+  }
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
   const globalStats = getGlobalStatsSnapshot();
   const displayCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : regularCityCount;
@@ -29829,6 +29979,9 @@ function renderCityListModal() {
     });
   });
   bindCityLevelUpButtons(null, modalBody);
+  modalBody.scrollTop = previousScrollTop;
+  if (revealCityKey) ensureCityListRowVisible(revealCityKey);
+  restoreCityListFocus(focusSnapshot);
 }
 
 async function focusCityListLocation(cityId, regionId = "") {
@@ -29902,9 +30055,12 @@ function getCityListSortLabel(key) {
 function renderCityListUpgradeButton(city, option) {
   const pending = option.reason === "Pending";
   const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
-  const label = pending && pendingAction?.mode === option.mode ? `${option.label}…` : option.label;
+  const activePending = pending
+    && pendingAction?.mode === option.mode
+    && (option.mode === "max" || Number(pendingAction.requestedLevels) === Number(option.levels));
+  const label = activePending ? `${option.label}…` : option.label;
   const details = option.reason || `${formatNumber(option.levels)} level${option.levels === 1 ? "" : "s"} · ${formatNumber(option.cost)} gold`;
-  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" aria-busy="${pending}" ${option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" aria-busy="${activePending}" ${activePending ? `aria-disabled="true"` : option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
 }
 
 function renderCityListRow(city) {
@@ -29916,13 +30072,20 @@ function renderCityListRow(city) {
   const locationLabel = statusLabel ? `${statusLabel} - ${regionLabel}` : regionLabel;
   const optionState = stronghold ? null : getCityUpgradeOptionState(city);
   const regionId = getCityRegionId(city);
+  const rowKey = getCityListRowKey(city, regionId);
+  const upgradeFeedback = stronghold ? null : getCityListUpgradeFeedback(city);
+  const animateUpgradeFeedback = Boolean(upgradeFeedback?.animate);
+  if (animateUpgradeFeedback) upgradeFeedback.animate = false;
+  const upgradeResult = upgradeFeedback
+    ? `Lv ${formatNumber(upgradeFeedback.startingLevel)} → Lv ${formatNumber(upgradeFeedback.finalLevel)} · +${formatNumber(upgradeFeedback.upgraded)} ${upgradeFeedback.upgraded === 1 ? "level" : "levels"}`
+    : "";
   return `
-    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}" ${optionState?.pendingAction ? `aria-busy="true"` : ""}>
+    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""} ${animateUpgradeFeedback ? "upgrade-confirmed" : ""}" data-city-list-row-key="${escapeHtml(rowKey)}" tabindex="-1" ${optionState?.pendingAction ? `aria-busy="true"` : ""}>
       <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
       <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : renderCrownlandsIcon("city")}</span>
       <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">${renderCrownlandsIcon("troops")}</span></strong>
-      <span class="city-list-name">${escapeHtml(city.name)}</span>
+      <span class="city-list-name"><span class="city-list-name-text">${escapeHtml(city.name)}</span>${upgradeResult ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeResult)}</small>` : ""}</span>
       <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
       <div class="city-list-actions">
         ${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : ""}
@@ -33100,10 +33263,12 @@ function renderCityLevelUpButton(city, option) {
     ? `${formatNumber(option.cost)}g${xp > 0 ? ` · +${formatNumber(xp)} XP` : ""}`
     : (option.reason || "Unavailable");
   const pending = option.reason === "Pending";
-  const label = pending && option.mode === getPendingCityUpgradeAction(city, getCityRegionId(city))?.mode
-    ? `${option.label}…`
-    : option.label;
-  return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-busy="${pending}" ${option.disabled ? "disabled" : ""}><span>${escapeHtml(label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
+  const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
+  const activePending = pending
+    && pendingAction?.mode === option.mode
+    && (option.mode === "max" || Number(pendingAction.requestedLevels) === Number(option.levels));
+  const label = activePending ? `${option.label}…` : option.label;
+  return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-busy="${activePending}" ${activePending ? `aria-disabled="true"` : option.disabled ? "disabled" : ""}><span>${escapeHtml(label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
 }
 
 function renderCityLevelUpAction(city) {
@@ -33116,6 +33281,7 @@ function renderCityLevelUpAction(city) {
 function bindCityLevelUpButtons(fallbackCity = null, root = modalBody) {
   root?.querySelectorAll("[data-city-upgrade-mode]").forEach(button => {
     button.addEventListener("click", () => {
+      if (button.getAttribute("aria-disabled") === "true") return;
       const cityId = button.dataset.cityUpgradeCity || fallbackCity?.id || "";
       const regionId = button.dataset.cityUpgradeRegion || (fallbackCity ? getCityRegionId(fallbackCity) : "");
       const mode = button.dataset.cityUpgradeMode === "max" ? "max" : "exact";

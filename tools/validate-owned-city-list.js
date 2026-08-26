@@ -7,6 +7,7 @@ const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "ut
 const controllerSource = fs.readFileSync(path.resolve(__dirname, "..", "instant-economy-actions.js"), "utf8");
 const styles = fs.readFileSync(path.resolve(__dirname, "..", "styles.css"), "utf8");
 const contrastStyles = fs.readFileSync(path.resolve(__dirname, "..", "ui-contrast-correction.css"), "utf8");
+const indexSource = fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf8");
 
 const loaderStart = clientSource.indexOf("async function loadOwnedCitiesAcrossIslands");
 const loaderEnd = clientSource.indexOf("async function loadServerReports", loaderStart);
@@ -25,7 +26,28 @@ assert.match(gameSource, /const optionState = stronghold \? null : getCityUpgrad
 assert.match(gameSource, /class="city-list-actions"[\s\S]*?renderCityListUpgradeButton[\s\S]*?class="city-list-info"/, "Regular city rows must place upgrade controls before Info.");
 assert.match(gameSource, /data-city-upgrade-region=/, "City-list upgrade controls must retain their map binding.");
 assert.match(controllerSource, /getPendingCityUpgradeAction[\s\S]*?already has an upgrade pending/, "Each city must reject overlapping upgrade requests while its action is pending.");
+assert.match(controllerSource, /serverCityUpgradePreviewIds = new Map\(\)/, "City-upgrade previews must retain the selected +1, +5, or MAX mode.");
+assert.match(controllerSource, /serverCityUpgradePreviewIds\.set\(actionKey, \{[\s\S]*?mode,[\s\S]*?requestedLevels:[\s\S]*?finally[\s\S]*?serverCityUpgradePreviewIds\.delete\(actionKey\)/, "Preview pending state must retain the exact button selection and clear on every outcome.");
+assert.match(gameSource, /const activePending = pending[\s\S]*?pendingAction\?\.mode === option\.mode[\s\S]*?pendingAction\.requestedLevels[\s\S]*?aria-busy="\$\{activePending\}"[\s\S]*?aria-disabled=\"true\"/, "Only the selected city-list upgrade button may expose busy state while all row upgrade actions are blocked.");
+assert.match(gameSource, /button\.getAttribute\("aria-disabled"\) === "true"/, "The focusable pending upgrade button must reject repeat activation.");
+assert.match(controllerSource, /renderCityList: false,[\s\S]*?cityUpgradeFeedback: result\?\.replayed \? null[\s\S]*?startingLevel: clampCityLevel\(authoritativeFinalLevel - upgraded\)[\s\S]*?finalLevel: authoritativeFinalLevel/, "City-list success feedback must be derived from the authoritative upgrade receipt and deferred until pending state clears.");
+assert.match(controllerSource, /if \(!result\?\.replayed\) \{[\s\S]*?playGameSound\("level_up"[\s\S]*?playCityUpgradeAnimation/, "Idempotent replay responses must not repeat success logs, audio, or animation.");
+
+const economyApplyStart = gameSource.indexOf("function applyServerEconomyResult");
+const economyApplyEnd = gameSource.indexOf("function mergeServerEconomyRefreshOptions", economyApplyStart);
+assert.ok(economyApplyStart >= 0 && economyApplyEnd > economyApplyStart, "Server economy result application must exist.");
+const economyApplySource = gameSource.slice(economyApplyStart, economyApplyEnd);
+assert.ok(
+  economyApplySource.indexOf("applyServerCityUpdates(result.cityUpdates)") < economyApplySource.indexOf("setCityListUpgradeFeedback(options.cityUpgradeFeedback)"),
+  "Authoritative city updates must reach active-map and off-map caches before success feedback is registered."
+);
+assert.match(economyApplySource, /result\.replayed !== true[\s\S]*?options\.renderCityList !== false/, "Economy reconciliation must suppress duplicate replay feedback and support one post-pending city-list render.");
+assert.match(gameSource, /data-city-list-row-key=[\s\S]*?city-list-upgrade-result" role="status"/, "The upgraded city row must expose a stable identity and an accessible level-change result.");
+assert.match(gameSource, /consumeCityListUpgradeRevealKey\(\)[\s\S]*?cities\.findIndex[\s\S]*?Math\.floor\(revealIndex \/ CITY_LIST_PAGE_SIZE\)/, "Sorting or pagination must keep the confirmed city visible after its level changes.");
+assert.match(gameSource, /captureCityListFocus\(\)[\s\S]*?previousScrollTop[\s\S]*?ensureCityListRowVisible[\s\S]*?restoreCityListFocus/, "City-list reconciliation must preserve scroll and keyboard focus around the upgraded row.");
+assert.match(styles, /\.city-list-row\.upgrade-confirmed[\s\S]*?@keyframes crownlandsCityListUpgradeConfirmed[\s\S]*?prefers-reduced-motion: reduce/, "Confirmed city upgrades need a brief reduced-motion-safe row highlight.");
+assert.match(indexSource, /styles\.css\?v=20260826-city-list-upgrade-feedback-r1[\s\S]*?instant-economy-actions\.js\?v=20260826-city-list-upgrade-feedback-r1[\s\S]*?game\.js\?v=20260826-city-list-upgrade-feedback-r1/, "Changed city-list client assets must use one cache-busting release token.");
 assert.match(styles, /@media \(max-width: 600px\) and \(orientation: landscape\)[\s\S]*?\.city-list-art,[\s\S]*?display: none;[\s\S]*?\.city-list-upgrade \{ min-width: 40px; width: 40px; height: 40px;/, "The 540px layout must preserve 40px controls by hiding decorative row content.");
 assert.match(contrastStyles, /\.city-list-modal \.city-list-toolbar button :is\(span, small, \.cl-icon\)[\s\S]*?color:\s*inherit !important;/, "City-list sort text and icons can still become brown on dark buttons.");
 
-console.log("Validated cross-map owned-city loading, shared upgrade controls, Stronghold exclusions, and compact responsive targets.");
+console.log("Validated cross-map loading, authoritative row feedback, replay safety, focus retention, and compact responsive targets.");

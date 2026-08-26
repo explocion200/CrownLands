@@ -28,7 +28,7 @@ requireMatch(game, /async function flushOnlineSave[\s\S]*Promise\.allSettled[\s\
 requireMatch(game, /if \(onlineSaveInFlight\) return onlineSavePromise \|\| false/, "Forced cloud flushes do not share the active save request.");
 
 const firebaseClientBuildId = "20260825-gear-upgrade-consumption-r1";
-const gameBuildId = "20260825-reconciled-updates-r1";
+const gameBuildId = "20260826-city-list-upgrade-feedback-r1";
 for (const [label, source] of [["index", index], ["service worker", worker]]) {
   requireMatch(source, new RegExp(firebaseClientBuildId), `The ${label} does not carry the login-resilience cache version.`);
   requireMatch(source, new RegExp(`firebaseClient\\.js\\?v=${firebaseClientBuildId}`), `The ${label} does not refresh the Firebase client.`);

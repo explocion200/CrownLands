@@ -23,7 +23,7 @@ let instantEconomyFlushTimer = 0;
 let instantEconomyGeneration = 1;
 let instantEconomyActionSequence = 0;
 let serverCityUpgradeInFlightIds = new Set();
-let serverCityUpgradePreviewIds = new Set();
+let serverCityUpgradePreviewIds = new Map();
 
 function createCityUpgradeRequestId(cityId = "") {
   const randomPart = typeof window.crypto?.randomUUID === "function"
@@ -49,7 +49,11 @@ function getCityUpgradeActionKey(cityOrId = "", regionId = "") {
 
 function getPendingCityUpgradeAction(cityOrId = "", regionId = "") {
   const key = getCityUpgradeActionKey(cityOrId, regionId);
-  return key ? getInstantEconomyPendingActions().find(action => action.type === "city" && action.key === key) || null : null;
+  if (!key) return null;
+  const queuedAction = getInstantEconomyPendingActions().find(action => action.type === "city" && action.key === key) || null;
+  if (queuedAction) return queuedAction;
+  const previewAction = serverCityUpgradePreviewIds.get(key);
+  return previewAction ? { type: "city", key, ...previewAction, preview: true } : null;
 }
 
 function isServerCityUpgradeInFlight(cityOrId = "", regionId = "") {
@@ -686,7 +690,19 @@ async function executeInstantCityUpgrade(action) {
     action.levelCosts = action.levelCosts.slice(upgraded);
     action.reservedGold = Math.max(0, action.reservedGold - chunkCosts.slice(0, upgraded).reduce((sum, cost) => sum + cost, 0));
   }
-  applyServerEconomyResult(result);
+  const authoritativeFinalLevel = clampCityLevel(result?.finalLevel);
+  applyServerEconomyResult(result, {
+    renderCityList: false,
+    cityUpgradeFeedback: result?.replayed ? null : {
+      cityId: city.id,
+      regionId: action.regionId,
+      mode: action.mode,
+      startingLevel: clampCityLevel(authoritativeFinalLevel - upgraded),
+      finalLevel: authoritativeFinalLevel,
+      upgraded,
+      spentGold: toWhole(result?.spentGold),
+    },
+  });
   const updatedCity = getOwnedCitySnapshotForUpgrade(city.id, action.regionId) || city;
   const awardedXp = toWhole(xpReceipt.awardedXp);
   const suppressedXp = capSuppressedXp + rebuildSuppressedXp;
@@ -695,10 +711,12 @@ async function executeInstantCityUpgrade(action) {
     : suppressedXp > 0
       ? ` No Hero XP was awarded; ${formatNumber(suppressedXp)} XP was suppressed.`
       : "";
-  addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.${xpLog}`);
-  showToast(`${updatedCity.name} upgraded${awardedXp > 0 ? ` · +${formatNumber(awardedXp)} Hero XP` : ""}`);
-  playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
-  playCityUpgradeAnimation(action.vfxBefore, getCityVfxSnapshot(updatedCity));
+  if (!result?.replayed) {
+    addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.${xpLog}`);
+    showToast(`${updatedCity.name} upgraded${awardedXp > 0 ? ` · +${formatNumber(awardedXp)} Hero XP` : ""}`);
+    playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
+    playCityUpgradeAnimation(action.vfxBefore, getCityVfxSnapshot(updatedCity));
+  }
   if (!authoritativeMode && action.levels > 0) queueInstantEconomyRemainder(action, { vfxBefore: getCityVfxSnapshot(updatedCity) });
 }
 
@@ -736,7 +754,10 @@ async function queueServerCityUpgradeWithPreview(cityId, options = {}) {
     ? Number.MAX_SAFE_INTEGER
     : Math.max(1, Math.floor(Number(options.requestedLevels) || 1));
   const actionKey = getCityUpgradeActionKey(requestCity, regionId);
-  serverCityUpgradePreviewIds.add(actionKey);
+  serverCityUpgradePreviewIds.set(actionKey, {
+    mode,
+    requestedLevels: mode === "max" ? 0 : requestedLevels,
+  });
   patchInstantEconomyUi();
   try {
     const api = getOnlineApi();
@@ -908,6 +929,7 @@ function upgradeCity(cityId, levels = 1, options) {
   }
   const vfxBefore = getCityVfxSnapshot(city);
   const localLevels = requestedMode === "exact" ? requested : affordable;
+  const startingLevel = clampCityLevel(city.level);
   for (let offset = 0; offset < localLevels; offset += 1) {
     const cost = getLevelCost(city);
     state.gold -= cost;
@@ -919,7 +941,16 @@ function upgradeCity(cityId, levels = 1, options) {
   playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
   markOwnedCityChanged(city);
   saveGame();
+  setCityListUpgradeFeedback({
+    cityId: city.id,
+    regionId: getCityRegionId(city),
+    mode: requestedMode,
+    startingLevel,
+    finalLevel: city.level,
+    upgraded: localLevels,
+  });
   renderAll();
+  if (modal?.open && modal.classList.contains("city-list-modal")) renderCityListModal();
   playCityUpgradeAnimation(vfxBefore, getCityVfxSnapshot(city));
   return true;
 }
