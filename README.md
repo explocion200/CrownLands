@@ -212,6 +212,8 @@ Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `inde
 
 Use Node 22 for release-equivalent local checks. Firebase emulator gates additionally require Java 21.
 
+For normal feature work, follow [the safe update workflow](docs/SAFE_UPDATE_WORKFLOW.md): start each update from a freshly synchronized `main`, run the complete preparation gate, and merge only through a reviewed pull request.
+
 ```powershell
 .\tools\run-health-check.ps1
 
