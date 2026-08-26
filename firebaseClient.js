@@ -741,6 +741,10 @@
     return callServerFunction("resetSkills", payload);
   }
 
+  async function syncSkillPointSystem(payload = {}) {
+    return callServerFunction("syncSkillPointSystem", payload);
+  }
+
   async function saveSkillPreset(payload = {}) {
     return callServerFunction("saveSkillPreset", payload);
   }
@@ -1592,6 +1596,9 @@
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
     delete cleanProfile.skillPresets;
+    delete cleanProfile.skillPointSystemVersion;
+    delete cleanProfile.skillPointSystemResetAtMs;
+    delete cleanProfile.skillPointSystemRollbackAtMs;
     delete cleanProfile.freeSkillResetGrantVersion;
     delete cleanProfile.freeSkillResetCredits;
     delete cleanProfile.gear;
@@ -2852,6 +2859,7 @@
     spendSkillPoint,
     spendSkillPoints,
     resetSkills,
+    syncSkillPointSystem,
     saveSkillPreset,
     renameSkillPreset,
     applySkillPreset,

@@ -690,6 +690,21 @@ const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.0
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
 const REGROUP_GOLD_COST = economyNumber("playerCosts.regroupGold", 150_000);
 const SKILL_PRESET_MODEL_VERSION = 5;
+const SKILL_POINT_SYSTEM_VERSION = 2;
+const SKILL_POINT_SYSTEM_RESET_ID = "skill-point-system-v2";
+const LEGACY_SKILL_UPGRADE_KEYS = Object.freeze([
+  "attack",
+  "income",
+  "defense",
+  "speed",
+  "striker",
+  "prosperous",
+  "recruiter",
+  "guardian",
+  "rusher",
+  "fearless",
+  "brave",
+]);
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 25 }),
@@ -3205,6 +3220,16 @@ function normalizeSkillUpgrades(upgrades = {}) {
     return skills;
   }, {});
 
+  SKILL_ORDER.forEach(key => {
+    normalized[key] = normalizeSkillLevelForSkill(key, normalized[key]);
+  });
+  return normalized;
+}
+
+function normalizePreResetSkillUpgrades(upgrades = {}) {
+  const source = upgrades && typeof upgrades === "object" ? upgrades : {};
+  const normalized = normalizeSkillUpgrades(source);
+
   const legacyAttack = Math.max(normalizeSkillLevel(source.striker), normalizeSkillLevel(source.attack));
   const legacyIncome = Math.max(normalizeSkillLevel(source.prosperous), normalizeSkillLevel(source.income));
   const legacyTroops = Math.max(normalizeSkillLevel(source.recruiter), normalizeSkillLevel(source.income));
@@ -3239,9 +3264,76 @@ function getAvailableSkillPoints(character = {}, upgrades = {}) {
   return Math.max(0, getEarnedSkillPoints(character) - getSpentSkillPoints(upgrades));
 }
 
+function getSkillPointSystemVersion(profile = {}) {
+  return Math.max(0, Math.floor(safeNumber(profile?.skillPointSystemVersion, 0)));
+}
+
+function needsSkillPointSystemReset(profile = {}) {
+  return getSkillPointSystemVersion(profile) < SKILL_POINT_SYSTEM_VERSION;
+}
+
+function createSkillPointSystemReset(profile = {}, nowMs = Date.now()) {
+  if (!needsSkillPointSystemReset(profile)) {
+    return {
+      applied: false,
+      previousVersion: getSkillPointSystemVersion(profile),
+      version: getSkillPointSystemVersion(profile),
+      resetAtMs: Math.max(0, timestampToMs(profile.skillPointSystemResetAtMs)),
+    };
+  }
+  const character = normalizeCharacterProgress(profile.character);
+  const upgrades = normalizeSkillUpgrades({});
+  character.skillPoints = getEarnedSkillPoints(character);
+  return {
+    applied: true,
+    previousVersion: getSkillPointSystemVersion(profile),
+    version: SKILL_POINT_SYSTEM_VERSION,
+    resetAtMs: Math.max(1, Math.floor(safeNumber(nowMs, Date.now()))),
+    character,
+    upgrades,
+    skillPresets: normalizeSkillPresets(),
+    freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
+    freeSkillResetCredits: 0,
+  };
+}
+
+function skillPointSystemBackupRef(uid = "") {
+  const playerUid = safeString(uid, 128);
+  return playerUid
+    ? db.doc(`maintenanceBackups/${SKILL_POINT_SYSTEM_RESET_ID}/players/${playerUid}`)
+    : null;
+}
+
+function createSkillPointSystemBackup(profile = {}, uid = "", nowMs = Date.now()) {
+  return {
+    uid: safeString(uid, 128),
+    resetId: SKILL_POINT_SYSTEM_RESET_ID,
+    backedUpAtMs: Math.max(1, Math.floor(safeNumber(nowMs, Date.now()))),
+    previousVersion: getSkillPointSystemVersion(profile),
+    character: normalizeCharacterProgress(profile.character),
+    upgrades: normalizePreResetSkillUpgrades(profile.upgrades),
+    rawLegacyUpgradeKeys: LEGACY_SKILL_UPGRADE_KEYS.filter(key => (
+      Object.prototype.hasOwnProperty.call(profile?.upgrades || {}, key)
+    )),
+    skillPresets: profile.skillPresets && typeof profile.skillPresets === "object"
+      ? sanitizeJsonValue(profile.skillPresets)
+      : normalizeSkillPresets(),
+    freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0))),
+    freeSkillResetCredits: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))),
+    skillPointSystemResetAtMs: Math.max(0, timestampToMs(profile.skillPointSystemResetAtMs)),
+    createdAt: FieldValue.serverTimestamp(),
+  };
+}
+
 function normalizeFreeSkillResetState(profile = {}) {
   const storedVersion = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0)));
   const storedCredits = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0)));
+  if (getSkillPointSystemVersion(profile) >= SKILL_POINT_SYSTEM_VERSION) {
+    return {
+      version: Math.max(SKILL_FREE_RESET_GRANT_VERSION, storedVersion),
+      credits: 0,
+    };
+  }
   if (storedVersion >= SKILL_FREE_RESET_GRANT_VERSION) {
     return { version: storedVersion, credits: storedCredits };
   }
@@ -12421,15 +12513,35 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   }
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
-  const participation = await requireCurrentSeasonParticipation(transaction, uid, {
+  const participation = options.participation || await requireCurrentSeasonParticipation(transaction, uid, {
     profileRef,
     profileSnap,
     allowMainCityRepair: options.allowMainCityRepair === true,
   });
   const rawProfile = participation.profile;
-  const upgrades = normalizeSkillUpgrades(rawProfile.upgrades);
-  const character = reconcileSkillPoints(rawProfile.character, upgrades);
-  const freeSkillResetState = normalizeFreeSkillResetState(rawProfile);
+  const skillPointSystemReset = createSkillPointSystemReset(rawProfile, nowMs);
+  const accruedUpgrades = skillPointSystemReset.applied
+    ? normalizePreResetSkillUpgrades(rawProfile.upgrades)
+    : normalizeSkillUpgrades(rawProfile.upgrades);
+  const accruedCharacter = reconcileSkillPoints(rawProfile.character, accruedUpgrades);
+  const upgrades = skillPointSystemReset.applied
+    ? skillPointSystemReset.upgrades
+    : accruedUpgrades;
+  const character = skillPointSystemReset.applied
+    ? skillPointSystemReset.character
+    : accruedCharacter;
+  const freeSkillResetState = skillPointSystemReset.applied
+    ? {
+      version: skillPointSystemReset.freeSkillResetGrantVersion,
+      credits: skillPointSystemReset.freeSkillResetCredits,
+    }
+    : normalizeFreeSkillResetState(rawProfile);
+  const skillPointBackupRef = skillPointSystemReset.applied && profileSnap.exists
+    ? skillPointSystemBackupRef(uid)
+    : null;
+  const skillPointBackupSnap = skillPointBackupRef
+    ? await transaction.get(skillPointBackupRef)
+    : null;
   const itemEffects = normalizeItemEffects(rawProfile.itemEffects);
   const shopItems = normalizeShopItems(rawProfile.shopItems);
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
@@ -12514,7 +12626,13 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       MAX_SERVER_PRODUCTION_SECONDS
     );
     maxElapsedSeconds = Math.max(maxElapsedSeconds, collectionElapsedSeconds);
-    const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, productionBonuses, {
+    const stats = getCityProductionStats(city, {
+      ...rawProfile,
+      character: accruedCharacter,
+      upgrades: accruedUpgrades,
+      skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+      itemEffects,
+    }, productionBonuses, {
       nowMs,
       includeWarDrums: false,
       includeRoyalTaxDecree: false,
@@ -12705,6 +12823,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     ...rawProfile,
     character,
     upgrades,
+    skillPresets: skillPointSystemReset.applied
+      ? skillPointSystemReset.skillPresets
+      : normalizeSkillPresets(rawProfile.skillPresets),
+    skillPointSystemVersion: skillPointSystemReset.version,
+    skillPointSystemResetAtMs: skillPointSystemReset.resetAtMs,
     freeSkillResetGrantVersion: freeSkillResetState.version,
     freeSkillResetCredits: freeSkillResetState.credits,
     gold,
@@ -12737,6 +12860,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     goldFloat,
     character,
     upgrades,
+    skillPresets: skillPointSystemReset.applied
+      ? skillPointSystemReset.skillPresets
+      : normalizeSkillPresets(rawProfile.skillPresets),
+    skillPointSystemVersion: skillPointSystemReset.version,
+    skillPointSystemResetAtMs: skillPointSystemReset.resetAtMs,
     freeSkillResetGrantVersion: freeSkillResetState.version,
     freeSkillResetCredits: freeSkillResetState.credits,
     shopItems,
@@ -12758,6 +12886,9 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     profileBefore: rawProfile,
     profileAfter,
     profilePatch,
+    skillPointSystemReset,
+    skillPointBackupRef,
+    skillPointBackupExists: Boolean(skillPointBackupSnap?.exists),
     globalStatsRef,
     globalStats,
     activeArmies,
@@ -12899,6 +13030,16 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
 
 function writePreparedEconomy(transaction, economy, profileOverrides = {}, extraCityPatches = [], options = {}) {
   if (!economy) return null;
+  if (
+    economy.skillPointSystemReset?.applied
+    && economy.skillPointBackupRef
+    && !economy.skillPointBackupExists
+  ) {
+    transaction.set(
+      economy.skillPointBackupRef,
+      createSkillPointSystemBackup(economy.profileBefore, economy.uid, economy.skillPointSystemReset.resetAtMs)
+    );
+  }
   economy.cityPatches.forEach(entry => {
     transaction.set(entry.ref, cleanCityUpdate(entry.city, entry.patch), { merge: true });
   });
@@ -12921,6 +13062,17 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
     } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
+  if (economy.profileSnap?.exists && economy.skillPointSystemReset?.applied) {
+    transaction.update(economy.profileRef, {
+      character: normalizeCharacterProgress(profileOverrides.character || economy.profileAfter.character),
+      upgrades: normalizeSkillUpgrades(profileOverrides.upgrades || economy.profileAfter.upgrades),
+      skillPresets: normalizeSkillPresets(profileOverrides.skillPresets || economy.profileAfter.skillPresets),
+      skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+      skillPointSystemResetAtMs: economy.skillPointSystemReset.resetAtMs,
+      freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
+      freeSkillResetCredits: 0,
+    });
+  }
   if (economy.profileSnap?.exists) {
     if (economy.profilePatch.scoutReports !== undefined) {
       deleteRemovedScoutReportEntries(
@@ -13183,6 +13335,8 @@ function createEconomyResponse(economy = null, overrides = {}) {
     character,
     upgrades,
     skillPresets,
+    skillPointSystemVersion,
+    skillPointSystemResetAtMs,
     gear,
     daily,
     dailyLoginReward,
@@ -13218,6 +13372,15 @@ function createEconomyResponse(economy = null, overrides = {}) {
     skillPresets: normalizeSkillPresets(
       skillPresets !== undefined ? skillPresets : economy.profileAfter.skillPresets
     ),
+    skillPointSystemVersion: Math.max(0, Math.floor(safeNumber(
+      skillPointSystemVersion,
+      economy.profileAfter.skillPointSystemVersion
+    ))),
+    skillPointSystemResetAtMs: Math.max(0, timestampToMs(
+      skillPointSystemResetAtMs !== undefined
+        ? skillPointSystemResetAtMs
+        : economy.profileAfter.skillPointSystemResetAtMs
+    )),
     freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(
       overrides.freeSkillResetGrantVersion,
       economy.profileAfter.freeSkillResetGrantVersion
@@ -13917,6 +14080,7 @@ exports.getRealmInfo = timedCallable(
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       siegeCombatVersion: SIEGE_COMBAT_VERSION,
       defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+      skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
       realmActivityVersion: REALM_ACTIVITY_VERSION,
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
       dailyMissionVersion: DAILY_MISSION_VERSION,
@@ -13932,6 +14096,7 @@ exports.getRealmInfo = timedCallable(
         combatForecastVersion: COMBAT_FORECAST_VERSION,
         siegeCombatVersion: SIEGE_COMBAT_VERSION,
         defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+        skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
         realmActivityVersion: REALM_ACTIVITY_VERSION,
         dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
         dailyMissionVersion: DAILY_MISSION_VERSION,
@@ -15031,7 +15196,10 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, timeoutS
     const expectedPoints = getAvailableSkillPoints(currentCharacter, currentUpgrades);
     const storedPoints = normalizeSkillLevel(currentCharacter.skillPoints);
     const needsPointRepair = storedPoints !== expectedPoints;
-    if (spentPoints < 1 && !needsPointRepair) throw new HttpsError("failed-precondition", "No spent skill points to reset.");
+    const automaticResetApplied = Boolean(economy.skillPointSystemReset?.applied);
+    if (spentPoints < 1 && !needsPointRepair && !automaticResetApplied) {
+      throw new HttpsError("failed-precondition", "No spent skill points to reset.");
+    }
     const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
     const freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0;
     const resetCost = spentPoints > 0 && !freeResetConsumed ? SKILL_RESET_COST : 0;
@@ -15066,6 +15234,7 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, timeoutS
       freeResetConsumed,
       freeSkillResetCredits: freeSkillResetCreditsAfter,
       repairedSkillPoints: needsPointRepair,
+      skillPointSystemResetApplied: automaticResetApplied,
     });
   });
 });
@@ -15082,7 +15251,13 @@ exports.saveSkillPreset = timedCallable(
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
       const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
-      const profile = participation.profile;
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+        profileRef,
+        profileSnap,
+        participation,
+      });
+      if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      const profile = economy.profileAfter;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const upgrades = normalizeSkillUpgrades(profile.upgrades);
@@ -15095,14 +15270,10 @@ exports.saveSkillPreset = timedCallable(
         upgrades,
         savedAtMs: nowMs,
       }), definition.slot);
-      transaction.set(profileRef, {
-        skillPresets,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      writePreparedEconomy(transaction, economy, { skillPresets }, [], { nowMs });
       const savedSlot = skillPresets.slots.find(slot => slot.slot === definition.slot);
       return {
-        ok: true,
-        currentUser: { skillPresets },
+        ...createEconomyResponse(economy, { skillPresets }),
         skillPreset: {
           action: "save",
           slot: definition.slot,
@@ -15124,12 +15295,19 @@ exports.renameSkillPreset = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const requestedSlot = Math.floor(safeNumber(request.data?.slot, 0));
+    const nowMs = Date.now();
     return runTransactionWithInfrastructureRetry(async transaction => {
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
       const participation = await requireCurrentSeasonParticipation(transaction, uid, { profileRef, profileSnap });
-      const profile = participation.profile;
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+        profileRef,
+        profileSnap,
+        participation,
+      });
+      if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      const profile = economy.profileAfter;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
       const name = requireSkillPresetName(request.data?.name, definition.slot);
@@ -15142,14 +15320,12 @@ exports.renameSkillPreset = timedCallable(
         name,
       });
       if (changed) {
-        transaction.set(profileRef, {
-          skillPresets,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
+        writePreparedEconomy(transaction, economy, { skillPresets }, [], { nowMs });
+      } else {
+        writePreparedEconomy(transaction, economy, {}, [], { nowMs });
       }
       return {
-        ok: true,
-        currentUser: { skillPresets },
+        ...createEconomyResponse(economy, { skillPresets }),
         skillPreset: {
           action: "rename",
           slot: definition.slot,
@@ -15225,6 +15401,96 @@ exports.applySkillPreset = timedCallable(
     });
   }
 );
+
+async function migrateSkillPointSystemForPlayer(uid = "", options = {}) {
+  const playerUid = safeString(uid, 128);
+  if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
+  const nowMs = Date.now();
+  let realmShardId = safeString(options.realmShardId, 48);
+  if (!realmShardId) {
+    const profileSnap = await db.doc(`players/${playerUid}`).get();
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    realmShardId = safeString(profileSnap.data()?.realmShardId, 48);
+  }
+  return runWithRealmShard(realmShardId || LEGACY_REALM_SHARD_ID, () => (
+    runTransactionWithInfrastructureRetry(async transaction => {
+      const economy = await prepareEconomyCollection(transaction, playerUid, nowMs, {
+        allowInactivityMaintenance: options.allowInactivityMaintenance === true,
+      });
+      if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      writePreparedEconomy(transaction, economy, {}, [], { nowMs });
+      return {
+        applied: Boolean(economy.skillPointSystemReset?.applied),
+        previousVersion: Math.max(0, Math.floor(safeNumber(
+          economy.skillPointSystemReset?.previousVersion,
+          economy.profileBefore?.skillPointSystemVersion
+        ))),
+        version: Math.max(0, Math.floor(safeNumber(
+          economy.profileAfter?.skillPointSystemVersion,
+          SKILL_POINT_SYSTEM_VERSION
+        ))),
+        resetAtMs: Math.max(0, timestampToMs(economy.profileAfter?.skillPointSystemResetAtMs)),
+        response: createEconomyResponse(economy, {
+          skillPointSystemResetApplied: Boolean(economy.skillPointSystemReset?.applied),
+        }),
+      };
+    })
+  ));
+}
+
+exports.syncSkillPointSystem = onCall({
+  region: "us-central1",
+  timeoutSeconds: 120,
+  memory: "256MiB",
+  maxInstances: 20,
+  invoker: "public",
+}, async request => {
+  const uid = requireAuth(request);
+  const profileSnap = await db.doc(`players/${uid}`).get();
+  if (!profileSnap.exists) {
+    return {
+      ok: true,
+      missingProfile: true,
+      skillPointSystemReset: {
+        resetId: SKILL_POINT_SYSTEM_RESET_ID,
+        applied: false,
+        previousVersion: 0,
+        version: SKILL_POINT_SYSTEM_VERSION,
+        resetAtMs: 0,
+      },
+    };
+  }
+  const result = await migrateSkillPointSystemForPlayer(uid, {
+    realmShardId: profileSnap.data()?.realmShardId,
+  });
+  return {
+    ...result.response,
+    skillPointSystemReset: {
+      resetId: SKILL_POINT_SYSTEM_RESET_ID,
+      applied: result.applied,
+      previousVersion: result.previousVersion,
+      version: result.version,
+      resetAtMs: result.resetAtMs,
+    },
+  };
+});
+
+exports.enforceSkillPointSystemState = onDocumentWritten({
+  document: "players/{uid}",
+  region: "us-central1",
+  maxInstances: 10,
+  retry: false,
+}, async event => {
+  const afterSnap = event.data?.after;
+  if (!afterSnap?.exists) return null;
+  const profile = afterSnap.data() || {};
+  const isCurrentRealm = safeString(profile.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(profile.resetGeneration, 120) === RESET_GENERATION;
+  if (!isCurrentRealm || getSkillPointSystemVersion(profile) < SKILL_POINT_SYSTEM_VERSION) return null;
+  if (Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))) === 0) return null;
+  await afterSnap.ref.update({ freeSkillResetCredits: 0 });
+  return null;
+});
 
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -15488,6 +15754,147 @@ exports.recalculateAllPlayerGlobalStats = onCall({ region: "us-central1", timeou
     processed: results.length,
     results,
   };
+});
+
+exports.resetAllPlayerSkills = onCall({
+  region: "us-central1",
+  timeoutSeconds: 300,
+  memory: "512MiB",
+  maxInstances: 1,
+  invoker: "public",
+}, async request => {
+  requireStatsAdmin(request);
+  const data = request.data || {};
+  const dryRun = data.dryRun !== false;
+  if (!dryRun && safeString(data.confirm, 80) !== SKILL_POINT_SYSTEM_RESET_ID) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Set confirm to ${SKILL_POINT_SYSTEM_RESET_ID} before applying the reset.`
+    );
+  }
+  const requestedLimit = clampInt(data.limit ?? 25, 1, 100);
+  const cursor = safeString(data.cursor, 128);
+  let query = db.collection("players")
+    .orderBy(FieldPath.documentId())
+    .limit(requestedLimit);
+  if (cursor) query = query.startAfter(cursor);
+  const playersSnap = await query.get();
+  const results = [];
+  for (const playerDoc of playersSnap.docs) {
+    const profile = playerDoc.data() || {};
+    const isCurrentRealm = safeString(profile.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(profile.resetGeneration, 120) === RESET_GENERATION;
+    const needsReset = isCurrentRealm && needsSkillPointSystemReset(profile);
+    if (!needsReset || dryRun) {
+      results.push({
+        uid: playerDoc.id,
+        status: !isCurrentRealm ? "skipped-other-realm" : needsReset ? "would-reset" : "already-current",
+        previousVersion: getSkillPointSystemVersion(profile),
+        heroLevel: Math.max(1, Math.floor(safeNumber(profile.character?.level, CHARACTER_START_LEVEL))),
+        unspentPointsAfter: needsReset
+          ? getEarnedSkillPoints(profile.character)
+          : getAvailableSkillPoints(profile.character, profile.upgrades),
+      });
+      continue;
+    }
+    try {
+      const migration = await migrateSkillPointSystemForPlayer(playerDoc.id, {
+        allowInactivityMaintenance: true,
+        realmShardId: profile.realmShardId,
+      });
+      results.push({
+        uid: playerDoc.id,
+        status: migration.applied ? "reset" : "already-current",
+        previousVersion: migration.previousVersion,
+        version: migration.version,
+        resetAtMs: migration.resetAtMs,
+      });
+    } catch (error) {
+      results.push({
+        uid: playerDoc.id,
+        status: "error",
+        code: safeString(error?.code, 80),
+        message: safeString(error?.message, 240),
+      });
+    }
+  }
+  const lastDocument = playersSnap.docs[playersSnap.docs.length - 1] || null;
+  return {
+    ok: true,
+    dryRun,
+    resetId: SKILL_POINT_SYSTEM_RESET_ID,
+    version: SKILL_POINT_SYSTEM_VERSION,
+    scanned: playersSnap.size,
+    reset: results.filter(entry => entry.status === "reset").length,
+    wouldReset: results.filter(entry => entry.status === "would-reset").length,
+    errors: results.filter(entry => entry.status === "error").length,
+    nextCursor: lastDocument?.id || "",
+    hasMore: playersSnap.size === requestedLimit,
+    results,
+  };
+});
+
+exports.rollbackPlayerSkillPointSystem = onCall({
+  region: "us-central1",
+  timeoutSeconds: 120,
+  memory: "256MiB",
+  maxInstances: 1,
+  invoker: "public",
+}, async request => {
+  requireStatsAdmin(request);
+  const data = request.data || {};
+  const targetUid = safeString(data.uid || data.playerId, 128);
+  if (!targetUid) throw new HttpsError("invalid-argument", "A player uid is required.");
+  if (safeString(data.confirm, 80) !== SKILL_POINT_SYSTEM_RESET_ID) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Set confirm to ${SKILL_POINT_SYSTEM_RESET_ID} before restoring a backup.`
+    );
+  }
+  const nowMs = Date.now();
+  const profileSnap = await db.doc(`players/${targetUid}`).get();
+  if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+  const realmShardId = safeString(profileSnap.data()?.realmShardId, 48) || LEGACY_REALM_SHARD_ID;
+  return runWithRealmShard(realmShardId, () => runTransactionWithInfrastructureRetry(async transaction => {
+    const backupRef = skillPointSystemBackupRef(targetUid);
+    const backupSnap = await transaction.get(backupRef);
+    if (!backupSnap.exists) throw new HttpsError("not-found", "No skill reset backup exists for that player.");
+    const economy = await prepareEconomyCollection(transaction, targetUid, nowMs);
+    if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    const backup = backupSnap.data() || {};
+    const upgrades = normalizeSkillUpgrades(backup.upgrades);
+    const character = reconcileSkillPoints(backup.character, upgrades);
+    const skillPresets = normalizeSkillPresets(backup.skillPresets);
+    const freeSkillResetGrantVersion = Math.max(
+      SKILL_FREE_RESET_GRANT_VERSION,
+      Math.floor(safeNumber(backup.freeSkillResetGrantVersion, 0))
+    );
+    const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(backup.freeSkillResetCredits, 0)));
+    writePreparedEconomy(transaction, economy, {
+      character,
+      upgrades,
+      skillPresets,
+      skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+      skillPointSystemResetAtMs: Math.max(0, timestampToMs(backup.skillPointSystemResetAtMs)),
+      skillPointSystemRollbackAtMs: nowMs,
+      freeSkillResetGrantVersion,
+      freeSkillResetCredits,
+    }, [], { nowMs });
+    return {
+      ok: true,
+      uid: targetUid,
+      resetId: SKILL_POINT_SYSTEM_RESET_ID,
+      restoredAtMs: nowMs,
+      currentUser: {
+        character,
+        upgrades,
+        skillPresets,
+        skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+        freeSkillResetGrantVersion,
+        freeSkillResetCredits,
+      },
+    };
+  }));
 });
 
 exports.getCombatPlayerIdentity = onCall({
@@ -16196,6 +16603,8 @@ function createFreshResetPlayerProfile({
     character: normalizeCharacterProgress({ level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 }),
     upgrades: normalizeSkillUpgrades({}),
     skillPresets: normalizeSkillPresets(),
+    skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION,
+    skillPointSystemResetAtMs: nowMs,
     freeSkillResetGrantVersion: SKILL_FREE_RESET_GRANT_VERSION,
     freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
@@ -16246,6 +16655,8 @@ function createStartingCityCurrentUser(profile = {}, {
     character: normalizeCharacterProgress(profile.character),
     upgrades: normalizeSkillUpgrades(profile.upgrades),
     skillPresets: normalizeSkillPresets(profile.skillPresets),
+    skillPointSystemVersion: getSkillPointSystemVersion(profile),
+    skillPointSystemResetAtMs: Math.max(0, timestampToMs(profile.skillPointSystemResetAtMs)),
     freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0))),
     freeSkillResetCredits: Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))),
     shopItems: normalizeShopItems(profile.shopItems),

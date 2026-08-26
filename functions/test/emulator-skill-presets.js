@@ -313,19 +313,19 @@ async function main() {
   const paidLegacyApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(paidLegacyApply.skillPreset?.changed === true && paidLegacyApply.skillPreset?.freeResetConsumed === false, "A preset application reported consuming a legacy credit.");
   assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === 1_000_000 && Number(paidLegacyApply.currentUser?.gold || 0) === 0, "A legacy profile did not pay the preset price.");
-  assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 2, "A preset application consumed a legacy or final-tier Reset Skills credit.");
+  assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 0, "A v2 preset application revived a legacy or final-tier Reset Skills credit.");
 
-  await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 0 });
-  await profileRef.set({ freeSkillResetGrantVersion: 2, freeSkillResetCredits: 1 }, { merge: true });
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 1_000_000 });
+  await profileRef.set({ freeSkillResetGrantVersion: 2, freeSkillResetCredits: 0 }, { merge: true });
   const concurrentResets = await Promise.all([
     invokeFunction("resetSkills", user.token),
     invokeFunction("resetSkills", user.token),
   ]);
-  assert(concurrentResets.filter(response => response.ok).length === 1, `Concurrent free resets did not settle exactly once: ${JSON.stringify(concurrentResets)}`);
+  assert(concurrentResets.filter(response => response.ok).length === 1, `Concurrent paid resets did not settle exactly once: ${JSON.stringify(concurrentResets)}`);
   const successfulReset = concurrentResets.find(response => response.ok)?.result;
-  assert(successfulReset?.freeResetConsumed === true && Number(successfulReset?.resetCost || 0) === 0, "The winning free reset did not consume its credit without gold.");
+  assert(successfulReset?.freeResetConsumed === false && Number(successfulReset?.resetCost || 0) === 1_000_000, "The winning v2 reset did not charge the standard reset price.");
   profile = (await profileRef.get()).data() || {};
-  assert(Number(profile.freeSkillResetCredits || 0) === 0 && Number(profile.gold || 0) === 0, "Concurrent reset settlement duplicated a credit or charged gold.");
+  assert(Number(profile.freeSkillResetCredits || 0) === 0 && Number(profile.gold || 0) === 0, "Concurrent reset settlement revived a credit or charged gold twice.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === 0), "Concurrent reset settlement left an allocated skill.");
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 2_000_000 });
 
@@ -342,7 +342,7 @@ async function main() {
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
 
-  console.log("Emulator skill presets passed: final-tier double costs, four unlocks, unconditional paid applies, protected reset credits, one active slot, concurrency, and rejection safety.");
+  console.log("Emulator skill presets passed: final-tier double costs, four unlocks, unconditional paid applies, zeroed reset credits, one active slot, concurrency, and rejection safety.");
 }
 
 main().then(() => process.exit(0)).catch(error => {

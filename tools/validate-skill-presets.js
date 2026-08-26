@@ -179,6 +179,14 @@ assert.equal(focusContext.isSkillPresetNameEditorActive(), false, "Preset render
 assert.match(serverSource, /const SKILL_PRESET_SLOTS = Object\.freeze\(\[[\s\S]*?slot: 1, unlockLevel: 25[\s\S]*?slot: 2, unlockLevel: 50[\s\S]*?slot: 3, unlockLevel: 75[\s\S]*?slot: 4, unlockLevel: 100[\s\S]*?\]\);/);
 assert.match(serverSource, /createFreshResetPlayerProfile[\s\S]*?skillPresets: normalizeSkillPresets\(\)/, "New profiles do not receive default preset slots.");
 assert.match(extractFunction(serverSource, "createEconomyResponse"), /skillPresets: normalizeSkillPresets\(/, "Economy snapshots omit presets.");
+assert.match(serverSource, /const SKILL_POINT_SYSTEM_VERSION = 2;[\s\S]*?const SKILL_POINT_SYSTEM_RESET_ID = "skill-point-system-v2";/, "The versioned skill reset marker is missing.");
+assert.match(extractFunction(serverSource, "createSkillPointSystemReset"), /needsSkillPointSystemReset[\s\S]*?character\.skillPoints = getEarnedSkillPoints\(character\)[\s\S]*?skillPresets: normalizeSkillPresets\(\)[\s\S]*?freeSkillResetCredits: 0/, "The one-time reset does not refund derived points and clear presets.");
+assert.doesNotMatch(extractFunction(serverSource, "normalizeSkillUpgrades"), /legacy|striker|prosperous|guardian|rusher|fearless|brave|source\.attack|source\.income/, "The current server normalizer can revive legacy skill fields.");
+assert.doesNotMatch(extractFunction(gameSource, "normalizeUpgrades"), /oldAttack|oldIncome|striker|prosperous|guardian|rusher|fearless|brave/, "The client normalizer can revive legacy skill fields.");
+assert.match(extractFunction(serverSource, "writePreparedEconomy"), /createSkillPointSystemBackup[\s\S]*?transaction\.update\(economy\.profileRef[\s\S]*?skillPointSystemVersion: SKILL_POINT_SYSTEM_VERSION/, "The reset is not backed up or does not replace the authoritative skill maps.");
+assert.match(serverSource, /exports\.syncSkillPointSystem[\s\S]*?migrateSkillPointSystemForPlayer/, "Players cannot trigger the idempotent reset during sign-in.");
+assert.match(serverSource, /exports\.resetAllPlayerSkills[\s\S]*?dryRun[\s\S]*?SKILL_POINT_SYSTEM_RESET_ID[\s\S]*?migrateSkillPointSystemForPlayer/, "The paged admin reset or its dry-run confirmation is missing.");
+assert.match(serverSource, /exports\.rollbackPlayerSkillPointSystem[\s\S]*?skillPointSystemBackupRef[\s\S]*?writePreparedEconomy/, "The per-player rollback path is missing.");
 
 const saveStart = serverSource.indexOf("exports.saveSkillPreset");
 const renameStart = serverSource.indexOf("exports.renameSkillPreset");
@@ -215,9 +223,13 @@ for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPrese
 }
 assert.match(firebaseSource, /async function spendSkillPoints\([\s\S]*?callServerFunction\("spendSkillPoints"/, "Missing batched skill client wrapper.");
 assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?spendSkillPoint,[\s\S]*?spendSkillPoints,/, "The batched skill wrapper is not exported to the game.");
+assert.match(firebaseSource, /async function syncSkillPointSystem\([\s\S]*?callServerFunction\("syncSkillPointSystem"/, "Missing skill reset sync wrapper.");
+assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?syncSkillPointSystem,/, "The skill reset sync wrapper is not exported to the game.");
 assert.match(firebaseSource, /delete cleanProfile\.skillPresets;/, "Cloud-profile saves can overwrite server presets.");
+assert.match(firebaseSource, /delete cleanProfile\.skillPointSystemVersion;[\s\S]*?delete cleanProfile\.skillPointSystemResetAtMs;/, "Cloud-profile saves can overwrite the reset marker.");
 assert.match(firebaseSource, /delete cleanProfile\.freeSkillResetGrantVersion;[\s\S]*?delete cleanProfile\.freeSkillResetCredits;/, "Cloud-profile saves can overwrite server reset credits.");
 assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPresets'/, "Creation rules do not protect presets.");
+assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPointSystemVersion'[\s\S]*?'skillPointSystemResetAtMs'/, "Creation rules do not protect the skill reset marker.");
 const playerProfileUpdateRule = extractFunction(rulesSource, "validPlayerProfileUpdate");
 assert.match(playerProfileUpdateRule, /affected\.hasOnly\(/, "Profile updates are not bounded by a changed-field allowlist.");
 assert.doesNotMatch(playerProfileUpdateRule, /skillPresets|freeSkillResetGrantVersion|freeSkillResetCredits/, "Client profile updates can change presets or legacy reset credits.");
