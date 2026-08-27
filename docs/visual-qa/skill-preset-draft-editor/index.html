@@ -4,18 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Skill Preset Draft Editor Visual QA</title>
-  <link rel="stylesheet" href="../../../styles.css?v=20260826-skill-preset-draft-editor-r1" />
+  <link rel="stylesheet" href="../../../styles.css?v=20260827-skill-controls-live-refunds-r1" />
   <link rel="stylesheet" href="../../../interface-theme.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="../../../readability.css?v=20260819-player-flags-v2-r1" />
   <link rel="stylesheet" href="../../../manuscript-prototype.css?v=20260819-player-flags-v2-r1" />
   <link rel="stylesheet" href="../../../ui-contrast-correction.css?v=20260819-player-flags-v2-r1" />
   <link rel="stylesheet" href="../../../profile-theme.css?v=20260819-player-flags-v2-r1" />
-  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260825-shop-hourly-prices-r1" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css?v=20260827-skill-controls-live-refunds-r1" />
   <link rel="stylesheet" href="../../../action-buttons.css?v=20260814-readability-r38" />
   <link rel="stylesheet" href="../../../mobile-viewport.css?v=20260825-shop-hourly-prices-r1" />
   <style>
     html, body { margin: 0; min-height: 100%; background: #081722; }
-    .profile-screen { display: flex !important; position: relative !important; inset: auto !important; width: min(1100px, 100%); min-height: 100vh; max-height: none !important; margin: 0 auto; transform: none !important; }
+    .profile-screen { display: grid !important; position: relative !important; inset: auto !important; width: min(1100px, 100%); min-height: 100vh; max-height: none !important; margin: 0 auto; transform: none !important; }
     .profile-skills-view { display: block !important; }
   </style>
 </head>
@@ -32,46 +32,47 @@
       <div class="profile-skill-summary" aria-label="Hero skill progress">
         <div><span>Skill points</span><strong>39</strong></div><div><span>Points spent</span><strong>61</strong></div>
       </div>
-      <p class="profile-skill-cost-note">Each skill's final 5 levels costs 2 skill points per level. Earlier levels cost 1.</p>
       <section class="skill-preset-panel" aria-label="Skill presets">
         <div class="skill-preset-tabs" role="tablist" aria-label="Saved skill builds">
-          <button type="button" class="skill-current-build-tab"><strong>Current Build</strong><small>Custom live build</small></button>
-          <button type="button" class="active pending dirty selected" aria-selected="true"><strong>War Build</strong><small>Active · Unsaved</small></button>
+          <button type="button" class="skill-current-build-tab selected" aria-selected="true"><strong>Current Build</strong><small>Custom live build</small></button>
+          <button type="button" class="active" data-qa-applied-preset><strong>War Build</strong><small>Active</small></button>
           <button type="button"><strong>Economy</strong><small>Saved</small></button>
           <button type="button"><strong>Preset 3</strong><small>Empty</small></button>
           <button type="button" class="locked" disabled><strong>Preset 4</strong><small>Locked · Lv 100</small></button>
         </div>
-        <article class="skill-preset-detail" role="tabpanel">
+        <article class="skill-preset-detail current-build" role="tabpanel">
           <header>
-            <div><strong>War Build</strong><small>Active · Unsaved changes</small></div>
-            <div class="skill-preset-rename"><input id="skillPresetNameInput" type="text" maxlength="24" value="War Build - Revised" aria-label="Name preset 1" /></div>
+            <div><strong>Current Build</strong><small>Custom live build</small></div>
           </header>
-          <p class="skill-preset-points">This draft assigns 61 points and leaves 39 unspent. Save these changes before applying.</p>
-          <footer><button type="button" class="profile-secondary-btn">Save Preset</button><button type="button" class="profile-primary-btn" disabled>Apply · 1,000,000</button></footer>
+          <p class="skill-preset-points">Use the − and + controls below to adjust your live build immediately. War Build remains the applied preset until the first live change.</p>
         </article>
       </section>
+      <div class="profile-skill-reset">
+        <div><strong>Reset Skills</strong><small>Free. Returns 61 spent points.</small></div>
+        <button type="button">Reset</button>
+      </div>
       <div class="profile-skill-list" aria-label="Skills by role">
         <section class="profile-skill-group skill-group-attack" aria-label="Attack skills">
           <header><strong>Attack</strong><small>3 skills</small></header>
           <div>
-            <div class="skill-row editing-preset"><div><strong>Swordmastery Lv 12 - +24%</strong><small>Soldier attack power</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
-            <div class="skill-row editing-preset"><div><strong>March Orders Lv 7 - +14%</strong><small>March speed</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
-            <div class="skill-row editing-preset"><div><strong>Field Medics Lv 5 - +10%</strong><small>Attacker recovery</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
+            <div class="skill-row"><div><strong>Swordmastery Lv 12 - +24%</strong><small>Soldier attack power</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
+            <div class="skill-row syncing"><div><strong>March Orders Lv 7 - +14%</strong><small>March speed</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
+            <div class="skill-row"><div><strong>Field Medics Lv 5 - +10%</strong><small>Attacker recovery</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
           </div>
         </section>
         <section class="profile-skill-group skill-group-defense" aria-label="Defense skills">
           <header><strong>Defense</strong><small>2 skills</small></header>
           <div>
-            <div class="skill-row editing-preset"><div><strong>Shieldwall Discipline Lv 10 - +20%</strong><small>Soldier defense</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
-            <div class="skill-row editing-preset"><div><strong>Stoneworks Lv 8 - +16%</strong><small>Wall power</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
+            <div class="skill-row"><div><strong>Shieldwall Discipline Lv 10 - +20%</strong><small>Soldier defense</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
+            <div class="skill-row"><div><strong>Stoneworks Lv 8 - +16%</strong><small>Wall power</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>2 PTS</span><button type="button">+</button></div></div>
           </div>
         </section>
         <section class="profile-skill-group skill-group-utility" aria-label="Utility skills">
           <header><strong>Utility</strong><small>3 skills</small></header>
           <div>
-            <div class="skill-row editing-preset"><div><strong>Tax Stewardship Lv 9 - +18%</strong><small>Gold production</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
-            <div class="skill-row editing-preset"><div><strong>Royal Granaries Lv 6 - +12%</strong><small>Troop production</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
-            <div class="skill-row editing-preset"><div><strong>Guild Charters Lv 4 - +8%</strong><small>Upgrade efficiency</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−1</button><button type="button">+1 · 1 pt</button></div></div>
+            <div class="skill-row"><div><strong>Tax Stewardship Lv 9 - +18%</strong><small>Gold production</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
+            <div class="skill-row"><div><strong>Royal Granaries Lv 6 - +12%</strong><small>Troop production</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>1 PT</span><button type="button">+</button></div></div>
+            <div class="skill-row"><div><strong>Guild Charters Lv 4 - +8%</strong><small>Upgrade efficiency</small></div><div class="skill-row-actions"><button type="button" data-skill-decrement>−</button><span data-skill-cost>MAX</span><button type="button" disabled>+</button></div></div>
           </div>
         </section>
       </div>
@@ -83,6 +84,16 @@
       <div class="skill-preset-exit-dialog__actions"><button class="profile-secondary-btn" value="cancel">Cancel</button><button class="profile-secondary-btn" value="discard">Discard</button><button class="profile-primary-btn" value="save">Save Preset</button></div>
     </form>
   </dialog>
-  <script>document.getElementById("qaCloseBtn").addEventListener("click", () => document.getElementById("skillPresetExitDialog").showModal());</script>
+  <script>
+    if (new URLSearchParams(location.search).get("view") === "active") {
+      const selected = document.querySelector(".skill-preset-tabs .selected");
+      const applied = document.querySelector("[data-qa-applied-preset]");
+      selected?.classList.remove("selected");
+      selected?.removeAttribute("aria-selected");
+      applied?.classList.add("selected");
+      applied?.setAttribute("aria-selected", "true");
+    }
+    document.getElementById("qaCloseBtn").addEventListener("click", () => document.getElementById("skillPresetExitDialog").showModal());
+  </script>
 </body>
 </html>

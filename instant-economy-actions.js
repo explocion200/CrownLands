@@ -1,5 +1,5 @@
 "use strict";
-/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getCityUpgradeStableSortLevel, getInventoryEffectLabel, getPendingCityUpgradeCount, isServerCityUpgradeInFlight, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
+/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getCityUpgradeStableSortLevel, getInventoryEffectLabel, getPendingCityUpgradeCount, isServerCityUpgradeInFlight, refundSkill, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
 
 const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;
 const INSTANT_ECONOMY_ITEM_BATCH_LIMIT = 25;
@@ -29,6 +29,13 @@ function createCityUpgradeRequestId(cityId = "") {
     ? window.crypto.randomUUID().replace(/-/g, "")
     : Math.random().toString(36).slice(2, 14);
   return `city_${String(cityId || "upgrade").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32)}_${Date.now().toString(36)}_${randomPart}`.slice(0, 88);
+}
+
+function createSkillLevelAdjustmentRequestId() {
+  const randomPart = typeof window.crypto?.randomUUID === "function"
+    ? window.crypto.randomUUID().replace(/-/g, "")
+    : Math.random().toString(36).slice(2, 14);
+  return `skill_${Date.now().toString(36)}_${randomPart}`.slice(0, 88);
 }
 
 function supportsInstantEconomyActionBatching() {
@@ -595,7 +602,7 @@ async function flushInstantEconomyActions() {
     if (action.generation !== instantEconomyGeneration) return false;
     if (action.type === "skill") {
       activeSkillSpendBatch = null;
-      trimPendingSkillSpendAllocations();
+      pendingSkillSpendAllocations.clear();
       skillPresetMarkupSignature = "";
       renderProfileSkills();
     }
@@ -1061,29 +1068,51 @@ function trimPendingSkillSpendAllocations() {
   let available = getAvailableSkillPoints(state.character, state.upgrades);
   let trimmed = false;
   const next = new Map();
-  pendingSkillSpendAllocations.forEach((points, skill) => {
+  pendingSkillSpendAllocations.forEach((levelDelta, skill) => {
     const currentLevel = getSkillLevel(skill);
-    const requestedLevels = Math.min(points, Math.max(0, getSkillMaxLevel(skill) - currentLevel));
-    let kept = 0;
-    while (kept < requestedLevels) {
-      const nextCost = getSkillPointCost(skill, currentLevel + kept);
-      if (nextCost < 1 || available < nextCost) break;
-      available -= nextCost;
-      kept += 1;
+    let keptDelta = 0;
+    if (levelDelta > 0) {
+      const requestedLevels = Math.min(levelDelta, Math.max(0, getSkillMaxLevel(skill) - currentLevel));
+      while (keptDelta < requestedLevels) {
+        const nextCost = getSkillPointCost(skill, currentLevel + keptDelta);
+        if (nextCost < 1 || available < nextCost) break;
+        available -= nextCost;
+        keptDelta += 1;
+      }
+    } else if (levelDelta < 0) {
+      const requestedLevels = Math.min(-levelDelta, currentLevel);
+      while (-keptDelta < requestedLevels) {
+        const levelBeingRemoved = currentLevel + keptDelta;
+        available += getSkillPointCost(skill, levelBeingRemoved - 1);
+        keptDelta -= 1;
+      }
     }
-    if (kept > 0) {
-      next.set(skill, kept);
-    }
-    if (kept !== points) trimmed = true;
+    if (keptDelta !== 0) next.set(skill, keptDelta);
+    if (keptDelta !== levelDelta) trimmed = true;
   });
   pendingSkillSpendAllocations.clear();
-  next.forEach((points, skill) => pendingSkillSpendAllocations.set(skill, points));
+  next.forEach((levelDelta, skill) => pendingSkillSpendAllocations.set(skill, levelDelta));
   return trimmed;
 }
 
-async function spendSkillBatchWithLegacyFallback(allocations = []) {
+async function adjustSkillLevelsWithSpendFallback(requestId = "", adjustments = []) {
   const api = getOnlineApi();
+  if (!api?.adjustSkillLevels && !api?.spendSkillPoint) throw new Error("Skill changes require the Crownlands server.");
+  if (api.adjustSkillLevels) {
+    try {
+      return await api.adjustSkillLevels({ requestId, adjustments });
+    } catch (error) {
+      if (!isMissingSkillBatchCallable(error)) throw error;
+    }
+  }
+  if (adjustments.some(adjustment => adjustment.levelDelta < 0)) {
+    throw new Error("Live skill refunds require the latest Crownlands server.");
+  }
   if (!api?.spendSkillPoint) throw new Error("Skill upgrades require the Crownlands server.");
+  const allocations = adjustments.map(adjustment => ({
+    skillId: adjustment.skillId,
+    points: adjustment.levelDelta,
+  }));
   if (api.spendSkillPoints) {
     try {
       return await api.spendSkillPoints({ allocations });
@@ -1104,24 +1133,35 @@ async function spendSkillBatchWithLegacyFallback(allocations = []) {
 
 function flushSkillSpendQueue() {
   if (!state || activeSkillSpendBatch || !pendingSkillSpendAllocations.size) return false;
-  const allocations = [...pendingSkillSpendAllocations.entries()].map(([skillId, points]) => ({ skillId, points }));
+  const adjustments = [...pendingSkillSpendAllocations.entries()]
+    .filter(([, levelDelta]) => levelDelta !== 0)
+    .map(([skillId, levelDelta]) => ({ skillId, levelDelta }));
   pendingSkillSpendAllocations.clear();
-  activeSkillSpendBatch = { allocations };
-  enqueueInstantEconomyAction({ type: "skill", key: "skill", coalesce: false, allocations });
+  if (!adjustments.length) return false;
+  const requestId = createSkillLevelAdjustmentRequestId();
+  activeSkillSpendBatch = { requestId, adjustments };
+  enqueueInstantEconomyAction({ type: "skill", key: "skill", coalesce: false, requestId, adjustments });
   return true;
 }
 
 async function executeInstantSkillSpend(action) {
-  const result = await spendSkillBatchWithLegacyFallback(action.allocations);
+  const result = await adjustSkillLevelsWithSpendFallback(action.requestId, action.adjustments);
   if (!isInstantEconomyActionCurrent(action)) return;
   applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
   activeSkillSpendBatch = null;
   const trimmed = trimPendingSkillSpendAllocations();
-  action.allocations.forEach(allocation => addLog(`${SKILL_CONFIG[allocation.skillId].label} improved by ${formatNumber(allocation.points)} to level ${getSkillLevel(allocation.skillId)}.`));
-  const totalLevels = action.allocations.reduce((sum, allocation) => sum + allocation.points, 0);
-  const spentSkillPoints = Math.max(0, Math.floor(Number(result?.spentSkillPoints) || totalLevels));
-  showToast(`${formatNumber(totalLevels)} skill ${totalLevels === 1 ? "level" : "levels"} improved · ${formatNumber(spentSkillPoints)} ${spentSkillPoints === 1 ? "point" : "points"} spent`);
-  if (trimmed) showToast("Some queued skill points were no longer available.");
+  action.adjustments.forEach(adjustment => addLog(
+    `${SKILL_CONFIG[adjustment.skillId].label} ${adjustment.levelDelta > 0 ? "improved" : "reduced"} by ${formatNumber(Math.abs(adjustment.levelDelta))} to level ${getSkillLevel(adjustment.skillId)}.`
+  ));
+  const levelsAdded = action.adjustments.reduce((sum, adjustment) => sum + Math.max(0, adjustment.levelDelta), 0);
+  const levelsRemoved = action.adjustments.reduce((sum, adjustment) => sum + Math.max(0, -adjustment.levelDelta), 0);
+  const spentSkillPoints = Math.max(0, Math.floor(Number(result?.spentSkillPoints) || 0));
+  const refundedSkillPoints = Math.max(0, Math.floor(Number(result?.refundedSkillPoints) || 0));
+  const parts = [];
+  if (levelsAdded) parts.push(`${formatNumber(levelsAdded)} added · ${formatNumber(spentSkillPoints)} ${spentSkillPoints === 1 ? "point" : "points"} spent`);
+  if (levelsRemoved) parts.push(`${formatNumber(levelsRemoved)} removed · ${formatNumber(refundedSkillPoints)} ${refundedSkillPoints === 1 ? "point" : "points"} refunded`);
+  showToast(parts.join(" · "));
+  if (trimmed) showToast("Some queued skill changes were no longer valid.");
   skillPresetMarkupSignature = "";
   renderProfileSkills();
 }
@@ -1146,6 +1186,8 @@ function buySkill(skill) {
   }
   if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
     pendingSkillSpendAllocations.set(skill, (pendingSkillSpendAllocations.get(skill) || 0) + 1);
+    if (pendingSkillSpendAllocations.get(skill) === 0) pendingSkillSpendAllocations.delete(skill);
+    state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
     skillPresetMarkupSignature = "";
     renderProfileSkills();
     scheduleSkillSpendFlush();
@@ -1155,6 +1197,39 @@ function buySkill(skill) {
   state.upgrades[skill] = getSkillLevel(skill) + 1;
   state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   addLog(`${config.label} improved to level ${state.upgrades[skill]}.`);
+  saveGame();
+  skillPresetMarkupSignature = "";
+  renderHud();
+  renderProfileSkills();
+  return true;
+}
+
+function refundSkill(skill) {
+  const config = SKILL_CONFIG[skill];
+  if (!config || skillActionInFlight) return false;
+  state.character = normalizeCharacterProgress(state.character);
+  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  reconcileSkillPoints(state.character, state.upgrades);
+  const displayedLevel = getDisplayedSkillLevel(skill);
+  if (displayedLevel < 1) return false;
+  if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
+    if (!getOnlineApi()?.adjustSkillLevels) {
+      rejectGameAction("Live skill refunds require the latest Crownlands server.");
+      return false;
+    }
+    pendingSkillSpendAllocations.set(skill, (pendingSkillSpendAllocations.get(skill) || 0) - 1);
+    if (pendingSkillSpendAllocations.get(skill) === 0) pendingSkillSpendAllocations.delete(skill);
+    state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
+    skillPresetMarkupSignature = "";
+    renderProfileSkills();
+    scheduleSkillSpendFlush();
+    return true;
+  }
+  const refundedPoints = getSkillPointCost(skill, displayedLevel - 1);
+  state.upgrades[skill] = displayedLevel - 1;
+  state.character.skillPoints = getAvailableSkillPoints(state.character, state.upgrades);
+  state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
+  addLog(`${config.label} reduced to level ${state.upgrades[skill]}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
   saveGame();
   skillPresetMarkupSignature = "";
   renderHud();

@@ -10,7 +10,9 @@ const gameSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.j
 const serverSource = fs.readFileSync(serverPath, "utf8");
 const firebaseSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
-const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
+const stylesSource = ["styles.css", "interface-theme.css", "crownlands-palette.css"]
+  .map(file => fs.readFileSync(path.join(root, file), "utf8"))
+  .join("\n");
 const howToSource = fs.readFileSync(path.join(root, "how-to-play.html"), "utf8");
 const gameRulesSource = fs.readFileSync(path.join(root, "game-rules.html"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
@@ -226,13 +228,22 @@ assert.match(applyCallable, /remainingSkillPoints: character\.skillPoints/, "App
 
 const spendStart = serverSource.indexOf("exports.spendSkillPoint");
 const resetStart = serverSource.indexOf("exports.resetSkills", spendStart);
+const adjustStart = serverSource.indexOf("exports.adjustSkillLevels");
+const adjustEnd = serverSource.indexOf("async function spendSkillAllocations", adjustStart);
+assert.ok(adjustStart > 0 && adjustEnd > adjustStart, "Missing signed skill adjustment callable.");
+const adjustCallable = serverSource.slice(adjustStart, adjustEnd);
+assert.match(adjustCallable, /requestId[\s\S]*?normalizeSkillLevelAdjustments[\s\S]*?requestSignature[\s\S]*?skillLevelAdjustmentRequestRef/, "Signed skill adjustments are not request-ID-backed.");
+assert.match(adjustCallable, /transaction\.get\(requestRef\)[\s\S]*?replayed: true[\s\S]*?prepareEconomyCollection/, "Signed skill adjustments are not replay safe.");
+assert.match(adjustCallable, /levelDelta[\s\S]*?getSkillUpgradePointCost[\s\S]*?getSkillDowngradePointRefund[\s\S]*?getSpentSkillPoints\(nextUpgrades\) > getEarnedSkillPoints/, "Signed adjustments do not enforce weighted spend, refund, and complete-allocation limits.");
+assert.match(adjustCallable, /setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?spentSkillPoints[\s\S]*?refundedSkillPoints[\s\S]*?transaction\.set\(requestRef/, "Signed adjustments do not clear the active marker or store their authoritative receipt.");
 const spendHelper = extractFunction(serverSource, "spendSkillAllocations");
 assert.match(spendHelper, /prepareEconomyCollection[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?writePreparedEconomy/, "Skill spending does not settle production and clear the active preset atomically.");
 assert.match(spendHelper, /getSkillUpgradePointCost[\s\S]*?totalPointCost[\s\S]*?character\.skillPoints < totalPointCost/, "Server skill spending does not enforce the final-tier point cost.");
 assert.doesNotMatch(spendHelper, /replaceSkillPresetSlot/, "Spending points overwrites a saved preset.");
 assert.match(serverSource.slice(spendStart, resetStart), /exports\.spendSkillPoints[\s\S]*?normalizeSkillSpendAllocations[\s\S]*?spendSkillAllocations/, "The batched skill callable is missing its shared authoritative path.");
 assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
-assert.match(serverSource.slice(resetStart, saveStart), /freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0[\s\S]*?freeSkillResetCreditsAfter/, "Reset Skills does not consume the legacy credit atomically.");
+assert.match(serverSource.slice(resetStart, saveStart), /freeResetConsumed = false[\s\S]*?resetCost = 0[\s\S]*?freeSkillResetCreditsAfter = freeSkillResetCredits/, "Reset Skills is not free or can still consume a legacy credit.");
+assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /economy\.gold - resetCost|economy\.gold < resetCost/, "Reset Skills can still charge Gold.");
 assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /replaceSkillPresetSlot/, "Reset Skills overwrites a saved preset.");
 
 for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPreset"]) {
@@ -241,6 +252,13 @@ for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPrese
 }
 assert.match(firebaseSource, /async function spendSkillPoints\([\s\S]*?callServerFunction\("spendSkillPoints"/, "Missing batched skill client wrapper.");
 assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?spendSkillPoint,[\s\S]*?spendSkillPoints,/, "The batched skill wrapper is not exported to the game.");
+assert.match(firebaseSource, /async function adjustSkillLevels\([\s\S]*?callServerFunction\("adjustSkillLevels"/, "Missing signed skill adjustment client wrapper.");
+assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?adjustSkillLevels,/, "The signed skill adjustment wrapper is not exported to the game.");
+assert.match(
+  rulesSource,
+  /match \/skillLevelAdjustmentRequests\/\{document=\*\*\} \{\s*allow read, create, update, delete: if false;/,
+  "Skill adjustment receipts must remain server-only."
+);
 assert.match(firebaseSource, /async function syncSkillPointSystem\([\s\S]*?callServerFunction\("syncSkillPointSystem"/, "Missing skill reset sync wrapper.");
 assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?syncSkillPointSystem,/, "The skill reset sync wrapper is not exported to the game.");
 assert.match(firebaseSource, /delete cleanProfile\.skillPresets;/, "Cloud-profile saves can overwrite server presets.");
@@ -267,28 +285,31 @@ assert.doesNotMatch(extractFunction(gameSource, "applySavedSkillPreset"), /alrea
 assert.match(extractFunction(gameSource, "applySavedSkillPreset"), /if \(!state \|\| skillActionInFlight\) return false;[\s\S]*?skillActionInFlight = true/, "The client does not suppress rapid duplicate Apply actions.");
 assert.match(gameSource, /const SKILL_GROUPS = Object\.freeze\([\s\S]*?Attack[\s\S]*?swordmastery[\s\S]*?marchOrders[\s\S]*?fieldMedics[\s\S]*?Defense[\s\S]*?shieldwallDiscipline[\s\S]*?stoneworks[\s\S]*?Utility[\s\S]*?taxStewardship[\s\S]*?royalGranaries[\s\S]*?guildCharters/, "Skills are not grouped into the approved roles.");
 assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(5,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-tabs \{ grid-template-columns: repeat\(2,[\s\S]*?skill-current-build-tab/, "Current Build and four preset tabs are not responsive on mobile.");
-assert.match(extractFunction(gameSource, "skillRow"), /data-skill-decrement[\s\S]*?data-skill=/, "Preset skill rows do not expose paired minus and plus controls.");
-assert.match(stylesSource, /\.skill-row\.editing-preset[\s\S]*?grid-template-columns: minmax\(0, 1fr\)[\s\S]*?\.skill-row\.editing-preset \.skill-row-actions[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/, "Preset point controls can overflow their skill cards.");
+assert.match(extractFunction(gameSource, "skillRow"), /data-skill-decrement[\s\S]*?data-skill-cost[\s\S]*?data-skill=/, "Skill rows do not expose the shared minus, cost, and plus control.");
+assert.match(stylesSource, /\.skill-row-actions[\s\S]*?grid-template-columns: minmax\(44px, 1fr\) minmax\(58px, auto\) minmax\(44px, 1fr\)/, "The segmented skill control is not responsive.");
 assert.match(stylesSource, /\.profile-skill-list \.skill-row button \{[^}]*min-height: 44px;/, "Preset point controls do not meet the mobile touch-target height.");
-assert.match(visualQaSource, /Current Build[\s\S]*?Active · Unsaved[\s\S]*?Save Preset[\s\S]*?Apply · 1,000,000[\s\S]*?skill-preset-exit-dialog/, "The responsive skill-preset visual-QA fixture is incomplete.");
+assert.match(visualQaSource, /display: grid !important[\s\S]*?skill-current-build-tab selected[\s\S]*?data-qa-applied-preset[\s\S]*?Free\. Returns 61 spent points\.[\s\S]*?data-skill-decrement[\s\S]*?data-skill-cost>2 PTS[\s\S]*?data-skill-cost>MAX[\s\S]*?skill-preset-exit-dialog[\s\S]*?view"\) === "active"[\s\S]*?classList\.add\("selected"\)/, "The responsive skill-control visual-QA fixture is incomplete.");
 assert.match(extractFunction(gameSource, "adjustSkillPresetDraft"), /direction[\s\S]*?currentLevel - 1[\s\S]*?getSkillPointCost[\s\S]*?getAvailableSkillPoints[\s\S]*?currentLevel \+ 1/, "Draft point controls do not enforce refunds, caps, and weighted point costs locally.");
 assert.match(gameSource, /skillPresetExitDialog\.addEventListener\("close"[\s\S]*?decision === "discard"[\s\S]*?decision === "save"/, "Dirty draft exits do not offer Save, Discard, and Cancel behavior.");
 assert.match(gameSource, /renderSkillPresetAllocation[\s\S]*?SKILL_GROUPS\.map[\s\S]*?skill-preset-allocation-group/, "Saved allocations are not grouped by role.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.map[\s\S]*?profile-skill-group/, "The current skill list is not grouped by role.");
 assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillSpendAllocations[\s\S]*?enqueueInstantEconomyAction/, "Queued skill spending is not routed through the shared instant-action queue.");
-assert.match(extractFunction(gameSource, "executeInstantSkillSpend"), /spendSkillBatchWithLegacyFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false/, "Skill settlement is not batched or is forcing broad renders.");
+assert.match(extractFunction(gameSource, "executeInstantSkillSpend"), /adjustSkillLevelsWithSpendFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false[\s\S]*?refundedSkillPoints/, "Signed skill settlement is not batched or is forcing broad renders.");
 assert.doesNotMatch(extractFunction(gameSource, "buySkill"), /skillActionInFlight = true|renderAll\(/, "A skill-point click still blocks the full Skills UI or forces a full map render.");
+assert.match(extractFunction(gameSource, "refundSkill"), /getDisplayedSkillLevel[\s\S]*?pendingSkillSpendAllocations\.set\(skill,[\s\S]*?- 1[\s\S]*?setActiveSkillPresetSlot/, "Current Build minus does not queue a free live refund and clear the active marker.");
 assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfChanged[\s\S]*?button\.disabled[\s\S]*?row\?\.classList\.toggle/, "Skill clicks are not patched into stable row nodes.");
-assert.match(extractFunction(gameSource, "updateProfileSkillState"), /getSkillPointCost[\s\S]*?points < nextPointCost[\s\S]*?nextPointCost === 1 \? "pt" : "pts"/, "Skills UI does not display and enforce the next upgrade's point cost.");
+assert.match(extractFunction(gameSource, "updateProfileSkillState"), /getSkillPointCost[\s\S]*?data-skill-cost[\s\S]*?points < nextPointCost[\s\S]*?"MAX"[\s\S]*?"PT" : "PTS"/, "Skills UI does not display and enforce the next upgrade's point cost.");
 assert.match(extractFunction(gameSource, "buySkill"), /getSkillPointCost[\s\S]*?getDisplayedSkillPoints\(\) < pointCost[\s\S]*?state\.character\.skillPoints -= pointCost/, "Skill purchase paths do not spend the displayed tier cost.");
+assert.doesNotMatch(gameSource, /Final \$\{SKILL_FINAL_DOUBLE_COST_LEVELS\} levels cost|profile-skill-cost-note/, "The removed final-tier explanatory UI text is still rendered.");
+assert.match(stylesSource, /skill-preset-tabs button\.active:not\(\.locked\)[\s\S]*?var\(--cl-header-bg\)[\s\S]*?selected:not\(\.active\)[\s\S]*?var\(--cl-gold\)[\s\S]*?active\.selected[\s\S]*?0 0 0 2px/, "Applied, viewed, and combined preset states are not distinct in the final palette.");
 
-assert.match(howToSource, /Current Build[\s\S]*?preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated draft[\s\S]*?Save Preset[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
-assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated named draft[\s\S]*?Saving a valid draft is free[\s\S]*?Apply requires a saved draft[\s\S]*?1,000,000 gold/i);
-const expectedBuild = "20260826-uncapped-city-xp-instant-upgrades-r1";
+assert.match(howToSource, /Current Build[\s\S]*?minus, cost, and plus[\s\S]*?freely refunds[\s\S]*?Reset Skills[\s\S]*?free clear-all[\s\S]*?1,000,000 gold/i);
+assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?minus, cost, and plus[\s\S]*?minus is free[\s\S]*?Reset Skills is also free[\s\S]*?1,000,000 gold/i);
+const expectedBuild = "20260827-skill-controls-live-refunds-r1";
 const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
-assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Reset Skills is not using the configured 1,000,000-gold cost.");
+assert.equal(Number(economyConfig.playerCosts.skillResetGold), 0, "Reset Skills is not configured as free.");
 assert.equal(Number(economyConfig.playerCosts.skillPresetApplyGold), 1_000_000, "Preset Apply is not using its dedicated 1,000,000-gold cost.");
 
-console.log("Validated weighted skill costs, Current Build, four isolated preset drafts, explicit saving, unconditional paid application, compatibility, mobile UI, and rules.");
+console.log("Validated signed live skill refunds, free resets, weighted costs, shared controls, preset drafts, readable tab states, compatibility, and rules.");

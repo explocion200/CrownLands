@@ -8,8 +8,8 @@ const css = read("readability.css");
 const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
 const releaseId = "20260819-player-flags-v2-r1";
-const buildId = "20260826-uncapped-city-xp-instant-upgrades-r1";
-const gameBuildId = "20260826-uncapped-city-xp-instant-upgrades-r1";
+const buildId = "20260827-skill-controls-live-refunds-r1";
+const gameBuildId = "20260827-skill-controls-live-refunds-r1";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);

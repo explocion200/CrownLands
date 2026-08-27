@@ -811,6 +811,10 @@ async function main() {
     ["getDailyMissionStatus", {}],
     ["getSeasonalAchievementStatus", {}],
     ["spendSkillPoint", { skillId: "swordmastery" }],
+    ["adjustSkillLevels", {
+      requestId: "preclaim_skill_adjustment_gate",
+      adjustments: [{ skillId: "swordmastery", levelDelta: 1 }],
+    }],
     ["repairMainCityAssignment", {}],
     ["syncPlayerIdentity", {}],
     ["markReportsViewed", {}],

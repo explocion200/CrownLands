@@ -234,7 +234,7 @@ assert.deepEqual(serverConfig.skills.royalGranaries, { percentPerLevel: 3, maxPe
 assert.deepEqual(serverConfig.skills.guildCharters, { percentPerLevel: 2, maxPercent: 50 });
 assert.equal(serverConfig.playerCosts.nearbyScoutGold, 250_000);
 assert.equal(serverConfig.playerCosts.regroupGold, 250_000);
-assert.equal(serverConfig.playerCosts.skillResetGold, 1_000_000);
+assert.equal(serverConfig.playerCosts.skillResetGold, 0);
 assert.equal(serverConfig.playerCosts.skillPresetApplyGold, 1_000_000);
 
 for (const source of [serverSource, clientSource]) {
