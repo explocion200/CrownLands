@@ -855,16 +855,17 @@ function validateCityUpgradeCueContract(gameSource) {
   );
 
   const queuedUpgrade = extractFunction(gameSource, "upgradeCity");
-  const previewQueue = extractFunction(gameSource, "queueServerCityUpgradeWithPreview");
+  const projectedQueue = extractFunction(gameSource, "queueServerCityUpgrade");
   const actionKey = extractFunction(gameSource, "getCityUpgradeActionKey");
   const confirmedSettlement = extractFunction(gameSource, "executeInstantCityUpgrade");
   check(
-    /getPendingCityUpgradeAction/.test(queuedUpgrade)
-      && /already has an upgrade pending/.test(queuedUpgrade)
-      && /queueServerCityUpgradeWithPreview/.test(queuedUpgrade)
-      && /enqueueInstantEconomyAction/.test(previewQueue)
+    /getProjectedAffordableCityUpgradeLevels/.test(queuedUpgrade)
+      && /queueServerCityUpgrade/.test(queuedUpgrade)
+      && /enqueueInstantEconomyAction/.test(projectedQueue)
+      && /coalesce:\s*mode === "legacy"/.test(projectedQueue)
+      && /createCityUpgradeRequestId/.test(projectedQueue)
       && /regionId/.test(actionKey),
-    "city upgrades must use one per-city pending lock while retaining queued settlement"
+    "city upgrades must retain ordered request-backed settlement without blocking rapid follow-up actions"
   );
   check(
     /if \(upgraded < 1\) throw/.test(confirmedSettlement)

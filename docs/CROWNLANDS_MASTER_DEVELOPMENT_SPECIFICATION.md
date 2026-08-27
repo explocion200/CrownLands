@@ -280,26 +280,32 @@ The following Hero-progression reward curve is confirmed design and is `IN DEVEL
 
 The following city-progression reward model is confirmed design and is `IN DEVELOPMENT` until its implementation is merged, deployed, and verified on a named release channel:
 
-- Upgrading a regular owned city from Level `L` to Level `L + 1` offers `max(1, floor(HeroXpRequired(L) × 0.05))` Hero XP. The source city level is the only balance input; Gold cost, discounts, skills, Gear, objectives, items, production, and the receiving Hero level do not change the raw award.
+- City-upgrade XP model version 2 is the confirmed model. Upgrading a regular owned city from Level `L` to Level `L + 1` offers `max(1, floor(HeroXpRequired(L) × 0.01))` Hero XP. The source city level is the only balance input; Gold cost, discounts, skills, Gear, objectives, items, production, and the receiving Hero level do not change the raw award.
 - A bulk upgrade evaluates every crossed city level independently and sums those fixed awards.
 - Each player has a seasonal high-watermark for each region-and-city identity. On the first encounter with this feature, the current pre-upgrade city level becomes the baseline and grants no retroactive XP. Only newly developed levels above the stored high-watermark are eligible. Capture, loss, relinquishment, recapture, or rebuilding does not reset the high-watermark. The high-watermark is generation-scoped and server-protected.
-- City-upgrade XP is uncapped while the Hero remains below Level 50. If one award crosses Level 50, the exact XP needed to reach Level 50 is uncapped and only the remainder consumes the Level-50 daily allowance.
-- From Hero Levels 50 through 99, the daily allowance rises linearly from one to two exact Hero level-equivalents: `1 + (capReferenceHeroLevel - 50) / 50`. At Hero Level 100 and above, the allowance is exactly two level-equivalents per UTC day.
-- A level-equivalent allowance is calculated from the exact successive Hero XP requirements beginning at the cap-reference level. Whole equivalents sum whole requirements; a fractional equivalent uses that fraction of the next requirement. The final allowance is floored once after summation.
-- The cap-reference Hero level and resulting XP allowance freeze when the player first consumes capped city-upgrade XP during that UTC day. Later Hero levels do not recalculate that day's allowance. The allowance resets at `00:00 UTC`.
-- Only city-upgrade XP consumes this allowance. Combat and all other XP sources remain governed by their own rules and do not consume it.
-- XP above the daily allowance and XP from rebuilding levels at or below the high-watermark are discarded, not banked. Before a bulk upgrade commits, the player must receive a clear warning when either rule would suppress XP and may reduce the upgrade or wait.
-- The authoritative upgrade compares its actual suppression with the amounts acknowledged from the preview. If cap or rebuild suppression has increased before commit, the transaction is rejected without changing the city or player so a refreshed warning can be reviewed.
+- Every eligible city-upgrade XP award is uncapped at every Hero level. Model version 2 does not read or write daily city-XP allowance state. Existing model-version-1 allowance data remains harmless stored data and is not migrated or deleted.
+- XP from rebuilding levels at or below the high-watermark is discarded, not banked. Before a bulk upgrade commits, the player must receive a clear warning only when rebuilt levels would suppress XP and may reduce or cancel the upgrade.
+- The authoritative upgrade compares actual rebuild suppression with the amount acknowledged from the preview. If rebuild suppression has increased before commit, the transaction is rejected without changing the city or player so a refreshed warning can be reviewed.
 - City XP uses the normal Hero-level reward path. Every crossed Hero level continues to grant its skill point, Gold, and approved standardized Main City troop reward exactly once; the city-XP feature does not independently alter those rewards.
 - Upgrade affordability is resolved using the player's Gold before city XP and Hero-level rewards are applied. Gold awarded by a Hero level-up cannot fund more city levels within the same request.
-- The authoritative response records raw XP, awarded XP, daily-cap suppression, rebuild suppression, eligible and ineligible levels, the frozen allowance and reference level, daily usage and remainder, UTC day key, and model version. Upgrade requests are replay-safe under retry and concurrency.
+- The authoritative response records raw XP, awarded XP, rebuild suppression, eligible and ineligible levels, UTC day key, and model version. Compatibility fields such as `capSuppressedXp`, daily-cap activity, allowance, usage, remainder, and cap-reference Hero level remain present with zero, false, or null values. Upgrade requests are replay-safe under retry and concurrency.
+
+### Confirmed instant city-upgrade feedback
+
+- Every accepted map, City Info, or City List upgrade action immediately reserves its projected Gold and displays its projected city level without changing persisted authoritative state. The active-map city, castle presentation, map label, selected-city controls, City Info, and City List must agree on the projected or confirmed level.
+- Additional `+1` and `+5` actions remain available while earlier requests are processing and use projected Gold and projected levels for cost and affordability. `+5` is exact and all-or-nothing. `MAX` reserves every level affordable with projected Gold, while the server remains authoritative for its final result.
+- Each accepted click is a separate request-ID-backed action and executes in order. Its city-XP preview occurs only when that action reaches the front so it includes prior confirmed upgrades.
+- If the player declines a rebuilt-level warning or the server rejects an action, dependent queued actions for that city are cleared, authoritative Gold and city data are refreshed, and the projection rolls back. Unrelated actions are revalidated against the refreshed state.
+- After each confirmation, the owned-city cache and active-map city receive the authoritative update before any remaining projection is reapplied. Gameplay calculations continue to use confirmed server state.
+- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Level sorting is reapplied after the queue settles. A nonblocking syncing state appears on affected rows and panels without disabling all upgrade controls.
+- Only the selected-city map Level action uses the dedicated simple arrow-up glyph and Crownlands gold treatment. Its accessible `Level up` label and Gold cost remain visible. City Info and City List controls retain the `+1`, `+5`, and `MAX` labels.
 
 #### City-upgrade XP compatibility rollout
 
 - During the temporary cross-channel compatibility window, the server accepts an otherwise valid legacy city-upgrade request that omits the new request ID. The city upgrade, Gold spend, invested-Gold accounting, production collection, and city-upgrade progression event remain authoritative and atomic.
-- A legacy request awards zero city-upgrade Hero XP and therefore cannot trigger a Hero level, skill point, level-up Gold reward, or level-up troop reward. It does not consume or freeze the UTC city-XP allowance.
+- A legacy request awards zero city-upgrade Hero XP and therefore cannot trigger a Hero level, skill point, level-up Gold reward, or level-up troop reward.
 - Every successful legacy request advances the seasonal per-player, per-region, per-city high-watermark through the highest city level completed by that request. Changing to an updated client cannot reclaim XP for those levels later. Legacy retries, duplicate calls, rebuilding, or client switching therefore cannot duplicate Hero XP.
-- Requests carrying a valid request ID remain on the complete updated path: preview, suppression acknowledgement, replay receipt, city XP, daily allowance, high-watermark, and normal Hero-level rewards all retain the confirmed behavior above.
+- Requests carrying a valid request ID remain on the complete updated path: preview, rebuilt-level suppression acknowledgement, replay receipt, city XP, high-watermark, and normal Hero-level rewards all retain the confirmed behavior above. The obsolete cap acknowledgement remains accepted from older clients but does not affect the award.
 - The server economy setting `cityUpgradeXp.legacyRequestsEnabled` controls the compatibility window and defaults to an explicit configured value. Once set to `false`, a request without an ID is rejected before any transaction writes with reason `city-upgrade-client-update-required` and a player-facing instruction to update Crownlands.
 - Required rollout order is: (1) deploy the compatibility-capable backend; (2) publish the updated client to every supported web and itch.io channel; (3) verify adoption and successful request-ID-backed upgrades on every channel; (4) disable legacy requests through the server setting; and (5) remove the temporary legacy path in a later cleanup release. Functions or clients must not be released independently in the opposite order.
 
@@ -1170,6 +1176,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.17 — August 27, 2026
+
+- Confirmed city-upgrade XP model version 2 at 1% of the matching Hero XP requirement with no daily allowance at any Hero level.
+- Retained seasonal high-watermarks, zero-XP legacy requests, replay receipts, normal Hero rewards, and neutral cap receipt fields while ending daily allowance reads and writes.
+- Confirmed ordered optimistic city-upgrade actions with immediate projected Gold and levels, exact `+5`, projected `MAX`, dispatch-time XP previews, same-city rollback, stable pending rows, and authoritative cache reconciliation.
+- Confirmed a dedicated gold arrow-up treatment only for the selected-city map Level action while City Info and City List retain `+1`, `+5`, and `MAX`.
 
 ## v1.16 — August 26, 2026
 

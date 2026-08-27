@@ -971,18 +971,7 @@ const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEn
 const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 108);
 const CITY_UPGRADE_XP_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.enabled !== false;
-const CITY_UPGRADE_XP_MODEL_VERSION = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.modelVersion", 1)));
-const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.05));
-const CITY_UPGRADE_XP_CAP_START_HERO_LEVEL = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.capStartHeroLevel", 50)));
-const CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL = Math.max(
-  CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
-  Math.floor(economyNumber("cityUpgradeXp.capMaximumHeroLevel", 100))
-);
-const CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS = Math.max(0, economyNumber("cityUpgradeXp.capStartLevelEquivalents", 1));
-const CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS = Math.max(
-  CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS,
-  economyNumber("cityUpgradeXp.capMaximumLevelEquivalents", 2)
-);
+const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.01));
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
@@ -1092,6 +1081,7 @@ const CROWNLANDS_ICON_KEYS = new Set([
   "locate",
   "information",
   "upgrade",
+  "arrow-up",
   "close",
   "back",
   "forward",
@@ -6257,42 +6247,6 @@ function getCityUpgradeRawXp(startingCityLevel, levels = 1) {
   return total;
 }
 
-function getCityUpgradeXpCapLevelEquivalents(heroLevel) {
-  const level = Math.max(
-    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
-    Math.floor(Number(heroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
-  );
-  if (level >= CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL) {
-    return CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS;
-  }
-  const progress = (level - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
-    / Math.max(1, CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL - CITY_UPGRADE_XP_CAP_START_HERO_LEVEL);
-  return CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS
-    + (CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS - CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS)
-      * progress;
-}
-
-function getCityUpgradeXpDailyCap(heroLevel) {
-  const referenceLevel = Math.max(
-    CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
-    Math.floor(Number(heroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
-  );
-  const equivalents = getCityUpgradeXpCapLevelEquivalents(referenceLevel);
-  const wholeLevels = Math.max(0, Math.floor(equivalents));
-  const fractionalLevel = Math.max(0, equivalents - wholeLevels);
-  let allowance = 0;
-  for (let offset = 0; offset < wholeLevels; offset += 1) {
-    allowance = Math.min(Number.MAX_SAFE_INTEGER, allowance + getXpRequiredForLevel(referenceLevel + offset));
-  }
-  if (fractionalLevel > 0 && allowance < Number.MAX_SAFE_INTEGER) {
-    allowance = Math.min(
-      Number.MAX_SAFE_INTEGER,
-      allowance + getXpRequiredForLevel(referenceLevel + wholeLevels) * fractionalLevel
-    );
-  }
-  return Math.max(0, Math.floor(allowance));
-}
-
 function getLevelUpGoldUpgradeShare(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
   if (current <= HERO_XP_SOFT_CAP_LEVEL) return LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE;
@@ -10793,24 +10747,6 @@ function getAuthoritativeProfileRevisionMs(profile = null) {
     || timestampToMs(profile.updatedAt);
 }
 
-function normalizeCityUpgradeXpDailyState(raw = null) {
-  if (!raw || typeof raw !== "object") return null;
-  const dayKey = String(raw.dayKey || "").slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
-  const dailyCapXp = Math.max(0, Math.floor(Number(raw.dailyCapXp) || 0));
-  return {
-    modelVersion: Math.max(1, Math.floor(Number(raw.modelVersion) || CITY_UPGRADE_XP_MODEL_VERSION)),
-    resetGeneration: String(raw.resetGeneration || "").slice(0, 120),
-    dayKey,
-    capReferenceHeroLevel: Math.max(
-      CITY_UPGRADE_XP_CAP_START_HERO_LEVEL,
-      Math.floor(Number(raw.capReferenceHeroLevel) || CITY_UPGRADE_XP_CAP_START_HERO_LEVEL)
-    ),
-    dailyCapXp,
-    dailyAwardedXp: Math.min(dailyCapXp, Math.max(0, Math.floor(Number(raw.dailyAwardedXp) || 0))),
-  };
-}
-
 function applyServerProfilePatch(patch = null, options = {}) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
@@ -10880,10 +10816,6 @@ function applyServerProfilePatch(patch = null, options = {}) {
   }
   if (patch.daily && typeof patch.daily === "object") {
     state.daily = normalizeDailyCaptureTracker(patch.daily);
-    changed = true;
-  }
-  if (patch.cityUpgradeXpDaily !== undefined) {
-    state.cityUpgradeXpDaily = normalizeCityUpgradeXpDailyState(patch.cityUpgradeXpDaily);
     changed = true;
   }
   if (patch.dailyLoginReward && typeof patch.dailyLoginReward === "object") {
@@ -25714,13 +25646,17 @@ function renderCitiesUncached(force = false) {
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
     const stronghold = isStronghold(city);
+    const displayCity = city.owner === "player" && !stronghold
+      ? getProjectedCityForInstantActions(city) || city
+      : city;
     const existingCityNode = existingCityNodes.get(city.id);
     const btn = existingCityNode || document.createElement("button");
     existingCityNodes.delete(city.id);
     btn.type = "button";
     btn.dataset.cityId = city.id;
-    const castleStage = getCastleStage(city.level);
+    const castleStage = getCastleStage(displayCity.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
+    if (displayCity !== city) btn.classList.add("upgrade-syncing");
     const clanAlly = isClanAllyCity(city);
     if (clanAlly) btn.classList.add("clan-ally");
     const enemyPowerBand = getStableEnemyCityPowerBand(city);
@@ -25776,7 +25712,7 @@ function renderCitiesUncached(force = false) {
           <span class="player-city-banner">
             <span class="city-owner-column">
               ${ownerFlag}
-              <span class="city-label-level">${formatNumber(city.level)}</span>
+              <span class="city-label-level">${formatNumber(displayCity.level)}</span>
             </span>
             <span class="player-city-data">
               ${clanTagMarkup}
@@ -25810,7 +25746,7 @@ function renderCitiesUncached(force = false) {
           </span>
         </span>`;
     const knownTroops = visibleGarrison;
-    const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
+    const locationType = stronghold ? "Stronghold" : `Level ${displayCity.level}`;
     const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand, city);
     const structureHtml = stronghold
       ? `
@@ -25885,14 +25821,12 @@ function renderSelectedCityWheel(city) {
   const levelCost = getLevelCost(projectedCity);
   const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
   const upgradePending = Boolean(getPendingCityUpgradeAction(city, getCityRegionId(city)));
-  const levelDisabled = upgradePending || incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || getProjectedGold() < levelCost;
+  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || getProjectedGold() < levelCost;
   const levelButtonLabel = incomingUpgradeLocked
     ? `${city.name} cannot be leveled while an attack is incoming`
-    : upgradePending ? `${city.name} already has an upgrade pending`
+    : upgradePending ? `Level up ${city.name}; earlier upgrades are syncing`
     : `Level up ${city.name}`;
-  const levelCostLabel = upgradePending
-    ? "Pending"
-    : incomingUpgradeLocked
+  const levelCostLabel = incomingUpgradeLocked
     ? "Incoming"
     : isStronghold(city) ? "Fixed" : Number.isFinite(levelCost) ? `${formatNumber(levelCost)}g` : "Unavailable";
   const scoutNearbyActive = bulkOrdersSupported && scoutNearbySourceId === city.id;
@@ -25905,8 +25839,8 @@ function renderSelectedCityWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action cl-action-button cl-action-royal wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" aria-busy="${upgradePending}" ${levelDisabled ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("upgrade")}</span>
+    <button class="city-wheel-action cl-action-button cl-action-level wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" data-syncing="${upgradePending}" ${levelDisabled ? "disabled" : ""}>
+      <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("arrow-up")}</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${levelCostLabel}</span>
     </button>
@@ -30291,12 +30225,12 @@ function isMainCityForList(city) {
 }
 
 function compareCityListEntries(a, b) {
-  const valueA = cityListSortKey === "troops" ? Math.floor(Number(a.troops) || 0) : clampCityLevel(a.level);
-  const valueB = cityListSortKey === "troops" ? Math.floor(Number(b.troops) || 0) : clampCityLevel(b.level);
+  const valueA = cityListSortKey === "troops" ? Math.floor(Number(a.troops) || 0) : getCityUpgradeStableSortLevel(a);
+  const valueB = cityListSortKey === "troops" ? Math.floor(Number(b.troops) || 0) : getCityUpgradeStableSortLevel(b);
   const primary = cityListSortDirection === "desc" ? valueB - valueA : valueA - valueB;
   if (primary !== 0) return primary;
   const secondary = cityListSortKey === "troops"
-    ? clampCityLevel(b.level) - clampCityLevel(a.level)
+    ? getCityUpgradeStableSortLevel(b) - getCityUpgradeStableSortLevel(a)
     : Math.floor(Number(b.troops) || 0) - Math.floor(Number(a.troops) || 0);
   if (secondary !== 0) return secondary;
   return a.name.localeCompare(b.name);
@@ -30309,14 +30243,9 @@ function getCityListSortLabel(key) {
 }
 
 function renderCityListUpgradeButton(city, option) {
-  const pending = option.reason === "Pending";
-  const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
-  const activePending = pending
-    && pendingAction?.mode === option.mode
-    && (option.mode === "max" || Number(pendingAction.requestedLevels) === Number(option.levels));
-  const label = activePending ? `${option.label}…` : option.label;
+  const label = option.label;
   const details = option.reason || `${formatNumber(option.levels)} level${option.levels === 1 ? "" : "s"} · ${formatNumber(option.cost)} gold`;
-  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" aria-busy="${activePending}" ${activePending ? `aria-disabled="true"` : option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" ${option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
 }
 
 function renderCityListRow(city) {
@@ -30335,13 +30264,18 @@ function renderCityListRow(city) {
   const upgradeResult = upgradeFeedback
     ? `Lv ${formatNumber(upgradeFeedback.startingLevel)} → Lv ${formatNumber(upgradeFeedback.finalLevel)} · +${formatNumber(upgradeFeedback.upgraded)} ${upgradeFeedback.upgraded === 1 ? "level" : "levels"}`
     : "";
+  const syncing = Boolean(optionState?.pendingAction);
+  const displayedLevel = optionState?.currentLevel ?? clampCityLevel(city.level);
+  const upgradeStatus = syncing
+    ? `${formatNumber(getPendingCityUpgradeCount(city, regionId))} upgrade${getPendingCityUpgradeCount(city, regionId) === 1 ? "" : "s"} syncing…`
+    : upgradeResult;
   return `
-    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""} ${animateUpgradeFeedback ? "upgrade-confirmed" : ""}" data-city-list-row-key="${escapeHtml(rowKey)}" tabindex="-1" ${optionState?.pendingAction ? `aria-busy="true"` : ""}>
+    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""} ${syncing ? "upgrade-syncing" : ""} ${animateUpgradeFeedback ? "upgrade-confirmed" : ""}" data-city-list-row-key="${escapeHtml(rowKey)}" tabindex="-1" ${syncing ? `aria-busy="true"` : ""}>
       <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
       <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : renderCrownlandsIcon("city")}</span>
-      <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
+      <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(displayedLevel)}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">${renderCrownlandsIcon("troops")}</span></strong>
-      <span class="city-list-name"><span class="city-list-name-text">${escapeHtml(city.name)}</span>${upgradeResult ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeResult)}</small>` : ""}</span>
+      <span class="city-list-name"><span class="city-list-name-text">${escapeHtml(city.name)}</span>${upgradeStatus ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeStatus)}</small>` : ""}</span>
       <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
       <div class="city-list-actions">
         ${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : ""}
@@ -33464,14 +33398,13 @@ function getAffordableCityUpgradeLevels(city, levelLimit = Number.POSITIVE_INFIN
 function getCityUpgradeOptionState(city) {
   if (!city || city.owner !== "player" || isStronghold(city)) return null;
   const regionId = getCityRegionId(city);
-  const pendingAction = getPendingCityUpgradeAction(city, regionId)
-    || (isServerCityUpgradePreviewPending(city, regionId) ? { mode: "" } : null);
+  const pendingAction = getPendingCityUpgradeAction(city, regionId);
   const projectedCity = getProjectedCityForInstantActions(city);
   const currentLevel = clampCityLevel(projectedCity?.level || 1);
   const availableGold = getProjectedGold();
   const incoming = getIncomingUpgradeBlockers(city.id).length > 0;
   const unsupported = usesServerEconomyAuthority() && !supportsAuthoritativeCityUpgradeModes();
-  const baseReason = pendingAction ? "Pending" : incoming ? "Incoming" : unsupported ? "Refresh" : "";
+  const baseReason = incoming ? "Incoming" : unsupported ? "Refresh" : "";
   const oneCost = getMultiLevelCost(projectedCity, 1);
   const fiveCost = getMultiLevelCost(projectedCity, 5);
   const showCityUpgradeXp = CITY_UPGRADE_XP_ENABLED && usesServerEconomyAuthority();
@@ -33518,26 +33451,22 @@ function renderCityLevelUpButton(city, option) {
   const details = Number.isFinite(option.cost) && option.cost > 0
     ? `${formatNumber(option.cost)}g${xp > 0 ? ` · +${formatNumber(xp)} XP` : ""}`
     : (option.reason || "Unavailable");
-  const pending = option.reason === "Pending";
-  const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
-  const activePending = pending
-    && pendingAction?.mode === option.mode
-    && (option.mode === "max" || Number(pendingAction.requestedLevels) === Number(option.levels));
-  const label = activePending ? `${option.label}…` : option.label;
-  return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-busy="${activePending}" ${activePending ? `aria-disabled="true"` : option.disabled ? "disabled" : ""}><span>${escapeHtml(label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
+  return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" ${option.disabled ? "disabled" : ""}><span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
 }
 
 function renderCityLevelUpAction(city) {
   if (!city || city.owner !== "player" || isStronghold(city)) return "";
   const optionState = getCityUpgradeOptionState(city);
   if (!optionState) return "";
-  return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)}${optionState.options[0]?.xp > 0 ? ` · up to +${formatNumber(optionState.options[0].xp)} Hero XP` : ""} · Gold ${formatNumber(optionState.availableGold)}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
+  const syncing = optionState.pendingAction
+    ? ` · ${formatNumber(getPendingCityUpgradeCount(city, optionState.regionId))} syncing`
+    : "";
+  return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)}${optionState.options[0]?.xp > 0 ? ` · up to +${formatNumber(optionState.options[0].xp)} Hero XP` : ""} · Gold ${formatNumber(optionState.availableGold)}${syncing}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
 }
 
 function bindCityLevelUpButtons(fallbackCity = null, root = modalBody) {
   root?.querySelectorAll("[data-city-upgrade-mode]").forEach(button => {
     button.addEventListener("click", () => {
-      if (button.getAttribute("aria-disabled") === "true") return;
       const cityId = button.dataset.cityUpgradeCity || fallbackCity?.id || "";
       const regionId = button.dataset.cityUpgradeRegion || (fallbackCity ? getCityRegionId(fallbackCity) : "");
       const mode = button.dataset.cityUpgradeMode === "max" ? "max" : "exact";

@@ -234,14 +234,12 @@ assert.deepEqual(
 for (const key of [
   "modelVersion",
   "fixedXpRate",
-  "capStartHeroLevel",
-  "capMaximumHeroLevel",
-  "capStartLevelEquivalents",
-  "capMaximumLevelEquivalents",
 ]) {
   assert.ok(Number.isFinite(Number(economyConfig.cityUpgradeXp?.[key])), `Missing cityUpgradeXp.${key}.`);
 }
 assert.equal(economyConfig.cityUpgradeXp.enabled, true, "City-upgrade XP is not enabled.");
+assert.equal(economyConfig.cityUpgradeXp.modelVersion, 2, "City-upgrade XP is not using model version 2.");
+assert.equal(economyConfig.cityUpgradeXp.fixedXpRate, 0.01, "City-upgrade XP is not using the approved 1% rate.");
 assert.equal(
   economyConfig.cityUpgradeXp.legacyRequestsEnabled,
   true,
@@ -257,11 +255,7 @@ requireMatch(
   /function getCityUpgradeFixedXp[\s\S]*?getXpRequiredForLevel\(level\) \* CITY_UPGRADE_XP_FIXED_RATE/,
   "Client city-upgrade XP preview does not mirror the fixed server formula."
 );
-requireMatch(
-  serverSource,
-  /function getCityUpgradeXpDailyCap[\s\S]*?wholeLevels[\s\S]*?getXpRequiredForLevel\(referenceLevel \+ offset\)[\s\S]*?fractionalLevel/,
-  "The city-upgrade daily cap does not sum exact successive level requirements."
-);
+assert.doesNotMatch(serverSource, /cityUpgradeXpDaily|getCityUpgradeXpDailyCap|normalizeCityUpgradeXpDailyState/, "The server still reads or writes obsolete daily city-XP allowance state.");
 requireMatch(
   serverUpgradeCitySource,
   /const cityUpgradeXpCalculation = legacyRequest[\s\S]*?: calculateCityUpgradeXpReceipt[\s\S]*?const progress = legacyRequest \? null : buildPlayerProgressPatch[\s\S]*?creditLevelUpTroopsToMainCity[\s\S]*?finalizeLevelUpReward/,
@@ -289,23 +283,28 @@ requireMatch(
 );
 requireMatch(
   serverUpgradeCitySource,
-  /cityUpgradeXpCalculation\.capSuppressedXp > acknowledgedCapSuppressedXp[\s\S]*?cityUpgradeXpCalculation\.rebuildSuppressedXp > acknowledgedRebuildSuppressedXp[\s\S]*?city-upgrade-xp-warning-required/,
-  "The server does not reject city XP suppression beyond the player's acknowledged preview."
+  /cityUpgradeXpCalculation\.rebuildSuppressedXp > acknowledgedRebuildSuppressedXp[\s\S]*?city-upgrade-xp-warning-required/,
+  "The server does not reject rebuilt-level XP suppression beyond the player's acknowledged preview."
 );
 requireMatch(
   clientSource,
-  /const acknowledgedCapSuppressedXp[\s\S]*?previewReceipt\.capSuppressedXp[\s\S]*?const acknowledgedRebuildSuppressedXp[\s\S]*?previewReceipt\.rebuildSuppressedXp/,
-  "The client does not preserve the accepted city XP suppression amounts."
+  /getCityUpgradeXpPreview[\s\S]*?const previewReceipt[\s\S]*?getCityUpgradeXpWarning[\s\S]*?acknowledgedRebuildSuppressedXp = toWhole\(previewReceipt\.rebuildSuppressedXp\)/,
+  "The queued client action does not preview and preserve rebuilt-level suppression at dispatch time."
 );
 requireMatch(
   clientSource,
-  /getOnlineApi\(\)\.upgradeCity\([\s\S]*?acknowledgedCapSuppressedXp[\s\S]*?acknowledgedRebuildSuppressedXp/,
-  "The client does not send city XP suppression acknowledgements to the authoritative upgrade."
+  /api\.upgradeCity\([\s\S]*?acknowledgedCapSuppressedXp:\s*0[\s\S]*?acknowledgedRebuildSuppressedXp/,
+  "The client does not send neutral cap compatibility data with the rebuilt-level acknowledgement."
 );
 requireMatch(
   clientSource,
-  /function hasPendingServerCityUpgrade[\s\S]*?already has an upgrade pending/,
-  "The client can queue a stale second city XP preview behind an unresolved upgrade."
+  /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?enqueueInstantEconomyAction[\s\S]*?coalesce:\s*mode === "legacy"/,
+  "The client does not reserve projected city levels and Gold for independent authoritative requests."
+);
+requireMatch(
+  clientSource,
+  /function discardQueuedCityUpgradeActions[\s\S]*?action\?\.type !== "city" \|\| action\.key !== actionKey[\s\S]*?instantEconomyActions\.splice/,
+  "A failed or declined city upgrade does not clear dependent queued actions for that city."
 );
 requireMatch(
   serverUpgradeCitySource,
@@ -535,10 +534,6 @@ const cityUpgradeSandbox = {
   CITY_UPGRADE_XP_MODEL_VERSION: cityUpgradeXpConfig.modelVersion,
   CITY_UPGRADE_XP_LEGACY_REQUESTS_ENABLED: cityUpgradeXpConfig.legacyRequestsEnabled,
   CITY_UPGRADE_XP_FIXED_RATE: cityUpgradeXpConfig.fixedXpRate,
-  CITY_UPGRADE_XP_CAP_START_HERO_LEVEL: cityUpgradeXpConfig.capStartHeroLevel,
-  CITY_UPGRADE_XP_CAP_MAXIMUM_HERO_LEVEL: cityUpgradeXpConfig.capMaximumHeroLevel,
-  CITY_UPGRADE_XP_CAP_START_LEVEL_EQUIVALENTS: cityUpgradeXpConfig.capStartLevelEquivalents,
-  CITY_UPGRADE_XP_CAP_MAXIMUM_LEVEL_EQUIVALENTS: cityUpgradeXpConfig.capMaximumLevelEquivalents,
   HERO_XP_EXPONENTIAL_START_LEVEL: constants.HERO_XP_EXPONENTIAL_START_LEVEL,
   HERO_XP_EXPONENTIAL_GROWTH_RATE: constants.HERO_XP_EXPONENTIAL_GROWTH_RATE,
   CHARACTER_START_LEVEL: 1,
@@ -556,18 +551,12 @@ vm.createContext(cityUpgradeSandbox);
 vm.runInContext(
   [
     "getXpRequiredForLevel",
-    "normalizeCharacterProgress",
     "getCityUpgradeFixedXp",
-    "getCityUpgradeXpCapLevelEquivalents",
-    "getCityUpgradeXpDailyCap",
-    "getXpNeededToReachHeroLevel",
-    "normalizeCityUpgradeXpDailyState",
     "calculateCityUpgradeXpReceipt",
     "calculateLegacyCityUpgradeXpReceipt",
     "resolveCityUpgradeRequestCompatibility",
   ].map(name => extractFunction(serverSource, name)).join("\n")
     + "\nthis.cityUpgradeFixedXp = getCityUpgradeFixedXp;"
-    + "\nthis.cityUpgradeDailyCap = getCityUpgradeXpDailyCap;"
     + "\nthis.calculateCityUpgradeXpReceipt = calculateCityUpgradeXpReceipt;"
     + "\nthis.calculateLegacyCityUpgradeXpReceipt = calculateLegacyCityUpgradeXpReceipt;"
     + "\nthis.resolveCityUpgradeRequestCompatibility = resolveCityUpgradeRequestCompatibility;",
@@ -576,35 +565,18 @@ vm.runInContext(
 );
 
 const cityXpAnchors = new Map([
-  [1, 12],
-  [10, 236],
-  [25, 1373],
-  [50, 14880],
-  [75, 161230],
-  [100, 1746884],
-  [125, 18926982],
-  [150, 205068284],
+  [1, 2],
+  [10, 47],
+  [25, 274],
+  [50, 2976],
+  [75, 32246],
+  [100, 349376],
+  [125, 3785396],
+  [150, 41013656],
 ]);
 for (const [level, expected] of cityXpAnchors) {
   assert.equal(cityUpgradeSandbox.cityUpgradeFixedXp(level), expected, `City level ${level} XP anchor changed.`);
 }
-
-const cityCapAnchors = new Map([
-  [50, 297618],
-  [60, 941773],
-  [75, 4998144],
-  [90, 25323586],
-  [100, 73369156],
-  [150, 8612867951],
-]);
-for (const [level, expected] of cityCapAnchors) {
-  assert.equal(cityUpgradeSandbox.cityUpgradeDailyCap(level), expected, `Hero level ${level} city XP cap changed.`);
-}
-assert.equal(
-  cityUpgradeSandbox.cityUpgradeDailyCap(60),
-  xpRequired(60) + Math.floor(xpRequired(61) * 0.2),
-  "Fractional city XP caps are not calculated from the exact next requirement."
-);
 
 const modernCityUpgradeRequest = cityUpgradeSandbox.resolveCityUpgradeRequestCompatibility("modern-request-1");
 assert.equal(modernCityUpgradeRequest.legacyRequest, false, "A request ID was misclassified as legacy.");
@@ -633,7 +605,7 @@ assert.equal(
   cityUpgradeSandbox.cityUpgradeFixedXp(5) + cityUpgradeSandbox.cityUpgradeFixedXp(6),
   "The legacy compatibility receipt did not account for every skipped level."
 );
-assert.equal(legacyCityXp.dailyState, null, "A legacy city upgrade consumed or froze the daily city-XP allowance.");
+assert.equal(legacyCityXp.dailyState, null, "A legacy city upgrade returned obsolete daily city-XP state.");
 assert.equal(legacyCityXp.highestDevelopedCityLevel, 7, "A legacy city upgrade did not advance the high-watermark.");
 
 const missingWatermark = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
@@ -662,88 +634,30 @@ assert.deepEqual(Array.from(rebuild.eligibleLevels), [8], "A newly exceeded high
 assert.deepEqual(Array.from(rebuild.ineligibleLevels), [6, 7], "Rebuilt levels were not suppressed.");
 assert.equal(rebuild.highestDevelopedCityLevel, 8, "The high-watermark did not advance through the bulk upgrade.");
 
-const uncappedBelow50 = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
-  character: { level: 49, xp: 0 },
-  dayKey: "2026-08-25",
-  startingCityLevel: 1,
-  endingCityLevel: 2,
-});
-assert.equal(uncappedBelow50.awardedXp, uncappedBelow50.rawXp, "XP was capped while the Hero remained below level 50.");
-assert.equal(uncappedBelow50.dailyCapActive, false, "A below-50 award incorrectly froze a daily cap.");
-
-const crossingLevel50 = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
-  character: { level: 49, xp: xpRequired(49) - 1 },
-  dayKey: "2026-08-25",
-  startingCityLevel: 1,
-  endingCityLevel: 2,
-});
-assert.equal(crossingLevel50.awardedXp, crossingLevel50.rawXp, "The level-50 boundary discarded XP before the cap was full.");
-assert.equal(crossingLevel50.dailyAwardedXp, crossingLevel50.rawXp - 1, "Only post-boundary XP should consume the cap.");
-assert.equal(crossingLevel50.capReferenceHeroLevel, 50, "Crossing level 50 did not freeze the cap at level 50.");
-
-const capAt50 = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
+const uncappedAt50 = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
   character: { level: 50, xp: 0 },
-  dayKey: "2026-08-25",
-  startingCityLevel: 150,
-  endingCityLevel: 151,
-});
-assert.equal(capAt50.awardedXp, cityCapAnchors.get(50), "Level-50 city XP cap was not enforced.");
-assert.ok(capAt50.capSuppressedXp > 0, "Excess capped XP was not discarded.");
-assert.equal(capAt50.dailyRemainingXp, 0, "A full cap still reports remaining city XP.");
-
-const partialCap = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
-  character: { level: 60, xp: 0 },
   dailyState: {
-    modelVersion: cityUpgradeXpConfig.modelVersion,
-    resetGeneration: "test-season",
+    modelVersion: 1,
     dayKey: "2026-08-25",
-    capReferenceHeroLevel: 60,
-    dailyCapXp: cityCapAnchors.get(60),
-    dailyAwardedXp: cityCapAnchors.get(60) - 7,
+    dailyCapXp: 1,
+    dailyAwardedXp: 1,
   },
   dayKey: "2026-08-25",
   startingCityLevel: 150,
   endingCityLevel: 151,
 });
-assert.equal(partialCap.awardedXp, 7, "A partially remaining daily cap was not consumed exactly.");
-assert.equal(partialCap.capSuppressedXp, partialCap.rawXp - 7, "Partial-cap suppression was not reported exactly.");
-
-const frozenCap = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
-  character: { level: 90, xp: 0 },
-  dailyState: {
-    modelVersion: cityUpgradeXpConfig.modelVersion,
-    resetGeneration: "test-season",
-    dayKey: "2026-08-25",
-    capReferenceHeroLevel: 60,
-    dailyCapXp: cityCapAnchors.get(60),
-    dailyAwardedXp: 0,
-  },
-  dayKey: "2026-08-25",
-  startingCityLevel: 150,
-  endingCityLevel: 151,
-});
-assert.equal(frozenCap.capReferenceHeroLevel, 60, "The daily cap reference changed after other Hero XP gains.");
-assert.equal(frozenCap.dailyCapXp, cityCapAnchors.get(60), "The frozen daily allowance was recalculated mid-day.");
-
-const utcReset = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
-  character: { level: 60, xp: 0 },
-  dailyState: {
-    modelVersion: cityUpgradeXpConfig.modelVersion,
-    resetGeneration: "test-season",
-    dayKey: "2026-08-24",
-    capReferenceHeroLevel: 50,
-    dailyCapXp: cityCapAnchors.get(50),
-    dailyAwardedXp: cityCapAnchors.get(50),
-  },
-  dayKey: "2026-08-25",
-  startingCityLevel: 150,
-  endingCityLevel: 151,
-});
-assert.equal(utcReset.capReferenceHeroLevel, 60, "The UTC-day reset retained yesterday's frozen cap reference.");
-assert.equal(utcReset.awardedXp, cityCapAnchors.get(60), "The UTC-day reset did not restore today's allowance.");
+assert.equal(uncappedAt50.awardedXp, uncappedAt50.rawXp, "Hero Level 50 still caps city-upgrade XP.");
+assert.equal(uncappedAt50.awardedXp, cityUpgradeSandbox.cityUpgradeFixedXp(150), "The Level-150 city XP award is not the full 1% amount.");
+assert.equal(uncappedAt50.capSuppressedXp, 0, "The compatibility receipt reported capped XP.");
+assert.equal(uncappedAt50.dailyCapActive, false, "The uncapped receipt marked a daily cap active.");
+assert.equal(uncappedAt50.dailyCapXp, 0, "The uncapped receipt returned a daily allowance.");
+assert.equal(uncappedAt50.dailyAwardedXp, 0, "The uncapped receipt tracked daily awarded XP.");
+assert.equal(uncappedAt50.dailyRemainingXp, 0, "The uncapped receipt returned daily remaining XP.");
+assert.equal(uncappedAt50.capReferenceHeroLevel, null, "The uncapped receipt froze a Hero-level cap reference.");
+assert.equal(uncappedAt50.dailyState, null, "Stored model-v1 allowance state affected model-v2 XP.");
 
 const combatCapSource = extractFunction(serverSource, "capBattleXpForHeroLevel");
-assert.doesNotMatch(combatCapSource, /CITY_UPGRADE_XP|cityUpgradeXp/, "City-upgrade daily limits leaked into combat XP.");
+assert.doesNotMatch(combatCapSource, /CITY_UPGRADE_XP|cityUpgradeXp/, "City-upgrade XP rules leaked into combat XP.");
 
 function battleCapRate(level) {
   if (level <= constants.HERO_XP_SOFT_CAP_LEVEL) return constants.BATTLE_XP_EARLY_LEVEL_CAP_RATE;
@@ -954,4 +868,4 @@ assert.equal(xpRequired(500), Number.MAX_SAFE_INTEGER, "Extreme hero levels must
 assert.ok(xpRequired(100) > xpRequired(50) * 10, "Levels 50-100 are not scaling enough.");
 assert.ok(xpRequired(150) > xpRequired(100) * 10, "Levels above 100 are not endgame-scaled.");
 
-console.log("Validated aligned battle XP, fixed city-upgrade XP, legacy rollout compatibility, daily caps, progression, and the level-up reward curve.");
+console.log("Validated aligned battle XP, uncapped 1% city-upgrade XP, legacy rollout compatibility, progression, and the level-up reward curve.");

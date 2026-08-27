@@ -40,6 +40,11 @@
   --cl-action-royal-text: #f2e2bf;
   --cl-action-royal-edge: #331617;
 
+  --cl-action-level-bg: linear-gradient(180deg, #f7df8b, #c98a25 72%, #8b5515);
+  --cl-action-level-border: #ffeeb2;
+  --cl-action-level-text: #2a1907;
+  --cl-action-level-edge: #70420e;
+
   --cl-action-disabled-bg: #c7b99b;
   --cl-action-disabled-border: #a59070;
   --cl-action-disabled-text: #8c8373;
@@ -189,6 +194,17 @@
   --cl-action-border: var(--cl-action-royal-border);
   --cl-action-text: var(--cl-action-royal-text);
   --cl-action-edge: var(--cl-action-royal-edge);
+}
+
+.cl-action-button.cl-action-level {
+  --cl-action-bg: var(--cl-action-level-bg);
+  --cl-action-border: var(--cl-action-level-border);
+  --cl-action-text: var(--cl-action-level-text);
+  --cl-action-edge: var(--cl-action-level-edge);
+}
+
+.cl-action-button.cl-action-level[data-syncing="true"] {
+  filter: brightness(1.03) drop-shadow(0 0 7px rgba(255, 220, 116, .7)) drop-shadow(0 5px 4px rgba(0, 0, 0, .56));
 }
 
 .cl-action-button:hover:not(:disabled),

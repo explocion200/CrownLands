@@ -284,7 +284,7 @@ assert.match(extractFunction(gameSource, "buySkill"), /getSkillPointCost[\s\S]*?
 
 assert.match(howToSource, /Current Build[\s\S]*?preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated draft[\s\S]*?Save Preset[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated named draft[\s\S]*?Saving a valid draft is free[\s\S]*?Apply requires a saved draft[\s\S]*?1,000,000 gold/i);
-const expectedBuild = "20260826-skill-preset-draft-editor-r1";
+const expectedBuild = "20260826-uncapped-city-xp-instant-upgrades-r1";
 const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");

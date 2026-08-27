@@ -11451,6 +11451,15 @@ select:focus {
   animation: crownlandsCityListUpgradeConfirmed 680ms ease-out both;
 }
 
+.city-list-row.upgrade-syncing {
+  border-color: rgba(255, 224, 128, .72);
+  box-shadow: 0 0 0 1px rgba(255, 224, 128, .12), var(--ui-inset);
+}
+
+.city-node.player.upgrade-syncing .city-castle {
+  filter: drop-shadow(0 0 9px rgba(255, 216, 102, .72));
+}
+
 @keyframes crownlandsCityListUpgradeConfirmed {
   0% {
     transform: scale(.992);
