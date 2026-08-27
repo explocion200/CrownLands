@@ -197,6 +197,8 @@ const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumH
 const CITY_UPGRADE_MODES_VERSION = 1;
 const CITY_UPGRADE_EXACT_LEVEL_LIMIT = 25;
 const CITY_UPGRADE_RECEIPT_LIMIT = 20;
+const SKILL_LEVEL_ADJUSTMENT_VERSION = 1;
+const SKILL_LEVEL_ADJUSTMENT_RECEIPT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
 const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
 const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
@@ -673,7 +675,6 @@ const SKILL_ORDER = [
 const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
 const SKILL_STANDARD_POINT_COST = 1;
 const SKILL_FINAL_POINT_COST = 2;
-const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
 const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
@@ -3203,6 +3204,12 @@ function getSkillUpgradePointCost(skill = "", currentLevel = 0, levels = 1) {
   return total;
 }
 
+function getSkillDowngradePointRefund(skill = "", currentLevel = 0, levels = 1) {
+  const startLevel = normalizeSkillLevelForSkill(skill, currentLevel);
+  const requestedLevels = Math.min(normalizeSkillLevel(levels), startLevel);
+  return getSkillUpgradePointCost(skill, startLevel - requestedLevels, requestedLevels);
+}
+
 function normalizeSkillUpgrades(upgrades = {}) {
   const source = upgrades && typeof upgrades === "object" ? upgrades : {};
   const normalized = SKILL_ORDER.reduce((skills, key) => {
@@ -3321,7 +3328,7 @@ function normalizeFreeSkillResetState(profile = {}) {
   if (getSkillPointSystemVersion(profile) >= SKILL_POINT_SYSTEM_VERSION) {
     return {
       version: Math.max(SKILL_FREE_RESET_GRANT_VERSION, storedVersion),
-      credits: 0,
+      credits: storedCredits,
     };
   }
   if (storedVersion >= SKILL_FREE_RESET_GRANT_VERSION) {
@@ -4000,6 +4007,12 @@ function cityUpgradeXpHighWatermarkRef(uid = "", regionId = "", cityId = "") {
 function cityUpgradeRequestRef(uid = "", requestId = "") {
   return db.doc(
     `players/${safeString(uid, 128)}/cityUpgradeRequests/${safeString(requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_")}`
+  );
+}
+
+function skillLevelAdjustmentRequestRef(uid = "", requestId = "") {
+  return db.doc(
+    `players/${safeString(uid, 128)}/skillLevelAdjustmentRequests/${safeString(requestId, 96).replace(/[^a-zA-Z0-9_-]/g, "_")}`
   );
 }
 
@@ -13975,6 +13988,7 @@ exports.getRealmInfo = timedCallable(
         monthlyShardedRealms: true,
         instantEconomyActionsVersion: 1,
         cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION,
+        skillLevelAdjustmentVersion: SKILL_LEVEL_ADJUSTMENT_VERSION,
         commonGearVersion: COMMON_GEAR.SCHEMA_VERSION,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
         bulkOrdersVersion: BULK_ORDERS_VERSION,
@@ -15008,6 +15022,127 @@ function normalizeSkillSpendAllocations(rawAllocations = []) {
   return order.map(skillId => ({ skillId, points: totals.get(skillId) }));
 }
 
+function normalizeSkillLevelAdjustmentRequestId(value = "") {
+  const requestId = safeString(value, 96);
+  return /^[a-zA-Z0-9_-]{8,96}$/.test(requestId) ? requestId : "";
+}
+
+function normalizeSkillLevelAdjustments(rawAdjustments = []) {
+  if (!Array.isArray(rawAdjustments) || rawAdjustments.length < 1) {
+    throw new HttpsError("invalid-argument", "Choose at least one skill to adjust.");
+  }
+  if (rawAdjustments.length > 64) {
+    throw new HttpsError("invalid-argument", "Too many skill adjustments were submitted.");
+  }
+  const totals = new Map();
+  const order = [];
+  rawAdjustments.forEach(rawAdjustment => {
+    const skillId = safeString(rawAdjustment?.skillId || rawAdjustment?.skill, 64);
+    if (!SKILL_CONFIG[skillId]) throw new HttpsError("invalid-argument", "Choose a valid skill.");
+    const rawDelta = Number(rawAdjustment?.levelDelta ?? rawAdjustment?.delta ?? 0);
+    const levelDelta = Math.trunc(rawDelta);
+    if (!Number.isFinite(rawDelta) || rawDelta !== levelDelta || levelDelta === 0 || Math.abs(levelDelta) > 100) {
+      throw new HttpsError("invalid-argument", "Skill level adjustments must be non-zero whole numbers.");
+    }
+    if (!totals.has(skillId)) order.push(skillId);
+    totals.set(skillId, (totals.get(skillId) || 0) + levelDelta);
+  });
+  const adjustments = order
+    .map(skillId => ({ skillId, levelDelta: totals.get(skillId) }))
+    .filter(adjustment => adjustment.levelDelta !== 0);
+  if (!adjustments.length) {
+    throw new HttpsError("invalid-argument", "The submitted skill adjustments cancel each other out.");
+  }
+  return adjustments;
+}
+
+function createSkillLevelAdjustmentSignature(adjustments = []) {
+  return JSON.stringify(
+    [...adjustments]
+      .sort((left, right) => SKILL_ORDER.indexOf(left.skillId) - SKILL_ORDER.indexOf(right.skillId))
+      .map(({ skillId, levelDelta }) => ({ skillId, levelDelta }))
+  );
+}
+
+exports.adjustSkillLevels = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const requestId = normalizeSkillLevelAdjustmentRequestId(request.data?.requestId);
+  if (!requestId) throw new HttpsError("invalid-argument", "A valid skill adjustment request ID is required.");
+  const adjustments = normalizeSkillLevelAdjustments(request.data?.adjustments);
+  const requestSignature = createSkillLevelAdjustmentSignature(adjustments);
+  const requestRef = skillLevelAdjustmentRequestRef(uid, requestId);
+  const nowMs = Date.now();
+
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const requestSnap = await transaction.get(requestRef);
+    if (requestSnap.exists && requestSnap.data()?.response) {
+      const priorRequest = requestSnap.data() || {};
+      if (safeString(priorRequest.requestSignature, 1200) !== requestSignature) {
+        throw new HttpsError("invalid-argument", "That skill adjustment request ID was already used for another action.");
+      }
+      return { ...priorRequest.response, replayed: true };
+    }
+
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    const upgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
+    const nextUpgrades = { ...upgrades };
+    let spentSkillPoints = 0;
+    let refundedSkillPoints = 0;
+    const appliedAdjustments = adjustments.map(adjustment => {
+      const currentLevel = normalizeSkillLevelForSkill(adjustment.skillId, upgrades[adjustment.skillId]);
+      const nextLevel = currentLevel + adjustment.levelDelta;
+      if (nextLevel < 0) {
+        throw new HttpsError("failed-precondition", "That skill is already at level zero.");
+      }
+      if (nextLevel > getSkillMaxLevel(adjustment.skillId)) {
+        throw new HttpsError("failed-precondition", "That skill is already capped.");
+      }
+      const pointDelta = adjustment.levelDelta > 0
+        ? getSkillUpgradePointCost(adjustment.skillId, currentLevel, adjustment.levelDelta)
+        : -getSkillDowngradePointRefund(adjustment.skillId, currentLevel, -adjustment.levelDelta);
+      if (pointDelta > 0) spentSkillPoints += pointDelta;
+      else refundedSkillPoints += Math.abs(pointDelta);
+      nextUpgrades[adjustment.skillId] = nextLevel;
+      return { ...adjustment, level: nextLevel, pointDelta };
+    });
+    const character = reconcileSkillPoints(economy.profileAfter.character, nextUpgrades);
+    if (getSpentSkillPoints(nextUpgrades) > getEarnedSkillPoints(character)) {
+      throw new HttpsError("failed-precondition", "Earn more hero levels before applying those skill changes.");
+    }
+    const skillPresets = setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0);
+    writePreparedEconomy(transaction, economy, {
+      character,
+      upgrades: nextUpgrades,
+      skillPresets,
+    });
+    const response = createEconomyResponse(economy, {
+      requestId,
+      replayed: false,
+      skillAdjustments: appliedAdjustments,
+      spentSkillPoints,
+      refundedSkillPoints,
+      character,
+      upgrades: nextUpgrades,
+      skillPresets,
+    });
+    transaction.set(requestRef, {
+      uid,
+      requestId,
+      requestSignature,
+      adjustments,
+      response,
+      resetGeneration: RESET_GENERATION,
+      worldId: ONLINE_WORLD_ID,
+      createdAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      expiresAtMs: nowMs + SKILL_LEVEL_ADJUSTMENT_RECEIPT_TTL_MS,
+      expiresAt: Timestamp.fromMillis(nowMs + SKILL_LEVEL_ADJUSTMENT_RECEIPT_TTL_MS),
+    }, { merge: false });
+    return response;
+  });
+});
+
 async function spendSkillAllocations(uid, allocations, legacySkillId = "") {
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
@@ -15086,20 +15221,15 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, timeoutS
       throw new HttpsError("failed-precondition", "No spent skill points to reset.");
     }
     const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
-    const freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0;
-    const resetCost = spentPoints > 0 && !freeResetConsumed ? SKILL_RESET_COST : 0;
-    if (economy.gold < resetCost) {
-      throw new HttpsError("failed-precondition", `Skill reset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
-    }
+    const freeResetConsumed = false;
+    const resetCost = 0;
     const upgrades = spentPoints > 0 ? normalizeSkillUpgrades({}) : currentUpgrades;
     const character = reconcileSkillPoints(currentCharacter, upgrades);
-    const gold = Math.max(0, economy.gold - resetCost);
+    const gold = Math.max(0, economy.gold);
     const skillPresets = spentPoints > 0
       ? setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0)
       : normalizeSkillPresets(economy.profileAfter.skillPresets);
-    const freeSkillResetCreditsAfter = freeResetConsumed
-      ? freeSkillResetCredits - 1
-      : freeSkillResetCredits;
+    const freeSkillResetCreditsAfter = freeSkillResetCredits;
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
@@ -15376,23 +15506,6 @@ exports.syncSkillPointSystem = onCall({
       resetAtMs: result.resetAtMs,
     },
   };
-});
-
-exports.enforceSkillPointSystemState = onDocumentWritten({
-  document: "players/{uid}",
-  region: "us-central1",
-  maxInstances: 10,
-  retry: false,
-}, async event => {
-  const afterSnap = event.data?.after;
-  if (!afterSnap?.exists) return null;
-  const profile = afterSnap.data() || {};
-  const isCurrentRealm = safeString(profile.worldId, 120) === ONLINE_WORLD_ID
-    && safeString(profile.resetGeneration, 120) === RESET_GENERATION;
-  if (!isCurrentRealm || getSkillPointSystemVersion(profile) < SKILL_POINT_SYSTEM_VERSION) return null;
-  if (Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0))) === 0) return null;
-  await afterSnap.ref.update({ freeSkillResetCredits: 0 });
-  return null;
 });
 
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {

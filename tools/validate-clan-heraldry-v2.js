@@ -141,8 +141,8 @@ for (const runtimeFile of ["clanHeraldryConfig.js", "clanHeraldryAssets.js", "cl
 assert.match(indexHtml, /clan-heraldry-v2\.css/);
 assert.match(indexHtml, /clan-heraldry-v2\.css\?v=20260825-clan-shield-surfaces-r1/, "The corrected shield-surface stylesheet is not cache-busted in the page shell.");
 assert.match(serviceWorkerSource, /clan-heraldry-v2\.css\?v=20260825-clan-shield-surfaces-r1/, "The corrected shield-surface stylesheet is not precached for offline play.");
-assert.match(indexHtml, /game\.js\?v=20260826-uncapped-city-xp-instant-upgrades-r1/, "The current game bundle containing the immediate post-save shield refresh is not cache-busted in the page shell.");
-assert.match(serviceWorkerSource, /game\.js\?v=20260826-uncapped-city-xp-instant-upgrades-r1/, "The current game bundle containing the immediate post-save shield refresh is not precached for offline play.");
+assert.match(indexHtml, /game\.js\?v=20260827-skill-controls-live-refunds-r1/, "The current game bundle containing the immediate post-save shield refresh is not cache-busted in the page shell.");
+assert.match(serviceWorkerSource, /game\.js\?v=20260827-skill-controls-live-refunds-r1/, "The current game bundle containing the immediate post-save shield refresh is not precached for offline play.");
 assert.ok(indexHtml.indexOf("clanHeraldryRenderer.js") < indexHtml.indexOf("game.js"), "The heraldry renderer must load before game.js.");
 assert.match(serviceWorkerSource, /charges-full\.svg[\s\S]*?charges-micro\.svg/);
 assert.match(gameSource, /CLAN_HERALDRY_CHARGES\s*=\s*CLAN_HERALDRY_CONFIG\.SELECTABLE_CHARGES/);

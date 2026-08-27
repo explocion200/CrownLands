@@ -95,7 +95,7 @@ const entrypointBudgets = {
   "profile-theme.css": 32 * 1024,
   // The heraldry v2 cascade boundary adds under 2 KiB while preventing the
   // global palette from overriding editor labels, tabs, and selected states.
-  "crownlands-palette.css": 42 * 1024,
+  "crownlands-palette.css": 45 * 1024,
   "action-buttons.css": 16 * 1024,
   "mobile-viewport.css": 16 * 1024,
   "assets/map-editor-data.js": 400 * 1024,

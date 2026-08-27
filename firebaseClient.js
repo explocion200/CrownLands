@@ -737,6 +737,10 @@
     return callServerFunction("spendSkillPoints", payload);
   }
 
+  async function adjustSkillLevels(payload = {}) {
+    return callServerFunction("adjustSkillLevels", payload);
+  }
+
   async function resetSkills(payload = {}) {
     return callServerFunction("resetSkills", payload);
   }
@@ -2858,6 +2862,7 @@
     upgradeCity,
     spendSkillPoint,
     spendSkillPoints,
+    adjustSkillLevels,
     resetSkills,
     syncSkillPointSystem,
     saveSkillPreset,

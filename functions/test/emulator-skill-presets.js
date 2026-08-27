@@ -262,6 +262,8 @@ async function main() {
   const reset = await callFunction("resetSkills", user.token);
   assert(Number(reset.currentUser?.skillPresets?.activeSlot || 0) === 0, "Reset Skills did not clear the active preset.");
   assert(reset.currentUser?.skillPresets?.slots?.filter(slot => slot.saved).length === 4, "Reset Skills overwrote a saved preset.");
+  assert(reset.freeResetConsumed === false && Number(reset.resetCost || 0) === 0, "Reset Skills was not reported as free.");
+  assert(Number(reset.currentUser?.gold || 0) >= 2_000_000, "Reset Skills deducted Gold.");
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 2_000_000 });
   const reactivated = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(Number(reactivated.currentUser?.skillPresets?.activeSlot || 0) === 1, "A matching allocation could not reactivate its preset.");
@@ -290,7 +292,126 @@ async function main() {
   assert(Number(spent.currentUser?.skillPresets?.activeSlot || 0) === 0, "Spending a skill point did not clear the active preset.");
   assert(spent.currentUser?.skillPresets?.slots?.filter(slot => slot.saved).length === 4, "Spending a skill point overwrote a saved preset.");
 
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: zeroBuild(), gold: 2_000_000 });
+  profile = (await profileRef.get()).data() || {};
+  await profileRef.set({ skillPresets: { ...profile.skillPresets, activeSlot: 1 } }, { merge: true });
+  const firstAdjustmentRequest = {
+    requestId: "skill-adjust-one-0001",
+    adjustments: [{ skillId: "swordmastery", levelDelta: 1 }],
+  };
+  const firstAdjustment = await callFunction("adjustSkillLevels", user.token, firstAdjustmentRequest);
+  assert(Number(firstAdjustment.spentSkillPoints || 0) === 1 && Number(firstAdjustment.refundedSkillPoints || 0) === 0, "A standard live addition reported the wrong weighted totals.");
+  assert(Number(firstAdjustment.currentUser?.upgrades?.swordmastery || 0) === 1, "A signed live addition did not update its resulting level.");
+  assert(Number(firstAdjustment.currentUser?.character?.skillPoints || 0) === 98, "A signed live addition did not reconcile available points.");
+  assert(Number(firstAdjustment.currentUser?.skillPresets?.activeSlot || 0) === 0, "A signed live addition did not clear the active preset.");
+  const firstAdjustmentReplay = await callFunction("adjustSkillLevels", user.token, firstAdjustmentRequest);
+  assert(firstAdjustmentReplay.replayed === true, "A repeated signed adjustment was not served from its replay receipt.");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.upgrades?.swordmastery || 0) === 1, "A replayed live addition was applied twice.");
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: firstAdjustmentRequest.requestId,
+    adjustments: [{ skillId: "taxStewardship", levelDelta: 1 }],
+  }), "INVALID_ARGUMENT", "A request ID was reused for a different signed adjustment");
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: zeroBuild(), gold: 2_000_000 });
+  const combinedDuplicates = await callFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-combine-0001",
+    adjustments: Array.from({ length: 9 }, () => ({ skillId: "taxStewardship", levelDelta: 1 })),
+  });
+  assert(Number(combinedDuplicates.currentUser?.upgrades?.taxStewardship || 0) === 9, "Duplicate signed adjustments were not combined.");
+  assert(combinedDuplicates.skillAdjustments?.length === 1 && Number(combinedDuplicates.spentSkillPoints || 0) === 9, "The combined signed receipt was not normalized.");
+
   const finalTierBuild = { ...zeroBuild(), guildCharters: 20 };
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: finalTierBuild, gold: 2_000_000 });
+  const signedFinalTierSpend = await callFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-tier-spend-0001",
+    adjustments: [{ skillId: "guildCharters", levelDelta: 1 }],
+  });
+  assert(Number(signedFinalTierSpend.spentSkillPoints || 0) === 2, "The signed final-tier addition did not cost two points.");
+  const signedFinalTierRefund = await callFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-tier-refund-0001",
+    adjustments: [{ skillId: "guildCharters", levelDelta: -1 }],
+  });
+  assert(Number(signedFinalTierRefund.refundedSkillPoints || 0) === 2, "Removing the first final-tier level did not refund two points.");
+  const signedStandardRefund = await callFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-standard-refund-0001",
+    adjustments: [{ skillId: "guildCharters", levelDelta: -1 }],
+  });
+  assert(Number(signedStandardRefund.refundedSkillPoints || 0) === 1, "Crossing below the final tier did not refund one point.");
+
+  const mixedBuild = { ...zeroBuild(), guildCharters: 21, swordmastery: 1 };
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: mixedBuild, gold: 2_000_000 });
+  const mixedAdjustment = await callFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-mixed-0001",
+    adjustments: [
+      { skillId: "guildCharters", levelDelta: -1 },
+      { skillId: "swordmastery", levelDelta: -1 },
+      { skillId: "stoneworks", levelDelta: 2 },
+    ],
+  });
+  assert(Number(mixedAdjustment.spentSkillPoints || 0) === 2 && Number(mixedAdjustment.refundedSkillPoints || 0) === 3, "A mixed refund-and-spend batch reported the wrong weighted totals.");
+  assert(Number(mixedAdjustment.currentUser?.upgrades?.guildCharters || 0) === 20, "The mixed batch lost its final-tier refund.");
+  assert(Number(mixedAdjustment.currentUser?.upgrades?.swordmastery || 0) === 0, "The mixed batch lost its standard refund.");
+  assert(Number(mixedAdjustment.currentUser?.upgrades?.stoneworks || 0) === 2, "The mixed batch lost its additions.");
+  const beforeAtomicRejection = (await profileRef.get()).data() || {};
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-atomic-reject-0001",
+    adjustments: [
+      { skillId: "royalGranaries", levelDelta: 1 },
+      { skillId: "guildCharters", levelDelta: -99 },
+    ],
+  }), "FAILED_PRECONDITION", "An invalid signed batch was partially accepted");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.upgrades?.royalGranaries || 0) === Number(beforeAtomicRejection.upgrades?.royalGranaries || 0), "An atomically rejected signed batch changed another skill.");
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-net-zero-0001",
+    adjustments: [
+      { skillId: "taxStewardship", levelDelta: 1 },
+      { skillId: "taxStewardship", levelDelta: -1 },
+    ],
+  }), "INVALID_ARGUMENT", "A net-zero signed batch was accepted");
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-fraction-0001",
+    adjustments: [{ skillId: "taxStewardship", levelDelta: 1.5 }],
+  }), "INVALID_ARGUMENT", "A fractional signed adjustment was accepted");
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-level-zero-0001",
+    adjustments: [{ skillId: "swordmastery", levelDelta: -1 }],
+  }), "FAILED_PRECONDITION", "A skill was refunded below level zero");
+
+  const cappedBuild = { ...zeroBuild(), guildCharters: getSkillMaxLevel("guildCharters") };
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: cappedBuild, gold: 2_000_000 });
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-cap-0001",
+    adjustments: [{ skillId: "guildCharters", levelDelta: 1 }],
+  }), "FAILED_PRECONDITION", "A signed adjustment exceeded the skill cap");
+
+  await setBuild(profileRef, cityRef, { level: 2, upgrades: zeroBuild(), gold: 2_000_000 });
+  assertRejected(await invokeFunction("adjustSkillLevels", user.token, {
+    requestId: "skill-adjust-insufficient-0001",
+    adjustments: [{ skillId: "stoneworks", levelDelta: 2 }],
+  }), "FAILED_PRECONDITION", "A signed adjustment exceeded earned points");
+
+  await setBuild(profileRef, cityRef, { level: 2, upgrades: zeroBuild(), gold: 2_000_000 });
+  const concurrentReplayRequest = {
+    requestId: "skill-adjust-concurrent-replay-0001",
+    adjustments: [{ skillId: "swordmastery", levelDelta: 1 }],
+  };
+  const concurrentReplays = await Promise.all([
+    invokeFunction("adjustSkillLevels", user.token, concurrentReplayRequest),
+    invokeFunction("adjustSkillLevels", user.token, concurrentReplayRequest),
+  ]);
+  assert(concurrentReplays.every(response => response.ok), `Concurrent replays did not both succeed: ${JSON.stringify(concurrentReplays)}`);
+  assert(concurrentReplays.filter(response => response.result?.replayed === true).length === 1, "Concurrent replay receipts did not distinguish the replayed response.");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.upgrades?.swordmastery || 0) === 1 && Number(profile.character?.skillPoints || 0) === 0, "Concurrent replays applied a level more than once.");
+
+  await setBuild(profileRef, cityRef, { level: 2, upgrades: zeroBuild(), gold: 2_000_000 });
+  const competingAdjustments = await Promise.all([
+    invokeFunction("adjustSkillLevels", user.token, { requestId: "skill-adjust-race-a-0001", adjustments: [{ skillId: "swordmastery", levelDelta: 1 }] }),
+    invokeFunction("adjustSkillLevels", user.token, { requestId: "skill-adjust-race-b-0001", adjustments: [{ skillId: "taxStewardship", levelDelta: 1 }] }),
+  ]);
+  assert(competingAdjustments.filter(response => response.ok).length === 1, `Concurrent signed spends did not consume the only available point exactly once: ${JSON.stringify(competingAdjustments)}`);
+
   await setBuild(profileRef, cityRef, { level: 100, upgrades: finalTierBuild, gold: 2_000_000 });
   const finalTierSpend = await callFunction("spendSkillPoint", user.token, { skillId: "guildCharters" });
   assert(Number(finalTierSpend.spentSkillPoints || 0) === 2, "The first of Guild Charters' final five levels did not cost 2 points.");
@@ -332,17 +453,20 @@ async function main() {
   assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === 1_000_000 && Number(paidLegacyApply.currentUser?.gold || 0) === 0, "A legacy profile did not pay the preset price.");
   assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 0, "A v2 preset application revived a legacy or final-tier Reset Skills credit.");
 
-  await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 1_000_000 });
-  await profileRef.set({ freeSkillResetGrantVersion: 2, freeSkillResetCredits: 0 }, { merge: true });
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 123 });
+  await profileRef.set({ freeSkillResetGrantVersion: 2, freeSkillResetCredits: 3 }, { merge: true });
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.skillPointSystemVersion || 0) === 2 && Number(profile.freeSkillResetCredits || 0) === 3, "The stored legacy-credit fixture was not established.");
   const concurrentResets = await Promise.all([
     invokeFunction("resetSkills", user.token),
     invokeFunction("resetSkills", user.token),
   ]);
-  assert(concurrentResets.filter(response => response.ok).length === 1, `Concurrent paid resets did not settle exactly once: ${JSON.stringify(concurrentResets)}`);
+  assert(concurrentResets.filter(response => response.ok).length === 1, `Concurrent free resets did not settle exactly once: ${JSON.stringify(concurrentResets)}`);
   const successfulReset = concurrentResets.find(response => response.ok)?.result;
-  assert(successfulReset?.freeResetConsumed === false && Number(successfulReset?.resetCost || 0) === 1_000_000, "The winning v2 reset did not charge the standard reset price.");
+  assert(successfulReset?.freeResetConsumed === false && Number(successfulReset?.resetCost || 0) === 0, "The winning reset was not free.");
   profile = (await profileRef.get()).data() || {};
-  assert(Number(profile.freeSkillResetCredits || 0) === 0 && Number(profile.gold || 0) === 0, "Concurrent reset settlement revived a credit or charged gold twice.");
+  assert(Number(profile.freeSkillResetCredits || 0) === 3, `A free reset consumed or deleted stored legacy reset credits (${JSON.stringify({ stored: profile.freeSkillResetCredits, response: successfulReset?.currentUser?.freeSkillResetCredits })}).`);
+  assert(Number(profile.gold || 0) >= 123 && Number(profile.gold || 0) < 143, `A free reset changed Gold beyond normal production accrual (${profile.gold}).`);
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === 0), "Concurrent reset settlement left an allocated skill.");
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 2_000_000 });
 
@@ -359,7 +483,7 @@ async function main() {
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
 
-  console.log("Emulator skill presets passed: final-tier double costs, four unlocks, unconditional paid applies, zeroed reset credits, one active slot, concurrency, and rejection safety.");
+  console.log("Emulator skill presets passed: signed weighted adjustments, replay safety, free refunds and resets, four presets, concurrency, and atomic rejection safety.");
 }
 
 main().then(() => process.exit(0)).catch(error => {

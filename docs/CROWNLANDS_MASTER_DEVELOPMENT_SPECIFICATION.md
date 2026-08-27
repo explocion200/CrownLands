@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.15
-**Effective date:** August 25, 2026
+**Version:** 1.18
+**Effective date:** August 27, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** August 25, 2026
+**Evidence reviewed through:** August 27, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -261,10 +261,12 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Hero and skill progression
 
-- Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Existing rulers receive one idempotent free Reset Skills credit for this balance migration, while profiles created on the revised ledger begin at migration version 2 without a free migration credit. **Status:** base Hero progression is `LIVE — ALL PUBLISHED CHANNELS`; the weighted final-tier ledger and migration credit are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
+- Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Removing a live skill level is free and refunds the exact weighted point cost of that level. Reset Skills is a free clear-all shortcut that refunds the complete weighted allocation without changing Gold or consuming legacy reset credits; existing credit data remains stored but has no effect on the reset. **Status:** base Hero progression and the weighted point ledger are `LIVE — ALL PUBLISHED CHANNELS`; free live refunds and free Reset Skills are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
-- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build, where point spending changes live skills immediately. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot. Draft names and `+`/`−` point changes remain local until an explicit free Save Preset; saving never changes live skills, Gold, or active-preset identity. Apply requires a clean saved preset, costs 1,000,000 Gold even for an active or identical allocation, and is the only preset action that changes the live build or active marker. Saving edits to the active preset retains its identity and shows that changes must be applied. **Status:** unlocks and paid application are `LIVE — ALL PUBLISHED CHANNELS`; the isolated draft editor and corrected Save semantics are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
+- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build. Current Build and every unlocked preset use the same compact `− | cost | +` control; the center shows the next addition's `1 PT`, `2 PTS`, or `MAX` state. Current Build additions and removals project immediately, clear the active-preset marker, and settle through replay-safe ordered server requests; a rejection refreshes the authoritative allocation and rolls back dependent projections. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot. Draft names and point changes remain local until an explicit free Save Preset; saving never changes live skills, Gold, or active-preset identity. Apply requires a clean saved preset, costs 1,000,000 Gold even for an active or identical allocation, and is the only preset action that applies a stored build. Saving edits to the active preset retains its identity and shows that changes must be applied. **Status:** unlocks and paid application are `LIVE — ALL PUBLISHED CHANNELS`; the isolated draft editor, free live refunds, and ordered signed adjustment path are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
+
+- Applied preset tabs use the established red treatment. The viewed tab uses Crownlands gold with dark readable text; when the viewed preset is also applied, it remains red with a clear gold selection outline. Inactive tabs remain tan, locked tabs remain distinct, and skill headings, descriptions, costs, and controls use explicit high-contrast colors. The repeated final-tier explanatory banner and card text are omitted because the segmented control exposes each next-level cost directly. **Status:** `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 
 ### Confirmed Hero level-up troop rewards
 
@@ -1176,6 +1178,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.18 — August 27, 2026
+
+- Confirmed free, exact weighted live-skill refunds and a free Reset Skills clear-all action that neither changes Gold nor consumes stored legacy credits.
+- Confirmed replay-safe signed skill adjustments, ordered optimistic projections, net-zero coalescing, authoritative rollback, and active-preset clearing for every live adjustment.
+- Standardized Current Build and preset drafts on compact `− | cost | +` controls, removed repeated final-tier explanatory text, and fixed applied, viewed, inactive, locked, and combined tab colors in the final palette layer.
 
 ## v1.17 — August 27, 2026
 

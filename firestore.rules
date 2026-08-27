@@ -312,6 +312,10 @@ service cloud.firestore {
         allow read, create, update, delete: if false;
       }
 
+      match /skillLevelAdjustmentRequests/{document=**} {
+        allow read, create, update, delete: if false;
+      }
+
       match /chatSendRequests/{requestId} {
         allow read, create, update, delete: if false;
       }

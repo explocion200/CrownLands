@@ -9196,17 +9196,6 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   font-weight: 850;
 }
 .profile-skill-summary [data-skill-sync-status][hidden] { display: none; }
-.profile-skill-cost-note {
-  margin: -.2rem 0 .7rem;
-  padding: .42rem .58rem;
-  border: 1px solid rgba(246,190,82,.28);
-  border-radius: 7px;
-  color: #f1ddb2;
-  background: rgba(66,47,24,.38);
-  font-size: .66rem;
-  font-weight: 800;
-  line-height: 1.4;
-}
 .profile-skill-list .skill-row.syncing {
   border-color: rgba(137,215,126,.48);
   box-shadow: inset 0 0 0 1px rgba(137,215,126,.08);
@@ -9442,6 +9431,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .profile-skill-group > div { display: grid; gap: .38rem; padding: .42rem; }
 .profile-skill-list .skill-row {
   min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
   padding: .52rem .58rem;
   border: 1px solid rgba(158,213,255,.15);
   border-radius: 7px;
@@ -9451,21 +9441,41 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .profile-skill-list .skill-row strong { color: #fff4c8; }
 .skill-row-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(68px, auto));
-  gap: .32rem;
-}
-.profile-skill-list .skill-row.editing-preset { grid-template-columns: minmax(0, 1fr); }
-.profile-skill-list .skill-row.editing-preset .skill-row-actions {
+  grid-template-columns: minmax(44px, 1fr) minmax(58px, auto) minmax(44px, 1fr);
+  gap: 0;
   width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.profile-skill-list .skill-row button { min-width: 68px; min-height: 44px; }
-.profile-skill-list .skill-row button[data-skill-decrement] {
-  color: #dceeff;
+  overflow: hidden;
   border: 1px solid rgba(158,213,255,.38);
-  background: linear-gradient(180deg, #285f86, #123c5c);
+  border-radius: 8px;
+  background: rgba(6,26,43,.74);
 }
-.profile-skill-list .skill-row button[hidden] { display: none; }
+.skill-row-actions [data-skill-cost] {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  padding: 0 .45rem;
+  color: #fff4c8;
+  border-inline: 1px solid rgba(158,213,255,.3);
+  background: rgba(8,31,50,.78);
+  font-size: .66rem;
+  font-weight: 950;
+  letter-spacing: .035em;
+  text-align: center;
+  white-space: nowrap;
+}
+.profile-skill-list .skill-row button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 .45rem;
+  border: 0;
+  border-radius: 0;
+  font-size: 1.08rem;
+  line-height: 1;
+}
+.profile-skill-list .skill-row button[data-skill-decrement] {
+  color: #211508;
+  background: linear-gradient(#ffd878, #e69627);
+}
 .skill-preset-exit-dialog {
   width: min(460px, calc(100% - 1.5rem));
   padding: 0;

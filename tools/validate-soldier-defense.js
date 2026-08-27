@@ -129,7 +129,7 @@ assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 5;/);
 assert.match(server, /const SKILL_FREE_RESET_GRANT_VERSION = 2;/);
 assert.match(server, /function normalizeFreeSkillResetState[\s\S]*?createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS/);
 assert.match(server, /goldCharged: SKILL_PRESET_APPLY_COST[\s\S]*?freeResetConsumed: false/);
-assert.match(server, /freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0/);
+assert.match(server, /freeResetConsumed = false[\s\S]*?resetCost = 0[\s\S]*?freeSkillResetCreditsAfter = freeSkillResetCredits/);
 assert.match(client, /Shieldwall Discipline/);
 
 for (const document of [read("README.md"), read("how-to-play.html"), read("game-rules.html"), read("battle-economy-guide.html")]) {
@@ -138,4 +138,4 @@ for (const document of [read("README.md"), read("how-to-play.html"), read("game-
 }
 assert.ok(packageJson.scripts.test.includes("validate-soldier-defense.js"), "The soldier-defense validator is not part of the Functions suite.");
 
-console.log("Validated Version 1 soldier defense, Shieldwall, additive objective/gear support, Stoneworks-plus-gear walls, legacy marches, free reset migration, and benchmarks.");
+console.log("Validated Version 1 soldier defense, Shieldwall, additive objective/gear support, Stoneworks-plus-gear walls, legacy marches, retained reset-credit compatibility, and benchmarks.");

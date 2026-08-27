@@ -1023,7 +1023,6 @@ const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const KING_POWER_AUTHORITY_VERSION = 11;
-const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
 
 const SKILL_CONFIG = {
@@ -24584,7 +24583,7 @@ function renderSkillPresetPanel() {
       ${!selected
         ? `<article class="skill-preset-detail current-build" role="tabpanel">
           <header><div><strong>Current Build</strong><small>${escapeHtml(liveStatus)}</small></div></header>
-          <p class="skill-preset-points">Use the + controls below to spend points on your live build immediately. Select an unlocked preset to plan a build without changing these active skills.</p>
+          <p class="skill-preset-points">Use the − and + controls below to adjust your live build immediately. Select an unlocked preset to plan a build without changing these active skills.</p>
         </article>`
         : `<article class="skill-preset-detail ${unlocked ? "" : "locked"}" role="tabpanel">
         <header>
@@ -24611,8 +24610,8 @@ function isSkillSpendSyncing() {
 }
 
 function getSkillSpendOverlayPoints(skill = "") {
-  const activePoints = activeSkillSpendBatch?.allocations
-    ?.find(allocation => allocation.skillId === skill)?.points || 0;
+  const activePoints = activeSkillSpendBatch?.adjustments
+    ?.find(adjustment => adjustment.skillId === skill)?.levelDelta || 0;
   return activePoints + (pendingSkillSpendAllocations.get(skill) || 0);
 }
 
@@ -24683,7 +24682,8 @@ function bindSkillPresetControls() {
     const button = event.target.closest("button");
     if (!button || !skillsView.contains(button)) return;
     if (button.dataset.skillDecrement) {
-      adjustSkillPresetDraft(button.dataset.skillDecrement, -1);
+      if (selectedSkillPresetSlot > 0) adjustSkillPresetDraft(button.dataset.skillDecrement, -1);
+      else refundSkill(button.dataset.skillDecrement);
       return;
     }
     if (button.dataset.skill) {
@@ -24740,10 +24740,6 @@ function updateProfileSkillState() {
   const displayedUpgrades = getSkillEditorUpgrades();
   const points = getAvailableSkillPoints(state.character, displayedUpgrades);
   const spentPoints = getSpentSkillPoints(displayedUpgrades);
-  const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
-  const resetPriceText = freeSkillResetCredits > 0
-    ? `Your next balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
-    : `Costs ${formatNumber(SKILL_RESET_COST)} gold.`;
   const syncing = isSkillSpendSyncing();
   setTextIfChanged(skillsView.querySelector("[data-skill-points]"), formatNumber(points));
   setTextIfChanged(skillsView.querySelector("[data-skill-spent]"), formatNumber(spentPoints));
@@ -24753,7 +24749,7 @@ function updateProfileSkillState() {
     setTextIfChanged(syncStatus, activeSkillSpendBatch ? "Syncing with the realm…" : "Preparing skill update…");
   }
   const resetCopy = skillsView.querySelector("[data-skill-reset-copy]");
-  setTextIfChanged(resetCopy, `${resetPriceText} Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.`);
+  setTextIfChanged(resetCopy, `Free. Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.`);
   const resetPanel = skillsView.querySelector(".profile-skill-reset");
   if (resetPanel) resetPanel.hidden = editingPreset;
   const resetButton = skillsView.querySelector("#resetSkillsBtn");
@@ -24769,17 +24765,24 @@ function updateProfileSkillState() {
     const label = row?.querySelector("[data-skill-level]");
     const button = row?.querySelector("button[data-skill]");
     const decrementButton = row?.querySelector("button[data-skill-decrement]");
+    const costLabel = row?.querySelector("[data-skill-cost]");
+    const refundPointCost = level > 0 ? getSkillPointCost(skill, level - 1) : 0;
     setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
     if (button) {
       button.disabled = skillActionInFlight || (editingPreset && syncing) || points < nextPointCost || capped;
-      setTextIfChanged(button, capped ? "Max" : `+1 · ${nextPointCost} ${nextPointCost === 1 ? "pt" : "pts"}`);
+      button.setAttribute("aria-label", capped
+        ? `${config.label} is at maximum level`
+        : `Add one ${config.label} level for ${nextPointCost} skill ${nextPointCost === 1 ? "point" : "points"}`);
     }
     if (decrementButton) {
-      decrementButton.hidden = !editingPreset;
-      decrementButton.disabled = !editingPreset || skillActionInFlight || syncing || level < 1;
+      decrementButton.disabled = skillActionInFlight || (editingPreset && syncing) || level < 1;
+      decrementButton.setAttribute("aria-label", level < 1
+        ? `${config.label} is at level zero`
+        : `Remove one ${config.label} level and refund ${refundPointCost} skill ${refundPointCost === 1 ? "point" : "points"}`);
     }
+    setTextIfChanged(costLabel, capped ? "MAX" : `${nextPointCost} ${nextPointCost === 1 ? "PT" : "PTS"}`);
     row?.classList.toggle("editing-preset", editingPreset);
-    row?.classList.toggle("syncing", !editingPreset && getSkillSpendOverlayPoints(skill) > 0);
+    row?.classList.toggle("syncing", !editingPreset && getSkillSpendOverlayPoints(skill) !== 0);
   });
   updateSkillPresetDraftActionState();
 }
@@ -24797,7 +24800,6 @@ function renderProfileSkills() {
       <div><span>Skill points</span><strong data-skill-points></strong><small data-skill-sync-status hidden></small></div>
       <div><span>Points spent</span><strong data-skill-spent></strong></div>
     </div>
-    <p class="profile-skill-cost-note">Each skill's final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} skill points per level. Earlier levels cost ${SKILL_STANDARD_POINT_COST}.</p>
     <div data-skill-preset-panel-root>${renderSkillPresetPanel()}</div>
     <section class="profile-skill-reset">
       <div>
@@ -33620,10 +33622,11 @@ function skillRow(key) {
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
   return `
     <div class="skill-row" data-skill-row="${key}">
-      <div><strong data-skill-level></strong><br><small>${config.description}${capText}. Final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} points each.</small></div>
-      <div class="skill-row-actions">
-        <button type="button" data-skill-decrement="${key}" aria-label="Remove one ${escapeHtml(config.label)} level" hidden>−1</button>
-        <button type="button" data-skill="${key}" aria-label="Add one ${escapeHtml(config.label)} level">+1</button>
+      <div><strong data-skill-level></strong><br><small>${config.description}${capText}.</small></div>
+      <div class="skill-row-actions" role="group" aria-label="Adjust ${escapeHtml(config.label)}">
+        <button type="button" data-skill-decrement="${key}" aria-label="Remove one ${escapeHtml(config.label)} level">−</button>
+        <span data-skill-cost aria-live="polite">1 PT</span>
+        <button type="button" data-skill="${key}" aria-label="Add one ${escapeHtml(config.label)} level">+</button>
       </div>
     </div>
   `;
@@ -33864,10 +33867,9 @@ async function resetSkills() {
     try {
       const result = await getOnlineApi().resetSkills();
       applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
-      const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
       const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
       if (refundedPoints > 0) {
-        addLog(`Skills reset${result?.freeResetConsumed ? " using a free balance reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
+        addLog(`Skills reset for free. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
         showToast(`Skills reset: +${formatNumber(refundedPoints)} points`);
       } else {
         addLog("Skill points repaired to match hero level.");
@@ -33884,21 +33886,11 @@ async function resetSkills() {
     }
     return;
   }
-  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
-  const resetCost = spentPoints > 0 && !freeResetAvailable ? SKILL_RESET_COST : 0;
-  const currentGold = Math.floor(Number(state.gold) || 0);
-  if (currentGold < resetCost) {
-    rejectGameAction(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
-    renderProfileSkills();
-    return;
-  }
-  state.gold = currentGold - resetCost;
-  if (spentPoints > 0 && freeResetAvailable) state.freeSkillResetCredits -= 1;
   state.character.skillPoints = getEarnedSkillPoints(state.character);
   state.upgrades = createDefaultSkills();
   if (spentPoints > 0) state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   if (spentPoints > 0) {
-    addLog(`Skills reset${freeResetAvailable ? " using a free balance reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+    addLog(`Skills reset for free. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   } else {
     addLog("Skill points repaired to match hero level.");
   }

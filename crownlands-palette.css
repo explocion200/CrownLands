@@ -1276,3 +1276,63 @@ input[type="range"] {
     grid-template-columns: minmax(0, 1fr) 40px 46px 72px 88px;
   }
 }
+
+/* Skills: final state and readability contract ------------------------- */
+.profile-screen .skill-preset-tabs button:not(.active):not(.selected):not([aria-selected="true"]):not(.locked) {
+  color: var(--cl-text) !important; border-color: var(--cl-border-faded) !important; background: var(--cl-card-bg) !important; text-shadow: none !important;
+}
+.profile-screen .skill-preset-tabs button.active:not(.locked) {
+  color: var(--cl-text-light) !important; border-color: var(--cl-burgundy-dark) !important; background: var(--cl-header-bg) !important;
+  box-shadow: inset 0 -2px 0 var(--cl-burgundy-dark) !important; text-shadow: 0 1px 1px rgba(47, 15, 18, .72) !important;
+}
+.profile-screen .skill-preset-tabs button.selected:not(.active):not(.locked),
+.profile-screen .skill-preset-tabs button[aria-selected="true"]:not(.active):not(.locked) {
+  color: var(--cl-text) !important; border-color: var(--cl-brass) !important; background: linear-gradient(180deg, #dbbd70, var(--cl-gold)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .55), inset 0 -2px 0 #8d6729 !important;
+  text-shadow: none !important;
+}
+.profile-screen .skill-preset-tabs button.active.selected:not(.locked),
+.profile-screen .skill-preset-tabs button.active[aria-selected="true"]:not(.locked) {
+  color: var(--cl-text-light) !important; border-color: #d7ad53 !important; background: var(--cl-header-bg) !important;
+  box-shadow: inset 0 -2px 0 var(--cl-burgundy-dark), 0 0 0 2px #d7ad53 !important;
+}
+.profile-screen .skill-preset-tabs button.locked,
+.profile-screen .skill-preset-tabs button.locked.selected,
+.profile-screen .skill-preset-tabs button.locked[aria-selected="true"] {
+  color: #ede1c9 !important; border-color: #756b5c !important; background: linear-gradient(180deg, #68645c, #46433e) !important; opacity: .82;
+}
+.profile-screen .skill-preset-tabs button :is(strong, small) { color: inherit !important; opacity: 1; }
+.profile-screen .profile-skill-group {
+  color: var(--cl-text) !important; border-color: var(--cl-brass) !important; background: var(--cl-panel-inset) !important;
+}
+.profile-screen .profile-skill-group > header {
+  color: var(--cl-text-light) !important; border-color: var(--cl-gold) !important; background: var(--cl-header-bg) !important;
+}
+.profile-screen .profile-skill-group > header strong {
+  color: #ffe5a3 !important; text-shadow: 0 1px 1px rgba(47, 15, 18, .72) !important;
+}
+.profile-screen .profile-skill-group > header small { color: var(--cl-text-light) !important; }
+.profile-screen .profile-skill-list .skill-row {
+  color: var(--cl-text) !important; border-color: var(--cl-border-faded) !important; background: var(--cl-panel-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .42) !important;
+}
+.profile-screen .profile-skill-list .skill-row.syncing {
+  border-color: var(--cl-green) !important; box-shadow: inset 0 0 0 1px rgba(102, 122, 74, .22) !important;
+}
+.profile-screen .profile-skill-list .skill-row :is(strong, small) { color: var(--cl-text) !important; opacity: 1; text-shadow: none !important; }
+.profile-screen .profile-skill-list .skill-row small { display: block; margin-top: .12rem; color: var(--cl-text-secondary) !important; }
+.profile-screen .skill-row-actions {
+  border-color: var(--cl-brass) !important; background: var(--cl-panel-inset) !important;
+}
+.profile-screen .skill-row-actions [data-skill-cost] {
+  color: var(--cl-text) !important; border-color: var(--cl-brass) !important; background: var(--cl-panel-secondary) !important;
+}
+.profile-screen .skill-row-actions button,
+.profile-screen .skill-row-actions button[data-skill-decrement] {
+  color: var(--cl-text) !important; background: linear-gradient(180deg, #e2c985, var(--cl-gold)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 232, .52) !important; text-shadow: none !important;
+}
+.profile-screen .skill-row-actions button:disabled,
+.profile-screen .skill-row-actions button[data-skill-decrement]:disabled {
+  color: var(--cl-disabled-text) !important; background: var(--cl-disabled-bg) !important; box-shadow: none !important; opacity: 1;
+}

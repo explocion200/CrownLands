@@ -291,6 +291,184 @@ const cityUpgradeDelayValidation = (async () => {
   assert(refreshCount >= 2, "Rejected and declined city actions did not refresh authoritative state.");
 })();
 
+const skillAdjustmentDelayValidation = (async () => {
+  const skillTimers = [];
+  const skillCalls = [];
+  const skillDeferreds = [];
+  const skillRejections = [];
+  let skillRefreshes = 0;
+  const skillSandbox = {
+    console: { ...console, warn() {} },
+    Promise,
+    Map,
+    Set,
+    Date,
+    Math,
+    state: {
+      gold: 0,
+      character: { level: 30, skillPoints: 8 },
+      upgrades: { alpha: 20, beta: 1 },
+      skillPresets: { activeSlot: 1, slots: [] },
+    },
+    selectedSourceId: "",
+    selectedInventoryItemId: "",
+    selectedInventoryEntryKey: "",
+    verifiedRealmInfo: { capabilities: { instantEconomyActionsVersion: 1, skillLevelAdjustmentVersion: 1 } },
+    skillPresetMarkupSignature: "",
+    SKILL_CONFIG: {
+      alpha: { label: "Alpha", maxPercent: 50 },
+      beta: { label: "Beta", maxPercent: 60 },
+    },
+    SHOP_ITEMS: [],
+    window: {
+      crypto: { randomUUID: (() => { let sequence = 200; return () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`; })() },
+      setTimeout(callback) { skillTimers.push(callback); return skillTimers.length; },
+      clearTimeout() {},
+    },
+    modal: { open: false, classList: { contains: () => false } },
+    modalBody: { querySelector: () => null, querySelectorAll: () => [] },
+    cityLayer: { querySelector: () => null },
+    normalizeCharacterProgress: character => ({ ...character }),
+    normalizeUpgrades: upgrades => ({ alpha: Number(upgrades?.alpha || 0), beta: Number(upgrades?.beta || 0) }),
+    getSkillMaxLevel: skill => skill === "alpha" ? 25 : 30,
+    getSkillPointCost: (skill, level) => {
+      const maxLevel = skill === "alpha" ? 25 : 30;
+      if (level < 0 || level >= maxLevel) return 0;
+      return level >= maxLevel - 5 ? 2 : 1;
+    },
+    getSpentSkillPoints(upgrades) {
+      return Object.entries(upgrades || {}).reduce((total, [skill, level]) => {
+        let spent = 0;
+        for (let current = 0; current < Number(level || 0); current += 1) spent += skillSandbox.getSkillPointCost(skill, current);
+        return total + spent;
+      }, 0);
+    },
+    getAvailableSkillPoints(character, upgrades) {
+      return Math.max(0, Number(character?.level || 1) - 1 - skillSandbox.getSpentSkillPoints(upgrades));
+    },
+    reconcileSkillPoints(character, upgrades) {
+      character.skillPoints = skillSandbox.getAvailableSkillPoints(character, upgrades);
+      return character;
+    },
+    getSkillLevel: skill => Number(skillSandbox.state.upgrades?.[skill] || 0),
+    setActiveSkillPresetSlot: presets => ({ ...(presets || {}), activeSlot: 0 }),
+    usesServerEconomyAuthority: () => true,
+    getOnlineApi: () => ({
+      spendSkillPoint() {},
+      adjustSkillLevels(payload) {
+        const deferred = createDeferred();
+        skillCalls.push(payload);
+        skillDeferreds.push(deferred);
+        return deferred.promise;
+      },
+    }),
+    applyServerEconomyResult(result) {
+      skillSandbox.state.character = { ...result.currentUser.character };
+      skillSandbox.state.upgrades = { ...result.currentUser.upgrades };
+      skillSandbox.state.skillPresets = { ...result.currentUser.skillPresets };
+    },
+    refreshServerEconomy: async () => { skillRefreshes += 1; },
+    refreshAllOwnedCities: async () => {},
+    ensureShopItems: () => ({}),
+    renderHud() {},
+    renderCities() {},
+    renderProfileSkills() {},
+    cityById: () => null,
+    formatNumber: value => String(value),
+    addLog() {},
+    showToast() {},
+    saveGame() {},
+    rejectGameAction(message) { skillRejections.push(message); },
+  };
+  vm.createContext(skillSandbox);
+  vm.runInContext(controller, skillSandbox, { filename: "instant-economy-actions.js" });
+  vm.runInContext(`
+    function getDisplayedSkillUpgrades() {
+      const upgrades = { ...state.upgrades };
+      for (const skill of Object.keys(SKILL_CONFIG)) {
+        const activeDelta = activeSkillSpendBatch?.adjustments?.find(adjustment => adjustment.skillId === skill)?.levelDelta || 0;
+        upgrades[skill] = Math.max(0, Math.min(getSkillMaxLevel(skill), upgrades[skill] + activeDelta + (pendingSkillSpendAllocations.get(skill) || 0)));
+      }
+      return upgrades;
+    }
+    function getDisplayedSkillLevel(skill) { return getDisplayedSkillUpgrades()[skill] || 0; }
+    function getDisplayedSkillPoints() { return getAvailableSkillPoints(state.character, getDisplayedSkillUpgrades()); }
+    function isDisplayedSkillAtCap(skill) { return getDisplayedSkillLevel(skill) >= getSkillMaxLevel(skill); }
+  `, skillSandbox);
+
+  assert.equal(vm.runInContext('buySkill("alpha")', skillSandbox), true);
+  assert.equal(vm.runInContext('buySkill("alpha")', skillSandbox), true);
+  assert.equal(vm.runInContext('refundSkill("alpha")', skillSandbox), true);
+  assert.equal(vm.runInContext('buySkill("beta")', skillSandbox), true);
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("alpha")', skillSandbox), 21, "Rapid plus/minus clicks did not coalesce to Alpha +1.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("beta")', skillSandbox), 2, "A rapid cross-skill addition was not projected.");
+  assert.equal(vm.runInContext("getDisplayedSkillPoints()", skillSandbox), 5, "Rapid signed changes showed the wrong optimistic point total.");
+  assert.equal(skillSandbox.state.skillPresets.activeSlot, 0, "An accepted live adjustment did not clear the active preset immediately.");
+
+  vm.runInContext("skillSpendFlushTimer = 0; flushSkillSpendQueue()", skillSandbox);
+  assert.equal(vm.runInContext("instantEconomyActions.length", skillSandbox), 1, "The first signed batch was not queued.");
+  const firstSkillFlush = vm.runInContext("instantEconomyFlushTimer = 0; flushInstantEconomyActions()", skillSandbox);
+  await Promise.resolve();
+  assert.equal(skillCalls.length, 1, "The first signed skill request did not reach the server.");
+  assert.equal(skillCalls[0].adjustments.find(adjustment => adjustment.skillId === "alpha")?.levelDelta, 1, "The net Alpha delta was not serialized.");
+  assert.equal(skillCalls[0].adjustments.find(adjustment => adjustment.skillId === "beta")?.levelDelta, 1, "The Beta delta was not serialized.");
+
+  assert.equal(vm.runInContext('buySkill("alpha")', skillSandbox), true, "A plus click was blocked while an earlier skill request was pending.");
+  assert.equal(vm.runInContext('refundSkill("beta")', skillSandbox), true, "A minus click was blocked while an earlier skill request was pending.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("alpha")', skillSandbox), 22, "A later Alpha projection was lost behind the active request.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("beta")', skillSandbox), 1, "A later Beta refund did not overlay the active request.");
+  skillDeferreds.shift().resolve({
+    spentSkillPoints: 3,
+    refundedSkillPoints: 0,
+    currentUser: {
+      character: { level: 30, skillPoints: 5 },
+      upgrades: { alpha: 21, beta: 2 },
+      skillPresets: { activeSlot: 0, slots: [] },
+    },
+  });
+  assert.equal(await firstSkillFlush, true, "The first delayed signed batch did not settle.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("alpha")', skillSandbox), 22, "Confirmation removed a later Alpha projection.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("beta")', skillSandbox), 1, "Confirmation removed a later Beta projection.");
+
+  vm.runInContext("skillSpendFlushTimer = 0; flushSkillSpendQueue()", skillSandbox);
+  const secondSkillFlush = vm.runInContext("instantEconomyFlushTimer = 0; flushInstantEconomyActions()", skillSandbox);
+  await Promise.resolve();
+  assert.equal(skillCalls.length, 2, "The later projected skill changes were not serialized after confirmation.");
+  skillDeferreds.shift().resolve({
+    spentSkillPoints: 2,
+    refundedSkillPoints: 1,
+    currentUser: {
+      character: { level: 30, skillPoints: 4 },
+      upgrades: { alpha: 22, beta: 1 },
+      skillPresets: { activeSlot: 0, slots: [] },
+    },
+  });
+  assert.equal(await secondSkillFlush, true, "The second delayed signed batch did not settle.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("alpha")', skillSandbox), 22, "The confirmed Alpha level is incorrect.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("beta")', skillSandbox), 1, "The confirmed Beta level is incorrect.");
+  assert.equal(vm.runInContext("getDisplayedSkillPoints()", skillSandbox), 4, "The confirmed available-point total is incorrect.");
+
+  vm.runInContext("skillSpendFlushTimer = 0", skillSandbox);
+  assert.equal(vm.runInContext('buySkill("beta")', skillSandbox), true);
+  assert.equal(vm.runInContext('refundSkill("beta")', skillSandbox), true);
+  assert.equal(vm.runInContext("pendingSkillSpendAllocations.size", skillSandbox), 0, "A net-zero rapid change was not coalesced away.");
+  vm.runInContext("skillSpendFlushTimer = 0", skillSandbox);
+  assert.equal(vm.runInContext("flushSkillSpendQueue()", skillSandbox), false, "A net-zero skill change created a server request.");
+
+  assert.equal(vm.runInContext('buySkill("alpha")', skillSandbox), true);
+  vm.runInContext("skillSpendFlushTimer = 0; flushSkillSpendQueue()", skillSandbox);
+  const rejectedSkillFlush = vm.runInContext("instantEconomyFlushTimer = 0; flushInstantEconomyActions()", skillSandbox);
+  await Promise.resolve();
+  assert.equal(vm.runInContext('buySkill("alpha")', skillSandbox), true, "A dependent projection could not queue behind the rejected request.");
+  skillDeferreds.shift().reject(new Error("server rejected skill adjustment"));
+  assert.equal(await rejectedSkillFlush, false, "A rejected signed skill request reported success.");
+  assert.equal(vm.runInContext("pendingSkillSpendAllocations.size", skillSandbox), 0, "A rejected signed request did not clear dependent projections.");
+  assert.equal(vm.runInContext("activeSkillSpendBatch === null", skillSandbox), true, "A rejected signed request left an active projection.");
+  assert.equal(vm.runInContext('getDisplayedSkillLevel("alpha")', skillSandbox), 22, "A rejected signed request did not roll back to the authoritative Alpha level.");
+  assert.equal(skillRefreshes, 1, "A rejected signed request did not refresh authoritative profile data.");
+  assert(skillRejections.some(message => /server rejected skill adjustment/i.test(message)), "The rejected signed request did not explain its rollback.");
+})();
+
 let resolvePurchase;
 const deferredPurchase = new Promise(resolve => { resolvePurchase = resolve; });
 const scheduled = [];
@@ -459,7 +637,7 @@ setImmediate(() => {
     assert.equal(vm.runInContext('getProjectedInventoryCount("drums")', rapidSandbox), 5, "Clearing an unconfirmed queue must roll the stack back to x5.");
     rapidSandbox.state.shopItems.drums = 4;
     assert.equal(vm.runInContext('getProjectedInventoryCount("drums")', rapidSandbox), 4, "A confirmed one-item settlement must remain at x4.");
-    cityUpgradeDelayValidation.then(() => {
+    Promise.all([cityUpgradeDelayValidation, skillAdjustmentDelayValidation]).then(() => {
       console.log("Instant economy action validation passed.");
     });
   });

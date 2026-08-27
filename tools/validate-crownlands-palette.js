@@ -14,13 +14,13 @@ const manifestBuilder = read("tools/generate-release-manifest.js");
 const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
-const releaseId = "20260825-shop-hourly-prices-r1";
-const cacheVersion = "20260826-uncapped-city-xp-instant-upgrades-r1";
+const releaseId = "20260827-skill-controls-live-refunds-r1";
+const cacheVersion = "20260827-skill-controls-live-refunds-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 // The v2 heraldry cascade boundary is intentionally kept in the global
 // palette so its broad legacy rules cannot override the dedicated editor.
-assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 42 * 1024, "The Crownlands palette exceeds its 42 KiB delivery budget.");
+assert.ok(Buffer.byteLength(css.replace(/\r\n/g, "\n"), "utf8") <= 45 * 1024, "The Crownlands palette exceeds its 45 KiB delivery budget.");
 assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length, "The Crownlands palette has unbalanced braces.");
 assert.doesNotMatch(css, /font-family\s*:/i, "The palette pass must preserve the existing Crownlands typefaces.");
 assert.doesNotMatch(css, /url\s*\(/i, "The palette pass must not recolor or replace visual assets.");

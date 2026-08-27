@@ -276,8 +276,8 @@ requireMatch(
 );
 assert.doesNotMatch(html, /id="dailyMissionsSection"/, "Daily Missions are still embedded in the Player Profile UI.");
 assert.doesNotMatch(`${html}\n${styles}`, /profile-dashboard/, "The removed profile dashboard structure or compact CSS returned.");
-requireMatch(html, /economy-config\.js\?v=20260826-uncapped-city-xp-instant-upgrades-r1/, "Frontend does not load the current economy release.");
-requireMatch(serviceWorker, /economy-config\.js\?v=20260826-uncapped-city-xp-instant-upgrades-r1/, "Offline shell does not cache the current economy release.");
+requireMatch(html, /economy-config\.js\?v=20260827-skill-controls-live-refunds-r1/, "Frontend does not load the current economy release.");
+requireMatch(serviceWorker, /economy-config\.js\?v=20260827-skill-controls-live-refunds-r1/, "Offline shell does not cache the current economy release.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");
 requireMatch(
   read("tools/validate-clan-callable-access.js"),
