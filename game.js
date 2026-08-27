@@ -2023,7 +2023,9 @@ let googlePublisherTagLoadPromise = null;
 let skillsViewMarkupReady = false;
 let skillsViewEventsBound = false;
 let skillPresetMarkupSignature = "";
-let selectedSkillPresetSlot = 1;
+let selectedSkillPresetSlot = 0;
+const skillPresetDrafts = new Map();
+let pendingSkillPresetExit = null;
 let serverCityRelinquishInFlightIds = new Set();
 let cityRelinquishCountdownTimer = 0;
 let pendingHarvestBonusIds = new Set();
@@ -2268,6 +2270,7 @@ const flagSwapColorsBtn = document.getElementById("flagSwapColorsBtn");
 const flagEditorTabButtons = Array.from(document.querySelectorAll("[data-flag-editor-tab]"));
 const flagEditorPanels = Array.from(document.querySelectorAll("[data-flag-editor-panel]"));
 const flagDiscardDialog = document.getElementById("flagDiscardDialog");
+const skillPresetExitDialog = document.getElementById("skillPresetExitDialog");
 const mapFrame = document.getElementById("mapFrame");
 const citadelAssaultCountdown = document.getElementById("citadelAssaultCountdown");
 const citadelAssaultCountdownTime = document.getElementById("citadelAssaultCountdownTime");
@@ -5786,6 +5789,127 @@ function isValidLocalSkillPresetAllocation(upgrades = null, character = state?.c
   });
   const spent = getSpentSkillPoints(allocation);
   return !invalid && spent <= getEarnedSkillPoints(character);
+}
+
+function getSkillPresetStoredSignature(slot = null) {
+  if (!slot) return "";
+  return JSON.stringify({
+    name: normalizeSkillPresetName(slot.name, slot.slot),
+    saved: slot.saved === true,
+    upgrades: slot.saved ? normalizeSkillPresetAllocation(slot.upgrades) : createDefaultSkills(),
+    savedAtMs: normalizeTimestampMs(slot.savedAtMs),
+  });
+}
+
+function createSkillPresetDraft(slot = null) {
+  if (!slot) return null;
+  const baselineUpgrades = slot.saved
+    ? normalizeSkillPresetAllocation(slot.upgrades)
+    : createDefaultSkills();
+  return {
+    slot: slot.slot,
+    name: normalizeSkillPresetName(slot.name, slot.slot),
+    upgrades: { ...baselineUpgrades },
+    baselineName: normalizeSkillPresetName(slot.name, slot.slot),
+    baselineUpgrades,
+    baselineSignature: getSkillPresetStoredSignature(slot),
+  };
+}
+
+function isSkillPresetDraftDirty(draft = null) {
+  if (!draft) return false;
+  return normalizeSkillPresetName(draft.name, draft.slot) !== draft.baselineName
+    || !skillPresetAllocationsMatch(draft.upgrades, draft.baselineUpgrades);
+}
+
+function getSkillPresetDraft(slotNumber = selectedSkillPresetSlot) {
+  const slot = getSkillPresetSlot(slotNumber);
+  if (!slot) return null;
+  let draft = skillPresetDrafts.get(slot.slot) || null;
+  const storedSignature = getSkillPresetStoredSignature(slot);
+  if (!draft || (!isSkillPresetDraftDirty(draft) && draft.baselineSignature !== storedSignature)) {
+    draft = createSkillPresetDraft(slot);
+    skillPresetDrafts.set(slot.slot, draft);
+  }
+  return draft;
+}
+
+function resetSkillPresetDraft(slotNumber = selectedSkillPresetSlot) {
+  const slot = getSkillPresetSlot(slotNumber);
+  if (!slot) return null;
+  const draft = createSkillPresetDraft(slot);
+  skillPresetDrafts.set(slot.slot, draft);
+  return draft;
+}
+
+function clearSkillPresetEditorSession() {
+  selectedSkillPresetSlot = 0;
+  skillPresetDrafts.clear();
+  pendingSkillPresetExit = null;
+  if (skillPresetExitDialog?.open) skillPresetExitDialog.close("cancel");
+  skillPresetMarkupSignature = "";
+}
+
+function isSelectedSkillPresetDraftDirty() {
+  return selectedSkillPresetSlot > 0 && isSkillPresetDraftDirty(getSkillPresetDraft());
+}
+
+function getSkillEditorUpgrades() {
+  if (selectedSkillPresetSlot > 0) {
+    return normalizeSkillPresetAllocation(getSkillPresetDraft()?.upgrades);
+  }
+  return getDisplayedSkillUpgrades();
+}
+
+function updateSkillPresetDraftName(value = "") {
+  const draft = getSkillPresetDraft();
+  if (!draft) return false;
+  draft.name = [...String(value || "")].slice(0, SKILL_PRESET_NAME_MAX_LENGTH).join("");
+  updateSkillPresetDraftActionState();
+  return true;
+}
+
+function adjustSkillPresetDraft(skill = "", direction = 0) {
+  const draft = getSkillPresetDraft();
+  const config = SKILL_CONFIG[skill];
+  const delta = Math.sign(Number(direction) || 0);
+  if (!draft || !config || !delta || skillActionInFlight || isSkillSpendSyncing()) return false;
+  const currentLevel = normalizeSkillUpgradeLevel(skill, draft.upgrades[skill]);
+  if (delta < 0) {
+    if (currentLevel < 1) return false;
+    draft.upgrades[skill] = currentLevel - 1;
+  } else {
+    const pointCost = getSkillPointCost(skill, currentLevel);
+    if (currentLevel >= getSkillMaxLevel(skill) || getAvailableSkillPoints(state?.character, draft.upgrades) < pointCost) {
+      rejectGameAction(pointCost > 1
+        ? `This final-tier upgrade costs ${pointCost} skill points.`
+        : "No skill points remain in this preset draft.");
+      return false;
+    }
+    draft.upgrades[skill] = currentLevel + 1;
+  }
+  skillPresetMarkupSignature = "";
+  renderProfileSkills();
+  return true;
+}
+
+function requestSkillPresetDraftExit(action) {
+  if (!isSelectedSkillPresetDraftDirty()) {
+    action?.();
+    return;
+  }
+  pendingSkillPresetExit = { action, slot: selectedSkillPresetSlot };
+  if (skillPresetExitDialog?.showModal) {
+    skillPresetExitDialog.returnValue = "cancel";
+    if (!skillPresetExitDialog.open) skillPresetExitDialog.showModal();
+    return;
+  }
+  if (window.confirm("Discard your unsaved skill preset changes?")) {
+    const pending = pendingSkillPresetExit;
+    pendingSkillPresetExit = null;
+    resetSkillPresetDraft(pending?.slot);
+    pending?.action?.();
+  }
 }
 
 function normalizeMarchPercent(value) {
@@ -14220,7 +14344,7 @@ function handleOnlineSessionReplaced() {
   disconnectOnlineWorld();
   clearSelection(false);
   if (modal?.open) modal.close();
-  closeProfileScreen();
+  closeProfileScreen({ force: true });
   setSetupLoading(false);
   state = null;
   if (setupScreen) setupScreen.classList.add("visible");
@@ -22215,6 +22339,10 @@ function clearFlagEditorSession() {
 
 function closeProfileScreen(options = {}) {
   if (!profileScreen) return;
+  if (!options.force && !skillsView?.hidden && isSelectedSkillPresetDraftDirty()) {
+    requestSkillPresetDraftExit(() => closeProfileScreen({ force: true }));
+    return;
+  }
   if (!options.force && !flagEditorView?.hidden && isFlagEditorDirty()) {
     requestFlagEditorExit(() => closeProfileScreen({ force: true }));
     return;
@@ -22223,6 +22351,7 @@ function closeProfileScreen(options = {}) {
   profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
   profileScreen.setAttribute("aria-hidden", "true");
   clearFlagEditorSession();
+  clearSkillPresetEditorSession();
   activeProfileTab = "profile";
   skillPresetMarkupSignature = "";
   cancelProfileNameEdit();
@@ -22248,6 +22377,10 @@ function animateUiTabPanel(panel) {
 
 function showProfileView(options = {}) {
   if (!profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !skillsView.hidden && isSelectedSkillPresetDraftDirty()) {
+    requestSkillPresetDraftExit(() => showProfileView({ force: true }));
+    return;
+  }
   if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
     requestFlagEditorExit(() => showProfileView({ force: true }));
     return;
@@ -22273,6 +22406,8 @@ function showProfileSkills(options = {}) {
     requestFlagEditorExit(() => showProfileSkills({ force: true }));
     return;
   }
+  const enteringSkills = activeProfileTab !== "skills";
+  if (enteringSkills) clearSkillPresetEditorSession();
   activeProfileTab = "skills";
   profileScreen.classList.add("skills-active");
   profileScreen.classList.remove("settings-active", "clan-active", "flag-editor-active");
@@ -22291,6 +22426,10 @@ function showProfileSkills(options = {}) {
 
 function showProfileSettings(options = {}) {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !skillsView.hidden && isSelectedSkillPresetDraftDirty()) {
+    requestSkillPresetDraftExit(() => showProfileSettings({ force: true }));
+    return;
+  }
   if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
     requestFlagEditorExit(() => showProfileSettings({ force: true }));
     return;
@@ -22999,6 +23138,10 @@ async function refreshClanState(options = {}) {
 
 function showProfileClan(options = {}) {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  if (!options.force && !skillsView.hidden && isSelectedSkillPresetDraftDirty()) {
+    requestSkillPresetDraftExit(() => showProfileClan({ force: true }));
+    return;
+  }
   if (!options.force && !flagEditorView.hidden && isFlagEditorDirty()) {
     requestFlagEditorExit(() => showProfileClan({ force: true }));
     return;
@@ -24424,7 +24567,9 @@ function renderProfileScreen() {
 
 function getSkillPresetSlot(slot = selectedSkillPresetSlot) {
   const presets = normalizeSkillPresets(state?.skillPresets);
-  return presets.slots.find(entry => entry.slot === Math.floor(Number(slot) || 0)) || presets.slots[0];
+  const requestedSlot = Math.floor(Number(slot) || 0);
+  if (requestedSlot < 1) return null;
+  return presets.slots.find(entry => entry.slot === requestedSlot) || null;
 }
 
 function isSkillPresetUnlocked(slot = null, character = state?.character) {
@@ -24448,65 +24593,84 @@ function renderSkillPresetAllocation(upgrades = {}) {
   </div>`;
 }
 
+function getSkillPresetEditorStatus(slot = null, presets = normalizeSkillPresets(state?.skillPresets), draft = null) {
+  if (!slot) return "";
+  const active = presets.activeSlot === slot.slot;
+  const dirty = isSkillPresetDraftDirty(draft);
+  const savedMatchesLive = slot.saved && skillPresetAllocationsMatch(state?.upgrades, slot.upgrades);
+  if (dirty) return active ? "Active · Unsaved changes" : "Unsaved changes";
+  if (active) return savedMatchesLive ? "Active" : "Active · Apply changes";
+  if (!slot.saved) return "Empty";
+  if (!isValidLocalSkillPresetAllocation(slot.upgrades, state?.character)) return "Needs resaving";
+  return `${formatNumber(slot.spentPoints)} points saved`;
+}
+
 function renderSkillPresetPanel() {
   const level = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
   const presets = normalizeSkillPresets(state?.skillPresets);
   state.skillPresets = presets;
   const controlsBlocked = skillActionInFlight || isSkillSpendSyncing();
-  const selected = presets.slots.find(slot => slot.slot === selectedSkillPresetSlot) || presets.slots[0];
-  selectedSkillPresetSlot = selected.slot;
-  const unlocked = isSkillPresetUnlocked(selected, state.character);
-  const valid = selected.saved && isValidLocalSkillPresetAllocation(selected.upgrades, state.character);
-  const active = valid
-    && !isSkillSpendSyncing()
-    && presets.activeSlot === selected.slot
-    && skillPresetAllocationsMatch(state.upgrades, selected.upgrades);
-  const remainingAfterApply = valid ? getAvailableSkillPoints(state.character, selected.upgrades) : 0;
-  const status = !unlocked
-    ? `Unlocks at Level ${selected.unlockLevel}`
-    : !selected.saved
-      ? "Empty"
-      : !valid
-        ? "Needs resaving"
-        : active
-          ? "Active"
-          : `${formatNumber(selected.spentPoints)} points saved`;
+  const selected = selectedSkillPresetSlot > 0 ? getSkillPresetSlot() : null;
+  if (selectedSkillPresetSlot > 0 && !selected) selectedSkillPresetSlot = 0;
+  const draft = selected ? getSkillPresetDraft(selected.slot) : null;
+  const unlocked = selected ? isSkillPresetUnlocked(selected, state.character) : true;
+  const valid = selected ? isValidLocalSkillPresetAllocation(draft?.upgrades, state.character) : true;
+  const dirty = isSkillPresetDraftDirty(draft);
+  const remainingAfterApply = selected && valid ? getAvailableSkillPoints(state.character, draft.upgrades) : 0;
+  const activePreset = presets.slots.find(slot => slot.slot === presets.activeSlot) || null;
+  const liveStatus = activePreset
+    ? skillPresetAllocationsMatch(state.upgrades, activePreset.upgrades)
+      ? `${activePreset.name} active`
+      : `${activePreset.name} active · saved changes pending`
+    : "Custom live build";
   return `
     <section class="skill-preset-panel" aria-label="Skill presets">
       <div class="skill-preset-tabs" role="tablist" aria-label="Saved skill builds">
+        <button type="button" role="tab" data-skill-preset-slot="0" class="skill-current-build-tab ${selectedSkillPresetSlot === 0 ? "selected" : ""}" aria-selected="${selectedSkillPresetSlot === 0}" ${controlsBlocked ? "disabled" : ""}>
+          <strong>Current Build</strong>
+          <small>${escapeHtml(liveStatus)}</small>
+        </button>
         ${presets.slots.map(slot => {
           const slotUnlocked = level >= slot.unlockLevel;
-          const slotActive = slot.saved
-            && !isSkillSpendSyncing()
-            && presets.activeSlot === slot.slot
-            && isValidLocalSkillPresetAllocation(slot.upgrades, state.character)
-            && skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
-          return `<button type="button" role="tab" data-skill-preset-slot="${slot.slot}" class="${slot.slot === selected.slot ? "selected" : ""} ${slotActive ? "active" : ""} ${slotUnlocked ? "" : "locked"}" aria-selected="${slot.slot === selected.slot}" aria-disabled="${!slotUnlocked}" ${slotUnlocked ? "" : "disabled"} title="${slotUnlocked ? escapeHtml(slot.name) : `Unlocks at Hero Level ${slot.unlockLevel}`}">
+          const slotDraft = skillPresetDrafts.get(slot.slot) || null;
+          const slotActive = slot.saved && presets.activeSlot === slot.slot;
+          const slotPending = slotActive && !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
+          const slotDirty = isSkillPresetDraftDirty(slotDraft);
+          const slotStatus = !slotUnlocked
+            ? `Locked · Lv ${slot.unlockLevel}`
+            : slotDirty
+              ? slotActive ? "Active · Unsaved" : "Unsaved"
+              : slotActive
+                ? slotPending ? "Apply changes" : "Active"
+                : slot.saved ? "Saved" : "Empty";
+          return `<button type="button" role="tab" data-skill-preset-slot="${slot.slot}" class="${slot.slot === selectedSkillPresetSlot ? "selected" : ""} ${slotActive ? "active" : ""} ${slotPending ? "pending" : ""} ${slotDirty ? "dirty" : ""} ${slotUnlocked ? "" : "locked"}" aria-selected="${slot.slot === selectedSkillPresetSlot}" aria-disabled="${!slotUnlocked || controlsBlocked}" ${slotUnlocked && !controlsBlocked ? "" : "disabled"} title="${slotUnlocked ? escapeHtml(slot.name) : `Unlocks at Hero Level ${slot.unlockLevel}`}">
             <strong>${slotUnlocked ? escapeHtml(slot.name) : `Preset ${slot.slot}`}</strong>
-            <small>${slotUnlocked ? slotActive ? "Active" : slot.saved ? "Saved" : "Empty" : `Locked · Lv ${slot.unlockLevel}`}</small>
+            <small data-skill-preset-tab-status="${slot.slot}">${escapeHtml(slotStatus)}</small>
           </button>`;
         }).join("")}
       </div>
-      <article class="skill-preset-detail ${unlocked ? "" : "locked"}" role="tabpanel">
+      ${!selected
+        ? `<article class="skill-preset-detail current-build" role="tabpanel">
+          <header><div><strong>Current Build</strong><small>${escapeHtml(liveStatus)}</small></div></header>
+          <p class="skill-preset-points">Use the + controls below to spend points on your live build immediately. Select an unlocked preset to plan a build without changing these active skills.</p>
+        </article>`
+        : `<article class="skill-preset-detail ${unlocked ? "" : "locked"}" role="tabpanel">
         <header>
-          <div><strong>${escapeHtml(selected.name)}</strong><small>${escapeHtml(status)}</small></div>
+          <div><strong>${escapeHtml(normalizeSkillPresetName(draft?.name, selected.slot))}</strong><small data-skill-preset-status>${escapeHtml(getSkillPresetEditorStatus(selected, presets, draft))}</small></div>
           ${unlocked ? `<div class="skill-preset-rename">
-            <input id="skillPresetNameInput" type="text" maxlength="${SKILL_PRESET_NAME_MAX_LENGTH}" value="${escapeHtml(selected.name)}" aria-label="Rename preset ${selected.slot}" ${controlsBlocked ? "disabled" : ""}>
-            <button type="button" data-rename-skill-preset="${selected.slot}" ${controlsBlocked ? "disabled" : ""}>Rename</button>
+            <input id="skillPresetNameInput" type="text" maxlength="${SKILL_PRESET_NAME_MAX_LENGTH}" value="${escapeHtml(draft?.name || selected.name)}" aria-label="Name preset ${selected.slot}" ${controlsBlocked ? "disabled" : ""}>
           </div>` : ""}
         </header>
         ${!unlocked
-          ? `<p class="skill-preset-locked-copy">Reach Hero Level ${selected.unlockLevel} to rename, save, and apply this preset.</p>`
-          : `${selected.saved
-              ? renderSkillPresetAllocation(selected.upgrades)
-              : `<p class="skill-preset-empty-copy">Save your current skill build into this tab.</p>`}
-            ${selected.saved && valid ? `<p class="skill-preset-points">Applying costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold and leaves ${formatNumber(remainingAfterApply)} earned ${remainingAfterApply === 1 ? "point" : "points"} unspent.</p>` : ""}
-            ${selected.saved && !valid ? `<p class="skill-preset-error">This saved build no longer matches the current skill limits. Save it again before applying.</p>` : ""}
+          ? `<p class="skill-preset-locked-copy">Reach Hero Level ${selected.unlockLevel} to name, edit, save, and apply this preset.</p>`
+          : `${valid
+              ? `<p class="skill-preset-points">This draft assigns ${formatNumber(getSpentSkillPoints(draft.upgrades))} points and leaves ${formatNumber(remainingAfterApply)} unspent.${dirty ? " Save these changes before applying." : selected.saved ? ` Applying costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold.` : " Assign points below, then save the preset."}</p>`
+              : `<p class="skill-preset-error">This draft exceeds the current skill limits or earned-point budget. Remove points before saving.</p>`}
             <footer>
-              <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked ? "disabled" : ""}>Save Current Build</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
+              <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked || !valid || (selected.saved && !dirty) ? "disabled" : ""}>Save Preset</button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || dirty || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
             </footer>`}
-      </article>
+      </article>`}
     </section>`;
 }
 
@@ -24542,16 +24706,42 @@ function isDisplayedSkillAtCap(skill = "") {
 
 function getSkillPresetMarkupSignature() {
   const presets = normalizeSkillPresets(state?.skillPresets);
-  const activeAllocation = presets.activeSlot > 0
-    ? normalizeSkillPresetAllocation(state?.upgrades)
-    : null;
+  const drafts = [...skillPresetDrafts.values()].map(draft => ({
+    slot: draft.slot,
+    name: draft.name,
+    upgrades: normalizeSkillPresetAllocation(draft.upgrades),
+    dirty: isSkillPresetDraftDirty(draft),
+  }));
   return JSON.stringify({
     level: Math.max(1, Math.floor(Number(state?.character?.level) || 1)),
     selectedSkillPresetSlot,
     controlsBlocked: skillActionInFlight || isSkillSpendSyncing(),
     presets,
-    activeAllocation,
+    liveAllocation: normalizeSkillPresetAllocation(state?.upgrades),
+    drafts,
   });
+}
+
+function updateSkillPresetDraftActionState() {
+  if (!skillsView || selectedSkillPresetSlot < 1) return;
+  const slot = getSkillPresetSlot();
+  const draft = getSkillPresetDraft();
+  if (!slot || !draft) return;
+  const presets = normalizeSkillPresets(state?.skillPresets);
+  const dirty = isSkillPresetDraftDirty(draft);
+  const valid = isValidLocalSkillPresetAllocation(draft.upgrades, state?.character);
+  const blocked = skillActionInFlight || isSkillSpendSyncing();
+  const saveButton = skillsView.querySelector("[data-save-skill-preset]");
+  const applyButton = skillsView.querySelector("[data-apply-skill-preset]");
+  const status = getSkillPresetEditorStatus(slot, presets, draft);
+  if (saveButton) saveButton.disabled = blocked || !valid || (slot.saved && !dirty);
+  if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid;
+  setTextIfChanged(skillsView.querySelector("[data-skill-preset-status]"), status);
+  setTextIfChanged(skillsView.querySelector(`[data-skill-preset-tab-status="${slot.slot}"]`), dirty
+    ? presets.activeSlot === slot.slot ? "Active · Unsaved" : "Unsaved"
+    : presets.activeSlot === slot.slot
+      ? skillPresetAllocationsMatch(state?.upgrades, slot.upgrades) ? "Active" : "Apply changes"
+      : slot.saved ? "Saved" : "Empty");
 }
 
 function bindSkillPresetControls() {
@@ -24560,24 +24750,28 @@ function bindSkillPresetControls() {
   skillsView.addEventListener("click", event => {
     const button = event.target.closest("button");
     if (!button || !skillsView.contains(button)) return;
-    if (button.dataset.skill) {
-      buySkill(button.dataset.skill);
+    if (button.dataset.skillDecrement) {
+      adjustSkillPresetDraft(button.dataset.skillDecrement, -1);
       return;
     }
-    if (button.dataset.skillPresetSlot) {
-      const requestedSlot = getSkillPresetSlot(Math.floor(Number(button.dataset.skillPresetSlot) || 0));
-      if (!requestedSlot || !isSkillPresetUnlocked(requestedSlot, state?.character)) {
+    if (button.dataset.skill) {
+      if (selectedSkillPresetSlot > 0) adjustSkillPresetDraft(button.dataset.skill, 1);
+      else buySkill(button.dataset.skill);
+      return;
+    }
+    if (button.hasAttribute("data-skill-preset-slot")) {
+      const slotNumber = Math.floor(Number(button.dataset.skillPresetSlot) || 0);
+      const requestedSlot = slotNumber > 0 ? getSkillPresetSlot(slotNumber) : null;
+      if (slotNumber > 0 && (!requestedSlot || !isSkillPresetUnlocked(requestedSlot, state?.character))) {
         if (requestedSlot) showToast(`Unlocks at Hero Level ${requestedSlot.unlockLevel}.`);
         return;
       }
-      selectedSkillPresetSlot = requestedSlot.slot;
-      skillPresetMarkupSignature = "";
-      renderProfileSkills();
-      return;
-    }
-    if (button.dataset.renameSkillPreset) {
-      const slot = Math.floor(Number(button.dataset.renameSkillPreset) || 0);
-      renameSkillPreset(slot, skillsView.querySelector("#skillPresetNameInput")?.value || "");
+      const selectSlot = () => {
+        selectedSkillPresetSlot = requestedSlot?.slot || 0;
+        skillPresetMarkupSignature = "";
+        renderProfileSkills();
+      };
+      if (slotNumber !== selectedSkillPresetSlot) requestSkillPresetDraftExit(selectSlot);
       return;
     }
     if (button.dataset.saveSkillPreset) {
@@ -24595,7 +24789,11 @@ function bindSkillPresetControls() {
     event.preventDefault();
     const slot = getSkillPresetSlot()?.slot || 0;
     event.target.blur();
-    renameSkillPreset(slot, event.target.value);
+    saveCurrentSkillPreset(slot);
+  });
+  skillsView.addEventListener("input", event => {
+    if (event.target?.id !== "skillPresetNameInput") return;
+    updateSkillPresetDraftName(event.target.value);
   });
 }
 
@@ -24606,7 +24804,8 @@ function isSkillPresetNameEditorActive() {
 
 function updateProfileSkillState() {
   if (!state || !skillsView) return;
-  const displayedUpgrades = getDisplayedSkillUpgrades();
+  const editingPreset = selectedSkillPresetSlot > 0;
+  const displayedUpgrades = getSkillEditorUpgrades();
   const points = getAvailableSkillPoints(state.character, displayedUpgrades);
   const spentPoints = getSpentSkillPoints(displayedUpgrades);
   const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
@@ -24623,8 +24822,10 @@ function updateProfileSkillState() {
   }
   const resetCopy = skillsView.querySelector("[data-skill-reset-copy]");
   setTextIfChanged(resetCopy, `${resetPriceText} Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.`);
+  const resetPanel = skillsView.querySelector(".profile-skill-reset");
+  if (resetPanel) resetPanel.hidden = editingPreset;
   const resetButton = skillsView.querySelector("#resetSkillsBtn");
-  if (resetButton) resetButton.disabled = skillActionInFlight || syncing || spentPoints < 1;
+  if (resetButton) resetButton.disabled = editingPreset || skillActionInFlight || syncing || spentPoints < 1;
   SKILL_ORDER.forEach(skill => {
     const config = SKILL_CONFIG[skill];
     const level = normalizeSkillUpgradeLevel(skill, displayedUpgrades[skill]);
@@ -24635,13 +24836,20 @@ function updateProfileSkillState() {
     const row = skillsView.querySelector(`[data-skill-row="${skill}"]`);
     const label = row?.querySelector("[data-skill-level]");
     const button = row?.querySelector("button[data-skill]");
+    const decrementButton = row?.querySelector("button[data-skill-decrement]");
     setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
     if (button) {
-      button.disabled = skillActionInFlight || points < nextPointCost || capped;
+      button.disabled = skillActionInFlight || (editingPreset && syncing) || points < nextPointCost || capped;
       setTextIfChanged(button, capped ? "Max" : `+1 · ${nextPointCost} ${nextPointCost === 1 ? "pt" : "pts"}`);
     }
-    row?.classList.toggle("syncing", getSkillSpendOverlayPoints(skill) > 0);
+    if (decrementButton) {
+      decrementButton.hidden = !editingPreset;
+      decrementButton.disabled = !editingPreset || skillActionInFlight || syncing || level < 1;
+    }
+    row?.classList.toggle("editing-preset", editingPreset);
+    row?.classList.toggle("syncing", !editingPreset && getSkillSpendOverlayPoints(skill) > 0);
   });
+  updateSkillPresetDraftActionState();
 }
 
 function renderProfileSkills() {
@@ -33484,29 +33692,30 @@ function skillRow(key) {
   return `
     <div class="skill-row" data-skill-row="${key}">
       <div><strong data-skill-level></strong><br><small>${config.description}${capText}. Final ${SKILL_FINAL_DOUBLE_COST_LEVELS} levels cost ${SKILL_FINAL_POINT_COST} points each.</small></div>
-      <button data-skill="${key}">+1</button>
+      <div class="skill-row-actions">
+        <button type="button" data-skill-decrement="${key}" aria-label="Remove one ${escapeHtml(config.label)} level" hidden>−1</button>
+        <button type="button" data-skill="${key}" aria-label="Add one ${escapeHtml(config.label)} level">+1</button>
+      </div>
     </div>
   `;
 }
 
-function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
+function confirmSkillPresetAction(slotNumber = 0) {
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot) return Promise.resolve(false);
-  const applying = action === "apply";
   modal.classList.add("skill-preset-confirmation-modal");
-  modalTitle.textContent = applying ? `Apply ${slot.name}?` : `Overwrite ${slot.name}?`;
+  modalTitle.textContent = `Apply ${slot.name}?`;
   modalBody.innerHTML = `
     <section class="skill-preset-confirmation">
       <div>
         <small>Preset ${slot.slot}</small>
         <h3>${escapeHtml(slot.name)}</h3>
       </div>
-      ${applying
-        ? `<p>Every preset application costs <strong>${formatNumber(SKILL_PRESET_APPLY_COST)} gold</strong>, including an active or identical build. Additional earned points remain unspent.</p>${renderSkillPresetAllocation(slot.upgrades)}`
-        : `<p>This replaces the saved allocation in this tab with your current build. Your active skills and gold will not change.</p>${renderSkillPresetAllocation(state.upgrades)}`}
+      <p>Every preset application costs <strong>${formatNumber(SKILL_PRESET_APPLY_COST)} gold</strong>, including an active or identical build. Additional earned points remain unspent.</p>
+      ${renderSkillPresetAllocation(slot.upgrades)}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
-        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${applying ? `Apply for ${formatNumber(SKILL_PRESET_APPLY_COST)}` : "Save Current Build"}</button>
+        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">Apply for ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -33596,28 +33805,39 @@ async function saveCurrentSkillPreset(slotNumber = 0) {
     showToast(slot ? `Preset ${slot.slot} unlocks at Hero Level ${slot.unlockLevel}.` : "Choose a valid preset tab.");
     return false;
   }
-  if (slot.saved && !await confirmSkillPresetAction(slot.slot, "save")) return false;
+  const draft = getSkillPresetDraft(slot.slot);
+  if (!draft) return false;
+  const name = normalizeSkillPresetName(draft.name, slot.slot);
+  const upgrades = normalizeSkillPresetAllocation(draft.upgrades);
+  if (!isValidLocalSkillPresetAllocation(upgrades, state.character)) {
+    showToast("This preset exceeds the current skill limits or earned-point budget.");
+    return false;
+  }
+  if (slot.saved && !isSkillPresetDraftDirty(draft)) {
+    showToast(`${slot.name} is already saved.`);
+    return true;
+  }
   const api = getOnlineApi();
   skillActionInFlight = true;
   renderProfileSkills();
   try {
     if (usesServerEconomyAuthority()) {
       if (!api?.saveSkillPreset) throw new Error("Saving skill presets requires the Crownlands server.");
-      const result = await api.saveSkillPreset({ slot: slot.slot });
+      const result = await api.saveSkillPreset({ slot: slot.slot, name, upgrades });
       applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
     } else {
-      const upgrades = normalizeUpgrades(state.upgrades, state.version);
       state.skillPresets = replaceLocalSkillPresetSlot(state.skillPresets, {
         ...slot,
+        name,
         saved: true,
         upgrades,
         savedAtMs: Date.now(),
       });
-      state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, slot.slot);
       saveGame();
     }
-    addLog(`Current skill build saved to ${slot.name}.`);
-    showToast(`Saved ${slot.name}`);
+    resetSkillPresetDraft(slot.slot);
+    addLog(`Skill preset ${name} saved with ${formatNumber(getSpentSkillPoints(upgrades))} assigned points.`);
+    showToast(`Saved ${name}`);
     return true;
   } catch (error) {
     console.warn("Could not save skill preset", error);
@@ -33642,6 +33862,10 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast(slot ? `Preset ${slot.slot} unlocks at Hero Level ${slot.unlockLevel}.` : "Choose a valid preset tab.");
     return false;
   }
+  if (isSkillPresetDraftDirty(getSkillPresetDraft(slot.slot))) {
+    showToast("Save this preset before applying it.");
+    return false;
+  }
   if (!slot.saved || !slot.upgrades) {
     showToast("Save a skill build in this preset first.");
     return false;
@@ -33654,7 +33878,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast(`Applying a skill preset costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold.`);
     return false;
   }
-  if (!await confirmSkillPresetAction(slot.slot, "apply")) return false;
+  if (!await confirmSkillPresetAction(slot.slot)) return false;
   const api = getOnlineApi();
   skillActionInFlight = true;
   renderProfileSkills();
@@ -37467,6 +37691,28 @@ if (flagDiscardDialog) {
     event.preventDefault();
     pendingFlagEditorExit = null;
     flagDiscardDialog.close("stay");
+  });
+}
+if (skillPresetExitDialog) {
+  skillPresetExitDialog.addEventListener("close", async () => {
+    const decision = skillPresetExitDialog.returnValue || "cancel";
+    const pending = pendingSkillPresetExit;
+    pendingSkillPresetExit = null;
+    if (!pending || decision === "cancel") return;
+    if (decision === "discard") {
+      resetSkillPresetDraft(pending.slot);
+      pending.action?.();
+      return;
+    }
+    if (decision === "save") {
+      const saved = await saveCurrentSkillPreset(pending.slot);
+      if (saved) pending.action?.();
+    }
+  });
+  skillPresetExitDialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    pendingSkillPresetExit = null;
+    skillPresetExitDialog.close("cancel");
   });
 }
 clearSelectBtn.addEventListener("click", () => clearSelection());

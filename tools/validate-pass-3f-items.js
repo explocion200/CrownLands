@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
 const SOURCE_SIZE = 1254;
-const BUILD_ID = "20260826-city-list-upgrade-feedback-r1";
+const BUILD_ID = "20260826-skill-preset-draft-editor-r1";
 
 const expected = [
   ["item-common-gear-box", "assets/gear/common-gear-box.png", 192, "gear-box"],

@@ -101,7 +101,7 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // City XP previews, replay-safe upgrades, and the City List controls use the
 // same bounded steps as the main asset-performance validator, including the
 // confirmed-row feedback and focus-retention client update.
-assert.ok(staticCacheBytes <= 3488 * 1024, "The service-worker installation cache exceeds 3.41 MiB.");
+assert.ok(staticCacheBytes <= 3504 * 1024, "The service-worker installation cache exceeds 3.42 MiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

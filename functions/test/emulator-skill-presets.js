@@ -194,31 +194,40 @@ async function main() {
 
   await setBuild(profileRef, cityRef, { level: 24, upgrades: savedBuild, gold: 2_000_000 });
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "War Build" }), "FAILED_PRECONDITION", "Preset 1 unlocked before Level 25");
-  await setBuild(profileRef, cityRef, { level: 25, upgrades: savedBuild, gold: 2_000_000 });
+  await setBuild(profileRef, cityRef, { level: 25, upgrades: alternateBuild, gold: 2_000_000 });
   const renamed = await callFunction("renameSkillPreset", user.token, { slot: 1, name: "  War   Build  " });
   assert(renamed.skillPreset?.name === "War Build" && renamed.skillPreset?.goldCharged === 0, "Preset rename was not normalized and free.");
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "1234567890123456789012345" }), "INVALID_ARGUMENT", "A 25-character preset name was accepted");
-  const firstSave = await callFunction("saveSkillPreset", user.token, { slot: 1 });
+  const firstSave = await callFunction("saveSkillPreset", user.token, { slot: 1, name: "War Build", upgrades: savedBuild });
   assert(firstSave.skillPreset?.goldCharged === 0, "Saving a preset charged gold.");
   assert(SKILL_ORDER.every(skill => firstSave.skillPreset?.allocation?.[skill] === savedBuild[skill]), "Save did not snapshot all eight authoritative skills.");
-  assert(Number(firstSave.currentUser?.skillPresets?.activeSlot || 0) === 1, "Saving did not mark the saved build as the sole active preset.");
+  assert(Number(firstSave.currentUser?.skillPresets?.activeSlot || 0) === 0, "Saving incorrectly activated the preset.");
+  assert(SKILL_ORDER.every(skill => Number(firstSave.currentUser?.upgrades?.[skill] || 0) === alternateBuild[skill]), "Saving a draft changed the live skill build.");
+  assert(Number(firstSave.currentUser?.gold || 0) >= 2_000_000, "Saving a draft changed the player's gold.");
+  assertRejected(
+    await invokeFunction("saveSkillPreset", user.token, { slot: 1, name: "Incomplete", upgrades: { swordmastery: 1 } }),
+    "INVALID_ARGUMENT",
+    "An incomplete preset allocation was accepted"
+  );
 
   await setBuild(profileRef, cityRef, { level: 49, upgrades: savedBuild, gold: 2_000_000 });
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 2, name: "Economy" }), "FAILED_PRECONDITION", "Preset 2 unlocked before Level 50");
   await setBuild(profileRef, cityRef, { level: 50, upgrades: savedBuild, gold: 2_000_000 });
   await callFunction("renameSkillPreset", user.token, { slot: 2, name: "Economy" });
-  const duplicateSave = await callFunction("saveSkillPreset", user.token, { slot: 2 });
-  assert(Number(duplicateSave.currentUser?.skillPresets?.activeSlot || 0) === 2, "Saving a duplicate allocation did not move the active preset to its tab.");
+  const duplicateSave = await callFunction("saveSkillPreset", user.token, { slot: 2, name: "Economy", upgrades: savedBuild });
+  assert(Number(duplicateSave.currentUser?.skillPresets?.activeSlot || 0) === 0, "Saving a duplicate allocation incorrectly moved the active preset.");
   await setBuild(profileRef, cityRef, { level: 74, upgrades: savedBuild, gold: 2_000_000 });
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 3, name: "Marching" }), "FAILED_PRECONDITION", "Preset 3 unlocked before Level 75");
   await setBuild(profileRef, cityRef, { level: 75, upgrades: savedBuild, gold: 2_000_000 });
   await callFunction("renameSkillPreset", user.token, { slot: 3, name: "Marching" });
-  await callFunction("saveSkillPreset", user.token, { slot: 3 });
+  const defaultNamed = await callFunction("saveSkillPreset", user.token, { slot: 3, name: "", upgrades: zeroBuild() });
+  assert(defaultNamed.skillPreset?.name === "Preset 3", "An empty draft name did not use the default preset name.");
+  await callFunction("saveSkillPreset", user.token, { slot: 3, name: "Marching", upgrades: savedBuild });
   await setBuild(profileRef, cityRef, { level: 99, upgrades: savedBuild, gold: 2_000_000 });
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 4, name: "Utility" }), "FAILED_PRECONDITION", "Preset 4 unlocked before Level 100");
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 4_000_000 });
   await callFunction("renameSkillPreset", user.token, { slot: 4, name: "Utility" });
-  await callFunction("saveSkillPreset", user.token, { slot: 4 });
+  await callFunction("saveSkillPreset", user.token, { slot: 4, name: "Utility", upgrades: alternateBuild });
 
   const duplicateApplies = await Promise.all([
     invokeFunction("applySkillPreset", user.token, { slot: 1 }),
@@ -238,6 +247,14 @@ async function main() {
   const duplicateAllocationApply = await callFunction("applySkillPreset", user.token, { slot: 2 });
   assert(duplicateAllocationApply.skillPreset?.changed === false && duplicateAllocationApply.skillPreset?.goldCharged === Number(economyConfig.playerCosts.skillPresetApplyGold), "An identical saved allocation was not charged exactly once.");
   assert(Number(duplicateAllocationApply.currentUser?.skillPresets?.activeSlot || 0) === 2, "Applying an identical saved allocation did not move the sole active marker to the requested tab.");
+  const editedActive = await callFunction("saveSkillPreset", user.token, { slot: 2, name: "Economy Revised", upgrades: alternateBuild });
+  assert(Number(editedActive.currentUser?.skillPresets?.activeSlot || 0) === 2, "Saving changes to the active preset cleared its active identity.");
+  assert(SKILL_ORDER.every(skill => Number(editedActive.currentUser?.upgrades?.[skill] || 0) === savedBuild[skill]), "Saving changes to the active preset applied them to the live build.");
+  assert(SKILL_ORDER.every(skill => Number(editedActive.currentUser?.skillPresets?.slots?.[1]?.upgrades?.[skill] || 0) === alternateBuild[skill]), "Saving changes to the active preset did not persist its new draft.");
+  await callFunction("saveSkillPreset", user.token, { slot: 2, name: "Economy", upgrades: savedBuild });
+  const legacySave = await callFunction("saveSkillPreset", user.token, { slot: 3 });
+  assert(Number(legacySave.currentUser?.skillPresets?.activeSlot || 0) === 2, "A legacy slot-only save changed the active preset.");
+  assert(SKILL_ORDER.every(skill => Number(legacySave.skillPreset?.allocation?.[skill] || 0) === savedBuild[skill]), "A legacy slot-only save stopped snapshotting the live build.");
   const globalStats = (await db.doc(`players/${user.uid}/stats/global`).get()).data() || {};
   assert(Number(globalStats.updatedAtMs || 0) > 0, "Applying did not atomically refresh global statistics.");
 

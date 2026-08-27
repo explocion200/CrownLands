@@ -173,8 +173,8 @@ assert.match(css, /\.profile-screen \.flag-option-grid button[\s\S]*?overflow-wr
 assert.match(heraldryCss, /data-heraldry-editor-version="2"[\s\S]*?\.clan-shield-choice-grid button\{[\s\S]*?color:#f8e9c4;/, "Clan Heraldry choices remain low contrast.");
 assert.match(heraldryCss, /\.clan-shield-choice-grid button small\{[\s\S]*?white-space:normal;[\s\S]*?overflow-wrap:anywhere/, "Clan Heraldry labels can still overflow their choices.");
 assert.doesNotMatch(css, /\.clan-shield-editor \.clan-shield-choice-grid button/, "The global contrast layer still owns Clan Heraldry choice colors.");
-assert.match(game, /data-skill-preset-slot="\$\{slot\.slot\}"[\s\S]{0,500}aria-disabled="\$\{!slotUnlocked\}"[\s\S]{0,100}disabled/, "Locked skill preset tabs are not disabled.");
-assert.match(game, /if \(!requestedSlot \|\| !isSkillPresetUnlocked\(requestedSlot, state\?\.character\)\)/, "Locked preset click handling lacks an interaction guard.");
+assert.match(game, /data-skill-preset-slot="\$\{slot\.slot\}"[\s\S]{0,700}aria-disabled="\$\{!slotUnlocked \|\| controlsBlocked\}"[\s\S]{0,160}disabled/, "Locked or busy skill preset tabs are not disabled.");
+assert.match(game, /slotNumber > 0 && \(!requestedSlot \|\| !isSkillPresetUnlocked\(requestedSlot, state\?\.character\)\)/, "Locked preset click handling lacks an interaction guard.");
 assert.match(css, /\.profile-screen \.skill-preset-tabs button\.locked[\s\S]*?cursor:\s*not-allowed/, "Locked presets do not have a readable disabled treatment.");
 assert.match(css, /\.profile-screen \.skill-preset-tabs button\.active\s*\{[\s\S]*?background:\s*linear-gradient\(180deg, #7d3941, var\(--cl-tab-selected-bg\)\)/, "The currently applied skill preset must retain its red active treatment.");
 assert.match(css, /\.profile-screen \.skill-preset-tabs button\.selected:not\(\.active\),[\s\S]*?button\[aria-selected="true"\]:not\(\.active\)[\s\S]*?background:\s*linear-gradient\(180deg, #285f86, #123c5c\)/, "A previewed non-active skill preset must use a distinct blue treatment.");
