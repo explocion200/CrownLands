@@ -300,13 +300,9 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   },
   "cityUpgradeXp": {
     "enabled": true,
-    "modelVersion": 1,
+    "modelVersion": 2,
     "legacyRequestsEnabled": true,
-    "fixedXpRate": 0.05,
-    "capStartHeroLevel": 50,
-    "capMaximumHeroLevel": 100,
-    "capStartLevelEquivalents": 1,
-    "capMaximumLevelEquivalents": 2
+    "fixedXpRate": 0.01
   },
   "camps": {
     "gold": {

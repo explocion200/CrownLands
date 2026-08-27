@@ -1,5 +1,5 @@
 "use strict";
-/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getInventoryEffectLabel, isServerCityUpgradeInFlight, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
+/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getCityUpgradeStableSortLevel, getInventoryEffectLabel, getPendingCityUpgradeCount, isServerCityUpgradeInFlight, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
 
 const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;
 const INSTANT_ECONOMY_ITEM_BATCH_LIMIT = 25;
@@ -23,7 +23,6 @@ let instantEconomyFlushTimer = 0;
 let instantEconomyGeneration = 1;
 let instantEconomyActionSequence = 0;
 let serverCityUpgradeInFlightIds = new Set();
-let serverCityUpgradePreviewIds = new Map();
 
 function createCityUpgradeRequestId(cityId = "") {
   const randomPart = typeof window.crypto?.randomUUID === "function"
@@ -50,18 +49,11 @@ function getCityUpgradeActionKey(cityOrId = "", regionId = "") {
 function getPendingCityUpgradeAction(cityOrId = "", regionId = "") {
   const key = getCityUpgradeActionKey(cityOrId, regionId);
   if (!key) return null;
-  const queuedAction = getInstantEconomyPendingActions().find(action => action.type === "city" && action.key === key) || null;
-  if (queuedAction) return queuedAction;
-  const previewAction = serverCityUpgradePreviewIds.get(key);
-  return previewAction ? { type: "city", key, ...previewAction, preview: true } : null;
+  return getInstantEconomyPendingActions().find(action => action.type === "city" && action.key === key) || null;
 }
 
 function isServerCityUpgradeInFlight(cityOrId = "", regionId = "") {
   return serverCityUpgradeInFlightIds.has(getCityUpgradeActionKey(cityOrId, regionId));
-}
-
-function isServerCityUpgradePreviewPending(cityOrId = "", regionId = "") {
-  return serverCityUpgradePreviewIds.has(getCityUpgradeActionKey(cityOrId, regionId));
 }
 
 function getInstantEconomyPendingActions() {
@@ -69,10 +61,19 @@ function getInstantEconomyPendingActions() {
 }
 
 function hasPendingServerCityUpgrade(cityId = "", regionId = "") {
-  return Boolean(
-    getPendingCityUpgradeAction(cityId, regionId)
-    || isServerCityUpgradePreviewPending(cityId, regionId)
-  );
+  return Boolean(getPendingCityUpgradeAction(cityId, regionId));
+}
+
+function getPendingCityUpgradeCount(cityOrId = "", regionId = "") {
+  const key = getCityUpgradeActionKey(cityOrId, regionId);
+  if (!key) return 0;
+  return getInstantEconomyPendingActions().filter(action => action.type === "city" && action.key === key).length;
+}
+
+function getCityUpgradeStableSortLevel(city) {
+  if (!city) return 1;
+  const pending = getPendingCityUpgradeAction(city, getCityRegionId(city));
+  return clampCityLevel(pending?.sortLevel ?? city.level);
 }
 
 function getInstantEconomyReservedGold() {
@@ -234,7 +235,6 @@ function clearInstantEconomyActions() {
   swiftMarchOrderRequests.clear();
   recallHornRequests.clear();
   serverCityUpgradeInFlightIds.clear();
-  serverCityUpgradePreviewIds.clear();
   instantEconomyActiveAction = null;
 }
 
@@ -437,15 +437,18 @@ function bindInventoryCarousel(viewport) {
 
 
 function patchCityUpgradeUi() {
+  if (getInstantEconomyPendingActions().some(action => action.type === "city")) {
+    renderCities(true);
+  }
   const selectedCity = cityById(selectedSourceId || "");
   const wheel = cityLayer?.querySelector(".city-action-wheel .wheel-level");
   if (selectedCity && wheel) {
     const projectedCity = getProjectedCityForInstantActions(selectedCity);
     const cost = getLevelCost(projectedCity);
     const pending = hasPendingServerCityUpgrade(selectedCity.id, getCityRegionId(selectedCity));
-    wheel.disabled = pending || cityHasIncomingUpgradeBlocker(selectedCity) || !Number.isFinite(cost) || getProjectedGold() < cost;
-    wheel.setAttribute("aria-busy", String(pending));
-    setTextIfChanged(wheel.querySelector(".wheel-cost"), pending ? "Pending" : Number.isFinite(cost) ? `${formatNumber(cost)}g` : "Unavailable");
+    wheel.disabled = cityHasIncomingUpgradeBlocker(selectedCity) || !Number.isFinite(cost) || getProjectedGold() < cost;
+    wheel.dataset.syncing = String(pending);
+    setTextIfChanged(wheel.querySelector(".wheel-cost"), Number.isFinite(cost) ? `${formatNumber(cost)}g` : "Unavailable");
   }
   if (modal?.open && modal.classList.contains("city-list-modal")) {
     renderCityListModal();
@@ -456,6 +459,10 @@ function patchCityUpgradeUi() {
   const cityId = panel.dataset.cityUpgradeCity || "";
   const city = getOwnedCitySnapshotForUpgrade(cityId, panel.dataset.cityUpgradeRegion);
   if (!city) return;
+  if (modal?.dataset?.cityInfoId === city.id && modalTitle) {
+    const projectedCity = getProjectedCityForInstantActions(city) || city;
+    modalTitle.textContent = `${city.name} - Level ${formatNumber(projectedCity.level)}`;
+  }
   const holder = document.createElement("div");
   holder.innerHTML = renderCityLevelUpAction(city);
   const replacement = holder.firstElementChild;
@@ -488,6 +495,18 @@ async function refreshInstantEconomyAfterFailure(action) {
   if (action.type === "city") await Promise.resolve(refreshAllOwnedCities(true));
   revalidateInstantEconomyActions();
   if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+}
+
+function discardQueuedCityUpgradeActions(actionKey = "") {
+  if (!actionKey) return 0;
+  let removed = 0;
+  for (let index = instantEconomyActions.length - 1; index >= 0; index -= 1) {
+    const action = instantEconomyActions[index];
+    if (action?.type !== "city" || action.key !== actionKey) continue;
+    instantEconomyActions.splice(index, 1);
+    removed += 1;
+  }
+  return removed;
 }
 
 function revalidateInstantEconomyActions() {
@@ -580,13 +599,16 @@ async function flushInstantEconomyActions() {
       skillPresetMarkupSignature = "";
       renderProfileSkills();
     }
-    console.warn(`Instant ${action.type} action failed`, error);
-    rejectGameAction(
-      action.type === "city"
-        ? getCityUpgradeFailureMessage(error, "That city upgrade was not confirmed by the server.")
-        : error?.message || "That action was not confirmed by the server.",
-      { allowCrossMap: true }
-    );
+    if (action.type === "city") discardQueuedCityUpgradeActions(action.key);
+    if (!error?.cityUpgradeCancelled) {
+      console.warn(`Instant ${action.type} action failed`, error);
+      rejectGameAction(
+        action.type === "city"
+          ? getCityUpgradeFailureMessage(error, "That city upgrade was not confirmed by the server.")
+          : error?.message || "That action was not confirmed by the server.",
+        { allowCrossMap: true }
+      );
+    }
     instantEconomyActiveAction = null;
     await refreshInstantEconomyAfterFailure(action);
     return false;
@@ -644,26 +666,58 @@ async function executeInstantCityUpgrade(action) {
   serverCityUpgradeInFlightIds.add(action.key);
   const requestChunk = toWhole(action.requestChunk);
   const requestId = `${action.requestIdBase || createCityUpgradeRequestId(city.id)}_${requestChunk}`.slice(0, 96);
-  const acknowledgedCapSuppressedXp = toWhole(action.acknowledgedCapSuppressedXp);
-  const acknowledgedRebuildSuppressedXp = toWhole(action.acknowledgedRebuildSuppressedXp);
-  const result = authoritativeMode
-    ? await getOnlineApi().upgradeCity({
+  const api = getOnlineApi();
+  let acknowledgedRebuildSuppressedXp = toWhole(action.acknowledgedRebuildSuppressedXp);
+  if (authoritativeMode) {
+    const preview = await api.getCityUpgradeXpPreview({
+      cityId: city.id,
+      regionId: action.regionId,
+      levels: action.mode === "max" ? Math.max(1, action.levels) : action.requestedLevels,
+    });
+    if (!isInstantEconomyActionCurrent(action)) return;
+    const previewReceipt = preview?.cityUpgradeXp || {};
+    const warning = getCityUpgradeXpWarning(previewReceipt);
+    if (warning && !window.confirm(warning)) {
+      const cancelled = new Error("City upgrade cancelled.");
+      cancelled.cityUpgradeCancelled = true;
+      throw cancelled;
+    }
+    acknowledgedRebuildSuppressedXp = toWhole(previewReceipt.rebuildSuppressedXp);
+  }
+  const submitUpgrade = () => authoritativeMode
+    ? api.upgradeCity({
       cityId: city.id,
       regionId: action.regionId,
       mode: action.mode,
       ...(action.mode === "exact" ? { levels: action.requestedLevels } : {}),
       requestId: action.requestId,
-      acknowledgedCapSuppressedXp,
+      acknowledgedCapSuppressedXp: 0,
       acknowledgedRebuildSuppressedXp,
     })
-    : await getOnlineApi().upgradeCity({
+    : api.upgradeCity({
       cityId: city.id,
       regionId: action.regionId,
       levels: chunkLevels,
       requestId,
-      acknowledgedCapSuppressedXp,
+      acknowledgedCapSuppressedXp: 0,
       acknowledgedRebuildSuppressedXp,
     });
+  let result;
+  try {
+    result = await submitUpgrade();
+  } catch (error) {
+    const details = getCityUpgradeErrorDetails(error);
+    const refreshedReceipt = details?.reason === "city-upgrade-xp-warning-required"
+      ? details.cityUpgradeXp
+      : null;
+    const refreshedWarning = getCityUpgradeXpWarning(refreshedReceipt);
+    if (!authoritativeMode || !refreshedWarning || !window.confirm(refreshedWarning)) {
+      if (refreshedWarning) error.cityUpgradeCancelled = true;
+      throw error;
+    }
+    acknowledgedRebuildSuppressedXp = toWhole(refreshedReceipt.rebuildSuppressedXp);
+    result = await submitUpgrade();
+  }
   if (!isInstantEconomyActionCurrent(action)) return;
   const reportedUpgraded = toWhole(result?.upgraded);
   const upgraded = authoritativeMode ? reportedUpgraded : Math.min(chunkLevels, reportedUpgraded);
@@ -703,6 +757,7 @@ async function executeInstantCityUpgrade(action) {
       spentGold: toWhole(result?.spentGold),
     },
   });
+  revalidateInstantEconomyActions();
   const updatedCity = getOwnedCitySnapshotForUpgrade(city.id, action.regionId) || city;
   const awardedXp = toWhole(xpReceipt.awardedXp);
   const suppressedXp = capSuppressedXp + rebuildSuppressedXp;
@@ -722,30 +777,25 @@ async function executeInstantCityUpgrade(action) {
 
 function getCityUpgradeXpWarning(receipt = null) {
   if (!receipt || typeof receipt !== "object") return "";
-  const capSuppressedXp = toWhole(receipt.capSuppressedXp);
   const rebuildSuppressedXp = toWhole(receipt.rebuildSuppressedXp);
-  if (capSuppressedXp <= 0 && rebuildSuppressedXp <= 0) return "";
-  const rawXp = toWhole(receipt.rawXp);
+  if (rebuildSuppressedXp <= 0) return "";
   const awardedXp = toWhole(receipt.awardedXp);
-  const reasons = [];
-  if (capSuppressedXp > 0) {
-    reasons.push(`${formatNumber(capSuppressedXp)} exceeds today's city-upgrade XP allowance`);
-  }
-  if (rebuildSuppressedXp > 0) {
-    reasons.push(`${formatNumber(rebuildSuppressedXp)} comes from city levels you already developed this season`);
-  }
-  return `Hero XP warning\n\nThis upgrade offers ${formatNumber(rawXp)} eligible Hero XP and will award ${formatNumber(awardedXp)} now. ${reasons.join("; ")}. Suppressed XP is not saved for later.\n\nContinue with the upgrade?`;
+  return `Hero XP warning\n\nThis upgrade will award ${formatNumber(awardedXp)} Hero XP. ${formatNumber(rebuildSuppressedXp)} XP comes from city levels you already developed this season and will not be awarded.\n\nContinue with the upgrade?`;
+}
+
+function getCityUpgradeErrorDetails(error = null) {
+  return error?.details || error?.customData?.details || error?.data || {};
 }
 
 function getCityUpgradeFailureMessage(error = null, fallback = "Could not upgrade that city.") {
-  const details = error?.details || error?.customData?.details || error?.data || {};
+  const details = getCityUpgradeErrorDetails(error);
   if (details?.reason === "city-upgrade-client-update-required") {
     return "Update Crownlands to the latest version to continue upgrading cities.";
   }
   return error?.message || fallback;
 }
 
-async function queueServerCityUpgradeWithPreview(cityId, options = {}) {
+function queueServerCityUpgrade(cityId, options = {}) {
   const requestCity = getOwnedCitySnapshotForUpgrade(cityId, options.regionId);
   if (!requestCity) return false;
   const regionId = getCityRegionId(requestCity);
@@ -753,73 +803,32 @@ async function queueServerCityUpgradeWithPreview(cityId, options = {}) {
   const requestedLevels = mode === "max"
     ? Number.MAX_SAFE_INTEGER
     : Math.max(1, Math.floor(Number(options.requestedLevels) || 1));
-  const actionKey = getCityUpgradeActionKey(requestCity, regionId);
-  serverCityUpgradePreviewIds.set(actionKey, {
+  const affordable = getProjectedAffordableCityUpgradeLevels(requestCity, requestedLevels);
+  if (affordable < 1 || (mode === "exact" && affordable !== requestedLevels)) {
+    rejectGameAction("Not enough gold");
+    return false;
+  }
+  const costs = getInstantCityLevelCosts(requestCity, affordable);
+  const authoritativeMode = mode === "exact" || mode === "max";
+  const priorPending = getPendingCityUpgradeAction(requestCity, regionId);
+  return enqueueInstantEconomyAction({
+    type: "city",
+    key: getCityUpgradeActionKey(requestCity, regionId),
+    cityId: requestCity.id,
+    regionId,
     mode,
     requestedLevels: mode === "max" ? 0 : requestedLevels,
+    requestId: authoritativeMode ? createCityUpgradeRequestId(requestCity.id) : "",
+    coalesce: mode === "legacy",
+    levels: costs.length,
+    levelCosts: costs,
+    reservedGold: costs.reduce((sum, cost) => sum + cost, 0),
+    vfxBefore: getCityVfxSnapshot(getProjectedCityForInstantActions(requestCity) || requestCity),
+    sortLevel: priorPending?.sortLevel ?? clampCityLevel(requestCity.level),
+    requestIdBase: authoritativeMode ? "" : createCityUpgradeRequestId(requestCity.id),
+    requestChunk: 0,
+    acknowledgedRebuildSuppressedXp: 0,
   });
-  patchInstantEconomyUi();
-  try {
-    const api = getOnlineApi();
-    const initialAffordable = getProjectedAffordableCityUpgradeLevels(requestCity, requestedLevels);
-    if (initialAffordable < 1 || (mode === "exact" && initialAffordable !== requestedLevels)) {
-      rejectGameAction("Not enough gold");
-      return false;
-    }
-    const preview = await api.getCityUpgradeXpPreview({
-      cityId: requestCity.id,
-      regionId,
-      levels: initialAffordable,
-    });
-    const warning = getCityUpgradeXpWarning(preview?.cityUpgradeXp);
-    if (warning && !window.confirm(warning)) return false;
-    const previewReceipt = preview?.cityUpgradeXp || {};
-    const acknowledgedCapSuppressedXp = toWhole(previewReceipt.capSuppressedXp);
-    const acknowledgedRebuildSuppressedXp = toWhole(previewReceipt.rebuildSuppressedXp);
-
-    const currentCity = getOwnedCitySnapshotForUpgrade(cityId, regionId);
-    if (!currentCity || currentCity.owner !== "player" || isStronghold(currentCity)) return false;
-    const blockers = getIncomingUpgradeBlockers(currentCity.id);
-    if (blockers.length) {
-      rejectGameAction(`${currentCity.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(blockers[0].remaining)}.`);
-      return false;
-    }
-    const affordable = getProjectedAffordableCityUpgradeLevels(currentCity, initialAffordable);
-    if (affordable < 1 || (mode === "exact" && affordable !== requestedLevels)) {
-      rejectGameAction("Not enough gold");
-      return false;
-    }
-    const costs = getInstantCityLevelCosts(currentCity, affordable);
-    const authoritativeMode = mode === "exact" || mode === "max";
-    return enqueueInstantEconomyAction({
-      type: "city",
-      key: getCityUpgradeActionKey(currentCity, regionId),
-      cityId: currentCity.id,
-      regionId,
-      mode,
-      requestedLevels: mode === "max" ? 0 : requestedLevels,
-      requestId: authoritativeMode ? createCityUpgradeRequestId(currentCity.id) : "",
-      coalesce: mode === "legacy",
-      levels: costs.length,
-      levelCosts: costs,
-      reservedGold: costs.reduce((sum, cost) => sum + cost, 0),
-      vfxBefore: getCityVfxSnapshot(currentCity),
-      requestIdBase: authoritativeMode ? "" : createCityUpgradeRequestId(currentCity.id),
-      requestChunk: 0,
-      acknowledgedCapSuppressedXp,
-      acknowledgedRebuildSuppressedXp,
-    });
-  } catch (error) {
-    console.warn("City upgrade XP preview failed", error);
-    rejectGameAction(
-      getCityUpgradeFailureMessage(error, "The city upgrade preview could not be confirmed by the server."),
-      { allowCrossMap: true }
-    );
-    return false;
-  } finally {
-    serverCityUpgradePreviewIds.delete(actionKey);
-    patchInstantEconomyUi();
-  }
 }
 
 async function executeInstantInventoryActivation(action) {
@@ -898,11 +907,6 @@ function upgradeCity(cityId, levels = 1, options) {
     rejectGameAction(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(blockers[0].remaining)}.`);
     return false;
   }
-  const pendingAction = getPendingCityUpgradeAction(city, getCityRegionId(city));
-  if (pendingAction) {
-    rejectGameAction(`${city.name} already has an upgrade pending.`, { allowCrossMap: true });
-    return false;
-  }
   const requested = requestedMode === "max" ? Number.MAX_SAFE_INTEGER : Math.max(1, Math.floor(Number(levels) || 1));
   const affordable = getProjectedAffordableCityUpgradeLevels(city, requested);
   if (affordable < 1 || (requestedMode === "exact" && affordable !== requested)) {
@@ -915,12 +919,7 @@ function upgradeCity(cityId, levels = 1, options) {
       rejectGameAction("City upgrade controls need the current realm version. Refresh and try again.", { allowCrossMap: true });
       return false;
     }
-    if (hasPendingServerCityUpgrade(city.id, getCityRegionId(city))) {
-      rejectGameAction(`${city.name} already has an upgrade pending.`);
-      patchInstantEconomyUi();
-      return false;
-    }
-    void queueServerCityUpgradeWithPreview(city.id, {
+    queueServerCityUpgrade(city.id, {
       regionId: getCityRegionId(city),
       mode: requestedMode,
       requestedLevels: requestedMode === "max" ? 0 : requested,

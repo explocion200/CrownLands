@@ -56,6 +56,8 @@ for (const declaration of [
   "--cl-action-scout-bg: linear-gradient(180deg, #a63b30, #4f1515)",
   "--cl-action-scout-border: #d66b64",
   "--cl-action-scout-text: #fff8e8",
+  "--cl-action-level-border: #ffeeb2",
+  "--cl-action-level-text: #2a1907",
   "--cl-action-disabled-bg: #c7b99b",
   "--cl-action-disabled-border: #a59070",
   "--cl-action-disabled-text: #8c8373",
@@ -102,7 +104,8 @@ for (const source of wheelFunctions) {
 }
 
 const ownedCity = wheelFunctions[0];
-assert.match(ownedCity, /cl-action-royal wheel-level/, "City Level is missing its royal action token.");
+assert.match(ownedCity, /cl-action-level wheel-level[\s\S]*?renderCrownlandsIcon\("arrow-up"\)/, "City Level is missing its dedicated gold arrow-up token.");
+assert.equal((game.match(/cl-action-level/g) || []).length, 1, "The dedicated gold Level token must remain exclusive to the selected-city map action.");
 assert.match(ownedCity, /cl-action-send wheel-send/, "City Send is missing its movement token.");
 assert.match(ownedCity, /cl-action-info wheel-info/, "City Info is missing its information token.");
 assert.match(ownedCity, /cl-action-scout wheel-scout-nearby/, "Nearby Scout is missing its red scouting token.");
@@ -125,8 +128,8 @@ assert.ok(!wheelFunctions[3].includes("cl-action-rally"), "Reward Camp actions m
 assert.ok(wheelFunctions[2].includes("cl-action-send"), "Owned Stronghold/Citadel Send is missing its movement token.");
 assert.ok(wheelFunctions[3].includes("cl-action-send camp-recall-action"), "Held Camp Recall is missing its movement token.");
 
-const releaseId = "20260814-readability-r38";
-const cacheVersion = "20260826-skill-preset-draft-editor-r1";
+const releaseId = "20260826-uncapped-city-xp-instant-upgrades-r1";
+const cacheVersion = "20260826-uncapped-city-xp-instant-upgrades-r1";
 const styleTag = `action-buttons.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The shared action-button stylesheet is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("profile-theme.css"), "The shared action-button stylesheet must load after legacy and Profile theme layers.");
@@ -135,9 +138,10 @@ assert.ok(worker.includes(`CACHE_VERSION = "${cacheVersion}"`), "The action-butt
 for (const source of [builder, manifestBuilder, artifactValidator]) {
   assert.ok(source.includes("action-buttons.css"), "The shared action-button stylesheet is missing from production packaging.");
 }
-for (const variant of ["info", "send", "attack", "reinforce", "rally", "scout", "royal"]) {
+for (const variant of ["info", "send", "attack", "reinforce", "rally", "scout", "royal", "level"]) {
   assert.ok(visualFixture.includes(`cl-action-${variant}`), `The visual matrix is missing the ${variant} action variant.`);
 }
+assert.match(visualFixture, /cl-action-level" data-syncing="true"/, "The visual matrix is missing the nonblocking syncing Level state.");
 assert.match(visualFixture, /cl-action-scout is-pending[\s\S]*?aria-busy="true" disabled/, "The visual matrix is missing pending red scouting.");
 assert.match(visualFixture, /cl-action-(?:send|attack|info)" disabled/, "The visual matrix is missing the shared disabled treatment.");
 for (const state of ["hover", "pressed", "focus"]) assert.ok(visualFixture.includes(`data-qa-state="${state}"`), `The visual matrix is missing the ${state} state.`);

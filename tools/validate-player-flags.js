@@ -246,7 +246,7 @@ for (const source of [index, worker]) {
   assert.match(source, /functions\/playerFlagConfig\.js\?v=20260825-player-flags-audit-r1/);
   assert.match(source, /functions\/flagRenderer\.js\?v=20260819-player-flags-v2-r1/);
   assert.match(source, /player-flag-editor\.css\?v=20260819-player-flags-v2-r1/);
-  assert.match(source, /game\.js\?v=20260826-skill-preset-draft-editor-r1/);
+  assert.match(source, /game\.js\?v=20260826-uncapped-city-xp-instant-upgrades-r1/);
 }
 for (const source of [productionBuilder, productionValidator]) {
   assert.match(source, /functions\/flagRenderer\.js/);

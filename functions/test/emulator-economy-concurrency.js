@@ -33,7 +33,7 @@ function getXpRequiredForLevel(level) {
 
 function getCityUpgradeXp(level) {
   return Math.max(1, Math.floor(
-    getXpRequiredForLevel(level) * Number(economyConfig.cityUpgradeXp?.fixedXpRate || 0.05)
+    getXpRequiredForLevel(level) * Number(economyConfig.cityUpgradeXp?.fixedXpRate || 0.01)
   ));
 }
 
@@ -329,7 +329,7 @@ async function main() {
     profileRef.set({
       gold: 1000000000,
       goldFloat: 1000000000,
-      character: { level: 1, xp: 240, skillPoints: 0 },
+      character: { level: 1, xp: getXpRequiredForLevel(1) - 2, skillPoints: 0 },
       economyUpdatedAtMs: Date.now(),
     }, { merge: true }),
     cityRef.set({
@@ -358,7 +358,7 @@ async function main() {
   const [profileAfterCityXp, cityAfterCityXp] = await Promise.all([profileRef.get(), cityRef.get()]);
   assert(Number(cityAfterCityXp.data()?.level || 0) === 3, "A replayed city upgrade applied its levels more than once.");
   assert(Number(profileAfterCityXp.data()?.character?.level || 0) === 2, "City XP did not use the normal Hero level-up path.");
-  assert(Number(profileAfterCityXp.data()?.character?.xp || 0) === expectedBulkCityXp - 10, "City XP was not applied exactly once.");
+  assert(Number(profileAfterCityXp.data()?.character?.xp || 0) === expectedBulkCityXp - 2, "City XP was not applied exactly once.");
   assert(Number(cityAfterCityXp.data()?.troops || 0) > 200, "The Hero level-up troop reward was not credited to the Main City.");
 
   await cityRef.set({
@@ -388,11 +388,20 @@ async function main() {
   assert(Number(rebuildUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "Rebuilding a prior seasonal city level awarded Hero XP.");
   assert(Number(rebuildUpgrade.cityUpgradeXp?.rebuildSuppressedXp || 0) === rebuildXp, "Rebuild suppression was not explicit.");
 
+  const obsoleteCityXpAllowance = {
+    modelVersion: 1,
+    resetGeneration: realm.resetGeneration,
+    dayKey: "2026-08-25",
+    capReferenceHeroLevel: 50,
+    dailyCapXp: 1,
+    dailyAwardedXp: 1,
+  };
   await Promise.all([
     profileRef.set({
       gold: Number.MAX_SAFE_INTEGER,
       goldFloat: Number.MAX_SAFE_INTEGER,
       character: { level: 50, xp: 0, skillPoints: 49 },
+      cityUpgradeXpDaily: obsoleteCityXpAllowance,
       economyUpdatedAtMs: Date.now(),
     }, { merge: true }),
     cityRef.set({
@@ -400,22 +409,30 @@ async function main() {
       productionUpdatedAtMs: Date.now(),
     }, { merge: true }),
   ]);
-  const cappedPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
+  const uncappedPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
   });
-  const cappedUpgrade = await callFunction("upgradeCity", user.token, {
+  const uncappedUpgrade = await callFunction("upgradeCity", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
-    requestId: `city-upgrade-cap-${crypto.randomBytes(6).toString("hex")}`,
-    acknowledgedCapSuppressedXp: Number(cappedPreview.cityUpgradeXp?.capSuppressedXp || 0),
-    acknowledgedRebuildSuppressedXp: Number(cappedPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
+    requestId: `city-upgrade-uncapped-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedCapSuppressedXp: Number.MAX_SAFE_INTEGER,
+    acknowledgedRebuildSuppressedXp: Number(uncappedPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
   });
-  assert(Number(cappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getXpRequiredForLevel(50), "Hero Level 50 did not use one exact level-equivalent.");
-  assert(Number(cappedUpgrade.cityUpgradeXp?.capSuppressedXp || 0) > 0, "The Level-50 cap did not report discarded excess XP.");
-  assert(Number(cappedUpgrade.cityUpgradeXp?.capReferenceHeroLevel || 0) === 50, "The daily cap did not freeze at Hero Level 50.");
+  assert(Number(uncappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getCityUpgradeXp(150), "Hero Level 50 did not receive the full 1% city XP award.");
+  assert(Number(uncappedUpgrade.cityUpgradeXp?.capSuppressedXp || 0) === 0, "The uncapped receipt reported cap-suppressed XP.");
+  assert(uncappedUpgrade.cityUpgradeXp?.dailyCapActive === false, "The uncapped receipt marked a daily cap active.");
+  assert(uncappedUpgrade.cityUpgradeXp?.capReferenceHeroLevel == null, "The uncapped receipt froze a Hero-level cap reference.");
+  const profileAfterUncappedXp = (await profileRef.get()).data() || {};
+  const allowanceAfterUncappedXp = profileAfterUncappedXp.cityUpgradeXpDaily || {};
+  assert(
+    Object.keys(allowanceAfterUncappedXp).length === Object.keys(obsoleteCityXpAllowance).length
+      && Object.entries(obsoleteCityXpAllowance).every(([key, value]) => allowanceAfterUncappedXp[key] === value),
+    "A model-v2 city upgrade read, rewrote, or deleted obsolete daily allowance data."
+  );
 
   await profileRef.set({
     gold: Number.MAX_SAFE_INTEGER,
@@ -423,21 +440,28 @@ async function main() {
     character: { level: 90, xp: 0, skillPoints: 89 },
     economyUpdatedAtMs: Date.now(),
   }, { merge: true });
-  const frozenCapPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
+  const secondUncappedPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
   });
-  const frozenCapUpgrade = await callFunction("upgradeCity", user.token, {
+  const secondUncappedUpgrade = await callFunction("upgradeCity", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
-    requestId: `city-upgrade-frozen-cap-${crypto.randomBytes(6).toString("hex")}`,
-    acknowledgedCapSuppressedXp: Number(frozenCapPreview.cityUpgradeXp?.capSuppressedXp || 0),
-    acknowledgedRebuildSuppressedXp: Number(frozenCapPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
+    requestId: `city-upgrade-uncapped-second-${crypto.randomBytes(6).toString("hex")}`,
+    acknowledgedCapSuppressedXp: 123456,
+    acknowledgedRebuildSuppressedXp: Number(secondUncappedPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
   });
-  assert(Number(frozenCapUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "A full frozen daily allowance awarded more city XP.");
-  assert(Number(frozenCapUpgrade.cityUpgradeXp?.capReferenceHeroLevel || 0) === 50, "Combat-style Hero progress recalculated the frozen city XP cap.");
+  assert(Number(secondUncappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getCityUpgradeXp(151), "A later Hero level did not receive the full eligible city XP award.");
+  assert(Number(secondUncappedUpgrade.cityUpgradeXp?.capSuppressedXp || 0) === 0, "The obsolete cap acknowledgement affected award calculation.");
+  const profileAfterSecondUncappedXp = (await profileRef.get()).data() || {};
+  const allowanceAfterSecondUncappedXp = profileAfterSecondUncappedXp.cityUpgradeXpDaily || {};
+  assert(
+    Object.keys(allowanceAfterSecondUncappedXp).length === Object.keys(obsoleteCityXpAllowance).length
+      && Object.entries(obsoleteCityXpAllowance).every(([key, value]) => allowanceAfterSecondUncappedXp[key] === value),
+    "A later uncapped upgrade modified obsolete daily allowance data."
+  );
 
   await Promise.all([
     profileRef.set({
