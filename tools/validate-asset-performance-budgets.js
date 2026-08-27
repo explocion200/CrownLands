@@ -46,7 +46,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // touched client files. Advance the offline shell by one bounded 16 KiB step.
 // Confirmed City List row reconciliation, focus retention, and accessible
 // feedback add under 13 KiB. Advance the offline shell by one bounded 16 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3488 * 1024;
+// The isolated skill-preset draft editor, five-tab status UI, paired point
+// controls, and dirty-exit dialog add under 16 KiB across the precached client.
+const MAX_INSTALL_PRECACHE_BYTES = 3504 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -77,11 +79,15 @@ const entrypointBudgets = {
   // Battle-time gear report normalization and rendering add under 16 KiB.
   // Version-aware v1/v2 editor dispatch and strict save feedback add under one
   // bounded 44 KiB step without adding per-frame or map-render work.
-  "game.js": 1664 * 1024,
+  // Preset draft state, guarded navigation, and explicit save/apply handling
+  // remain within one bounded 16 KiB client-runtime step.
+  "game.js": 1680 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
-  "styles.css": 400 * 1024,
+  // Five responsive build tabs, paired 44px controls, and the exit dialog add
+  // under one bounded 4 KiB stylesheet step.
+  "styles.css": 404 * 1024,
   "common-gear-ui.css": 40 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,

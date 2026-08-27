@@ -3384,6 +3384,20 @@ function requireSkillPresetName(value = "", slot = 1) {
   return normalizeSkillPresetName(raw, slot);
 }
 
+function requireSkillPresetSaveName(value = "", slot = 1) {
+  const raw = String(value || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if ([...raw].length > SKILL_PRESET_NAME_MAX_LENGTH) {
+    throw new HttpsError(
+      "invalid-argument",
+      `Preset names can contain at most ${SKILL_PRESET_NAME_MAX_LENGTH} characters.`
+    );
+  }
+  return normalizeSkillPresetName(raw, slot);
+}
+
 function normalizeSkillPresetAllocation(upgrades = {}) {
   const source = upgrades && typeof upgrades === "object" ? upgrades : {};
   return SKILL_ORDER.reduce((allocation, skill) => {
@@ -15260,17 +15274,35 @@ exports.saveSkillPreset = timedCallable(
       const profile = economy.profileAfter;
       const character = reconcileSkillPoints(profile.character, profile.upgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
-      const upgrades = normalizeSkillUpgrades(profile.upgrades);
       const currentPresets = normalizeSkillPresets(profile.skillPresets);
       const currentSlot = currentPresets.slots.find(slot => slot.slot === definition.slot);
-      const skillPresets = setActiveSkillPresetSlot(replaceSkillPresetSlot(currentPresets, {
+      const hasRequestedAllocation = Object.prototype.hasOwnProperty.call(request.data || {}, "upgrades");
+      const requestedAllocation = request.data?.upgrades;
+      if (hasRequestedAllocation && !isValidSkillPresetAllocation(requestedAllocation, character)) {
+        throw new HttpsError(
+          "invalid-argument",
+          "Choose a complete skill preset allocation within your earned-point budget."
+        );
+      }
+      const upgrades = hasRequestedAllocation
+        ? normalizeSkillPresetAllocation(requestedAllocation)
+        : normalizeSkillUpgrades(profile.upgrades);
+      const hasRequestedName = Object.prototype.hasOwnProperty.call(request.data || {}, "name");
+      const name = hasRequestedName
+        ? requireSkillPresetSaveName(request.data?.name, definition.slot)
+        : currentSlot?.name;
+      const changed = !currentSlot?.saved
+        || normalizeSkillPresetName(currentSlot?.name, definition.slot) !== normalizeSkillPresetName(name, definition.slot)
+        || !skillPresetAllocationsMatch(currentSlot?.upgrades, upgrades);
+      const savedAtMs = changed ? nowMs : Math.max(0, timestampToMs(currentSlot?.savedAtMs));
+      const skillPresets = replaceSkillPresetSlot(currentPresets, {
         slot: definition.slot,
-        name: currentSlot?.name,
+        name,
         saved: true,
         upgrades,
-        savedAtMs: nowMs,
-      }), definition.slot);
-      writePreparedEconomy(transaction, economy, { skillPresets }, [], { nowMs });
+        savedAtMs,
+      });
+      writePreparedEconomy(transaction, economy, changed ? { skillPresets } : {}, [], { nowMs });
       const savedSlot = skillPresets.slots.find(slot => slot.slot === definition.slot);
       return {
         ...createEconomyResponse(economy, { skillPresets }),
@@ -15278,11 +15310,11 @@ exports.saveSkillPreset = timedCallable(
           action: "save",
           slot: definition.slot,
           name: savedSlot?.name || `Preset ${definition.slot}`,
-          changed: true,
+          changed,
           goldCharged: 0,
           allocation: upgrades,
-          remainingSkillPoints: character.skillPoints,
-          savedAtMs: nowMs,
+          remainingSkillPoints: getAvailableSkillPoints(character, upgrades),
+          savedAtMs,
         },
       };
     });

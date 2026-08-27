@@ -264,7 +264,7 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 - Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Existing rulers receive one idempotent free Reset Skills credit for this balance migration, while profiles created on the revised ledger begin at migration version 2 without a free migration credit. **Status:** base Hero progression is `LIVE — ALL PUBLISHED CHANNELS`; the weighted final-tier ledger and migration credit are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
-- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. Current Apply cost is documented as 1,000,000 Gold. **Status:** `LIVE — ALL PUBLISHED CHANNELS`; current backend value should be checked before balance changes.
+- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build, where point spending changes live skills immediately. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot. Draft names and `+`/`−` point changes remain local until an explicit free Save Preset; saving never changes live skills, Gold, or active-preset identity. Apply requires a clean saved preset, costs 1,000,000 Gold even for an active or identical allocation, and is the only preset action that changes the live build or active marker. Saving edits to the active preset retains its identity and shows that changes must be applied. **Status:** unlocks and paid application are `LIVE — ALL PUBLISHED CHANNELS`; the isolated draft editor and corrected Save semantics are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 
 ### Confirmed Hero level-up troop rewards
 
@@ -1170,6 +1170,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.16 — August 26, 2026
+
+- Confirmed Current Build as the default live skill editor and unlocked presets as isolated named drafts with weighted `+`/`−` controls.
+- Required explicit free preset saving to preserve the live build, Gold, and active identity; only the existing paid Apply action may activate or switch a preset.
+- Confirmed zero-point initialization for empty drafts, default preset-name support, dirty-exit Save/Discard/Cancel choices, and an Active · Apply changes state for saved edits to the active preset.
 
 ## v1.15 — August 25, 2026
 

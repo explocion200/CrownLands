@@ -15,6 +15,7 @@ const howToSource = fs.readFileSync(path.join(root, "how-to-play.html"), "utf8")
 const gameRulesSource = fs.readFileSync(path.join(root, "game-rules.html"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const workerSource = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const visualQaSource = fs.readFileSync(path.join(root, "docs", "visual-qa", "skill-preset-draft-editor", "index.html"), "utf8");
 const releaseSource = fs.readFileSync(path.join(root, "release-config.js"), "utf8");
 const functionsRelease = JSON.parse(fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8"));
 const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
@@ -95,6 +96,7 @@ vm.runInContext([
   extractFunction(gameSource, "getSkillPointCost"),
   extractFunction(gameSource, "getSkillUpgradePointCost"),
   extractFunction(gameSource, "getSpentSkillPoints"),
+  extractFunction(gameSource, "createDefaultSkills"),
   extractFunction(gameSource, "normalizeSkillPresetName"),
   extractFunction(gameSource, "normalizeSkillPresetAllocation"),
   extractFunction(gameSource, "createDefaultSkillPresets"),
@@ -103,6 +105,9 @@ vm.runInContext([
   extractFunction(gameSource, "setActiveSkillPresetSlot"),
   extractFunction(gameSource, "skillPresetAllocationsMatch"),
   extractFunction(gameSource, "isValidLocalSkillPresetAllocation"),
+  extractFunction(gameSource, "getSkillPresetStoredSignature"),
+  extractFunction(gameSource, "createSkillPresetDraft"),
+  extractFunction(gameSource, "isSkillPresetDraftDirty"),
 ].join("\n"), context, { filename: gamePath });
 
 for (const skill of SKILL_ORDER) {
@@ -163,6 +168,18 @@ assert.equal(upgradedV3.slots[0].name, "War Build");
 assert.equal(upgradedV3.slots[1].name, "Duplicate Build");
 assert.equal(upgradedV3.slots[3].saved, false);
 assert.equal(upgradedV3.activeSlot, 2);
+const emptyDraft = context.createSkillPresetDraft(defaults.slots[0]);
+assert.equal(emptyDraft.name, "Preset 1");
+assert.ok(SKILL_ORDER.every(skill => emptyDraft.upgrades[skill] === 0), "An empty preset draft did not start from zero.");
+assert.equal(context.isSkillPresetDraftDirty(emptyDraft), false, "A new untouched preset draft started dirty.");
+emptyDraft.upgrades.swordmastery = 1;
+assert.equal(context.isSkillPresetDraftDirty(emptyDraft), true, "Adding a draft point did not mark the preset dirty.");
+emptyDraft.upgrades.swordmastery = 0;
+emptyDraft.name = "Border Guard";
+assert.equal(context.isSkillPresetDraftDirty(emptyDraft), true, "Editing a draft name did not mark the preset dirty.");
+const savedDraft = context.createSkillPresetDraft(saved.slots[0]);
+assert.equal(context.isSkillPresetDraftDirty(savedDraft), false, "A saved preset did not open as a clean draft.");
+assert.ok(SKILL_ORDER.every(skill => savedDraft.upgrades[skill] === partial[skill]), "A saved preset draft did not load its stored allocation.");
 
 const focusedPresetInput = {};
 const focusContext = {
@@ -196,8 +213,9 @@ assert.ok(saveStart > 0 && renameStart > saveStart && applyStart > renameStart &
 const saveCallable = serverSource.slice(saveStart, renameStart);
 const renameCallable = serverSource.slice(renameStart, applyStart);
 const applyCallable = serverSource.slice(applyStart, applyEnd);
-assert.match(saveCallable, /requireUnlockedSkillPresetSlot[\s\S]*?normalizeSkillUpgrades\(profile\.upgrades\)[\s\S]*?goldCharged: 0/, "Saving is not a free authoritative snapshot.");
-assert.match(saveCallable, /setActiveSkillPresetSlot\(replaceSkillPresetSlot[\s\S]*?definition\.slot\)/, "Saving does not make the saved tab the sole active preset.");
+assert.match(saveCallable, /requireUnlockedSkillPresetSlot[\s\S]*?hasRequestedAllocation[\s\S]*?isValidSkillPresetAllocation[\s\S]*?normalizeSkillPresetAllocation[\s\S]*?: normalizeSkillUpgrades\(profile\.upgrades\)/, "Saving does not validate a complete draft while retaining slot-only compatibility.");
+assert.match(saveCallable, /hasRequestedName[\s\S]*?requireSkillPresetSaveName[\s\S]*?replaceSkillPresetSlot\(currentPresets[\s\S]*?goldCharged: 0/, "Saving does not atomically persist the draft name and allocation for free.");
+assert.doesNotMatch(saveCallable, /setActiveSkillPresetSlot/, "Saving a preset can change the active preset identity.");
 assert.match(renameCallable, /requireSkillPresetName[\s\S]*?goldCharged: 0/, "Renaming is not validated and free.");
 assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?if \(economy\.gold < SKILL_PRESET_APPLY_COST\)[\s\S]*?gold = Math\.max\(0, economy\.gold - SKILL_PRESET_APPLY_COST\)/, "Applying does not always enforce the dedicated preset price.");
 assert.match(applyCallable, /writePreparedEconomy\([\s\S]*?upgrades,[\s\S]*?skillPresets,[\s\S]*?gold/, "Applying is not an atomic gold/allocation write.");
@@ -234,18 +252,27 @@ const playerProfileUpdateRule = extractFunction(rulesSource, "validPlayerProfile
 assert.match(playerProfileUpdateRule, /affected\.hasOnly\(/, "Profile updates are not bounded by a changed-field allowlist.");
 assert.doesNotMatch(playerProfileUpdateRule, /skillPresets|freeSkillResetGrantVersion|freeSkillResetCredits/, "Client profile updates can change presets or legacy reset credits.");
 
-assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Save Current Build[\s\S]*?data-apply-skill-preset/, "Skills UI does not include all preset controls.");
-assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /presets\.activeSlot === selected\.slot[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not limit the active marker to one explicit preset slot.");
+assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Current Build[\s\S]*?Save Preset[\s\S]*?data-apply-skill-preset/, "Skills UI does not include the Current Build and preset draft controls.");
+assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /data-skill-preset-slot="0"[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not separate Current Build selection from the active preset identity.");
 assert.doesNotMatch(extractFunction(gameSource, "renderSkillPresetPanel"), /!valid \|\| active/, "The active preset cannot be deliberately applied for the configured price.");
-assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /Applying costs[\s\S]*?SKILL_PRESET_APPLY_COST[\s\S]*?Apply · \$\{formatNumber\(SKILL_PRESET_APPLY_COST\)\}/, "The preset panel does not show the unconditional price.");
+assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /Save these changes before applying[\s\S]*?Applying costs[\s\S]*?SKILL_PRESET_APPLY_COST[\s\S]*?Apply · \$\{formatNumber\(SKILL_PRESET_APPLY_COST\)\}/, "The preset panel does not distinguish dirty drafts from paid application.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /nextPresetSignature !== skillPresetMarkupSignature && !isSkillPresetNameEditorActive\(\)/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
-assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.target\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
-assert.match(extractFunction(gameSource, "confirmSkillPresetAction"), /Overwrite[\s\S]*?Every preset application costs[\s\S]*?including an active or identical build/, "Preset confirmation does not explain unconditional charging.");
+assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /data-skill-preset-slot[\s\S]*?requestSkillPresetDraftExit[\s\S]*?event\.target\.blur\(\)[\s\S]*?saveCurrentSkillPreset/, "Preset selection and keyboard submission do not protect or save dirty drafts.");
+assert.match(extractFunction(gameSource, "confirmSkillPresetAction"), /Every preset application costs[\s\S]*?including an active or identical build[\s\S]*?Apply for/, "Preset confirmation does not explain unconditional charging.");
+assert.match(extractFunction(gameSource, "saveCurrentSkillPreset"), /getSkillPresetDraft[\s\S]*?api\.saveSkillPreset\(\{ slot: slot\.slot, name, upgrades \}\)[\s\S]*?replaceLocalSkillPresetSlot/, "The client does not save the isolated draft through both authority paths.");
+assert.doesNotMatch(extractFunction(gameSource, "saveCurrentSkillPreset"), /setActiveSkillPresetSlot|state\.upgrades\s*=/, "Saving a preset can activate it or change live skills.");
 assert.match(gameSource, /applySavedSkillPreset[\s\S]*?usesServerEconomyAuthority[\s\S]*?api\.applySkillPreset[\s\S]*?state\.gold =/, "Local and server-authoritative application paths are not both present.");
+assert.match(extractFunction(gameSource, "applySavedSkillPreset"), /isSkillPresetDraftDirty[\s\S]*?Save this preset before applying/, "Apply does not reject unsaved draft edits.");
 assert.doesNotMatch(extractFunction(gameSource, "applySavedSkillPreset"), /already active|freeResetAvailable|allocationChanges/, "The client can bypass the unconditional preset price.");
 assert.match(extractFunction(gameSource, "applySavedSkillPreset"), /if \(!state \|\| skillActionInFlight\) return false;[\s\S]*?skillActionInFlight = true/, "The client does not suppress rapid duplicate Apply actions.");
 assert.match(gameSource, /const SKILL_GROUPS = Object\.freeze\([\s\S]*?Attack[\s\S]*?swordmastery[\s\S]*?marchOrders[\s\S]*?fieldMedics[\s\S]*?Defense[\s\S]*?shieldwallDiscipline[\s\S]*?stoneworks[\s\S]*?Utility[\s\S]*?taxStewardship[\s\S]*?royalGranaries[\s\S]*?guildCharters/, "Skills are not grouped into the approved roles.");
-assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(4,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-tabs \{ grid-template-columns: repeat\(2,/, "Four preset tabs are not responsive as a mobile 2x2 grid.");
+assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(5,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-tabs \{ grid-template-columns: repeat\(2,[\s\S]*?skill-current-build-tab/, "Current Build and four preset tabs are not responsive on mobile.");
+assert.match(extractFunction(gameSource, "skillRow"), /data-skill-decrement[\s\S]*?data-skill=/, "Preset skill rows do not expose paired minus and plus controls.");
+assert.match(stylesSource, /\.skill-row\.editing-preset[\s\S]*?grid-template-columns: minmax\(0, 1fr\)[\s\S]*?\.skill-row\.editing-preset \.skill-row-actions[\s\S]*?repeat\(2, minmax\(0, 1fr\)\)/, "Preset point controls can overflow their skill cards.");
+assert.match(stylesSource, /\.profile-skill-list \.skill-row button \{[^}]*min-height: 44px;/, "Preset point controls do not meet the mobile touch-target height.");
+assert.match(visualQaSource, /Current Build[\s\S]*?Active · Unsaved[\s\S]*?Save Preset[\s\S]*?Apply · 1,000,000[\s\S]*?skill-preset-exit-dialog/, "The responsive skill-preset visual-QA fixture is incomplete.");
+assert.match(extractFunction(gameSource, "adjustSkillPresetDraft"), /direction[\s\S]*?currentLevel - 1[\s\S]*?getSkillPointCost[\s\S]*?getAvailableSkillPoints[\s\S]*?currentLevel \+ 1/, "Draft point controls do not enforce refunds, caps, and weighted point costs locally.");
+assert.match(gameSource, /skillPresetExitDialog\.addEventListener\("close"[\s\S]*?decision === "discard"[\s\S]*?decision === "save"/, "Dirty draft exits do not offer Save, Discard, and Cancel behavior.");
 assert.match(gameSource, /renderSkillPresetAllocation[\s\S]*?SKILL_GROUPS\.map[\s\S]*?skill-preset-allocation-group/, "Saved allocations are not grouped by role.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.map[\s\S]*?profile-skill-group/, "The current skill list is not grouped by role.");
 assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillSpendAllocations[\s\S]*?enqueueInstantEconomyAction/, "Queued skill spending is not routed through the shared instant-action queue.");
@@ -255,13 +282,13 @@ assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfC
 assert.match(extractFunction(gameSource, "updateProfileSkillState"), /getSkillPointCost[\s\S]*?points < nextPointCost[\s\S]*?nextPointCost === 1 \? "pt" : "pts"/, "Skills UI does not display and enforce the next upgrade's point cost.");
 assert.match(extractFunction(gameSource, "buySkill"), /getSkillPointCost[\s\S]*?getDisplayedSkillPoints\(\) < pointCost[\s\S]*?state\.character\.skillPoints -= pointCost/, "Skill purchase paths do not spend the displayed tier cost.");
 
-assert.match(howToSource, /preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
-assert.match(gameRulesSource, /preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed Apply costs 1,000,000 gold[\s\S]*?never overwrites a preset automatically/i);
-const expectedBuild = "20260810-daily-mission-camp-fix-v1";
+assert.match(howToSource, /Current Build[\s\S]*?preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated draft[\s\S]*?Save Preset[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
+assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?isolated named draft[\s\S]*?Saving a valid draft is free[\s\S]*?Apply requires a saved draft[\s\S]*?1,000,000 gold/i);
+const expectedBuild = "20260826-skill-preset-draft-editor-r1";
 const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Reset Skills is not using the configured 1,000,000-gold cost.");
 assert.equal(Number(economyConfig.playerCosts.skillPresetApplyGold), 1_000_000, "Preset Apply is not using its dedicated 1,000,000-gold cost.");
 
-console.log("Validated final-five double-cost skills, four private v5 skill presets, role grouping, unconditional paid application, migration-credit isolation, mobile UI, rules, and release IDs.");
+console.log("Validated weighted skill costs, Current Build, four isolated preset drafts, explicit saving, unconditional paid application, compatibility, mobile UI, and rules.");

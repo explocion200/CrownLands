@@ -9219,7 +9219,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .skill-preset-tabs {
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: .38rem;
 }
 .skill-preset-tabs button {
@@ -9249,6 +9249,9 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 }
 .skill-preset-tabs button.active { border-color: rgba(137,215,126,.7); }
 .skill-preset-tabs button.active small { color: #a8ec84; }
+.skill-preset-tabs button.pending { border-style: dashed; }
+.skill-preset-tabs button.dirty small { color: #ffd878; }
+.skill-preset-tabs button.skill-current-build-tab { background: linear-gradient(180deg, rgba(79,52,27,.92), rgba(35,25,18,.96)); }
 .skill-preset-detail {
   min-width: 0;
   display: grid;
@@ -9262,6 +9265,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   border-color: rgba(158,213,255,.14);
   background: rgba(10,31,49,.72);
 }
+.skill-preset-detail.current-build > header { grid-template-columns: minmax(0, 1fr); }
 .skill-preset-detail > header {
   min-width: 0;
   display: grid;
@@ -9277,7 +9281,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .skill-preset-rename {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: .35rem;
 }
 .skill-preset-rename input {
@@ -9445,7 +9449,40 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 }
 .profile-skill-list .skill-row:first-child { border-top: 1px solid rgba(158,213,255,.15); }
 .profile-skill-list .skill-row strong { color: #fff4c8; }
-.profile-skill-list .skill-row button { min-width: 78px; }
+.skill-row-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(68px, auto));
+  gap: .32rem;
+}
+.profile-skill-list .skill-row.editing-preset { grid-template-columns: minmax(0, 1fr); }
+.profile-skill-list .skill-row.editing-preset .skill-row-actions {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.profile-skill-list .skill-row button { min-width: 68px; min-height: 44px; }
+.profile-skill-list .skill-row button[data-skill-decrement] {
+  color: #dceeff;
+  border: 1px solid rgba(158,213,255,.38);
+  background: linear-gradient(180deg, #285f86, #123c5c);
+}
+.profile-skill-list .skill-row button[hidden] { display: none; }
+.skill-preset-exit-dialog {
+  width: min(460px, calc(100% - 1.5rem));
+  padding: 0;
+  color: #352316;
+  border: 1px solid #6d4c2d;
+  border-radius: 6px;
+  background: #d9c8a0;
+  box-shadow: 0 20px 55px rgba(0,0,0,.55);
+}
+.skill-preset-exit-dialog::backdrop { background: rgba(8,7,5,.72); }
+.skill-preset-exit-dialog__card { display: grid; gap: .7rem; padding: 1rem; }
+.skill-preset-exit-dialog__card h2,
+.skill-preset-exit-dialog__card p { margin: 0; }
+.skill-preset-exit-dialog__card h2 { font: 900 1.15rem var(--font-display, serif); }
+.skill-preset-exit-dialog__card p { line-height: 1.45; }
+.skill-preset-exit-dialog__actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
+.skill-preset-exit-dialog__actions button { min-height: 44px; }
 .profile-identity {
   display: grid;
   justify-items: center;
@@ -12520,6 +12557,7 @@ html[data-animation-mode="off"] .city-list-row.upgrade-confirmed {
   }
 
   .skill-preset-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .skill-preset-tabs .skill-current-build-tab { grid-column: 1 / -1; }
   .skill-preset-allocation { grid-template-columns: minmax(0, 1fr); }
   .profile-skill-list { grid-template-columns: minmax(0, 1fr); }
 
@@ -12540,8 +12578,9 @@ html[data-animation-mode="off"] .city-list-row.upgrade-confirmed {
   .skill-preset-tabs { gap: .25rem; }
   .skill-preset-tabs button { min-height: 44px; padding: .32rem; }
   .skill-preset-detail { padding: .52rem; }
-  .skill-preset-rename { grid-template-columns: minmax(0, 1fr) 68px; }
+  .skill-preset-rename { grid-template-columns: minmax(0, 1fr); }
   .skill-preset-detail > footer { grid-template-columns: minmax(0, 1fr); }
+  .skill-preset-exit-dialog__actions { grid-template-columns: minmax(0, 1fr); }
 
   .profile-settings-view {
     padding: .55rem max(.55rem, env(safe-area-inset-right)) max(.55rem, env(safe-area-inset-bottom)) max(.55rem, env(safe-area-inset-left));
