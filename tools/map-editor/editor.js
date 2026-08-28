@@ -1126,7 +1126,7 @@
         goldLinkedWall + safeWall(
           midSlope * Math.pow(
             Math.max(0, costRatio),
-            Math.max(0, readEconomyNumber(config.wallGoldLinkedCostExponent, 0.22701846543276433))
+            Math.max(0, readEconomyNumber(config.wallGoldLinkedCostExponent, 0.22881653173769995))
           )
         )
       );
@@ -1467,8 +1467,8 @@
                 "Gold curve multiplier per level",
                 economy.cityEconomy.productionVpGrowth,
                 {
-                  step: 0.001,
-                  description: "Multiplies the internal gold units for every city level up to the endgame switch. For example, 1.115 means roughly +11.5% per level.",
+                  step: 0.0001,
+                  description: "Multiplies the internal gold units for every city level up to the endgame switch. For example, 1.1155 means roughly +11.55% per level.",
                 }
               )}
               ${economyNumberInput(
@@ -1494,7 +1494,7 @@
                 economy.cityEconomy.goldEndgameGrowth,
                 {
                   step: 0.001,
-                  description: "Applied once for every city level above the switch level. For example, 1.08 means +8% base gold per additional endgame level.",
+                  description: "Applied once for every city level above the switch level. For example, 1.079 means +7.9% base gold per additional endgame level.",
                 }
               )}
             </div>

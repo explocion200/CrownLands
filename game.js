@@ -876,11 +876,11 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
   ],
 });
 const SERVER_CITY_UPGRADE_LEVEL_CHUNK = 25;
-const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 20);
-const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.115);
+const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 19);
+const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.1155);
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = economyNumber("cityEconomy.goldPerProductionVp", 15);
 const CITY_GOLD_ENDGAME_START_LEVEL = economyNumber("cityEconomy.goldEndgameStartLevel", 100);
-const CITY_GOLD_ENDGAME_GROWTH = economyNumber("cityEconomy.goldEndgameGrowth", 1.08);
+const CITY_GOLD_ENDGAME_GROWTH = economyNumber("cityEconomy.goldEndgameGrowth", 1.079);
 const CITY_UPGRADE_EARLY_END_LEVEL = economyNumber("cityEconomy.upgradeEarlyEndLevel", 50);
 const CITY_UPGRADE_MID_END_LEVEL = economyNumber("cityEconomy.upgradeMidEndLevel", 100);
 const CITY_UPGRADE_EARLY_START_HOURS = economyNumber("cityEconomy.upgradeEarlyStartHours", 0.1);
@@ -1025,7 +1025,7 @@ const CITY_LEVEL_STATS = {
   wallMidEndLevel: economyNumber("cityEconomy.wallMidEndLevel", 100),
   wallMidDefense: economyNumber("cityEconomy.wallMidDefense", 3_000_000),
   wallGoldLinkedEndLevel: economyNumber("cityEconomy.wallGoldLinkedEndLevel", 150),
-  wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22701846543276433),
+  wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995),
   wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
   wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.3),

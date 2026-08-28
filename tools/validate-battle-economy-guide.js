@@ -29,12 +29,12 @@ assert.equal(guide.RULES.strongholdEffectiveLevel, 50);
 assert.equal(guide.RULES.citadelEffectiveLevel, 100);
 
 const expectedMilestones = {
-  1: { vp: 12, gold: 300, troops: 123, wall: 200, repair: 15 },
-  25: { vp: 260, gold: 4080, troops: 2678, wall: 145557, repair: 23 },
-  50: { vp: 599, gold: 62160, troops: 6169, wall: 1456669, repair: 30 },
-  75: { vp: 985, gold: 945060, troops: 10145, wall: 2228335, repair: 38 },
-  100: { vp: 1408, gold: 14365905, troops: 14502, wall: 3000000, repair: 45 },
-  150: { vp: 2338, gold: 673784109, troops: 24081, wall: 6200000, repair: 60 },
+  1: { vp: 12, gold: 285, troops: 123, wall: 200, repair: 15 },
+  25: { vp: 260, gold: 3915, troops: 2678, wall: 145557, repair: 23 },
+  50: { vp: 599, gold: 60360, troops: 6169, wall: 1456669, repair: 30 },
+  75: { vp: 985, gold: 928095, troops: 10145, wall: 2228335, repair: 38 },
+  100: { vp: 1408, gold: 14266995, troops: 14502, wall: 3000000, repair: 45 },
+  150: { vp: 2338, gold: 638858596, troops: 24081, wall: 6200000, repair: 60 },
 };
 
 for (const [levelText, expected] of Object.entries(expectedMilestones)) {

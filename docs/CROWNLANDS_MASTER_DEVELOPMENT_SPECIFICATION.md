@@ -113,6 +113,7 @@ The August 24 and August 25 audits remain historical evidence. The August 27 rel
 | Touch map-selection Shop/Bag guard | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | City XP model v2, uncapped 1% awards, ordered optimistic upgrades, and selected-city gold arrow action | Present | Present in exact build `a561374b...` | `LIVE — ALL PUBLISHED CHANNELS`; authenticated mutation smoke remains pending |
 | Unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and revised Skills readability | Present in build `291e5657...` | Absent from build `a561374b...` | `LIVE — WEB` |
+| Next-reset regular-city Gold production curve | Absent from the audited production build | Absent from the audited published build | `IN DEVELOPMENT`; coordinated backend, web, and itch.io release required |
 | Holding Towers and Clan Treasury | Absent | Absent | `IMPLEMENTED BUT NOT LIVE` |
 | Pending 5×5 Core world | Absent | Absent | `IN DEVELOPMENT` |
 | Dynamic automatic map expansion | Absent | Absent | `IN DEVELOPMENT` |
@@ -363,10 +364,13 @@ At commit `27105ae...`, regular-city production is server-authoritative and mirr
 The following balance is confirmed for the next coordinated client and Functions release. It is **IN DEVELOPMENT** until the implementation pull request is merged and is not LIVE until deployment to each named release channel is verified:
 
 - Base troops per hour become `floor(city progression value × 10.3)`, a 3% increase before bonuses. Level 1 becomes 123 troops per hour, Level 100 becomes 14,502, and Level 150 becomes 24,081.
+- For regular-city Gold production, `U(L) = floor(19 × 1.1155^(min(L, 100) - 1) + 0.000001)` and base Gold per hour is `floor(U(L) × 15 × 1.079^max(0, L - 100))`.
+- The confirmed Gold anchors are 285 per hour at Level 1, 3,915 at Level 25, 60,360 at Level 50, 928,095 at Level 75, 14,266,995 at Level 100, 638,858,596 at Level 150, and 28,607,307,045 at Level 200.
+- The existing upgrade target-hour curve is unchanged. Absolute upgrade prices and other raw-production-scaled Gold amounts follow the lower curve, while the intended one-city production-hour cost of an upgrade stays unchanged.
 - Regular-city base walls use staged, monotonic growth with anchors of 200 at Level 1, 600 at Level 2, 1,456,669 at Level 50, 3,000,000 at Level 100, and 6,200,000 at Level 150.
 - Levels 1-25 use `round(200 + 400 × (level - 1)^1.8550607303011009)`. The Level 1-to-2 increase is exactly 3×, and no adjacent level through Level 25 may exceed 3×.
 - Levels 26-50 use a shape-preserving cubic bridge from the Level 25 curve to the Level 50 anchor. Levels 51-100 interpolate evenly to the Level 100 anchor.
-- Levels 101-150 add wall power according to the relative Gold upgrade cost raised to exponent `0.22701846543276433`, normalized at Level 100. This makes later wall gains respond to increasingly expensive upgrades without copying the Gold curve directly.
+- Levels 101-150 add wall power according to the relative Gold upgrade cost raised to exponent `0.22881653173769995`, normalized at Level 100. This re-anchors the Gold-linked segment to the exact 6,200,000 Level 150 wall after the Gold-curve change without changing the post-Level-150 troop-production rule.
 - Above Level 150, base wall power transitions to a base troop-production replacement ratio. That ratio begins at the Level 150 anchor, reaches 240 production hours at Level 200, and remains at 240 hours thereafter so the wall continues increasing with troop production without a fixed level cap.
 - Stoneworks remains the only skill that strengthens the wall. Soldier defense, wall repair, objective support, reward-camp behavior, and the two-stage siege model do not change.
 - The Level 150 maximum-activity siege benchmark must remain within 59-62 million maximum-Swordmastery attackers and 2.34-2.59 maximum-activity troop-production days for the existing apex portfolio.
@@ -1194,6 +1198,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.22 — August 28, 2026
+
+- Confirmed regular-city base Gold production at 285 per hour at Level 1, 11.55% unit growth through Level 100, and 7.9% Gold growth per level afterward.
+- Preserved the upgrade target-hour curve, so Gold production and nominal upgrade costs change together without changing the intended one-city production-hour pacing.
+- Re-anchored the Gold-cost-linked wall exponent to `0.22881653173769995`, preserving the exact 6,200,000 Level 150 wall and the existing post-Level-150 troop-production continuation.
+- Classified the curve as `IN DEVELOPMENT` pending validation, merge, and coordinated backend, web, and itch.io deployment.
 
 ## v1.21 — August 27, 2026
 
