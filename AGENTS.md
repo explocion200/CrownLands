@@ -24,6 +24,24 @@
 - Never begin a new update from a previous feature branch.
 - If already on the correct `codex/` branch for the current task, continue that task instead of starting another branch.
 
+### Post-merge local synchronization
+
+- Pushing a feature branch does not update local `main`. After any pull request is confirmed merged, whether merged by Codex or elsewhere, synchronize the local repository before reporting that the workspace is ready for another update.
+- Only synchronize when the workspace is clean. If tracked or untracked work exists, or if Git reports divergence or another unsafe condition, stop and report it. Never automatically discard, reset, overwrite, or stash user work.
+- From a clean workspace, run:
+
+  `git fetch origin`
+
+  `git switch main`
+
+  `git merge --ff-only origin/main`
+
+- Verify all of the following before claiming local synchronization:
+  - `git status --short --branch` shows clean `main` tracking `origin/main`.
+  - `git rev-parse main` and `git rev-parse origin/main` return the same commit.
+  - `git rev-list --left-right --count main...origin/main` returns `0 0`.
+- If the fast-forward or any verification fails, stop and report the exact condition. Do not begin the next update until local `main` and `origin/main` are safely reconciled.
+
 ## Implementation rules
 
 - Keep changes limited to the requested task.
@@ -62,6 +80,7 @@ When finishing a task, clearly report:
 - Which validation checks passed or failed.
 - The pull-request number and link, if created.
 - Whether the pull request is ready to merge.
+- After a merge, whether local `main` was synchronized with and verified against `origin/main`.
 - Whether anything was deployed.
 - Any remaining risks, conflicts, or manual verification steps.
 
