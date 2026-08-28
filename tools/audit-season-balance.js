@@ -86,7 +86,10 @@ function getLevelRewardTotals(maxLevel = 150) {
         ? rewards.goldEarlyProductionHours
           + (rewards.goldMidProductionHours - rewards.goldEarlyProductionHours) * ((level - 50) / 50)
         : rewards.goldEndgameProductionHours;
-    const upgradeRelief = getGoldPerHour(level - 1) * getUpgradeTargetHours(level - 1) * upgradeShare;
+    const referenceUpgradeCost = Math.floor(
+      getGoldPerHour(level - 1) * getUpgradeTargetHours(level - 1) + 0.000001
+    );
+    const upgradeRelief = referenceUpgradeCost * upgradeShare;
     const productionRelief = getGoldPerHour(level) * productionHours;
     gold += Math.floor(Math.max(goldFloor, Math.min(upgradeRelief, productionRelief)));
 
@@ -207,8 +210,10 @@ const levelRewards = getLevelRewardTotals(150);
 assert.equal(profile.version, 1);
 assert.equal(cityCount, 30, "The apex portfolio must contain exactly 30 cities.");
 assert.equal(Math.max(...Object.keys(profile.apexPortfolio).map(Number)), 150, "The apex capital must be Level 150.");
-assert.equal(baseGoldPerHour, 741_630_729, "Apex base gold production drifted; review the season benchmark.");
+assert.equal(baseGoldPerHour, 706_112_926, "Apex base gold production drifted; review the season benchmark.");
 assert.equal(baseTroopsPerHour, 276_074, "Apex base troop production drifted; review the season benchmark.");
+assert.equal(levelRewards.gold, 299_088_478_550, "Cumulative Hero Gold rewards through Level 150 drifted.");
+assert.equal(levelRewards.troops, 86_585_401, "Cumulative Hero troop rewards through Level 150 drifted.");
 assert.ok(
   minimumCaptureTroops >= siege.minimumCaptureTroops && minimumCaptureTroops <= siege.maximumCaptureTroops,
   `Level-150 capture threshold ${minimumCaptureTroops} left the ${siege.minimumCaptureTroops}-${siege.maximumCaptureTroops} guardrail.`

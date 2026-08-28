@@ -62,6 +62,7 @@ assert.equal(wallStats.cityWallsBase, 200);
 assert.equal(wallStats.wallBridgeDefense, 1_456_669);
 assert.equal(wallStats.wallMidDefense, 3_000_000);
 assert.equal(wallStats.wallGoldLinkedEndLevel, 150);
+assert.equal(wallStats.wallGoldLinkedCostExponent, 0.22881653173769995);
 assert.equal(wallStats.wallProductionRatioMaximumHours, 240);
 assert.equal("defensePercentPerLevel" in cityEconomy, false, "City level must never increase soldier defense.");
 assert.equal(Number(troopCombat.baseAttackPowerPerTroop), 1.25);
@@ -112,7 +113,7 @@ const expectedWalls = new Map([
   [75, 2_228_335],
   [100, 3_000_000],
   [101, 3_030_867],
-  [125, 4_090_540],
+  [125, 4_090_593],
   [150, 6_200_000],
   [151, 6_279_528],
   [175, 8_325_854],

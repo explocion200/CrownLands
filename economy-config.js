@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-08-28T00:31:10.357Z",
+  "updatedAt": "2026-08-28T16:25:48.838Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -211,11 +211,11 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "minimumTroops": 250
   },
   "cityEconomy": {
-    "productionVpBase": 20,
-    "productionVpGrowth": 1.115,
+    "productionVpBase": 19,
+    "productionVpGrowth": 1.1155,
     "goldPerProductionVp": 15,
     "goldEndgameStartLevel": 100,
-    "goldEndgameGrowth": 1.08,
+    "goldEndgameGrowth": 1.079,
     "troopsPerVictoryPoint": 10.3,
     "wallDefenseBase": 200,
     "wallDefensePerLevel": 28858,
@@ -228,7 +228,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "wallMidEndLevel": 100,
     "wallMidDefense": 3000000,
     "wallGoldLinkedEndLevel": 150,
-    "wallGoldLinkedCostExponent": 0.22701846543276433,
+    "wallGoldLinkedCostExponent": 0.22881653173769995,
     "wallProductionRatioEndLevel": 200,
     "wallProductionRatioMaximumHours": 240,
     "upgradeEarlyEndLevel": 50,

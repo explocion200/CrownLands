@@ -792,14 +792,14 @@ const rewardAnchors = new Map([
   [2, { gold: 1095, troops: 936 }],
   [10, { gold: 3711, troops: 7416 }],
   [25, { gold: 8986, troops: 37492 }],
-  [50, { gold: 162787, troops: 148056 }],
-  [51, { gold: 184739, troops: 155299 }],
-  [75, { gold: 7530834, troops: 395655 }],
-  [100, { gold: 180933608, troops: 783108 }],
-  [101, { gold: 206869032, troops: 798428 }],
-  [125, { gold: 3541843584, troops: 1226112 }],
-  [150, { gold: 24256227924, troops: 1781994 }],
-  [200, { gold: 1137656204316, troops: 3254092 }],
+  [50, { gold: 158013, troops: 148056 }],
+  [51, { gold: 179389, troops: 155299 }],
+  [75, { gold: 7392228, troops: 395655 }],
+  [100, { gold: 179607384, troops: 783108 }],
+  [101, { gold: 205444728, troops: 798428 }],
+  [125, { gold: 3436933464, troops: 1226112 }],
+  [150, { gold: 22998909456, troops: 1781994 }],
+  [200, { gold: 1029863053620, troops: 3254092 }],
 ]);
 for (const [level, expected] of rewardAnchors) {
   assert.equal(levelUpGoldReward(level), expected.gold, `Hero level ${level} gold reward changed.`);
@@ -808,6 +808,12 @@ for (const [level, expected] of rewardAnchors) {
 assert.ok(levelUpGoldReward(101) >= levelUpGoldReward(100), "Gold rewards must not drop after level 100.");
 assert.ok(levelUpTroopReward(51) >= levelUpTroopReward(50), "Troop rewards must not drop after level 50.");
 assert.ok(levelUpTroopReward(101) >= levelUpTroopReward(100), "Troop rewards must not drop after level 100.");
+for (let level = 3; level <= 200; level += 1) {
+  assert.ok(
+    levelUpGoldReward(level) >= levelUpGoldReward(level - 1),
+    `Hero Gold rewards must not fall from Level ${level - 1} to Level ${level}.`
+  );
+}
 for (let level = 3; level <= 500; level += 1) {
   assert.ok(
     levelUpTroopReward(level) >= levelUpTroopReward(level - 1),
@@ -831,6 +837,15 @@ assert.equal(
 const cumulativeTroopRewardThrough150 = [...Array(149)].reduce(
   (total, _, index) => total + levelUpTroopReward(index + 2),
   0
+);
+const cumulativeGoldRewardThrough150 = [...Array(149)].reduce(
+  (total, _, index) => total + levelUpGoldReward(index + 2),
+  0
+);
+assert.equal(
+  cumulativeGoldRewardThrough150,
+  299088478550,
+  "Cumulative Hero Gold rewards through Level 150 changed."
 );
 assert.equal(
   cumulativeTroopRewardThrough150,

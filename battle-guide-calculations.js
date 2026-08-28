@@ -68,12 +68,12 @@
       const endgameStart = Math.max(1, read(economy, "cityEconomy.goldEndgameStartLevel", 100));
       const curveLevel = Math.min(normalized, endgameStart);
       const productionVp = Math.floor(
-        read(economy, "cityEconomy.productionVpBase", 20)
-          * Math.pow(read(economy, "cityEconomy.productionVpGrowth", 1.115), curveLevel - 1)
+        read(economy, "cityEconomy.productionVpBase", 19)
+          * Math.pow(read(economy, "cityEconomy.productionVpGrowth", 1.1155), curveLevel - 1)
           + 0.000001
       );
       const endgameMultiplier = normalized > endgameStart
-        ? Math.pow(read(economy, "cityEconomy.goldEndgameGrowth", 1.08), normalized - endgameStart)
+        ? Math.pow(read(economy, "cityEconomy.goldEndgameGrowth", 1.079), normalized - endgameStart)
         : 1;
       const raw = productionVp
         * read(economy, "cityEconomy.goldPerProductionVp", 15)
@@ -147,7 +147,7 @@
           goldLinkedWall + safeWall(
             midSlope * Math.pow(
               Math.max(0, costRatio),
-              read(economy, "cityEconomy.wallGoldLinkedCostExponent", 0.22701846543276433)
+              read(economy, "cityEconomy.wallGoldLinkedCostExponent", 0.22881653173769995)
             )
           )
         );

@@ -215,6 +215,12 @@ function goldPerHour(level) {
   return Math.floor(base * (level > endgameStart ? Math.pow(endgameGrowth, level - endgameStart) : 1));
 }
 
+assert.equal(baseVp, 19, "Level-1 Gold production units changed.");
+assert.equal(vpGrowth, 1.1155, "Pre-Level-100 Gold growth changed.");
+assert.equal(goldPerVp, 15, "Gold per production unit changed.");
+assert.equal(endgameStart, 100, "Gold endgame transition level changed.");
+assert.equal(endgameGrowth, 1.079, "Post-Level-100 Gold growth changed.");
+
 function upgradeTargetHours(level) {
   if (level <= 50) return upgradeEarlyStartHours + (upgradeEarlyEndHours - upgradeEarlyStartHours) * Math.pow((level - 1) / 49, 1.35);
   if (level <= 100) return upgradeEarlyEndHours + (upgradeMidEndHours - upgradeEarlyEndHours) * Math.pow((level - 50) / 50, 1.4);
@@ -225,10 +231,25 @@ assert.equal(upgradeTargetHours(1), 0.1);
 assert.equal(upgradeTargetHours(50), 4);
 assert.equal(upgradeTargetHours(100), 36);
 assert.equal(upgradeTargetHours(150), 240);
-assert.ok(goldPerHour(101) / goldPerHour(100) <= 1.081, "Post-100 gold growth should be near 8%.");
+assert.ok(goldPerHour(101) / goldPerHour(100) <= 1.08, "Post-100 gold growth should not exceed 7.9% after flooring tolerance.");
 assert.ok(goldPerHour(150) < 1_000_000_000, "Post-100 city gold has returned to runaway growth.");
-for (const level of [1, 25, 50, 75, 100, 125, 150]) {
+const expectedGoldAnchors = new Map([
+  [1, { goldPerHour: 285, upgradeCost: 28 }],
+  [2, { goldPerHour: 315, upgradeCost: 37 }],
+  [10, { goldPerHour: 750, upgradeCost: 371 }],
+  [25, { goldPerHour: 3_915, upgradeCost: 6_216 }],
+  [50, { goldPerHour: 60_360, upgradeCost: 241_440 }],
+  [75, { goldPerHour: 928_095, upgradeCost: 14_966_211 }],
+  [100, { goldPerHour: 14_266_995, upgradeCost: 513_611_820 }],
+  [101, { goldPerHour: 15_394_087, upgradeCost: 563_069_506 }],
+  [125, { goldPerHour: 95_470_374, upgradeCost: 10_322_723_847 }],
+  [150, { goldPerHour: 638_858_596, upgradeCost: 153_326_063_040 }],
+  [200, { goldPerHour: 28_607_307_045, upgradeCost: 17_536_254_428_872 }],
+]);
+for (const [level, expected] of expectedGoldAnchors) {
   const cost = Math.floor(goldPerHour(level) * upgradeTargetHours(level));
+  assert.equal(goldPerHour(level), expected.goldPerHour, `Gold production drifted at Level ${level}.`);
+  assert.equal(cost, expected.upgradeCost, `Upgrade cost drifted at Level ${level}.`);
   assert.ok(Number.isSafeInteger(cost) && cost >= 10, `Invalid upgrade cost at level ${level}.`);
 }
 assert.ok(upgradeTargetHours(50) / 10 <= 0.5, "A ten-city level-50 kingdom should still progress comfortably.");

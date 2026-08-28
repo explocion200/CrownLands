@@ -98,12 +98,12 @@ function baseGoldPerHourForLevel(level) {
   const normalizedLevel = Math.max(1, Math.min(150, Math.floor(Number(level) || 1)));
   const curveLevel = Math.min(normalizedLevel, Number(cityEconomy.goldEndgameStartLevel || 100));
   const productionVp = Math.floor(
-    Number(cityEconomy.productionVpBase || 20)
-      * Math.pow(Number(cityEconomy.productionVpGrowth || 1.115), curveLevel - 1)
+    Number(cityEconomy.productionVpBase || 19)
+      * Math.pow(Number(cityEconomy.productionVpGrowth || 1.1155), curveLevel - 1)
       + 0.000001
   );
   const endgameMultiplier = normalizedLevel > curveLevel
-    ? Math.pow(Number(cityEconomy.goldEndgameGrowth || 1.08), normalizedLevel - curveLevel)
+    ? Math.pow(Number(cityEconomy.goldEndgameGrowth || 1.079), normalizedLevel - curveLevel)
     : 1;
   return Math.floor(productionVp * Number(cityEconomy.goldPerProductionVp || 15) * endgameMultiplier);
 }

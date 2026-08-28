@@ -172,7 +172,7 @@ async function main() {
   const collectedTroops = Number(cityAfterEconomy.data()?.troopFloat || cityAfterEconomy.data()?.troops || 0);
   const cityEconomy = economyConfig.cityEconomy || {};
   const expectedGold = 100
-    + Math.floor(Number(cityEconomy.productionVpBase || 20))
+    + Math.floor(Number(cityEconomy.productionVpBase || 19))
       * Number(cityEconomy.goldPerProductionVp || 15);
   const levelOneVictoryPoints = Math.floor(6 + 4 + Math.pow(1, 1.35) * 2);
   const expectedTroops = 200
@@ -604,7 +604,7 @@ async function main() {
     );
   }
 
-  const levelOneBaseGoldPerHour = Math.floor(Number(cityEconomy.productionVpBase || 20))
+  const levelOneBaseGoldPerHour = Math.floor(Number(cityEconomy.productionVpBase || 19))
     * Number(cityEconomy.goldPerProductionVp || 15);
   const levelOneBaseTroopsPerHour = Math.floor(
     levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 10.3)
