@@ -123,7 +123,7 @@ async function main() {
     ...remoteBase,
     id: remoteBase.id,
     name: remoteBase.name || "Remote Upgrade City",
-    regionId: remoteMap.id,
+    regionId: claimRegionId,
     islandId: `${realm.worldId}-${remoteMap.id}`,
     worldId: realm.worldId,
     resetGeneration: realm.resetGeneration,
@@ -154,6 +154,10 @@ async function main() {
   });
   assert(exactFive.mode === "exact" && exactFive.upgraded === 5 && exactFive.finalLevel === 6, "Exact +5 did not upgrade exactly five levels.");
   assert(Number(exactFive.spentGold) > 0, "Exact +5 did not report authoritative Gold spent.");
+  assert(
+    exactFive.cityUpdates?.some(update => update.id === remoteBase.id && update.regionId === remoteMap.id),
+    "The off-map response did not reconcile the canonical region from the city document path."
+  );
   assert(Number((await cityRef.get()).data()?.level) === 6, "The off-map city did not persist its exact +5 result.");
 
   await Promise.all([
@@ -226,18 +230,11 @@ async function main() {
     setEconomyGold(profileRef, 1_000_000_000_000),
     cityRef.set({ level: 1, investedGold: 0, productionUpdatedAtMs: Date.now() }, { merge: true }),
   ]);
-  const maxPreview = await callFunction("getCityUpgradeXpPreview", user.token, {
-    cityId: remoteBase.id,
-    regionId: remoteMap.id,
-    levels: 500,
-  });
   const maxResult = await callFunction("upgradeCity", user.token, {
     cityId: remoteBase.id,
     regionId: remoteMap.id,
     mode: "max",
     requestId: `max_${crypto.randomUUID()}`,
-    acknowledgedCapSuppressedXp: Number(maxPreview.cityUpgradeXp?.capSuppressedXp || 0),
-    acknowledgedRebuildSuppressedXp: Number(maxPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
   });
   assert(maxResult.mode === "max" && maxResult.upgraded > 5, "MAX did not buy every affordable level in one authoritative call.");
   assert(maxResult.finalLevel === 1 + maxResult.upgraded, "MAX returned an inconsistent final level.");
@@ -286,7 +283,7 @@ async function main() {
     "The bounded city-upgrade receipt ledger did not retain the idempotency receipt."
   );
 
-  console.log("City upgrade emulator validation passed: exact +5 atomicity, off-map MAX, idempotency, and incoming-attack authority.");
+  console.log("City upgrade emulator validation passed: canonical off-map routing, exact +5 atomicity, direct MAX, idempotency, and incoming-attack authority.");
 }
 
 main().catch(error => {

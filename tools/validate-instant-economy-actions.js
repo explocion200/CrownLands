@@ -32,7 +32,9 @@ assert.match(controller, /action\.mode === "exact" \|\| action\.mode === "max"[\
 assert.match(controller, /action\.mode === "exact" \? \{ levels: action\.requestedLevels \} : \{\}/, "MAX requests must not send a client-computed level target.");
 assert.match(controller, /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?coalesce: mode === "legacy"/, "Authoritative city upgrades must enqueue each accepted tap against projected Gold and levels.");
 assert.doesNotMatch(controller, /already has an upgrade pending/, "Pending city upgrades must not block rapid follow-up actions.");
-assert.match(controller, /async function executeInstantCityUpgrade[\s\S]*?getCityUpgradeXpPreview[\s\S]*?const submitUpgrade/, "City XP preview must wait until the queued action reaches the server.");
+assert.doesNotMatch(controller, /api\.getCityUpgradeXpPreview/, "City upgrades still wait for a routine XP-preview request.");
+assert.match(controller, /scheduleInstantEconomyFlush\(normalized\.type === "city" \? 0/, "City upgrades must dispatch without the shared 125ms economy delay.");
+assert.match(controller, /const submitUpgrade[\s\S]*?result = await submitUpgrade\(\)[\s\S]*?city-upgrade-xp-warning-required[\s\S]*?result = await submitUpgrade\(\)/, "The direct city request must retain a silent retry for an older warning-enforcing backend.");
 assert.match(controller, /function discardQueuedCityUpgradeActions[\s\S]*?instantEconomyActions\.splice[\s\S]*?discardQueuedCityUpgradeActions\(action\.key\)/, "Rejected or declined city actions must discard dependent same-city actions.");
 assert.match(server, /requestedQuantity = data\.quantity === undefined \? 1[\s\S]*?unitPrice = getShopItemPriceForEconomy\(economy, itemId\)[\s\S]*?purchasedQuantity: requestedQuantity[\s\S]*?unitPrice,[\s\S]*?spentGold: totalCost/, "Shop quantity purchases are not atomically priced and backward compatible.");
 assert.match(server, /const maxQuantity = stackable \? 25 : 1;[\s\S]*?activatedQuantity: requestedQuantity[\s\S]*?effectDurationAddedMs:[\s\S]*?requestedQuantity/, "Timed-item quantity activation is not bounded and aggregated.");
@@ -60,6 +62,7 @@ const citySandbox = {
   selectedInventoryEntryKey: "",
   skillPresetMarkupSignature: "",
   SHOP_ITEMS: [],
+  goldText: null,
   window: {
     crypto: { randomUUID: (() => { let sequence = 0; return () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`; })() },
     confirm: () => true,
@@ -85,6 +88,8 @@ const citySandbox = {
   usesServerEconomyAuthority: () => true,
   renderHud() {},
   renderCities() {},
+  setTextIfChanged() {},
+  patchCityListUpgradeRows() {},
   formatNumber: value => String(value),
   formatDuration: value => String(value),
   rejectGameAction(message) { cityRejections.push(message); },
@@ -132,13 +137,11 @@ function createDeferred() {
 const cityUpgradeDelayValidation = (async () => {
   const delayedCities = [
     { id: "city_1", name: "First City", regionId: "west", owner: "player", level: 1 },
-    { id: "city_2", name: "Second City", regionId: "west", owner: "player", level: 1 },
+    { id: "city_2", name: "Second City", regionId: "east", owner: "player", level: 1 },
   ];
   const delayedTimers = [];
   const delayedCalls = [];
-  const previewDeferreds = [];
   const upgradeDeferreds = [];
-  let confirmWarnings = true;
   let refreshCount = 0;
   const delayedSandbox = {
     console: { ...console, warn() {} },
@@ -155,9 +158,9 @@ const cityUpgradeDelayValidation = (async () => {
     selectedInventoryEntryKey: "",
     skillPresetMarkupSignature: "",
     SHOP_ITEMS: [],
+    goldText: null,
     window: {
       crypto: { randomUUID: (() => { let sequence = 100; return () => `00000000-0000-4000-8000-${String(++sequence).padStart(12, "0")}`; })() },
-      confirm: () => confirmWarnings,
       setTimeout(callback) { delayedTimers.push(callback); return delayedTimers.length; },
       clearTimeout() {},
     },
@@ -169,7 +172,9 @@ const cityUpgradeDelayValidation = (async () => {
     getActiveMapRegionId: () => "west",
     getCityRegionId: city => city?.regionId || "west",
     clampCityLevel: value => Math.max(1, Math.floor(Number(value) || 1)),
-    getOwnedCitySnapshotForUpgrade: id => delayedCities.find(city => city.id === id) || null,
+    getOwnedCitySnapshotForUpgrade: (id, regionId = "") => delayedCities.find(city => (
+      city.id === id && (!regionId || city.regionId === regionId)
+    )) || null,
     cityById: id => delayedCities.find(city => city.id === id) || null,
     isStronghold: () => false,
     getIncomingUpgradeBlockers: () => [],
@@ -180,6 +185,8 @@ const cityUpgradeDelayValidation = (async () => {
     usesServerEconomyAuthority: () => true,
     renderHud() {},
     renderCities() {},
+    setTextIfChanged() {},
+    patchCityListUpgradeRows() {},
     formatNumber: value => String(value),
     formatDuration: value => String(value),
     rejectGameAction() {},
@@ -198,15 +205,15 @@ const cityUpgradeDelayValidation = (async () => {
       }
     },
     getOnlineApi: () => ({
-      getCityUpgradeXpPreview(payload) {
-        const deferred = createDeferred();
-        delayedCalls.push({ type: "preview", cityId: payload.cityId, level: delayedCities.find(city => city.id === payload.cityId)?.level });
-        previewDeferreds.push(deferred);
-        return deferred.promise;
-      },
       upgradeCity(payload) {
         const deferred = createDeferred();
-        delayedCalls.push({ type: "upgrade", cityId: payload.cityId, requestId: payload.requestId });
+        delayedCalls.push({
+          type: "upgrade",
+          cityId: payload.cityId,
+          regionId: payload.regionId,
+          requestId: payload.requestId,
+          acknowledgedRebuildSuppressedXp: payload.acknowledgedRebuildSuppressedXp,
+        });
         upgradeDeferreds.push(deferred);
         return deferred.promise;
       },
@@ -215,11 +222,6 @@ const cityUpgradeDelayValidation = (async () => {
   vm.createContext(delayedSandbox);
   vm.runInContext(controller, delayedSandbox, { filename: "instant-economy-actions.js" });
 
-  const settlePreview = async receipt => {
-    previewDeferreds.shift().resolve({ cityUpgradeXp: receipt || { awardedXp: 1, rebuildSuppressedXp: 0 } });
-    await Promise.resolve();
-    await Promise.resolve();
-  };
   const runNext = () => {
     vm.runInContext("instantEconomyFlushTimer = 0", delayedSandbox);
     return vm.runInContext("flushInstantEconomyActions()", delayedSandbox);
@@ -236,12 +238,9 @@ const cityUpgradeDelayValidation = (async () => {
     await Promise.resolve();
     assert.deepEqual(
       delayedCalls.map(call => `${call.type}:${call.cityId}`),
-      Array.from({ length: confirmation - 1 }, () => ["preview:city_1", "upgrade:city_1"]).flat().concat("preview:city_1"),
+      Array.from({ length: confirmation }, () => "upgrade:city_1"),
       "A later city request reached the server before the prior request confirmed."
     );
-    assert.equal(delayedCalls.at(-1).level, confirmation, "The XP preview did not use the previously confirmed city level.");
-    await settlePreview();
-    assert.equal(delayedCalls.at(-1).type, "upgrade", "The upgrade request did not follow its front-of-queue XP preview.");
     upgradeDeferreds.shift().resolve({
       upgraded: 1,
       spentGold: 100,
@@ -261,10 +260,9 @@ const cityUpgradeDelayValidation = (async () => {
   delayedCities.forEach(city => { city.level = 1; });
   assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
   assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
-  assert.equal(vm.runInContext('upgradeCity("city_2", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
+  assert.equal(vm.runInContext('upgradeCity("city_2", 1, { mode: "exact", regionId: "east" })', delayedSandbox), true);
   const rejectedFlush = runNext();
   await Promise.resolve();
-  await settlePreview();
   upgradeDeferreds.shift().reject(new Error("server rejected city upgrade"));
   assert.equal(await rejectedFlush, false, "A rejected city request reported success.");
   assert.equal(vm.runInContext("instantEconomyActions.length", delayedSandbox), 1, "A rejection did not clear only dependent same-city actions.");
@@ -272,23 +270,34 @@ const cityUpgradeDelayValidation = (async () => {
   assert.equal(vm.runInContext('getProjectedCityForInstantActions(delayedCities[0]).level', delayedSandbox), 1, "A rejected action did not roll its city projection back.");
   assert.equal(vm.runInContext('getProjectedCityForInstantActions(delayedCities[1]).level', delayedSandbox), 2, "The unrelated action was not revalidated after rejection.");
   assert.equal(vm.runInContext("getProjectedGold()", delayedSandbox), 900, "Gold was not reprojected after rejection.");
+  assert.equal(vm.runInContext('instantEconomyActions[0].regionId', delayedSandbox), "east", "The unrelated off-map action lost its region binding.");
 
   vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
   delayedSandbox.state.gold = 1_000;
   delayedCities[0].level = 1;
-  confirmWarnings = false;
-  const upgradesBeforeDecline = delayedCalls.filter(call => call.type === "upgrade").length;
   assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
-  assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
-  const declinedFlush = runNext();
+  const compatibilityFlush = runNext();
   await Promise.resolve();
-  await settlePreview({ awardedXp: 0, rebuildSuppressedXp: 2 });
-  assert.equal(await declinedFlush, false, "A declined rebuilt-level warning reported success.");
-  assert.equal(delayedCalls.filter(call => call.type === "upgrade").length, upgradesBeforeDecline, "A declined warning still submitted an upgrade.");
-  assert.equal(vm.runInContext("getInstantEconomyPendingActions().length", delayedSandbox), 0, "A declined warning did not clear dependent same-city actions.");
-  assert.equal(vm.runInContext("getProjectedGold()", delayedSandbox), 1_000, "A declined warning did not roll Gold back.");
-  assert.equal(vm.runInContext('getProjectedCityForInstantActions(delayedCities[0]).level', delayedSandbox), 1, "A declined warning did not roll the city level back.");
-  assert(refreshCount >= 2, "Rejected and declined city actions did not refresh authoritative state.");
+  const warningError = new Error("Older backend warning");
+  warningError.details = {
+    reason: "city-upgrade-xp-warning-required",
+    cityUpgradeXp: { awardedXp: 0, rebuildSuppressedXp: 2 },
+  };
+  upgradeDeferreds.shift().reject(warningError);
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(delayedCalls.at(-1).acknowledgedRebuildSuppressedXp, 2, "The compatibility retry did not silently acknowledge rebuilt-level suppression.");
+  upgradeDeferreds.shift().resolve({
+    upgraded: 1,
+    spentGold: 100,
+    finalLevel: 2,
+    currentUser: { gold: 900 },
+    cityUpdates: [{ id: "city_1", regionId: "west", level: 2 }],
+    cityUpgradeXp: { awardedXp: 0, capSuppressedXp: 0, rebuildSuppressedXp: 2 },
+  });
+  assert.equal(await compatibilityFlush, true, "The silent compatibility retry did not settle.");
+  assert.equal(delayedCities[0].level, 2, "The compatibility retry did not reconcile the city.");
+  assert(refreshCount >= 1, "A rejected city action did not refresh authoritative state.");
 })();
 
 const skillAdjustmentDelayValidation = (async () => {
@@ -370,8 +379,10 @@ const skillAdjustmentDelayValidation = (async () => {
     refreshServerEconomy: async () => { skillRefreshes += 1; },
     refreshAllOwnedCities: async () => {},
     ensureShopItems: () => ({}),
+    goldText: null,
     renderHud() {},
     renderCities() {},
+    setTextIfChanged() {},
     renderProfileSkills() {},
     cityById: () => null,
     formatNumber: value => String(value),
@@ -493,6 +504,7 @@ const sandbox = {
   modalBody: { querySelector: () => null, querySelectorAll: () => [] },
   cityLayer: { querySelector: () => null },
   SHOP_ITEMS: [{ id: "test_item", label: "Test Item", cost: 100 }],
+  goldText: null,
   getShopItemById: id => id === "test_item" ? { id, label: "Test Item", cost: 100 } : null,
   getShopItemPrice: item => item?.cost || 0,
   getItemPurchaseCount: () => 0,
@@ -502,6 +514,7 @@ const sandbox = {
   usesServerEconomyAuthority: () => true,
   getOnlineApi: () => ({ purchaseShopItem: () => deferredPurchase }),
   renderHud() {},
+  setTextIfChanged() {},
   cityById: () => null,
   formatNumber: value => String(value),
   rejectGameAction(message) { throw new Error(message); },
@@ -562,6 +575,7 @@ setImmediate(() => {
     modalBody: { querySelector: () => null, querySelectorAll: () => [] },
     cityLayer: { querySelector: () => null },
     SHOP_ITEMS: [{ id: "shield", label: "Shield", cost: 0 }],
+    goldText: null,
     SWIFT_MARCH_ORDER_ITEM_ID: "swift",
     RECALL_HORN_ITEM_ID: "recall",
     WAR_DRUMS_ITEM_ID: "drums",
@@ -587,6 +601,7 @@ setImmediate(() => {
     refreshServerEconomy: async () => {},
     refreshAllOwnedCities: async () => {},
     renderHud() {},
+    setTextIfChanged() {},
     cityById: () => null,
     formatNumber: value => String(value),
     formatDuration: value => String(value),

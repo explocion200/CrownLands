@@ -305,7 +305,7 @@ assert.match(stylesSource, /skill-preset-tabs button\.active:not\(\.locked\)[\s\
 
 assert.match(howToSource, /Current Build[\s\S]*?minus, cost, and plus[\s\S]*?freely refunds[\s\S]*?Reset Skills[\s\S]*?free clear-all[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?minus, cost, and plus[\s\S]*?minus is free[\s\S]*?Reset Skills is also free[\s\S]*?1,000,000 gold/i);
-const expectedBuild = "20260827-city-wall-troop-balance-r1";
+const expectedBuild = "20260827-instant-cross-map-city-upgrades-r1";
 const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");

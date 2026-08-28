@@ -6570,14 +6570,14 @@ function getKnownOwnedRegularCities() {
   const merged = new Map();
   onlineOwnedCitiesCache.forEach(city => {
     const normalized = normalizeOwnedCitySnapshot(city);
-    if (normalized && !isStronghold(normalized)) merged.set(normalized.id, normalized);
+    if (normalized && !isStronghold(normalized)) merged.set(getOwnedCityCacheKey(normalized), normalized);
   });
   playerRegularCities().forEach(city => {
     const normalized = normalizeOwnedCitySnapshot({
       ...city,
       islandId: getOnlineIslandId(getCityRegionId(city)),
     });
-    if (normalized && !isStronghold(normalized)) merged.set(normalized.id, normalized);
+    if (normalized && !isStronghold(normalized)) merged.set(getOwnedCityCacheKey(normalized), normalized);
   });
   return Array.from(merged.values());
 }
@@ -11000,7 +11000,15 @@ function applyServerCityUpdateToOwnedCache(update = {}) {
   const cityId = getKnownCityId(update.id);
   if (!cityId) return false;
   const currentUid = getCurrentOnlineUid();
-  const existingIndex = onlineOwnedCitiesCache.findIndex(city => city.id === cityId);
+  const updateRegionId = normalizeRegionId(update.regionId || getCityRegionId(cityId));
+  const updateKey = getOwnedCityCacheKey(cityId, updateRegionId);
+  let existingIndex = onlineOwnedCitiesCache.findIndex(city => getOwnedCityCacheKey(city) === updateKey);
+  if (existingIndex < 0) {
+    const sameIdIndexes = onlineOwnedCitiesCache
+      .map((city, index) => city.id === cityId ? index : -1)
+      .filter(index => index >= 0);
+    if (sameIdIndexes.length === 1) existingIndex = sameIdIndexes[0];
+  }
   const existing = existingIndex >= 0 ? onlineOwnedCitiesCache[existingIndex] : null;
   const ownerUidProvided = Object.prototype.hasOwnProperty.call(update, "ownerUid");
   const nextOwnerUid = ownerUidProvided ? String(update.ownerUid || "").trim() : String(existing?.ownerUid || currentUid || "").trim();
@@ -11017,7 +11025,7 @@ function applyServerCityUpdateToOwnedCache(update = {}) {
     ...(existing || {}),
     ...update,
     id: cityId,
-    regionId: normalizeRegionId(update.regionId || existing?.regionId || getCityRegionId(cityId)),
+    regionId: updateRegionId || normalizeRegionId(existing?.regionId || getCityRegionId(cityId)),
     ownerKind: "player",
     ownerUid: nextOwnerUid || currentUid || null,
     ownerName: update.ownerName || existing?.ownerName || state.playerName,
@@ -11029,7 +11037,7 @@ function applyServerCityUpdateToOwnedCache(update = {}) {
   return true;
 }
 
-function applyServerCityUpdates(cityUpdates = []) {
+function applyServerCityUpdates(cityUpdates = [], options = {}) {
   if (!state || !Array.isArray(cityUpdates)) return false;
   let changed = false;
   let cacheChanged = false;
@@ -11122,7 +11130,7 @@ function applyServerCityUpdates(cityUpdates = []) {
   if (cacheChanged) updateIslandSummariesFromOwnedCityCache();
   const mainCityRepair = normalizeSingleMainCityAssignment(state.mainCityId);
   changed = mainCityRepair.changed || changed;
-  if (changed) {
+  if (changed && options.render !== false) {
     renderHud();
     renderCities();
     renderPanel();
@@ -11283,7 +11291,7 @@ function applyServerEconomyResult(result = null, options = {}) {
       levelUpReward: result.currentUser.levelUpReward || result.levelUpReward,
     }) || changed;
   }
-  if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates, { render: false }) || changed;
   if (options.cityUpgradeFeedback && result.replayed !== true) {
     setCityListUpgradeFeedback(options.cityUpgradeFeedback);
   }
@@ -11319,7 +11327,10 @@ function applyServerEconomyResult(result = null, options = {}) {
   if (changed) {
     renderHud();
     if (options.renderCities === false) updateVisibleCityDynamicText();
-    else renderCities();
+    else {
+      renderCities();
+      renderPanel();
+    }
     renderHarvestBonuses();
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
@@ -12680,8 +12691,9 @@ function getOwnedRegularCityCountsByRegionForDisplay() {
   const seenIds = new Set();
   const addCity = city => {
     const id = getKnownCityId(city?.id);
-    if (!id || seenIds.has(id) || isStronghold(city)) return;
-    seenIds.add(id);
+    const key = getOwnedCityCacheKey(city);
+    if (!id || !key || seenIds.has(key) || isStronghold(city)) return;
+    seenIds.add(key);
     const regionId = getCityRegionId(city);
     countsByRegion.set(regionId, (countsByRegion.get(regionId) || 0) + 1);
   };
@@ -18234,15 +18246,19 @@ function getOutgoingAttacks() {
     .sort((a, b) => a.remaining - b.remaining);
 }
 
-function getIncomingUpgradeBlockers(cityOrId) {
+function getIncomingUpgradeBlockers(cityOrId, regionId = "") {
   if (!state) return [];
-  const cityId = getKnownCityId(typeof cityOrId === "object" ? cityOrId?.id : cityOrId);
+  const city = typeof cityOrId === "object" ? cityOrId : null;
+  const cityId = getKnownCityId(city?.id || cityOrId);
   if (!cityId) return [];
+  const targetRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
       if (!attack || attack.returning || attack.kind !== "attack") return null;
       if (getKnownCityId(attack.toId) !== cityId) return null;
+      const attackTargetRegionId = normalizeRegionId(attack.targetRegionId || getCityRegionId(attack.toId));
+      if (attackTargetRegionId !== targetRegionId) return null;
       if (attack.owner === "player") return null;
       const remaining = Math.max(0, Number(attack.remaining) || 0);
       if (remaining <= 0) return null;
@@ -18425,7 +18441,8 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   const id = getKnownCityId(raw.id);
   if (!id) return null;
   const base = getPlayableBaseCityById(id) || {};
-  const regionId = normalizeRegionId(raw.regionId || base.regionId || raw.startPool || base.startPool);
+  const islandRegionId = raw.islandId ? getRegionIdFromOnlineIslandId(raw.islandId) : "";
+  const regionId = normalizeRegionId(islandRegionId || raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
   const ownerFlag = ownerIdentity?.flag || raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
@@ -18465,17 +18482,25 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   };
 }
 
+function getOwnedCityCacheKey(cityOrId = "", regionId = "") {
+  const city = typeof cityOrId === "object" ? cityOrId : null;
+  const cityId = getKnownCityId(city?.id || cityOrId);
+  if (!cityId) return "";
+  const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
+  return `${resolvedRegionId}:${cityId}`;
+}
+
 function mergeOwnedCitySnapshots(cities = [], { complete = false } = {}) {
   const merged = new Map();
   if (!complete) {
     onlineOwnedCitiesCache.forEach(city => {
       const normalized = normalizeOwnedCitySnapshot(city);
-      if (normalized) merged.set(normalized.id, normalized);
+      if (normalized) merged.set(getOwnedCityCacheKey(normalized), normalized);
     });
   }
   cities.forEach(city => {
     const normalized = normalizeOwnedCitySnapshot(city);
-    if (normalized) merged.set(normalized.id, normalized);
+    if (normalized) merged.set(getOwnedCityCacheKey(normalized), normalized);
   });
   onlineOwnedCitiesCache = Array.from(merged.values());
   normalizeSingleMainCityAssignment(state?.mainCityId || "");
@@ -18492,7 +18517,7 @@ function getAllOwnedCitiesForDisplay() {
   const merged = new Map();
   onlineOwnedCitiesCache.forEach(city => {
     const normalized = normalizeOwnedCitySnapshot(city);
-    if (normalized) merged.set(normalized.id, normalized);
+    if (normalized) merged.set(getOwnedCityCacheKey(normalized), normalized);
   });
   if (state?.cities) {
     playerCities().forEach(city => {
@@ -18500,7 +18525,7 @@ function getAllOwnedCitiesForDisplay() {
         ...city,
         islandId: getOnlineIslandId(getCityRegionId(city)),
       });
-      if (normalized) merged.set(normalized.id, normalized);
+      if (normalized) merged.set(getOwnedCityCacheKey(normalized), normalized);
     });
   }
   return Array.from(merged.values());
@@ -18510,10 +18535,13 @@ function getAllOwnedRegularCitiesForDisplay() {
   return getAllOwnedCitiesForDisplay().filter(city => !isStronghold(city));
 }
 
-function getOwnedCitySnapshotById(cityId) {
+function getOwnedCitySnapshotById(cityId, regionId = "") {
   const id = getKnownCityId(cityId);
   if (!id) return null;
-  return getAllOwnedCitiesForDisplay().find(city => city.id === id) || null;
+  const expectedKey = regionId ? getOwnedCityCacheKey(id, regionId) : "";
+  return getAllOwnedCitiesForDisplay().find(city => (
+    city.id === id && (!expectedKey || getOwnedCityCacheKey(city) === expectedKey)
+  )) || null;
 }
 
 function getOwnedCitySnapshotForUpgrade(cityId, regionId = "") {
@@ -18522,9 +18550,7 @@ function getOwnedCitySnapshotForUpgrade(cityId, regionId = "") {
   const normalizedRegionId = regionId ? normalizeRegionId(regionId) : "";
   const activeCity = cityById(id);
   if (activeCity && (!normalizedRegionId || getCityRegionId(activeCity) === normalizedRegionId)) return activeCity;
-  return getAllOwnedCitiesForDisplay().find(city => (
-    city.id === id && (!normalizedRegionId || getCityRegionId(city) === normalizedRegionId)
-  )) || null;
+  return getOwnedCitySnapshotById(id, normalizedRegionId);
 }
 
 function ownedCities(owner) {
@@ -30255,22 +30281,50 @@ function renderCityListModal() {
     });
   });
 
-  modalBody.querySelectorAll("[data-city-list-jump]").forEach(button => {
+  bindCityListRowActions(modalBody);
+  modalBody.scrollTop = previousScrollTop;
+  if (revealCityKey) ensureCityListRowVisible(revealCityKey);
+  restoreCityListFocus(focusSnapshot);
+}
+
+function bindCityListRowActions(root = modalBody) {
+  root?.querySelectorAll("[data-city-list-jump]").forEach(button => {
     button.addEventListener("click", () => {
       focusCityListLocation(button.dataset.cityListJump, button.dataset.cityListRegion);
     });
   });
 
-  modalBody.querySelectorAll("[data-city-list-info]").forEach(button => {
+  root?.querySelectorAll("[data-city-list-info]").forEach(button => {
     button.addEventListener("click", async () => {
       modal.classList.remove("city-list-modal");
       await openCityListInfo(button.dataset.cityListInfo, button.dataset.cityListRegion);
     });
   });
-  bindCityLevelUpButtons(null, modalBody);
+  bindCityLevelUpButtons(null, root);
+}
+
+function patchCityListUpgradeRows() {
+  if (!modal?.open || !modal.classList.contains("city-list-modal")) return false;
+  const rows = [...modalBody.querySelectorAll("[data-city-list-row-key]")];
+  if (!rows.length) return false;
+  const citiesByKey = new Map(getAllOwnedCitiesForDisplay().map(city => [getCityListRowKey(city), city]));
+  const focusSnapshot = captureCityListFocus();
+  const previousScrollTop = modalBody.scrollTop;
+  let changed = false;
+  rows.forEach(row => {
+    const city = citiesByKey.get(row.dataset.cityListRowKey || "");
+    if (!city) return;
+    const holder = document.createElement("div");
+    holder.innerHTML = renderCityListRow(city);
+    const replacement = holder.firstElementChild;
+    if (!replacement) return;
+    row.replaceWith(replacement);
+    bindCityListRowActions(replacement);
+    changed = true;
+  });
   modalBody.scrollTop = previousScrollTop;
-  if (revealCityKey) ensureCityListRowVisible(revealCityKey);
   restoreCityListFocus(focusSnapshot);
+  return changed;
 }
 
 async function focusCityListLocation(cityId, regionId = "") {
@@ -33506,19 +33560,14 @@ function getCityUpgradeOptionState(city) {
   const baseReason = incoming ? "Incoming" : unsupported ? "Refresh" : "";
   const oneCost = getMultiLevelCost(projectedCity, 1);
   const fiveCost = getMultiLevelCost(projectedCity, 5);
-  const showCityUpgradeXp = CITY_UPGRADE_XP_ENABLED && usesServerEconomyAuthority();
-  const oneXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 1) : 0;
-  const fiveXp = showCityUpgradeXp ? getCityUpgradeRawXp(currentLevel, 5) : 0;
   const affordableMax = baseReason ? 0 : getProjectedAffordableCityUpgradeLevels(city);
   const maxCost = affordableMax > 0 ? getMultiLevelCost(projectedCity, affordableMax) : Infinity;
-  const maxXp = showCityUpgradeXp && affordableMax > 0 ? getCityUpgradeRawXp(currentLevel, affordableMax) : 0;
   const unavailableReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
-  const makeExactOption = (label, levels, cost, xp) => ({
+  const makeExactOption = (label, levels, cost) => ({
     label,
     mode: "exact",
     levels,
     cost,
-    xp,
     disabled: Boolean(baseReason) || !Number.isFinite(cost) || availableGold < cost,
     reason: baseReason || (!Number.isFinite(cost) ? "Unavailable" : availableGold < cost ? `Need ${formatNumber(cost)}g` : ""),
   });
@@ -33528,27 +33577,25 @@ function getCityUpgradeOptionState(city) {
     availableGold,
     pendingAction,
     options: [
-      makeExactOption("+1", 1, oneCost, oneXp),
-      makeExactOption("+5", 5, fiveCost, fiveXp),
+      makeExactOption("+1", 1, oneCost),
+      makeExactOption("+5", 5, fiveCost),
       {
         label: "MAX",
         mode: "max",
         levels: affordableMax,
         cost: maxCost,
-        xp: maxXp,
         disabled: Boolean(baseReason) || affordableMax < 1,
         reason: baseReason || (affordableMax < 1
           ? unavailableReason
-          : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g${maxXp > 0 ? ` · +${formatNumber(maxXp)} XP` : ""}`),
+          : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g`),
       },
     ],
   };
 }
 
 function renderCityLevelUpButton(city, option) {
-  const xp = normalizePowerValue(option.xp);
   const details = Number.isFinite(option.cost) && option.cost > 0
-    ? `${formatNumber(option.cost)}g${xp > 0 ? ` · +${formatNumber(xp)} XP` : ""}`
+    ? `${formatNumber(option.cost)}g`
     : (option.reason || "Unavailable");
   return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" ${option.disabled ? "disabled" : ""}><span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
 }
@@ -33560,7 +33607,7 @@ function renderCityLevelUpAction(city) {
   const syncing = optionState.pendingAction
     ? ` · ${formatNumber(getPendingCityUpgradeCount(city, optionState.regionId))} syncing`
     : "";
-  return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)}${optionState.options[0]?.xp > 0 ? ` · up to +${formatNumber(optionState.options[0].xp)} Hero XP` : ""} · Gold ${formatNumber(optionState.availableGold)}${syncing}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
+  return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)} · Gold ${formatNumber(optionState.availableGold)}${syncing}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
 }
 
 function bindCityLevelUpButtons(fallbackCity = null, root = modalBody) {
