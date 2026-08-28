@@ -479,8 +479,7 @@ service cloud.firestore {
 
     match /clanLeaderboards/{resetId}/entries/{clanId} {
       allow read: if signedIn()
-        && resetId == currentRealmStorageId()
-        && isCurrentGeneration(resource.data);
+        && resetId == currentRealmStorageId();
       allow create, update, delete: if false;
     }
 
