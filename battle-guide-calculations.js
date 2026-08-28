@@ -82,16 +82,95 @@
     }
 
     function getTroopsPerHour(level) {
-      const raw = getVictoryPoints(level) * read(economy, "cityEconomy.troopsPerVictoryPoint", 10);
+      const raw = getVictoryPoints(level) * read(economy, "cityEconomy.troopsPerVictoryPoint", 10.3);
       return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
     }
 
     function getBaseWall(level) {
       const normalized = levelOf(level);
-      const levelOffset = normalized - 1;
-      const raw = read(economy, "cityEconomy.wallDefenseBase", 200)
-        + read(economy, "cityEconomy.wallDefensePerLevel", 28858) * levelOffset;
-      return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
+      const safeWall = rawWall => Number.isFinite(rawWall)
+        ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)))
+        : Number.MAX_SAFE_INTEGER;
+      if (Math.floor(read(economy, "cityEconomy.wallCurveModelVersion", 1)) < 2) {
+        return safeWall(
+          read(economy, "cityEconomy.wallDefenseBase", 200)
+            + read(economy, "cityEconomy.wallDefensePerLevel", 28858) * (normalized - 1)
+        );
+      }
+
+      const earlyEndLevel = Math.max(1, Math.floor(read(economy, "cityEconomy.wallEarlyEndLevel", 25)));
+      const bridgeEndLevel = Math.max(earlyEndLevel + 1, Math.floor(read(economy, "cityEconomy.wallBridgeEndLevel", 50)));
+      const midEndLevel = Math.max(bridgeEndLevel + 1, Math.floor(read(economy, "cityEconomy.wallMidEndLevel", 100)));
+      const goldLinkedEndLevel = Math.max(midEndLevel + 1, Math.floor(read(economy, "cityEconomy.wallGoldLinkedEndLevel", 150)));
+      const ratioEndLevel = Math.max(goldLinkedEndLevel + 1, Math.floor(read(economy, "cityEconomy.wallProductionRatioEndLevel", 200)));
+      const baseWall = read(economy, "cityEconomy.wallDefenseBase", 200);
+      const earlyScale = read(economy, "cityEconomy.wallEarlyScale", 400);
+      const earlyExponent = read(economy, "cityEconomy.wallEarlyExponent", 1.8550607303011009);
+      const earlyWallAt = targetLevel => safeWall(
+        baseWall + earlyScale * Math.pow(Math.max(0, targetLevel - 1), earlyExponent)
+      );
+      if (normalized <= earlyEndLevel) return earlyWallAt(normalized);
+
+      const earlyEndWall = earlyWallAt(earlyEndLevel);
+      const earlyNextWall = earlyWallAt(earlyEndLevel + 1);
+      const bridgeEndWall = safeWall(read(economy, "cityEconomy.wallBridgeDefense", 1_456_669));
+      const midEndWall = safeWall(read(economy, "cityEconomy.wallMidDefense", 3_000_000));
+      const midSlope = (midEndWall - bridgeEndWall) / Math.max(1, midEndLevel - bridgeEndLevel);
+      if (normalized <= bridgeEndLevel) {
+        const span = bridgeEndLevel - earlyEndLevel;
+        const progress = (normalized - earlyEndLevel) / span;
+        const progressSquared = progress * progress;
+        const progressCubed = progressSquared * progress;
+        return safeWall(
+          (2 * progressCubed - 3 * progressSquared + 1) * earlyEndWall
+            + (progressCubed - 2 * progressSquared + progress) * span * (earlyNextWall - earlyEndWall)
+            + (-2 * progressCubed + 3 * progressSquared) * bridgeEndWall
+            + (progressCubed - progressSquared) * span * midSlope
+        );
+      }
+      if (normalized <= midEndLevel) {
+        const progress = (normalized - bridgeEndLevel) / (midEndLevel - bridgeEndLevel);
+        return safeWall(bridgeEndWall + (midEndWall - bridgeEndWall) * progress);
+      }
+
+      const baseUpgradeCost = getGoldPerHour(midEndLevel) * getUpgradeTargetHours(midEndLevel);
+      let goldLinkedWall = midEndWall;
+      for (
+        let currentLevel = midEndLevel;
+        currentLevel < Math.min(normalized, goldLinkedEndLevel);
+        currentLevel += 1
+      ) {
+        const upgradeCost = getGoldPerHour(currentLevel) * getUpgradeTargetHours(currentLevel);
+        const costRatio = baseUpgradeCost > 0 ? upgradeCost / baseUpgradeCost : 1;
+        goldLinkedWall = Math.min(
+          Number.MAX_SAFE_INTEGER,
+          goldLinkedWall + safeWall(
+            midSlope * Math.pow(
+              Math.max(0, costRatio),
+              read(economy, "cityEconomy.wallGoldLinkedCostExponent", 0.22701846543276433)
+            )
+          )
+        );
+      }
+      if (normalized <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
+
+      const defensePowerPerTroop = read(
+        economy,
+        "troopCombat.baseDefensePowerPerTroop",
+        RULES.baseDefensePowerPerTroop
+      );
+      const ratioStartTroopsPerHour = getTroopsPerHour(goldLinkedEndLevel);
+      const maximumHours = read(economy, "cityEconomy.wallProductionRatioMaximumHours", 240);
+      const ratioStartHours = ratioStartTroopsPerHour > 0 && defensePowerPerTroop > 0
+        ? goldLinkedWall / (ratioStartTroopsPerHour * defensePowerPerTroop)
+        : maximumHours;
+      const ratioProgress = (normalized - goldLinkedEndLevel)
+        / Math.max(1, ratioEndLevel - goldLinkedEndLevel);
+      const targetHours = Math.min(
+        maximumHours,
+        ratioStartHours + (maximumHours - ratioStartHours) * Math.max(0, ratioProgress)
+      );
+      return safeWall(getTroopsPerHour(normalized) * defensePowerPerTroop * targetHours);
     }
 
     function getRepairMinutes(level) {

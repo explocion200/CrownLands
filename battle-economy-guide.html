@@ -61,7 +61,7 @@
         </div>
       </div>
       <div class="guide-callout">
-        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; each troop starts at 1.25 attack power and Swordmastery can raise that to 2.
+        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10.3 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; each troop starts at 1.25 attack power and Swordmastery can raise that to 2.
       </div>
     </section>
 
@@ -98,7 +98,7 @@
       <div class="guide-chart-grid">
         <figure><figcaption>Gold production by level <small>logarithmic value scale</small></figcaption><svg id="goldLevelChart" class="guide-chart" role="img" aria-label="Gold production by city level"></svg></figure>
         <figure><figcaption>Troop production by level</figcaption><svg id="troopLevelChart" class="guide-chart" role="img" aria-label="Troop production by city level"></svg></figure>
-        <figure><figcaption>Wall power by level <small>linear value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
+        <figure><figcaption>Wall power by level <small>staged curve · linear value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
         <figure><figcaption>Full-breach repair minutes by level</figcaption><svg id="repairLevelChart" class="guide-chart" role="img" aria-label="Full-breach wall repair minutes by city level"></svg></figure>
       </div>
 
@@ -114,10 +114,10 @@
         <summary>Show the city math</summary>
         <div class="formula-list">
           <p><strong>Victory points:</strong> floor(6 + 4L + 2L<sup>1.35</sup>).</p>
-          <p><strong>Troops/hour:</strong> victory points &times; 10, then Royal Granaries and the applicable objective package add percentages of that base.</p>
+          <p><strong>Troops/hour:</strong> floor(victory points &times; 10.3), then Royal Granaries and the applicable objective package add percentages of that base.</p>
           <p><strong>Gold/hour:</strong> floor(20 &times; 1.115<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 8% per additional level.</p>
           <p><strong>Owner garrison:</strong> floor(stationed troops &times; 1.30 &times; (1 + Shieldwall Discipline% + personal objective% + shared clan objective%)). City level is never part of soldier defense.</p>
-          <p><strong>Wall:</strong> floor(200 + 28,858 &times; (city level &minus; 1)), then Stoneworks alone strengthens that one wall. Objective support never changes wall power.</p>
+          <p><strong>Wall:</strong> smooth staged growth from 200 at Level 1 to 1,456,669 at Level 50, 3,000,000 at Level 100, and 6,200,000 at Level 150. Above 150 it transitions to a base troop-production replacement ratio that reaches 240 hours at Level 200. Stoneworks alone strengthens that one wall.</p>
           <p><strong>Repair added by a hit:</strong> full-breach repair window &times; wall damage &divide; full wall power.</p>
         </div>
       </details>

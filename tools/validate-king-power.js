@@ -8,6 +8,8 @@ const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const htmlSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
+const balanceCalculator = require(path.join(root, "battle-guide-calculations.js")).create(economyConfig);
 const constantNames = [
   "KING_POWER_ARMY_TROOP_VALUE",
   "KING_POWER_REPLACEMENT_HOURS",
@@ -160,11 +162,10 @@ assert.equal(individualBonuses.marchSpeedBonusPercent, 8);
 assert.equal(individualBonuses.cityDefenseBonusPercent, 8);
 
 function cityMilitaryComponents(level, troops, bonuses = {}) {
-  const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);
-  const sustainableTroopPerHour = victoryPoints * 3 * (1 + (bonuses.troop || 0) / 100);
+  const sustainableTroopPerHour = balanceCalculator.getTroopsPerHour(level)
+    * (1 + (bonuses.troop || 0) / 100);
   const replacementPower = Math.floor(sustainableTroopPerHour * config.KING_POWER_REPLACEMENT_HOURS);
-  const levelOffset = level - 1;
-  const walls = 200 + 28858 * levelOffset;
+  const walls = balanceCalculator.getBaseWall(level);
   const troopDefense = Math.floor(troops * 1.30 * (1 + (bonuses.defense || 0) / 100));
   const totalDefense = walls + troopDefense;
   const defensivePower = Math.floor(

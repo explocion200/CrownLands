@@ -320,6 +320,8 @@ async function main() {
   };
   vm.createContext(productionContext);
   vm.runInContext([
+    extractFunction(serverSource, "getCityVictoryPoints"),
+    extractFunction(serverSource, "getBaseCityTroopProductionPerHour"),
     extractFunction(serverSource, "calculateGoldProductionRates"),
     extractFunction(serverSource, "calculateTroopProductionRates"),
     extractFunction(serverSource, "getCityProductionStats"),
@@ -420,6 +422,7 @@ async function main() {
     isRewardCamp() { return false; },
     getStrongholdDefenseLevel() { return 1; },
     clampCityLevel(value) { return Math.max(1, Math.floor(Number(value) || 1)); },
+    getCityVictoryPoints() { return 0; },
     getBaseCityWalls() { return 1_000; },
     getCommonGearBonuses(profile) { return commonGear.getBonuses(profile); },
     getSkillPercent(profile, skill) {
@@ -555,6 +558,8 @@ async function main() {
   };
   vm.createContext(clientStatsContext);
   vm.runInContext([
+    extractFunction(clientSource, "getCityVictoryPoints"),
+    extractFunction(clientSource, "getBaseCityTroopProductionPerHour"),
     extractFunction(clientSource, "calculateGoldProductionRates"),
     extractFunction(clientSource, "calculateTroopProductionRates"),
     extractFunction(clientSource, "getCityStats"),

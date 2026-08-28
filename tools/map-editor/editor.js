@@ -1062,12 +1062,104 @@
   function getEconomyPreviewBaseWall(level, economy = state.economy) {
     const config = economy?.cityEconomy || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
-    const levelOffset = normalizedLevel - 1;
+    const safeWall = rawWall => Number.isFinite(rawWall)
+      ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)))
+      : Number.MAX_SAFE_INTEGER;
     const base = Math.max(0, readEconomyNumber(config.wallDefenseBase, 200));
-    const perLevel = Math.max(0, readEconomyNumber(config.wallDefensePerLevel, 28858));
-    const walls = base + perLevel * levelOffset;
-    if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
-    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+    if (Math.floor(readEconomyNumber(config.wallCurveModelVersion, 1)) < 2) {
+      return safeWall(base + Math.max(0, readEconomyNumber(config.wallDefensePerLevel, 28858)) * (normalizedLevel - 1));
+    }
+
+    const earlyEndLevel = Math.max(1, Math.floor(readEconomyNumber(config.wallEarlyEndLevel, 25)));
+    const bridgeEndLevel = Math.max(earlyEndLevel + 1, Math.floor(readEconomyNumber(config.wallBridgeEndLevel, 50)));
+    const midEndLevel = Math.max(bridgeEndLevel + 1, Math.floor(readEconomyNumber(config.wallMidEndLevel, 100)));
+    const goldLinkedEndLevel = Math.max(midEndLevel + 1, Math.floor(readEconomyNumber(config.wallGoldLinkedEndLevel, 150)));
+    const ratioEndLevel = Math.max(goldLinkedEndLevel + 1, Math.floor(readEconomyNumber(config.wallProductionRatioEndLevel, 200)));
+    const earlyWallAt = targetLevel => safeWall(
+      base
+        + Math.max(0, readEconomyNumber(config.wallEarlyScale, 400))
+          * Math.pow(
+            Math.max(0, targetLevel - 1),
+            Math.max(0, readEconomyNumber(config.wallEarlyExponent, 1.8550607303011009))
+          )
+    );
+    if (normalizedLevel <= earlyEndLevel) return earlyWallAt(normalizedLevel);
+
+    const earlyEndWall = earlyWallAt(earlyEndLevel);
+    const earlyNextWall = earlyWallAt(earlyEndLevel + 1);
+    const bridgeEndWall = safeWall(readEconomyNumber(config.wallBridgeDefense, 1_456_669));
+    const midEndWall = safeWall(readEconomyNumber(config.wallMidDefense, 3_000_000));
+    const midSlope = (midEndWall - bridgeEndWall) / Math.max(1, midEndLevel - bridgeEndLevel);
+    if (normalizedLevel <= bridgeEndLevel) {
+      const span = bridgeEndLevel - earlyEndLevel;
+      const progress = (normalizedLevel - earlyEndLevel) / span;
+      const progressSquared = progress * progress;
+      const progressCubed = progressSquared * progress;
+      return safeWall(
+        (2 * progressCubed - 3 * progressSquared + 1) * earlyEndWall
+          + (progressCubed - 2 * progressSquared + progress) * span * (earlyNextWall - earlyEndWall)
+          + (-2 * progressCubed + 3 * progressSquared) * bridgeEndWall
+          + (progressCubed - progressSquared) * span * midSlope
+      );
+    }
+    if (normalizedLevel <= midEndLevel) {
+      return safeWall(
+        bridgeEndWall
+          + (midEndWall - bridgeEndWall)
+            * ((normalizedLevel - bridgeEndLevel) / (midEndLevel - bridgeEndLevel))
+      );
+    }
+
+    const baseUpgradeCost = getEconomyPreviewGoldPerHour(midEndLevel, economy)
+      * getEconomyPreviewUpgradeTargetHours(midEndLevel, economy);
+    let goldLinkedWall = midEndWall;
+    for (
+      let currentLevel = midEndLevel;
+      currentLevel < Math.min(normalizedLevel, goldLinkedEndLevel);
+      currentLevel += 1
+    ) {
+      const upgradeCost = getEconomyPreviewGoldPerHour(currentLevel, economy)
+        * getEconomyPreviewUpgradeTargetHours(currentLevel, economy);
+      const costRatio = baseUpgradeCost > 0 ? upgradeCost / baseUpgradeCost : 1;
+      goldLinkedWall = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        goldLinkedWall + safeWall(
+          midSlope * Math.pow(
+            Math.max(0, costRatio),
+            Math.max(0, readEconomyNumber(config.wallGoldLinkedCostExponent, 0.22701846543276433))
+          )
+        )
+      );
+    }
+    if (normalizedLevel <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
+
+    const defensePowerPerTroop = Math.max(
+      0,
+      readEconomyNumber(economy?.troopCombat?.baseDefensePowerPerTroop, 1.3)
+    );
+    const ratioStartTroopsPerHour = getEconomyPreviewTroopsPerHour(goldLinkedEndLevel, economy);
+    const maximumHours = Math.max(0, readEconomyNumber(config.wallProductionRatioMaximumHours, 240));
+    const ratioStartHours = ratioStartTroopsPerHour > 0 && defensePowerPerTroop > 0
+      ? goldLinkedWall / (ratioStartTroopsPerHour * defensePowerPerTroop)
+      : maximumHours;
+    const ratioProgress = (normalizedLevel - goldLinkedEndLevel)
+      / Math.max(1, ratioEndLevel - goldLinkedEndLevel);
+    const targetHours = Math.min(
+      maximumHours,
+      ratioStartHours + (maximumHours - ratioStartHours) * Math.max(0, ratioProgress)
+    );
+    return safeWall(
+      getEconomyPreviewTroopsPerHour(normalizedLevel, economy)
+        * defensePowerPerTroop
+        * targetHours
+    );
+  }
+
+  function getEconomyPreviewTroopsPerHour(level, economy = state.economy) {
+    const rawTroops = getEconomyPreviewVictoryPoints(level)
+      * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+    if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
   }
 
   function getEconomyPreviewRepairMinutes(level, economy = state.economy) {
@@ -1152,8 +1244,7 @@
       Math.min(goldFromUpgradeShare, goldFromProductionHours)
     ));
     const troopHours = getEconomyPreviewHeroTroopHours(normalizedLevel, economy);
-    const baseTroopsPerHour = getEconomyPreviewVictoryPoints(normalizedLevel)
-      * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+    const baseTroopsPerHour = getEconomyPreviewTroopsPerHour(normalizedLevel, economy);
     return {
       gold,
       troopHours,
@@ -1169,8 +1260,7 @@
   function buildCityEconomyPreviewRows(economy = state.economy) {
     return ECONOMY_CITY_PREVIEW_LEVELS.map(level => {
       const victoryPoints = getEconomyPreviewVictoryPoints(level);
-      const troopsPerHour = victoryPoints
-        * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+      const troopsPerHour = getEconomyPreviewTroopsPerHour(level, economy);
       return `
         <tr>
           <td>${level}</td>
@@ -1492,8 +1582,8 @@
             </div>
             <div class="economy-fixed-formula">
               <span>Wall formula</span>
-              <code>base + per-level growth × (level − 1)</code>
-              <small>Stoneworks alone multiplies the resulting wall. Reinforcements bring their own soldier-defense package, not additional walls.</small>
+              <code>smooth early curve → Level 50/100 anchors → Gold-linked gains through Level 150 → troop-production-hour ratio</code>
+              <small>Stoneworks alone multiplies the resulting wall. The post-150 ratio reaches its configured production-hour ceiling at Level 200 and then continues with base troop production.</small>
             </div>
             <div class="economy-fixed-formula">
               <span>Repair formula</span>
@@ -1517,13 +1607,85 @@
                 "cityEconomy.wallDefenseBase",
                 "Level 1 base wall power",
                 economy.cityEconomy.wallDefenseBase,
-                { description: "Flat wall power before level growth and Stoneworks. Objective bonuses never affect it." }
+                { description: "The active Level 1 wall and the legacy linear-curve base. Stoneworks applies afterward." }
               )}
               ${economyNumberInput(
                 "cityEconomy.wallDefensePerLevel",
-                "Wall power per level",
+                "Legacy wall power per level",
                 economy.cityEconomy.wallDefensePerLevel,
-                { step: 1, description: "Adds this much wall power for every level after Level 1." }
+                { step: 1, description: "Used only by model-version-1 clients. Model version 2 uses the staged fields below." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallCurveModelVersion",
+                "Wall curve model version",
+                economy.cityEconomy.wallCurveModelVersion,
+                { step: 1, description: "Version 2 enables the smooth early, Gold-linked, and production-ratio stages." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallEarlyScale",
+                "Early wall scale",
+                economy.cityEconomy.wallEarlyScale,
+                { step: 1, description: "Added to the Level 1 base using scale × (level − 1)^exponent." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallEarlyExponent",
+                "Early wall exponent",
+                economy.cityEconomy.wallEarlyExponent,
+                { step: 0.000001, description: "Controls the smooth Levels 1–25 acceleration." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallEarlyEndLevel",
+                "Early wall end level",
+                economy.cityEconomy.wallEarlyEndLevel,
+                { step: 1, description: "Last level calculated directly from the early power curve." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallBridgeEndLevel",
+                "Wall bridge end level",
+                economy.cityEconomy.wallBridgeEndLevel,
+                { step: 1, description: "The shape-preserving bridge ends at this level." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallBridgeDefense",
+                "Wall at bridge end",
+                economy.cityEconomy.wallBridgeDefense,
+                { step: 1, description: "Base wall defense at the bridge endpoint, currently Level 50." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallMidEndLevel",
+                "Mid-wall end level",
+                economy.cityEconomy.wallMidEndLevel,
+                { step: 1, description: "The slightly-above-current middle stage ends at this level." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallMidDefense",
+                "Wall at mid-stage end",
+                economy.cityEconomy.wallMidDefense,
+                { step: 1, description: "Base wall defense at the mid-stage endpoint, currently 3 million at Level 100." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallGoldLinkedEndLevel",
+                "Gold-linked wall end level",
+                economy.cityEconomy.wallGoldLinkedEndLevel,
+                { step: 1, description: "Wall gained per upgrade follows compressed upgrade-cost growth through this level." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallGoldLinkedCostExponent",
+                "Gold-linked wall exponent",
+                economy.cityEconomy.wallGoldLinkedCostExponent,
+                { step: 0.000001, description: "Compresses upgrade Gold growth into sustainable wall gains." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallProductionRatioEndLevel",
+                "Wall ratio ramp end level",
+                economy.cityEconomy.wallProductionRatioEndLevel,
+                { step: 1, description: "The wall reaches its maximum local troop-production-hour ratio here." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallProductionRatioMaximumHours",
+                "Maximum wall production hours",
+                economy.cityEconomy.wallProductionRatioMaximumHours,
+                { step: 1, description: "Post-ramp wall equals this many hours of local base troop defensive production." }
               )}
               ${economyNumberInput(
                 "siegeCombat.repairBaseMinutes",

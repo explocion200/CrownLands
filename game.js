@@ -1016,7 +1016,19 @@ const CITY_LEVEL_STATS = {
   victoryPointsExponentScale: 2,
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
-  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
+  wallCurveModelVersion: Math.max(1, Math.floor(economyNumber("cityEconomy.wallCurveModelVersion", 1))),
+  wallEarlyScale: economyNumber("cityEconomy.wallEarlyScale", 400),
+  wallEarlyExponent: economyNumber("cityEconomy.wallEarlyExponent", 1.8550607303011009),
+  wallEarlyEndLevel: economyNumber("cityEconomy.wallEarlyEndLevel", 25),
+  wallBridgeEndLevel: economyNumber("cityEconomy.wallBridgeEndLevel", 50),
+  wallBridgeDefense: economyNumber("cityEconomy.wallBridgeDefense", 1_456_669),
+  wallMidEndLevel: economyNumber("cityEconomy.wallMidEndLevel", 100),
+  wallMidDefense: economyNumber("cityEconomy.wallMidDefense", 3_000_000),
+  wallGoldLinkedEndLevel: economyNumber("cityEconomy.wallGoldLinkedEndLevel", 150),
+  wallGoldLinkedCostExponent: economyNumber("cityEconomy.wallGoldLinkedCostExponent", 0.22701846543276433),
+  wallProductionRatioEndLevel: economyNumber("cityEconomy.wallProductionRatioEndLevel", 200),
+  wallProductionRatioMaximumHours: economyNumber("cityEconomy.wallProductionRatioMaximumHours", 240),
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 10.3),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
@@ -8052,6 +8064,22 @@ function getMillionLordsPassiveGoldPerHour(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawGold)));
 }
 
+function getCityVictoryPoints(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const rawVictoryPoints = CITY_LEVEL_STATS.victoryPointsBase
+    + normalizedLevel * CITY_LEVEL_STATS.victoryPointsPerLevel
+    + Math.pow(normalizedLevel, CITY_LEVEL_STATS.victoryPointsExponent)
+      * CITY_LEVEL_STATS.victoryPointsExponentScale;
+  if (!Number.isFinite(rawVictoryPoints)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawVictoryPoints)));
+}
+
+function getBaseCityTroopProductionPerHour(level) {
+  const rawTroops = getCityVictoryPoints(level) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  if (!Number.isFinite(rawTroops)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawTroops)));
+}
+
 function dropCapturedCityLevel(city) {
   const previousLevel = clampCityLevel(city?.level);
   if (isStronghold(city)) return { previousLevel, nextLevel: previousLevel };
@@ -8068,11 +8096,84 @@ function formatCapturedCityLevelDrop(levelDrop) {
 
 function getBaseCityWalls(level) {
   const normalizedLevel = clampCityLevel(level);
-  const levelOffset = normalizedLevel - 1;
-  const walls = CITY_LEVEL_STATS.cityWallsBase
-    + CITY_LEVEL_STATS.cityWallsPerLevel * levelOffset;
-  if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
-  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+  const safeWall = rawWall => {
+    if (!Number.isFinite(rawWall)) return Number.MAX_SAFE_INTEGER;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.round(rawWall)));
+  };
+  if (CITY_LEVEL_STATS.wallCurveModelVersion < 2) {
+    return safeWall(
+      CITY_LEVEL_STATS.cityWallsBase
+        + CITY_LEVEL_STATS.cityWallsPerLevel * (normalizedLevel - 1)
+    );
+  }
+
+  const earlyEndLevel = Math.max(1, Math.floor(CITY_LEVEL_STATS.wallEarlyEndLevel));
+  const bridgeEndLevel = Math.max(earlyEndLevel + 1, Math.floor(CITY_LEVEL_STATS.wallBridgeEndLevel));
+  const midEndLevel = Math.max(bridgeEndLevel + 1, Math.floor(CITY_LEVEL_STATS.wallMidEndLevel));
+  const goldLinkedEndLevel = Math.max(midEndLevel + 1, Math.floor(CITY_LEVEL_STATS.wallGoldLinkedEndLevel));
+  const ratioEndLevel = Math.max(goldLinkedEndLevel + 1, Math.floor(CITY_LEVEL_STATS.wallProductionRatioEndLevel));
+  const earlyWallAt = targetLevel => safeWall(
+    CITY_LEVEL_STATS.cityWallsBase
+      + CITY_LEVEL_STATS.wallEarlyScale
+        * Math.pow(Math.max(0, targetLevel - 1), CITY_LEVEL_STATS.wallEarlyExponent)
+  );
+  if (normalizedLevel <= earlyEndLevel) return earlyWallAt(normalizedLevel);
+
+  const earlyEndWall = earlyWallAt(earlyEndLevel);
+  const earlyNextWall = earlyWallAt(earlyEndLevel + 1);
+  const bridgeEndWall = safeWall(CITY_LEVEL_STATS.wallBridgeDefense);
+  const midEndWall = safeWall(CITY_LEVEL_STATS.wallMidDefense);
+  const midSlope = (midEndWall - bridgeEndWall) / Math.max(1, midEndLevel - bridgeEndLevel);
+  if (normalizedLevel <= bridgeEndLevel) {
+    const span = bridgeEndLevel - earlyEndLevel;
+    const progress = (normalizedLevel - earlyEndLevel) / span;
+    const progressSquared = progress * progress;
+    const progressCubed = progressSquared * progress;
+    const startSlope = earlyNextWall - earlyEndWall;
+    return safeWall(
+      (2 * progressCubed - 3 * progressSquared + 1) * earlyEndWall
+        + (progressCubed - 2 * progressSquared + progress) * span * startSlope
+        + (-2 * progressCubed + 3 * progressSquared) * bridgeEndWall
+        + (progressCubed - progressSquared) * span * midSlope
+    );
+  }
+  if (normalizedLevel <= midEndLevel) {
+    const progress = (normalizedLevel - bridgeEndLevel) / (midEndLevel - bridgeEndLevel);
+    return safeWall(bridgeEndWall + (midEndWall - bridgeEndWall) * progress);
+  }
+
+  const baseUpgradeCost = getMillionLordsPassiveGoldPerHour(midEndLevel)
+    * getCityUpgradeTargetHours(midEndLevel);
+  let goldLinkedWall = midEndWall;
+  const cappedGoldLinkedLevel = Math.min(normalizedLevel, goldLinkedEndLevel);
+  for (let currentLevel = midEndLevel; currentLevel < cappedGoldLinkedLevel; currentLevel += 1) {
+    const upgradeCost = getMillionLordsPassiveGoldPerHour(currentLevel)
+      * getCityUpgradeTargetHours(currentLevel);
+    const costRatio = baseUpgradeCost > 0 ? upgradeCost / baseUpgradeCost : 1;
+    const wallGain = safeWall(
+      midSlope * Math.pow(Math.max(0, costRatio), CITY_LEVEL_STATS.wallGoldLinkedCostExponent)
+    );
+    goldLinkedWall = Math.min(Number.MAX_SAFE_INTEGER, goldLinkedWall + wallGain);
+  }
+  if (normalizedLevel <= goldLinkedEndLevel) return safeWall(goldLinkedWall);
+
+  const ratioStartTroopsPerHour = getBaseCityTroopProductionPerHour(goldLinkedEndLevel);
+  const ratioStartHours = ratioStartTroopsPerHour > 0 && BASE_TROOP_DEFENSE_POWER > 0
+    ? goldLinkedWall / (ratioStartTroopsPerHour * BASE_TROOP_DEFENSE_POWER)
+    : CITY_LEVEL_STATS.wallProductionRatioMaximumHours;
+  const ratioProgress = (normalizedLevel - goldLinkedEndLevel)
+    / Math.max(1, ratioEndLevel - goldLinkedEndLevel);
+  const targetProductionHours = Math.min(
+    CITY_LEVEL_STATS.wallProductionRatioMaximumHours,
+    ratioStartHours
+      + (CITY_LEVEL_STATS.wallProductionRatioMaximumHours - ratioStartHours)
+        * Math.max(0, ratioProgress)
+  );
+  return safeWall(
+    getBaseCityTroopProductionPerHour(normalizedLevel)
+      * BASE_TROOP_DEFENSE_POWER
+      * targetProductionHours
+  );
 }
 
 function getObjectiveTroopDefenseBonusPercent(value = {}) {
@@ -8190,11 +8291,7 @@ function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
   const rewardCamp = isRewardCampTarget(city);
   const level = rewardCamp ? 0 : stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
-  const victoryPoints = rewardCamp ? 0 : Math.floor(
-    CITY_LEVEL_STATS.victoryPointsBase
-    + level * CITY_LEVEL_STATS.victoryPointsPerLevel
-    + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
-  );
+  const victoryPoints = rewardCamp ? 0 : getCityVictoryPoints(level);
   const defenseCombatVersion = Math.max(0, Math.floor(Number(
     options.defenseCombatVersion ?? (supportsDefenseCombat() ? DEFENSE_COMBAT_VERSION : 0)
   ) || 0));
@@ -8240,7 +8337,7 @@ function getCityStats(city, options = {}) {
   const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && !rewardCamp && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : getBaseCityTroopProductionPerHour(level);
   const {
     baseTroopProductionPerHour,
     untimedTroopProductionPerHour,
@@ -36281,7 +36378,7 @@ function showHelpModal() {
       <li>Stoneworks strengthens the holding's one physical wall. Objective support never strengthens walls, and clan reinforcements contribute their own live Shieldwall and objective bonuses without duplicating the destination wall.</li>
       <li>Each troop starts at ${formatNumber(BASE_TROOP_ATTACK_POWER)} attack power; maximum Swordmastery raises that to ${formatNumber(BASE_TROOP_ATTACK_POWER * 1.6)}. The value is locked when the army launches.</li>
       <li>Every neutral reward camp starts with 20,000 troops. Camps have no level or walls, and each stationed troop or reinforcement contributes exactly ${REWARD_CAMP_TROOP_POWER.toFixed(2)} defense power without skill or objective bonuses.</li>
-      <li>Every city level uses the same linear wall formula: ${formatNumber(CITY_LEVEL_STATS.cityWallsBase)} + ${formatNumber(CITY_LEVEL_STATS.cityWallsPerLevel)} × (level − 1). Each level adds the same base wall power. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
+      <li>Regular-city walls grow smoothly from ${formatNumber(getBaseCityWalls(1))} at Level 1 to ${formatNumber(getBaseCityWalls(50))} at Level 50, ${formatNumber(getBaseCityWalls(100))} at Level 100, and ${formatNumber(getBaseCityWalls(150))} at Level 150. Above Level 150, wall strength transitions to a base troop-production replacement ratio that reaches ${formatNumber(CITY_LEVEL_STATS.wallProductionRatioMaximumHours)} hours at Level ${formatNumber(CITY_LEVEL_STATS.wallProductionRatioEndLevel)}. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
       <li>Later meaningful hits preserve elapsed repair progress and add only their own damage time. Combat captures and every player or neutral handoff keep the existing integrity and deadline; a breached wall contributes zero defense until it repairs.</li>
       <li>When an intact wall holds, defender troop losses are capped at ${formatNumber(SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT)}%. Protected raids never persist wall damage.</li>
         <li>Troop production is VP x ${formatNumber(CITY_LEVEL_STATS.troopProductionPerVictoryPoint)}, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>

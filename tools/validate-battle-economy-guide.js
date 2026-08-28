@@ -29,12 +29,12 @@ assert.equal(guide.RULES.strongholdEffectiveLevel, 50);
 assert.equal(guide.RULES.citadelEffectiveLevel, 100);
 
 const expectedMilestones = {
-  1: { vp: 12, gold: 300, troops: 120, wall: 200, repair: 15 },
-  25: { vp: 260, gold: 4080, troops: 2600, wall: 692792, repair: 23 },
-  50: { vp: 599, gold: 62160, troops: 5990, wall: 1414242, repair: 30 },
-  75: { vp: 985, gold: 945060, troops: 9850, wall: 2135692, repair: 38 },
-  100: { vp: 1408, gold: 14365905, troops: 14080, wall: 2857142, repair: 45 },
-  150: { vp: 2338, gold: 673784109, troops: 23380, wall: 4300042, repair: 60 },
+  1: { vp: 12, gold: 300, troops: 123, wall: 200, repair: 15 },
+  25: { vp: 260, gold: 4080, troops: 2678, wall: 145557, repair: 23 },
+  50: { vp: 599, gold: 62160, troops: 6169, wall: 1456669, repair: 30 },
+  75: { vp: 985, gold: 945060, troops: 10145, wall: 2228335, repair: 38 },
+  100: { vp: 1408, gold: 14365905, troops: 14502, wall: 3000000, repair: 45 },
+  150: { vp: 2338, gold: 673784109, troops: 24081, wall: 6200000, repair: 60 },
 };
 
 for (const [levelText, expected] of Object.entries(expectedMilestones)) {
@@ -178,7 +178,7 @@ assert.equal(breachedWall.repairAddedMs, 0);
 
 assert.match(page, /id="system-map"/);
 assert.match(page, /id="city-explorer"/);
-assert.match(page, /Wall power by level <small>linear value scale<\/small>/);
+assert.match(page, /Wall power by level <small>staged curve · linear value scale<\/small>/);
 assert.doesNotMatch(page, /Wall power by level <small>logarithmic value scale<\/small>/);
 assert.match(page, /id="economy-map"/);
 assert.match(page, /id="skills-guide"/);
@@ -188,7 +188,7 @@ assert.match(page, /id="battle-explorer"/);
 assert.match(page, /id="wall-timers"/);
 assert.match(page, /Damage-proportional wall-repair examples/);
 assert.match(runtime, /formatRepairDuration[\s\S]*?repairAddedMs/);
-assert.match(runtime, /drawLineChart\(\$\("wallLevelChart"\)[^\n]+title: "Full wall power by city level" \}\);/, "The wall chart must use the linear display scale.");
+assert.match(runtime, /drawLineChart\(\$\("wallLevelChart"\)[^\n]+title: "Full wall power by city level" \}\);/, "The staged wall chart must use the linear display scale.");
 assert.doesNotMatch(runtime, /wallLevelChart[^\n]+logarithmic/, "The wall chart must not use a logarithmic display scale.");
 assert.match(page, /id="special-rules"/);
 assert.match(page, /Every neutral camp starts with 20,000 troops/);
