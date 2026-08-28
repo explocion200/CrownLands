@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.20
+**Version:** 1.21
 **Effective date:** August 27, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 27, 2026
@@ -285,8 +285,8 @@ The following city-progression reward model is confirmed design and is `LIVE —
 - A bulk upgrade evaluates every crossed city level independently and sums those fixed awards.
 - Each player has a seasonal high-watermark for each region-and-city identity. On the first encounter with this feature, the current pre-upgrade city level becomes the baseline and grants no retroactive XP. Only newly developed levels above the stored high-watermark are eligible. Capture, loss, relinquishment, recapture, or rebuilding does not reset the high-watermark. The high-watermark is generation-scoped and server-protected.
 - Every eligible city-upgrade XP award is uncapped at every Hero level. Model version 2 does not read or write daily city-XP allowance state. Existing model-version-1 allowance data remains harmless stored data and is not migrated or deleted.
-- XP from rebuilding levels at or below the high-watermark is discarded, not banked. Before a bulk upgrade commits, the player must receive a clear warning only when rebuilt levels would suppress XP and may reduce or cancel the upgrade.
-- The authoritative upgrade compares actual rebuild suppression with the amount acknowledged from the preview. If rebuild suppression has increased before commit, the transaction is rejected without changing the city or player so a refreshed warning can be reviewed.
+- XP from rebuilding levels at or below the high-watermark is discarded, not banked. Rebuild suppression is applied silently and does not block, reduce, or cancel an otherwise valid city upgrade.
+- City-upgrade controls, accessibility text, confirmations, toasts, and logs do not display XP estimates, awards, or suppression. The authoritative response retains its XP receipt for progression, replay safety, compatibility, and validation.
 - City XP uses the normal Hero-level reward path. Every crossed Hero level continues to grant its skill point, Gold, and approved standardized Main City troop reward exactly once; the city-XP feature does not independently alter those rewards.
 - Upgrade affordability is resolved using the player's Gold before city XP and Hero-level rewards are applied. Gold awarded by a Hero level-up cannot fund more city levels within the same request.
 - The authoritative response records raw XP, awarded XP, rebuild suppression, eligible and ineligible levels, UTC day key, and model version. Compatibility fields such as `capSuppressedXp`, daily-cap activity, allowance, usage, remainder, and cap-reference Hero level remain present with zero, false, or null values. Upgrade requests are replay-safe under retry and concurrency.
@@ -295,10 +295,11 @@ The following city-progression reward model is confirmed design and is `LIVE —
 
 - Every accepted map, City Info, or City List upgrade action immediately reserves its projected Gold and displays its projected city level without changing persisted authoritative state. The active-map city, castle presentation, map label, selected-city controls, City Info, and City List must agree on the projected or confirmed level.
 - Additional `+1` and `+5` actions remain available while earlier requests are processing and use projected Gold and projected levels for cost and affordability. `+5` is exact and all-or-nothing. `MAX` reserves every level affordable with projected Gold, while the server remains authoritative for its final result.
-- Each accepted click is a separate request-ID-backed action and executes in order. Its city-XP preview occurs only when that action reaches the front so it includes prior confirmed upgrades.
-- If the player declines a rebuilt-level warning or the server rejects an action, dependent queued actions for that city are cleared, authoritative Gold and city data are refreshed, and the projection rolls back. Unrelated actions are revalidated against the refreshed state.
+- Each accepted click is a separate request-ID-backed action, executes in order, and dispatches without the shared economy coalescing delay or a routine city-XP preview request.
+- If the server rejects an action, dependent queued actions for that city are cleared, authoritative Gold and city data are refreshed, and the projection rolls back. Unrelated actions are revalidated against the refreshed state.
 - After each confirmation, the owned-city cache and active-map city receive the authoritative update before any remaining projection is reapplied. Gameplay calculations continue to use confirmed server state.
-- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Level sorting is reapplied after the queue settles. A nonblocking syncing state appears on affected rows and panels without disabling all upgrade controls.
+- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Visible rows and Gold are patched in place before any active-map redraw. A nonblocking syncing state appears on affected rows and panels without disabling all upgrade controls.
+- City List upgrades are map-independent. Region-and-city is the canonical identity for owned-city caching, pending actions, incoming-attack blockers, authoritative requests, and reconciliation. The city document's island path is authoritative when stored region metadata disagrees, and an off-map upgrade never requires a map switch.
 - Only the selected-city map Level action uses the dedicated simple arrow-up glyph and Crownlands gold treatment. Its accessible `Level up` label and Gold cost remain visible. City Info and City List controls retain the `+1`, `+5`, and `MAX` labels.
 
 #### City-upgrade XP compatibility rollout
@@ -306,7 +307,7 @@ The following city-progression reward model is confirmed design and is `LIVE —
 - During the temporary cross-channel compatibility window, the server accepts an otherwise valid legacy city-upgrade request that omits the new request ID. The city upgrade, Gold spend, invested-Gold accounting, production collection, and city-upgrade progression event remain authoritative and atomic.
 - A legacy request awards zero city-upgrade Hero XP and therefore cannot trigger a Hero level, skill point, level-up Gold reward, or level-up troop reward.
 - Every successful legacy request advances the seasonal per-player, per-region, per-city high-watermark through the highest city level completed by that request. Changing to an updated client cannot reclaim XP for those levels later. Legacy retries, duplicate calls, rebuilding, or client switching therefore cannot duplicate Hero XP.
-- Requests carrying a valid request ID remain on the complete updated path: preview, rebuilt-level suppression acknowledgement, replay receipt, city XP, high-watermark, and normal Hero-level rewards all retain the confirmed behavior above. The obsolete cap acknowledgement remains accepted from older clients but does not affect the award.
+- Requests carrying a valid request ID remain on the complete updated path: replay receipt, city XP, silent rebuild suppression, high-watermark, and normal Hero-level rewards all retain the confirmed behavior above. The preview endpoint and suppression acknowledgement fields remain accepted for older clients but are not required by the current server. A current client silently retries if an older compatible backend still returns the former suppression-warning precondition.
 - The server economy setting `cityUpgradeXp.legacyRequestsEnabled` controls the compatibility window and defaults to an explicit configured value. Once set to `false`, a request without an ID is rejected before any transaction writes with reason `city-upgrade-client-update-required` and a player-facing instruction to update Crownlands.
 - Required rollout order is: (1) deploy the compatibility-capable backend; (2) publish the updated client to every supported web and itch.io channel; (3) verify adoption and successful request-ID-backed upgrades on every channel; (4) disable legacy requests through the server setting; and (5) remove the temporary legacy path in a later cleanup release. Functions or clients must not be released independently in the opposite order.
 
@@ -1028,7 +1029,7 @@ Status verified through August 27, 2026.
 | Scalable Shop pricing | `LIVE — ALL PUBLISHED CHANNELS` | Present in both current channel builds. |
 | Reworked/stacked Item Bag | `LIVE — ALL PUBLISHED CHANNELS` | Present in both current channel builds. |
 | Clan Heraldry v2 | `LIVE — ALL PUBLISHED CHANNELS` | v1 compatibility remains; v2 presentation is available on both channels. |
-| Hero reward curve, city XP model v2, and instant city upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Both client builds remain compatible with the current backend; authenticated production mutations remain manual smoke checks. |
+| Hero reward curve, city XP model v2, and instant city upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Published channels retain the verified PR #199 baseline. Direct, targeted, silent-XP cross-map refinement is `IN DEVELOPMENT` pending merge and coordinated deployment. |
 | Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — WEB` | itch.io remains on the prior skill-control and reset behavior in build `a561374b...`. |
 | Holding Towers and Clan Treasury | `IMPLEMENTED BUT NOT LIVE` | Open PR #159. |
 | Pending 5×5 Core | `IN DEVELOPMENT` | Staged; not production. |
@@ -1154,6 +1155,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Clan reset persistence | Confirmed design preserves clan ID/name/tag/heraldry, roster, membership, and roles; current reset initializer and generation gates remove them | Design remains authoritative; implementation and its emulator expectation are divergent and `IN DEVELOPMENT` |
 | War Drums production bonus | Codex audit summary said 5%; executable config says 30% while server fallback is 5% | Repository fact is 30% at `27105ae...`; exact production runtime parity remains **NEEDS VERIFICATION** |
 | King Power replacement-power validator | Validator hardcodes three troops per progression point; executable config uses ten | Executable implementation uses ten; validator is stale technical debt |
+| City-upgrade XP warnings | Earlier model required a preview and confirmation before rebuilt-level suppression | Superseded by silent suppression and direct replay-safe submission; XP progression remains authoritative but city-upgrade XP messaging is hidden |
 | Season leaderboard history | Current rankings are generation-scoped and no final lock/archive exists | Active rankings reset; final Kingdom Top 100 and Clan leaderboard must persist as read-only archives. Implementation is `PLANNED`. |
 
 # Appendix C — Evidence Register
@@ -1192,6 +1194,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.21 — August 27, 2026
+
+- Confirmed direct replay-safe city-upgrade submission with synchronous projected level and Gold, targeted City List row patching, and a subtle nonblocking syncing state.
+- Confirmed map-independent City List upgrades keyed by region and city, with the city document's island path authoritative over stale stored region metadata.
+- Removed all player-facing city-upgrade XP estimates, warnings, logs, and toast text while retaining authoritative XP awards, seasonal high-watermarks, silent rebuild suppression, and compatibility receipts.
+- Retained the preview callable and acknowledgement fields for older clients, plus a silent current-client retry against an older warning-enforcing backend. Classified the refinement as `IN DEVELOPMENT` pending merge and coordinated backend, web, and itch.io deployment.
 
 ## v1.20 — August 27, 2026
 

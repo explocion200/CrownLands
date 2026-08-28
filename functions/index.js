@@ -9226,10 +9226,11 @@ function getRegionIdFromOnlineIslandId(islandId = "") {
 }
 
 function getRegionIdFromCityDoc(doc = null, data = {}) {
+  const islandId = doc?.ref?.parent?.parent?.id || "";
+  if (islandId) return getRegionIdFromOnlineIslandId(islandId);
   const rawStored = data.regionId || data.startPool || "";
   if (rawStored) return normalizeRegionId(rawStored);
-  const islandId = doc?.ref?.parent?.parent?.id || "";
-  return getRegionIdFromOnlineIslandId(islandId);
+  return normalizeRegionId();
 }
 
 function createDefaultShopItems() {
@@ -17494,22 +17495,6 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       highestDevelopedCityLevel: _highestDevelopedCityLevel,
       ...cityUpgradeXp
     } = cityUpgradeXpCalculation;
-    if (
-      !legacyRequest
-      && (
-        cityUpgradeXpCalculation.rebuildSuppressedXp > acknowledgedRebuildSuppressedXp
-      )
-    ) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Hero XP eligibility changed before the upgrade. Review the updated warning and try again.",
-        {
-          reason: "city-upgrade-xp-warning-required",
-          cityUpgradeXp,
-        }
-      );
-    }
-
     appendEconomyCityPatch(economy, cityRef, cityEntry.city, cityPatch);
     const progress = legacyRequest ? null : buildPlayerProgressPatch({
       ...economy.profileAfter,

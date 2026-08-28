@@ -276,26 +276,24 @@ requireMatch(
   /cityUpgradeXpHighWatermarkRef[\s\S]*?highestDevelopedCityLevel[\s\S]*?transaction\.set\(highWatermarkRef/,
   "City upgrades do not persist the seasonal per-city high-watermark."
 );
+assert.doesNotMatch(clientSource, /api\.getCityUpgradeXpPreview/, "The client still blocks city upgrades on a routine XP preview.");
+assert.doesNotMatch(serverUpgradeCitySource, /city-upgrade-xp-warning-required/, "The current server still rejects silent rebuilt-level suppression.");
 requireMatch(
   clientSource,
-  /getCityUpgradeXpPreview[\s\S]*?getCityUpgradeXpWarning[\s\S]*?window\.confirm/,
-  "The client does not warn before committing suppressed city-upgrade XP."
-);
-requireMatch(
-  serverUpgradeCitySource,
-  /cityUpgradeXpCalculation\.rebuildSuppressedXp > acknowledgedRebuildSuppressedXp[\s\S]*?city-upgrade-xp-warning-required/,
-  "The server does not reject rebuilt-level XP suppression beyond the player's acknowledged preview."
-);
-requireMatch(
-  clientSource,
-  /getCityUpgradeXpPreview[\s\S]*?const previewReceipt[\s\S]*?getCityUpgradeXpWarning[\s\S]*?acknowledgedRebuildSuppressedXp = toWhole\(previewReceipt\.rebuildSuppressedXp\)/,
-  "The queued client action does not preview and preserve rebuilt-level suppression at dispatch time."
+  /result = await submitUpgrade\(\)[\s\S]*?city-upgrade-xp-warning-required[\s\S]*?acknowledgedRebuildSuppressedXp = toWhole[\s\S]*?result = await submitUpgrade\(\)/,
+  "The client does not silently retry against an older warning-enforcing backend."
 );
 requireMatch(
   clientSource,
   /api\.upgradeCity\([\s\S]*?acknowledgedCapSuppressedXp:\s*0[\s\S]*?acknowledgedRebuildSuppressedXp/,
   "The client does not send neutral cap compatibility data with the rebuilt-level acknowledgement."
 );
+assert.doesNotMatch(clientSource, /function getCityUpgradeXpWarning/, "The removed city-upgrade XP warning remains in the client.");
+const cityUpgradeControllerSource = extractFunction(clientSource, "executeInstantCityUpgrade");
+assert.doesNotMatch(cityUpgradeControllerSource, /Hero XP| XP was suppressed|window\.confirm/, "City-upgrade confirmation still exposes XP messaging.");
+for (const functionName of ["getCityUpgradeOptionState", "renderCityLevelUpButton", "renderCityLevelUpAction"]) {
+  assert.doesNotMatch(extractFunction(clientSource, functionName), /Hero XP| XP|option\.xp/, `${functionName} still exposes city-upgrade XP.`);
+}
 requireMatch(
   clientSource,
   /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?enqueueInstantEconomyAction[\s\S]*?coalesce:\s*mode === "legacy"/,

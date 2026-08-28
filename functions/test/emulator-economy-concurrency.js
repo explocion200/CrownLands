@@ -246,55 +246,26 @@ async function main() {
     Number(reclaimPreview.cityUpgradeXp?.rebuildSuppressedXp || 0) === getCityUpgradeXp(1),
     "The legacy-upgraded level was not treated as already developed."
   );
-  const [profileBeforeRejectedReclaim, cityBeforeRejectedReclaim] = await Promise.all([
-    profileRef.get(),
-    cityRef.get(),
-  ]);
-  const rejectedReclaim = await invokeFunction("upgradeCity", user.token, {
+  const silentReclaim = await callFunction("upgradeCity", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
-    requestId: `city-upgrade-legacy-reclaim-warning-${crypto.randomBytes(6).toString("hex")}`,
+    requestId: `city-upgrade-legacy-reclaim-silent-${crypto.randomBytes(6).toString("hex")}`,
   });
-  assert(!rejectedReclaim.ok, "An unacknowledged legacy-level reclaim committed.");
   assert(
-    rejectedReclaim.error?.details?.reason === "city-upgrade-xp-warning-required",
-    "The legacy-level reclaim did not require the modern suppression warning."
+    Number(silentReclaim.cityUpgradeXp?.awardedXp || 0) === 0
+      && Number(silentReclaim.cityUpgradeXp?.rebuildSuppressedXp || 0) === getCityUpgradeXp(1),
+    "A silently rebuilt legacy level did not preserve its XP suppression receipt."
   );
-  const [profileAfterRejectedReclaim, cityAfterRejectedReclaim, watermarkAfterRejectedReclaim] = await Promise.all([
-    profileRef.get(),
+  const [cityAfterSilentReclaim, watermarkAfterSilentReclaim] = await Promise.all([
     cityRef.get(),
     cityXpHighWatermarkRef.get(),
   ]);
-  assert(Number(cityAfterRejectedReclaim.data()?.level || 0) === 1, "A rejected reclaim partially upgraded the city.");
+  assert(Number(cityAfterSilentReclaim.data()?.level || 0) === 2, "A silently rebuilt legacy level did not upgrade the city.");
   assert(
-    Number(profileAfterRejectedReclaim.data()?.goldFloat || 0)
-      === Number(profileBeforeRejectedReclaim.data()?.goldFloat || 0),
-    "A rejected reclaim partially spent Gold."
+    Number(watermarkAfterSilentReclaim.data()?.highestDevelopedCityLevel || 0) === 2,
+    "A silently rebuilt level changed the city high-watermark incorrectly."
   );
-  assert(
-    JSON.stringify(profileAfterRejectedReclaim.data()?.character || {})
-      === JSON.stringify(profileBeforeRejectedReclaim.data()?.character || {}),
-    "A rejected reclaim changed Hero progression or level-up rewards."
-  );
-  for (const field of ["investedGold", "troops", "troopFloat"]) {
-    assert(
-      Number(cityAfterRejectedReclaim.data()?.[field] || 0) === Number(cityBeforeRejectedReclaim.data()?.[field] || 0),
-      `A rejected reclaim partially changed city ${field}.`
-    );
-  }
-  assert(
-    Number(watermarkAfterRejectedReclaim.data()?.highestDevelopedCityLevel || 0) === 2,
-    "A rejected reclaim changed the city high-watermark."
-  );
-  const acknowledgedReclaim = await callFunction("upgradeCity", user.token, {
-    cityId: claim.cityId,
-    regionId: cityRegionId,
-    levels: 1,
-    requestId: `city-upgrade-legacy-reclaim-${crypto.randomBytes(6).toString("hex")}`,
-    acknowledgedRebuildSuppressedXp: getCityUpgradeXp(1),
-  });
-  assert(Number(acknowledgedReclaim.cityUpgradeXp?.awardedXp || 0) === 0, "A legacy-upgraded level awarded XP later.");
 
   await Promise.all([
     cityXpHighWatermarkRef.delete(),
@@ -366,27 +337,15 @@ async function main() {
     productionUpdatedAtMs: Date.now(),
   }, { merge: true });
   const rebuildXp = getCityUpgradeXp(1);
-  const unacknowledgedRebuild = await invokeFunction("upgradeCity", user.token, {
+  const silentRebuild = await callFunction("upgradeCity", user.token, {
     cityId: claim.cityId,
     regionId: cityRegionId,
     levels: 1,
-    requestId: `city-upgrade-unacknowledged-${crypto.randomBytes(6).toString("hex")}`,
+    requestId: `city-upgrade-silent-rebuild-${crypto.randomBytes(6).toString("hex")}`,
   });
-  assert(!unacknowledgedRebuild.ok, "A rebuild committed without acknowledging suppressed Hero XP.");
-  assert(
-    unacknowledgedRebuild.error?.details?.reason === "city-upgrade-xp-warning-required",
-    "The server did not return the refreshed city XP warning receipt."
-  );
-  assert(Number((await cityRef.get()).data()?.level || 0) === 1, "An unacknowledged rebuild changed the city.");
-  const rebuildUpgrade = await callFunction("upgradeCity", user.token, {
-    cityId: claim.cityId,
-    regionId: cityRegionId,
-    levels: 1,
-    requestId: `city-upgrade-rebuild-${crypto.randomBytes(6).toString("hex")}`,
-    acknowledgedRebuildSuppressedXp: rebuildXp,
-  });
-  assert(Number(rebuildUpgrade.cityUpgradeXp?.awardedXp || 0) === 0, "Rebuilding a prior seasonal city level awarded Hero XP.");
-  assert(Number(rebuildUpgrade.cityUpgradeXp?.rebuildSuppressedXp || 0) === rebuildXp, "Rebuild suppression was not explicit.");
+  assert(Number((await cityRef.get()).data()?.level || 0) === 2, "A silent rebuild did not change the city level.");
+  assert(Number(silentRebuild.cityUpgradeXp?.awardedXp || 0) === 0, "Rebuilding a prior seasonal city level awarded Hero XP.");
+  assert(Number(silentRebuild.cityUpgradeXp?.rebuildSuppressedXp || 0) === rebuildXp, "Silent rebuild suppression was not explicit in the server receipt.");
 
   const obsoleteCityXpAllowance = {
     modelVersion: 1,
