@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const config = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
 const profile = JSON.parse(fs.readFileSync(path.join(__dirname, "season-balance-profile.json"), "utf8"));
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
+const balanceCalculator = require(path.join(root, "battle-guide-calculations.js")).create(config);
 
 function sourceNumber(name) {
   const match = new RegExp(`const ${name} = ([^;]+);`).exec(serverSource);
@@ -46,56 +47,23 @@ function getVictoryPoints(level) {
 }
 
 function getGoldPerHour(level) {
-  const economy = config.cityEconomy;
-  const curveLevel = Math.min(level, economy.goldEndgameStartLevel);
-  const productionVp = Math.floor(
-    economy.productionVpBase * Math.pow(economy.productionVpGrowth, curveLevel - 1) + 0.000001
-  );
-  const endgameMultiplier = level > economy.goldEndgameStartLevel
-    ? Math.pow(economy.goldEndgameGrowth, level - economy.goldEndgameStartLevel)
-    : 1;
-  return Math.floor(productionVp * economy.goldPerProductionVp * endgameMultiplier);
+  return balanceCalculator.getGoldPerHour(level);
 }
 
 function getTroopsPerHour(level) {
-  return getVictoryPoints(level) * config.cityEconomy.troopsPerVictoryPoint;
+  return balanceCalculator.getTroopsPerHour(level);
 }
 
 function getBaseWall(level) {
-  const economy = config.cityEconomy;
-  const levelOffset = Math.max(1, Math.floor(Number(level) || 1)) - 1;
-  return Math.floor(
-    economy.wallDefenseBase
-      + economy.wallDefensePerLevel * levelOffset
-  );
+  return balanceCalculator.getBaseWall(level);
 }
 
 function getRepairMinutes(level) {
-  return Math.round(
-    config.siegeCombat.repairBaseMinutes
-      + level * config.siegeCombat.repairMinutesPerLevel
-  );
+  return balanceCalculator.getRepairMinutes(level);
 }
 
 function getUpgradeTargetHours(level) {
-  const economy = config.cityEconomy;
-  if (level <= economy.upgradeEarlyEndLevel) {
-    const progress = (level - 1) / Math.max(1, economy.upgradeEarlyEndLevel - 1);
-    return economy.upgradeEarlyStartHours
-      + (economy.upgradeEarlyEndHours - economy.upgradeEarlyStartHours) * Math.pow(progress, 1.35);
-  }
-  if (level <= economy.upgradeMidEndLevel) {
-    const progress = (level - economy.upgradeEarlyEndLevel)
-      / (economy.upgradeMidEndLevel - economy.upgradeEarlyEndLevel);
-    return economy.upgradeEarlyEndHours
-      + (economy.upgradeMidEndHours - economy.upgradeEarlyEndHours) * Math.pow(progress, 1.4);
-  }
-  const progress = (level - economy.upgradeMidEndLevel) / (150 - economy.upgradeMidEndLevel);
-  return Math.min(
-    economy.upgradeMaximumHours,
-    economy.upgradeMidEndHours
-      + (economy.upgradeLevel150Hours - economy.upgradeMidEndHours) * Math.pow(progress, 1.5)
-  );
+  return balanceCalculator.getUpgradeTargetHours(level);
 }
 
 function getLevelRewardTotals(maxLevel = 150) {
@@ -240,7 +208,7 @@ assert.equal(profile.version, 1);
 assert.equal(cityCount, 30, "The apex portfolio must contain exactly 30 cities.");
 assert.equal(Math.max(...Object.keys(profile.apexPortfolio).map(Number)), 150, "The apex capital must be Level 150.");
 assert.equal(baseGoldPerHour, 741_630_729, "Apex base gold production drifted; review the season benchmark.");
-assert.equal(baseTroopsPerHour, 268_050, "Apex base troop production drifted; review the season benchmark.");
+assert.equal(baseTroopsPerHour, 276_074, "Apex base troop production drifted; review the season benchmark.");
 assert.ok(
   minimumCaptureTroops >= siege.minimumCaptureTroops && minimumCaptureTroops <= siege.maximumCaptureTroops,
   `Level-150 capture threshold ${minimumCaptureTroops} left the ${siege.minimumCaptureTroops}-${siege.maximumCaptureTroops} guardrail.`

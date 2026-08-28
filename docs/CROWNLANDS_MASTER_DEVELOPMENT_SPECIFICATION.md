@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.19
+**Version:** 1.20
 **Effective date:** August 27, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 27, 2026
@@ -357,6 +357,19 @@ At commit `27105ae...`, regular-city production is server-authoritative and mirr
 - Level 1 therefore produces 120 base troops per hour.
 - Strongholds and the Crown Citadel produce zero base Gold and zero base troops themselves.
 
+### Confirmed next-reset city balance
+
+The following balance is confirmed for the next coordinated client and Functions release. It is **IN DEVELOPMENT** until the implementation pull request is merged and is not LIVE until deployment to each named release channel is verified:
+
+- Base troops per hour become `floor(city progression value × 10.3)`, a 3% increase before bonuses. Level 1 becomes 123 troops per hour, Level 100 becomes 14,502, and Level 150 becomes 24,081.
+- Regular-city base walls use staged, monotonic growth with anchors of 200 at Level 1, 600 at Level 2, 1,456,669 at Level 50, 3,000,000 at Level 100, and 6,200,000 at Level 150.
+- Levels 1-25 use `round(200 + 400 × (level - 1)^1.8550607303011009)`. The Level 1-to-2 increase is exactly 3×, and no adjacent level through Level 25 may exceed 3×.
+- Levels 26-50 use a shape-preserving cubic bridge from the Level 25 curve to the Level 50 anchor. Levels 51-100 interpolate evenly to the Level 100 anchor.
+- Levels 101-150 add wall power according to the relative Gold upgrade cost raised to exponent `0.22701846543276433`, normalized at Level 100. This makes later wall gains respond to increasingly expensive upgrades without copying the Gold curve directly.
+- Above Level 150, base wall power transitions to a base troop-production replacement ratio. That ratio begins at the Level 150 anchor, reaches 240 production hours at Level 200, and remains at 240 hours thereafter so the wall continues increasing with troop production without a fixed level cap.
+- Stoneworks remains the only skill that strengthens the wall. Soldier defense, wall repair, objective support, reward-camp behavior, and the two-stage siege model do not change.
+- The Level 150 maximum-activity siege benchmark must remain within 59-62 million maximum-Swordmastery attackers and 2.34-2.59 maximum-activity troop-production days for the existing apex portfolio.
+
 Permanent/untimed and temporary production additions are calculated separately against base production:
 
 - Gold per hour = `base × (1 + (Tax Stewardship + Gear + objective Gold bonus) / 100) + base × Royal Tax Decree / 100`.
@@ -397,7 +410,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Each attacking troop has `1.25` base attack power. Maximum Swordmastery raises it by 60% to `2.0`. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
 - Each defending troop has `1.30` base defense power before Shieldwall and other valid support. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Shieldwall Discipline adds 2% per level up to 60%. City level does not increase per-soldier defense. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
-- The regular-city wall curve is `200 + 28,858 × (level - 1)`. Stoneworks is the wall-strength skill multiplier. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
+- The currently published regular-city wall curve is `200 + 28,858 × (level - 1)`. Stoneworks is the wall-strength skill multiplier. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules. The confirmed staged replacement is specified in Section 4 and remains **IN DEVELOPMENT** until merged and deployed.
 - Full-breach repair time is `round(15 + 0.3 × city level)` minutes. Wall damage below 5% does not persist. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
 - Failed attacks and lost defenses award reduced XP according to current configuration. Exact current award calculation is **NEEDS VERIFICATION**.
 - Field Medics returns a configured share of losses to the Main City. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
@@ -1179,6 +1192,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.20 — August 27, 2026
+
+- Confirmed a 3% regular-city troop-production increase to `floor(city progression value × 10.3)` for the next reset.
+- Confirmed the staged regular-city wall curve through Level 150, including its exact anchors, early 3× ceiling, Gold-cost-linked Level 101-150 gains, and unlimited post-150 production-ratio continuation.
+- Preserved the current published linear wall rule as LIVE deployment history and classified the replacement as IN DEVELOPMENT pending merge and coordinated deployment.
+- Preserved the existing Level 150 apex siege and replacement-time guardrails.
 
 ## v1.19 — August 27, 2026
 

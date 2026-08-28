@@ -48,7 +48,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // feedback add under 13 KiB. Advance the offline shell by one bounded 16 KiB step.
 // The isolated skill-preset draft editor, five-tab status UI, paired point
 // controls, and dirty-exit dialog add under 16 KiB across the precached client.
-const MAX_INSTALL_PRECACHE_BYTES = 3504 * 1024;
+// The staged wall and production helpers add under 16 KiB while keeping the
+// full offline shell bounded. Advance the allowance by one 16 KiB step.
+const MAX_INSTALL_PRECACHE_BYTES = 3520 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;

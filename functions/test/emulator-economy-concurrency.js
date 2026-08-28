@@ -176,7 +176,7 @@ async function main() {
       * Number(cityEconomy.goldPerProductionVp || 15);
   const levelOneVictoryPoints = Math.floor(6 + 4 + Math.pow(1, 1.35) * 2);
   const expectedTroops = 200
-    + levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 3);
+    + Math.floor(levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 10.3));
   assert(
     collectedGold >= expectedGold - 2 && collectedGold < expectedGold + 10,
     `Concurrent collection duplicated gold production (${collectedGold}; expected about ${expectedGold}).`
@@ -647,7 +647,9 @@ async function main() {
 
   const levelOneBaseGoldPerHour = Math.floor(Number(cityEconomy.productionVpBase || 20))
     * Number(cityEconomy.goldPerProductionVp || 15);
-  const levelOneBaseTroopsPerHour = levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 3);
+  const levelOneBaseTroopsPerHour = Math.floor(
+    levelOneVictoryPoints * Number(cityEconomy.troopsPerVictoryPoint || 10.3)
+  );
   for (const stackable of stackableTimedItems) {
     const durationMs = Number(economyConfig.shopItems?.[stackable.itemId]?.effectDurationMinutes || 30) * 60 * 1000;
     for (const quantity of [1, 2, 3]) {

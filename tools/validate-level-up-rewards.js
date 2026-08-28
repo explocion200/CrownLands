@@ -785,22 +785,23 @@ function rewardTroopHours(level) {
 function levelUpTroopReward(level) {
   return Math.floor(Math.max(
     50,
-    rewardVictoryPoints(level) * cityEconomyConfig.troopsPerVictoryPoint * rewardTroopHours(level)
+    Math.floor(rewardVictoryPoints(level) * cityEconomyConfig.troopsPerVictoryPoint)
+      * rewardTroopHours(level)
   ));
 }
 
 const rewardAnchors = new Map([
-  [2, { gold: 1095, troops: 912 }],
-  [10, { gold: 3711, troops: 7200 }],
-  [25, { gold: 8986, troops: 36400 }],
-  [50, { gold: 162787, troops: 143760 }],
-  [51, { gold: 184739, troops: 150798 }],
-  [75, { gold: 7530834, troops: 384150 }],
-  [100, { gold: 180933608, troops: 760320 }],
-  [101, { gold: 206869032, troops: 775200 }],
-  [125, { gold: 3541843584, troops: 1190400 }],
-  [150, { gold: 24256227924, troops: 1730120 }],
-  [200, { gold: 1137656204316, troops: 3159340 }],
+  [2, { gold: 1095, troops: 936 }],
+  [10, { gold: 3711, troops: 7416 }],
+  [25, { gold: 8986, troops: 37492 }],
+  [50, { gold: 162787, troops: 148056 }],
+  [51, { gold: 184739, troops: 155299 }],
+  [75, { gold: 7530834, troops: 395655 }],
+  [100, { gold: 180933608, troops: 783108 }],
+  [101, { gold: 206869032, troops: 798428 }],
+  [125, { gold: 3541843584, troops: 1226112 }],
+  [150, { gold: 24256227924, troops: 1781994 }],
+  [200, { gold: 1137656204316, troops: 3254092 }],
 ]);
 for (const [level, expected] of rewardAnchors) {
   assert.equal(levelUpGoldReward(level), expected.gold, `Hero level ${level} gold reward changed.`);
@@ -835,7 +836,7 @@ const cumulativeTroopRewardThrough150 = [...Array(149)].reduce(
 );
 assert.equal(
   cumulativeTroopRewardThrough150,
-  84066135,
+  86585401,
   "Cumulative Hero troop rewards through Level 150 changed."
 );
 const threeLevelGoldReward = levelUpGoldReward(50) + levelUpGoldReward(51) + levelUpGoldReward(52);

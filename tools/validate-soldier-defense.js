@@ -5,6 +5,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const config = JSON.parse(read("functions/economy-config.json"));
+const balanceCalculator = require(path.join(root, "battle-guide-calculations.js")).create(config);
 const server = read("functions/index.js");
 const client = read("game.js");
 const packageJson = JSON.parse(read("functions/package.json"));
@@ -65,14 +66,12 @@ assert.equal(minimumTroops(defensePower(shieldwallMaximum + 8)), 1_092_001);
 assert.equal(minimumTroops(defensePower(shieldwallMaximum + 10)), 1_105_001);
 
 const wallForLevel = level => Math.floor(
-  (Number(config.cityEconomy.wallDefenseBase)
-    + Number(config.cityEconomy.wallDefensePerLevel) * (level - 1))
-  * (1 + stoneworksMaximum / 100)
+  balanceCalculator.getBaseWall(level) * (1 + stoneworksMaximum / 100)
 );
 const benchmarks = new Map([
-  [50, { wall: 2_474_923, normal: 2_277_462, stronghold: 2_329_462, citadel: 2_342_462 }],
-  [100, { wall: 4_999_998, normal: 3_540_000, stronghold: 3_592_000, citadel: 3_605_000 }],
-  [150, { wall: 7_525_073, normal: 4_802_537, stronghold: 4_854_537, citadel: 4_867_537 }],
+  [50, { wall: 2_549_170, normal: 2_314_586, stronghold: 2_366_586, citadel: 2_379_586 }],
+  [100, { wall: 5_250_000, normal: 3_665_001, stronghold: 3_717_001, citadel: 3_730_001 }],
+  [150, { wall: 10_850_000, normal: 6_465_001, stronghold: 6_517_001, citadel: 6_530_001 }],
 ]);
 for (const [level, expected] of benchmarks) {
   const wall = wallForLevel(level);

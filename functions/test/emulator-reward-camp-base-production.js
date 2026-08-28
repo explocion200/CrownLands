@@ -111,7 +111,7 @@ function baseGoldPerHourForLevel(level) {
 function baseTroopPerHourForLevel(level) {
   const normalizedLevel = Math.max(1, Math.min(150, Math.floor(Number(level) || 1)));
   const victoryPoints = Math.floor(6 + normalizedLevel * 4 + Math.pow(normalizedLevel, 1.35) * 2);
-  return victoryPoints * Number(economyConfig.cityEconomy?.troopsPerVictoryPoint || 10);
+  return Math.floor(victoryPoints * Number(economyConfig.cityEconomy?.troopsPerVictoryPoint || 10.3));
 }
 
 function createProductionGear() {
