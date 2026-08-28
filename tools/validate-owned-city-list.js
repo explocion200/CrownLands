@@ -66,7 +66,7 @@ assert.match(styles, /\.city-list-row\.upgrade-confirmed[\s\S]*?@keyframes crown
 assert.match(gameSource, /cl-action-button cl-action-level[\s\S]*?renderCrownlandsIcon\("arrow-up"\)/, "The selected-city map action must use its dedicated arrow-up treatment.");
 assert.match(indexSource, /id="cl-icon-arrow-up"/, "The dedicated map Level arrow glyph is missing.");
 assert.match(actionButtons, /\.cl-action-button\.cl-action-level[\s\S]*?--cl-action-bg:\s*var\(--cl-action-level-bg\)/, "The selected-city Level action is missing its gold button treatment.");
-assert.match(indexSource, /styles\.css\?v=20260827-instant-cross-map-city-upgrades-r1[\s\S]*?instant-economy-actions\.js\?v=20260827-instant-cross-map-city-upgrades-r1[\s\S]*?game\.js\?v=20260827-instant-cross-map-city-upgrades-r1/, "Changed city-list client assets must use one cache-busting release token.");
+assert.match(indexSource, /styles\.css\?v=20260828-hero-level-gold-rebalance-r1[\s\S]*?instant-economy-actions\.js\?v=20260828-hero-level-gold-rebalance-r1[\s\S]*?game\.js\?v=20260828-hero-level-gold-rebalance-r1/, "Changed city-list client assets must use one cache-busting release token.");
 assert.match(styles, /@media \(max-width: 600px\) and \(orientation: landscape\)[\s\S]*?\.city-list-art,[\s\S]*?display: none;[\s\S]*?\.city-list-upgrade \{ min-width: 40px; width: 40px; height: 40px;/, "The 540px layout must preserve 40px controls by hiding decorative row content.");
 assert.match(contrastStyles, /\.city-list-modal \.city-list-toolbar button :is\(span, small, \.cl-icon\)[\s\S]*?color:\s*inherit !important;/, "City-list sort text and icons can still become brown on dark buttons.");
 

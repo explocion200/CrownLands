@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260827-instant-cross-map-city-upgrades-r1";
+const CACHE_VERSION = "20260828-hero-level-gold-rebalance-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -28,21 +28,21 @@ function getNotificationOpenUrl(notificationData = {}) {
 const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/styles.css?v=20260828-hero-level-gold-rebalance-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
   "/ui-contrast-correction.css?v=20260819-player-flags-v2-r1",
   "/profile-theme.css?v=20260819-player-flags-v2-r1",
-  "/crownlands-palette.css?v=20260827-instant-cross-map-city-upgrades-r1",
-  "/action-buttons.css?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/crownlands-palette.css?v=20260828-hero-level-gold-rebalance-r1",
+  "/action-buttons.css?v=20260828-hero-level-gold-rebalance-r1",
   "/mobile-viewport.css?v=20260825-shop-hourly-prices-r1",
   "/player-flag-editor.css?v=20260819-player-flags-v2-r1",
   "/chat.css?v=20260818-global-clan-chat-r1",
   "/clan-heraldry-v2.css?v=20260825-clan-shield-surfaces-r1",
   "/release-config.js",
   "/world-config.js",
-  "/economy-config.js?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/economy-config.js?v=20260828-hero-level-gold-rebalance-r1",
   "/common-gear.js?v=20260825-gear-upgrade-consumption-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
   "/functions/playerFlagConfig.js?v=20260825-player-flags-audit-r1",
@@ -51,12 +51,12 @@ const STATIC_CACHE_URLS = [
   "/functions/clanHeraldryAssets.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryLegacyV1.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1",
-  "/firebaseClient.js?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/firebaseClient.js?v=20260828-hero-level-gold-rebalance-r1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
-  "/instant-economy-actions.js?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/instant-economy-actions.js?v=20260828-hero-level-gold-rebalance-r1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/game.js?v=20260828-hero-level-gold-rebalance-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

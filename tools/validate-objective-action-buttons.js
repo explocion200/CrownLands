@@ -128,8 +128,8 @@ assert.ok(!wheelFunctions[3].includes("cl-action-rally"), "Reward Camp actions m
 assert.ok(wheelFunctions[2].includes("cl-action-send"), "Owned Stronghold/Citadel Send is missing its movement token.");
 assert.ok(wheelFunctions[3].includes("cl-action-send camp-recall-action"), "Held Camp Recall is missing its movement token.");
 
-const releaseId = "20260827-instant-cross-map-city-upgrades-r1";
-const cacheVersion = "20260827-instant-cross-map-city-upgrades-r1";
+const releaseId = "20260828-hero-level-gold-rebalance-r1";
+const cacheVersion = "20260828-hero-level-gold-rebalance-r1";
 const styleTag = `action-buttons.css?v=${releaseId}`;
 assert.ok(index.includes(styleTag), "The shared action-button stylesheet is not loaded by the game.");
 assert.ok(index.indexOf(styleTag) > index.indexOf("profile-theme.css"), "The shared action-button stylesheet must load after legacy and Profile theme layers.");

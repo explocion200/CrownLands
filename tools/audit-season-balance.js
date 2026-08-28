@@ -86,7 +86,11 @@ function getLevelRewardTotals(maxLevel = 150) {
         ? rewards.goldEarlyProductionHours
           + (rewards.goldMidProductionHours - rewards.goldEarlyProductionHours) * ((level - 50) / 50)
         : rewards.goldEndgameProductionHours;
-    const upgradeRelief = getGoldPerHour(level - 1) * getUpgradeTargetHours(level - 1) * upgradeShare;
+    const referenceUpgradeCost = Math.max(
+      10,
+      Math.floor(getGoldPerHour(level - 1) * getUpgradeTargetHours(level - 1) + 0.000001)
+    );
+    const upgradeRelief = referenceUpgradeCost * upgradeShare;
     const productionRelief = getGoldPerHour(level) * productionHours;
     gold += Math.floor(Math.max(goldFloor, Math.min(upgradeRelief, productionRelief)));
 

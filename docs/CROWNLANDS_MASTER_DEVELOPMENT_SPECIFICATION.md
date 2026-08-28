@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.21
-**Effective date:** August 27, 2026
+**Version:** 1.22
+**Effective date:** August 28, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** August 27, 2026
+**Evidence reviewed through:** August 28, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -267,11 +267,22 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 - Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot; draft names and point changes remain local until Save, and Apply remains the only preset action that changes the live build for 1,000,000 Gold. **Status:** preset unlocks, isolated drafts, free saving, and paid application are `LIVE — ALL PUBLISHED CHANNELS`. Web build `291e5657...` additionally gives Current Build and every preset the compact `− | cost | +` control and settles live additions and removals through the replay-safe signed adjustment queue; those controls and live refunds are `LIVE — WEB`.
 - Applied preset tabs use the established red treatment. On web, the viewed tab uses Crownlands gold with dark readable text; a viewed applied preset remains red with a gold outline, inactive tabs remain tan, locked tabs remain distinct, and skill headings, descriptions, costs, and controls use explicit high-contrast colors. The repeated final-tier explanatory banner and card text are omitted because the segmented control exposes each next-level cost directly. **Status:** `LIVE — WEB`.
 
+### Confirmed Hero level-up Gold rewards
+
+The following Hero-progression Gold reward curve is confirmed design. The 27-hour endgame ceiling is **IN DEVELOPMENT** until the implementation pull request is merged and the authoritative backend, web client, and itch.io client are deployed and verified together:
+
+- For the new Hero level `L`, the minimum Gold floor is `500 + 250L + 40 × L^1.25`.
+- Upgrade relief uses the authoritative Gold cost of upgrading a reference regular city at Level `max(1, L - 1)`. Its allowed share is 75% through Level 50, interpolates linearly from 75% to 40% across Levels 51-100, and remains 40% from Level 101 onward.
+- Production relief uses the raw base Gold per hour of a reference regular city at Level `L`. Its allowance is six production hours through Level 50, interpolates linearly from six to 16 hours across Levels 51-100, and is 27 hours from Level 101 onward.
+- The Gold reward is `floor(max(minimumGoldFloor, min(upgradeRelief, productionRelief)))` and is credited once by the authoritative Hero level-up transaction.
+- The 27-hour ceiling leaves every Gold reward through Hero Level 116 unchanged because upgrade relief remains the binding limit. Level 117 is the first reduced reward. The confirmed anchors are 1,807,889,409 Gold at Level 120, 2,656,382,688 at Level 125, and 18,192,170,943 at Level 150. Cumulative Gold from Levels 2-150 is 238,517,082,338.
+- These are standardized reference calculations. They do not inspect the player's cities, balance, skills, Gear, objectives, production bonuses, timed items, or other Gold sources. Previously claimed rewards and existing balances are not recalculated.
+
 ### Confirmed Hero level-up troop rewards
 
 The following Hero-progression reward curve is confirmed design and is `LIVE — ALL PUBLISHED CHANNELS`, beginning with verified cross-channel baseline build `a561374b...`:
 
-- For the new Hero level `L`, reference victory points are `floor(6 + 4L + 2 × L^1.35)` and reference troop production is ten troops per hour for each reference victory point.
+- For the new Hero level `L`, reference victory points are `floor(6 + 4L + 2 × L^1.35)` and reference troop production is `floor(referenceVictoryPoints × 10.3)` troops per hour.
 - The troop reward is `floor(max(50, referenceTroopsPerHour × rewardHours))`.
 - Reward hours are `4 + 0.40L` through Level 50, `24 + 0.60(L - 50)` from Levels 51 through 100, and `min(108, 54 + 0.40(L - 100))` from Level 101 onward. The 108-hour maximum first binds at Level 235.
 - This is standardized reference production, not the player's actual raw city or kingdom production. The calculation does not inspect owned cities, the receiving city, buildings, city count, skills, Gear, objectives, production bonuses, timed items, or casualty recovery. Every player reaching the same Hero level receives the same calculated base reward.
@@ -1014,7 +1025,7 @@ Before a status becomes LIVE:
 
 ## 23. Current Development Status
 
-Status verified through August 27, 2026.
+Status verified through August 28, 2026.
 
 | System | Status | Notes |
 |---|---|---|
@@ -1030,6 +1041,7 @@ Status verified through August 27, 2026.
 | Reworked/stacked Item Bag | `LIVE — ALL PUBLISHED CHANNELS` | Present in both current channel builds. |
 | Clan Heraldry v2 | `LIVE — ALL PUBLISHED CHANNELS` | v1 compatibility remains; v2 presentation is available on both channels. |
 | Hero reward curve, city XP model v2, and instant city upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Published channels retain the verified PR #199 baseline. Direct, targeted, silent-XP cross-map refinement is `IN DEVELOPMENT` pending merge and coordinated deployment. |
+| Hero level-up Gold 27-hour endgame ceiling | `IN DEVELOPMENT` | Levels 2-116 remain unchanged; coordinated backend, web, and itch.io deployment is required before this balance is live. |
 | Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — WEB` | itch.io remains on the prior skill-control and reset behavior in build `a561374b...`. |
 | Holding Towers and Clan Treasury | `IMPLEMENTED BUT NOT LIVE` | Open PR #159. |
 | Pending 5×5 Core | `IN DEVELOPMENT` | Staged; not production. |
@@ -1194,6 +1206,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.22 — August 28, 2026
+
+- Confirmed a 27-hour raw-production ceiling for Hero level-up Gold from Level 101 onward while retaining the existing Gold floor and upgrade-relief limits.
+- Recorded Level 117 as the first reduced payout, 18,192,170,943 Gold at Level 150, and 238,517,082,338 cumulative Gold through Level 150.
+- Documented the complete standardized Gold reward formula and corrected the Hero troop-reward production scalar to the live 10.3 value.
+- Required the season audit to floor the authoritative reference upgrade cost before applying its reward share.
 
 ## v1.21 — August 27, 2026
 
