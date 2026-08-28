@@ -53,6 +53,20 @@ async function clientGet(token, documentPath) {
   return response;
 }
 
+async function clientRunQuery(token, parentPath, structuredQuery) {
+  return fetch(
+    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${parentPath}:runQuery`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ structuredQuery }),
+    }
+  );
+}
+
 async function expectStatus(token, documentPath, expected, message) {
   const response = await clientGet(token, documentPath);
   assert(response.status === expected, `${message} (expected ${expected}, received ${response.status})`);
@@ -111,8 +125,57 @@ async function main() {
       ...shared,
       kingPower: 100 + index,
     });
+    batch.set(db.doc(`clanLeaderboards/${storageId(shardId)}/entries/clan_${index + 1}`), {
+      ...shared,
+      clanId: `clan_${index + 1}`,
+      name: `Shard Clan ${index + 1}`,
+      tag: `S${index + 1}`,
+      memberCount: 1,
+      totalKingPower: 100 + index,
+    });
   });
   await batch.commit();
+
+  const clanLeaderboardResponse = await clientRunQuery(
+    playerOne.token,
+    `clanLeaderboards/${storageId(SHARD_ONE)}`,
+    {
+      from: [{ collectionId: "entries" }],
+      orderBy: [{
+        field: { fieldPath: "totalKingPower" },
+        direction: "DESCENDING",
+      }],
+      limit: 100,
+    }
+  );
+  assert(
+    clanLeaderboardResponse.status === 200,
+    `A player could not list their shard clan leaderboard (expected 200, received ${clanLeaderboardResponse.status})`
+  );
+  const clanLeaderboardRows = await clanLeaderboardResponse.json();
+  const clanLeaderboardNames = clanLeaderboardRows
+    .map(row => row.document?.name || "")
+    .filter(Boolean);
+  assert(
+    clanLeaderboardNames.length === 1 && clanLeaderboardNames[0].endsWith("/entries/clan_1"),
+    "A clan leaderboard query returned entries outside the player's realm shard."
+  );
+  const otherShardClanLeaderboardResponse = await clientRunQuery(
+    playerOne.token,
+    `clanLeaderboards/${storageId(SHARD_TWO)}`,
+    {
+      from: [{ collectionId: "entries" }],
+      orderBy: [{
+        field: { fieldPath: "totalKingPower" },
+        direction: "DESCENDING",
+      }],
+      limit: 100,
+    }
+  );
+  assert(
+    otherShardClanLeaderboardResponse.status === 403,
+    `A player listed another shard's clan leaderboard (expected 403, received ${otherShardClanLeaderboardResponse.status})`
+  );
 
   await expectStatus(playerOne.token, `islands/${islandId(SHARD_ONE)}`, 200, "A player could not read their shard island");
   await expectStatus(playerOne.token, `islands/${islandId(SHARD_TWO)}`, 403, "A player read another shard island");
@@ -125,7 +188,7 @@ async function main() {
   await expectStatus(playerTwo.token, `islands/${islandId(SHARD_TWO)}/cities/city_2`, 200, "The second shard could not read its own city");
   await expectStatus(playerTwo.token, `islands/${islandId(SHARD_ONE)}/cities/city_1`, 403, "The second shard read the first shard city");
 
-  console.log("Realm shard rules passed: islands, activity, leaderboards, and assignments remain isolated between shards.");
+  console.log("Realm shard rules passed: islands, activity, player and clan leaderboards, and assignments remain isolated between shards.");
 }
 
 main().catch(error => {

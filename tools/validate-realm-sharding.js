@@ -122,5 +122,10 @@ assert.match(
 );
 assert.match(rulesSource, /documents\/realmConfig\/current/);
 assert.match(rulesSource, /currentRealmShardId\(\)/);
+assert.match(
+  rulesSource,
+  /match \/clanLeaderboards\/\{resetId\}\/entries\/\{clanId\}[\s\S]*?allow read: if signedIn\(\)[\s\S]*?resetId == currentRealmStorageId\(\);[\s\S]*?allow create, update, delete: if false;/,
+  "Clan leaderboard list reads must use the authoritative realm-storage path without an unqueryable document-field predicate."
+);
 
 console.log("Realm sharding validation passed: 120 players map to 50/50/20 across three isolated shards.");
