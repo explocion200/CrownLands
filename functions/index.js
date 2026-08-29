@@ -225,8 +225,8 @@ const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 50);
 const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 10) * 60;
 const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 10);
 const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
-const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 3) * 60;
-const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 1) * 60;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 2) * 60;
+const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 2) * 60;
 const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
@@ -7728,7 +7728,7 @@ function enforceHarvestBonusActiveLimit(bonuses = [], nowMs = Date.now()) {
 
 function getHarvestNextSpawnAtMs(profile = {}, nowMs = Date.now()) {
   const explicit = timestampToMs(profile.harvestNextSpawnAtMs);
-  if (explicit) return explicit;
+  if (explicit) return Math.min(explicit, nowMs + HARVEST_BONUS_MAX_TIMER_SECONDS * 1000);
   if (Number.isFinite(Number(profile.harvestSpawnTimer))) {
     return nowMs + clampInt(profile.harvestSpawnTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS) * 1000;
   }

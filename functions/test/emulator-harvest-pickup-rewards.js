@@ -170,7 +170,9 @@ async function setObjectiveOwner(objective, user, owned) {
 
 async function main() {
   const user = await createAuthUser();
+  const claimStartedAtMs = Date.now();
   const claim = await callFunction("claimStartingCity", user.token, { playerName: "Harvest Sentinel" });
+  const claimCompletedAtMs = Date.now();
   const profileRef = db.doc(`players/${user.uid}`);
   const mainCityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
   const mainRegionId = claim.mainRegionId || claim.islandId.split("-").at(-1);
@@ -205,6 +207,60 @@ async function main() {
     marchOrders: 0,
     fieldMedics: 0,
   };
+
+  const initialSpawnSeconds = Number(economyConfig.pickups?.initialSpawnDelayMinutes || 2) * 60;
+  const freshProfile = (await profileRef.get()).data() || {};
+  const freshDeadlineMs = typeof freshProfile.harvestNextSpawnAtMs?.toMillis === "function"
+    ? freshProfile.harvestNextSpawnAtMs.toMillis()
+    : Number(freshProfile.harvestNextSpawnAtMs);
+  assert(
+    Number(freshProfile.harvestSpawnTimer) === initialSpawnSeconds,
+    `A fresh server profile did not receive the ${initialSpawnSeconds}-second initial pickup timer.`
+  );
+  assert(
+    freshDeadlineMs >= claimStartedAtMs + initialSpawnSeconds * 1000
+      && freshDeadlineMs <= claimCompletedAtMs + initialSpawnSeconds * 1000,
+    "A fresh server profile did not anchor its initial pickup deadline to two minutes."
+  );
+
+  const legacyLongDeadlineMs = Date.now() + 180_000;
+  await profileRef.set({
+    harvestBonuses: [],
+    harvestSpawnTimer: 180,
+    harvestNextSpawnAtMs: legacyLongDeadlineMs,
+  }, { merge: true });
+  const legacyLongStartedAtMs = Date.now();
+  const legacyLongResult = await callFunction("reserveHarvestBonusSpawn", user.token, {
+    type: "gold",
+    regionId: mainRegionId,
+    bonus: { id: "legacy-long-wait", type: "gold", regionId: mainRegionId, x: 500, y: 500 },
+  });
+  const legacyLongCompletedAtMs = Date.now();
+  assert(legacyLongResult.reason === "cooldown", "A normalized legacy wait should remain in cooldown before two minutes elapse.");
+  assert(
+    Number(legacyLongResult.currentUser?.harvestSpawnTimer) === initialSpawnSeconds,
+    "A legacy pickup timer longer than two minutes did not normalize to 120 seconds."
+  );
+  assert(
+    Number(legacyLongResult.currentUser?.harvestNextSpawnAtMs) >= legacyLongStartedAtMs + initialSpawnSeconds * 1000
+      && Number(legacyLongResult.currentUser?.harvestNextSpawnAtMs) <= legacyLongCompletedAtMs + initialSpawnSeconds * 1000,
+    "A legacy absolute pickup deadline longer than two minutes did not normalize to the new maximum."
+  );
+
+  const legacyShortDeadlineMs = Date.now() + 60_000;
+  await profileRef.set({
+    harvestBonuses: [],
+    harvestSpawnTimer: 60,
+    harvestNextSpawnAtMs: legacyShortDeadlineMs,
+  }, { merge: true });
+  const legacyShortResult = await callFunction("reserveHarvestBonusSpawn", user.token, {
+    type: "gold",
+    regionId: mainRegionId,
+    bonus: { id: "legacy-short-wait", type: "gold", regionId: mainRegionId, x: 500, y: 500 },
+  });
+  assert(legacyShortResult.reason === "cooldown", "A shorter legacy wait should remain in cooldown until its existing deadline.");
+  assert(Number(legacyShortResult.currentUser?.harvestSpawnTimer) <= 60, "A shorter legacy pickup timer was lengthened during synchronization.");
+  assert(Number(legacyShortResult.currentUser?.harvestNextSpawnAtMs) === legacyShortDeadlineMs, "A shorter legacy absolute pickup deadline changed during synchronization.");
 
   const scenarios = [
     { name: "raw production only" },
@@ -343,7 +399,7 @@ async function main() {
         Number(result.reward) === expectedReward,
         `${scenario.name} ${type} pickup used a boosted rate: ${result.reward}; expected raw ${expectedReward}.`
       );
-      const respawnSeconds = Number(economyConfig.pickups?.respawnAfterCollectionMinutes || 1) * 60;
+      const respawnSeconds = Number(economyConfig.pickups?.respawnAfterCollectionMinutes || 2) * 60;
       const nextSpawnAtMs = Number(result.currentUser?.harvestNextSpawnAtMs || result.harvestNextSpawnAtMs);
       assert(
         Number(result.currentUser?.harvestSpawnTimer) === respawnSeconds,
@@ -364,7 +420,11 @@ async function main() {
       );
       assert(
         Number(storedAfterCollection.harvestSpawnTimer) === respawnSeconds,
-        `${scenario.name} ${type} pickup did not persist its one-minute timer.`
+        `${scenario.name} ${type} pickup did not persist its two-minute timer.`
+      );
+      assert(
+        result.currentUser?.harvestNextBonusType === (type === "troops" ? "gold" : "troops"),
+        `${scenario.name} ${type} pickup did not alternate the next pickup type.`
       );
       assert(
         !(storedAfterCollection.harvestBonuses || []).some(bonus => bonus.id === pickupId),
@@ -494,7 +554,7 @@ async function main() {
   );
 
   console.log(
-    "Emulator harvest pickup rewards passed: raw city rates stay authoritative, successful claims start the one-minute timer, and rejected claims preserve pickup state and deadlines."
+    "Emulator harvest pickup rewards passed: raw city rates stay authoritative, successful claims start the two-minute timer, and rejected claims preserve pickup state and deadlines."
   );
 }
 

@@ -448,7 +448,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Each production-scaled Gold or troop Camp payout is `max(minimum reward, floor(raw kingdom production per hour × reward hours))`.
 - A Relic Camp uses a 30-minute hold and permits five item rewards per player per UTC day. Its item weights are War Drums 35, Veil of Silence 25, Swift March Order 18, Royal Tax Decree 12, Recall Horn 8, and Royal Peace Shield 2, plus a separate 1% Common Gear Box chance.
 - A Deed Camp uses a 60-minute hold and permits one reward per player per UTC day. It grants one eligible neutral regular non-center city at that city’s existing level with zero troops.
-- A ruler's first world pickup appears after three minutes. Each successful collection starts a one-minute respawn, while rejected or failed collections preserve the active pickup and its existing deadline. Pickups favor terrain-safe positions toward the center of the active map, expire after 20 minutes, and grant one hour of raw Gold or troop production with a minimum of 250. Daily caps are 50 total, 25 Gold, and 25 troop pickups, with at most one active pickup per player. **Status:** the base pickup system is live; the one-minute post-collection cadence and center-biased placement are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
+- A ruler's first world pickup appears after two minutes. Each successful collection starts a two-minute respawn, while rejected or failed collections preserve the active pickup and its existing deadline. Pickups favor terrain-safe positions toward the center of the active map, expire after 20 minutes, and grant one hour of raw Gold or troop production with a minimum of 250. Daily caps are 50 total, 25 Gold, and 25 troop pickups, with at most one active pickup per player. Failed placement attempts retry after five seconds. **Status:** the base pickup system is live; the uniform two-minute cadence and center-biased placement are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
 
 These are verified repository facts for commit `27105ae...`; exact deployed backend parity remains **NEEDS VERIFICATION**.
 
@@ -1198,6 +1198,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.23 — August 28, 2026
+
+- Confirmed a uniform two-minute pickup cadence for the first pickup and every successful post-collection respawn.
+- Preserved Gold/troop alternation, the one-active-pickup limit, 20-minute expiration, and five-second failed-placement retry.
+- Confirmed rejected or failed claims preserve the active pickup and its existing deadline, while legacy pending waits longer than two minutes normalize to the new maximum when synchronized.
+- Classified the cadence as `IN DEVELOPMENT` pending validation, merge, and coordinated backend, web, and itch.io deployment.
 
 ## v1.22 — August 28, 2026
 

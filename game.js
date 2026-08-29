@@ -893,8 +893,8 @@ const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
-const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 3) * 60;
-const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 1) * 60;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 2) * 60;
+const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 2) * 60;
 const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
@@ -8849,6 +8849,13 @@ function normalizeHarvestBonuses(bonuses) {
     .filter(bonus => bonus.id && Number.isFinite(bonus.x) && Number.isFinite(bonus.y));
 }
 
+function normalizeHarvestNextSpawnAtMs(value, fallbackSeconds = HARVEST_BONUS_INITIAL_SPAWN_SECONDS, nowMs = Date.now()) {
+  const explicit = normalizeTimestampMs(value);
+  if (explicit) return Math.min(explicit, nowMs + HARVEST_BONUS_MAX_TIMER_SECONDS * 1000);
+  const delay = clamp(Math.ceil(Number(fallbackSeconds) || 0), 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
+  return nowMs + delay * 1000;
+}
+
 function normalizeHarvestState(snapshot) {
   if (!snapshot || typeof snapshot !== "object") return;
   snapshot.harvestBonuses = enforceHarvestBonusActiveLimit(snapshot.harvestBonuses);
@@ -8856,8 +8863,10 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestSpawnTimer = Number.isFinite(timer)
     ? clamp(timer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
-  snapshot.harvestNextSpawnAtMs = normalizeTimestampMs(snapshot.harvestNextSpawnAtMs)
-    || (Date.now() + snapshot.harvestSpawnTimer * 1000);
+  snapshot.harvestNextSpawnAtMs = normalizeHarvestNextSpawnAtMs(
+    snapshot.harvestNextSpawnAtMs,
+    snapshot.harvestSpawnTimer
+  );
   snapshot.harvestNextBonusType = normalizeHarvestBonusType(snapshot.harvestNextBonusType);
 }
 
@@ -10931,7 +10940,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
     changed = true;
   }
   if (Number.isFinite(Number(patch.harvestNextSpawnAtMs))) {
-    state.harvestNextSpawnAtMs = normalizeTimestampMs(patch.harvestNextSpawnAtMs);
+    state.harvestNextSpawnAtMs = normalizeHarvestNextSpawnAtMs(
+      patch.harvestNextSpawnAtMs,
+      state.harvestSpawnTimer
+    );
     const remainingSeconds = Math.ceil(Math.max(0, state.harvestNextSpawnAtMs - Date.now()) / 1000);
     state.harvestSpawnTimer = clamp(remainingSeconds, 0, HARVEST_BONUS_MAX_TIMER_SECONDS);
     changed = true;
@@ -11521,8 +11533,10 @@ function getPlayerProfileSnapshot() {
     harvestSpawnTimer: Number.isFinite(harvestTimer)
       ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
       : HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
-    harvestNextSpawnAtMs: normalizeTimestampMs(state?.harvestNextSpawnAtMs)
-      || Date.now() + (Number.isFinite(harvestTimer) ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS) : HARVEST_BONUS_INITIAL_SPAWN_SECONDS) * 1000,
+    harvestNextSpawnAtMs: normalizeHarvestNextSpawnAtMs(
+      state?.harvestNextSpawnAtMs,
+      Number.isFinite(harvestTimer) ? harvestTimer : HARVEST_BONUS_INITIAL_SPAWN_SECONDS
+    ),
     harvestNextBonusType: normalizeHarvestBonusType(state?.harvestNextBonusType),
     scoutReports: state ? normalizeScoutReports(state.scoutReports) : {},
     battleReports: state ? normalizeBattleReports(state.battleReports) : [],
@@ -11618,8 +11632,10 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.harvestSpawnTimer = Number.isFinite(harvestTimer)
     ? clamp(harvestTimer, 0, HARVEST_BONUS_MAX_TIMER_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
-  state.harvestNextSpawnAtMs = normalizeTimestampMs(profile.harvestNextSpawnAtMs)
-    || Date.now() + state.harvestSpawnTimer * 1000;
+  state.harvestNextSpawnAtMs = normalizeHarvestNextSpawnAtMs(
+    profile.harvestNextSpawnAtMs,
+    state.harvestSpawnTimer
+  );
   state.harvestNextBonusType = normalizeHarvestBonusType(profile.harvestNextBonusType);
   state.scoutReports = normalizeScoutReports(profile.scoutReports);
   state.battleReports = normalizeBattleReports(profile.battleReports);
