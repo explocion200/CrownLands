@@ -447,10 +447,11 @@
 .common-gear-bag-filter-menu button:hover,
 .common-gear-bag-filter-menu button:focus-visible { border-color: #9f773e; outline: 0; color: #fff0c7; background: #493526; }
 .common-gear-bag-filter-menu button.selected { border-color: #c49b53; color: #fff0c7; background: linear-gradient(180deg, #733237, #4f2327); }
-.common-gear-bag-scroll { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #9c7338 #dac796; scrollbar-width: thin; background: linear-gradient(180deg, #eadbb5, #d6c08e); }
-.common-gear-bag-scroll::-webkit-scrollbar { width: 12px; }
-.common-gear-bag-scroll::-webkit-scrollbar-track { background: #d5bf8e; box-shadow: inset 0 0 4px rgba(54,32,12,.42); }
-.common-gear-bag-scroll::-webkit-scrollbar-thumb { border: 2px solid #d5bf8e; border-radius: 6px; background: linear-gradient(90deg, #795526, #b18747, #795526); }
+.common-gear-scroll { overflow: hidden auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-color: #9c7338 #dac796; scrollbar-width: thin; }
+.common-gear-bag-scroll { min-height: 0; background: linear-gradient(180deg, #eadbb5, #d6c08e); }
+.common-gear-scroll::-webkit-scrollbar { width: 12px; }
+.common-gear-scroll::-webkit-scrollbar-track { background: #d5bf8e; box-shadow: inset 0 0 4px rgba(54,32,12,.42); }
+.common-gear-scroll::-webkit-scrollbar-thumb { border: 2px solid #d5bf8e; border-radius: 6px; background: linear-gradient(90deg, #795526, #b18747, #795526); }
 .common-gear-bag-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: start; gap: 8px; min-height: 100%; padding: 9px; }
 
 .common-gear-mini-card,
