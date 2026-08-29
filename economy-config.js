@@ -198,8 +198,8 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     }
   },
   "pickups": {
-    "initialSpawnDelayMinutes": 3,
-    "respawnAfterCollectionMinutes": 1,
+    "initialSpawnDelayMinutes": 2,
+    "respawnAfterCollectionMinutes": 2,
     "expireMinutes": 20,
     "goldAwardProductionMinutes": 60,
     "troopAwardProductionMinutes": 60,

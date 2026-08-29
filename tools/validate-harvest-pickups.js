@@ -6,6 +6,10 @@ const vm = require("node:vm");
 const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "utf8");
 const serverSource = fs.readFileSync(path.resolve(__dirname, "..", "functions", "index.js"), "utf8");
 const styleSource = `${fs.readFileSync(path.resolve(__dirname, "..", "styles.css"), "utf8")}\n${fs.readFileSync(path.resolve(__dirname, "..", "interface-theme.css"), "utf8")}`;
+const howToPlaySource = fs.readFileSync(path.resolve(__dirname, "..", "how-to-play.html"), "utf8");
+const dailyRewardsGuideSource = fs.readFileSync(path.resolve(__dirname, "..", "daily-rewards-guide.html"), "utf8");
+const battleEconomyGuideSource = fs.readFileSync(path.resolve(__dirname, "..", "battle-economy-guide.js"), "utf8");
+const battleEconomyGuideHtml = fs.readFileSync(path.resolve(__dirname, "..", "battle-economy-guide.html"), "utf8");
 const economyConfigContext = { window: {} };
 vm.createContext(economyConfigContext);
 vm.runInContext(fs.readFileSync(path.resolve(__dirname, "..", "economy-config.js"), "utf8"), economyConfigContext);
@@ -13,9 +17,18 @@ const economyConfig = economyConfigContext.window.CROWNLANDS_ECONOMY_CONFIG;
 const serverEconomyConfig = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "functions", "economy-config.json"), "utf8"));
 
 assert.deepEqual(serverEconomyConfig.pickups, JSON.parse(JSON.stringify(economyConfig.pickups)), "Client and server pickup timing configuration must remain identical.");
-assert.equal(economyConfig.pickups.initialSpawnDelayMinutes, 3, "The first pickup must retain its three-minute delay.");
-assert.equal(economyConfig.pickups.respawnAfterCollectionMinutes, 1, "Successful collections must start a one-minute respawn.");
+assert.equal(economyConfig.pickups.initialSpawnDelayMinutes, 2, "The first pickup must use a two-minute delay.");
+assert.equal(economyConfig.pickups.respawnAfterCollectionMinutes, 2, "Successful collections must start a two-minute respawn.");
 assert.equal(economyConfig.pickups.expireMinutes, 20, "Pickup expiration must remain twenty minutes.");
+
+assert.match(howToPlaySource, /first active-map pickup appears after two minutes/i, "How to Play must describe the two-minute initial pickup wait.");
+assert.match(howToPlaySource, /successful collection starts a two-minute wait/i, "How to Play must describe the two-minute post-collection wait.");
+assert.match(dailyRewardsGuideSource, /first pickup appears after two minutes/i, "The Daily Rewards Guide must describe the two-minute initial pickup wait.");
+assert.match(dailyRewardsGuideSource, /next appears two minutes later/i, "The Daily Rewards Guide must describe the two-minute post-collection wait.");
+assert.match(battleEconomyGuideSource, /initialPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the initial pickup wait.");
+assert.match(battleEconomyGuideSource, /respawnPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the post-collection pickup wait.");
+assert.match(battleEconomyGuideHtml, /economy-config\.js\?v=20260828-two-minute-pickup-cadence-r1/, "The Battle & Economy Guide must request the current pickup configuration.");
+assert.match(battleEconomyGuideHtml, /battle-economy-guide\.js\?v=20260828-two-minute-pickup-cadence-r1/, "The Battle & Economy Guide must request its updated timer wording runtime.");
 
 assert.match(
   styleSource,
@@ -89,6 +102,16 @@ assert.match(serverSource, /targetRegionId:\s*normalizeRegionId\(mainEntry\.city
 assert.match(collectSource, /resetHarvestRespawnTimer\(\)/, "Local pickup claims must start the dedicated collection respawn timer.");
 assert.match(collectSource, /getHarvestBonusRespawnToastSuffix/, "Successful pickup messages must include the collection respawn notice.");
 assert.match(extractFunction(gameSource, "getHarvestBonusRespawnToastSuffix"), /Next pickup in/, "The collection respawn notice must tell the player when the next pickup arrives.");
+const toastContext = {
+  HARVEST_BONUS_RESPAWN_SECONDS: 120,
+  ensureDailyCaptureTracker: () => ({}),
+  getNextAvailableHarvestBonusType: () => "gold",
+  formatDuration: seconds => `${seconds} seconds`,
+  formatNumber: value => String(value),
+};
+vm.createContext(toastContext);
+vm.runInContext(extractFunction(gameSource, "getHarvestBonusRespawnToastSuffix"), toastContext);
+assert.equal(toastContext.getHarvestBonusRespawnToastSuffix({}), " · Next pickup in 2 minutes", "Successful pickup messages must show the two-minute wait with correct pluralization.");
 assert.match(
   collectSource,
   /catch \(error\) \{[\s\S]*?state\.harvestBonuses\.splice\(Math\.min\(index, state\.harvestBonuses\.length\), 0, bonus\);[\s\S]*?Could not collect harvest bonus/,
@@ -112,7 +135,7 @@ assert.match(
 assert.match(
   serverCollectSource,
   /harvestSpawnTimer: HARVEST_BONUS_RESPAWN_SECONDS/,
-  "The authoritative collection response must return the one-minute respawn timer."
+  "The authoritative collection response must return the two-minute respawn timer."
 );
 assert.match(
   serverCollectSource,
@@ -122,21 +145,36 @@ assert.match(
 
 const initialStateSource = extractFunction(gameSource, "newGame");
 assert.match(initialStateSource, /harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS/, "New local games must start with the initial delay.");
-assert.match(initialStateSource, /HARVEST_BONUS_INITIAL_SPAWN_SECONDS \* 1000/, "The local initial deadline must use the three-minute setting.");
+assert.match(initialStateSource, /HARVEST_BONUS_INITIAL_SPAWN_SECONDS \* 1000/, "The local initial deadline must use the two-minute setting.");
 assert.match(serverSource, /harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,[\s\S]*?harvestNextSpawnAtMs: nowMs \+ HARVEST_BONUS_INITIAL_SPAWN_SECONDS \* 1000/, "New server profiles must start with the initial delay.");
 
 const timerContext = {
-  HARVEST_BONUS_INITIAL_SPAWN_SECONDS: 180,
-  HARVEST_BONUS_MAX_TIMER_SECONDS: 180,
+  HARVEST_BONUS_INITIAL_SPAWN_SECONDS: 120,
+  HARVEST_BONUS_MAX_TIMER_SECONDS: 120,
   timestampToMs(value) { return Math.max(0, Number(value) || 0); },
   clampInt(value, minimum, maximum) { return Math.min(maximum, Math.max(minimum, Math.floor(Number(value) || 0))); },
 };
 vm.createContext(timerContext);
 vm.runInContext(extractFunction(serverSource, "getHarvestNextSpawnAtMs"), timerContext);
 vm.runInContext(extractFunction(serverSource, "getHarvestSpawnTimerFromNextAt"), timerContext);
-assert.equal(timerContext.getHarvestNextSpawnAtMs({}, 10_000), 190_000, "A profile without pickup timing state must receive the three-minute initial delay.");
+assert.equal(timerContext.getHarvestNextSpawnAtMs({}, 10_000), 130_000, "A profile without pickup timing state must receive the two-minute initial delay.");
 assert.equal(timerContext.getHarvestNextSpawnAtMs({ harvestSpawnTimer: 60 }, 10_000), 70_000, "Legacy timer state must preserve a one-minute remaining cooldown.");
 assert.equal(timerContext.getHarvestSpawnTimerFromNextAt(70_000, 10_000), 60, "The server response must report one minute remaining from its absolute deadline.");
+assert.equal(timerContext.getHarvestNextSpawnAtMs({ harvestSpawnTimer: 180 }, 10_000), 130_000, "A legacy timer longer than two minutes must normalize to the new maximum.");
+assert.equal(timerContext.getHarvestNextSpawnAtMs({ harvestNextSpawnAtMs: 190_000 }, 10_000), 130_000, "A legacy absolute deadline longer than two minutes must normalize to the new maximum.");
+assert.equal(timerContext.getHarvestNextSpawnAtMs({ harvestNextSpawnAtMs: 70_000 }, 10_000), 70_000, "A shorter absolute deadline must remain unchanged.");
+assert.equal(timerContext.getHarvestSpawnTimerFromNextAt(190_000, 10_000), 120, "Authoritative responses must cap legacy deadlines at two minutes.");
+
+const clientTimerContext = {
+  HARVEST_BONUS_INITIAL_SPAWN_SECONDS: 120,
+  HARVEST_BONUS_MAX_TIMER_SECONDS: 120,
+  normalizeTimestampMs(value) { return Math.max(0, Number(value) || 0); },
+  clamp(value, minimum, maximum) { return Math.min(maximum, Math.max(minimum, Number(value) || 0)); },
+};
+vm.createContext(clientTimerContext);
+vm.runInContext(extractFunction(gameSource, "normalizeHarvestNextSpawnAtMs"), clientTimerContext);
+assert.equal(clientTimerContext.normalizeHarvestNextSpawnAtMs(190_000, 120, 10_000), 130_000, "The browser must cap a legacy absolute deadline at two minutes when synchronizing.");
+assert.equal(clientTimerContext.normalizeHarvestNextSpawnAtMs(70_000, 120, 10_000), 70_000, "The browser must preserve a shorter synchronized deadline.");
 
 const createPointSource = extractFunction(gameSource, "createHarvestBonusPoint");
 const pruneSource = extractFunction(gameSource, "pruneExpiredHarvestBonuses");

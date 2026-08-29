@@ -314,7 +314,9 @@
 
   function renderStaticValues() {
     const pickups = config.pickups || {};
-    $("pickupEconomyText").textContent = `First pickup after ${format(pickups.initialSpawnDelayMinutes)} minutes · then ${format(pickups.respawnAfterCollectionMinutes)} minute after each collection · center-biased placement · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} gold and ${format(pickups.dailyTroopCap)} troop pickups`;
+    const initialPickupMinutes = Number(pickups.initialSpawnDelayMinutes) || 0;
+    const respawnPickupMinutes = Number(pickups.respawnAfterCollectionMinutes) || 0;
+    $("pickupEconomyText").textContent = `First pickup after ${format(initialPickupMinutes)} minute${initialPickupMinutes === 1 ? "" : "s"} · then ${format(respawnPickupMinutes)} minute${respawnPickupMinutes === 1 ? "" : "s"} after each collection · center-biased placement · ${format(pickups.goldAwardProductionMinutes)} minutes of stored production · daily cap ${format(pickups.dailyGoldCap)} gold and ${format(pickups.dailyTroopCap)} troop pickups`;
     const repairExamples = [
       { label: "Level 1 city", level: 1 },
       { label: "Level 25 city", level: 25 },
