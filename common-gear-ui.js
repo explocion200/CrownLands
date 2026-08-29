@@ -475,7 +475,7 @@ function setCommonGearBagFilterOpen(screen, open, { focusSelectedOption = false 
 function renderCommonGearSelectedPanel(viewModel) {
   const { selected, definition, requirement } = viewModel;
   if (!selected || !definition) {
-    return `<section class="common-gear-detail-panel common-gear-selected-panel" data-gear-panel="details">
+    return `<section class="common-gear-detail-panel common-gear-selected-panel common-gear-scroll" data-gear-panel="details" role="region" aria-label="${escapeHtml(titleCaseCommonGearLabel(viewModel.selectedSlot))} selected gear details" tabindex="0">
       <div class="common-gear-empty-selection">
         <span aria-hidden="true">◇</span>
         <strong>No ${escapeHtml(titleCaseCommonGearLabel(viewModel.selectedSlot))} gear selected</strong>
@@ -487,7 +487,7 @@ function renderCommonGearSelectedPanel(viewModel) {
   const mergeCopy = requirement
     ? `Requires ${requirement.duplicates} matching Level ${selected.level} cop${requirement.duplicates === 1 ? "y" : "ies"} (${viewModel.duplicateCount} available) + ${formatNumber(viewModel.upgradeGold)} gold (${formatStackedBonusPercent(requirement.baseGoldHours)}h raw production)`
     : "This item has reached its maximum level.";
-  return `<section class="common-gear-detail-panel common-gear-selected-panel" data-gear-panel="details">
+  return `<section class="common-gear-detail-panel common-gear-selected-panel common-gear-scroll" data-gear-panel="details" role="region" aria-label="${escapeHtml(`${viewModel.officerName} ${definition.gearName} selected gear details`)}" tabindex="0">
     <span class="common-gear-detail-eyebrow">${escapeHtml(viewModel.officerName)}'s</span>
     <strong class="common-gear-detail-name">${escapeHtml(definition.gearName)}</strong>
     <span class="common-gear-rarity rarity-${escapeHtml(definition.rarity)}">${escapeHtml(definition.rarity)} · L${selected.level}/${COMMON_GEAR.MAX_LEVEL} · ${escapeHtml(selected.slot)}</span>
@@ -627,11 +627,22 @@ async function runCommonGearAction(buildingId, action, instanceId) {
 function bindCommonGearScreen(viewModel) {
   const screen = modalBody.querySelector("[data-common-gear-screen]");
   const bagScroll = modalBody.querySelector("[data-gear-bag-scroll]");
+  const detailsScroll = modalBody.querySelector('[data-gear-panel="details"]');
   if (!screen) return;
   if (bagScroll) {
     bagScroll.scrollTop = commonGearBagScrollTop;
     bagScroll.addEventListener("scroll", () => { commonGearBagScrollTop = bagScroll.scrollTop; }, { passive: true });
   }
+  detailsScroll?.addEventListener("keydown", event => {
+    if (event.target !== detailsScroll || !["Home", "End", "PageUp", "PageDown"].includes(event.key)) return;
+    const maxScrollTop = Math.max(0, detailsScroll.scrollHeight - detailsScroll.clientHeight);
+    const pageStep = Math.max(1, Math.floor(detailsScroll.clientHeight * .8));
+    const nextScrollTop = event.key === "Home" ? 0
+      : event.key === "End" ? maxScrollTop
+        : detailsScroll.scrollTop + (event.key === "PageUp" ? -pageStep : pageStep);
+    event.preventDefault();
+    detailsScroll.scrollTop = Math.max(0, Math.min(maxScrollTop, nextScrollTop));
+  });
   screen.addEventListener("keydown", event => {
     const filterButton = event.target.closest?.("[data-gear-bag-filter-button]");
     if (filterButton && event.key === "ArrowDown") {
@@ -768,7 +779,7 @@ function renderCommonGearBuilding(buildingId) {
       ${renderCommonGearSelectedPanel(viewModel)}
       <section class="common-gear-bag-panel" data-gear-panel="bag">
         <header><strong>Equipment Bag</strong>${renderCommonGearBagFilter(viewModel)}</header>
-        <div class="common-gear-bag-scroll" data-gear-bag-scroll>
+        <div class="common-gear-bag-scroll common-gear-scroll" data-gear-bag-scroll>
           <div class="common-gear-bag-grid">${viewModel.filteredBagGroups.map(renderCommonGearBagTile).join("") || `<div class="common-gear-bag-empty"><strong>No equipment here</strong><small>${viewModel.instances.length ? "Change the bag filter to see this officer's other gear." : "Open Common Gear Boxes to find gear for this officer."}</small></div>`}</div>
         </div>
         <footer><span>◆ ${formatNumber(viewModel.bagOwnedCount)} owned</span><small>${formatNumber(viewModel.filteredBagGroups.length)} shown · ${formatNumber(viewModel.bagStackCount)} stacks · matching slots glow</small></footer>

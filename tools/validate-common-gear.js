@@ -163,7 +163,7 @@ assert.match(rules, /'shopItems',\s*'gear',/, "Client profile creation must not 
 const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
-assert.match(clientIndex, /common-gear-ui\.css\?v=20260817-inner-castle-labels-r1/, "The equipment stylesheet must load in the game shell.");
+assert.match(clientIndex, /common-gear-ui\.css\?v=20260828-scrollable-selected-gear-panel-r1/, "The equipment stylesheet must load with the selected-panel scroll cache token.");
 assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-gear-upgrade-consumption-r1[\s\S]*game\.js\?v=20260827-instant-cross-map-city-upgrades-r1/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
@@ -181,6 +181,8 @@ assert.match(
 assert.match(game, /getCommonGearInstances\(buildingId\)/, "The right bag must load every slot for only the active officer.");
 assert.match(game, /data-gear-bag-scroll/, "The redesigned officer bag must own vertical scrolling.");
 assert.match(game, /commonGearBagScrollTop/, "Officer bag scroll position must survive rerenders.");
+assert.match(game, /common-gear-selected-panel common-gear-scroll" data-gear-panel="details" role="region" aria-label="[^\"]*selected gear details" tabindex="0"/, "Selected gear details must be a named, keyboard-focusable scroll region.");
+assert.match(gearUi, /detailsScroll\?\.addEventListener\("keydown"[\s\S]{0,700}\["Home", "End", "PageUp", "PageDown"\][\s\S]{0,700}detailsScroll\.scrollTop = Math\.max/, "Selected gear details must support deterministic Home, End, Page Up, and Page Down scrolling.");
 assert.match(game, /common-gear-bottom-info/, "Selected equipment metadata must render in the bottom strip.");
 assert.match(game, /common-gear-confirm-backdrop/, "Upgrade must have an in-game confirmation step.");
 assert.match(game, /upgradeCommonGear\(\{[\s\S]{0,180}instanceId,[\s\S]{0,180}requestId:/, "Upgrade must continue through the authoritative callable with a replay-safe request id.");
@@ -352,7 +354,13 @@ assert.match(
 );
 assert.match(css, /@media \(max-height: 560px\) and \(orientation: landscape\)[\s\S]{0,3000}\.common-gear-slot\s*\{[^}]*min-height: 0;/, "Short landscape loadouts must fit all four slot rows.");
 assert.match(css, /\.common-gear-main\s*\{[^}]*grid-template-columns:[^}]*1\.12fr[^}]*\.72fr[^}]*1\.05fr/, "Wide equipment screens must keep loadout, detail, and bag columns.");
-assert.match(css, /\.common-gear-bag-scroll\s*\{[^}]*overflow-y: auto;/, "The officer equipment bag must scroll vertically.");
+assert.match(game, /common-gear-bag-scroll common-gear-scroll" data-gear-bag-scroll/, "The equipment bag must retain the shared native scroll treatment.");
+assert.match(
+  css,
+  /\.common-gear-scroll\s*\{[^}]*overflow: hidden auto;[^}]*overscroll-behavior: contain;[^}]*touch-action: pan-y;[^}]*scrollbar-color: #9c7338 #dac796;[^}]*scrollbar-width: thin;/,
+  "Every officer's selected-item panel must support contained native vertical scrolling for mouse, touch, and keyboard users."
+);
+assert.match(css, /\.common-gear-scroll::-webkit-scrollbar-thumb\s*\{[^}]*background: linear-gradient\(90deg, #795526, #b18747, #795526\);/, "The selected-item scrollbar must match the equipment bag's parchment and brass treatment.");
 assert.match(css, /\.common-gear-bag-grid\s*\{[^}]*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/, "The officer bag must render as a tile grid.");
 assert.match(css, /@media \(max-width: 980px\)[\s\S]{0,1800}\.common-gear-main\s*\{[^}]*display: grid;[^}]*grid-template-columns:[^}]*1\.12fr[^}]*\.76fr[^}]*1\.08fr/, "Narrow equipment screens must retain the loadout, detail, and bag columns.");
 assert.doesNotMatch(css, /common-gear-mobile-tabs|data-gear-mobile-view/, "The equipment stylesheet must not restore the retired mobile tab layout.");
