@@ -12,7 +12,14 @@ const { SCENARIOS } = require("./fixtures.js");
 const { createMapBenchmarkServer } = require("./server.js");
 
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
-const OUTPUT_DIR = path.join(ROOT_DIR, "benchmark-results", "map");
+const outputDirectoryArgument = process.argv.find(argument => argument.startsWith("--output-directory="));
+const outputBasenameArgument = process.argv.find(argument => argument.startsWith("--output-basename="));
+const OUTPUT_DIR = outputDirectoryArgument
+  ? path.resolve(ROOT_DIR, outputDirectoryArgument.slice("--output-directory=".length))
+  : path.join(ROOT_DIR, "benchmark-results", "map");
+const OUTPUT_BASENAME = outputBasenameArgument
+  ? outputBasenameArgument.slice("--output-basename=".length).replace(/[^a-z0-9._-]/gi, "-")
+  : "";
 const QUICK = process.argv.includes("--quick");
 const PROFILE_MARCHES = process.argv.includes("--profile-marches");
 const PROFILE_MARCHES_STAGE = process.argv.includes("--profile-before") ? "before" : "after";
@@ -356,7 +363,13 @@ async function runProfileScenario(client, serverAddress, scenario, profile) {
   console.log(`  ${progressPrefix}: authenticated fixture ready`);
   const initialRuntime = await evaluate(client, "window.__CROWNLANDS_BENCHMARK__.getMetrics()");
   if (initialRuntime.dataCityCount !== scenario.cityCount || initialRuntime.dataMarchCount !== scenario.marchCount) {
-    throw new Error(`Fixture count mismatch: expected ${scenario.cityCount}/${scenario.marchCount}, received ${initialRuntime.dataCityCount}/${initialRuntime.dataMarchCount}.`);
+    throw new Error(
+      `Fixture count mismatch: expected ${scenario.cityCount}/${scenario.marchCount}, `
+      + `received ${initialRuntime.dataCityCount}/${initialRuntime.dataMarchCount} in ${initialRuntime.regionId || "unknown region"}. `
+      + `Regions: ${JSON.stringify(initialRuntime.worldRegionIds || [])}. `
+      + `Online state: ${JSON.stringify(initialRuntime.onlineState || {})}; main city: ${initialRuntime.mainCityId || "none"}. `
+      + `Operations: ${JSON.stringify(initialRuntime.realtime?.operations || [])}.`
+    );
   }
 
   if (PROFILE_MARCHES) {
@@ -570,7 +583,8 @@ async function main() {
     await fsp.mkdir(OUTPUT_DIR, { recursive: true });
     const partialPath = path.join(
       OUTPUT_DIR,
-      VERIFY_PHASE_1_A_DESKTOP ? "phase-1-verification-a-desktop.partial.json"
+      OUTPUT_BASENAME ? `${OUTPUT_BASENAME}.partial.json`
+        : VERIFY_PHASE_1_A_DESKTOP ? "phase-1-verification-a-desktop.partial.json"
         : VERIFY_PHASE_1 ? "phase-1-verification.partial.json"
         : PHASE_2_AFTER ? "phase-2-after.partial.json"
         : PHASE_1_AFTER ? "phase-1-after.partial.json" : "baseline.partial.json"
@@ -624,14 +638,14 @@ async function main() {
       }
     }
     const report = buildReport(chromePath, browserVersion, runs, failures);
-    const basename = PROFILE_MARCHES
+    const basename = OUTPUT_BASENAME || (PROFILE_MARCHES
       ? `phase-1-profile-${PROFILE_MARCHES_STAGE}`
       : PROFILE_ZOOM ? `phase-2-zoom-profile-${PROFILE_ZOOM_STAGE}`
       : VERIFY_PHASE_1_A_DESKTOP ? "phase-1-verification-a-desktop"
       : VERIFY_PHASE_1 ? "phase-1-verification"
       : PHASE_2_AFTER ? "phase-2-after"
       : PHASE_1_AFTER ? "phase-1-after"
-        : QUICK ? "quick-latest" : "baseline";
+        : QUICK ? "quick-latest" : "baseline");
     if (PROFILE_MARCHES || PROFILE_ZOOM) {
       await fsp.writeFile(path.join(OUTPUT_DIR, `${basename}.json`), `${JSON.stringify(report, null, 2)}\n`);
       console.log(`Wrote ${path.relative(ROOT_DIR, path.join(OUTPUT_DIR, `${basename}.json`))}`);

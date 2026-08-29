@@ -1,0 +1,4284 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-29T21:58:24.271Z",
+  "source": {
+    "commit": "f1187b58c6484f40fb2644deb27a4e15f488b3fb",
+    "branch": "codex/stability-login-performance-audit",
+    "dirtyDuringAudit": true
+  },
+  "auditProfile": {
+    "full": true,
+    "soakMinutes": 60,
+    "mapSwitches": 50,
+    "foregroundCycles": 20,
+    "reconnectCycles": 10
+  },
+  "repository": {
+    "releaseId": "crownlands-2026-09-monthly-sharded-realms-v1",
+    "resetGeneration": "fresh-2026-07-26-server-reset",
+    "worldId": "main-fresh-2026-07-26-server-reset",
+    "apiContractHash": "86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd",
+    "buildId": "20260827-instant-cross-map-city-upgrades-r1",
+    "cacheVersion": "20260827-instant-cross-map-city-upgrades-r1",
+    "skillPointSystemVersion": 2,
+    "realmSourceHash": "ae92166e56c3000b173d884fd7c433a0264bf5c3f35ecde08806b8abd344d42e",
+    "parity": {
+      "browserReleaseMatchesServer": true,
+      "browserContractMatchesServer": true,
+      "gameAssetMatchesServiceWorker": true,
+      "firebaseAssetMatchesServiceWorker": true,
+      "buildMatchesCache": true,
+      "firestoreRulesPresent": true,
+      "firestoreIndexesPresent": true
+    }
+  },
+  "localBrowser": {
+    "browser": {
+      "product": "Chrome/151.0.7922.175",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+      "executable": "chrome.exe"
+    },
+    "loopbackOrigin": "http://127.0.0.1:<ephemeral>",
+    "cases": [
+      {
+        "id": "cold-desktop",
+        "expected": "ready",
+        "passed": false,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 1454,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 184,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 282,
+            "sincePreviousMs": 98
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 334,
+            "sincePreviousMs": 52
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 335,
+            "sincePreviousMs": 1
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 335,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 517,
+            "sincePreviousMs": 182
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 530,
+            "sincePreviousMs": 13
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 530,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 553,
+            "sincePreviousMs": 23
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 677,
+            "sincePreviousMs": 124
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 806,
+            "sincePreviousMs": 129
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 1430,
+            "sincePreviousMs": 625
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected realtime listener failure\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runRealtimeRecoveryCheck (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:38982:45)\n    at <anonymous>:1:33"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          },
+          {
+            "type": "warning",
+            "text": "Active island snapshot failed Error: Injected reconnect cycle\n    at Object.__emitIslandError (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:368:26)\n    at Object.runLifecycleCycles (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39026:31)"
+          }
+        ],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 337,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 78101979,
+            "usedJSHeapSize": 11988735
+          },
+          "timers": {
+            "activeTimeouts": 0,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 2407,
+            "intervalCreated": 14,
+            "animationFrameRequested": 656480,
+            "animationFrameExecuted": 656479,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "chat": 1,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000097
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000097
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000097
+              },
+              {
+                "id": "listener-18",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032000472
+              },
+              {
+                "id": "listener-381",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-382",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-383",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-384",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-385",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-386",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-387",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-388",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-389",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-390",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-391",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-392",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-393",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209035621980
+              },
+              {
+                "id": "listener-394",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209035621980
+              }
+            ],
+            "subscribedTotal": 394,
+            "unsubscribedTotal": 376
+          },
+          "longTasks": [
+            {
+              "startTime": 345.80000000074506,
+              "duration": 54
+            },
+            {
+              "startTime": 516.3000000007451,
+              "duration": 312
+            },
+            {
+              "startTime": 862.8000000007451,
+              "duration": 130
+            },
+            {
+              "startTime": 1023,
+              "duration": 130
+            },
+            {
+              "startTime": 2708.10000000149,
+              "duration": 105
+            },
+            {
+              "startTime": 3919.900000002235,
+              "duration": 134
+            },
+            {
+              "startTime": 5114.70000000298,
+              "duration": 246
+            },
+            {
+              "startTime": 5363.800000000745,
+              "duration": 264
+            },
+            {
+              "startTime": 5640.70000000298,
+              "duration": 327
+            },
+            {
+              "startTime": 6332.20000000298,
+              "duration": 76
+            },
+            {
+              "startTime": 6510.400000002235,
+              "duration": 91
+            },
+            {
+              "startTime": 52712.60000000149,
+              "duration": 110
+            },
+            {
+              "startTime": 98915.90000000224,
+              "duration": 88
+            },
+            {
+              "startTime": 120610.20000000298,
+              "duration": 183
+            },
+            {
+              "startTime": 145113.30000000075,
+              "duration": 111
+            },
+            {
+              "startTime": 145249.80000000075,
+              "duration": 207
+            },
+            {
+              "startTime": 191316.20000000298,
+              "duration": 88
+            },
+            {
+              "startTime": 191406,
+              "duration": 178
+            },
+            {
+              "startTime": 237519.1000000015,
+              "duration": 109
+            },
+            {
+              "startTime": 237653.40000000224,
+              "duration": 205
+            },
+            {
+              "startTime": 283716.40000000224,
+              "duration": 85
+            },
+            {
+              "startTime": 283809,
+              "duration": 173
+            },
+            {
+              "startTime": 329913.700000003,
+              "duration": 106
+            },
+            {
+              "startTime": 330043.30000000075,
+              "duration": 205
+            },
+            {
+              "startTime": 376108.30000000075,
+              "duration": 85
+            },
+            {
+              "startTime": 376200.90000000224,
+              "duration": 175
+            },
+            {
+              "startTime": 422308.5,
+              "duration": 107
+            },
+            {
+              "startTime": 422440.1000000015,
+              "duration": 203
+            },
+            {
+              "startTime": 468508.90000000224,
+              "duration": 86
+            },
+            {
+              "startTime": 468604.90000000224,
+              "duration": 176
+            },
+            {
+              "startTime": 514714.40000000224,
+              "duration": 107
+            },
+            {
+              "startTime": 514845.700000003,
+              "duration": 206
+            },
+            {
+              "startTime": 560911.5,
+              "duration": 84
+            },
+            {
+              "startTime": 561002.9000000022,
+              "duration": 174
+            },
+            {
+              "startTime": 607098.3000000007,
+              "duration": 120
+            },
+            {
+              "startTime": 607251.5,
+              "duration": 233
+            },
+            {
+              "startTime": 653295.4000000022,
+              "duration": 81
+            },
+            {
+              "startTime": 653385.4000000022,
+              "duration": 175
+            },
+            {
+              "startTime": 699498.200000003,
+              "duration": 108
+            },
+            {
+              "startTime": 699631.5,
+              "duration": 204
+            },
+            {
+              "startTime": 745695.700000003,
+              "duration": 86
+            },
+            {
+              "startTime": 745788.8000000007,
+              "duration": 173
+            },
+            {
+              "startTime": 791898.8000000007,
+              "duration": 106
+            },
+            {
+              "startTime": 792028.1000000015,
+              "duration": 203
+            },
+            {
+              "startTime": 838090.8000000007,
+              "duration": 84
+            },
+            {
+              "startTime": 838176.8000000007,
+              "duration": 179
+            },
+            {
+              "startTime": 884293.200000003,
+              "duration": 106
+            },
+            {
+              "startTime": 884424.200000003,
+              "duration": 206
+            },
+            {
+              "startTime": 930483.4000000022,
+              "duration": 83
+            },
+            {
+              "startTime": 930574.200000003,
+              "duration": 174
+            },
+            {
+              "startTime": 976672,
+              "duration": 126
+            },
+            {
+              "startTime": 976825,
+              "duration": 235
+            },
+            {
+              "startTime": 1022865.9000000022,
+              "duration": 83
+            },
+            {
+              "startTime": 1022962.200000003,
+              "duration": 175
+            },
+            {
+              "startTime": 1069071.3000000007,
+              "duration": 106
+            },
+            {
+              "startTime": 1069202.6000000015,
+              "duration": 204
+            },
+            {
+              "startTime": 1115263.3000000007,
+              "duration": 82
+            },
+            {
+              "startTime": 1115354.3000000007,
+              "duration": 172
+            },
+            {
+              "startTime": 1161455.1000000015,
+              "duration": 123
+            },
+            {
+              "startTime": 1161610.700000003,
+              "duration": 231
+            },
+            {
+              "startTime": 1207652.5,
+              "duration": 84
+            },
+            {
+              "startTime": 1207743.8000000007,
+              "duration": 173
+            },
+            {
+              "startTime": 1253850.1000000015,
+              "duration": 115
+            },
+            {
+              "startTime": 1254001.4000000022,
+              "duration": 235
+            },
+            {
+              "startTime": 1300052.9000000022,
+              "duration": 81
+            },
+            {
+              "startTime": 1300142.5,
+              "duration": 178
+            },
+            {
+              "startTime": 1320791.6000000015,
+              "duration": 176
+            },
+            {
+              "startTime": 1346250.3000000007,
+              "duration": 105
+            },
+            {
+              "startTime": 1346380.9000000022,
+              "duration": 210
+            },
+            {
+              "startTime": 1392459,
+              "duration": 84
+            },
+            {
+              "startTime": 1392545.1000000015,
+              "duration": 177
+            },
+            {
+              "startTime": 1438661.9000000022,
+              "duration": 106
+            },
+            {
+              "startTime": 1438791.1000000015,
+              "duration": 204
+            },
+            {
+              "startTime": 1484853.9000000022,
+              "duration": 82
+            },
+            {
+              "startTime": 1484943.8000000007,
+              "duration": 175
+            },
+            {
+              "startTime": 1531050.8000000007,
+              "duration": 106
+            },
+            {
+              "startTime": 1531181.9000000022,
+              "duration": 205
+            },
+            {
+              "startTime": 1577242.8000000007,
+              "duration": 84
+            },
+            {
+              "startTime": 1577334.200000003,
+              "duration": 173
+            },
+            {
+              "startTime": 1623445.5,
+              "duration": 106
+            },
+            {
+              "startTime": 1623575.200000003,
+              "duration": 205
+            },
+            {
+              "startTime": 1669642.8000000007,
+              "duration": 80
+            },
+            {
+              "startTime": 1669730.200000003,
+              "duration": 174
+            },
+            {
+              "startTime": 1715840.5,
+              "duration": 106
+            },
+            {
+              "startTime": 1715970.6000000015,
+              "duration": 203
+            },
+            {
+              "startTime": 1762031.200000003,
+              "duration": 83
+            },
+            {
+              "startTime": 1762123.3000000007,
+              "duration": 174
+            },
+            {
+              "startTime": 1808229.3000000007,
+              "duration": 106
+            },
+            {
+              "startTime": 1808360.1000000015,
+              "duration": 202
+            },
+            {
+              "startTime": 1854423.9000000022,
+              "duration": 84
+            },
+            {
+              "startTime": 1854527.1000000015,
+              "duration": 175
+            },
+            {
+              "startTime": 1900629.9000000022,
+              "duration": 106
+            },
+            {
+              "startTime": 1900738.8000000007,
+              "duration": 211
+            },
+            {
+              "startTime": 1946842.1000000015,
+              "duration": 83
+            },
+            {
+              "startTime": 1946937.4000000022,
+              "duration": 173
+            },
+            {
+              "startTime": 1993046.6000000015,
+              "duration": 106
+            },
+            {
+              "startTime": 1993177.1000000015,
+              "duration": 204
+            },
+            {
+              "startTime": 2039260.6000000015,
+              "duration": 83
+            },
+            {
+              "startTime": 2039352.8000000007,
+              "duration": 174
+            },
+            {
+              "startTime": 2085452.6000000015,
+              "duration": 105
+            },
+            {
+              "startTime": 2085581.6000000015,
+              "duration": 205
+            },
+            {
+              "startTime": 2131659.200000003,
+              "duration": 82
+            },
+            {
+              "startTime": 2131748.5,
+              "duration": 175
+            },
+            {
+              "startTime": 2177852.9000000022,
+              "duration": 106
+            },
+            {
+              "startTime": 2177982.200000003,
+              "duration": 202
+            },
+            {
+              "startTime": 2224042.9000000022,
+              "duration": 83
+            },
+            {
+              "startTime": 2224138.200000003,
+              "duration": 175
+            },
+            {
+              "startTime": 2270250,
+              "duration": 102
+            },
+            {
+              "startTime": 2270373.9000000022,
+              "duration": 210
+            },
+            {
+              "startTime": 2521022.8000000007,
+              "duration": 208
+            },
+            {
+              "startTime": 3216507.1000000015,
+              "duration": 69
+            },
+            {
+              "startTime": 3261577.3000000007,
+              "duration": 69
+            },
+            {
+              "startTime": 3306651.700000003,
+              "duration": 69
+            },
+            {
+              "startTime": 3351727.1000000015,
+              "duration": 68
+            },
+            {
+              "startTime": 3396801.200000003,
+              "duration": 68
+            },
+            {
+              "startTime": 3441870.5,
+              "duration": 68
+            },
+            {
+              "startTime": 3486939.700000003,
+              "duration": 68
+            },
+            {
+              "startTime": 3532011.700000003,
+              "duration": 72
+            },
+            {
+              "startTime": 3577090.5,
+              "duration": 73
+            },
+            {
+              "startTime": 3622164.200000003,
+              "duration": 77
+            },
+            {
+              "startTime": 3667244.200000003,
+              "duration": 232
+            },
+            {
+              "startTime": 3667479.700000003,
+              "duration": 251
+            }
+          ]
+        },
+        "recovery": {
+          "staleSnapshot": {
+            "passed": true,
+            "emitted": true,
+            "beforeRegionId": "region_6",
+            "afterRegionId": "region_6"
+          },
+          "realtimeRecovery": {
+            "passed": false,
+            "emitted": true,
+            "restarted": true,
+            "listeners": {
+              "active": 18,
+              "categories": {
+                "player/session": 4,
+                "chat": 1,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-18",
+                  "key": "chat.global",
+                  "category": "chat",
+                  "startedAtMs": 2209032000472
+                },
+                {
+                  "id": "listener-27",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-28",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-29",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-30",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-31",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-32",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-33",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-34",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-35",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-36",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-37",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-38",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-39",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032005457
+                },
+                {
+                  "id": "listener-40",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032005457
+                }
+              ],
+              "subscribedTotal": 40,
+              "unsubscribedTotal": 22
+            }
+          },
+          "offlineRecovery": {
+            "passed": false,
+            "synchronized": true,
+            "listeners": {
+              "active": 18,
+              "categories": {
+                "player/session": 4,
+                "chat": 1,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-18",
+                  "key": "chat.global",
+                  "category": "chat",
+                  "startedAtMs": 2209032000472
+                },
+                {
+                  "id": "listener-41",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-42",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-43",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-44",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-45",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-46",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-47",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-48",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-49",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-50",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-51",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-52",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-53",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-54",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032006148
+                }
+              ],
+              "subscribedTotal": 54,
+              "unsubscribedTotal": 36
+            }
+          },
+          "lifecycle": {
+            "passed": false,
+            "requestedDurationMs": 3600000,
+            "elapsedMs": 3661241.8000000007,
+            "switchesCompleted": 50,
+            "foregroundCompleted": 20,
+            "reconnectsCompleted": 10,
+            "baselineListeners": {
+              "active": 18,
+              "categories": {
+                "player/session": 4,
+                "chat": 1,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-18",
+                  "key": "chat.global",
+                  "category": "chat",
+                  "startedAtMs": 2209032000472
+                },
+                {
+                  "id": "listener-41",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-42",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-43",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-44",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-45",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-46",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-47",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-48",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-49",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-50",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-51",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-52",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-53",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209032006148
+                },
+                {
+                  "id": "listener-54",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209032006148
+                }
+              ],
+              "subscribedTotal": 54,
+              "unsubscribedTotal": 36
+            },
+            "listeners": {
+              "active": 18,
+              "categories": {
+                "player/session": 4,
+                "chat": 1,
+                "region": 4,
+                "player": 7,
+                "global": 2
+              },
+              "duplicates": [],
+              "entries": [
+                {
+                  "id": "listener-1",
+                  "key": "session.active",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-2",
+                  "key": "player.dailyMission",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-3",
+                  "key": "player.seasonalAchievement",
+                  "category": "player/session",
+                  "startedAtMs": 2209032000097
+                },
+                {
+                  "id": "listener-18",
+                  "key": "chat.global",
+                  "category": "chat",
+                  "startedAtMs": 2209032000472
+                },
+                {
+                  "id": "listener-381",
+                  "key": "region.region_11.1",
+                  "category": "region",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-382",
+                  "key": "region.region_11.2",
+                  "category": "region",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-383",
+                  "key": "region.region_11.3",
+                  "category": "region",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-384",
+                  "key": "region.region_11.4",
+                  "category": "region",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-385",
+                  "key": "player.armies.1",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-386",
+                  "key": "player.armies.2",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-387",
+                  "key": "player.reinforcements.1",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-388",
+                  "key": "player.reinforcements.2",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-389",
+                  "key": "player.heldCamps",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-390",
+                  "key": "player.serverReports",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-391",
+                  "key": "global.realmActivity",
+                  "category": "global",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-392",
+                  "key": "player.globalStats",
+                  "category": "player",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-393",
+                  "key": "global.crownCitadel",
+                  "category": "global",
+                  "startedAtMs": 2209035621980
+                },
+                {
+                  "id": "listener-394",
+                  "key": "session.gameServerMembership",
+                  "category": "player/session",
+                  "startedAtMs": 2209035621980
+                }
+              ],
+              "subscribedTotal": 394,
+              "unsubscribedTotal": 376
+            },
+            "baselineTimers": {
+              "activeTimeouts": 2,
+              "activeIntervals": 2,
+              "pendingAnimationFrames": 1,
+              "timeoutCreated": 128,
+              "intervalCreated": 4,
+              "animationFrameRequested": 709,
+              "animationFrameExecuted": 708,
+              "measurementAnimationFrameLoops": 1,
+              "longTaskObserverAvailable": true
+            },
+            "timers": {
+              "activeTimeouts": 0,
+              "activeIntervals": 2,
+              "pendingAnimationFrames": 1,
+              "timeoutCreated": 2407,
+              "intervalCreated": 14,
+              "animationFrameRequested": 656479,
+              "animationFrameExecuted": 656478,
+              "measurementAnimationFrameLoops": 1,
+              "longTaskObserverAvailable": true
+            },
+            "timerDelta": {
+              "activeTimeouts": -2,
+              "activeIntervals": 0,
+              "pendingAnimationFrames": 0
+            }
+          },
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1203.300000000745,
+            "frameCount": 217,
+            "fps": 180.33740546818385,
+            "medianFrameTimeMs": 5.599999999999909,
+            "p95FrameTimeMs": 5.600000000000364,
+            "maximumFrameTimeMs": 5.7000000000000455,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          }
+        }
+      },
+      {
+        "id": "warm-desktop",
+        "expected": "ready",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 1919,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 201,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 362,
+            "sincePreviousMs": 161
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 744,
+            "sincePreviousMs": 382
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 745,
+            "sincePreviousMs": 1
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 745,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 929,
+            "sincePreviousMs": 184
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 941,
+            "sincePreviousMs": 12
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 941,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 962,
+            "sincePreviousMs": 21
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 1099,
+            "sincePreviousMs": 137
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 1247,
+            "sincePreviousMs": 148
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 1871,
+            "sincePreviousMs": 625
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 81,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 84105505,
+            "usedJSHeapSize": 20175605
+          },
+          "timers": {
+            "activeTimeouts": 2,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 17,
+            "intervalCreated": 2,
+            "animationFrameRequested": 300,
+            "animationFrameExecuted": 299,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2,
+              "chat": 1
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000161
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000544
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032000761
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032000761
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032000761
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032000761
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032000862
+              },
+              {
+                "id": "listener-18",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032000880
+              }
+            ],
+            "subscribedTotal": 18,
+            "unsubscribedTotal": 0
+          },
+          "longTasks": [
+            {
+              "startTime": 929.0999999977648,
+              "duration": 345
+            },
+            {
+              "startTime": 1311.3999999985099,
+              "duration": 181
+            },
+            {
+              "startTime": 1527.699999999255,
+              "duration": 154
+            }
+          ]
+        },
+        "recovery": {
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1204.1000000014901,
+            "frameCount": 217,
+            "fps": 180.21758990094798,
+            "medianFrameTimeMs": 5.599999999999909,
+            "p95FrameTimeMs": 5.600000000000364,
+            "maximumFrameTimeMs": 5.800000000000182,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          }
+        }
+      },
+      {
+        "id": "slow-realm-call",
+        "expected": "ready",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 2414,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 129,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 257,
+            "sincePreviousMs": 128
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 304,
+            "sincePreviousMs": 47
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 305,
+            "sincePreviousMs": 1
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 305,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 486,
+            "sincePreviousMs": 181
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 1502,
+            "sincePreviousMs": 1016
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 1502,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 1518,
+            "sincePreviousMs": 16
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 1638,
+            "sincePreviousMs": 121
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 1780,
+            "sincePreviousMs": 142
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 2407,
+            "sincePreviousMs": 627
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 1005,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 82,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 82008921,
+            "usedJSHeapSize": 8893709
+          },
+          "timers": {
+            "activeTimeouts": 2,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 18,
+            "intervalCreated": 2,
+            "animationFrameRequested": 471,
+            "animationFrameExecuted": 470,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2,
+              "chat": 1
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000175
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032001388
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032001388
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032001388
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032001388
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-18",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032001493
+              }
+            ],
+            "subscribedTotal": 18,
+            "unsubscribedTotal": 0
+          },
+          "longTasks": [
+            {
+              "startTime": 1501.699999999255,
+              "duration": 305
+            },
+            {
+              "startTime": 1842.300000000745,
+              "duration": 163
+            },
+            {
+              "startTime": 2037.5,
+              "duration": 149
+            }
+          ]
+        },
+        "recovery": {
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1202.300000000745,
+            "frameCount": 216,
+            "fps": 179.65565998491735,
+            "medianFrameTimeMs": 5.599999999999909,
+            "p95FrameTimeMs": 5.600000000000364,
+            "maximumFrameTimeMs": 5.700000000000273,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          }
+        }
+      },
+      {
+        "id": "delayed-city-snapshot",
+        "expected": "ready",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 2419,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 142,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 267,
+            "sincePreviousMs": 125
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 316,
+            "sincePreviousMs": 49
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 316,
+            "sincePreviousMs": 1
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 316,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 498,
+            "sincePreviousMs": 182
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 509,
+            "sincePreviousMs": 11
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 509,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 1531,
+            "sincePreviousMs": 1022
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 1650,
+            "sincePreviousMs": 119
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 1789,
+            "sincePreviousMs": 139
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 2415,
+            "sincePreviousMs": 627
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 82,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 81484996,
+            "usedJSHeapSize": 31210664
+          },
+          "timers": {
+            "activeTimeouts": 2,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 18,
+            "intervalCreated": 2,
+            "animationFrameRequested": 475,
+            "animationFrameExecuted": 474,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2,
+              "chat": 1
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000125
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000125
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000125
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000174
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032000388
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032000388
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032000388
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032000388
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032001478
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032001479
+              },
+              {
+                "id": "listener-18",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032001493
+              }
+            ],
+            "subscribedTotal": 18,
+            "unsubscribedTotal": 0
+          },
+          "longTasks": [
+            {
+              "startTime": 1530.8999999985099,
+              "duration": 284
+            },
+            {
+              "startTime": 1849.300000000745,
+              "duration": 158
+            },
+            {
+              "startTime": 2041.8999999985099,
+              "duration": 148
+            }
+          ]
+        },
+        "recovery": {
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1202.0999999977648,
+            "frameCount": 216,
+            "fps": 179.68555028733186,
+            "medianFrameTimeMs": 5.599999999999909,
+            "p95FrameTimeMs": 5.699999999999818,
+            "maximumFrameTimeMs": 5.800000000000182,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          }
+        }
+      },
+      {
+        "id": "rejected-realm-call",
+        "expected": "failed",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": false,
+          "failed": true,
+          "timedOut": false,
+          "elapsedMs": 580,
+          "error": "Error: Injected getRealmInfo rejection\n    at http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39233:50"
+        },
+        "startupPhases": [],
+        "callableLatency": [],
+        "consoleFailures": [
+          {
+            "type": "warning",
+            "text": "Could not start Crown Lands Error: Injected getRealmInfo rejection\n    at Object.benchmarkOperation [as getRealmInfo] (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:412:17)\n    at verifyRealmCompatibility (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:14967:9)\n    at setupOnlineWorld (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:15072:9)\n    at startFromInput (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:18361:29)\n    at async http://127.0.0.1:57581/__benchmark__/game.js?s"
+          },
+          {
+            "type": "error",
+            "text": "Crownlands Phase 0 benchmark failed to start Error: Injected getRealmInfo rejection\n    at http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39233:50"
+          }
+        ],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 71,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": null,
+        "recovery": null
+      },
+      {
+        "id": "lost-realm-response",
+        "expected": "failed",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": false,
+          "failed": true,
+          "timedOut": false,
+          "elapsedMs": 496,
+          "error": "Error: Injected getRealmInfo response loss\n    at http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39233:50"
+        },
+        "startupPhases": [],
+        "callableLatency": [],
+        "consoleFailures": [
+          {
+            "type": "warning",
+            "text": "Could not start Crown Lands Error: Injected getRealmInfo response loss\n    at Object.benchmarkOperation [as getRealmInfo] (http://127.0.0.1:57581/__benchmark__/mock-firebase.js?scenario=A:416:17)\n    at async verifyRealmCompatibility (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:14966:17)\n    at async setupOnlineWorld (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:15072:3)\n    at async startFromInput (http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:18361:23)\n    at async http://127.0.0.1:57581/"
+          },
+          {
+            "type": "error",
+            "text": "Crownlands Phase 0 benchmark failed to start Error: Injected getRealmInfo response loss\n    at http://127.0.0.1:57581/__benchmark__/game.js?scenario=A:39233:50"
+          }
+        ],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 71,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": null,
+        "recovery": null
+      },
+      {
+        "id": "mobile-throttled-4x",
+        "expected": "ready",
+        "passed": true,
+        "environment": {
+          "width": 844,
+          "height": 390,
+          "mobile": true,
+          "cpuRate": 4,
+          "network": "throttled"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 32401,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 12302,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 12314,
+            "sincePreviousMs": 12
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 23819,
+            "sincePreviousMs": 11505
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 23821,
+            "sincePreviousMs": 2
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 23822,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 24005,
+            "sincePreviousMs": 183
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 24081,
+            "sincePreviousMs": 76
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 24081,
+            "sincePreviousMs": 1
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 28371,
+            "sincePreviousMs": 4290
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 29028,
+            "sincePreviousMs": 656
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 29930,
+            "sincePreviousMs": 902
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 32562,
+            "sincePreviousMs": 2632
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 1,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 3,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 83,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 15686781,
+            "usedJSHeapSize": 8867945
+          },
+          "timers": {
+            "activeTimeouts": 1,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 18,
+            "intervalCreated": 2,
+            "animationFrameRequested": 926,
+            "animationFrameExecuted": 925,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "chat": 1,
+              "region": 4,
+              "player": 7,
+              "global": 2
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000012
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000012
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000012
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032011519
+              },
+              {
+                "id": "listener-5",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032016042
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032016069
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032016069
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032016069
+              },
+              {
+                "id": "listener-9",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032016069
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-11",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-13",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-14",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-15",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-16",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-17",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032016569
+              },
+              {
+                "id": "listener-18",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032016569
+              }
+            ],
+            "subscribedTotal": 18,
+            "unsubscribedTotal": 0
+          },
+          "longTasks": [
+            {
+              "startTime": 24004.300000000745,
+              "duration": 149
+            },
+            {
+              "startTime": 28369.300000000745,
+              "duration": 1696
+            },
+            {
+              "startTime": 30079.699999999255,
+              "duration": 200
+            },
+            {
+              "startTime": 30283.5,
+              "duration": 979
+            },
+            {
+              "startTime": 31267.5,
+              "duration": 57
+            },
+            {
+              "startTime": 31334.199999999255,
+              "duration": 138
+            },
+            {
+              "startTime": 31474,
+              "duration": 81
+            },
+            {
+              "startTime": 31556.800000000745,
+              "duration": 930
+            },
+            {
+              "startTime": 32584.39999999851,
+              "duration": 61
+            }
+          ]
+        },
+        "recovery": {
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1222.800000000745,
+            "frameCount": 143,
+            "fps": 116.94471704278122,
+            "medianFrameTimeMs": 5.599999999998545,
+            "p95FrameTimeMs": 22.200000000004366,
+            "maximumFrameTimeMs": 38.900000000001455,
+            "longTaskCount": 1,
+            "longTaskTotalMs": 61,
+            "longestTaskMs": 61
+          }
+        }
+      },
+      {
+        "id": "session-replacement",
+        "expected": "ready",
+        "passed": true,
+        "environment": {
+          "width": 1440,
+          "height": 900,
+          "mobile": false,
+          "cpuRate": 1,
+          "network": "normal"
+        },
+        "outcome": {
+          "ready": true,
+          "failed": false,
+          "timedOut": false,
+          "elapsedMs": 1450,
+          "error": ""
+        },
+        "startupPhases": [
+          {
+            "name": "instrumentation-ready",
+            "atMs": 146,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "session-activation-ready",
+            "atMs": 274,
+            "sincePreviousMs": 128
+          },
+          {
+            "name": "authentication-ready",
+            "atMs": 331,
+            "sincePreviousMs": 56
+          },
+          {
+            "name": "runtime-start",
+            "atMs": 331,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-watch-started",
+            "atMs": 331,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "membership-joined",
+            "atMs": 513,
+            "sincePreviousMs": 182
+          },
+          {
+            "name": "realm-verified",
+            "atMs": 527,
+            "sincePreviousMs": 13
+          },
+          {
+            "name": "profile-loaded",
+            "atMs": 527,
+            "sincePreviousMs": 0
+          },
+          {
+            "name": "first-city-snapshot",
+            "atMs": 546,
+            "sincePreviousMs": 19
+          },
+          {
+            "name": "game-entry-resolved",
+            "atMs": 669,
+            "sincePreviousMs": 124
+          },
+          {
+            "name": "fixture-armies-ready",
+            "atMs": 812,
+            "sincePreviousMs": 143
+          },
+          {
+            "name": "interactive-map-ready",
+            "atMs": 1440,
+            "sincePreviousMs": 628
+          }
+        ],
+        "callableLatency": [
+          {
+            "name": "heartbeatGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "joinGameServer",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "getRealmInfo",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerProfile",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadGameSnapshot",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "loadPlayerGlobalStats",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "repairMainCityAssignment",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          },
+          {
+            "name": "ensureMainIsland",
+            "status": "fulfilled",
+            "durationMs": 0,
+            "error": ""
+          }
+        ],
+        "consoleFailures": [],
+        "uncaughtExceptions": [],
+        "runtimeErrors": [],
+        "network": {
+          "requestCount": 81,
+          "failedRequestCount": 0,
+          "productionBackendRequestCount": 0
+        },
+        "performance": {
+          "heap": {
+            "jsHeapSizeLimit": 4395630592,
+            "totalJSHeapSize": 22507347,
+            "usedJSHeapSize": 13892143
+          },
+          "timers": {
+            "activeTimeouts": 2,
+            "activeIntervals": 2,
+            "pendingAnimationFrames": 1,
+            "timeoutCreated": 17,
+            "intervalCreated": 2,
+            "animationFrameRequested": 293,
+            "animationFrameExecuted": 292,
+            "measurementAnimationFrameLoops": 1,
+            "longTaskObserverAvailable": true
+          },
+          "listeners": {
+            "active": 18,
+            "categories": {
+              "player/session": 4,
+              "region": 4,
+              "player": 7,
+              "global": 2,
+              "chat": 1
+            },
+            "duplicates": [],
+            "entries": [
+              {
+                "id": "listener-1",
+                "key": "session.active",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-2",
+                "key": "player.dailyMission",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-3",
+                "key": "player.seasonalAchievement",
+                "category": "player/session",
+                "startedAtMs": 2209032000128
+              },
+              {
+                "id": "listener-4",
+                "key": "session.gameServerMembership",
+                "category": "player/session",
+                "startedAtMs": 2209032000184
+              },
+              {
+                "id": "listener-5",
+                "key": "region.region_11.1",
+                "category": "region",
+                "startedAtMs": 2209032000399
+              },
+              {
+                "id": "listener-6",
+                "key": "region.region_11.2",
+                "category": "region",
+                "startedAtMs": 2209032000399
+              },
+              {
+                "id": "listener-7",
+                "key": "region.region_11.3",
+                "category": "region",
+                "startedAtMs": 2209032000399
+              },
+              {
+                "id": "listener-8",
+                "key": "region.region_11.4",
+                "category": "region",
+                "startedAtMs": 2209032000399
+              },
+              {
+                "id": "listener-9",
+                "key": "player.armies.1",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-10",
+                "key": "player.armies.2",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-11",
+                "key": "player.reinforcements.1",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-12",
+                "key": "player.reinforcements.2",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-13",
+                "key": "player.heldCamps",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-14",
+                "key": "player.serverReports",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-15",
+                "key": "global.realmActivity",
+                "category": "global",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-16",
+                "key": "player.globalStats",
+                "category": "player",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-17",
+                "key": "global.crownCitadel",
+                "category": "global",
+                "startedAtMs": 2209032000492
+              },
+              {
+                "id": "listener-18",
+                "key": "chat.global",
+                "category": "chat",
+                "startedAtMs": 2209032000507
+              }
+            ],
+            "subscribedTotal": 18,
+            "unsubscribedTotal": 0
+          },
+          "longTasks": [
+            {
+              "startTime": 513.1999999992549,
+              "duration": 325
+            },
+            {
+              "startTime": 875.3000000007451,
+              "duration": 158
+            },
+            {
+              "startTime": 1067,
+              "duration": 152
+            }
+          ]
+        },
+        "recovery": {
+          "sessionReplacement": {
+            "passed": true,
+            "before": {
+              "hadState": true,
+              "setupVisible": false
+            },
+            "after": {
+              "hasState": false,
+              "setupVisible": true,
+              "onlineSessionReplaced": true
+            }
+          },
+          "idleSample": {
+            "name": "stability-idle",
+            "durationMs": 1204,
+            "frameCount": 217,
+            "fps": 180.2325581395349,
+            "medianFrameTimeMs": 5.599999999999909,
+            "p95FrameTimeMs": 5.600000000000364,
+            "maximumFrameTimeMs": 5.7000000000000455,
+            "longTaskCount": 0,
+            "longTaskTotalMs": 0,
+            "longestTaskMs": 0
+          }
+        }
+      }
+    ],
+    "serverRequestCount": 840
+  },
+  "mapMatrix": {
+    "status": "complete",
+    "repetitions": [
+      {
+        "repetition": 1,
+        "runCount": 15,
+        "failures": [],
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "node": "v22.23.2",
+          "browser": "Chrome/151.0.7922.175"
+        },
+        "runs": [
+          {
+            "scenario": "A",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 179.94781513357105,
+            "panFps": 179.82907335599154,
+            "zoomFps": 176.5840918392176,
+            "heapUsedBytes": 6308752,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 179.6335355918444,
+            "panFps": 178.38321567067715,
+            "zoomFps": 174.98824267129064,
+            "heapUsedBytes": 7092448,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 153.18462778824033,
+            "panFps": 163.2230193326664,
+            "zoomFps": 165.46018614278157,
+            "heapUsedBytes": 7951812,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 171.19627643107253,
+            "panFps": 179.08791948965225,
+            "zoomFps": 174.88234824915645,
+            "heapUsedBytes": 8689060,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 176.6833889633237,
+            "panFps": 178.9118347895155,
+            "zoomFps": 173.8053380214936,
+            "heapUsedBytes": 6531700,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 106.96894707430357,
+            "panFps": 126.1926746690747,
+            "zoomFps": 129.17559623283213,
+            "heapUsedBytes": 9531932,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "desktop",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 154.44748785409507,
+            "panFps": 176.83936598052298,
+            "zoomFps": 172.52662264252996,
+            "heapUsedBytes": 9711500,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 171.148655403379,
+            "panFps": 177.59051800523656,
+            "zoomFps": 172.95753416508893,
+            "heapUsedBytes": 10434940,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 95.34911525585136,
+            "panFps": 135.75529484056958,
+            "zoomFps": 139.83973860283035,
+            "heapUsedBytes": 8399600,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 179.9604087100972,
+            "panFps": 179.40965868414372,
+            "zoomFps": 176.4878909697029,
+            "heapUsedBytes": 6251088,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 179.98380145782858,
+            "panFps": 178.9829161700437,
+            "zoomFps": 175.8674138548013,
+            "heapUsedBytes": 6404332,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 166.32224185605082,
+            "panFps": 163.30038676412144,
+            "zoomFps": 163.11388529025967,
+            "heapUsedBytes": 7551852,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 175.57541944123898,
+            "panFps": 179.51823976808265,
+            "zoomFps": 175.95423611796036,
+            "heapUsedBytes": 8026464,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 179.5061333759406,
+            "panFps": 178.71310695025377,
+            "zoomFps": 174.30763837502232,
+            "heapUsedBytes": 9038052,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 127.27290862484364,
+            "panFps": 168.40153724334198,
+            "zoomFps": 169.69148789746276,
+            "heapUsedBytes": 10622552,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          }
+        ]
+      },
+      {
+        "repetition": 2,
+        "runCount": 15,
+        "failures": [],
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "node": "v22.23.2",
+          "browser": "Chrome/151.0.7922.175"
+        },
+        "runs": [
+          {
+            "scenario": "A",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 179.74068557374727,
+            "panFps": 179.87041380138092,
+            "zoomFps": 177.0281572344315,
+            "heapUsedBytes": 6025780,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 179.73823558797082,
+            "panFps": 178.85792382186838,
+            "zoomFps": 175.7897657458726,
+            "heapUsedBytes": 6751064,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 169.6287559225252,
+            "panFps": 173.90794029622236,
+            "zoomFps": 174.22974702234472,
+            "heapUsedBytes": 7013044,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 179.05317639536915,
+            "panFps": 179.2816859602256,
+            "zoomFps": 175.81516966849395,
+            "heapUsedBytes": 8692164,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 179.87588563886897,
+            "panFps": 179.12463261572267,
+            "zoomFps": 175.13169665043236,
+            "heapUsedBytes": 6408284,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 140.45841153212288,
+            "panFps": 156.8543188655377,
+            "zoomFps": 156.90234382587664,
+            "heapUsedBytes": 9754792,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "desktop",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 163.67739873769236,
+            "panFps": 177.67698678761585,
+            "zoomFps": 174.17674273929492,
+            "heapUsedBytes": 8251424,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 171.0777598912014,
+            "panFps": 177.70151667551576,
+            "zoomFps": 172.99810844895353,
+            "heapUsedBytes": 9758056,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 94.986965511056,
+            "panFps": 135.73524868707545,
+            "zoomFps": 136.02890367412238,
+            "heapUsedBytes": 10102952,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 179.95783331171057,
+            "panFps": 179.30762402603807,
+            "zoomFps": 176.07508330542643,
+            "heapUsedBytes": 6384220,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 178.55715427657873,
+            "panFps": 179.0903160766702,
+            "zoomFps": 175.87641117052883,
+            "heapUsedBytes": 8177476,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 167.8858376304613,
+            "panFps": 162.1282518771671,
+            "zoomFps": 161.54639993646893,
+            "heapUsedBytes": 6533860,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 175.57358701736058,
+            "panFps": 179.34653934172502,
+            "zoomFps": 175.64657301481222,
+            "heapUsedBytes": 8985772,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 179.33185389550636,
+            "panFps": 178.62763613461357,
+            "zoomFps": 175.1979305480368,
+            "heapUsedBytes": 7948912,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 133.4451198211714,
+            "panFps": 170.6059721816944,
+            "zoomFps": 169.67739362755128,
+            "heapUsedBytes": 10662804,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          }
+        ]
+      },
+      {
+        "repetition": 3,
+        "runCount": 15,
+        "failures": [],
+        "environment": {
+          "platform": "win32",
+          "architecture": "x64",
+          "node": "v22.23.2",
+          "browser": "Chrome/151.0.7922.175"
+        },
+        "runs": [
+          {
+            "scenario": "A",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 179.72502071828762,
+            "panFps": 179.44147355912062,
+            "zoomFps": 176.8558095759917,
+            "heapUsedBytes": 6909764,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 180.00279848884284,
+            "panFps": 178.85177162610708,
+            "zoomFps": 176.07019200493298,
+            "heapUsedBytes": 6057420,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "A",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 25,
+            "idleFps": 169.59980833925215,
+            "panFps": 174.3119266055046,
+            "zoomFps": 173.52688003751103,
+            "heapUsedBytes": 6789924,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 178.80344613911151,
+            "panFps": 179.4023880714704,
+            "zoomFps": 175.90114906348617,
+            "heapUsedBytes": 9220696,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 179.94524708747795,
+            "panFps": 179.21005315058002,
+            "zoomFps": 174.97916914647845,
+            "heapUsedBytes": 6365328,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "B",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 50,
+            "idleFps": 138.07080246788274,
+            "panFps": 156.82103838344773,
+            "zoomFps": 155.47548424340258,
+            "heapUsedBytes": 6483248,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "desktop",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 163.35461439315358,
+            "panFps": 177.88594720801524,
+            "zoomFps": 174.10399184370067,
+            "heapUsedBytes": 9576252,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 170.9700627522828,
+            "panFps": 177.59509105922498,
+            "zoomFps": 172.96870372198637,
+            "heapUsedBytes": 10177348,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "C",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 150,
+            "marchCount": 100,
+            "idleFps": 93.55883411300422,
+            "panFps": 131.09115230269444,
+            "zoomFps": 136.12626884932146,
+            "heapUsedBytes": 11662048,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "desktop",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 180.01557539093596,
+            "panFps": 179.3226029426286,
+            "zoomFps": 176.34834240475013,
+            "heapUsedBytes": 5604184,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 179.9388208009545,
+            "panFps": 178.98555033591668,
+            "zoomFps": 175.83686799293685,
+            "heapUsedBytes": 8126720,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "D",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 100,
+            "marchCount": 0,
+            "idleFps": 165.69230000499675,
+            "panFps": 162.4844139650637,
+            "zoomFps": 162.9987054254681,
+            "heapUsedBytes": 6351968,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "desktop",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 175.97681622863996,
+            "panFps": 179.41211377937796,
+            "zoomFps": 175.4351460320582,
+            "heapUsedBytes": 8708076,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 179.78853111072473,
+            "panFps": 178.56078813040162,
+            "zoomFps": 175.02778218767472,
+            "heapUsedBytes": 9600804,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          },
+          {
+            "scenario": "E",
+            "profile": "mobile-landscape-4x",
+            "cityCount": 50,
+            "marchCount": 100,
+            "idleFps": 131.52793104477695,
+            "panFps": 170.2988005210548,
+            "zoomFps": 168.90549240923846,
+            "heapUsedBytes": 6580708,
+            "activeListeners": 18,
+            "duplicateListenerKeys": 0,
+            "productionBackendRequests": 0
+          }
+        ]
+      }
+    ]
+  },
+  "productionAnonymous": [
+    {
+      "id": "marketing-root",
+      "requestedUrl": "https://playcrownlands.com/",
+      "finalUrl": "https://playcrownlands.com/",
+      "status": 200,
+      "ok": true,
+      "durationMs": 128,
+      "contentType": "text/html; charset=UTF-8",
+      "detail": {}
+    },
+    {
+      "id": "canonical-play-redirect",
+      "requestedUrl": "https://playcrownlands.com/play/",
+      "finalUrl": "https://game.playcrownlands.com/play/",
+      "status": 200,
+      "ok": true,
+      "durationMs": 174,
+      "contentType": "text/html; charset=UTF-8",
+      "detail": {
+        "buildId": "f1187b58c6484f40fb2644deb27a4e15f488b3fb"
+      }
+    },
+    {
+      "id": "game-entry",
+      "requestedUrl": "https://game.playcrownlands.com/play/",
+      "finalUrl": "https://game.playcrownlands.com/play/",
+      "status": 200,
+      "ok": true,
+      "durationMs": 56,
+      "contentType": "text/html; charset=UTF-8",
+      "detail": {
+        "buildId": "f1187b58c6484f40fb2644deb27a4e15f488b3fb"
+      }
+    },
+    {
+      "id": "manifest",
+      "requestedUrl": "https://game.playcrownlands.com/manifest.webmanifest",
+      "finalUrl": "https://game.playcrownlands.com/manifest.webmanifest",
+      "status": 200,
+      "ok": true,
+      "durationMs": 51,
+      "contentType": "application/manifest+json",
+      "detail": {
+        "name": "Crownlands",
+        "startUrl": "/play/"
+      }
+    },
+    {
+      "id": "service-worker",
+      "requestedUrl": "https://game.playcrownlands.com/service-worker.js",
+      "finalUrl": "https://game.playcrownlands.com/service-worker.js",
+      "status": 200,
+      "ok": true,
+      "durationMs": 101,
+      "contentType": "application/javascript; charset=UTF-8",
+      "detail": {
+        "cacheVersion": "f1187b58c6484f40fb2644deb27a4e15f488b3fb"
+      }
+    },
+    {
+      "id": "release-config",
+      "requestedUrl": "https://game.playcrownlands.com/release-config.js",
+      "finalUrl": "https://game.playcrownlands.com/release-config.js",
+      "status": 200,
+      "ok": true,
+      "durationMs": 36,
+      "contentType": "application/javascript; charset=UTF-8",
+      "detail": {
+        "releaseId": "crownlands-2026-09-monthly-sharded-realms-v1",
+        "apiContractHash": "86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd"
+      }
+    },
+    {
+      "id": "release-manifest",
+      "requestedUrl": "https://game.playcrownlands.com/release-manifest.js",
+      "finalUrl": "https://game.playcrownlands.com/release-manifest.js",
+      "status": 200,
+      "ok": true,
+      "durationMs": 35,
+      "contentType": "application/javascript; charset=UTF-8",
+      "detail": {
+        "buildId": "f1187b58c6484f40fb2644deb27a4e15f488b3fb",
+        "releaseId": "crownlands-2026-09-monthly-sharded-realms-v1"
+      }
+    }
+  ],
+  "productionAuthenticated": {
+    "status": "blocked",
+    "reason": "No approved pre-seeded QA account was supplied to this audit run."
+  },
+  "itchAuthenticated": {
+    "status": "blocked",
+    "reason": "Published itch.io authenticated gameplay is outside this web-priority audit."
+  },
+  "findings": [
+    {
+      "id": "STAB-001",
+      "severity": "P3",
+      "classification": "tooling-only",
+      "status": "fixed",
+      "title": "Benchmark realm capabilities drifted behind the authoritative server contract",
+      "affectedEnvironment": "Local benchmark fixture",
+      "reproduction": "Run the quick map benchmark before this audit branch; startup rejects skill-point capability parity.",
+      "evidence": "The fixture previously hand-authored getRealmInfo and omitted the live skillPointSystemVersion capability.",
+      "likelyOwner": "Benchmark tooling",
+      "recommendation": "Keep release identity, contract hashes, realm capabilities, and progression versions derived from authoritative configuration."
+    },
+    {
+      "id": "STAB-002",
+      "severity": "P3",
+      "classification": "tooling-only",
+      "status": "fixed",
+      "title": "Missing optional pickup query silently switched ordinary benchmarks to the default region",
+      "affectedEnvironment": "Local benchmark fixture",
+      "reproduction": "Launch a benchmark without pickupSoakRegion and compare the active region with the scenario's primary region.",
+      "evidence": "normalizeRegionId(null) selected the default map; the runtime now distinguishes a missing parameter from an explicit region.",
+      "likelyOwner": "Benchmark tooling",
+      "recommendation": "Retain the missing-query regression assertion in validate-map-benchmark."
+    },
+    {
+      "id": "STAB-003",
+      "severity": "P2",
+      "classification": "confirmed",
+      "status": "open",
+      "title": "Always-on global chat raises base authenticated gameplay from 17 to 18 listeners",
+      "affectedEnvironment": "Canonical web and compatible itch.io client",
+      "reproduction": "Start an authenticated-equivalent session without opening a social panel and inspect active logical subscriptions.",
+      "evidence": "Every successful isolated browser case settles at 18 listeners: the established 17 gameplay streams plus chat.global. Region switches and recovery do not duplicate it.",
+      "likelyOwner": "Chat and realtime lifecycle",
+      "recommendation": "Decide whether global chat must remain always-on; otherwise make it view-scoped on a separate synchronized branch and restore the exact 17-listener base budget."
+    },
+    {
+      "id": "STAB-004",
+      "severity": "P2",
+      "classification": "suspected",
+      "status": "open",
+      "title": "Heartbeat calls do not have a generic transport timeout",
+      "affectedEnvironment": "Web and itch.io session heartbeat",
+      "reproduction": "Drop a callable response after the request reaches the transport and observe the in-flight heartbeat guard.",
+      "evidence": "Repository inspection found higher-level realm timeouts, but no generic timeout in callServerFunction; a never-settling heartbeat can retain its in-flight state.",
+      "likelyOwner": "Login and session lifecycle",
+      "recommendation": "Confirm with a focused emulator fault test, then fix on a separate synchronized branch if reproduced."
+    },
+    {
+      "id": "STAB-005",
+      "severity": "P3",
+      "classification": "telemetry-required",
+      "status": "blocked",
+      "title": "Authenticated production login and second-tab recovery are not verified by repository tests",
+      "affectedEnvironment": "game.playcrownlands.com production",
+      "reproduction": "Use the approved pre-seeded QA account for cold login, warm login, refresh, second-tab replacement, interrupted connection, and logout.",
+      "evidence": "No QA account identity or authorization was supplied to this audit run, so no authenticated production writes were attempted.",
+      "likelyOwner": "Release QA",
+      "recommendation": "Complete the controlled smoke test before treating production login as verified."
+    },
+    {
+      "id": "STAB-006",
+      "severity": "P3",
+      "classification": "telemetry-required",
+      "status": "open",
+      "title": "Physical device and itch.io authenticated behavior still require release QA",
+      "affectedEnvironment": "Physical mobile devices and published itch.io artifact",
+      "reproduction": "Run the documented browser/device matrix and inspect the exact published itch.io build.",
+      "evidence": "This audit uses desktop Chromium emulation and repository artifact checks; it does not control a published itch.io authenticated session.",
+      "likelyOwner": "Release QA",
+      "recommendation": "Verify relative assets, login entry, cache behavior, and backend compatibility in the published package."
+    }
+  ],
+  "acceptance": {
+    "checks": {
+      "allDeterministicCasesPassed": false,
+      "zeroUncaughtErrors": true,
+      "zeroDuplicateListenerKeys": true,
+      "listenerBaselineRestored": false,
+      "zeroProductionBackendRequestsFromFixtures": true,
+      "configurationParity": true,
+      "mapMatrixComplete": true,
+      "mapMatrixSafety": true,
+      "anonymousProductionResourcesReachable": true,
+      "anonymousProductionIdentityMatches": true,
+      "authenticatedProductionVerified": false,
+      "itchAuthenticatedVerified": false
+    },
+    "passedLocalAcceptance": false
+  }
+}
