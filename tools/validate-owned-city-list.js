@@ -41,6 +41,7 @@ assert.match(gameSource, /function getAllOwnedCitiesForDisplay[\s\S]*?const acti
 assert.match(benchmarkClientSource, /loadOwnedCitiesAcrossIslands: async \(\) => Object\.entries\(fixture\.citiesByRegion\)\.flatMap[\s\S]*?islandId:/, "The browser fixture must exercise a genuine multi-region owned-city roster.");
 assert.match(gameSource, /data-city-list-sort="level"[\s\S]*?data-city-list-sort="troops"/, "City list must retain Level and Troops sort controls.");
 assert.match(gameSource, /function getOwnedCitySnapshotForUpgrade[\s\S]*?getAllOwnedCitiesForDisplay/, "Direct city upgrades must resolve owned cities outside the active map.");
+assert.match(gameSource, /function getOwnedCitySnapshotForUpgrade[\s\S]*?getActiveMapRegionId\(\)[\s\S]*?getCityRegionId\(activeCity\) === activeRegionId[\s\S]*?getOwnedCitySnapshotById/, "Off-map upgrades must not prefer stale inactive-map state over the owned-city roster.");
 assert.match(gameSource, /function getOwnedCityCacheKey[\s\S]*?resolvedRegionId[\s\S]*?cityId/, "Owned-city identity must use a region-and-city composite key.");
 assert.match(gameSource, /const islandRegionId = rawIslandId \? getRegionIdFromOnlineIslandId[\s\S]*?getOnlineIslandId\(islandRegionId\) !== rawIslandId[\s\S]*?islandRegionId \|\| raw\.regionId/, "Owned-city snapshots must require and prefer their canonical island path over stale stored region metadata.");
 assert.match(serverSource, /function getRegionIdFromCityDoc[\s\S]*?doc\?\.ref\?\.parent\?\.parent\?\.id[\s\S]*?if \(islandId\) return getRegionIdFromOnlineIslandId\(islandId\)[\s\S]*?data\.regionId/, "The server must prefer the city document path over stale stored region metadata.");
@@ -89,8 +90,8 @@ assert.match(styles, /\.city-list-row\.upgrade-confirmed[\s\S]*?@keyframes crown
 assert.match(gameSource, /cl-action-button cl-action-level[\s\S]*?renderCrownlandsIcon\("arrow-up"\)/, "The selected-city map action must use its dedicated arrow-up treatment.");
 assert.match(indexSource, /id="cl-icon-arrow-up"/, "The dedicated map Level arrow glyph is missing.");
 assert.match(actionButtons, /\.cl-action-button\.cl-action-level[\s\S]*?--cl-action-bg:\s*var\(--cl-action-level-bg\)/, "The selected-city Level action is missing its gold button treatment.");
-assert.match(indexSource, /firebaseClient\.js\?v=20260830-city-list-reliability-r1[\s\S]*?instant-economy-actions\.js\?v=20260829-city-upgrade-queue-stability-r1[\s\S]*?game\.js\?v=20260830-city-list-reliability-r1/, "Changed city-list client assets must have current cache-busting release tokens.");
-assert.match(workerSource, /firebaseClient\.js\?v=20260830-city-list-reliability-r1[\s\S]*?game\.js\?v=20260830-city-list-reliability-r1/, "The offline shell must precache the current City List client assets.");
+assert.match(indexSource, /firebaseClient\.js\?v=20260830-city-list-reliability-r1[\s\S]*?instant-economy-actions\.js\?v=20260829-city-upgrade-queue-stability-r1[\s\S]*?game\.js\?v=20260830-city-list-off-map-ownership-r1/, "Changed city-list client assets must have current cache-busting release tokens.");
+assert.match(workerSource, /firebaseClient\.js\?v=20260830-city-list-reliability-r1[\s\S]*?game\.js\?v=20260830-city-list-off-map-ownership-r1/, "The offline shell must precache the current City List client assets.");
 assert.match(styles, /@media \(max-width: 600px\) and \(orientation: landscape\)[\s\S]*?\.city-list-art,[\s\S]*?display: none;[\s\S]*?\.city-list-upgrade \{ min-width: 40px; width: 40px; height: 40px;/, "The 540px layout must preserve 40px controls by hiding decorative row content.");
 assert.match(contrastStyles, /\.city-list-modal \.city-list-toolbar button :is\(span, small, \.cl-icon\)[\s\S]*?color:\s*inherit !important;/, "City-list sort text and icons can still become brown on dark buttons.");
 
@@ -109,6 +110,42 @@ assert.ok(completenessContext.checkCompleteness({ invalidRecordCount: 1 }).lengt
 assert.ok(completenessContext.checkCompleteness({ duplicateKeyCount: 1 }).length > 0, "Duplicate canonical city identities were marked complete.");
 assert.ok(completenessContext.checkCompleteness({ regularCityCount: 2, expectedRegularCityCount: 3 }).length > 0, "A count-mismatched roster was marked complete.");
 assert.ok(completenessContext.checkCompleteness({ regularCityCount: 3, expectedRegularCityCount: 3, missingLoadedCity: true }).length > 0, "A roster missing an already-loaded city was marked complete.");
+
+const upgradeLookupStart = gameSource.indexOf("function getOwnedCitySnapshotForUpgrade");
+const upgradeLookupEnd = gameSource.indexOf("function ownedCities", upgradeLookupStart);
+assert.ok(upgradeLookupStart >= 0 && upgradeLookupEnd > upgradeLookupStart, "Owned-city upgrade lookup must exist.");
+const staleInactiveCity = { id: "city_b", regionId: "north", owner: "neutral", level: 1 };
+const ownedRosterCity = { id: "city_b", regionId: "north", owner: "player", level: 42 };
+const upgradeLookupContext = {
+  activeRegionId: "west",
+  stateCity: staleInactiveCity,
+  rosterCity: ownedRosterCity,
+  getKnownCityId: id => String(id || ""),
+  normalizeRegionId: id => String(id || "west"),
+  getActiveMapRegionId: () => upgradeLookupContext.activeRegionId,
+  cityById: id => upgradeLookupContext.stateCity?.id === id ? upgradeLookupContext.stateCity : null,
+  getCityRegionId: city => String(city?.regionId || "west"),
+  getOwnedCitySnapshotById: (id, regionId) => (
+    upgradeLookupContext.rosterCity?.id === id
+      && (!regionId || upgradeLookupContext.rosterCity.regionId === regionId)
+      ? upgradeLookupContext.rosterCity
+      : null
+  ),
+};
+vm.createContext(upgradeLookupContext);
+vm.runInContext(`${gameSource.slice(upgradeLookupStart, upgradeLookupEnd)}\nthis.resolveUpgradeCity = getOwnedCitySnapshotForUpgrade;`, upgradeLookupContext);
+assert.equal(
+  upgradeLookupContext.resolveUpgradeCity("city_b", "north"),
+  ownedRosterCity,
+  "A stale inactive-map city overrode the authoritative owned-city roster."
+);
+upgradeLookupContext.activeRegionId = "north";
+upgradeLookupContext.stateCity = { ...staleInactiveCity, owner: "player", level: 43 };
+assert.equal(
+  upgradeLookupContext.resolveUpgradeCity("city_b", "north"),
+  upgradeLookupContext.stateCity,
+  "The currently active map stopped providing the live city snapshot."
+);
 
 const orderStart = gameSource.indexOf("function resetCityListSessionOrder");
 const orderEnd = gameSource.indexOf("function clearCityListUpgradeFeedback", orderStart);
@@ -150,4 +187,4 @@ const reorderedPagedCities = orderContext.reconcile([...pagedCities].reverse());
 assert.equal(reorderedPagedCities.findIndex(city => city.key === "region:city_7"), 7, "An upgraded row changed ordinal position.");
 assert.equal(Math.floor(reorderedPagedCities.findIndex(city => city.key === "region:city_7") / 5), 1, "An upgraded row changed page.");
 
-console.log("Validated shard-complete loading, session-stable ordering, optimistic queue feedback, replay safety, focus retention, and the gold map upgrade action.");
+console.log("Validated shard-complete loading, stale off-map ownership recovery, session-stable ordering, optimistic queue feedback, replay safety, focus retention, and the gold map upgrade action.");
