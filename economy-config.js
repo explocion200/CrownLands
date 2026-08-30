@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 2,
-  "updatedAt": "2026-08-28T16:25:48.838Z",
+  "updatedAt": "2026-08-30T14:13:51.834Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -301,7 +301,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "goldEndgameUpgradeShare": 0.4,
     "goldEarlyProductionHours": 6,
     "goldMidProductionHours": 16,
-    "goldEndgameProductionHours": 36,
+    "goldEndgameProductionHours": 27,
     "troopEarlyBaseHours": 4,
     "troopEarlyHoursPerLevel": 0.4,
     "troopMidBaseHours": 24,
