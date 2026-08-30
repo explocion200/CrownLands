@@ -240,7 +240,11 @@
       return { cityCount: cities.length, regularCityCount: cities.length, neutralCityCount: cities.filter(city => !city.ownerUid).length };
     },
     loadIslandCities: async islandId => fixture.citiesByRegion[regionIdFromIsland(islandId)] || [],
-    loadOwnedCitiesAcrossIslands: async () => fixture.citiesByRegion[fixture.primaryRegionId].filter(city => city.ownerUid === fixture.player.uid),
+    loadOwnedCitiesAcrossIslands: async () => Object.entries(fixture.citiesByRegion).flatMap(([regionId, cities]) => (
+      cities
+        .filter(city => city.ownerUid === fixture.player.uid)
+        .map(city => ({ ...city, islandId: `${fixture.releaseConfig.worldId}-${regionId}` }))
+    )),
     loadPlayerIdentities: async () => [],
     loadServerReports: async () => [],
     ensureMainIsland: async () => ({ seeded: true }),

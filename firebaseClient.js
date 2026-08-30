@@ -2409,7 +2409,8 @@
         collectionGroup(client.db, "cities"),
         where("ownerUid", "==", uid),
         where("resetGeneration", "==", RESET_GENERATION),
-        where("worldId", "==", ONLINE_WORLD_ID)
+        where("worldId", "==", ONLINE_WORLD_ID),
+        ...getRealmShardQueryConstraints(where)
       );
       const snapshot = await getDocs(ownedRef);
       return snapshot.docs
@@ -2417,8 +2418,7 @@
           const city = cityDoc.data() || {};
           const islandId = String(cityDoc.ref?.parent?.parent?.id || city.islandId || "").trim();
           return { ...city, islandId, id: cityDoc.id };
-        })
-        .filter(city => !uniqueIslandIds.length || uniqueIslandIds.includes(city.islandId));
+        });
     }
 
     const snapshots = await Promise.all(uniqueIslandIds.map(async islandId => {

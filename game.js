@@ -47,6 +47,7 @@ const PLAYER_IDENTITY_LOOKUP_BATCH_SIZE = 80;
 const PLAYER_IDENTITY_CACHE_STALE_MS = 5 * 60 * 1000;
 const ENEMY_POWER_BAND_STABILIZE_MS = 3 * 1000;
 const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
+const ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS = 15 * 1000;
 const ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS = 18 * 1000;
 const ONLINE_INITIAL_CITY_LIST_FALLBACK_TIMEOUT_MS = 35 * 1000;
 const ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS = 20 * 1000;
@@ -2127,6 +2128,7 @@ const clanPublicSnapshotCache = new Map();
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
 let cityListPage = 0;
+let cityListSessionOrderKeys = [];
 let cityListUpgradeFeedback = null;
 let cityListUpgradeFeedbackTimer = 0;
 let innerCastleSelectedBuildingKey = "";
@@ -5474,7 +5476,7 @@ async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShiel
     mergeOwnedCitySnapshots(normalized.map(city => ({
       ...city,
       ownerShieldExpiresAtMs: isStronghold(city) ? 0 : nextShieldExpiresAtMs,
-    })), { complete: true });
+    })), { complete: false });
     renderCities(true);
     renderHud();
     return true;
@@ -5598,7 +5600,7 @@ async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = 
       leaderboardSave,
       presenceSave,
     ]);
-    mergeOwnedCitySnapshots(normalized, { complete: true });
+    mergeOwnedCitySnapshots(normalized, { complete: false });
     normalized.forEach(city => localDirtyCityIds.delete(city.id));
     onlineLastError = "";
     renderCities(true);
@@ -7107,7 +7109,9 @@ function normalizeGlobalStatsSnapshot(raw = null) {
 }
 
 function hasUsableGlobalStats(stats = getGlobalStatsSnapshot()) {
-  return Boolean(stats && (stats.version > 0 || stats.updatedAtMs > 0 || stats.worldId));
+  if (!stats || (stats.worldId && stats.worldId !== ONLINE_WORLD_ID)) return false;
+  if (stats.resetGeneration && stats.resetGeneration !== RESET_GENERATION) return false;
+  return Boolean(stats.version > 0 || stats.updatedAtMs > 0 || stats.worldId);
 }
 
 function getGlobalStatsSnapshot() {
@@ -12939,6 +12943,8 @@ async function refreshAllOwnedCities(force = false) {
   if (!state || onlineOwnedCitiesRefreshInFlight) return false;
   const api = getOnlineApi();
   if (!api?.loadOwnedCitiesAcrossIslands || !api?.isSignedIn?.()) {
+    onlineOwnedCitiesCacheComplete = false;
+    onlineOwnedCitiesRefreshError = "Full city roster is unavailable while disconnected.";
     mergeOwnedCitySnapshots(playerCities().map(city => ({
       ...city,
       islandId: getOnlineIslandId(getCityRegionId(city)),
@@ -12946,7 +12952,7 @@ async function refreshAllOwnedCities(force = false) {
     return false;
   }
   const now = Date.now();
-  if (!force && onlineOwnedCitiesCacheComplete && onlineOwnedCitiesCache.length && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
+  if (!force && onlineOwnedCitiesCacheComplete && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
 
   onlineOwnedCitiesRefreshInFlight = true;
   onlineOwnedCitiesRefreshError = "";
@@ -12954,13 +12960,16 @@ async function refreshAllOwnedCities(force = false) {
     const islandIds = getRegionIds().map(getOnlineIslandId);
     const owned = await withTimeout(
       api.loadOwnedCitiesAcrossIslands(islandIds),
-      6500,
+      ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS,
       "Owned city lookup is taking too long."
     );
-    mergeOwnedCitySnapshots((Array.isArray(owned) ? owned : []).map(city => ({
-      ...city,
-      islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
-    })), { complete: true });
+    const roster = validateCompleteOwnedCityRoster(Array.isArray(owned) ? owned : []);
+    if (!roster.complete) {
+      onlineOwnedCitiesCacheComplete = false;
+      mergeOwnedCitySnapshots(roster.cities, { complete: false });
+      throw new Error(roster.error || "Full owned-city roster could not be verified.");
+    }
+    mergeOwnedCitySnapshots(roster.cities, { complete: true });
     onlineOwnedCitiesRefreshError = "";
     if (typeof resumeInstantEconomyActionsAfterSync === "function") {
       resumeInstantEconomyActionsAfterSync({ ownedCities: true });
@@ -12971,6 +12980,7 @@ async function refreshAllOwnedCities(force = false) {
     if (modal.open && modal.classList.contains("island-switcher-modal")) rerenderIslandSwitcherModalIfOpen();
     return true;
   } catch (error) {
+    onlineOwnedCitiesCacheComplete = false;
     onlineLastError = error?.message || String(error);
     onlineOwnedCitiesRefreshError = onlineLastError;
     console.warn("Could not load owned cities across islands", error);
@@ -18471,7 +18481,9 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   const id = getKnownCityId(raw.id);
   if (!id) return null;
   const base = getPlayableBaseCityById(id) || {};
-  const islandRegionId = raw.islandId ? getRegionIdFromOnlineIslandId(raw.islandId) : "";
+  const rawIslandId = String(raw.islandId || "").trim();
+  const islandRegionId = rawIslandId ? getRegionIdFromOnlineIslandId(rawIslandId) : "";
+  if (rawIslandId && (!islandRegionId || getOnlineIslandId(islandRegionId) !== rawIslandId)) return null;
   const regionId = normalizeRegionId(islandRegionId || raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
@@ -18494,7 +18506,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     ownerShieldExpiresAtMs: isStronghold(raw) || isStronghold(base) ? 0 : normalizeTimestampMs(raw.ownerShieldExpiresAtMs),
     regionId,
     startPool: raw.startPool || base.startPool || regionId,
-    islandId: raw.islandId || getOnlineIslandId(regionId),
+    islandId: rawIslandId || getOnlineIslandId(regionId),
     kind: raw.kind || base.kind || "",
     strongholdType: raw.strongholdType || base.strongholdType || "",
     bonus: raw.bonus || base.bonus || "",
@@ -18518,6 +18530,71 @@ function getOwnedCityCacheKey(cityOrId = "", regionId = "") {
   if (!cityId) return "";
   const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   return `${resolvedRegionId}:${cityId}`;
+}
+
+function getOwnedCityRosterCompletenessIssues({
+  invalidRecordCount = 0,
+  duplicateKeyCount = 0,
+  regularCityCount = 0,
+  expectedRegularCityCount = null,
+  missingLoadedCity = false,
+} = {}) {
+  const issues = [];
+  if (invalidRecordCount > 0) issues.push("an owned-city record had an unknown city or noncanonical island path");
+  if (duplicateKeyCount > 0) issues.push("owned-city records did not have unique region-and-city identities");
+  if (expectedRegularCityCount !== null && regularCityCount !== expectedRegularCityCount) {
+    issues.push(`the roster returned ${regularCityCount} of ${expectedRegularCityCount} expected regular cities`);
+  }
+  if (missingLoadedCity) issues.push("the roster omitted a city loaded on the active map");
+  return issues;
+}
+
+function validateCompleteOwnedCityRoster(cities = []) {
+  const normalizedCities = [];
+  const seenKeys = new Set();
+  let invalidRecordCount = 0;
+  let duplicateKeyCount = 0;
+  (Array.isArray(cities) ? cities : []).forEach(city => {
+    const normalized = normalizeOwnedCitySnapshot(city);
+    if (!normalized) {
+      invalidRecordCount += 1;
+      return;
+    }
+    const key = getOwnedCityCacheKey(normalized);
+    if (!key || seenKeys.has(key)) {
+      duplicateKeyCount += 1;
+      return;
+    }
+    seenKeys.add(key);
+    normalizedCities.push(normalized);
+  });
+
+  const regularCityCount = normalizedCities.filter(city => !isStronghold(city)).length;
+  const globalStats = getGlobalStatsSnapshot();
+  const expectedRegularCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : null;
+
+  const activeRegionId = getActiveMapRegionId();
+  const missingLoadedCity = playerCities()
+    .filter(city => getCityRegionId(city) === activeRegionId)
+    .map(city => normalizeOwnedCitySnapshot({
+      ...city,
+      islandId: getOnlineIslandId(getCityRegionId(city)),
+    }))
+    .filter(Boolean)
+    .some(city => !seenKeys.has(getOwnedCityCacheKey(city)));
+  const issues = getOwnedCityRosterCompletenessIssues({
+    invalidRecordCount,
+    duplicateKeyCount,
+    regularCityCount,
+    expectedRegularCityCount,
+    missingLoadedCity,
+  });
+
+  return {
+    cities: normalizedCities,
+    complete: issues.length === 0,
+    error: issues.length ? `Full owned-city roster is incomplete: ${[...new Set(issues)].join("; ")}.` : "",
+  };
 }
 
 function mergeOwnedCitySnapshots(cities = [], { complete = false } = {}) {
@@ -18550,7 +18627,8 @@ function getAllOwnedCitiesForDisplay() {
     if (normalized) merged.set(getOwnedCityCacheKey(normalized), normalized);
   });
   if (state?.cities) {
-    playerCities().forEach(city => {
+    const activeRegionId = getActiveMapRegionId();
+    playerCities().filter(city => getCityRegionId(city) === activeRegionId).forEach(city => {
       const normalized = normalizeOwnedCitySnapshot({
         ...city,
         islandId: getOnlineIslandId(getCityRegionId(city)),
@@ -30086,6 +30164,7 @@ function showCityInfoModal(cityId) {
 
 function showCityListModal() {
   if (!state) return;
+  if (!modal.open || !modal.classList.contains("city-list-modal")) resetCityListSessionOrder();
   modal.classList.add("city-list-modal");
   const refreshPromise = refreshAllOwnedCities(true);
   renderCityListModal();
@@ -30099,6 +30178,34 @@ function getCityListRowKey(cityOrId = "", regionId = "") {
   if (!cityId) return "";
   const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   return `${resolvedRegionId}:${cityId}`;
+}
+
+function resetCityListSessionOrder() {
+  cityListSessionOrderKeys = [];
+}
+
+function reconcileCityListSessionOrder(sortedCities = []) {
+  const citiesByKey = new Map();
+  sortedCities.forEach(city => {
+    const key = getCityListRowKey(city);
+    if (key) citiesByKey.set(key, city);
+  });
+  const ordered = [];
+  const retainedKeys = new Set();
+  cityListSessionOrderKeys.forEach(key => {
+    const city = citiesByKey.get(key);
+    if (!city) return;
+    retainedKeys.add(key);
+    ordered.push(city);
+  });
+  sortedCities.forEach(city => {
+    const key = getCityListRowKey(city);
+    if (!key || retainedKeys.has(key)) return;
+    retainedKeys.add(key);
+    ordered.push(city);
+  });
+  cityListSessionOrderKeys = ordered.map(getCityListRowKey);
+  return ordered;
 }
 
 function clearCityListUpgradeFeedback(options = {}) {
@@ -30132,7 +30239,6 @@ function setCityListUpgradeFeedback(raw = {}) {
     finalLevel,
     upgraded,
     spentGold: Math.max(0, Math.floor(Number(raw.spentGold) || 0)),
-    reveal: true,
     animate: true,
     expiresAtMs: Date.now() + CITY_LIST_UPGRADE_FEEDBACK_MS,
   };
@@ -30154,12 +30260,6 @@ function getCityListUpgradeFeedback(city) {
   }
   if (cityListUpgradeFeedback.key !== getCityListRowKey(city)) return null;
   return clampCityLevel(city?.level) === cityListUpgradeFeedback.finalLevel ? cityListUpgradeFeedback : null;
-}
-
-function consumeCityListUpgradeRevealKey() {
-  if (!cityListUpgradeFeedback?.reveal || cityListUpgradeFeedback.expiresAtMs <= Date.now()) return "";
-  cityListUpgradeFeedback.reveal = false;
-  return cityListUpgradeFeedback.key;
 }
 
 function captureCityListFocus() {
@@ -30215,30 +30315,11 @@ function restoreCityListFocus(snapshot) {
   return Boolean(fallbackRow);
 }
 
-function ensureCityListRowVisible(cityKey = "") {
-  if (!cityKey) return;
-  const row = [...modalBody.querySelectorAll("[data-city-list-row-key]")].find(entry => entry.dataset.cityListRowKey === cityKey);
-  if (!row) return;
-  const bodyRect = modalBody.getBoundingClientRect();
-  const rowRect = row.getBoundingClientRect();
-  const margin = 8;
-  if (rowRect.top < bodyRect.top + margin) {
-    modalBody.scrollTop -= bodyRect.top + margin - rowRect.top;
-  } else if (rowRect.bottom > bodyRect.bottom - margin) {
-    modalBody.scrollTop += rowRect.bottom - bodyRect.bottom + margin;
-  }
-}
-
 function renderCityListModal() {
   const preserveUiState = Boolean(modal?.open && modal.classList.contains("city-list-modal"));
   const previousScrollTop = preserveUiState ? modalBody.scrollTop : 0;
   const focusSnapshot = preserveUiState ? captureCityListFocus() : null;
-  const revealCityKey = consumeCityListUpgradeRevealKey();
   const cities = getSortedCityList();
-  if (revealCityKey) {
-    const revealIndex = cities.findIndex(city => getCityListRowKey(city) === revealCityKey);
-    if (revealIndex >= 0) cityListPage = Math.floor(revealIndex / CITY_LIST_PAGE_SIZE);
-  }
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
   const globalStats = getGlobalStatsSnapshot();
   const displayCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : regularCityCount;
@@ -30298,6 +30379,7 @@ function renderCityListModal() {
         cityListSortDirection = "desc";
       }
       cityListPage = 0;
+      resetCityListSessionOrder();
       renderCityListModal();
     });
   });
@@ -30317,7 +30399,6 @@ function renderCityListModal() {
 
   bindCityListRowActions(modalBody);
   modalBody.scrollTop = previousScrollTop;
-  if (revealCityKey) ensureCityListRowVisible(revealCityKey);
   restoreCityListFocus(focusSnapshot);
 }
 
@@ -30330,6 +30411,7 @@ function bindCityListRowActions(root = modalBody) {
 
   root?.querySelectorAll("[data-city-list-info]").forEach(button => {
     button.addEventListener("click", async () => {
+      resetCityListSessionOrder();
       modal.classList.remove("city-list-modal");
       await openCityListInfo(button.dataset.cityListInfo, button.dataset.cityListRegion);
     });
@@ -30404,7 +30486,8 @@ function getSortedCityList() {
   const mainCities = cities.filter(isMainCityForList);
   const otherCities = cities.filter(city => !isMainCityForList(city));
   otherCities.sort(compareCityListEntries);
-  return [...mainCities.sort((a, b) => a.name.localeCompare(b.name)), ...otherCities];
+  const sortedCities = [...mainCities.sort((a, b) => a.name.localeCompare(b.name)), ...otherCities];
+  return reconcileCityListSessionOrder(sortedCities);
 }
 
 function isMainCityForList(city) {
@@ -30415,12 +30498,14 @@ function isMainCityForList(city) {
 }
 
 function compareCityListEntries(a, b) {
-  const valueA = cityListSortKey === "troops" ? Math.floor(Number(a.troops) || 0) : getCityUpgradeStableSortLevel(a);
-  const valueB = cityListSortKey === "troops" ? Math.floor(Number(b.troops) || 0) : getCityUpgradeStableSortLevel(b);
+  const levelA = clampCityLevel(getProjectedCityForInstantActions(a)?.level ?? a.level);
+  const levelB = clampCityLevel(getProjectedCityForInstantActions(b)?.level ?? b.level);
+  const valueA = cityListSortKey === "troops" ? Math.floor(Number(a.troops) || 0) : levelA;
+  const valueB = cityListSortKey === "troops" ? Math.floor(Number(b.troops) || 0) : levelB;
   const primary = cityListSortDirection === "desc" ? valueB - valueA : valueA - valueB;
   if (primary !== 0) return primary;
   const secondary = cityListSortKey === "troops"
-    ? getCityUpgradeStableSortLevel(b) - getCityUpgradeStableSortLevel(a)
+    ? levelB - levelA
     : Math.floor(Number(b.troops) || 0) - Math.floor(Number(a.troops) || 0);
   if (secondary !== 0) return secondary;
   return a.name.localeCompare(b.name);
@@ -38008,6 +38093,7 @@ document.addEventListener("pointerdown", event => {
   closeProfileScreen();
 }, true);
 modal.addEventListener("close", () => {
+  const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"
     : modal.classList.contains("offline-reward-modal")
@@ -38038,6 +38124,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("battle-report-modal");
   modal.classList.remove("offline-reward-modal");
   modal.classList.remove("city-list-modal");
+  if (closedCityListSession) resetCityListSessionOrder();
   modal.classList.remove("island-switcher-modal");
   modal.classList.remove("leaderboard-modal");
   modal.classList.remove("shop-modal");

@@ -41,8 +41,8 @@ function storageId(shardId) {
   return `${RESET_GENERATION}--${shardId}`;
 }
 
-function islandId(shardId) {
-  return `${WORLD_ID}--${shardId}--starter-west`;
+function islandId(shardId, regionId = "starter-west") {
+  return `${WORLD_ID}--${shardId}--${regionId}`;
 }
 
 async function clientGet(token, documentPath) {
@@ -54,8 +54,9 @@ async function clientGet(token, documentPath) {
 }
 
 async function clientRunQuery(token, parentPath, structuredQuery) {
+  const parentSuffix = parentPath ? `/${parentPath}` : "";
   return fetch(
-    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${parentPath}:runQuery`,
+    `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents${parentSuffix}:runQuery`,
     {
       method: "POST",
       headers: {
@@ -70,6 +71,30 @@ async function clientRunQuery(token, parentPath, structuredQuery) {
 async function expectStatus(token, documentPath, expected, message) {
   const response = await clientGet(token, documentPath);
   assert(response.status === expected, `${message} (expected ${expected}, received ${response.status})`);
+}
+
+function ownedCityRosterQuery(uid, shardId = "") {
+  const filters = [
+    ["ownerUid", uid],
+    ["resetGeneration", RESET_GENERATION],
+    ["worldId", WORLD_ID],
+  ];
+  if (shardId) filters.push(["realmShardId", shardId]);
+  return {
+    from: [{ collectionId: "cities", allDescendants: true }],
+    where: {
+      compositeFilter: {
+        op: "AND",
+        filters: filters.map(([fieldPath, value]) => ({
+          fieldFilter: {
+            field: { fieldPath },
+            op: "EQUAL",
+            value: { stringValue: value },
+          },
+        })),
+      },
+    },
+  };
 }
 
 async function main() {
@@ -134,7 +159,71 @@ async function main() {
       totalKingPower: 100 + index,
     });
   });
+  ["relic-vale", "southfields"].forEach((regionId, index) => {
+    const shared = {
+      uid: playerOne.uid,
+      resetGeneration: RESET_GENERATION,
+      worldId: WORLD_ID,
+      realmShardId: SHARD_ONE,
+    };
+    batch.set(db.doc(`islands/${islandId(SHARD_ONE, regionId)}`), {
+      resetGeneration: RESET_GENERATION,
+      worldId: WORLD_ID,
+      realmShardId: SHARD_ONE,
+      regionId,
+    });
+    batch.set(db.doc(`islands/${islandId(SHARD_ONE, regionId)}/cities/city_${index + 3}`), {
+      ...shared,
+      ownerUid: playerOne.uid,
+      ownerKind: "player",
+      regionId: index === 0 ? "stale-wrong-region" : regionId,
+    });
+  });
   await batch.commit();
+
+  const ownedCityRosterResponse = await clientRunQuery(
+    playerOne.token,
+    "",
+    ownedCityRosterQuery(playerOne.uid, SHARD_ONE)
+  );
+  const ownedCityRows = await ownedCityRosterResponse.json();
+  assert(
+    ownedCityRosterResponse.status === 200,
+    `A player could not list their complete shard-owned city roster (expected 200, received ${ownedCityRosterResponse.status}: ${JSON.stringify(ownedCityRows)})`
+  );
+  const ownedCityNames = ownedCityRows
+    .map(row => row.document?.name || "")
+    .filter(Boolean)
+    .sort();
+  assert(ownedCityNames.length === 3, `The shard-owned roster returned ${ownedCityNames.length} cities instead of 3.`);
+  assert(new Set(ownedCityNames).size === 3, "The shard-owned roster returned a city more than once.");
+  assert(
+    ownedCityNames.every(name => name.includes(`--${SHARD_ONE}--`)),
+    "The owned-city roster returned a city outside the player's realm shard."
+  );
+  assert(
+    ownedCityNames.some(name => name.includes(`--${SHARD_ONE}--relic-vale/cities/city_3`)),
+    "The roster did not preserve the city document's canonical island path when stored region metadata was stale."
+  );
+
+  const unscopedOwnedCityRosterResponse = await clientRunQuery(
+    playerOne.token,
+    "",
+    ownedCityRosterQuery(playerOne.uid)
+  );
+  assert(
+    unscopedOwnedCityRosterResponse.status === 403,
+    `An owned-city collection-group query omitted its realm shard and was not denied (expected 403, received ${unscopedOwnedCityRosterResponse.status})`
+  );
+  const otherShardOwnedCityRosterResponse = await clientRunQuery(
+    playerOne.token,
+    "",
+    ownedCityRosterQuery(playerOne.uid, SHARD_TWO)
+  );
+  assert(
+    otherShardOwnedCityRosterResponse.status === 403,
+    `A player queried another shard's owned-city roster (expected 403, received ${otherShardOwnedCityRosterResponse.status})`
+  );
 
   const clanLeaderboardResponse = await clientRunQuery(
     playerOne.token,
@@ -188,7 +277,7 @@ async function main() {
   await expectStatus(playerTwo.token, `islands/${islandId(SHARD_TWO)}/cities/city_2`, 200, "The second shard could not read its own city");
   await expectStatus(playerTwo.token, `islands/${islandId(SHARD_ONE)}/cities/city_1`, 403, "The second shard read the first shard city");
 
-  console.log("Realm shard rules passed: islands, activity, player and clan leaderboards, and assignments remain isolated between shards.");
+  console.log("Realm shard rules passed: complete multi-region city rosters, islands, activity, player and clan leaderboards, and assignments remain isolated between shards.");
 }
 
 main().catch(error => {
