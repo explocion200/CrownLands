@@ -18657,7 +18657,12 @@ function getOwnedCitySnapshotForUpgrade(cityId, regionId = "") {
   if (!id) return null;
   const normalizedRegionId = regionId ? normalizeRegionId(regionId) : "";
   const activeCity = cityById(id);
-  if (activeCity && (!normalizedRegionId || getCityRegionId(activeCity) === normalizedRegionId)) return activeCity;
+  const activeRegionId = getActiveMapRegionId();
+  if (
+    activeCity
+    && getCityRegionId(activeCity) === activeRegionId
+    && (!normalizedRegionId || activeRegionId === normalizedRegionId)
+  ) return activeCity;
   return getOwnedCitySnapshotById(id, normalizedRegionId);
 }
 
