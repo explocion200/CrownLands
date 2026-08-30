@@ -90,6 +90,8 @@ function validate() {
   const findingIds = new Set(baseline.findings.map(finding => finding.id));
   ["STAB-001", "STAB-002", "STAB-003", "STAB-004", "STAB-005", "STAB-006"].forEach(id => assert.ok(findingIds.has(id), `Missing ${id} finding.`));
   assert.equal(baseline.findings.find(finding => finding.id === "STAB-003")?.classification, "confirmed", "Listener-budget drift must remain a confirmed finding while base sessions settle above 17.");
+  assert.equal(baseline.findings.find(finding => finding.id === "STAB-004")?.classification, "confirmed", "Heartbeat lifecycle recovery must remain a confirmed finding.");
+  assert.equal(baseline.findings.find(finding => finding.id === "STAB-004")?.status, "fixed", "Heartbeat lifecycle recovery must remain marked fixed.");
 
   [
     "# Crown Lands Stability, Login, and Performance Audit",
@@ -98,6 +100,8 @@ function validate() {
     "## Acceptance scorecard",
     "## Findings",
     "STAB-003",
+    "STAB-004",
+    "lifecycle generation",
     "17-listener",
     "benchmark-results/stability/baseline.json",
   ].forEach(anchor => assert.ok(report.includes(anchor), `Audit report is missing: ${anchor}`));

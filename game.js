@@ -1952,6 +1952,7 @@ let googleSignInRedirectReady = false;
 let gameServerMembership = null;
 let gameServerMembershipUnsubscribe = null;
 let gameServerHeartbeatIntervalId = 0;
+let gameServerHeartbeatGeneration = 0;
 let gameServerHeartbeatInFlight = false;
 let gameServerJoinInFlight = false;
 let gameServerLaunchInFlight = false;
@@ -14068,6 +14069,7 @@ function isWaitingForGameServerSlot() {
 function stopGameServerHeartbeat() {
   if (gameServerHeartbeatIntervalId) window.clearInterval(gameServerHeartbeatIntervalId);
   gameServerHeartbeatIntervalId = 0;
+  gameServerHeartbeatGeneration += 1;
   gameServerHeartbeatInFlight = false;
 }
 
@@ -14075,6 +14077,7 @@ async function heartbeatGameServerMembership() {
   if (gameServerHeartbeatInFlight || (!hasActiveGameServerSlot() && !isWaitingForGameServerSlot())) return false;
   const api = getOnlineApi();
   if (!api?.heartbeatGameServer || !api?.isSignedIn?.()) return false;
+  const heartbeatGeneration = gameServerHeartbeatGeneration;
   gameServerHeartbeatInFlight = true;
   try {
     const result = await withTimeout(
@@ -14082,13 +14085,14 @@ async function heartbeatGameServerMembership() {
       GAME_SERVER_HEARTBEAT_TIMEOUT_MS,
       "Crownlands realm heartbeat timed out."
     );
+    if (heartbeatGeneration !== gameServerHeartbeatGeneration || !api.isSignedIn?.()) return false;
     applyGameServerMembership(result);
     return true;
   } catch (error) {
     console.warn("Could not refresh Crownlands realm membership", error);
     return false;
   } finally {
-    gameServerHeartbeatInFlight = false;
+    if (heartbeatGeneration === gameServerHeartbeatGeneration) gameServerHeartbeatInFlight = false;
   }
 }
 
