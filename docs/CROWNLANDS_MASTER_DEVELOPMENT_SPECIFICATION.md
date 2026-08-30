@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.25
+**Version:** 1.26
 **Effective date:** August 30, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** August 30, 2026
@@ -305,12 +305,14 @@ The following city-progression reward model is confirmed design and is `LIVE —
 
 ### Confirmed instant city-upgrade feedback
 
+- The City List represents every regular city and Stronghold the signed-in player owns throughout the current server world, reset generation, and realm shard, independent of the region currently displayed. The roster is obtained through one bounded owner-scoped cross-region read rather than one persistent listener per region. The city document's island path supplies canonical region identity; stale stored region metadata cannot override it.
+- A timed-out, denied, invalid, duplicate, or count-mismatched roster read must not be reported as complete. The City List may retain verified or previously saved rows while clearly reporting that the full roster is unavailable and offering a retry; a later verified complete read replaces the cache and removes cities no longer owned.
 - Every accepted map, City Info, or City List upgrade action immediately reserves its projected Gold and displays its projected city level without changing persisted authoritative state. The active-map city, castle presentation, map label, selected-city controls, City Info, and City List must agree on the projected or confirmed level.
 - Additional `+1` and `+5` actions remain available while earlier requests are processing and use projected Gold and projected levels for cost and affordability. `+5` is exact and all-or-nothing. `MAX` reserves every level affordable with projected Gold, while the server remains authoritative for its final result.
 - Each accepted input reserves its projected levels and Gold immediately. Adjacent undispatched exact `+1` and `+5` inputs for the same region-and-city key compact into one request-ID-backed exact batch of no more than 25 levels. The active request is immutable, overflow remains in global input order, and `MAX` is always a standalone authoritative request. City batches dispatch without the shared economy coalescing delay or a routine city-XP preview request.
 - If the server rejects an action, dependent queued actions for that city are cleared, authoritative Gold and city data are refreshed, and the projection rolls back. Unrelated actions are revalidated against the refreshed state.
 - After each confirmation, the owned-city cache and active-map city receive the authoritative update before any remaining projection is reapplied. Gameplay calculations continue to use confirmed server state.
-- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Only affected visible rows and Gold are patched, with heavy presentation work limited to one update per animation frame before any required active-map redraw. The nonblocking state reports projected levels syncing without disabling affordable upgrade controls.
+- During one open City List session, each surviving row keeps its ordinal position, page, scroll, focus, and sort position through projection, authoritative settlement, rejection recovery, and automatic roster or economy synchronization. Newly discovered cities append in deterministic current-sort order, while cities no longer owned disappear without changing the relative order of surviving rows. Clicking either sort control, including reapplying the current sort, creates a fresh ordering; closing and reopening the City List also applies the selected sort to the latest roster. Only affected visible rows and Gold are patched during queued upgrades, with heavy presentation work limited to one update per animation frame before any required active-map redraw. The nonblocking state reports projected levels syncing without disabling affordable upgrade controls.
 - Confirmed city-upgrade feedback is emitted once per settled server batch. A presentation, sound, toast, log, or animation failure cannot reject an authoritative settlement, freeze the queue, or prevent later actions from draining.
 - City List upgrades are map-independent. Region-and-city is the canonical identity for owned-city caching, pending actions, incoming-attack blockers, authoritative requests, and reconciliation. The city document's island path is authoritative when stored region metadata disagrees, and an off-map upgrade never requires a map switch.
 - Only the selected-city map Level action uses the dedicated simple arrow-up glyph and Crownlands gold treatment. Its accessible `Level up` label and Gold cost remain visible. City Info and City List controls retain the `+1`, `+5`, and `MAX` labels.
@@ -1230,6 +1232,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.26 — August 30, 2026
+
+- Confirmed that the City List must represent the complete owner-scoped roster across the current world, generation, and realm shard, independent of the displayed map, with canonical region identity taken from each city document's island path.
+- Required roster failures or reconciliation mismatches to remain explicitly incomplete and retryable instead of silently replacing the cache as complete.
+- Extended City List position stability from pending queues to the full open-modal session, with deterministic append-only discovery, relative-order-preserving removals, explicit-sort resets, and fresh ordering on reopen.
+- Classified the City List reliability correction as `IN DEVELOPMENT` pending validation, merge, and coordinated publication; no deployment status changed.
 
 ## v1.25 — August 30, 2026
 

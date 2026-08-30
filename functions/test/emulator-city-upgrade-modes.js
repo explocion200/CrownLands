@@ -114,30 +114,54 @@ async function main() {
   const claim = await callFunction("claimStartingCity", user.token, { playerName: "Upgrade Sentinel" });
   const profileRef = db.doc(`players/${user.uid}`);
   const claimRegionId = getClaimRegionId(claim);
-  const remoteMap = worldLayout.maps.find(map => map.id !== claimRegionId && Array.isArray(map.cities) && map.cities.length);
-  assert(remoteMap, "No off-map city is available for the city-upgrade fixture.");
+  const remoteMaps = worldLayout.maps.filter(map => map.id !== claimRegionId && Array.isArray(map.cities) && map.cities.length).slice(0, 2);
+  const [remoteMap, maxRemoteMap] = remoteMaps;
+  assert(remoteMap && maxRemoteMap, "Two off-map cities are required for the city-upgrade fixture.");
   const remoteBase = remoteMap.cities[0];
+  const maxRemoteBase = maxRemoteMap.cities[0];
   const cityRef = db.doc(`islands/${realm.worldId}-${remoteMap.id}/cities/${remoteBase.id}`);
+  const maxCityRef = db.doc(`islands/${realm.worldId}-${maxRemoteMap.id}/cities/${maxRemoteBase.id}`);
   const nowMs = await setEconomyGold(profileRef, 1_000_000_000);
-  await cityRef.set({
-    ...remoteBase,
-    id: remoteBase.id,
-    name: remoteBase.name || "Remote Upgrade City",
-    regionId: claimRegionId,
-    islandId: `${realm.worldId}-${remoteMap.id}`,
-    worldId: realm.worldId,
-    resetGeneration: realm.resetGeneration,
-    owner: "player",
-    ownerKind: "player",
-    ownerUid: user.uid,
-    ownerId: user.uid,
-    ownerName: "Upgrade Sentinel",
-    level: 1,
-    investedGold: 0,
-    troops: 200,
-    troopFloat: 200,
-    productionUpdatedAtMs: nowMs,
-  }, { merge: true });
+  await Promise.all([
+    cityRef.set({
+      ...remoteBase,
+      id: remoteBase.id,
+      name: remoteBase.name || "Remote Upgrade City",
+      regionId: claimRegionId,
+      islandId: `${realm.worldId}-${remoteMap.id}`,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: user.uid,
+      ownerId: user.uid,
+      ownerName: "Upgrade Sentinel",
+      level: 1,
+      investedGold: 0,
+      troops: 200,
+      troopFloat: 200,
+      productionUpdatedAtMs: nowMs,
+    }, { merge: true }),
+    maxCityRef.set({
+      ...maxRemoteBase,
+      id: maxRemoteBase.id,
+      name: maxRemoteBase.name || "Remote MAX City",
+      regionId: maxRemoteMap.id,
+      islandId: `${realm.worldId}-${maxRemoteMap.id}`,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: user.uid,
+      ownerId: user.uid,
+      ownerName: "Upgrade Sentinel",
+      level: 1,
+      investedGold: 0,
+      troops: 200,
+      troopFloat: 200,
+      productionUpdatedAtMs: nowMs,
+    }, { merge: true }),
+  ]);
 
   const realmInfo = await callFunction("getRealmInfo", user.token);
   assert(
@@ -253,17 +277,21 @@ async function main() {
 
   await Promise.all([
     setEconomyGold(profileRef, 1_000_000_000_000),
-    cityRef.set({ level: 1, investedGold: 0, productionUpdatedAtMs: Date.now() }, { merge: true }),
+    maxCityRef.set({ level: 1, investedGold: 0, productionUpdatedAtMs: Date.now() }, { merge: true }),
   ]);
   const maxResult = await callFunction("upgradeCity", user.token, {
-    cityId: remoteBase.id,
-    regionId: remoteMap.id,
+    cityId: maxRemoteBase.id,
+    regionId: maxRemoteMap.id,
     mode: "max",
     requestId: `max_${crypto.randomUUID()}`,
   });
   assert(maxResult.mode === "max" && maxResult.upgraded > 5, "MAX did not buy every affordable level in one authoritative call.");
   assert(maxResult.finalLevel === 1 + maxResult.upgraded, "MAX returned an inconsistent final level.");
-  assert(Number((await cityRef.get()).data()?.level) === maxResult.finalLevel, "MAX did not persist its authoritative final level.");
+  assert(
+    maxResult.cityUpdates?.some(update => update.id === maxRemoteBase.id && update.regionId === maxRemoteMap.id),
+    "MAX did not reconcile the second off-map city's canonical region."
+  );
+  assert(Number((await maxCityRef.get()).data()?.level) === maxResult.finalLevel, "MAX did not persist its authoritative final level on a second off-map region.");
 
   await Promise.all([
     setEconomyGold(profileRef, 1_000_000_000),
@@ -308,7 +336,7 @@ async function main() {
     "The bounded city-upgrade receipt ledger did not retain the idempotency receipt."
   );
 
-  console.log("City upgrade emulator validation passed: canonical off-map routing, exact +5 atomicity, direct MAX, idempotency, and incoming-attack authority.");
+  console.log("City upgrade emulator validation passed: canonical routing across two off-map regions, exact +1/+5 atomicity, direct MAX, idempotency, and incoming-attack authority.");
 }
 
 main().catch(error => {
