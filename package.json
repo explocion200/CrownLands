@@ -6,6 +6,10 @@
   "scripts": {
     "start-feature": "node tools/start-feature.js",
     "prepare-pr": "node tools/prepare-pr.js",
+    "audit:stability": "node tools/run-stability-audit.js",
+    "audit:stability:full": "node tools/run-stability-audit.js --full",
+    "validate:stability-audit": "node tools/validate-stability-audit.js",
+    "validate:login-stability-matrix": "node tools/validate-login-stability-matrix.js",
     "setup:hooks": "node tools/install-git-hooks.js",
     "test:safe-update": "node tools/test-safe-update-pipeline.js",
     "benchmark:map": "node tools/map-benchmark/run-map-benchmark.js",

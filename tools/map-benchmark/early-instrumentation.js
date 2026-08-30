@@ -55,6 +55,38 @@
   let animationFrameExecuted = 0;
   let activeSample = null;
   const completedSamples = [];
+  const runtimeErrors = [];
+  const lifecycleEvents = [];
+  const phases = [{ name: "instrumentation-ready", atMs: performance.now() }];
+
+  function cleanError(error) {
+    return String(error?.message || error?.reason?.message || error?.reason || error || "Unknown error").slice(0, 500);
+  }
+
+  function markPhase(name, detail = {}) {
+    const entry = { name: String(name || "phase"), atMs: performance.now(), ...detail };
+    phases.push(entry);
+    return entry;
+  }
+
+  window.addEventListener("error", event => {
+    runtimeErrors.push({ type: "error", message: cleanError(event.error || event.message), atMs: performance.now() });
+  });
+  window.addEventListener("unhandledrejection", event => {
+    runtimeErrors.push({ type: "unhandledrejection", message: cleanError(event), atMs: performance.now() });
+  });
+  ["online-ready", "auth", "auth-error", "online-error", "session-replaced", "army-sync-status"].forEach(name => {
+    window.addEventListener(`crownlands:${name}`, event => {
+      lifecycleEvents.push({
+        name,
+        atMs: performance.now(),
+        reason: String(event.detail?.reason || event.detail?.code || event.detail?.status || "").slice(0, 120),
+      });
+    });
+  });
+  ["online", "offline", "pageshow", "pagehide"].forEach(name => {
+    window.addEventListener(name, () => lifecycleEvents.push({ name: `browser-${name}`, atMs: performance.now(), reason: "" }));
+  });
 
   window.setTimeout = function benchmarkSetTimeout(callback, delay, ...args) {
     let id = 0;
@@ -176,6 +208,13 @@
       measurementAnimationFrameLoops: 1,
       longTaskObserverAvailable: Boolean(longTaskObserver),
     }),
+    getDiagnostics: () => ({
+      phases: phases.map(entry => ({ ...entry })),
+      runtimeErrors: runtimeErrors.map(entry => ({ ...entry })),
+      lifecycleEvents: lifecycleEvents.map(entry => ({ ...entry })),
+      longTasks: longTasks.map(entry => ({ ...entry })),
+    }),
+    markPhase,
     native,
   });
 })();

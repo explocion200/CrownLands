@@ -15,6 +15,20 @@
   const benchmarkMainCityId = benchmarkMainCity.id;
   const benchmarkMainIslandId = `${fixture.releaseConfig.worldId}-${benchmarkMainRegionId}`;
   const benchmarkProfileStorageKey = `crownlands-benchmark-profile-${fixture.benchmarkSeed}-${fixture.scenario.id}`;
+  const query = new URLSearchParams(location.search);
+  const stabilityFault = String(query.get("stabilityFault") || "").trim();
+  const stabilityFaultTarget = String(query.get("stabilityFaultTarget") || "").trim();
+  const stabilityFaultDelayMs = Math.max(0, Math.min(15000, Math.floor(Number(query.get("stabilityFaultDelayMs")) || 0)));
+  const stabilityFaultOnce = query.get("stabilityFaultOnce") !== "false";
+  const consumedFaults = new Set();
+  const phaseMarks = new Set();
+  const benchmarkNow = () => globalThis.performance?.now?.() ?? Date.now();
+
+  function markPhaseOnce(name, detail = {}) {
+    if (phaseMarks.has(name)) return;
+    phaseMarks.add(name);
+    window.__CROWNLANDS_BENCHMARK_INSTRUMENTATION__?.markPhase?.(name, detail);
+  }
 
   function readStoredProfile() {
     try {
@@ -40,7 +54,9 @@
   const lifecycle = [];
   const eventTraffic = [];
   const writes = [];
+  const operations = [];
   const islandHandlers = new Map();
+  const retiredIslandHandlers = new Map();
   const chatMessages = {
     global: [
       { id: "benchmark-global-1", channel: "global", channelId: "global", senderUid: "benchmark-ally-1", senderDisplayName: "Lady Maeve", text: "The western road is clear.", createdAtMs: fixture.fixedEpochMs - 120000, status: "visible" },
@@ -89,6 +105,7 @@
     subscribeLogical("player.dailyMission", "player/session"),
     subscribeLogical("player.seasonalAchievement", "player/session"),
   ];
+  markPhaseOnce("session-activation-ready");
 
   function regionIdFromIsland(islandId) {
     const suffix = String(islandId || "").split("-").pop();
@@ -124,6 +141,29 @@
     return unsubscribe;
   }
 
+  function shouldApplyFault(name) {
+    if (!stabilityFault || (stabilityFaultTarget && stabilityFaultTarget !== name)) return false;
+    if (stabilityFaultOnce && consumedFaults.has(name)) return false;
+    consumedFaults.add(name);
+    return true;
+  }
+
+  function delay(milliseconds) {
+    return new Promise(resolve => window.setTimeout(resolve, milliseconds));
+  }
+
+  function scheduleSnapshot(name, callback) {
+    const markedCallback = () => {
+      if (name === "subscribeIsland") markPhaseOnce("first-city-snapshot");
+      callback();
+    };
+    if (stabilityFault === "delayed-snapshot" && (!stabilityFaultTarget || stabilityFaultTarget === name)) {
+      window.setTimeout(markedCallback, stabilityFaultDelayMs || 1000);
+      return;
+    }
+    queueMicrotask(markedCallback);
+  }
+
   const membership = {
     serverId: "crown-marches",
     serverName: "The Crown Marches",
@@ -134,10 +174,16 @@
   };
 
   const api = {
-    init: async () => true,
+    init: async () => {
+      markPhaseOnce("firebase-initialized");
+      return true;
+    },
     isConfigured: () => true,
     isReady: () => true,
-    isSignedIn: () => true,
+    isSignedIn: () => {
+      markPhaseOnce("authentication-ready");
+      return true;
+    },
     getUser: () => ({ ...fixture.player }),
     getLastError: () => null,
     usesServerArmyAuthority: () => true,
@@ -160,10 +206,7 @@
     },
 
     getRealmInfo: async () => ({
-      releaseId: fixture.releaseConfig.releaseId,
-      resetGeneration: fixture.releaseConfig.resetGeneration,
-      worldId: fixture.releaseConfig.worldId,
-      contractHash: fixture.releaseConfig.apiContractHash,
+      ...fixture.realmContract,
       serverBuildId: "phase-0-benchmark",
       serverTimeMs: Date.now(),
       authoritativeRoutesVersion: 1,
@@ -173,6 +216,7 @@
       realmActivityVersion: 1,
       dailyMissionVersion: 0,
       seasonalAchievementVersion: 0,
+      capabilities: { ...(fixture.realmContract.capabilities || {}) },
     }),
     loadPlayerProfile: async () => ({
       uid: fixture.player.uid,
@@ -218,7 +262,8 @@
       const campRows = fixture.campsByRegion[regionId] || [];
       const unsubscribe = subscribeLogical(`region.${regionId}`, "region", 4);
       islandHandlers.set(islandId, handlers);
-      queueMicrotask(() => {
+      retiredIslandHandlers.delete(islandId);
+      scheduleSnapshot("subscribeIsland", () => {
         recordEvent(`region.${regionId}.cities`, cityRows);
         handlers.onCities?.(cityRows);
         recordEvent(`region.${regionId}.camps`, campRows);
@@ -230,6 +275,8 @@
         handlers.onPresence?.(presence, []);
       });
       return () => {
+        const retiredHandlers = islandHandlers.get(islandId);
+        if (retiredHandlers) retiredIslandHandlers.set(islandId, retiredHandlers);
         islandHandlers.delete(islandId);
         unsubscribe();
       };
@@ -315,12 +362,25 @@
       handlers.onArmies?.(armies);
       return true;
     },
+    __emitIslandError(islandId, source = "cities", message = "Injected realtime listener failure") {
+      const handlers = islandHandlers.get(islandId);
+      if (!handlers) return false;
+      handlers.onError?.(new Error(String(message)), String(source));
+      return true;
+    },
+    __emitRetiredIslandCities(islandId, cities = []) {
+      const handlers = retiredIslandHandlers.get(islandId);
+      if (!handlers) return false;
+      handlers.onCities?.(cities);
+      return true;
+    },
     __getBenchmarkTelemetry() {
       return {
         listeners: listenerSnapshot(),
         lifecycle: [...lifecycle],
         eventTraffic: [...eventTraffic],
         writes: [...writes],
+        operations: [...operations],
         storedProfile: readStoredProfile(),
       };
     },
@@ -328,6 +388,63 @@
       baselineUnsubscribers.forEach(unsubscribe => unsubscribe());
     },
   };
+
+  [
+    "getRealmInfo",
+    "joinGameServer",
+    "heartbeatGameServer",
+    "loadPlayerProfile",
+    "loadGameSnapshot",
+    "loadPlayerGlobalStats",
+    "repairMainCityAssignment",
+    "ensureMainIsland",
+    "loadIslandCities",
+    "loadOwnedCitiesAcrossIslands",
+  ].forEach(name => {
+    const original = api[name];
+    if (typeof original !== "function") return;
+    api[name] = async function benchmarkOperation(...args) {
+      const startedAt = benchmarkNow();
+      try {
+        const applyFault = shouldApplyFault(name);
+        if (applyFault && stabilityFault === "slow-call") await delay(stabilityFaultDelayMs || 1000);
+        if (applyFault && stabilityFault === "rejected-call") {
+          throw new Error(`Injected ${name} rejection`);
+        }
+        const result = await original.apply(this, args);
+        if (applyFault && stabilityFault === "response-loss") {
+          throw new Error(`Injected ${name} response loss`);
+        }
+        operations.push({
+          name,
+          status: "fulfilled",
+          durationMs: benchmarkNow() - startedAt,
+          request: args[0] && typeof args[0] === "object" ? {
+            islandId: String(args[0].islandId || ""),
+            regionId: String(args[0].regionId || ""),
+          } : typeof args[0] === "string" ? { value: args[0] } : null,
+          result: result && typeof result === "object" ? {
+            resetGeneration: String(result.resetGeneration || ""),
+            mainRegionId: String(result.mainRegionId || result.currentUser?.mainRegionId || ""),
+            mainCityId: String(result.mainCityId || result.currentUser?.mainCityId || ""),
+            rowCount: Array.isArray(result) ? result.length : null,
+          } : null,
+        });
+        if (name === "getRealmInfo") markPhaseOnce("realm-verified");
+        if (name === "joinGameServer") markPhaseOnce("membership-joined");
+        if (name === "loadPlayerProfile") markPhaseOnce("profile-loaded");
+        return result;
+      } catch (error) {
+        operations.push({
+          name,
+          status: "rejected",
+          durationMs: benchmarkNow() - startedAt,
+          error: String(error?.message || error),
+        });
+        throw error;
+      }
+    };
+  });
 
   window.CrownlandsOnline = Object.freeze(api);
 })();

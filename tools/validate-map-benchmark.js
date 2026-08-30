@@ -6,6 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const { BENCHMARK_SEED, SCENARIOS, createFixture } = require("./map-benchmark/fixtures.js");
+const { loadAuthoritativeRealmContract } = require("./map-benchmark/realm-contract.js");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
 const root = path.resolve(__dirname, "..");
@@ -13,6 +14,7 @@ const productionGame = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const benchmarkEarlySource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "early-instrumentation.js"), "utf8");
 const benchmarkMockSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "mock-firebase.js"), "utf8");
 const benchmarkRuntimeSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "injected-runtime.js"), "utf8");
+const benchmarkRunnerSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "run-map-benchmark.js"), "utf8");
 const pickupQaSource = fs.readFileSync(path.join(root, "tools", "map-benchmark", "pickup-qa-runtime.js"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
@@ -20,6 +22,12 @@ assert.equal(BENCHMARK_SEED, "crownlands-map-phase-0-v1");
 assert.equal(packageJson.scripts["benchmark:map"], "node tools/map-benchmark/run-map-benchmark.js");
 assert.ok(!productionGame.includes("__CROWNLANDS_BENCHMARK__"), "Benchmark API leaked into production game.js.");
 assert.ok(!productionGame.includes("Benchmark Ruler"), "Benchmark account leaked into production game.js.");
+
+const authoritativeRealmContract = loadAuthoritativeRealmContract();
+assert.equal(authoritativeRealmContract.skillPointSystemVersion, 2, "The benchmark did not derive the current server skill progression version.");
+assert.equal(authoritativeRealmContract.capabilities.skillPointSystemVersion, authoritativeRealmContract.skillPointSystemVersion);
+assert.equal(authoritativeRealmContract.releaseId, createFixture("A").releaseConfig.releaseId);
+assert.equal(authoritativeRealmContract.contractHash, createFixture("A").releaseConfig.apiContractHash);
 
 const expected = {
   A: [50, 25],
@@ -38,6 +46,7 @@ for (const [id, [cityCount, marchCount]] of Object.entries(expected)) {
   assert.equal(first.scenario.marchCount, marchCount);
   assert.equal(first.primaryRegionId, "region_11");
   assert.equal(first.neighborRegionId, "region_6");
+  assert.deepEqual(first.realmContract, authoritativeRealmContract, `Scenario ${id} drifted from the authoritative realm contract.`);
   const mapIds = first.mapData.maps.map(map => map.id);
   assert.deepEqual(Object.keys(first.citiesByRegion).sort(), [...mapIds].sort(), `Scenario ${id} does not expose city fixtures for every map.`);
   assert.deepEqual(Object.keys(first.campsByRegion).sort(), [...mapIds].sort(), `Scenario ${id} does not expose camp fixtures for every map.`);
@@ -57,19 +66,26 @@ assert.match(benchmarkRuntimeSource, /dataset\.pickupSoakState/, "Pickup soak di
 assert.match(benchmarkRuntimeSource, /pickupSoakDelay/, "The loopback benchmark must support a query-gated ordinary-play pickup setup.");
 assert.match(benchmarkRuntimeSource, /rawPickupSoakDelay === null \? Number\.NaN/, "A missing soak delay must not reset pickup state during refresh testing.");
 assert.match(benchmarkRuntimeSource, /pickupSoakRegion/, "The loopback benchmark must support pickup relocation checks without focusing the pickup camera.");
+assert.match(benchmarkRuntimeSource, /rawPickupSoakRegion === null \? ""/, "A missing pickup soak region must not switch the benchmark away from its scenario map.");
 assert.match(benchmarkRuntimeSource, /centerFraction/, "Pickup soak diagnostics must report center bias without moving the camera.");
 assert.match(benchmarkMockSource, /benchmarkProfileStorageKey/, "The loopback Firebase mock must preserve pickup state across same-tab reloads for soak testing.");
 assert.match(benchmarkMockSource, /loadGameSnapshot:\s*async \(\) => readStoredProfile\(\)/, "The loopback Firebase mock must restore its saved gameplay snapshot after a reload.");
 assert.match(benchmarkMockSource, /storedProfile:\s*readStoredProfile\(\)/, "Pickup soak diagnostics must report the profile persisted by the loopback Firebase mock.");
 assert.match(benchmarkEarlySource, /pickupSoakClock/, "The loopback benchmark must support a reload-stable clock for pickup soak testing.");
+assert.match(benchmarkEarlySource, /runtimeErrors[\s\S]*unhandledrejection[\s\S]*longTasks/, "Stability instrumentation must retain runtime-error and long-task evidence.");
+assert.match(benchmarkMockSource, /stabilityFault[\s\S]*slow-call[\s\S]*rejected-call[\s\S]*response-loss/, "The loopback Firebase mock must retain callable fault injection.");
+assert.match(benchmarkMockSource, /first-city-snapshot[\s\S]*realm-verified[\s\S]*membership-joined[\s\S]*profile-loaded/, "Startup phase instrumentation drifted.");
+assert.match(benchmarkRuntimeSource, /runStaleSnapshotCheck[\s\S]*runRealtimeRecoveryCheck[\s\S]*runLifecycleCycles[\s\S]*runOfflineRecoveryCheck[\s\S]*runSessionReplacementCheck/, "Stability recovery probes drifted.");
+assert.match(benchmarkRunnerSource, /--output-directory=[\s\S]*--output-basename=/, "The benchmark runner must support isolated stability-audit output.");
 assert.ok(!productionGame.includes("pickup-qa-panel"), "Pickup QA controls leaked into production game.js.");
 assert.ok(!productionGame.includes("getPickupSoakState"), "Pickup soak diagnostics leaked into production game.js.");
 
 function createBenchmarkMockSandbox(fixture, hostname = "127.0.0.1") {
   let networkRequests = 0;
   const sandbox = {
-    location: { hostname },
+    location: { hostname, search: "" },
     queueMicrotask,
+    URLSearchParams,
     window: { __CROWNLANDS_BENCHMARK_BOOTSTRAP__: fixture },
     fetch: async () => {
       networkRequests += 1;

@@ -4,6 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
+const { loadAuthoritativeRealmContract } = require("./realm-contract.js");
+
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 const MAP_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const RELEASE_CONFIG_PATH = path.join(ROOT_DIR, "functions", "release-config.json");
@@ -170,6 +172,7 @@ function createFixture(scenarioId = "A") {
   const scenario = SCENARIOS[String(scenarioId || "A").toUpperCase()] || SCENARIOS.A;
   const mapData = loadMapEditorData();
   const releaseConfig = loadReleaseConfig();
+  const realmContract = loadAuthoritativeRealmContract();
   const cityDefinitions = createBenchmarkCityDefinitions(scenario.cityCount);
   const campDefinitions = createCampDefinitions();
   const primaryMap = mapData.maps.find(map => map.id === PRIMARY_REGION_ID);
@@ -206,6 +209,7 @@ function createFixture(scenarioId = "A") {
       displayName: "Benchmark Ruler",
     },
     releaseConfig,
+    realmContract,
     mapData,
     citiesByRegion,
     campsByRegion,

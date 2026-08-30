@@ -14,6 +14,7 @@
     error: "",
     regionLoadLatencyMs: null,
     createdArmies: [],
+    stabilityChecks: {},
   };
   const mapPickerInputTelemetry = {
     switchCalls: [],
@@ -736,7 +737,15 @@
     const runningAnimations = document.getAnimations ? document.getAnimations().filter(animation => animation.playState === "running") : [];
     return {
       scenario: fixture.scenario,
+      worldRegionIds: [...WORLD_REGION_IDS],
       regionId: getActiveMapRegionId(),
+      onlineState: state?.online ? {
+        activeRegionId: state.online.activeRegionId || "",
+        mainRegionId: state.online.mainRegionId || "",
+        mainCityId: state.online.mainCityId || "",
+        islandId: state.online.islandId || "",
+      } : null,
+      mainCityId: state?.mainCityId || "",
       dataCityCount: state.cities.filter(city => getCityRegionId(city) === getActiveMapRegionId() && !isStronghold(city)).length,
       dataMarchCount: getRenderableArmies().length,
       dom: {
@@ -762,6 +771,8 @@
       },
       timers: instrumentation.getTimerSnapshot(),
       realtime: listenerTelemetry,
+      diagnostics: instrumentation.getDiagnostics(),
+      stabilityChecks: { ...benchmarkState.stabilityChecks },
       images: getImageMemoryEstimate(),
       performanceMemory: performance.memory
         ? {
@@ -820,6 +831,138 @@
     await wait(350);
     const after = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
     return { neighborResult, returnResult, neighborLatencyMs, returnLatencyMs, before, atNeighbor, after };
+  }
+
+  async function runStaleSnapshotCheck() {
+    const primaryIslandId = getOnlineIslandId(fixture.primaryRegionId);
+    await switchOnlineIsland(fixture.neighborRegionId, { fromMapPicker: true });
+    await waitForMapInteractionReady();
+    const beforeRegionId = getActiveMapRegionId();
+    const staleCities = (fixture.citiesByRegion?.[fixture.primaryRegionId] || []).map(city => ({
+      ...city,
+      level: 500,
+      updatedAtMs: Date.now() + 1000,
+    }));
+    const emitted = window.CrownlandsOnline.__emitRetiredIslandCities(primaryIslandId, staleCities);
+    await wait(50);
+    const afterRegionId = getActiveMapRegionId();
+    const passed = emitted && beforeRegionId === fixture.neighborRegionId && afterRegionId === fixture.neighborRegionId;
+    await switchOnlineIsland(fixture.primaryRegionId, { fromMapPicker: true });
+    await waitForMapInteractionReady();
+    emitBenchmarkArmies();
+    const result = { passed, emitted, beforeRegionId, afterRegionId };
+    benchmarkState.stabilityChecks.staleSnapshot = result;
+    return result;
+  }
+
+  async function runRealtimeRecoveryCheck() {
+    const islandId = getOnlineIslandId(getActiveMapRegionId());
+    const emitted = window.CrownlandsOnline.__emitIslandError(islandId, "cities");
+    const restarted = await restartOnlineRealtimeSubscriptionsForResume();
+    await wait(100);
+    const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
+    const result = {
+      passed: emitted && restarted && listeners.active === 17 && listeners.duplicates.length === 0,
+      emitted,
+      restarted,
+      listeners,
+    };
+    benchmarkState.stabilityChecks.realtimeRecovery = result;
+    return result;
+  }
+
+  async function runLifecycleCycles({ mapSwitches = 2, foregroundCycles = 1, reconnectCycles = 1, durationMs = 0 } = {}) {
+    const startedAt = performance.now();
+    const baselineListeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
+    const baselineTimers = instrumentation.getTimerSnapshot();
+    const totalActions = Math.max(1, mapSwitches + foregroundCycles + reconnectCycles);
+    const delayPerActionMs = durationMs > 0 ? Math.max(0, durationMs / totalActions) : 0;
+    let switchesCompleted = 0;
+    let foregroundCompleted = 0;
+    let reconnectsCompleted = 0;
+    for (let index = 0; index < mapSwitches; index += 1) {
+      const targetRegionId = getActiveMapRegionId() === fixture.primaryRegionId
+        ? fixture.neighborRegionId
+        : fixture.primaryRegionId;
+      await switchOnlineIsland(targetRegionId, { fromMapPicker: true });
+      await waitForMapInteractionReady();
+      switchesCompleted += 1;
+      if (delayPerActionMs) await wait(delayPerActionMs);
+    }
+    if (getActiveMapRegionId() !== fixture.primaryRegionId) {
+      await switchOnlineIsland(fixture.primaryRegionId, { fromMapPicker: true });
+      await waitForMapInteractionReady();
+    }
+    for (let index = 0; index < foregroundCycles; index += 1) {
+      markGameBackgrounded();
+      await synchronizeForegroundGame(60000, { longRefresh: false });
+      foregroundCompleted += 1;
+      if (delayPerActionMs) await wait(delayPerActionMs);
+    }
+    for (let index = 0; index < reconnectCycles; index += 1) {
+      const islandId = getOnlineIslandId(getActiveMapRegionId());
+      window.CrownlandsOnline.__emitIslandError(islandId, "cities", "Injected reconnect cycle");
+      await restartOnlineRealtimeSubscriptionsForResume();
+      reconnectsCompleted += 1;
+      if (delayPerActionMs) await wait(delayPerActionMs);
+    }
+    emitBenchmarkArmies();
+    await wait(100);
+    const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
+    const timers = instrumentation.getTimerSnapshot();
+    const result = {
+      passed: listeners.active === 17 && listeners.duplicates.length === 0,
+      requestedDurationMs: durationMs,
+      elapsedMs: performance.now() - startedAt,
+      switchesCompleted,
+      foregroundCompleted,
+      reconnectsCompleted,
+      baselineListeners,
+      listeners,
+      baselineTimers,
+      timers,
+      timerDelta: {
+        activeTimeouts: timers.activeTimeouts - baselineTimers.activeTimeouts,
+        activeIntervals: timers.activeIntervals - baselineTimers.activeIntervals,
+        pendingAnimationFrames: timers.pendingAnimationFrames - baselineTimers.pendingAnimationFrames,
+      },
+    };
+    benchmarkState.stabilityChecks.lifecycle = result;
+    return result;
+  }
+
+  async function runOfflineRecoveryCheck() {
+    markGameBackgrounded();
+    const synchronized = await restartOnlineRealtimeSubscriptionsForResume();
+    await wait(100);
+    const listeners = window.CrownlandsOnline.__getBenchmarkTelemetry().listeners;
+    const result = {
+      passed: Boolean(synchronized) && listeners.active === 17 && listeners.duplicates.length === 0,
+      synchronized: Boolean(synchronized),
+      listeners,
+    };
+    benchmarkState.stabilityChecks.offlineRecovery = result;
+    return result;
+  }
+
+  function runSessionReplacementCheck() {
+    const before = {
+      hadState: Boolean(state),
+      setupVisible: Boolean(setupScreen?.classList.contains("visible")),
+    };
+    handleOnlineSessionReplaced();
+    const after = {
+      hasState: Boolean(state),
+      setupVisible: Boolean(setupScreen?.classList.contains("visible")),
+      onlineSessionReplaced: Boolean(onlineSessionReplaced),
+    };
+    const result = {
+      passed: before.hadState && !after.hasState && after.setupVisible && after.onlineSessionReplaced,
+      before,
+      after,
+    };
+    benchmarkState.stabilityChecks.sessionReplacement = result;
+    return result;
   }
 
   function resetMapPickerInputTelemetry() {
@@ -933,6 +1076,11 @@
     endSample: instrumentation.endSample,
     selectAndOpenCities,
     switchNeighborAndReturn,
+    runStaleSnapshotCheck,
+    runRealtimeRecoveryCheck,
+    runLifecycleCycles,
+    runOfflineRecoveryCheck,
+    runSessionReplacementCheck,
     resetMapPickerInputTelemetry,
     getMapPickerInputTelemetry,
     getPickupSoakState,
@@ -954,15 +1102,24 @@
 
   (async () => {
     try {
+      instrumentation.markPhase("runtime-start");
       const regionStartedAt = performance.now();
       watchGameServerMembership();
+      instrumentation.markPhase("membership-watch-started");
       await startFromInput(false);
+      instrumentation.markPhase("game-entry-resolved");
       if (!state || !onlineWorldConnected) throw new Error(onlineLastError || "Benchmark game session did not connect.");
       benchmarkState.regionLoadLatencyMs = performance.now() - regionStartedAt;
       benchmarkState.createdArmies = createBenchmarkArmies();
       emitBenchmarkArmies();
-      startHudChatQa();
-      applyHudQaState();
+      instrumentation.markPhase("fixture-armies-ready", { count: benchmarkState.createdArmies.length });
+      const benchmarkQuery = new URLSearchParams(location.search);
+      const benchmarkHash = new URLSearchParams(location.hash.replace(/^#/, ""));
+      const hudQaRequested = benchmarkQuery.has("chatMode") || benchmarkQuery.has("hudOperations") || benchmarkHash.has("chat") || benchmarkHash.has("operations");
+      if (hudQaRequested) {
+        startHudChatQa();
+        applyHudQaState();
+      }
       const requestedVisualZoom = Number(new URLSearchParams(location.search).get("visualZoom"));
       zoom = Number.isFinite(requestedVisualZoom)
         ? clampZoomForViewport(requestedVisualZoom)
@@ -975,12 +1132,14 @@
         preparePickupSoak({ delaySeconds: requestedPickupSoakDelay });
         if (requestedPickupSoakDelay <= 0) advancePickupSoakTimer();
       }
-      const requestedPickupSoakRegion = normalizeRegionId(new URLSearchParams(location.search).get("pickupSoakRegion"));
+      const rawPickupSoakRegion = new URLSearchParams(location.search).get("pickupSoakRegion");
+      const requestedPickupSoakRegion = rawPickupSoakRegion === null ? "" : normalizeRegionId(rawPickupSoakRegion);
       if (requestedPickupSoakRegion && requestedPickupSoakRegion !== getActiveMapRegionId()) {
         await switchOnlineIsland(requestedPickupSoakRegion, { fromMapPicker: true });
         await waitForMapInteractionReady();
       }
       await wait(600);
+      instrumentation.markPhase("interactive-map-ready", { regionId: getActiveMapRegionId() });
       benchmarkState.status = "ready";
       document.documentElement.dataset.crownlandsBenchmarkReady = "true";
       publishPickupSoakState();
