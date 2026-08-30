@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.21
-**Effective date:** August 27, 2026
+**Version:** 1.24
+**Effective date:** August 29, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** August 27, 2026
+**Evidence reviewed through:** August 29, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -296,10 +296,11 @@ The following city-progression reward model is confirmed design and is `LIVE —
 
 - Every accepted map, City Info, or City List upgrade action immediately reserves its projected Gold and displays its projected city level without changing persisted authoritative state. The active-map city, castle presentation, map label, selected-city controls, City Info, and City List must agree on the projected or confirmed level.
 - Additional `+1` and `+5` actions remain available while earlier requests are processing and use projected Gold and projected levels for cost and affordability. `+5` is exact and all-or-nothing. `MAX` reserves every level affordable with projected Gold, while the server remains authoritative for its final result.
-- Each accepted click is a separate request-ID-backed action, executes in order, and dispatches without the shared economy coalescing delay or a routine city-XP preview request.
+- Each accepted input reserves its projected levels and Gold immediately. Adjacent undispatched exact `+1` and `+5` inputs for the same region-and-city key compact into one request-ID-backed exact batch of no more than 25 levels. The active request is immutable, overflow remains in global input order, and `MAX` is always a standalone authoritative request. City batches dispatch without the shared economy coalescing delay or a routine city-XP preview request.
 - If the server rejects an action, dependent queued actions for that city are cleared, authoritative Gold and city data are refreshed, and the projection rolls back. Unrelated actions are revalidated against the refreshed state.
 - After each confirmation, the owned-city cache and active-map city receive the authoritative update before any remaining projection is reapplied. Gameplay calculations continue to use confirmed server state.
-- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Visible rows and Gold are patched in place before any active-map redraw. A nonblocking syncing state appears on affected rows and panels without disabling all upgrade controls.
+- A city's City List row keeps its page, scroll, focus, and sort position while that city's queue is pending. Only affected visible rows and Gold are patched, with heavy presentation work limited to one update per animation frame before any required active-map redraw. The nonblocking state reports projected levels syncing without disabling affordable upgrade controls.
+- Confirmed city-upgrade feedback is emitted once per settled server batch. A presentation, sound, toast, log, or animation failure cannot reject an authoritative settlement, freeze the queue, or prevent later actions from draining.
 - City List upgrades are map-independent. Region-and-city is the canonical identity for owned-city caching, pending actions, incoming-attack blockers, authoritative requests, and reconciliation. The city document's island path is authoritative when stored region metadata disagrees, and an off-map upgrade never requires a map switch.
 - Only the selected-city map Level action uses the dedicated simple arrow-up glyph and Crownlands gold treatment. Its accessible `Level up` label and Gold cost remain visible. City Info and City List controls retain the `+1`, `+5`, and `MAX` labels.
 
@@ -1198,6 +1199,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.24 — August 29, 2026
+
+- Confirmed adjacent undispatched `+1` and `+5` city inputs compact into exact same-city batches of up to 25 levels while preserving global input order, immediate projections, immutable active request IDs, and standalone authoritative `MAX` requests.
+- Limited projected City List and map presentation to affected cities and one animation-frame update, with one confirmation sequence per settled batch.
+- Required queue lifecycle cleanup and recovery to remain independent from presentation failures, and required unrelated city actions to wait for authoritative synchronization rather than cascade after an offline rejection.
+- Classified the queue-stability correction as `IN DEVELOPMENT` pending validation, merge, and coordinated web and itch.io publication.
 
 ## v1.23 — August 28, 2026
 

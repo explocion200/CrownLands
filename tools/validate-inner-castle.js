@@ -86,7 +86,7 @@ function getWebpMetadata(buffer) {
 
 const BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
 const STYLE_BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
-const GAME_BUILD_ID = "20260829-heartbeat-response-timeout-r1";
+const GAME_BUILD_ID = "20260829-city-upgrade-queue-stability-r1";
 const GEAR_UI_BUILD_ID = "20260825-gear-upgrade-consumption-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [

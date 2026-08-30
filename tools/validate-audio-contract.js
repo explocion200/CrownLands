@@ -862,7 +862,7 @@ function validateCityUpgradeCueContract(gameSource) {
     /getProjectedAffordableCityUpgradeLevels/.test(queuedUpgrade)
       && /queueServerCityUpgrade/.test(queuedUpgrade)
       && /enqueueInstantEconomyAction/.test(projectedQueue)
-      && /coalesce:\s*mode === "legacy"/.test(projectedQueue)
+      && /coalesce:\s*mode !== "max"/.test(projectedQueue)
       && /createCityUpgradeRequestId/.test(projectedQueue)
       && /regionId/.test(actionKey),
     "city upgrades must retain ordered request-backed settlement without blocking rapid follow-up actions"

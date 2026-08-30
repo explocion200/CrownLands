@@ -17,8 +17,9 @@ assert.match(controller, /const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;/, "The sh
 for (const type of ["shop", "city", "item", "swift", "recall", "skill"]) {
   assert.match(controller, new RegExp(`action\\.type === "${type}"`), `The controller does not serialize ${type} actions.`);
 }
-assert.match(controller, /previous\.type === normalized\.type && previous\.key === normalized\.key/, "Adjacent matching actions are not coalesced.");
-assert.match(controller, /refreshServerEconomy\(true[\s\S]*?revalidateInstantEconomyActions\(\)/, "Rejected actions do not refresh and revalidate the remaining queue.");
+assert.match(controller, /function canBatchExactCityActions[\s\S]*?combinedLevels <= SERVER_CITY_UPGRADE_LEVEL_CHUNK/, "Adjacent exact city upgrades are not bounded into server-safe batches.");
+assert.match(controller, /previous[\s\S]*?previous\.type === normalized\.type[\s\S]*?previous\.key === normalized\.key/, "Adjacent matching non-city actions are not coalesced.");
+assert.match(controller, /function resumeInstantEconomyActionsAfterSync[\s\S]*?revalidateInstantEconomyActions\(\)[\s\S]*?scheduleInstantEconomyFlush\(0\)/, "Rejected actions do not wait for authoritative synchronization before the remaining queue resumes.");
 assert.match(controller, /action\.generation !== instantEconomyGeneration/, "Late responses from an old session are not ignored.");
 assert.match(game, /clearInstantEconomyActions\(\)[\s\S]*?onlineSaveAuthUid = nextUid/, "Auth generation changes do not clear queued actions.");
 assert.match(server, /instantEconomyActionsVersion: 1/, "Realm capabilities do not advertise instant economy actions.");
@@ -30,10 +31,13 @@ assert.match(server, /activeArmiesTargetingPlayerQuery\(uid\)[\s\S]*?isIncomingC
 assert.match(controller, /supportsAuthoritativeCityUpgradeModes[\s\S]*?cityUpgradeModesVersion/, "The client does not gate authoritative city-upgrade modes on realm capability.");
 assert.match(controller, /action\.mode === "exact" \|\| action\.mode === "max"[\s\S]*?requestId: action\.requestId/, "Exact/MAX upgrades do not use one request-id-backed server call.");
 assert.match(controller, /action\.mode === "exact" \? \{ levels: action\.requestedLevels \} : \{\}/, "MAX requests must not send a client-computed level target.");
-assert.match(controller, /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?coalesce: mode === "legacy"/, "Authoritative city upgrades must enqueue each accepted tap against projected Gold and levels.");
+assert.match(controller, /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?coalesce: mode !== "max"/, "Authoritative exact city upgrades must be batchable while MAX stays standalone.");
 assert.doesNotMatch(controller, /already has an upgrade pending/, "Pending city upgrades must not block rapid follow-up actions.");
 assert.doesNotMatch(controller, /api\.getCityUpgradeXpPreview/, "City upgrades still wait for a routine XP-preview request.");
 assert.match(controller, /scheduleInstantEconomyFlush\(normalized\.type === "city" \? 0/, "City upgrades must dispatch without the shared 125ms economy delay.");
+assert.match(controller, /requestAnimationFrame[\s\S]*?safelyPatchInstantEconomyUi/, "Projected economy presentation is not limited to one guarded animation-frame update.");
+assert.match(controller, /flushInstantEconomyActions\(\)\.catch[\s\S]*?Instant economy queue drain failed/, "Timer-launched queue failures can still become unhandled rejections.");
+assert.match(controller, /finally \{[\s\S]*?instantEconomyActiveAction = null[\s\S]*?scheduleInstantEconomyFlush\(0\)[\s\S]*?scheduleInstantEconomyUiPatch/, "Queue cleanup and continued draining are not guaranteed independently from presentation.");
 assert.match(controller, /const submitUpgrade[\s\S]*?result = await submitUpgrade\(\)[\s\S]*?city-upgrade-xp-warning-required[\s\S]*?result = await submitUpgrade\(\)/, "The direct city request must retain a silent retry for an older warning-enforcing backend.");
 assert.match(controller, /function discardQueuedCityUpgradeActions[\s\S]*?instantEconomyActions\.splice[\s\S]*?discardQueuedCityUpgradeActions\(action\.key\)/, "Rejected or declined city actions must discard dependent same-city actions.");
 assert.match(server, /requestedQuantity = data\.quantity === undefined \? 1[\s\S]*?unitPrice = getShopItemPriceForEconomy\(economy, itemId\)[\s\S]*?purchasedQuantity: requestedQuantity[\s\S]*?unitPrice,[\s\S]*?spentGold: totalCost/, "Shop quantity purchases are not atomically priced and backward compatible.");
@@ -47,13 +51,18 @@ assert.doesNotMatch(staticCache, /map-transition-clouds/, "Map-transition clouds
 const queuedCity = { id: "city_1", name: "Queued City", regionId: "west", owner: "player", level: 1 };
 const cityTimers = [];
 const cityRejections = [];
+const cityPresentationFrames = new Map();
+let cityPresentationFrameSequence = 0;
+let cityPresentationFailures = 0;
+let throwCityPresentation = false;
 const citySandbox = {
-  console,
+  console: { ...console, warn() {} },
   Promise,
   Map,
   Set,
   Date,
   Math,
+  SERVER_CITY_UPGRADE_LEVEL_CHUNK: 25,
   queuedCity,
   state: { gold: 1_000 },
   selectedSourceId: "",
@@ -68,6 +77,12 @@ const citySandbox = {
     confirm: () => true,
     setTimeout(callback) { cityTimers.push(callback); return cityTimers.length; },
     clearTimeout() {},
+    requestAnimationFrame(callback) {
+      const frameId = ++cityPresentationFrameSequence;
+      cityPresentationFrames.set(frameId, callback);
+      return frameId;
+    },
+    cancelAnimationFrame(frameId) { cityPresentationFrames.delete(frameId); },
   },
   modal: { open: false, classList: { contains: () => false } },
   modalBody: { querySelector: () => null, querySelectorAll: () => [] },
@@ -87,7 +102,12 @@ const citySandbox = {
   getCityVfxSnapshot: city => ({ level: city?.level || 1 }),
   usesServerEconomyAuthority: () => true,
   renderHud() {},
-  renderCities() {},
+  renderCities() {
+    if (!throwCityPresentation) return;
+    throwCityPresentation = false;
+    cityPresentationFailures += 1;
+    throw new Error("injected city presentation failure");
+  },
   setTextIfChanged() {},
   patchCityListUpgradeRows() {},
   formatNumber: value => String(value),
@@ -100,15 +120,44 @@ vm.runInContext(controller, citySandbox, { filename: "instant-economy-actions.js
 for (let tap = 0; tap < 3; tap += 1) {
   assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', citySandbox), true);
 }
-assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 3, "Rapid +1 taps did not create three ordered request-ID-backed actions.");
+assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 1, "Rapid +1 taps were not compacted into one undispatched exact batch.");
+assert.equal(vm.runInContext("instantEconomyActions[0].requestedLevels", citySandbox), 3, "The compacted exact batch lost requested levels.");
 assert.equal(vm.runInContext("getProjectedGold()", citySandbox), 700, "Rapid city taps did not reserve projected Gold immediately.");
 assert.equal(vm.runInContext("getProjectedCityForInstantActions(queuedCity).level", citySandbox), 4, "Rapid city taps did not project the city level immediately.");
 assert.equal(vm.runInContext('getPendingCityUpgradeCount("city_1", "west")', citySandbox), 3, "The syncing count lost queued city actions.");
+assert.equal(cityPresentationFrames.size, 1, "Rapid projected changes scheduled more than one presentation frame.");
+throwCityPresentation = true;
+const projectedFrame = cityPresentationFrames.values().next().value;
+cityPresentationFrames.clear();
+projectedFrame();
+assert.equal(cityPresentationFailures, 1, "The presentation-failure fixture did not execute.");
+assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 1, "A presentation exception corrupted the queued city batch.");
 assert.equal(vm.runInContext("getCityUpgradeStableSortLevel(queuedCity)", citySandbox), 1, "A pending projection changed the row's stable sort level.");
-assert.equal(vm.runInContext("new Set(instantEconomyActions.map(action => action.requestId)).size", citySandbox), 3, "Rapid actions reused a city request ID.");
-assert.equal(vm.runInContext('discardQueuedCityUpgradeActions("west:city_1")', citySandbox), 3, "Same-city dependent actions were not discarded together.");
+assert.equal(vm.runInContext("new Set(instantEconomyActions.map(action => action.requestId)).size", citySandbox), 1, "The compacted exact batch does not have one replay-safe request ID.");
+assert.equal(vm.runInContext('discardQueuedCityUpgradeActions("west:city_1")', citySandbox), 1, "Same-city dependent batches were not discarded together.");
 assert.equal(vm.runInContext("getProjectedGold()", citySandbox), 1_000, "Discarding dependent city actions did not roll projected Gold back.");
 assert.equal(vm.runInContext("getProjectedCityForInstantActions(queuedCity).level", citySandbox), 1, "Discarding dependent city actions did not roll the projected level back.");
+
+citySandbox.state.gold = 10_000;
+for (let tap = 0; tap < 50; tap += 1) {
+  assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', citySandbox), true);
+}
+assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 2, "Fifty rapid upgrades were not bounded into two 25-level batches.");
+assert.equal(vm.runInContext("instantEconomyActions[0].requestedLevels", citySandbox), 25, "The first stress batch exceeded or missed the 25-level contract.");
+assert.equal(vm.runInContext("instantEconomyActions[1].requestedLevels", citySandbox), 25, "The overflow stress batch did not preserve all requested levels.");
+assert.equal(vm.runInContext("getProjectedGold()", citySandbox), 5_000, "The 50-level stress projection reserved the wrong Gold.");
+assert.equal(vm.runInContext("getProjectedCityForInstantActions(queuedCity).level", citySandbox), 51, "The 50-level stress projection lost city levels.");
+assert.equal(cityPresentationFrames.size, 1, "Fifty rapid changes scheduled more than one presentation frame.");
+vm.runInContext("clearInstantEconomyActions()", citySandbox);
+
+citySandbox.state.gold = 5_000;
+assert.equal(vm.runInContext('upgradeCity("city_1", 5, { mode: "exact", regionId: "west" })', citySandbox), true);
+assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', citySandbox), true);
+assert.equal(vm.runInContext('upgradeCity("city_1", 5, { mode: "exact", regionId: "west" })', citySandbox), true);
+assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 1, "Mixed +1 and +5 inputs were not compacted together.");
+assert.equal(vm.runInContext("instantEconomyActions[0].requestedLevels", citySandbox), 11, "The mixed exact batch lost requested levels.");
+assert.equal(vm.runInContext("getProjectedGold()", citySandbox), 3_900, "The mixed exact batch reserved the wrong Gold.");
+vm.runInContext("clearInstantEconomyActions()", citySandbox);
 
 citySandbox.state.gold = 400;
 assert.equal(vm.runInContext('upgradeCity("city_1", 5, { mode: "exact", regionId: "west" })', citySandbox), false, "+5 accepted a partial purchase.");
@@ -122,6 +171,13 @@ citySandbox.state.gold = 350;
 assert.equal(vm.runInContext('upgradeCity("city_1", 0, { mode: "max", regionId: "west" })', citySandbox), true, "MAX was rejected with affordable levels available.");
 assert.equal(vm.runInContext("instantEconomyActions[0].levels", citySandbox), 3, "MAX did not reserve every level affordable with projected Gold.");
 assert.equal(vm.runInContext("getProjectedGold()", citySandbox), 50, "MAX projected Gold is incorrect.");
+vm.runInContext("clearInstantEconomyActions()", citySandbox);
+
+citySandbox.state.gold = 1_000;
+assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', citySandbox), true);
+assert.equal(vm.runInContext('upgradeCity("city_1", 0, { mode: "max", regionId: "west" })', citySandbox), true);
+assert.equal(vm.runInContext("instantEconomyActions.length", citySandbox), 2, "MAX merged into an adjacent exact city batch.");
+assert.equal(vm.runInContext('instantEconomyActions[0].mode === "exact" && instantEconomyActions[1].mode === "max"', citySandbox), true, "MAX did not remain a standalone ordered action.");
 vm.runInContext("clearInstantEconomyActions()", citySandbox);
 
 function createDeferred() {
@@ -143,6 +199,10 @@ const cityUpgradeDelayValidation = (async () => {
   const delayedCalls = [];
   const upgradeDeferreds = [];
   let refreshCount = 0;
+  let economyRefreshSucceeds = true;
+  let ownedCityRefreshSucceeds = true;
+  let throwAfterAuthoritativeSettlement = false;
+  let authoritativeSettlementPresentationFailures = 0;
   const delayedSandbox = {
     console: { ...console, warn() {} },
     Promise,
@@ -150,6 +210,7 @@ const cityUpgradeDelayValidation = (async () => {
     Set,
     Date,
     Math,
+    SERVER_CITY_UPGRADE_LEVEL_CHUNK: 25,
     delayedCities,
     state: { gold: 1_000 },
     selectedSourceId: "",
@@ -195,13 +256,18 @@ const cityUpgradeDelayValidation = (async () => {
     playGameSound() {},
     playCityUpgradeAnimation() {},
     saveGame() {},
-    refreshServerEconomy: async () => { refreshCount += 1; },
-    refreshAllOwnedCities: async () => {},
+    refreshServerEconomy: async () => { refreshCount += 1; return economyRefreshSucceeds; },
+    refreshAllOwnedCities: async () => ownedCityRefreshSucceeds,
     applyServerEconomyResult(result) {
       delayedSandbox.state.gold = result.currentUser.gold;
       for (const update of result.cityUpdates || []) {
         const city = delayedCities.find(entry => entry.id === update.id);
         if (city) Object.assign(city, update);
+      }
+      if (throwAfterAuthoritativeSettlement) {
+        throwAfterAuthoritativeSettlement = false;
+        authoritativeSettlementPresentationFailures += 1;
+        throw new Error("injected post-settlement presentation failure");
       }
     },
     getOnlineApi: () => ({
@@ -211,6 +277,8 @@ const cityUpgradeDelayValidation = (async () => {
           type: "upgrade",
           cityId: payload.cityId,
           regionId: payload.regionId,
+          mode: payload.mode,
+          levels: payload.levels,
           requestId: payload.requestId,
           acknowledgedRebuildSuppressedXp: payload.acknowledgedRebuildSuppressedXp,
         });
@@ -233,27 +301,90 @@ const cityUpgradeDelayValidation = (async () => {
   assert.equal(vm.runInContext("getProjectedGold()", delayedSandbox), 700, "Delayed responses removed the immediate Gold projection.");
   assert.equal(vm.runInContext('getProjectedCityForInstantActions(delayedCities[0]).level', delayedSandbox), 4, "Delayed responses removed the immediate level projection.");
 
-  for (let confirmation = 1; confirmation <= 3; confirmation += 1) {
-    const flush = runNext();
-    await Promise.resolve();
-    assert.deepEqual(
-      delayedCalls.map(call => `${call.type}:${call.cityId}`),
-      Array.from({ length: confirmation }, () => "upgrade:city_1"),
-      "A later city request reached the server before the prior request confirmed."
-    );
-    upgradeDeferreds.shift().resolve({
-      upgraded: 1,
-      spentGold: 100,
-      finalLevel: confirmation + 1,
-      currentUser: { gold: 1_000 - confirmation * 100 },
-      cityUpdates: [{ id: "city_1", regionId: "west", level: confirmation + 1 }],
-      cityUpgradeXp: { awardedXp: 1, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
-    });
-    assert.equal(await flush, true, `Delayed city confirmation ${confirmation} did not settle.`);
-  }
+  const compactedFlush = runNext();
+  await Promise.resolve();
+  assert.equal(delayedCalls.length, 1, "Three undispatched presses made more than one server request.");
+  assert.equal(delayedCalls[0].levels, 3, "The compacted server request did not contain all three levels.");
+  throwAfterAuthoritativeSettlement = true;
+  upgradeDeferreds.shift().resolve({
+    upgraded: 3,
+    spentGold: 300,
+    finalLevel: 4,
+    currentUser: { gold: 700 },
+    cityUpdates: [{ id: "city_1", regionId: "west", level: 4 }],
+    cityUpgradeXp: { awardedXp: 3, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
+  });
+  assert.equal(await compactedFlush, true, "The compacted three-level confirmation did not settle.");
+  assert.equal(authoritativeSettlementPresentationFailures, 1, "The post-settlement presentation exception was not injected.");
   assert.equal(delayedCities[0].level, 4, "Ordered confirmations did not reconcile the authoritative city level.");
   assert.equal(delayedSandbox.state.gold, 700, "Ordered confirmations did not reconcile authoritative Gold.");
   assert.equal(vm.runInContext("getInstantEconomyPendingActions().length", delayedSandbox), 0, "Confirmed city actions remained pending.");
+
+  vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
+  delayedSandbox.state.gold = 10_000;
+  delayedCities[0].level = 1;
+  const stressCallStart = delayedCalls.length;
+  assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
+  const firstStressFlush = runNext();
+  await Promise.resolve();
+  for (let tap = 1; tap < 20; tap += 1) {
+    assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
+  }
+  assert.equal(vm.runInContext('getPendingCityUpgradeCount("city_1", "west")', delayedSandbox), 20, "The active and trailing batches lost stress-test levels.");
+  assert.equal(vm.runInContext("instantEconomyActions.length", delayedSandbox), 1, "Nineteen trailing presses were not compacted behind the active request.");
+  assert.equal(vm.runInContext("instantEconomyActions[0].requestedLevels", delayedSandbox), 19, "The trailing exact batch has the wrong level count.");
+  upgradeDeferreds.shift().resolve({
+    upgraded: 1,
+    spentGold: 100,
+    finalLevel: 2,
+    currentUser: { gold: 9_900 },
+    cityUpdates: [{ id: "city_1", regionId: "west", level: 2 }],
+    cityUpgradeXp: { awardedXp: 1, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
+  });
+  assert.equal(await firstStressFlush, true, "The immutable active stress request did not settle.");
+  const trailingStressFlush = runNext();
+  await Promise.resolve();
+  assert.equal(delayedCalls.length - stressCallStart, 2, "Twenty rapid presses used more than one initial and one trailing request.");
+  assert.equal(delayedCalls.at(-1).levels, 19, "The trailing server request lost compacted levels.");
+  upgradeDeferreds.shift().resolve({
+    upgraded: 19,
+    spentGold: 1_900,
+    finalLevel: 21,
+    currentUser: { gold: 8_000 },
+    cityUpdates: [{ id: "city_1", regionId: "west", level: 21 }],
+    cityUpgradeXp: { awardedXp: 19, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
+  });
+  assert.equal(await trailingStressFlush, true, "The trailing stress batch did not settle.");
+  assert.equal(delayedCities[0].level, 21, "Twenty rapid presses did not reconcile the final city level.");
+  assert.equal(delayedSandbox.state.gold, 8_000, "Twenty rapid presses did not reconcile final Gold.");
+
+  vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
+  delayedSandbox.state.gold = 10_000;
+  delayedCities[0].level = 1;
+  for (let tap = 0; tap < 30; tap += 1) {
+    assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
+  }
+  assert.equal(vm.runInContext("instantEconomyActions.length", delayedSandbox), 2, "Thirty presses were not split at the exact 25-level boundary.");
+  const firstMidQueueFlush = runNext();
+  await Promise.resolve();
+  assert.equal(delayedCalls.at(-1).levels, 25, "The first mid-queue request did not stop at 25 levels.");
+  upgradeDeferreds.shift().resolve({
+    upgraded: 25,
+    spentGold: 2_500,
+    finalLevel: 26,
+    currentUser: { gold: 7_500 },
+    cityUpdates: [{ id: "city_1", regionId: "west", level: 26 }],
+    cityUpgradeXp: { awardedXp: 25, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
+  });
+  assert.equal(await firstMidQueueFlush, true, "The first mid-queue batch did not settle.");
+  const rejectedMidQueueFlush = runNext();
+  await Promise.resolve();
+  assert.equal(delayedCalls.at(-1).levels, 5, "The overflow mid-queue request did not retain five levels.");
+  upgradeDeferreds.shift().reject(new Error("insufficient gold after first batch"));
+  assert.equal(await rejectedMidQueueFlush, false, "The rejected overflow batch reported success.");
+  assert.equal(delayedCities[0].level, 26, "A rejected overflow batch rolled back an already-confirmed batch.");
+  assert.equal(delayedSandbox.state.gold, 7_500, "A rejected overflow batch corrupted confirmed Gold.");
+  assert.equal(vm.runInContext('getPendingCityUpgradeCount("city_1", "west")', delayedSandbox), 0, "A rejected overflow batch left dependent city levels pending.");
 
   vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
   delayedSandbox.state.gold = 1_000;
@@ -271,6 +402,39 @@ const cityUpgradeDelayValidation = (async () => {
   assert.equal(vm.runInContext('getProjectedCityForInstantActions(delayedCities[1]).level', delayedSandbox), 2, "The unrelated action was not revalidated after rejection.");
   assert.equal(vm.runInContext("getProjectedGold()", delayedSandbox), 900, "Gold was not reprojected after rejection.");
   assert.equal(vm.runInContext('instantEconomyActions[0].regionId', delayedSandbox), "east", "The unrelated off-map action lost its region binding.");
+
+  vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
+  delayedSandbox.state.gold = 1_000;
+  delayedCities.forEach(city => { city.level = 1; });
+  economyRefreshSucceeds = false;
+  ownedCityRefreshSucceeds = false;
+  assert.equal(vm.runInContext('upgradeCity("city_1", 1, { mode: "exact", regionId: "west" })', delayedSandbox), true);
+  assert.equal(vm.runInContext('upgradeCity("city_2", 1, { mode: "exact", regionId: "east" })', delayedSandbox), true);
+  const offlineRejectedFlush = runNext();
+  await Promise.resolve();
+  upgradeDeferreds.shift().reject(new Error("offline during city upgrade"));
+  assert.equal(await offlineRejectedFlush, false, "An offline rejection reported success.");
+  assert.equal(vm.runInContext("Boolean(instantEconomySyncRecovery)", delayedSandbox), true, "The unrelated queue did not pause for authoritative recovery.");
+  assert.equal(vm.runInContext("instantEconomyActions.length", delayedSandbox), 1, "Offline recovery discarded an unrelated city action.");
+  const callsWhileOffline = delayedCalls.length;
+  assert.equal(await runNext(), false, "The queue drained while authoritative recovery was incomplete.");
+  assert.equal(delayedCalls.length, callsWhileOffline, "An unrelated request reached the server while recovery was paused.");
+  assert.equal(vm.runInContext("resumeInstantEconomyActionsAfterSync({ economy: true })", delayedSandbox), false, "Economy-only recovery resumed a city queue without its owned-city snapshot.");
+  assert.equal(vm.runInContext("resumeInstantEconomyActionsAfterSync({ ownedCities: true })", delayedSandbox), true, "Complete reconnect synchronization did not resume the queue.");
+  const recoveredFlush = runNext();
+  await Promise.resolve();
+  assert.equal(delayedCalls.at(-1).cityId, "city_2", "Reconnect resumed the wrong queued city.");
+  upgradeDeferreds.shift().resolve({
+    upgraded: 1,
+    spentGold: 100,
+    finalLevel: 2,
+    currentUser: { gold: 900 },
+    cityUpdates: [{ id: "city_2", regionId: "east", level: 2 }],
+    cityUpgradeXp: { awardedXp: 1, capSuppressedXp: 0, rebuildSuppressedXp: 0 },
+  });
+  assert.equal(await recoveredFlush, true, "The unrelated city action did not settle after reconnect.");
+  economyRefreshSucceeds = true;
+  ownedCityRefreshSucceeds = true;
 
   vm.runInContext("clearInstantEconomyActions()", delayedSandbox);
   delayedSandbox.state.gold = 1_000;
