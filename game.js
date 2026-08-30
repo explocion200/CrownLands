@@ -29,6 +29,7 @@ let ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
 const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
 const GAME_SERVER_HEARTBEAT_SECONDS = 60;
+const GAME_SERVER_HEARTBEAT_TIMEOUT_MS = 15 * 1000;
 const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
   || WORLD_REGIONS.find(region => region.id === "west")?.id
   || WORLD_REGIONS[0]?.id
@@ -14057,7 +14058,11 @@ async function heartbeatGameServerMembership() {
   if (!api?.heartbeatGameServer || !api?.isSignedIn?.()) return false;
   gameServerHeartbeatInFlight = true;
   try {
-    const result = await api.heartbeatGameServer(GAME_SERVER_ID);
+    const result = await withTimeout(
+      api.heartbeatGameServer(GAME_SERVER_ID),
+      GAME_SERVER_HEARTBEAT_TIMEOUT_MS,
+      "Crownlands realm heartbeat timed out."
+    );
     applyGameServerMembership(result);
     return true;
   } catch (error) {

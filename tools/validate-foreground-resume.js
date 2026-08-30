@@ -41,12 +41,21 @@ function functionSource(name) {
 
 assert.match(game, /const FOREGROUND_LONG_RESUME_MS = 60 \* 1000;/, "Long foreground catch-up must start after 60 seconds.");
 assert.match(game, /const FOREGROUND_RESUME_RETRY_DELAYS_MS = Object\.freeze\(\[2000, 8000\]\);/, "Foreground retries must use the planned 2s and 8s delays.");
+assert.match(game, /const GAME_SERVER_HEARTBEAT_TIMEOUT_MS = 15 \* 1000;/, "Realm heartbeats must release after the 15-second transport timeout.");
 for (const eventName of ["visibilitychange", "pagehide", "pageshow", "focus", "freeze", "resume", "online"]) {
   assert.match(game, new RegExp(`addEventListener\\("${eventName}"`), `Missing ${eventName} lifecycle handling.`);
 }
 
 const foregroundSync = functionSource("synchronizeForegroundGame");
 const applyEconomyResult = functionSource("applyServerEconomyResult");
+const gameServerHeartbeat = functionSource("heartbeatGameServerMembership");
+assert.ok(
+  gameServerHeartbeat.includes("withTimeout(")
+    && gameServerHeartbeat.includes("api.heartbeatGameServer(GAME_SERVER_ID)")
+    && gameServerHeartbeat.includes("GAME_SERVER_HEARTBEAT_TIMEOUT_MS")
+    && gameServerHeartbeat.includes("Crownlands realm heartbeat timed out."),
+  "Realm membership heartbeat does not use the focused transport timeout."
+);
 for (const operation of [
   "refreshServerEconomy(true",
   "refreshAllOwnedCities(true)",
@@ -150,6 +159,51 @@ for (const name of [
 }
 
 async function validateAsyncBehavior() {
+  const heartbeatWarnings = [];
+  const appliedMemberships = [];
+  let heartbeatCalls = 0;
+  const heartbeatContext = {
+    GAME_SERVER_ID: "crown-marches",
+    GAME_SERVER_HEARTBEAT_TIMEOUT_MS: 10,
+    gameServerHeartbeatInFlight: false,
+    hasActiveGameServerSlot: () => true,
+    isWaitingForGameServerSlot: () => false,
+    getOnlineApi: () => ({
+      isSignedIn: () => true,
+      heartbeatGameServer: () => {
+        heartbeatCalls += 1;
+        return heartbeatCalls === 1
+          ? new Promise(() => {})
+          : Promise.resolve({ serverId: "crown-marches", status: "active" });
+      },
+    }),
+    applyGameServerMembership: result => appliedMemberships.push(result),
+    console: { warn: (...args) => heartbeatWarnings.push(args) },
+    window: { setTimeout, clearTimeout },
+    Error,
+    Promise,
+  };
+  vm.createContext(heartbeatContext);
+  vm.runInContext(functionSource("withTimeout"), heartbeatContext, { filename: "game.js" });
+  vm.runInContext(gameServerHeartbeat, heartbeatContext, { filename: "game.js" });
+  assert.equal(
+    await Promise.race([
+      heartbeatContext.heartbeatGameServerMembership(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Heartbeat regression test did not settle.")), 100)),
+    ]),
+    false,
+    "A lost heartbeat response did not fail safely."
+  );
+  assert.equal(heartbeatContext.gameServerHeartbeatInFlight, false, "A timed-out heartbeat retained the in-flight lock.");
+  assert.equal(heartbeatWarnings.length, 1, "A timed-out heartbeat was not recorded for diagnostics.");
+  assert.equal(await heartbeatContext.heartbeatGameServerMembership(), true, "The heartbeat could not retry after timing out.");
+  assert.equal(heartbeatCalls, 2, "The heartbeat retry did not reach the server adapter exactly once.");
+  assert.deepEqual(
+    { ...appliedMemberships[0] },
+    { serverId: "crown-marches", status: "active" },
+    "The successful retry did not apply the authoritative membership."
+  );
+
   const initialRefresh = economyContext.refreshServerEconomy(false, { renderCities: false });
   const resumeRefresh = economyContext.refreshServerEconomy(true, { showOfflineRewards: true });
   assert.equal(initialRefresh, resumeRefresh, "Concurrent economy callers must share one draining promise.");
@@ -327,7 +381,7 @@ async function validateAsyncBehavior() {
 }
 
 validateAsyncBehavior()
-  .then(() => console.log("Validated coalesced foreground resume, authoritative catch-up, listener recovery, retries, and safe summaries."))
+  .then(() => console.log("Validated coalesced foreground resume, heartbeat timeout recovery, authoritative catch-up, listener recovery, retries, and safe summaries."))
   .catch(error => {
     console.error(error);
     process.exitCode = 1;

@@ -137,8 +137,8 @@ for (const asset of ["styles.css", "instant-economy-actions.js"]) {
 }
 assert(index.includes("mobile-viewport.css?v=20260825-shop-hourly-prices-r1"), "mobile-viewport.css has a stale cache stamp.");
 assert(worker.includes("/mobile-viewport.css?v=20260825-shop-hourly-prices-r1"), "mobile-viewport.css is missing from the refreshed offline shell.");
-assert(index.includes("game.js?v=20260827-instant-cross-map-city-upgrades-r1"), "game.js has a stale City List cache stamp.");
-assert(worker.includes("/game.js?v=20260827-instant-cross-map-city-upgrades-r1"), "game.js is missing from the refreshed offline shell.");
+assert(index.includes("game.js?v=20260829-heartbeat-response-timeout-r1"), "game.js has a stale City List cache stamp.");
+assert(worker.includes("/game.js?v=20260829-heartbeat-response-timeout-r1"), "game.js is missing from the refreshed offline shell.");
 assert(worker.includes('CACHE_VERSION = "20260827-instant-cross-map-city-upgrades-r1"'));
 
 console.log("Validated the Crownlands Item Bag: authoritative item-ID stacks, xN badges, unique 4x2 paging, zero-count selection, responsive layout, and cache delivery.");
