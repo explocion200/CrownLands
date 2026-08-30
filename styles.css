@@ -7043,6 +7043,44 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   color: #fff;
   font-size: .98rem;
 }
+.enemy-power-guide {
+  --enemy-power-guide-color: #b3261e;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .2rem .7rem;
+  align-items: center;
+  border-left: 4px solid var(--enemy-power-guide-color);
+}
+.enemy-power-guide.enemy-power-protected { --enemy-power-guide-color: #c9786f; }
+.enemy-power-guide.enemy-power-in-range { --enemy-power-guide-color: #b3261e; }
+.enemy-power-guide.enemy-power-overpowering { --enemy-power-guide-color: #4b1418; }
+.enemy-power-guide > strong {
+  display: inline-flex;
+  gap: .38rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.enemy-power-guide-swatch {
+  width: .78rem;
+  height: .78rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, .66);
+  border-radius: 2px;
+  background: var(--enemy-power-guide-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .38);
+}
+.enemy-power-guide > small {
+  color: rgba(224, 235, 245, .78);
+  font-size: .68rem;
+  line-height: 1.35;
+}
+.enemy-power-guide > a {
+  color: #ffd477;
+  font-size: .7rem;
+  font-weight: 900;
+  text-align: right;
+  text-underline-offset: .15em;
+}
 .stat-chip small {
   display: block;
   color: #ffbd52;

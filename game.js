@@ -7505,6 +7505,34 @@ function getEnemyCityPowerBandLabel(powerBand, city = null) {
   return "";
 }
 
+function renderEnemyPowerBandGuideMarkup(city) {
+  if (!city || city.owner !== "enemy" || isStronghold(city) || isClanAllyCity(city)) return "";
+  const powerBand = getStableEnemyCityPowerBand(city);
+  const presentation = {
+    protected: {
+      name: "Light red",
+      meaning: getEnemyCityPowerBandLabel(powerBand, city),
+    },
+    "in-range": {
+      name: "Red",
+      meaning: "Normal King Power range, or confirmed power data is still loading",
+    },
+    overpowering: {
+      name: "Dark red",
+      meaning: "This rival kingdom has more King Power than yours",
+    },
+  }[powerBand];
+  if (!presentation) return "";
+  return `
+    <div class="stat-wide enemy-power-guide enemy-power-${escapeHtml(powerBand)}">
+      <span>Opponent map color</span>
+      <strong><i class="enemy-power-guide-swatch" aria-hidden="true"></i>${escapeHtml(presentation.name)}</strong>
+      <small>${escapeHtml(presentation.meaning)}. The server-confirmed attack screen is final.</small>
+      <a href="weak-player-protection-guide.html" target="_blank" rel="noopener noreferrer">How opponent colors work</a>
+    </div>
+  `;
+}
+
 function normalizeDemoAttackSnapshot(demo = null) {
   if (!demo || typeof demo !== "object" || !demo.active) return null;
   const attackerKingPower = normalizePowerValue(demo.attackerKingPower);
@@ -29958,6 +29986,7 @@ function showCityInfoModal(cityId) {
             : ""}
         ${stronghold ? renderObjectiveClanAffiliation(city) : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>${isDefenseStronghold(city) ? "The controller receives +8% and current clanmates receive +4% against each defending soldier's 1.30 base. Walls, Stoneworks, city level, and repair time are unchanged." : "The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence."}</small></div>` : ""}
+        ${renderEnemyPowerBandGuideMarkup(city)}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
@@ -36476,7 +36505,7 @@ function showHelpModal() {
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. Citadel attacks ignore 100% of city-wall defense without damaging the wall. If the Legion defeats every stationed and reinforcing troop, the city loses five levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
       <li>Each regular Stronghold has its own Stronghold Legacy tab. It ranks rulers by cumulative time held, adds repeat tenures together, and updates the current holder's timer live. The Crown Citadel uses its separate Reign Ledger.</li>
-      <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
+      <li>Weak Player Protection applies when your King Power is at least twice the defender's. The server limits the force, uses either a two-stage protected assault or a non-capturing protected raid, and awards the attacker 0 XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
     </ul>
   `;
