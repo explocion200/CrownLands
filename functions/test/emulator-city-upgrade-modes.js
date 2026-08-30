@@ -161,8 +161,33 @@ async function main() {
   assert(Number((await cityRef.get()).data()?.level) === 6, "The off-map city did not persist its exact +5 result.");
 
   await Promise.all([
+    setEconomyGold(profileRef, 1_000_000_000_000),
+    cityRef.set({ level: 1, investedGold: 0, productionUpdatedAtMs: Date.now() }, { merge: true }),
+  ]);
+  const exactTwentyRequestId = `exact_twenty_${crypto.randomUUID()}`;
+  const exactTwenty = await callFunction("upgradeCity", user.token, {
+    cityId: remoteBase.id,
+    regionId: remoteMap.id,
+    mode: "exact",
+    levels: 20,
+    requestId: exactTwentyRequestId,
+  });
+  assert(exactTwenty.mode === "exact" && exactTwenty.upgraded === 20 && exactTwenty.finalLevel === 21, "An exact 20-level client batch did not settle atomically.");
+  assert(Number(exactTwenty.spentGold) > Number(exactFive.spentGold), "The exact 20-level batch reported an invalid Gold spend.");
+  assert(Number((await cityRef.get()).data()?.level) === 21, "The exact 20-level batch did not persist its authoritative level.");
+  const exactTwentyReplay = await callFunction("upgradeCity", user.token, {
+    cityId: remoteBase.id,
+    regionId: remoteMap.id,
+    mode: "exact",
+    levels: 20,
+    requestId: exactTwentyRequestId,
+  });
+  assert(exactTwentyReplay.replayed === true && exactTwentyReplay.finalLevel === 21, "The exact 20-level batch was not replay-safe.");
+  assert(Number((await cityRef.get()).data()?.level) === 21, "Replaying the exact 20-level batch applied it twice.");
+
+  await Promise.all([
     setEconomyGold(profileRef, 0),
-    cityRef.set({ productionUpdatedAtMs: Date.now() }, { merge: true }),
+    cityRef.set({ level: 6, productionUpdatedAtMs: Date.now() }, { merge: true }),
   ]);
   const insufficient = await invokeFunction("upgradeCity", user.token, {
     cityId: remoteBase.id,

@@ -1,5 +1,5 @@
 "use strict";
-/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getCityUpgradeStableSortLevel, getInventoryEffectLabel, getPendingCityUpgradeCount, isServerCityUpgradeInFlight, refundSkill, renderInventorySlot, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
+/* exported bindInventoryCarousel, bindInventoryCategoryControls, buyShopItem, buySkill, clearInstantEconomyActions, getCityUpgradeStableSortLevel, getInventoryEffectLabel, getPendingCityUpgradeCount, isServerCityUpgradeInFlight, refundSkill, renderInventorySlot, resumeInstantEconomyActionsAfterSync, upgradeCity, useInventoryItem, useRecallHornOnMission, useSwiftMarchOrderOnMission */
 
 const INSTANT_ECONOMY_ACTION_DELAY_MS = 125;
 const INSTANT_ECONOMY_ITEM_BATCH_LIMIT = 25;
@@ -23,6 +23,10 @@ let instantEconomyFlushTimer = 0;
 let instantEconomyGeneration = 1;
 let instantEconomyActionSequence = 0;
 let serverCityUpgradeInFlightIds = new Set();
+let instantEconomyPresentationFrame = 0;
+let instantEconomyPresentationCancel = null;
+let instantEconomySyncRecovery = null;
+const instantEconomyDirtyCityKeys = new Set();
 
 function createCityUpgradeRequestId(cityId = "") {
   const randomPart = typeof window.crypto?.randomUUID === "function"
@@ -74,7 +78,9 @@ function hasPendingServerCityUpgrade(cityId = "", regionId = "") {
 function getPendingCityUpgradeCount(cityOrId = "", regionId = "") {
   const key = getCityUpgradeActionKey(cityOrId, regionId);
   if (!key) return 0;
-  return getInstantEconomyPendingActions().filter(action => action.type === "city" && action.key === key).length;
+  return getInstantEconomyPendingActions().reduce((total, action) => (
+    action.type === "city" && action.key === key ? total + toWhole(action.levels) : total
+  ), 0);
 }
 
 function getCityUpgradeStableSortLevel(city) {
@@ -202,11 +208,22 @@ function getInstantCityLevelCosts(city, levels = 1) {
 }
 
 function scheduleInstantEconomyFlush(delayMs = INSTANT_ECONOMY_ACTION_DELAY_MS) {
-  if (instantEconomyFlushTimer || instantEconomyActiveAction || !instantEconomyActions.length) return;
+  if (instantEconomyFlushTimer || instantEconomyActiveAction || instantEconomySyncRecovery || !instantEconomyActions.length) return;
   instantEconomyFlushTimer = window.setTimeout(() => {
     instantEconomyFlushTimer = 0;
-    void flushInstantEconomyActions();
+    void flushInstantEconomyActions().catch(error => {
+      console.warn("Instant economy queue drain failed", error);
+      if (instantEconomyActiveAction) return;
+      scheduleInstantEconomyFlush(0);
+    });
   }, Math.max(0, delayMs));
+}
+
+function canBatchExactCityActions(previous, normalized) {
+  if (!previous || !normalized || previous.type !== "city" || normalized.type !== "city") return false;
+  if (previous.key !== normalized.key || previous.mode !== "exact" || normalized.mode !== "exact") return false;
+  const combinedLevels = toWhole(previous.requestedLevels) + toWhole(normalized.requestedLevels);
+  return combinedLevels > 0 && combinedLevels <= SERVER_CITY_UPGRADE_LEVEL_CHUNK;
 }
 
 function enqueueInstantEconomyAction(action) {
@@ -217,7 +234,18 @@ function enqueueInstantEconomyAction(action) {
     generation: instantEconomyGeneration,
   };
   const previous = instantEconomyActions.at(-1);
-  if (previous && previous.type === normalized.type && previous.key === normalized.key && normalized.coalesce !== false) {
+  if (canBatchExactCityActions(previous, normalized)) {
+    previous.requestedLevels += normalized.requestedLevels;
+    previous.levels += normalized.levels;
+    previous.reservedGold += normalized.reservedGold;
+    if (normalized.levelCosts?.length) previous.levelCosts.push(...normalized.levelCosts);
+  } else if (
+    previous
+    && previous.type === normalized.type
+    && previous.key === normalized.key
+    && normalized.coalesce !== false
+    && normalized.mode !== "exact"
+  ) {
     previous.quantity = Math.max(0, Number(previous.quantity) || 0) + Math.max(0, Number(normalized.quantity) || 0);
     previous.levels = Math.max(0, Number(previous.levels) || 0) + Math.max(0, Number(normalized.levels) || 0);
     previous.reservedGold = Math.max(0, Number(previous.reservedGold) || 0) + Math.max(0, Number(normalized.reservedGold) || 0);
@@ -225,7 +253,7 @@ function enqueueInstantEconomyAction(action) {
   } else {
     instantEconomyActions.push(normalized);
   }
-  patchInstantEconomyUi();
+  scheduleInstantEconomyUiPatch(normalized);
   scheduleInstantEconomyFlush(normalized.type === "city" ? 0 : INSTANT_ECONOMY_ACTION_DELAY_MS);
   return true;
 }
@@ -236,6 +264,11 @@ function clearInstantEconomyActions() {
   if (skillSpendFlushTimer) window.clearTimeout(skillSpendFlushTimer);
   instantEconomyFlushTimer = 0;
   skillSpendFlushTimer = 0;
+  if (instantEconomyPresentationCancel) instantEconomyPresentationCancel();
+  instantEconomyPresentationFrame = 0;
+  instantEconomyPresentationCancel = null;
+  instantEconomyDirtyCityKeys.clear();
+  instantEconomySyncRecovery = null;
   instantEconomyActions.length = 0;
   pendingSkillSpendAllocations.clear();
   activeSkillSpendBatch = null;
@@ -245,7 +278,57 @@ function clearInstantEconomyActions() {
   instantEconomyActiveAction = null;
 }
 
-function patchInstantEconomyUi() {
+function safelyPatchInstantEconomyUi(dirtyCityKeys = null) {
+  try {
+    patchInstantEconomyUi(dirtyCityKeys);
+    return true;
+  } catch (error) {
+    console.warn("Instant economy presentation failed", error);
+    return false;
+  }
+}
+
+function scheduleInstantEconomyUiPatch(action = null) {
+  if (action?.type === "city" && action.key) instantEconomyDirtyCityKeys.add(action.key);
+  if (!state) return false;
+  if (getInstantEconomyPendingActions().some(entry => entry.type === "city")) {
+    try {
+      setTextIfChanged(goldText, formatNumber(getProjectedGold()));
+    } catch (error) {
+      console.warn("Instant economy Gold presentation failed", error);
+    }
+  }
+  if (instantEconomyPresentationFrame) return true;
+  if (typeof window.requestAnimationFrame !== "function") {
+    const dirtyCityKeys = instantEconomyDirtyCityKeys.size ? new Set(instantEconomyDirtyCityKeys) : null;
+    instantEconomyDirtyCityKeys.clear();
+    return safelyPatchInstantEconomyUi(dirtyCityKeys);
+  }
+  try {
+    instantEconomyPresentationFrame = window.requestAnimationFrame(() => {
+      instantEconomyPresentationFrame = 0;
+      instantEconomyPresentationCancel = null;
+      const dirtyCityKeys = instantEconomyDirtyCityKeys.size ? new Set(instantEconomyDirtyCityKeys) : null;
+      instantEconomyDirtyCityKeys.clear();
+      safelyPatchInstantEconomyUi(dirtyCityKeys);
+    });
+  } catch (error) {
+    console.warn("Could not schedule instant economy presentation", error);
+    instantEconomyPresentationFrame = 0;
+    instantEconomyPresentationCancel = null;
+    const dirtyCityKeys = instantEconomyDirtyCityKeys.size ? new Set(instantEconomyDirtyCityKeys) : null;
+    instantEconomyDirtyCityKeys.clear();
+    return safelyPatchInstantEconomyUi(dirtyCityKeys);
+  }
+  instantEconomyPresentationCancel = () => {
+    if (instantEconomyPresentationFrame && typeof window.cancelAnimationFrame === "function") {
+      window.cancelAnimationFrame(instantEconomyPresentationFrame);
+    }
+  };
+  return true;
+}
+
+function patchInstantEconomyUi(dirtyCityKeys = null) {
   if (!state) return;
   const hasPendingCityUpgrade = getInstantEconomyPendingActions().some(action => action.type === "city");
   if (hasPendingCityUpgrade) setTextIfChanged(goldText, formatNumber(getProjectedGold()));
@@ -253,7 +336,7 @@ function patchInstantEconomyUi() {
   if (modal?.open && modal.classList.contains("shop-modal")) patchShopProjectedUi();
   if (modal?.open && modal.classList.contains("inventory-modal")) patchInventoryProjectedUi();
   if (modal?.open && modal.classList.contains("outgoing-attack-modal")) patchMarchItemActionUi();
-  patchCityUpgradeUi();
+  patchCityUpgradeUi(dirtyCityKeys);
 }
 
 function patchShopProjectedUi() {
@@ -445,14 +528,21 @@ function bindInventoryCarousel(viewport) {
 /* Common Gear Box reveal flow lives in common-gear-ui.js. */
 
 
-function patchCityUpgradeUi() {
+function patchCityUpgradeUi(dirtyCityKeys = null) {
   const pendingCityActions = getInstantEconomyPendingActions().filter(action => action.type === "city");
   if (modal?.open && modal.classList.contains("city-list-modal")) {
-    patchCityListUpgradeRows();
+    patchCityListUpgradeRows(dirtyCityKeys);
     return;
   }
-  if (pendingCityActions.some(action => normalizeRegionId(action.regionId) === getActiveMapRegionId())) renderCities(true);
+  const needsActiveMapCheck = Boolean(dirtyCityKeys?.size || pendingCityActions.length);
+  const activeRegionId = needsActiveMapCheck ? getActiveMapRegionId() : "";
+  const activeMapDirty = needsActiveMapCheck && (dirtyCityKeys
+    ? [...dirtyCityKeys].some(key => String(key || "").startsWith(`${activeRegionId}:`))
+    : pendingCityActions.some(action => normalizeRegionId(action.regionId) === activeRegionId));
+  if (activeMapDirty) renderCities();
   const selectedCity = cityById(selectedSourceId || "");
+  const selectedCityKey = selectedCity ? getCityUpgradeActionKey(selectedCity, getCityRegionId(selectedCity)) : "";
+  if (dirtyCityKeys && selectedCityKey && !dirtyCityKeys.has(selectedCityKey)) return;
   const wheel = cityLayer?.querySelector(".city-action-wheel .wheel-level");
   if (selectedCity && wheel) {
     const projectedCity = getProjectedCityForInstantActions(selectedCity);
@@ -499,10 +589,51 @@ function queueInstantEconomyRemainder(action, patch) {
 }
 
 async function refreshInstantEconomyAfterFailure(action) {
-  await Promise.resolve(refreshServerEconomy(true, { renderCities: action.type === "city" }));
-  if (action.type === "city") await Promise.resolve(refreshAllOwnedCities(true));
+  const generation = action?.generation;
+  instantEconomySyncRecovery = {
+    generation,
+    actionKey: action?.key || "",
+    requiresOwnedCities: action?.type === "city",
+    economy: false,
+    ownedCities: action?.type !== "city",
+  };
+  let economyRefreshed = false;
+  let ownedCitiesRefreshed = action?.type !== "city";
+  try {
+    economyRefreshed = Boolean(await Promise.resolve(refreshServerEconomy(true, { renderCities: false })));
+    resumeInstantEconomyActionsAfterSync({ economy: economyRefreshed });
+    if (action?.type === "city") {
+      ownedCitiesRefreshed = Boolean(await Promise.resolve(refreshAllOwnedCities(true)));
+      resumeInstantEconomyActionsAfterSync({ ownedCities: ownedCitiesRefreshed });
+    }
+  } catch (error) {
+    console.warn("Could not restore authoritative economy state after a rejected action", error);
+  }
+  if (modal?.open && modal.classList.contains("inventory-modal")) {
+    try {
+      showInventoryModal();
+    } catch (error) {
+      console.warn("Could not restore the Bag after a rejected action", error);
+    }
+  }
+  return economyRefreshed && ownedCitiesRefreshed;
+}
+
+function resumeInstantEconomyActionsAfterSync({ economy = false, ownedCities = false } = {}) {
+  const recovery = instantEconomySyncRecovery;
+  if (!recovery) return false;
+  if (recovery.generation !== instantEconomyGeneration) {
+    instantEconomySyncRecovery = null;
+    return false;
+  }
+  recovery.economy = recovery.economy || economy === true;
+  recovery.ownedCities = recovery.ownedCities || ownedCities === true;
+  if (!recovery.economy || (recovery.requiresOwnedCities && !recovery.ownedCities)) return false;
+  instantEconomySyncRecovery = null;
   revalidateInstantEconomyActions();
-  if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+  scheduleInstantEconomyUiPatch(recovery.actionKey ? { type: "city", key: recovery.actionKey } : null);
+  scheduleInstantEconomyFlush(0);
+  return true;
 }
 
 function discardQueuedCityUpgradeActions(actionKey = "") {
@@ -567,16 +698,18 @@ function revalidateInstantEconomyActions() {
       const requestedLevels = action.mode === "max"
         ? Number.MAX_SAFE_INTEGER
         : Math.max(1, Math.floor(Number(action.requestedLevels || action.levels) || 1));
+      let totalCost = 0;
       for (let offset = 0; offset < requestedLevels; offset += 1) {
         const cost = getCityUpgradeCostAtLevel(startLevel + offset, reduction);
-        if (!Number.isFinite(cost) || cost > availableGold - costs.reduce((sum, value) => sum + value, 0)) break;
+        if (!Number.isFinite(cost) || cost > availableGold - totalCost) break;
         costs.push(cost);
+        totalCost += cost;
       }
       if (action.mode === "exact" && costs.length !== requestedLevels) return;
       if (!costs.length) return;
       action.levels = costs.length;
       action.levelCosts = costs;
-      action.reservedGold = costs.reduce((sum, value) => sum + value, 0);
+      action.reservedGold = totalCost;
       availableGold -= action.reservedGold;
       levelsByCity.set(cityKey, startLevel + costs.length);
     }
@@ -584,18 +717,17 @@ function revalidateInstantEconomyActions() {
   });
   instantEconomyActions.length = 0;
   instantEconomyActions.push(...kept);
-  patchInstantEconomyUi();
 }
 
 async function flushInstantEconomyActions() {
-  if (instantEconomyActiveAction || !instantEconomyActions.length) return false;
+  if (instantEconomyActiveAction || instantEconomySyncRecovery || !instantEconomyActions.length) return false;
   const action = instantEconomyActions.shift();
   if (!action || action.generation !== instantEconomyGeneration || !state) {
     scheduleInstantEconomyFlush(0);
     return false;
   }
   instantEconomyActiveAction = action;
-  patchInstantEconomyUi();
+  scheduleInstantEconomyUiPatch(action);
   try {
     await executeInstantEconomyAction(action);
     return true;
@@ -610,14 +742,17 @@ async function flushInstantEconomyActions() {
     if (action.type === "city") discardQueuedCityUpgradeActions(action.key);
     if (!error?.cityUpgradeCancelled) {
       console.warn(`Instant ${action.type} action failed`, error);
-      rejectGameAction(
-        action.type === "city"
-          ? getCityUpgradeFailureMessage(error, "That city upgrade was not confirmed by the server.")
-          : error?.message || "That action was not confirmed by the server.",
-        { allowCrossMap: true }
-      );
+      try {
+        rejectGameAction(
+          action.type === "city"
+            ? getCityUpgradeFailureMessage(error, "That city upgrade was not confirmed by the server.")
+            : error?.message || "That action was not confirmed by the server.",
+          { allowCrossMap: true }
+        );
+      } catch (presentationError) {
+        console.warn("Could not present an instant economy rejection", presentationError);
+      }
     }
-    instantEconomyActiveAction = null;
     await refreshInstantEconomyAfterFailure(action);
     return false;
   } finally {
@@ -625,9 +760,9 @@ async function flushInstantEconomyActions() {
     if (action.type === "city") serverCityUpgradeInFlightIds.delete(action.key);
     if (action.type === "swift") swiftMarchOrderRequests.delete(action.armyId);
     if (action.type === "recall") recallHornRequests.delete(action.armyId);
-    patchInstantEconomyUi();
     if (pendingSkillSpendAllocations.size && !activeSkillSpendBatch) scheduleSkillSpendFlush();
     scheduleInstantEconomyFlush(0);
+    scheduleInstantEconomyUiPatch(action);
   }
 }
 
@@ -733,27 +868,39 @@ async function executeInstantCityUpgrade(action) {
     action.reservedGold = Math.max(0, action.reservedGold - chunkCosts.slice(0, upgraded).reduce((sum, cost) => sum + cost, 0));
   }
   const authoritativeFinalLevel = clampCityLevel(result?.finalLevel);
-  const cityListOpen = Boolean(modal?.open && modal.classList.contains("city-list-modal"));
-  applyServerEconomyResult(result, {
-    renderCities: !cityListOpen,
-    renderCityList: false,
-    cityUpgradeFeedback: result?.replayed ? null : {
-      cityId: city.id,
-      regionId: action.regionId,
-      mode: action.mode,
-      startingLevel: clampCityLevel(authoritativeFinalLevel - upgraded),
-      finalLevel: authoritativeFinalLevel,
-      upgraded,
-      spentGold: toWhole(result?.spentGold),
-    },
-  });
-  revalidateInstantEconomyActions();
-  const updatedCity = getOwnedCitySnapshotForUpgrade(city.id, action.regionId) || city;
+  try {
+    applyServerEconomyResult(result, {
+      render: false,
+      renderCities: false,
+      renderCityList: false,
+      cityUpgradeFeedback: result?.replayed ? null : {
+        cityId: city.id,
+        regionId: action.regionId,
+        mode: action.mode,
+        startingLevel: clampCityLevel(authoritativeFinalLevel - upgraded),
+        finalLevel: authoritativeFinalLevel,
+        upgraded,
+        spentGold: toWhole(result?.spentGold),
+      },
+    });
+  } catch (error) {
+    console.warn("Could not reconcile a confirmed city upgrade locally", error);
+    await refreshInstantEconomyAfterFailure(action);
+  }
+  if (!instantEconomySyncRecovery) revalidateInstantEconomyActions();
+  const reconciledCity = getOwnedCitySnapshotForUpgrade(city.id, action.regionId) || city;
+  const updatedCity = clampCityLevel(reconciledCity.level) === authoritativeFinalLevel
+    ? reconciledCity
+    : { ...reconciledCity, level: authoritativeFinalLevel };
   if (!result?.replayed) {
-    addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.`);
-    showToast(`${updatedCity.name} upgraded`);
-    playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
-    playCityUpgradeAnimation(action.vfxBefore, getCityVfxSnapshot(updatedCity));
+    try {
+      addLog(`${updatedCity.name} upgraded ${upgraded === 1 ? "1 level" : `${formatNumber(upgraded)} levels`} to level ${formatNumber(updatedCity.level)}.`);
+      showToast(upgraded === 1 ? `${updatedCity.name} upgraded` : `${updatedCity.name} upgraded ${formatNumber(upgraded)} levels`);
+      playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
+      playCityUpgradeAnimation(action.vfxBefore, getCityVfxSnapshot(updatedCity));
+    } catch (error) {
+      console.warn("Could not present a confirmed city upgrade", error);
+    }
   }
   if (!authoritativeMode && action.levels > 0) queueInstantEconomyRemainder(action, { vfxBefore: getCityVfxSnapshot(updatedCity) });
 }
@@ -797,7 +944,7 @@ function queueServerCityUpgrade(cityId, options = {}) {
     mode,
     requestedLevels: mode === "max" ? 0 : requestedLevels,
     requestId: authoritativeMode ? createCityUpgradeRequestId(requestCity.id) : "",
-    coalesce: mode === "legacy",
+    coalesce: mode !== "max",
     levels: costs.length,
     levelCosts: costs,
     reservedGold: costs.reduce((sum, cost) => sum + cost, 0),
@@ -892,7 +1039,10 @@ function upgradeCity(cityId, levels = 1, options) {
   const affordable = getProjectedAffordableCityUpgradeLevels(city, requested);
   if (affordable < 1 || (requestedMode === "exact" && affordable !== requested)) {
     rejectGameAction("Not enough gold");
-    patchInstantEconomyUi();
+    scheduleInstantEconomyUiPatch({
+      type: "city",
+      key: getCityUpgradeActionKey(city, getCityRegionId(city)),
+    });
     return false;
   }
   if (usesServerEconomyAuthority()) {

@@ -10991,8 +10991,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
   changed = mainCityRepair.changed || changed;
   if (changed) {
     saveGame();
-    renderHud();
-    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    if (options.render !== false) {
+      renderHud();
+      if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    }
   }
   const levelUpReward = getLevelUpRewardAnnouncement(patch, previousLevel, options);
   if (levelUpReward) {
@@ -11302,6 +11304,7 @@ function applyServerEconomyResult(result = null, options = {}) {
   if (result.currentUser) {
     changed = applyServerProfilePatch(result.currentUser, {
       levelUpReward: result.currentUser.levelUpReward || result.levelUpReward,
+      render: options.render !== false,
     }) || changed;
   }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates, { render: false }) || changed;
@@ -11337,7 +11340,7 @@ function applyServerEconomyResult(result = null, options = {}) {
       lostCityCount: awayLostCityCount,
     });
   }
-  if (changed) {
+  if (changed && options.render !== false) {
     renderHud();
     if (options.renderCities === false) updateVisibleCityDynamicText();
     else {
@@ -11391,6 +11394,9 @@ async function performServerEconomyRefresh(options = {}) {
     }
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
+    if (typeof resumeInstantEconomyActionsAfterSync === "function") {
+      resumeInstantEconomyActionsAfterSync({ economy: true });
+    }
     updateOnlineUi();
     return true;
   } catch (error) {
@@ -12956,6 +12962,9 @@ async function refreshAllOwnedCities(force = false) {
       islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
     })), { complete: true });
     onlineOwnedCitiesRefreshError = "";
+    if (typeof resumeInstantEconomyActionsAfterSync === "function") {
+      resumeInstantEconomyActionsAfterSync({ ownedCities: true });
+    }
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
@@ -25553,6 +25562,9 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
     .map(attack => getKnownCityId(attack.toId))
     .filter(Boolean));
   const cityTokens = visibleCities.map(city => {
+    const displayCity = city.owner === "player" && !isStronghold(city)
+      ? getProjectedCityForInstantActions(city) || city
+      : city;
     const report = city.owner === "player" ? null : getScoutReport(city.id);
     const clanAlly = isClanAllyCity(city);
     return [
@@ -25572,7 +25584,8 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isStronghold(city) && city.flipX ? 1 : 0,
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       getCachedScoutVeilExpiresAtMs(city),
-      city.level,
+      displayCity.level,
+      city.owner === "player" && hasPendingServerCityUpgrade(city.id, getCityRegionId(city)) ? 1 : 0,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
       clanAlly ? Math.max(0, Math.floor(Number(city.troops) || 0)) : "",
       city.isMainCity ? 1 : 0,
@@ -30324,9 +30337,12 @@ function bindCityListRowActions(root = modalBody) {
   bindCityLevelUpButtons(null, root);
 }
 
-function patchCityListUpgradeRows() {
+function patchCityListUpgradeRows(dirtyCityKeys = null) {
   if (!modal?.open || !modal.classList.contains("city-list-modal")) return false;
-  const rows = [...modalBody.querySelectorAll("[data-city-list-row-key]")];
+  const requestedKeys = dirtyCityKeys ? new Set(dirtyCityKeys) : null;
+  const rows = [...modalBody.querySelectorAll("[data-city-list-row-key]")].filter(row => (
+    !requestedKeys || requestedKeys.has(row.dataset.cityListRowKey || "")
+  ));
   if (!rows.length) return false;
   const citiesByKey = new Map(getAllOwnedCitiesForDisplay().map(city => [getCityListRowKey(city), city]));
   const focusSnapshot = captureCityListFocus();
@@ -30440,8 +30456,9 @@ function renderCityListRow(city) {
     : "";
   const syncing = Boolean(optionState?.pendingAction);
   const displayedLevel = optionState?.currentLevel ?? clampCityLevel(city.level);
+  const syncingLevels = syncing ? getPendingCityUpgradeCount(city, regionId) : 0;
   const upgradeStatus = syncing
-    ? `${formatNumber(getPendingCityUpgradeCount(city, regionId))} upgrade${getPendingCityUpgradeCount(city, regionId) === 1 ? "" : "s"} syncing…`
+    ? `${formatNumber(syncingLevels)} level${syncingLevels === 1 ? "" : "s"} syncing…`
     : upgradeResult;
   return `
     <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""} ${syncing ? "upgrade-syncing" : ""} ${animateUpgradeFeedback ? "upgrade-confirmed" : ""}" data-city-list-row-key="${escapeHtml(rowKey)}" tabindex="-1" ${syncing ? `aria-busy="true"` : ""}>
@@ -33626,7 +33643,7 @@ function renderCityLevelUpAction(city) {
   const optionState = getCityUpgradeOptionState(city);
   if (!optionState) return "";
   const syncing = optionState.pendingAction
-    ? ` · ${formatNumber(getPendingCityUpgradeCount(city, optionState.regionId))} syncing`
+    ? ` · ${formatNumber(getPendingCityUpgradeCount(city, optionState.regionId))} level${getPendingCityUpgradeCount(city, optionState.regionId) === 1 ? "" : "s"} syncing`
     : "";
   return `<section class="city-level-up-panel" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(optionState.regionId)}" ${optionState.pendingAction ? `aria-busy="true"` : ""}><div class="city-level-up-copy"><strong>Level up city</strong><small>Next: Lv ${formatNumber(optionState.currentLevel + 1)} · Gold ${formatNumber(optionState.availableGold)}${syncing}</small></div><div class="city-level-up-actions">${optionState.options.map(option => renderCityLevelUpButton(city, option)).join("")}</div></section>`;
 }

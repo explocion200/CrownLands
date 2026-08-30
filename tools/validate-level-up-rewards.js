@@ -296,8 +296,8 @@ for (const functionName of ["getCityUpgradeOptionState", "renderCityLevelUpButto
 }
 requireMatch(
   clientSource,
-  /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?enqueueInstantEconomyAction[\s\S]*?coalesce:\s*mode === "legacy"/,
-  "The client does not reserve projected city levels and Gold for independent authoritative requests."
+  /function queueServerCityUpgrade[\s\S]*?getProjectedAffordableCityUpgradeLevels[\s\S]*?enqueueInstantEconomyAction[\s\S]*?coalesce:\s*mode !== "max"/,
+  "The client does not reserve projected city levels and Gold while permitting exact same-city batching and standalone MAX requests."
 );
 requireMatch(
   clientSource,
