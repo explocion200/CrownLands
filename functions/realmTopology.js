@@ -1,9 +1,10 @@
 "use strict";
 
 const LEGACY_REALM_SHARD_ID = "legacy";
+const SHARED_REALM_SHARD_ID = "shard_0001";
 const DEFAULT_MONTHLY_GENERATION_PREFIX = "realm";
 const DEFAULT_WORLD_ID_PREFIX = "main";
-const DEFAULT_REALM_SHARD_CAPACITY = 50;
+const DEFAULT_SHARED_REALM_STARTING_CITY_CAPACITY = 363;
 
 function safeIdentifier(value = "", fallback = "", maxLength = 120) {
   const cleaned = String(value || "")
@@ -52,7 +53,8 @@ function getRealmIdentity(config = {}, nowMs = Date.now()) {
   );
   const legacyWorldId = safeIdentifier(config.worldId, `main-${legacyResetGeneration}`);
   const monthlyResetStartsAtMs = parseUtcTimestamp(config.monthlyResetStartsAt, Number.MAX_SAFE_INTEGER);
-  const monthlyEnabled = String(config.realmMode || "").toLowerCase() === "monthly-sharded"
+  const configuredMode = String(config.realmMode || "").toLowerCase();
+  const monthlyEnabled = configuredMode === "monthly-shared"
     && Number(nowMs) >= monthlyResetStartsAtMs;
 
   if (!monthlyEnabled) {
@@ -77,7 +79,7 @@ function getRealmIdentity(config = {}, nowMs = Date.now()) {
   const worldIdPrefix = safeIdentifier(config.worldIdPrefix, DEFAULT_WORLD_ID_PREFIX, 48);
   const resetGeneration = `${generationPrefix}-${monthKey}`;
   return Object.freeze({
-    mode: "monthly-sharded",
+    mode: configuredMode,
     resetGeneration,
     worldId: `${worldIdPrefix}-${resetGeneration}`,
     monthKey,
@@ -87,21 +89,25 @@ function getRealmIdentity(config = {}, nowMs = Date.now()) {
   });
 }
 
-function getRealmShardCapacity(config = {}) {
+function getSharedRealmStartingCityCapacity(config = {}) {
   return Math.max(
     1,
-    Math.min(500, Math.floor(Number(config.realmShardCapacity) || DEFAULT_REALM_SHARD_CAPACITY))
+    Math.min(
+      500,
+      Math.floor(
+        Number(config.sharedRealmStartingCityCapacity)
+        || DEFAULT_SHARED_REALM_STARTING_CITY_CAPACITY
+      )
+    )
   );
 }
 
-function getRealmShardForSequence(sequence = 0, capacity = DEFAULT_REALM_SHARD_CAPACITY) {
+function getSharedRealmAssignment(sequence = 0) {
   const safeSequence = Math.max(0, Math.floor(Number(sequence) || 0));
-  const safeCapacity = Math.max(1, Math.floor(Number(capacity) || DEFAULT_REALM_SHARD_CAPACITY));
-  const ordinal = Math.floor(safeSequence / safeCapacity) + 1;
   return Object.freeze({
-    realmShardId: formatRealmShardId(ordinal),
-    shardOrdinal: ordinal,
-    slotIndex: safeSequence % safeCapacity,
+    realmShardId: SHARED_REALM_SHARD_ID,
+    shardOrdinal: 1,
+    slotIndex: safeSequence,
     sequence: safeSequence,
   });
 }
@@ -146,15 +152,16 @@ function parseIslandId(islandId = "", worldId = "") {
 
 module.exports = Object.freeze({
   LEGACY_REALM_SHARD_ID,
-  DEFAULT_REALM_SHARD_CAPACITY,
+  SHARED_REALM_SHARD_ID,
+  DEFAULT_SHARED_REALM_STARTING_CITY_CAPACITY,
   safeIdentifier,
   normalizeRealmShardId,
   formatRealmShardId,
   getUtcMonthKey,
   getUtcMonthBounds,
   getRealmIdentity,
-  getRealmShardCapacity,
-  getRealmShardForSequence,
+  getSharedRealmStartingCityCapacity,
+  getSharedRealmAssignment,
   buildIslandId,
   parseIslandId,
 });

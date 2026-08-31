@@ -32,7 +32,7 @@ assert.deepEqual(
     endsAtMs: septemberRealm.endsAtMs,
   },
   {
-    mode: "monthly-sharded",
+    mode: "monthly-shared",
     resetGeneration: "realm-2026-09",
     worldId: "main-realm-2026-09",
     monthKey: "2026-09",
@@ -47,27 +47,27 @@ assert.equal(octoberRealm.worldId, "main-realm-2026-10");
 assert.equal(octoberRealm.startsAtMs, Date.parse("2026-10-01T00:00:00.000Z"));
 assert.equal(octoberRealm.endsAtMs, Date.parse("2026-11-01T00:00:00.000Z"));
 
-const capacity = topology.getRealmShardCapacity(releaseConfig);
-assert.equal(capacity, 50);
-const assignments = Array.from({ length: 120 }, (_, sequence) => (
-  topology.getRealmShardForSequence(sequence, capacity)
+const capacity = topology.getSharedRealmStartingCityCapacity(releaseConfig);
+assert.equal(capacity, 363);
+const assignments = Array.from({ length: 150 }, (_, sequence) => (
+  topology.getSharedRealmAssignment(sequence)
 ));
 const counts = assignments.reduce((result, assignment) => {
   result[assignment.realmShardId] = (result[assignment.realmShardId] || 0) + 1;
   return result;
 }, {});
-assert.deepEqual(counts, { shard_0001: 50, shard_0002: 50, shard_0003: 20 });
+assert.deepEqual(counts, { shard_0001: 150 });
 assert.deepEqual(assignments[50], {
-  realmShardId: "shard_0002",
-  shardOrdinal: 2,
-  slotIndex: 0,
+  realmShardId: "shard_0001",
+  shardOrdinal: 1,
+  slotIndex: 50,
   sequence: 50,
 });
-assert.deepEqual(assignments[119], {
-  realmShardId: "shard_0003",
-  shardOrdinal: 3,
-  slotIndex: 19,
-  sequence: 119,
+assert.deepEqual(assignments[149], {
+  realmShardId: "shard_0001",
+  shardOrdinal: 1,
+  slotIndex: 149,
+  sequence: 149,
 });
 
 const legacyIslandId = topology.buildIslandId(legacy.worldId, "west", "legacy");
@@ -79,11 +79,11 @@ assert.deepEqual(topology.parseIslandId(legacyIslandId, legacy.worldId), {
   legacy: true,
 });
 
-const shardIslandId = topology.buildIslandId(septemberRealm.worldId, "west", "shard_0003");
-assert.equal(shardIslandId, "main-realm-2026-09--shard_0003--west");
+const shardIslandId = topology.buildIslandId(septemberRealm.worldId, "west", topology.SHARED_REALM_SHARD_ID);
+assert.equal(shardIslandId, "main-realm-2026-09--shard_0001--west");
 assert.deepEqual(topology.parseIslandId(shardIslandId, septemberRealm.worldId), {
   worldId: septemberRealm.worldId,
-  realmShardId: "shard_0003",
+  realmShardId: "shard_0001",
   regionId: "west",
   legacy: false,
 });
@@ -97,6 +97,10 @@ assert.deepEqual(releaseConfig.legacyCompatibleClients, [{
 assert.match(serverSource, /identity\.mode === "legacy"[\s\S]*?LEGACY_COMPATIBLE_CLIENTS\.some/);
 assert.match(serverSource, /function getRealmInfoResponseContract/);
 assert.match(serverSource, /nextPlayerSequence: sequence \+ 1/);
+assert.match(serverSource, /getSharedRealmAssignment\(sequence\)/);
+assert.match(serverSource, /identity\.mode === "legacy" \? \[LEGACY_REALM_SHARD_ID\] : \[SHARED_REALM_ID\]/);
+assert.doesNotMatch(serverSource, /getRealmShardForSequence/);
+assert.match(serverSource, /realmShardCapacity:\s*realm\.startingCityCapacity/);
 assert.match(serverSource, /status: "claimed"/);
 assert.match(serverSource, /activateMonthlyRealm/);
 assert.match(serverSource, /runWithRealmShard\(target\.realmShardId/);
@@ -128,4 +132,4 @@ assert.match(
   "Clan leaderboard list reads must use the authoritative realm-storage path without an unqueryable document-field predicate."
 );
 
-console.log("Realm sharding validation passed: 120 players map to 50/50/20 across three isolated shards.");
+console.log("Shared realm validation passed: 150 players map to one generation-isolated realm partition with no 50-player split.");

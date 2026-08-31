@@ -383,7 +383,7 @@ async function main() {
   const serverRef = db.doc(`gameServers/${serverDocumentId}`);
   const serverAfterJoins = (await serverRef.get()).data() || {};
   assert(
-    serverAfterJoins.admissionModel === "sharded-members-v3"
+    serverAfterJoins.admissionModel === "shared-realm-members-v1"
       && Number(serverAfterJoins.waitingCount || 0) === 0
       && !Object.prototype.hasOwnProperty.call(serverAfterJoins, "activeSlots")
       && !Object.prototype.hasOwnProperty.call(serverAfterJoins, "waitingQueue"),
@@ -407,7 +407,7 @@ async function main() {
   assert(
     heartbeatResults.length === 51
       && heartbeatResults.every(result => result?.status === "active"),
-    "Sharded heartbeats changed realm admission state."
+    "Shared-realm heartbeats changed realm admission state."
   );
   const serverAfterHeartbeats = (await serverRef.get()).data() || {};
   assert(

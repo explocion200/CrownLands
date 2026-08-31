@@ -91,7 +91,7 @@ async function mapWithConcurrency(items, concurrency, operation) {
 
 async function main() {
   const users = await mapWithConcurrency(
-    Array.from({ length: 120 }, (_, index) => index),
+    Array.from({ length: 150 }, (_, index) => index),
     20,
     createAuthUser
   );
@@ -128,7 +128,7 @@ async function main() {
       displayName: `Scale Ruler ${index + 1}`,
     }
   ));
-  assert(joins.length === 120, "The scale admission gate did not exercise 120 players.");
+  assert(joins.length === 150, "The scale admission gate did not exercise 150 players.");
   assert(joins.every(result => result?.status === "active"), "At least one player entered a waiting room.");
 
   const heartbeats = await mapWithConcurrency(users, 12, (user, index) => callFunction(
@@ -148,13 +148,14 @@ async function main() {
     serverRef.collection("members").get(),
   ]);
   const server = serverSnap.data() || {};
-  assert(server.admissionModel === "sharded-members-v3", "The sharded admission model was not persisted.");
+  assert(server.admissionModel === "shared-realm-members-v1", "The shared-realm admission model was not persisted.");
+  assert(Number(server.startingCityCapacity || 0) === 363, "The shared realm did not report its physical starting-city capacity.");
   assert(Number(server.waitingCount || 0) === 0, "The server reported a global waiting count.");
   assert(!Object.prototype.hasOwnProperty.call(server, "activeSlots"), "The removed global active-slot map returned.");
   assert(!Object.prototype.hasOwnProperty.call(server, "waitingQueue"), "The removed FIFO waiting queue returned.");
-  assert(membersSnap.size === 120, `Expected 120 active member documents, received ${membersSnap.size}.`);
+  assert(membersSnap.size === 150, `Expected 150 active member documents, received ${membersSnap.size}.`);
 
-  console.log("Realm scale admission passed: 120 concurrent players joined and heartbeated as active without a global queue.");
+  console.log("Shared-realm scale admission passed: 150 concurrent players joined and heartbeated as active without a global queue or realm split.");
 }
 
 main().catch(error => {

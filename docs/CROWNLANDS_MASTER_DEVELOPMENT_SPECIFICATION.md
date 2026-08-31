@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.26
-**Effective date:** August 30, 2026
+**Version:** 1.28
+**Effective date:** August 31, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** August 30, 2026
+**Evidence reviewed through:** August 31, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -833,9 +833,21 @@ Normal world progression resets unless another system is explicitly added to the
 
 The earlier broad statement that “items persist” is superseded by this allowlist.
 
+### Confirmed monthly realm topology
+
+- Every player in an active monthly generation belongs to one shared realm and may interact with every other player in that generation. A 50-player population split is not permitted.
+- The implementation may retain `shard_0001` as an internal canonical storage partition so existing generation-scoped paths, rules, and indexes remain isolated. It does not represent a separate player realm, and no `shard_0002` may be opened when player 51 joins.
+- New and returning players without current-generation world progression claim one server-authoritative starting city on exactly one of `region_11`, `region_12`, `region_13`, `region_14`, or `region_15` before gameplay subscriptions open.
+- Starting placement selects among the least-populated eligible starter islands with random tie breaking and remains replay-safe. The current five-island layout contains 363 neutral regular starting cities; exhaustion must fail explicitly instead of silently moving players into a different realm.
+- Scheduled work, leaderboards, clans, activity, combat, armies, reports, presence, and world reads execute once against the shared current-generation partition. Archived generations remain inaccessible and inactive but intact for rollback and historical retention.
+- Monthly generation and world identifiers remain `realm-YYYY-MM` and `main-realm-YYYY-MM`. Realm generation isolation remains mandatory even though population sharding is removed.
+
+**Status:** `IN DEVELOPMENT` on the single-shared-realm feature branch. This decision is not LIVE until the coordinated Functions, rules, client, and reset release is merged, deployed, and verified.
+
 ### Implementation state
 
 - Season/reset persistence policy is confirmed design.
+- One shared monthly realm, five-island starter placement, and removal of the 50-player split are confirmed design and `IN DEVELOPMENT`.
 - Production reset enforcement is `IN DEVELOPMENT`.
 - A previously reported staging reset rehearsal preserved flags, clans, and Common Gear data while resetting world/season state. The inspected current `origin/main` executable reset path does not preserve clans or Common Gear, so the rehearsal is not evidence of current code parity.
 - The production reset has not been verified as executed under this policy.
@@ -1238,6 +1250,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.28 — August 31, 2026
+
+- Confirmed that every player in a monthly generation belongs to one shared interactive realm; the previous 50-player split and automatic creation of additional player shards are superseded.
+- Retained `shard_0001` only as the canonical internal generation partition so query, rule, and archived-generation isolation remain intact.
+- Limited server-authoritative starting placement to `region_11` through `region_15`, whose current layouts provide 363 neutral regular cities, and required explicit exhaustion instead of creating another realm.
+- Classified the shared-realm implementation as `IN DEVELOPMENT` pending full release validation, merge, coordinated deployment, and post-reset verification.
 
 ## v1.27 — August 30, 2026
 

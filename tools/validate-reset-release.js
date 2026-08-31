@@ -16,6 +16,7 @@ const browserRealm = read("release-config.js");
 const serverRealm = JSON.parse(read("functions/release-config.json"));
 const manifestGenerator = read("tools/generate-release-manifest.js");
 const worldLayout = JSON.parse(read("assets/worlds/world_01/world-layout.json"));
+const serverWorldLayout = JSON.parse(read("functions/world-layout.json"));
 const topology = require("../functions/realmTopology.js");
 
 for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId, serverRealm.apiContractHash]) {
@@ -91,12 +92,24 @@ for (const [label, source] of [["server", server], ["client", client]]) {
 }
 
 const newPlayerSpawnMapCount = worldLayout.regions.filter(map => map.newPlayerSpawnEligible === true).length;
-if (newPlayerSpawnMapCount !== 10) {
-  throw new Error(`Expected 10 designated new-player spawn maps, found ${newPlayerSpawnMapCount}.`);
+if (newPlayerSpawnMapCount !== 5) {
+  throw new Error(`Expected 5 designated new-player spawn maps, found ${newPlayerSpawnMapCount}.`);
+}
+const spawnRegionIds = worldLayout.regions
+  .filter(map => map.newPlayerSpawnEligible === true)
+  .map(map => map.id);
+if (JSON.stringify(spawnRegionIds) !== JSON.stringify(["region_11", "region_12", "region_13", "region_14", "region_15"])) {
+  throw new Error(`The reset spawn allowlist drifted: ${JSON.stringify(spawnRegionIds)}.`);
+}
+const startingCityCapacity = serverWorldLayout.maps
+  .filter(map => spawnRegionIds.includes(map.id))
+  .reduce((total, map) => total + (Array.isArray(map.cities) ? map.cities.length : 0), 0);
+if (startingCityCapacity !== 363 || serverRealm.sharedRealmStartingCityCapacity !== startingCityCapacity) {
+  throw new Error(`Shared-realm starting capacity drifted: layout=${startingCityCapacity}, config=${serverRealm.sharedRealmStartingCityCapacity}.`);
 }
 for (let trial = 0; trial < 500; trial += 1) {
   const counts = Array(newPlayerSpawnMapCount).fill(0);
-  for (let player = 0; player < 50; player += 1) {
+  for (let player = 0; player < 150; player += 1) {
     const minimum = Math.min(...counts);
     const candidates = counts.map((count, index) => count === minimum ? index : -1).filter(index => index >= 0);
     const chosen = candidates[Math.floor(Math.random() * candidates.length)];
@@ -105,19 +118,19 @@ for (let trial = 0; trial < 500; trial += 1) {
       throw new Error(`Balanced allocation invariant failed: ${counts.join(",")}`);
     }
   }
-  if (counts.reduce((sum, count) => sum + count, 0) !== 50) {
+  if (counts.reduce((sum, count) => sum + count, 0) !== 150) {
     throw new Error("The reset allocation model lost a player.");
   }
 }
 
-const shardCounts = Array.from({ length: 120 }, (_, sequence) => (
-  topology.getRealmShardForSequence(sequence, serverRealm.realmShardCapacity)
+const shardCounts = Array.from({ length: 150 }, (_, sequence) => (
+  topology.getSharedRealmAssignment(sequence)
 )).reduce((counts, assignment) => {
   counts[assignment.realmShardId] = (counts[assignment.realmShardId] || 0) + 1;
   return counts;
 }, {});
-if (JSON.stringify(shardCounts) !== JSON.stringify({ shard_0001: 50, shard_0002: 50, shard_0003: 20 })) {
-  throw new Error(`Realm sharding lost or overfilled players: ${JSON.stringify(shardCounts)}.`);
+if (JSON.stringify(shardCounts) !== JSON.stringify({ shard_0001: 150 })) {
+  throw new Error(`Shared realm split or lost players: ${JSON.stringify(shardCounts)}.`);
 }
 
 console.log(`Reset release validation passed for ${serverRealm.resetGeneration}.`);

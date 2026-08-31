@@ -5,12 +5,12 @@
   "worldId": "main-fresh-2026-07-26-server-reset",
   "apiContractHash": "86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd",
   "inactivityPolicyMode": "enforce",
-  "realmMode": "monthly-sharded",
+  "realmMode": "monthly-shared",
   "monthlyResetStartsAt": "2026-09-01T00:00:00.000Z",
   "monthlyGenerationPrefix": "realm",
   "worldIdPrefix": "main",
   "legacyRealmShardId": "legacy",
-  "realmShardCapacity": 50,
+  "sharedRealmStartingCityCapacity": 363,
   "legacyCompatibleClients": [
     {
       "releaseId": "crownlands-2026-08-02-single-active-skill-preset-v1",
