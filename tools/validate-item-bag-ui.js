@@ -141,6 +141,6 @@ assert(index.includes("instant-economy-actions.js?v=20260829-city-upgrade-queue-
 assert(worker.includes("/instant-economy-actions.js?v=20260829-city-upgrade-queue-stability-r1"), "instant-economy-actions.js is missing from the refreshed offline shell.");
 assert(index.includes("game.js?v=20260830-heartbeat-lifecycle-recovery-r1"), "game.js has a stale City List cache stamp.");
 assert(worker.includes("/game.js?v=20260830-heartbeat-lifecycle-recovery-r1"), "game.js is missing from the refreshed offline shell.");
-assert(worker.includes('CACHE_VERSION = "20260827-instant-cross-map-city-upgrades-r1"'));
+assert(worker.includes('CACHE_VERSION = "20260831-core-expansion-prepared-r1"'));
 
 console.log("Validated the Crownlands Item Bag: authoritative item-ID stacks, xN badges, unique 4x2 paging, zero-count selection, responsive layout, and cache delivery.");

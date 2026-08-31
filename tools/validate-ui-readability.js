@@ -9,6 +9,7 @@ const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
 const releaseId = "20260819-player-flags-v2-r1";
 const buildId = "20260827-instant-cross-map-city-upgrades-r1";
+const cacheBuildId = "20260831-core-expansion-prepared-r1";
 const gameBuildId = "20260830-heartbeat-lifecycle-recovery-r1";
 
 function requireMatch(source, pattern, message) {
@@ -38,7 +39,7 @@ if (dailyIndex < 0 || readabilityIndex <= dailyIndex) {
 
 requireMatch(index, new RegExp(`crownlands-build\" content=\"${buildId}`), "The page build stamp is stale.");
 requireMatch(index, new RegExp(`game\\.js\\?v=${gameBuildId}`), "The game script cache stamp is stale.");
-requireMatch(worker, new RegExp(`CACHE_VERSION = \"${buildId}\"`), "The service-worker cache version is stale.");
+requireMatch(worker, new RegExp(`CACHE_VERSION = \"${cacheBuildId}\"`), "The service-worker cache version is stale.");
 requireMatch(worker, new RegExp(`readability\\.css\\?v=${releaseId}`), "The service worker does not cache the readability contract.");
 requireMatch(build, /"readability\.css"/, "The production client does not include readability.css.");
 

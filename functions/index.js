@@ -6,14 +6,32 @@ const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-adm
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
-const SERVER_WORLD_LAYOUT = require("./world-layout.json");
-const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
+const CONFIGURED_CORE_EXPANSION_ACTIVE = String(REALM_CONFIG.worldTopology || "").toLowerCase()
+  === "core-expansion-v1";
+if (CONFIGURED_CORE_EXPANSION_ACTIVE && REALM_CONFIG.resetActivationHeld !== false) {
+  throw new Error("Core expansion activation is blocked while resetActivationHeld is true.");
+}
+if (CONFIGURED_CORE_EXPANSION_ACTIVE && String(REALM_CONFIG.realmMode || "").toLowerCase() !== "monthly-shared") {
+  throw new Error("Core expansion activation requires the single monthly shared realm.");
+}
+const SERVER_WORLD_LAYOUT = CONFIGURED_CORE_EXPANSION_ACTIVE
+  ? require("./core-expansion-world-layout.json")
+  : require("./world-layout.json");
+const SERVER_REGION_CATALOG = CONFIGURED_CORE_EXPANSION_ACTIVE
+  ? require("./core-expansion-region-catalog.json")
+  : Object.freeze({});
+const ECONOMY_CONFIG = require("./economy-config.json");
+const {
+  MINIMUM_NPC_CITIES_FOR_SPAWN,
+  derivePlayerRegionSpawnEligibility,
+} = require("./player-region-spawn.js");
 const COMMON_GEAR = require("./common-gear.js");
 const PLAYER_FLAG_CONFIG = require("./playerFlagConfig.js");
 const CLAN_HERALDRY_CONFIG = require("./clanHeraldryConfig.js");
 const CHAT = require("./chat.js");
 const REALM_TOPOLOGY = require("./realmTopology.js");
+const CORE_EXPANSION = require("./coreExpansionTopology.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -772,6 +790,42 @@ function realmGenerationRef(resetGeneration = RESET_GENERATION) {
 
 function realmShardRef(realmShardId = getCurrentRealmShardId(), resetGeneration = RESET_GENERATION) {
   return db.doc(`realmGenerations/${resetGeneration}/shards/${REALM_TOPOLOGY.normalizeRealmShardId(realmShardId)}`);
+}
+
+function coreExpansionStateRef(resetGeneration = RESET_GENERATION) {
+  return db.doc(`realmGenerations/${resetGeneration}/expansion/current`);
+}
+
+async function ensureCoreExpansionState() {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return null;
+  const stateRef = coreExpansionStateRef();
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const snapshot = await transaction.get(stateRef);
+    if (snapshot.exists) {
+      const state = CORE_EXPANSION.normalizeExpansionState(snapshot.data() || {});
+      if (state.resetGeneration !== RESET_GENERATION) {
+        throw new HttpsError("failed-precondition", "The New Lands expansion state belongs to another generation.");
+      }
+      return state;
+    }
+    const state = CORE_EXPANSION.createInitialExpansionState(RESET_GENERATION);
+    transaction.set(stateRef, {
+      ...state,
+      worldId: ONLINE_WORLD_ID,
+      realmShardId: getCurrentRealmShardId(),
+      createdAtMs: Date.now(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAtMs: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return state;
+  });
+}
+
+async function getNewPlayerSpawnRegionIdsForClaim() {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return [...NEW_PLAYER_SPAWN_REGION_IDS];
+  const expansionState = await ensureCoreExpansionState();
+  return expansionState.admittingRegionIds.filter(regionId => NEW_PLAYER_SPAWN_REGION_IDS.includes(regionId));
 }
 
 async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
@@ -2504,6 +2558,24 @@ function normalizePlayerName(value, fallback = "Ruler") {
 const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
 const SERVER_WORLD_MAP_BY_ID = new Map(SERVER_WORLD_MAPS.map(map => [safeString(map?.id, 80), map]));
 const SERVER_WORLD_REGION_IDS = new Set(SERVER_WORLD_MAP_BY_ID.keys());
+const CORE_EXPANSION_TOPOLOGY_ACTIVE = CONFIGURED_CORE_EXPANSION_ACTIVE;
+const SERVER_CATALOG_REGIONS = Array.isArray(SERVER_REGION_CATALOG?.regions)
+  ? SERVER_REGION_CATALOG.regions
+  : [];
+const SERVER_CATALOG_REGION_BY_ID = new Map(
+  SERVER_CATALOG_REGIONS.map(region => [normalizeRegionId(region?.id), region])
+);
+const STATIC_ACTIVE_SERVER_REGION_IDS = new Set(CORE_EXPANSION_TOPOLOGY_ACTIVE
+  ? SERVER_CATALOG_REGIONS
+      .filter(region => region?.permanentCore === true)
+      .map(region => normalizeRegionId(region?.id))
+      .filter(Boolean)
+  : SERVER_WORLD_REGION_IDS);
+const MINIMUM_SPAWN_NPC_CITIES = Math.max(
+  20,
+  MINIMUM_NPC_CITIES_FOR_SPAWN,
+  Math.floor(safeNumber(SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn, 20))
+);
 const SERVER_WORLD_OBJECTIVE_TARGETS = SERVER_WORLD_MAPS.flatMap(map => (
   Array.isArray(map?.objectives) ? map.objectives : []
 ).map(objective => ({
@@ -2536,6 +2608,35 @@ function requireKnownWorldRegionId(regionId = "") {
     throw new HttpsError("invalid-argument", "That Crownlands map does not exist.");
   }
   return normalized;
+}
+
+function getActiveServerRegionIds(expansionState = null) {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return new Set(SERVER_WORLD_REGION_IDS);
+  return new Set([
+    ...STATIC_ACTIVE_SERVER_REGION_IDS,
+    ...(Array.isArray(expansionState?.activeRegionIds) ? expansionState.activeRegionIds : [])
+      .map(normalizeRegionId)
+      .filter(regionId => SERVER_WORLD_REGION_IDS.has(regionId)),
+  ]);
+}
+
+async function requireActiveWorldRegionIds(regionIds = []) {
+  const normalizedRegionIds = regionIds.map(requireKnownWorldRegionId);
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return normalizedRegionIds;
+  const expansionState = await ensureCoreExpansionState();
+  const activeRegionIds = getActiveServerRegionIds(expansionState);
+  const inactiveRegionId = normalizedRegionIds.find(regionId => !activeRegionIds.has(regionId));
+  if (inactiveRegionId) {
+    throw new HttpsError("failed-precondition", "That New Lands map has not opened yet.", {
+      reason: "region-not-active",
+      regionId: inactiveRegionId,
+    });
+  }
+  return normalizedRegionIds;
+}
+
+async function requireActiveWorldRegionId(regionId = "") {
+  return (await requireActiveWorldRegionIds([regionId]))[0];
 }
 
 function getServerWorldMap(regionId = "") {
@@ -4272,7 +4373,7 @@ function createGlobalStatsSnapshot({
   let untimedTroopPerHour = 0;
   // Include zeroes so Firestore merge writes clear regions where the player lost their final city.
   const cityCountsByRegion = Object.fromEntries(
-    [...SERVER_WORLD_REGION_IDS].map(regionId => [regionId, 0])
+    [...STATIC_ACTIVE_SERVER_REGION_IDS].map(regionId => [regionId, 0])
   );
 
   ownedEntries.forEach(entry => {
@@ -14054,6 +14155,9 @@ exports.getRealmInfo = timedCallable(
     requireAuth(request, { allowRealmMismatch: true });
     const serverTimeMs = Date.now();
     const realm = await ensureCurrentRealmConfiguration(serverTimeMs);
+    const expansionState = CORE_EXPANSION_TOPOLOGY_ACTIVE
+      ? await ensureCoreExpansionState()
+      : null;
     const responseContract = getRealmInfoResponseContract(request.data || {});
     return {
       ok: true,
@@ -14062,6 +14166,9 @@ exports.getRealmInfo = timedCallable(
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
       realmMode: realm.mode,
+      worldTopology: CORE_EXPANSION_TOPOLOGY_ACTIVE ? CORE_EXPANSION.TOPOLOGY_VERSION : "legacy",
+      preparedWorldTopology: safeConfigString(REALM_CONFIG.preparedWorldTopology),
+      resetActivationHeld: REALM_CONFIG.resetActivationHeld !== false,
       realmMonthKey: realm.monthKey,
       realmStartsAtMs: realm.startsAtMs,
       realmEndsAtMs: realm.endsAtMs,
@@ -14089,11 +14196,21 @@ exports.getRealmInfo = timedCallable(
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
       dailyMissionVersion: DAILY_MISSION_VERSION,
       seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
+      coreExpansion: expansionState ? {
+        topologyVersion: CORE_EXPANSION.TOPOLOGY_VERSION,
+        revision: expansionState.revision,
+        activeRegionIds: expansionState.activeRegionIds,
+        admittingRegionIds: expansionState.admittingRegionIds,
+        nextActivationOrdinal: expansionState.nextActivationOrdinal,
+        thresholdNpcCities: CORE_EXPANSION.EXPANSION_THRESHOLD_NPC_CITIES,
+        activationBatchSize: CORE_EXPANSION.EXPANSION_ACTIVATION_BATCH_SIZE,
+      } : null,
       capabilities: {
         sharedRealmHeartbeats: true,
         monthlySharedRealm: true,
         shardedGameServerHeartbeats: false,
         monthlyShardedRealms: false,
+        coreExpansionTopologyVersion: CORE_EXPANSION.TOPOLOGY_VERSION,
         instantEconomyActionsVersion: 1,
         cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION,
         skillLevelAdjustmentVersion: SKILL_LEVEL_ADJUSTMENT_VERSION,
@@ -16146,7 +16263,8 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
   const requestedRegionId = data.regionId
     || data.meta?.regionId
     || getRegionIdFromOnlineIslandId(requestedIslandId);
-  const seed = getAuthoritativeIslandSeed(requestedRegionId || "west");
+  const activeRegionId = await requireActiveWorldRegionId(requestedRegionId || "west");
+  const seed = getAuthoritativeIslandSeed(activeRegionId);
   const islandId = seed.islandId;
   if (requestedIslandId && requestedIslandId !== islandId) {
     throw new HttpsError("invalid-argument", "The requested island does not match the current Crownlands world.");
@@ -16823,15 +16941,16 @@ async function claimFreshStartingCityInAssignedShard(request) {
   const uid = request.auth?.uid || "";
   const data = request.data || {};
   const authToken = request.auth?.token || {};
-  if (!NEW_PLAYER_SPAWN_REGION_IDS.length) {
+  const spawnRegionIds = await getNewPlayerSpawnRegionIdsForClaim();
+  if (!spawnRegionIds.length) {
     throw new HttpsError("failed-precondition", "No new-player islands are configured.");
   }
 
-  await Promise.all(NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
+  await Promise.all(spawnRegionIds.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
   const shuffledCityIdsByRegion = new Map(
-    NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
+    spawnRegionIds.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
   );
-  const spawnAvailability = await loadNewPlayerSpawnAvailability();
+  const spawnAvailability = await loadNewPlayerSpawnAvailability(spawnRegionIds);
   const spawnAvailabilityByRegion = new Map(
     spawnAvailability.map(entry => [entry.regionId, entry])
   );
@@ -16840,9 +16959,11 @@ async function claimFreshStartingCityInAssignedShard(request) {
   const runClaimTransaction = async (transaction, placement) => {
     const nowMs = Date.now();
     const assignmentRef = realmAssignmentRef(RESET_GENERATION, uid);
-    const [playerSnap, assignmentSnap] = await Promise.all([
+    const expansionRef = CORE_EXPANSION_TOPOLOGY_ACTIVE ? coreExpansionStateRef() : null;
+    const [playerSnap, assignmentSnap, expansionSnap] = await Promise.all([
       transaction.get(playerRef),
       transaction.get(assignmentRef),
+      expansionRef ? transaction.get(expansionRef) : Promise.resolve(null),
     ]);
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
     const currentAssignment = assignmentSnap.exists ? assignmentSnap.data() || {} : {};
@@ -16902,9 +17023,8 @@ async function claimFreshStartingCityInAssignedShard(request) {
       throw contentionError;
     }
     const candidateIds = shuffledCityIdsByRegion.get(chosenIsland.regionId) || [];
-
-    let chosenCityRef = null;
-    let chosenCity = null;
+    const cityOwnershipState = [];
+    const cityRefsById = new Map();
     for (const cityId of candidateIds) {
       const cityRef = db.doc(`islands/${chosenIsland.islandId}/cities/${cityId}`);
       const citySnap = await transaction.get(cityRef);
@@ -16913,12 +17033,62 @@ async function claimFreshStartingCityInAssignedShard(request) {
       if (safeString(city.resetGeneration, 120) !== RESET_GENERATION) continue;
       if (safeString(city.worldId, 120) !== ONLINE_WORLD_ID) continue;
       if (REALM_TOPOLOGY.normalizeRealmShardId(city.realmShardId) !== getCurrentRealmShardId()) continue;
-      if (safeString(city.ownerKind, 24).toLowerCase() !== "neutral") continue;
-      if (getOwnerUid(city) || isStronghold(city)) continue;
-      chosenCityRef = cityRef;
-      chosenCity = city;
-      break;
+      cityOwnershipState.push(city);
+      cityRefsById.set(city.id, cityRef);
     }
+    let thresholdActivation = null;
+    if (CORE_EXPANSION_TOPOLOGY_ACTIVE) {
+      const catalogRegion = SERVER_CATALOG_REGION_BY_ID.get(chosenIsland.regionId) || null;
+      const region = catalogRegion ? { ...catalogRegion, lifecycle: "active" } : null;
+      const spawnEligibility = derivePlayerRegionSpawnEligibility({
+        region,
+        regions: SERVER_CATALOG_REGIONS,
+        cityOwnershipState,
+        regularCityIds: candidateIds,
+        resetGeneration: RESET_GENERATION,
+        ownershipStateAuthoritative: true,
+        minimumNpcCitiesForSpawn: MINIMUM_SPAWN_NPC_CITIES,
+      });
+      if (!spawnEligibility.spawnEligible) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "This player region no longer has enough unowned cities for another placement.",
+          {
+            reason: "region-spawn-ineligible",
+            regionId: chosenIsland.regionId,
+            currentNpcCityCount: spawnEligibility.currentNpcCityCount,
+            minimumNpcCitiesForSpawn: spawnEligibility.minimumNpcCitiesForSpawn,
+          },
+        );
+      }
+      if (!expansionSnap?.exists) {
+        throw new HttpsError("failed-precondition", "The New Lands expansion state is not initialized.");
+      }
+      thresholdActivation = CORE_EXPANSION.planThresholdActivation({
+        state: expansionSnap.data() || {},
+        resetGeneration: RESET_GENERATION,
+        sourceRegionId: chosenIsland.regionId,
+        remainingNpcCities: spawnEligibility.currentNpcCityCount - 1,
+        thresholdRevision: placement.expectedPopulation + 1,
+      });
+      if (thresholdActivation.changed) {
+        transaction.set(expansionRef, {
+          ...thresholdActivation.state,
+          worldId: ONLINE_WORLD_ID,
+          realmShardId: getCurrentRealmShardId(),
+          lastActivationEventId: thresholdActivation.eventId,
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    const chosenCity = cityOwnershipState.find(city => (
+      safeString(city.resetGeneration, 120) === RESET_GENERATION
+      && safeString(city.ownerKind, 24).toLowerCase() === "neutral"
+      && !getOwnerUid(city)
+      && !isStronghold(city)
+    ));
+    const chosenCityRef = chosenCity ? cityRefsById.get(chosenCity.id) : null;
     if (!chosenCityRef || !chosenCity) {
       return {
         starterIslandExhausted: true,
@@ -17058,6 +17228,9 @@ async function claimFreshStartingCityInAssignedShard(request) {
       realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
       alreadyClaimed: false,
+      activatedRegionIds: thresholdActivation?.changed
+        ? thresholdActivation.activatedRegions.map(region => region.id)
+        : [],
       currentUser: createStartingCityCurrentUser(freshProfile, {
         uid,
         cityId: chosenCity.id,
@@ -17127,13 +17300,14 @@ async function claimFreshStartingCityInAssignedShard(request) {
   };
 
   const exhaustedSpawnRegionIds = new Set();
+  const ineligibleSpawnRegionIds = new Set();
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
-    const islandRefs = NEW_PLAYER_SPAWN_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
+    const islandRefs = spawnRegionIds.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
     const islandSnapshots = await db.getAll(...islandRefs);
     const islandEntries = islandSnapshots.flatMap((snap, index) => {
       const island = snap.exists ? snap.data() || {} : {};
-      const regionId = NEW_PLAYER_SPAWN_REGION_IDS[index];
+      const regionId = spawnRegionIds[index];
       const availability = spawnAvailabilityByRegion.get(regionId);
       if (
         !snap.exists
@@ -17154,7 +17328,7 @@ async function claimFreshStartingCityInAssignedShard(request) {
     });
     if (!islandEntries.length) {
       const seededRegionCount = spawnAvailability.filter(entry => entry.currentIsland).length;
-      if (seededRegionCount < NEW_PLAYER_SPAWN_REGION_IDS.length) {
+      if (seededRegionCount < spawnRegionIds.length) {
         throw new HttpsError("failed-precondition", "New-player islands are still being prepared.");
       }
       throw new HttpsError(
@@ -17162,20 +17336,24 @@ async function claimFreshStartingCityInAssignedShard(request) {
         "No unclaimed starting city is available in this realm.",
         {
           reason: "starter-realm-exhausted",
-          exhaustedRegionIds: [...NEW_PLAYER_SPAWN_REGION_IDS].sort(),
+          exhaustedRegionIds: [...spawnRegionIds].sort(),
         }
       );
     }
-    const availableIslandEntries = islandEntries.filter(
-      entry => !exhaustedSpawnRegionIds.has(entry.regionId)
-    );
+    const availableIslandEntries = islandEntries.filter(entry => (
+      !exhaustedSpawnRegionIds.has(entry.regionId)
+      && !ineligibleSpawnRegionIds.has(entry.regionId)
+    ));
     if (!availableIslandEntries.length) {
       throw new HttpsError(
         "resource-exhausted",
         "No unclaimed starting city is available in this realm.",
         {
           reason: "starter-realm-exhausted",
-          exhaustedRegionIds: [...exhaustedSpawnRegionIds].sort(),
+          exhaustedRegionIds: [...new Set([
+            ...exhaustedSpawnRegionIds,
+            ...ineligibleSpawnRegionIds,
+          ])].sort(),
         }
       );
     }
@@ -17216,14 +17394,28 @@ async function claimFreshStartingCityInAssignedShard(request) {
           regionId: chosenIsland.regionId,
           islandId: chosenIsland.islandId,
           exhaustedRegionCount: exhaustedSpawnRegionIds.size,
-          remainingRegionCount: Math.max(0, NEW_PLAYER_SPAWN_REGION_IDS.length - exhaustedSpawnRegionIds.size),
+          remainingRegionCount: Math.max(0, spawnRegionIds.length - exhaustedSpawnRegionIds.size),
         });
         continue;
       }
       if (result?.alreadyClaimed) await releasePlacementReservation(placement);
+      if (CORE_EXPANSION_TOPOLOGY_ACTIVE && result?.activatedRegionIds?.length) {
+        await Promise.all(result.activatedRegionIds.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
+      }
       return result;
     } catch (error) {
       await releasePlacementReservation(placement);
+      const spawnIneligible = safeString(error?.details?.reason || error?.details, 120)
+        === "region-spawn-ineligible";
+      if (spawnIneligible) {
+        ineligibleSpawnRegionIds.add(chosenIsland.regionId);
+        if (CORE_EXPANSION_TOPOLOGY_ACTIVE) {
+          const refreshedRegionIds = await getNewPlayerSpawnRegionIdsForClaim();
+          const admissionAdvanced = refreshedRegionIds.some(regionId => !spawnRegionIds.includes(regionId));
+          if (admissionAdvanced) return claimFreshStartingCityInAssignedShard(request);
+        }
+        continue;
+      }
       const errorCode = Number(error?.code);
       const retryableContention = errorCode === 10
         || safeString(error?.details, 200).toLowerCase().includes("transaction lock timeout")
@@ -17304,7 +17496,7 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
   const uid = requireAuth(request);
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = requireKnownWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
+  const regionId = await requireActiveWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
   const rawMode = safeString(data.mode, 16).toLowerCase();
   if (rawMode && rawMode !== "exact" && rawMode !== "max") {
     throw new HttpsError("invalid-argument", "That city upgrade mode is not supported.");
@@ -17628,7 +17820,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
   const uid = requireAuth(request);
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = requireKnownWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
+  const regionId = await requireActiveWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
   const order = normalizeArmyPayload(data, uid);
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to relinquish.");
 
@@ -20377,8 +20569,10 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
   if (!order.fromId || !order.toId || order.fromId === order.toId) {
     throw new HttpsError("invalid-argument", "Choose a valid assembly city and rally objective.");
   }
-  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
-  order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
+  [order.sourceRegionId, order.targetRegionId] = await requireActiveWorldRegionIds([
+    order.sourceRegionId,
+    order.targetRegionId,
+  ]);
   if (order.targetType !== "city") {
     throw new HttpsError("failed-precondition", "Rallies may target only Strongholds or the Crown Citadel.");
   }
@@ -20583,7 +20777,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
   if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally to join.");
   const order = normalizeArmyPayload(request.data || {}, uid);
   if (!order.fromId) throw new HttpsError("invalid-argument", "Choose a source city.");
-  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
+  order.sourceRegionId = await requireActiveWorldRegionId(order.sourceRegionId);
   if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
     throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
   }
@@ -21386,8 +21580,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
 exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
-  const sourceRegionId = requireKnownWorldRegionId(data.sourceRegionId || data.fromRegionId);
-  const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.toRegionId);
+  const [sourceRegionId, targetRegionId] = await requireActiveWorldRegionIds([
+    data.sourceRegionId || data.fromRegionId,
+    data.targetRegionId || data.toRegionId,
+  ]);
   const fromId = safeString(data.fromId, 96);
   const toId = safeString(data.toId, 96);
   const targetType = data.targetType === "camp" ? "camp" : "city";
@@ -21858,6 +22054,7 @@ exports.previewArmyRoute = timedCallable(
     const uid = requireAuth(request);
     const nowMs = Date.now();
     const order = normalizeAuthoritativeRouteRequest(request.data || {});
+    await requireActiveWorldRegionIds([order.sourceRegionId, order.targetRegionId]);
     const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
     const targetRef = order.targetType === "camp"
       ? campRefForRegion(order.targetRegionId, order.toId)
@@ -22669,7 +22866,7 @@ exports.sendNearbyScouts = timedCallable(
     const data = request.data || {};
     const nowMs = Date.now();
     const requestId = normalizeBulkOrderRequestId(data.requestId);
-    const sourceRegionId = requireKnownWorldRegionId(data.sourceRegionId || data.regionId);
+    const sourceRegionId = await requireActiveWorldRegionId(data.sourceRegionId || data.regionId);
     const sourceCityId = safeString(data.sourceCityId || data.fromId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const targetCityIds = normalizeBulkCityIds(data.targetCityIds || data.targetIds, MAX_NEARBY_SCOUT_TARGETS)
       .sort();
@@ -22956,7 +23153,7 @@ exports.sendRegroupOrders = timedCallable(
     const data = request.data || {};
     const nowMs = Date.now();
     const requestId = normalizeBulkOrderRequestId(data.requestId);
-    const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.regionId);
+    const targetRegionId = await requireActiveWorldRegionId(data.targetRegionId || data.regionId);
     const targetCityId = safeString(data.targetCityId || data.toId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const sourceCityIds = normalizeBulkCityIds(data.sourceCityIds || data.sourceIds, MAX_REGROUP_SOURCES)
       .sort();
@@ -23179,8 +23376,10 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
   if (!order.sourceRegionId || !order.targetRegionId) {
     throw new HttpsError("invalid-argument", "Missing source or destination region.");
   }
-  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
-  order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
+  [order.sourceRegionId, order.targetRegionId] = await requireActiveWorldRegionIds([
+    order.sourceRegionId,
+    order.targetRegionId,
+  ]);
   if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
     throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
   }
@@ -28645,11 +28844,22 @@ function stableDeedCampChoiceIndex(seed = "", count = 0) {
   return size ? stableDeedCampHash(seed) % size : -1;
 }
 
-function getDeedCampCandidateRegionIds(camp = {}, holderUid = "", payoutAtMs = 0, selectionEntropy = "") {
+function getDeedCampCandidateRegionIds(
+  camp = {},
+  holderUid = "",
+  payoutAtMs = 0,
+  selectionEntropy = "",
+  activeRegionIds = STATIC_ACTIVE_SERVER_REGION_IDS,
+) {
   const seed = `${safeString(selectionEntropy, 64)}:${safeString(camp.id, 96)}:${Math.max(0, Math.floor(safeNumber(payoutAtMs, 0)))}:${safeString(holderUid, 128)}`;
   return SERVER_WORLD_MAPS
     .map(map => normalizeRegionId(map?.id))
-    .filter(regionId => regionId && regionId !== DEED_CAMP_EXCLUDED_REGION_ID && getServerWorldRegularCityIds(regionId).size)
+    .filter(regionId => (
+      regionId
+      && activeRegionIds.has(regionId)
+      && regionId !== DEED_CAMP_EXCLUDED_REGION_ID
+      && getServerWorldRegularCityIds(regionId).size
+    ))
     .sort((left, right) => (
       stableDeedCampHash(`${seed}:${left}`) - stableDeedCampHash(`${seed}:${right}`)
       || left.localeCompare(right)
@@ -28657,7 +28867,17 @@ function getDeedCampCandidateRegionIds(camp = {}, holderUid = "", payoutAtMs = 0
 }
 
 async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", payoutAtMs = 0, selectionEntropy = "") {
-  for (const regionId of getDeedCampCandidateRegionIds(camp, holderUid, payoutAtMs, selectionEntropy)) {
+  const expansionSnap = CORE_EXPANSION_TOPOLOGY_ACTIVE
+    ? await transaction.get(coreExpansionStateRef())
+    : null;
+  const activeRegionIds = getActiveServerRegionIds(expansionSnap?.exists ? expansionSnap.data() : null);
+  for (const regionId of getDeedCampCandidateRegionIds(
+    camp,
+    holderUid,
+    payoutAtMs,
+    selectionEntropy,
+    activeRegionIds,
+  )) {
     const regularCityIds = getServerWorldRegularCityIds(regionId);
     if (!regularCityIds.size) continue;
     const neutralQuery = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
@@ -29240,7 +29460,7 @@ exports.resolveRewardCampPayout = onCall({ region: "us-central1", maxInstances: 
   const callerUid = requireAuth(request);
   const data = request.data || {};
   const campId = safeString(data.campId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = requireKnownWorldRegionId(data.regionId || data.mapId);
+  const regionId = await requireActiveWorldRegionId(data.regionId || data.mapId);
   if (!campId || !getServerWorldCampIds(regionId).has(campId)) {
     throw new HttpsError("invalid-argument", "Choose a valid reward camp.");
   }
@@ -29253,7 +29473,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
   const uid = requireAuth(request);
   const data = request.data || {};
   const campId = safeString(data.campId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = requireKnownWorldRegionId(data.regionId || data.mapId);
+  const regionId = await requireActiveWorldRegionId(data.regionId || data.mapId);
   if (!campId || !getServerWorldCampIds(regionId).has(campId)) {
     throw new HttpsError("invalid-argument", "Choose a valid reward camp.");
   }
@@ -30284,12 +30504,18 @@ async function cleanupLegacyRewardCampPublicMetadata() {
   if (markerSnap.exists && markerSnap.data()?.status === "complete") {
     return { status: "complete", campsCleaned: 0 };
   }
-  const campRefs = SERVER_WORLD_MAPS.flatMap(map => (
+  const expansionState = CORE_EXPANSION_TOPOLOGY_ACTIVE
+    ? await ensureCoreExpansionState()
+    : null;
+  const activeRegionIds = getActiveServerRegionIds(expansionState);
+  const campRefs = SERVER_WORLD_MAPS
+    .filter(map => activeRegionIds.has(normalizeRegionId(map?.id)))
+    .flatMap(map => (
     (Array.isArray(map?.camps) ? map.camps : [])
       .map(camp => safeString(camp?.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
       .filter(Boolean)
       .map(campId => campRefForRegion(map.id, campId))
-  ));
+    ));
   const campSnaps = campRefs.length ? await db.getAll(...campRefs) : [];
   const leakingCampSnaps = campSnaps.filter(campSnap => (
     campSnap.exists

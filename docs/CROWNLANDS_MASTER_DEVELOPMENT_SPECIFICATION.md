@@ -242,6 +242,9 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 ### Pending Core world
 
 - A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges has been developed and staged. **Status:** `IN DEVELOPMENT`.
+- The first expansion layer contains exactly 24 maps: five maps along each cardinal side of the Core plus the four corner maps. Together with the 25-map Core, this forms a complete 7×7 footprint.
+- Later player-growth layers allocate positions in clockwise order. Each layer begins on its north side; capacity expansion activates the next two positions together, and a later layer cannot begin until the preceding layer's allocation order is complete.
+- Each generated New Lands map begins with 40 neutral NPC cities. When the currently admitting map reaches 20 remaining neutral NPC cities, the server activates the next two maps in clockwise allocation order for new-player placement. The threshold transition must be transactional, idempotent, and safe under concurrent claims.
 - The Core is intended to be non-spawnable where reserved central/objective rules require it. Exact current reservation data must come from the current branch. **Status:** `IN DEVELOPMENT`.
 - Future outward player regions are intended to expand the realm as population and capacity require. **Status:** `IN DEVELOPMENT`.
 - Production migration to this world has not occurred.
@@ -249,7 +252,7 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 ### Needs verification
 
 - Exact 20-region production topology, city capacities, total city count, reserved positions, and connection graph: **NEEDS VERIFICATION** against current production data.
-- Exact automated expansion trigger, generation order, rollback behavior, and capacity thresholds: **NEEDS VERIFICATION** before promotion from development design.
+- Exact rollback behavior remains **NEEDS VERIFICATION** before promotion from development design. The confirmed capacity trigger activates two additional maps when the current admitting map has 20 neutral NPC cities remaining; generation follows the complete 24-map first ring and then north-origin, clockwise allocation in later layers.
 
 ## 3. Cities & Progression
 
@@ -848,7 +851,7 @@ The earlier broad statement that “items persist” is superseded by this allow
 
 - Season/reset persistence policy is confirmed design.
 - One shared monthly realm and removal of the 50-player split are confirmed design. The temporary five-island starter placement is not the approved reset topology and remains inactive while the production reset is held.
-- The approved reset target is the 25-map Core with northward expanding New Lands. Exact expansion capacity triggers, left-to-right generation, additional-layer creation, routing, rollback, and migration behavior require implementation and validation before activation.
+- The approved reset target is the 25-map Core, a complete 24-map first ring containing five maps on each cardinal side plus four corner maps, and later New Lands layers that begin on the north side and allocate clockwise. Each New Lands map starts with 40 neutral NPC cities; at 20 remaining neutral cities on the current admitting map, the next two maps activate for incoming players. Routing, rollback, and migration behavior require implementation and validation before activation.
 - Production reset enforcement is `IN DEVELOPMENT`.
 - A previously reported staging reset rehearsal preserved flags, clans, and Common Gear data while resetting world/season state. The inspected current `origin/main` executable reset path does not preserve clans or Common Gear, so the rehearsal is not evidence of current code parity.
 - The production reset has not been verified as executed under this policy.

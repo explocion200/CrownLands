@@ -29,7 +29,7 @@ assert.match(server, /function isNewPlayerSpawnMap[\s\S]*?newPlayerSpawnEligible
 assert.match(server, /NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES\s*=\s*10/);
 assert.match(server, /loadNewPlayerSpawnAvailability[\s\S]*?\.where\("ownerKind",\s*"==",\s*"neutral"\)[\s\S]*?ready:/);
 assert.match(server, /readyIslandEntries\.length\s*\?\s*readyIslandEntries\s*:\s*availableIslandEntries/);
-assert.match(server, /safeString\(city\.ownerKind[\s\S]*?!==\s*"neutral"/);
+assert.match(server, /chosenCity[\s\S]*?safeString\(city\.ownerKind[\s\S]*?===\s*"neutral"[\s\S]*?!getOwnerUid\(city\)/);
 assert.doesNotMatch(server, /const STARTER_REGION_IDS/);
 
 assert.match(client, /function isNewPlayerSpawnRegion[\s\S]*?newPlayerSpawnEligible/);
