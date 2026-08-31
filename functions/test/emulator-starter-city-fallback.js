@@ -23,7 +23,7 @@ const spawnRegionIds = (worldLayout.maps || [])
     : String(map?.type || "").toLowerCase() === "starter")
   .map(map => String(map.id || ""))
   .filter(Boolean);
-const southernSpawnRegionIds = ["region_16", "region_17", "region_19", "region_21", "region_22"];
+const designatedSpawnRegionIds = ["region_11", "region_12", "region_13", "region_14", "region_15"];
 const regularCityIdsByRegion = new Map(spawnRegionIds.map(regionId => [
   regionId,
   new Set((mapsById.get(regionId)?.cities || []).map(city => String(city.id || ""))),
@@ -178,18 +178,21 @@ async function assertNoReservedSlotsFor(userIds, label) {
 }
 
 async function main() {
-  assert(spawnRegionIds.length === 10, `Expected 10 designated spawn maps, found ${spawnRegionIds.length}.`);
-  assert(southernSpawnRegionIds.every(regionId => spawnRegionIds.includes(regionId)), "A southern map is not spawn eligible.");
-  southernSpawnRegionIds.forEach(regionId => {
+  assert(spawnRegionIds.length === 5, `Expected 5 designated spawn maps, found ${spawnRegionIds.length}.`);
+  assert(
+    designatedSpawnRegionIds.every(regionId => spawnRegionIds.includes(regionId)),
+    "A designated starter map is not spawn eligible."
+  );
+  designatedSpawnRegionIds.forEach(regionId => {
     const map = mapsById.get(regionId);
-    assert(map?.type === "midgame", `${regionId} lost its midgame progression type.`);
+    assert(map?.type === "starter", `${regionId} lost its starter progression type.`);
     assert(map?.newPlayerSpawnEligible === true, `${regionId} lacks explicit spawn eligibility.`);
     assert((map.cities || []).every(city => Number(city.level) === 1), `${regionId} contains a non-level-1 seed city.`);
   });
 
   const users = await Promise.all([
     createAuthUser("seed"),
-    ...southernSpawnRegionIds.map(regionId => createAuthUser(`south-${regionId}`)),
+    ...designatedSpawnRegionIds.map(regionId => createAuthUser(`starter-${regionId}`)),
     createAuthUser("preferred"),
     createAuthUser("fallback"),
     createAuthUser("concurrent-a"),
@@ -199,15 +202,15 @@ async function main() {
   const [seedUser, ...claimUsers] = users;
   await seedSpawnIslands(seedUser.token);
 
-  for (let index = 0; index < southernSpawnRegionIds.length; index += 1) {
-    const targetRegionId = southernSpawnRegionIds[index];
+  for (let index = 0; index < designatedSpawnRegionIds.length; index += 1) {
+    const targetRegionId = designatedSpawnRegionIds[index];
     const overrides = Object.fromEntries(spawnRegionIds.map((regionId, regionIndex) => [regionId, {
       playerCount: regionId === targetRegionId ? 0 : 50 + regionIndex,
       neutralCount: Number.MAX_SAFE_INTEGER,
     }]));
     await setAllSpawnStates(overrides);
     const claim = await callFunction("claimStartingCity", claimUsers[index].token, {
-      playerName: `Southern ${targetRegionId}`,
+      playerName: `Starter ${targetRegionId}`,
     });
     assert(claimRegionId(claim) === targetRegionId, `${targetRegionId} was not selected when it was the balanced choice.`);
     await assertNoReservedSlotsFor([claimUsers[index].uid], `${targetRegionId} claim`);
@@ -215,16 +218,16 @@ async function main() {
 
   const preferredUser = claimUsers[5];
   await setAllSpawnStates({
-    region_16: { playerCount: 10, neutralCount: 10 },
-    region_17: { playerCount: 0, neutralCount: 1 },
+    region_11: { playerCount: 10, neutralCount: 10 },
+    region_12: { playerCount: 0, neutralCount: 1 },
   });
   const preferredClaim = await callFunction("claimStartingCity", preferredUser.token, { playerName: "Ready-map preference" });
-  assert(claimRegionId(preferredClaim) === "region_16", "A below-threshold map displaced a map with 10 neutral cities.");
+  assert(claimRegionId(preferredClaim) === "region_11", "A below-threshold map displaced a map with 10 neutral cities.");
 
   const fallbackUser = claimUsers[6];
-  await setAllSpawnStates({ region_21: { playerCount: 0, neutralCount: 1 } });
+  await setAllSpawnStates({ region_15: { playerCount: 0, neutralCount: 1 } });
   const fallbackClaim = await callFunction("claimStartingCity", fallbackUser.token, { playerName: "Last neutral fallback" });
-  assert(claimRegionId(fallbackClaim) === "region_21", "A valid final neutral city was unavailable to a new player.");
+  assert(claimRegionId(fallbackClaim) === "region_15", "A valid final neutral city was unavailable to a new player.");
 
   const concurrentUsers = [claimUsers[7], claimUsers[8]];
   await setAllSpawnStates({
@@ -270,7 +273,7 @@ async function main() {
   assert(!(await db.doc(`players/${exhaustedUser.uid}`).get()).exists, "An exhausted claim created a player profile.");
   await assertNoReservedSlotsFor([exhaustedUser.uid], "All-region exhaustion");
 
-  console.log("New-player admission passed for all southern maps, readiness preference, final-city fallback, concurrency, and exhaustion.");
+  console.log("New-player admission passed for all five starter maps, readiness preference, final-city fallback, concurrency, and exhaustion.");
 }
 
 main().catch(error => {

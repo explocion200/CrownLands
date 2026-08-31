@@ -107,53 +107,51 @@ async function main() {
   batch.set(db.doc("realmConfig/current"), {
     resetGeneration: RESET_GENERATION,
     worldId: WORLD_ID,
-    mode: "monthly-sharded",
+    mode: "monthly-shared",
     monthKey: "2026-09",
-    realmShardCapacity: 50,
+    sharedRealmId: SHARD_ONE,
+    startingCityCapacity: 363,
   });
 
-  [
-    { player: playerOne, shardId: SHARD_ONE },
-    { player: playerTwo, shardId: SHARD_TWO },
-  ].forEach(({ player, shardId }, index) => {
+  batch.set(db.doc(`islands/${islandId(SHARD_ONE)}`), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: SHARD_ONE,
+    regionId: "starter-west",
+  });
+  [playerOne, playerTwo].forEach((player, index) => {
     const shared = {
       uid: player.uid,
       resetGeneration: RESET_GENERATION,
       worldId: WORLD_ID,
-      realmShardId: shardId,
+      realmShardId: SHARD_ONE,
     };
-    batch.set(db.doc(`players/${player.uid}`), { ...shared, playerName: `Shard Tester ${index + 1}` });
+    batch.set(db.doc(`players/${player.uid}`), { ...shared, playerName: `Realm Tester ${index + 1}` });
     batch.set(db.doc(`realmGenerations/${RESET_GENERATION}/assignments/${player.uid}`), {
       ...shared,
       status: "claimed",
-      sequence: index * 50,
+      sequence: index,
     });
-    batch.set(db.doc(`islands/${islandId(shardId)}`), {
-      resetGeneration: RESET_GENERATION,
-      worldId: WORLD_ID,
-      realmShardId: shardId,
-      regionId: "starter-west",
-    });
-    batch.set(db.doc(`islands/${islandId(shardId)}/cities/city_${index + 1}`), {
+    batch.set(db.doc(`islands/${islandId(SHARD_ONE)}/cities/city_${index + 1}`), {
       ...shared,
       ownerUid: player.uid,
       ownerKind: "player",
     });
-    batch.set(db.doc(`realmEvents/${storageId(shardId)}/activity/event_${index + 1}`), {
+    batch.set(db.doc(`realmEvents/${storageId(SHARD_ONE)}/activity/event_${index + 1}`), {
       resetGeneration: RESET_GENERATION,
       worldId: WORLD_ID,
-      realmShardId: shardId,
+      realmShardId: SHARD_ONE,
       eventType: "STRONGHOLD_CAPTURED",
       occurredAtMs: nowMs + index,
     });
-    batch.set(db.doc(`leaderboards/${storageId(shardId)}/entries/${player.uid}`), {
+    batch.set(db.doc(`leaderboards/${storageId(SHARD_ONE)}/entries/${player.uid}`), {
       ...shared,
       kingPower: 100 + index,
     });
-    batch.set(db.doc(`clanLeaderboards/${storageId(shardId)}/entries/clan_${index + 1}`), {
+    batch.set(db.doc(`clanLeaderboards/${storageId(SHARD_ONE)}/entries/clan_${index + 1}`), {
       ...shared,
       clanId: `clan_${index + 1}`,
-      name: `Shard Clan ${index + 1}`,
+      name: `Realm Clan ${index + 1}`,
       tag: `S${index + 1}`,
       memberCount: 1,
       totalKingPower: 100 + index,
@@ -179,6 +177,33 @@ async function main() {
       regionId: index === 0 ? "stale-wrong-region" : regionId,
     });
   });
+  batch.set(db.doc(`islands/${islandId(SHARD_TWO)}`), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: SHARD_TWO,
+    regionId: "starter-west",
+  });
+  batch.set(db.doc(`islands/${islandId(SHARD_TWO)}/cities/rogue_city`), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: SHARD_TWO,
+    ownerUid: "rogue-player",
+    ownerKind: "player",
+  });
+  batch.set(db.doc(`realmEvents/${storageId(SHARD_TWO)}/activity/rogue_event`), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: SHARD_TWO,
+    eventType: "ROGUE_PARTITION_EVENT",
+    occurredAtMs: nowMs + 10,
+  });
+  batch.set(db.doc(`leaderboards/${storageId(SHARD_TWO)}/entries/rogue-player`), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: SHARD_TWO,
+    uid: "rogue-player",
+    kingPower: 999,
+  });
   await batch.commit();
 
   const ownedCityRosterResponse = await clientRunQuery(
@@ -189,17 +214,17 @@ async function main() {
   const ownedCityRows = await ownedCityRosterResponse.json();
   assert(
     ownedCityRosterResponse.status === 200,
-    `A player could not list their complete shard-owned city roster (expected 200, received ${ownedCityRosterResponse.status}: ${JSON.stringify(ownedCityRows)})`
+    `A player could not list their complete shared-realm city roster (expected 200, received ${ownedCityRosterResponse.status}: ${JSON.stringify(ownedCityRows)})`
   );
   const ownedCityNames = ownedCityRows
     .map(row => row.document?.name || "")
     .filter(Boolean)
     .sort();
-  assert(ownedCityNames.length === 3, `The shard-owned roster returned ${ownedCityNames.length} cities instead of 3.`);
-  assert(new Set(ownedCityNames).size === 3, "The shard-owned roster returned a city more than once.");
+  assert(ownedCityNames.length === 3, `The shared-realm roster returned ${ownedCityNames.length} cities instead of 3.`);
+  assert(new Set(ownedCityNames).size === 3, "The shared-realm roster returned a city more than once.");
   assert(
     ownedCityNames.every(name => name.includes(`--${SHARD_ONE}--`)),
-    "The owned-city roster returned a city outside the player's realm shard."
+    "The owned-city roster returned a city outside the canonical shared-realm partition."
   );
   assert(
     ownedCityNames.some(name => name.includes(`--${SHARD_ONE}--relic-vale/cities/city_3`)),
@@ -222,7 +247,7 @@ async function main() {
   );
   assert(
     otherShardOwnedCityRosterResponse.status === 403,
-    `A player queried another shard's owned-city roster (expected 403, received ${otherShardOwnedCityRosterResponse.status})`
+    `A player queried a noncanonical realm partition (expected 403, received ${otherShardOwnedCityRosterResponse.status})`
   );
 
   const clanLeaderboardResponse = await clientRunQuery(
@@ -239,15 +264,17 @@ async function main() {
   );
   assert(
     clanLeaderboardResponse.status === 200,
-    `A player could not list their shard clan leaderboard (expected 200, received ${clanLeaderboardResponse.status})`
+    `A player could not list the shared clan leaderboard (expected 200, received ${clanLeaderboardResponse.status})`
   );
   const clanLeaderboardRows = await clanLeaderboardResponse.json();
   const clanLeaderboardNames = clanLeaderboardRows
     .map(row => row.document?.name || "")
     .filter(Boolean);
   assert(
-    clanLeaderboardNames.length === 1 && clanLeaderboardNames[0].endsWith("/entries/clan_1"),
-    "A clan leaderboard query returned entries outside the player's realm shard."
+    clanLeaderboardNames.length === 2
+      && clanLeaderboardNames.some(name => name.endsWith("/entries/clan_1"))
+      && clanLeaderboardNames.some(name => name.endsWith("/entries/clan_2")),
+    "The shared clan leaderboard did not expose both players' realm entries."
   );
   const otherShardClanLeaderboardResponse = await clientRunQuery(
     playerOne.token,
@@ -263,21 +290,24 @@ async function main() {
   );
   assert(
     otherShardClanLeaderboardResponse.status === 403,
-    `A player listed another shard's clan leaderboard (expected 403, received ${otherShardClanLeaderboardResponse.status})`
+    `A player listed a noncanonical partition's clan leaderboard (expected 403, received ${otherShardClanLeaderboardResponse.status})`
   );
 
-  await expectStatus(playerOne.token, `islands/${islandId(SHARD_ONE)}`, 200, "A player could not read their shard island");
-  await expectStatus(playerOne.token, `islands/${islandId(SHARD_TWO)}`, 403, "A player read another shard island");
-  await expectStatus(playerOne.token, `realmEvents/${storageId(SHARD_ONE)}/activity/event_1`, 200, "A player could not read their shard activity");
-  await expectStatus(playerOne.token, `realmEvents/${storageId(SHARD_TWO)}/activity/event_2`, 403, "A player read another shard activity");
-  await expectStatus(playerOne.token, `leaderboards/${storageId(SHARD_ONE)}/entries/${playerOne.uid}`, 200, "A player could not read their shard leaderboard");
-  await expectStatus(playerOne.token, `leaderboards/${storageId(SHARD_TWO)}/entries/${playerTwo.uid}`, 403, "A player read another shard leaderboard");
-  await expectStatus(playerOne.token, `realmGenerations/${RESET_GENERATION}/assignments/${playerOne.uid}`, 200, "A player could not read their own shard assignment");
+  await expectStatus(playerOne.token, `islands/${islandId(SHARD_ONE)}`, 200, "A player could not read the shared realm island");
+  await expectStatus(playerOne.token, `islands/${islandId(SHARD_ONE)}/cities/city_2`, 200, "A player could not read another player's city in the shared realm");
+  await expectStatus(playerOne.token, `islands/${islandId(SHARD_TWO)}`, 403, "A player read a noncanonical realm partition");
+  await expectStatus(playerOne.token, `realmEvents/${storageId(SHARD_ONE)}/activity/event_1`, 200, "A player could not read shared realm activity");
+  await expectStatus(playerOne.token, `realmEvents/${storageId(SHARD_ONE)}/activity/event_2`, 200, "A player could not read another player's shared realm activity");
+  await expectStatus(playerOne.token, `realmEvents/${storageId(SHARD_TWO)}/activity/rogue_event`, 403, "A player read noncanonical realm activity");
+  await expectStatus(playerOne.token, `leaderboards/${storageId(SHARD_ONE)}/entries/${playerOne.uid}`, 200, "A player could not read the shared leaderboard");
+  await expectStatus(playerOne.token, `leaderboards/${storageId(SHARD_ONE)}/entries/${playerTwo.uid}`, 200, "A player could not read another player's shared leaderboard entry");
+  await expectStatus(playerOne.token, `leaderboards/${storageId(SHARD_TWO)}/entries/rogue-player`, 403, "A player read a noncanonical partition leaderboard");
+  await expectStatus(playerOne.token, `realmGenerations/${RESET_GENERATION}/assignments/${playerOne.uid}`, 200, "A player could not read their own realm assignment");
   await expectStatus(playerOne.token, `realmGenerations/${RESET_GENERATION}/assignments/${playerTwo.uid}`, 403, "A player read another assignment");
-  await expectStatus(playerTwo.token, `islands/${islandId(SHARD_TWO)}/cities/city_2`, 200, "The second shard could not read its own city");
-  await expectStatus(playerTwo.token, `islands/${islandId(SHARD_ONE)}/cities/city_1`, 403, "The second shard read the first shard city");
+  await expectStatus(playerTwo.token, `islands/${islandId(SHARD_ONE)}/cities/city_2`, 200, "The second player could not read their city");
+  await expectStatus(playerTwo.token, `islands/${islandId(SHARD_ONE)}/cities/city_1`, 200, "The second player could not read the first player's city");
 
-  console.log("Realm shard rules passed: complete multi-region city rosters, islands, activity, player and clan leaderboards, and assignments remain isolated between shards.");
+  console.log("Shared-realm rules passed: players can interact through one canonical realm while noncanonical partitions and private assignments remain isolated.");
 }
 
 main().catch(error => {

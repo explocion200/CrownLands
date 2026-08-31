@@ -63,7 +63,7 @@ After Google sign-in, the game tries the current reset slot in Firebase first an
 The game creates one island document per world region and realm shard, and subscribes to only one active island at a time:
 
 - `islands/main-fresh-2026-07-26-server-reset-west`: one region metadata document for the current reset.
-- `islands/main-realm-2026-09--shard_0001--west`: the equivalent monthly sharded island format.
+- `islands/main-realm-2026-09--shard_0001--west`: the monthly shared-realm island format; `shard_0001` is the canonical storage partition, not a separate player realm.
 - `islands/main-fresh-2026-07-26-server-reset-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
 - `islands/{islandId}/armies/{armyId}`: server-written moving troops, route, owner, arrival time, and mission type.
 - `islands/{islandId}/reports/{reportId}`: server-written shared report records.

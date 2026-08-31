@@ -407,7 +407,8 @@ const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
 let GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
-const GAME_SERVER_CAPACITY = REALM_TOPOLOGY.getRealmShardCapacity(REALM_CONFIG);
+const SHARED_REALM_ID = REALM_TOPOLOGY.SHARED_REALM_SHARD_ID;
+const SHARED_REALM_STARTING_CITY_CAPACITY = REALM_TOPOLOGY.getSharedRealmStartingCityCapacity(REALM_CONFIG);
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const WELCOME_BACK_SUMMARY_VERSION = 1;
 const WELCOME_BACK_MIN_AWAY_MS = 60 * 1000;
@@ -788,8 +789,12 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
     ]);
     const assignment = assignmentSnap.exists ? assignmentSnap.data() || {} : {};
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
+    const expectedRealmShardId = identity.mode === "legacy"
+      ? LEGACY_REALM_SHARD_ID
+      : SHARED_REALM_ID;
     const assignmentIsCurrent = safeString(assignment.resetGeneration, 120) === identity.resetGeneration
-      && safeString(assignment.worldId, 120) === identity.worldId;
+      && safeString(assignment.worldId, 120) === identity.worldId
+      && REALM_TOPOLOGY.normalizeRealmShardId(assignment.realmShardId) === expectedRealmShardId;
     if (assignmentIsCurrent) {
       return {
         ...assignment,
@@ -800,7 +805,7 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
 
     const playerIsCurrent = safeString(player.resetGeneration, 120) === identity.resetGeneration
       && safeString(player.worldId, 120) === identity.worldId;
-    const preserveLegacyPlacement = identity.mode !== "monthly-sharded"
+    const preserveLegacyPlacement = identity.mode === "legacy"
       || (playerIsCurrent && !safeString(player.realmShardId, 48));
     const generation = generationSnap.exists ? generationSnap.data() || {} : {};
     const sequence = Math.max(0, Math.floor(safeNumber(generation.nextPlayerSequence, 0)));
@@ -811,7 +816,7 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
           slotIndex: -1,
           sequence: -1,
         }
-      : REALM_TOPOLOGY.getRealmShardForSequence(sequence, GAME_SERVER_CAPACITY);
+      : REALM_TOPOLOGY.getSharedRealmAssignment(sequence);
     const shardRef = realmShardRef(placement.realmShardId, identity.resetGeneration);
     const assignmentPatch = {
       uid,
@@ -838,7 +843,9 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
         monthKey: identity.monthKey,
         startsAtMs: identity.startsAtMs,
         endsAtMs: identity.endsAtMs,
-        realmShardCapacity: GAME_SERVER_CAPACITY,
+        topology: "shared-realm",
+        sharedRealmId: SHARED_REALM_ID,
+        startingCityCapacity: SHARED_REALM_STARTING_CITY_CAPACITY,
         nextPlayerSequence: sequence + 1,
         assignedCount: FieldValue.increment(1),
         highestShardOrdinal: Math.max(
@@ -855,7 +862,8 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
         releaseId: REALM_RELEASE_ID,
         resetGeneration: identity.resetGeneration,
         worldId: identity.worldId,
-        capacity: GAME_SERVER_CAPACITY,
+        topology: "shared-realm",
+        startingCityCapacity: SHARED_REALM_STARTING_CITY_CAPACITY,
         assignedCount: FieldValue.increment(1),
         status: "active",
         updatedAtMs: nowMs,
@@ -869,6 +877,7 @@ async function ensureRealmShardAssignment(uid, nowMs = Date.now()) {
 
 async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
   const identity = refreshActiveRealmIdentity(nowMs);
+  const sharedRealmId = identity.mode === "legacy" ? LEGACY_REALM_SHARD_ID : SHARED_REALM_ID;
   const configRef = db.doc("realmConfig/current");
   const configSnap = await configRef.get();
   const current = configSnap.exists ? configSnap.data() || {} : {};
@@ -876,7 +885,8 @@ async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
     && safeString(current.resetGeneration, 120) === identity.resetGeneration
     && safeString(current.worldId, 120) === identity.worldId
     && safeString(current.mode, 40) === identity.mode
-    && safeNumber(current.realmShardCapacity, 0) === GAME_SERVER_CAPACITY
+    && safeString(current.sharedRealmId, 48) === sharedRealmId
+    && safeNumber(current.startingCityCapacity, 0) === SHARED_REALM_STARTING_CITY_CAPACITY
     && safeNumber(current.startsAtMs, -1) === identity.startsAtMs
     && safeNumber(current.endsAtMs, -1) === identity.endsAtMs;
   if (!alreadyCurrent) {
@@ -889,7 +899,9 @@ async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
       worldId: identity.worldId,
       startsAtMs: identity.startsAtMs,
       endsAtMs: identity.endsAtMs,
-      realmShardCapacity: GAME_SERVER_CAPACITY,
+      topology: identity.mode === "legacy" ? "legacy" : "shared-realm",
+      sharedRealmId,
+      startingCityCapacity: SHARED_REALM_STARTING_CITY_CAPACITY,
       islandIdFormat: "world--shard--region",
       legacyRealmShardId: LEGACY_REALM_SHARD_ID,
       reconciledAtMs: nowMs,
@@ -897,19 +909,12 @@ async function ensureCurrentRealmConfiguration(nowMs = Date.now()) {
       ...(configSnap.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
     }, { merge: true });
   }
-  return { ...identity, realmShardCapacity: GAME_SERVER_CAPACITY };
+  return { ...identity, sharedRealmId, startingCityCapacity: SHARED_REALM_STARTING_CITY_CAPACITY };
 }
 
 async function listCurrentRealmShardIds(nowMs = Date.now()) {
   const identity = refreshActiveRealmIdentity(nowMs);
-  if (identity.mode !== "monthly-sharded") return [LEGACY_REALM_SHARD_ID];
-  const snapshot = await realmGenerationRef(identity.resetGeneration).collection("shards")
-    .where("status", "==", "active")
-    .get();
-  return [...new Set(snapshot.docs
-    .map(doc => REALM_TOPOLOGY.normalizeRealmShardId(doc.id))
-    .filter(shardId => shardId !== LEGACY_REALM_SHARD_ID))]
-    .sort();
+  return identity.mode === "legacy" ? [LEGACY_REALM_SHARD_ID] : [SHARED_REALM_ID];
 }
 
 async function runForCurrentRealmShards(operation, nowMs = Date.now()) {
@@ -1354,8 +1359,8 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       resetGeneration: RESET_GENERATION,
       realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
-      admissionModel: "sharded-members-v3",
-      perShardCapacity: GAME_SERVER_CAPACITY,
+      admissionModel: "shared-realm-members-v1",
+      startingCityCapacity: SHARED_REALM_STARTING_CITY_CAPACITY,
       waitingCount: 0,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
@@ -1468,7 +1473,7 @@ async function maintainGameServer(nowMs = Date.now()) {
     await batch.commit();
   }
   await serverRef.set({
-    admissionModel: "sharded-members-v3",
+    admissionModel: "shared-realm-members-v1",
     waitingCount: 0,
     lastMaintenanceAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
@@ -2364,7 +2369,7 @@ async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.no
     }
     transaction.delete(serverRef.collection("members").doc(playerUid));
     transaction.set(serverRef, {
-      admissionModel: "sharded-members-v3",
+      admissionModel: "shared-realm-members-v1",
       waitingCount: 0,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
@@ -9927,7 +9932,8 @@ async function buildDailyMissionCapacity(transaction, uid = "", nowMs = Date.now
     Math.floor(launchableTroops + troopPerHour * Math.min(12, cycle.remainingHours))
   );
 
-  const leaderboardQuery = db.collection(`leaderboards/${getRealmStorageId()}/entries`).limit(GAME_SERVER_CAPACITY);
+  const leaderboardQuery = db.collection(`leaderboards/${getRealmStorageId()}/entries`)
+      .limit(SHARED_REALM_STARTING_CITY_CAPACITY);
   const campSeeds = getConfiguredRewardCampSeeds();
   const strongholdSeeds = getConfiguredStrongholdSeeds();
   const clanId = safeString(profile.clanId, 128);
@@ -14060,7 +14066,9 @@ exports.getRealmInfo = timedCallable(
       realmStartsAtMs: realm.startsAtMs,
       realmEndsAtMs: realm.endsAtMs,
       realmShardId: getCurrentRealmShardId(),
-      realmShardCapacity: GAME_SERVER_CAPACITY,
+      sharedRealmId: realm.sharedRealmId,
+      startingCityCapacity: realm.startingCityCapacity,
+      realmShardCapacity: realm.startingCityCapacity,
       serverBuildId: String(RELEASE_MANIFEST.buildId || "development"),
       contractHash: responseContract.apiContractHash,
       currentContractHash: String(RELEASE_MANIFEST.contractHash || ""),
@@ -14069,7 +14077,7 @@ exports.getRealmInfo = timedCallable(
       clanQuestPeriod: getClanQuestPeriod(serverTimeMs, RESET_GENERATION),
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
-      capacity: GAME_SERVER_CAPACITY,
+      capacity: realm.startingCityCapacity,
       heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
       authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
       bulkOrdersVersion: BULK_ORDERS_VERSION,
@@ -14082,8 +14090,10 @@ exports.getRealmInfo = timedCallable(
       dailyMissionVersion: DAILY_MISSION_VERSION,
       seasonalAchievementVersion: SEASONAL_ACHIEVEMENT_VERSION,
       capabilities: {
-        shardedGameServerHeartbeats: true,
-        monthlyShardedRealms: true,
+        sharedRealmHeartbeats: true,
+        monthlySharedRealm: true,
+        shardedGameServerHeartbeats: false,
+        monthlyShardedRealms: false,
         instantEconomyActionsVersion: 1,
         cityUpgradeModesVersion: CITY_UPGRADE_MODES_VERSION,
         skillLevelAdjustmentVersion: SKILL_LEVEL_ADJUSTMENT_VERSION,

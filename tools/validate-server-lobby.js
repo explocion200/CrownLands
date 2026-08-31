@@ -18,11 +18,11 @@ function requireMatch(source, pattern, message) {
 
 requireMatch(serverSource, /GAME_SERVER_ID\s*=\s*"crown-marches"/, "The Crown Marches server id is missing.");
 requireMatch(serverSource, /GAME_SERVER_NAME\s*=\s*"The Crown Marches"/, "The medieval server name is missing.");
-requireMatch(serverSource, /getRealmShardCapacity\(REALM_CONFIG\)/, "Realm capacity is not configuration-driven.");
-requireMatch(serverSource, /async function ensureRealmShardAssignment/, "Missing server-authoritative shard allocation.");
-requireMatch(serverSource, /nextPlayerSequence:\s*sequence \+ 1/, "Shard allocation does not advance atomically.");
-requireMatch(serverSource, /newlyAssigned:\s*false/, "Shard allocation is not retry-idempotent.");
-requireMatch(serverSource, /admissionModel:\s*"sharded-members-v3"/, "Realm admission is not using the sharded member model.");
+requireMatch(serverSource, /getSharedRealmStartingCityCapacity\(REALM_CONFIG\)/, "Shared-realm starting capacity is not configuration-driven.");
+requireMatch(serverSource, /async function ensureRealmShardAssignment/, "Missing server-authoritative realm assignment.");
+requireMatch(serverSource, /nextPlayerSequence:\s*sequence \+ 1/, "Realm assignment does not advance atomically.");
+requireMatch(serverSource, /newlyAssigned:\s*false/, "Realm assignment is not retry-idempotent.");
+requireMatch(serverSource, /admissionModel:\s*"shared-realm-members-v1"/, "Realm admission is not using the shared member model.");
 requireMatch(serverSource, /waitingCount:\s*0/, "The removed global waiting room is still represented as active.");
 requireMatch(serverSource, /exports\.joinGameServer\s*=\s*(?:onCall|timedCallable)/, "Missing realm admission callable.");
 requireMatch(serverSource, /exports\.heartbeatGameServer\s*=\s*(?:onCall|timedCallable)/, "Missing realm heartbeat callable.");
@@ -32,15 +32,17 @@ assert.doesNotMatch(serverSource, /activeSlots\s*:/, "The unbounded shared activ
 assert.doesNotMatch(serverSource, /waitingQueue\s*:/, "The unbounded shared waiting queue still exists.");
 assert.doesNotMatch(serverSource, /status:\s*"waiting"/, "New joins can still be routed to a global waiting room.");
 
-const capacity = topology.getRealmShardCapacity(releaseConfig);
-const assignments = Array.from({ length: 120 }, (_, sequence) => (
-  topology.getRealmShardForSequence(sequence, capacity)
+const capacity = topology.getSharedRealmStartingCityCapacity(releaseConfig);
+assert.equal(capacity, 363, "Shared-realm capacity must match the five starter islands' city inventory.");
+const assignments = Array.from({ length: 150 }, (_, sequence) => (
+  topology.getSharedRealmAssignment(sequence)
 ));
 const counts = assignments.reduce((result, assignment) => {
   result[assignment.realmShardId] = (result[assignment.realmShardId] || 0) + 1;
   return result;
 }, {});
-assert.deepEqual(counts, { shard_0001: 50, shard_0002: 50, shard_0003: 20 });
+assert.deepEqual(counts, { shard_0001: 150 });
+assert.doesNotMatch(serverSource, /getRealmShardForSequence/, "Player sequence still opens additional realm shards.");
 
 requireMatch(firebaseClientSource, /clientRealmShardId:\s*REALM_SHARD_ID/, "Callable requests omit the verified shard.");
 requireMatch(firebaseClientSource, /applyRealmIdentity\(result\?\.currentUser \|\| result\)/, "Starting-city assignment is not adopted by the Firebase client.");
@@ -49,4 +51,4 @@ requireMatch(clientSource, /--\$\{REALM_SHARD_ID\}--/, "The game client does not
 requireMatch(rulesSource, /currentRealmShardId\(\)/, "Firestore rules do not scope reads to the player's shard.");
 requireMatch(rulesSource, /match \/gameServers\/\{serverId\}[\s\S]*?allow read, create, update, delete: if false;/, "Realm membership state must remain server-owned.");
 
-console.log("Validated unlimited realm admission with 50-player shard allocation and no global waiting room.");
+console.log("Validated shared-realm admission: 150 players remain together with no 50-player split or global waiting room.");
