@@ -1,6 +1,6 @@
 {
   "id": "core-v2-relic-camp-east-south-p2-p1",
-  "name": "Relic Camp East-South",
+  "name": "Emberfen",
   "type": "starter",
   "gridX": 2,
   "gridY": 1,
@@ -873,7 +873,7 @@
         "start": 0.462,
         "end": 0.538,
         "type": "road",
-        "connectsToRegionId": "new-lands-l01-p011",
+        "connectsToRegionId": "new-lands-l01-p008",
         "arrowXNorm": 0.935,
         "arrowYNorm": 0.5,
         "intentionalOuter": false,

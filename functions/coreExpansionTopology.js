@@ -7,6 +7,91 @@ const NEW_LANDS_CITY_CAPACITY = 40;
 const EXPANSION_THRESHOLD_NPC_CITIES = 20;
 const EXPANSION_ACTIVATION_BATCH_SIZE = 2;
 const TOPOLOGY_VERSION = "core-expansion-v1";
+const PREPARED_CORE_REGION_NAMES = Object.freeze({
+  "core-v2-warband-camp-m2-m2": "Frostwolf March",
+  "core-v2-relic-camp-north-west-m1-m2": "Ravenscar",
+  "core-v2-north-support-p0-m2": "Highwinter Vale",
+  "core-v2-deed-camp-north-east-p1-m2": "Dawncrest",
+  "core-v2-gold-camp-north-east-p2-m2": "Gilded Moor",
+  "core-v2-relic-camp-west-north-m2-m1": "Elderglen",
+  "core-v2-north-west-holding-tower-m1-m1": "Stoneward",
+  "core-v2-greybanner-hold-p0-m1": "Greybanner Hold",
+  "core-v2-north-east-holding-tower-p1-m1": "Lionwatch",
+  "core-v2-deed-camp-east-north-p2-m1": "Kingsbridge",
+  "core-v2-west-support-m2-p0": "Westwych",
+  "core-v2-aurum-keep-m1-p0": "Aurum Keep",
+  "core-v2-crown-citadel-p0-p0": "Crown Citadel",
+  "core-v2-swiftgate-p1-p0": "Swiftgate",
+  "core-v2-east-support-p2-p0": "Eastmarch",
+  "core-v2-deed-camp-west-south-m2-p1": "Thornmere",
+  "core-v2-south-west-holding-tower-m1-p1": "Oakwatch",
+  "core-v2-ironwatch-p0-p1": "Ironwatch",
+  "core-v2-south-east-holding-tower-p1-p1": "Roseguard",
+  "core-v2-relic-camp-east-south-p2-p1": "Emberfen",
+  "core-v2-gold-camp-south-west-m2-p2": "Goldmere",
+  "core-v2-deed-camp-south-west-m1-p2": "Brambleford",
+  "core-v2-south-support-p0-p2": "Southhaven",
+  "core-v2-relic-camp-south-east-p1-p2": "Brightmere",
+  "core-v2-warband-camp-south-east-p2-p2": "Redwolf Reach",
+});
+const PREPARED_NEW_LANDS_REGION_NAMES = Object.freeze([
+  "Northgate March",
+  "Frostmere",
+  "Highwatch Vale",
+  "Ravenstone",
+  "Eastwall Reach",
+  "Kingsroad March",
+  "Redwych",
+  "Ashford Vale",
+  "Emberfield",
+  "Sunward Ford",
+  "Goldbarrow",
+  "Southwatch",
+  "Dunmere",
+  "Blackthorn Reach",
+  "Westervale",
+  "Stoneford",
+  "Greyfen",
+  "Oakshield",
+  "Briar March",
+  "Wolfpine",
+  "Alderwatch",
+  "Moorhaven",
+  "Crownsward",
+  "Ironwood Vale",
+  "Wintergate",
+  "Silverbrook",
+  "Windermere",
+  "Northreach",
+  "Coldharbor March",
+  "Whitecliff",
+  "Falconmere",
+  "Dawnwatch",
+  "Sunfield Reach",
+  "Roseford",
+  "Eastmere",
+  "Amberwick",
+  "Goldcrest Vale",
+  "Greenbarrow",
+  "Fairhaven March",
+  "Summerholt",
+  "Brightwater",
+  "Stormwatch",
+  "Darkwater Reach",
+  "Hollowfen",
+  "Nightwood",
+  "Blackmere",
+  "Westwatch",
+  "Flintbarrow",
+  "Stonehaven",
+  "Wyvern's Rest",
+  "Thornwall",
+  "Mistwood Vale",
+  "Greyhaven",
+  "Frostford",
+  "Wintermere",
+  "Northwood",
+]);
 
 function integer(value, fallback = 0) {
   const number = Number(value);
@@ -21,7 +106,10 @@ function getClockwiseLayerCoordinates(layer = 1) {
   const normalizedLayer = Math.max(1, integer(layer, 1));
   const radius = ringRadius(normalizedLayer);
   const coordinates = [];
-  for (let x = -radius; x <= radius; x += 1) {
+
+  // Start at the north-center cardinal entrance so the first map in every
+  // layer has a direct south road into the immediately inner layer.
+  for (let x = 0; x <= radius; x += 1) {
     coordinates.push({ gridX: x, gridY: -radius });
   }
   for (let y = -radius + 1; y <= radius; y += 1) {
@@ -30,8 +118,11 @@ function getClockwiseLayerCoordinates(layer = 1) {
   for (let x = radius - 1; x >= -radius; x -= 1) {
     coordinates.push({ gridX: x, gridY: radius });
   }
-  for (let y = radius - 1; y > -radius; y -= 1) {
+  for (let y = radius - 1; y >= -radius; y -= 1) {
     coordinates.push({ gridX: -radius, gridY: y });
+  }
+  for (let x = -radius + 1; x < 0; x += 1) {
+    coordinates.push({ gridX: x, gridY: -radius });
   }
   return Object.freeze(coordinates.map((coordinate, clockwiseOrderIndex) => Object.freeze({
     ...coordinate,
@@ -186,6 +277,8 @@ module.exports = Object.freeze({
   EXPANSION_THRESHOLD_NPC_CITIES,
   EXPANSION_ACTIVATION_BATCH_SIZE,
   TOPOLOGY_VERSION,
+  PREPARED_CORE_REGION_NAMES,
+  PREPARED_NEW_LANDS_REGION_NAMES,
   getClockwiseLayerCoordinates,
   getLayerMapCount,
   formatNewLandsRegionId,

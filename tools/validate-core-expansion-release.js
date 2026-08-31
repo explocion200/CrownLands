@@ -50,6 +50,11 @@ assert.equal(receipt.newLandsCityCount, 2240);
 assert.equal(receipt.objectiveCount, 17);
 assert.equal(receipt.catalogHash, hash(catalog));
 assert.equal(receipt.worldLayoutHash, hash(layout));
+assert.equal(catalog.version, 2026083102);
+assert.equal(layout.version, 2026083102);
+assert.equal(catalog.topology.ringAnchor, "north-center");
+assert.equal(catalog.topology.ringDirection, "clockwise");
+assert.equal(catalog.topology.connections, "cardinal-only");
 
 const mapsById = new Map(layout.maps.map(map => [map.id, map]));
 const regionsById = new Map(catalog.regions.map(region => [region.id, region]));
@@ -62,6 +67,7 @@ const newLands = catalog.regions.filter(region => !region.permanentCore);
 assert.equal(core.length, 25);
 assert(core.every(region => region.worldLayer === 0 && !region.spawnEligible && !region.spawnReady));
 assert(core.every(region => region.purpose !== "player_region"));
+assert(core.every(region => region.name === topology.PREPARED_CORE_REGION_NAMES[region.id]));
 assert.equal(newLands.length, 56);
 assert(newLands.every(region => region.purpose === "player_region" && region.cityCapacity === 40));
 assert(newLands.every(region => mapsById.get(region.id)?.cities?.length === 40));
@@ -69,6 +75,24 @@ assert.equal(newLands.filter(region => region.worldLayer === 1).length, 24);
 assert.equal(newLands.filter(region => region.worldLayer === 2).length, 32);
 assert(newLands.filter(region => region.worldLayer === 1).every(region => region.lifecycle === "active"));
 assert(newLands.filter(region => region.worldLayer === 2).every(region => region.lifecycle === "standby"));
+assert.deepEqual(
+  newLands.map(region => region.name),
+  [...topology.PREPARED_NEW_LANDS_REGION_NAMES],
+  "Prepared New Lands maps must use the approved medieval names in activation order.",
+);
+assert.equal(new Set(catalog.regions.map(region => region.name)).size, catalog.regions.length, "Map names must be unique.");
+assert(catalog.regions.every(region => !/^New Lands \d+$/i.test(region.name)), "Numbered New Lands labels are not player-facing map names.");
+
+for (const layer of [1, 2]) {
+  const first = newLands.find(region => region.worldLayer === layer && region.clockwiseOrderIndex === 0);
+  assert(first, `Layer ${layer} must have a first map.`);
+  assert.equal(first.gridX, 0, `Layer ${layer} must begin at north-center, not a corner.`);
+  assert.equal(first.gridY, -(topology.CORE_RADIUS + layer));
+  const inward = regionsById.get(first.connections?.south?.targetRegionId);
+  assert(inward, `Layer ${layer}'s first map must have a south road into the inner layer.`);
+  assert.equal(inward.gridX, 0);
+  assert.equal(inward.gridY, first.gridY + 1);
+}
 
 for (const region of catalog.regions) {
   for (const [side, connection] of Object.entries(region.connections || {})) {
@@ -114,12 +138,12 @@ assert.match(
 assert.match(clientSource, /isWorldRegionRuntimeActive\(targetRegionId\)/);
 assert.match(clientSource, /applyCoreExpansionRealmState\(realm\)/);
 const indexSource = read("index.html");
-assert.match(indexSource, /region-catalog\.js\?v=20260831-core-expansion-prepared-r1/);
-assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260831-core-expansion-prepared-r1/);
+assert.match(indexSource, /region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
+assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
 
 const preparedText = [JSON.stringify(layout), JSON.stringify(catalog)].join("\n");
 for (const forbidden of ["developmentOnly", "productionActivated", "fixturePackageAvailabilityOnly", "Core v2 QA-1", "phase6d", "phase6f"]) {
   assert(!preparedText.includes(forbidden), `Prepared release leaked development marker ${forbidden}.`);
 }
 
-console.log("Validated the inactive Core-expansion release bundle, 81-map topology, 3,720 city definitions, 17 objectives, asset hashes, runtime wiring, and reset hold.");
+console.log("Validated the inactive Core-expansion release bundle, north-center cardinal layer starts, 81 unique medieval map names, 3,720 city definitions, 17 objectives, asset hashes, runtime wiring, and reset hold.");

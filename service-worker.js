@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260831-core-expansion-prepared-r1";
+const CACHE_VERSION = "20260831-core-expansion-prepared-r2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;

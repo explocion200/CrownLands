@@ -30,11 +30,20 @@
     return Math.max(0, Math.max(Math.abs(Number(gridX) || 0), Math.abs(Number(gridY) || 0)) - coreRadius);
   }
 
-  function getClockwiseRingCoordinates(layer, coreRadius = CORE_RADIUS) {
+  function getClockwiseRingCoordinates(layer, coreRadius = CORE_RADIUS, ringAnchor = "north-west") {
     const normalizedLayer = Math.max(1, Math.floor(Number(layer) || 1));
     const radius = coreRadius + normalizedLayer;
     const coordinates = [];
-    // Stable anchor: north-west corner, then clockwise in screen coordinates.
+    if (ringAnchor === "north-center") {
+      for (let x = 0; x <= radius; x += 1) coordinates.push({ gridX: x, gridY: -radius });
+      for (let y = -radius + 1; y <= radius; y += 1) coordinates.push({ gridX: radius, gridY: y });
+      for (let x = radius - 1; x >= -radius; x -= 1) coordinates.push({ gridX: x, gridY: radius });
+      for (let y = radius - 1; y >= -radius; y -= 1) coordinates.push({ gridX: -radius, gridY: y });
+      for (let x = -radius + 1; x < 0; x += 1) coordinates.push({ gridX: x, gridY: -radius });
+      return coordinates;
+    }
+    // Preserve the current-world north-west anchor unless a catalog explicitly
+    // declares the reset world's north-center cardinal anchor.
     for (let x = -radius; x <= radius; x += 1) coordinates.push({ gridX: x, gridY: -radius });
     for (let y = -radius + 1; y <= radius; y += 1) coordinates.push({ gridX: radius, gridY: y });
     for (let x = radius - 1; x >= -radius; x -= 1) coordinates.push({ gridX: x, gridY: radius });
@@ -42,10 +51,10 @@
     return coordinates;
   }
 
-  function getClockwiseRingIndex(gridX, gridY, coreRadius = CORE_RADIUS) {
+  function getClockwiseRingIndex(gridX, gridY, coreRadius = CORE_RADIUS, ringAnchor = "north-west") {
     const layer = getWorldLayer(gridX, gridY, coreRadius);
     if (layer < 1) return null;
-    return getClockwiseRingCoordinates(layer, coreRadius)
+    return getClockwiseRingCoordinates(layer, coreRadius, ringAnchor)
       .findIndex(point => point.gridX === Number(gridX) && point.gridY === Number(gridY));
   }
 
@@ -378,6 +387,7 @@
   function validateCatalog(catalog = {}) {
     const errors = [];
     const regions = Array.isArray(catalog.regions) ? catalog.regions : [];
+    const ringAnchor = catalog.topology?.ringAnchor === "north-center" ? "north-center" : "north-west";
     const byId = new Map();
     const byCoordinate = new Map();
     for (const region of regions) {
@@ -387,7 +397,7 @@
       if (byCoordinate.has(key)) errors.push(`Duplicate coordinate ${key}.`);
       byCoordinate.set(key, region.id);
       const expectedLayer = getWorldLayer(region.gridX, region.gridY);
-      const expectedOrder = getClockwiseRingIndex(region.gridX, region.gridY);
+      const expectedOrder = getClockwiseRingIndex(region.gridX, region.gridY, CORE_RADIUS, ringAnchor);
       if (!REGION_PURPOSES.includes(region.purpose)) errors.push(`${region.id} has invalid purpose ${region.purpose}.`);
       if (Number(region.worldLayer) !== expectedLayer) errors.push(`${region.id} has invalid world layer.`);
       if ((region.clockwiseOrderIndex ?? null) !== expectedOrder) errors.push(`${region.id} has invalid clockwise order.`);

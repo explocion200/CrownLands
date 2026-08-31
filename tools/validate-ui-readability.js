@@ -9,7 +9,7 @@ const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
 const releaseId = "20260819-player-flags-v2-r1";
 const buildId = "20260827-instant-cross-map-city-upgrades-r1";
-const cacheBuildId = "20260831-core-expansion-prepared-r1";
+const cacheBuildId = "20260831-core-expansion-prepared-r2";
 const gameBuildId = "20260830-heartbeat-lifecycle-recovery-r1";
 
 function requireMatch(source, pattern, message) {

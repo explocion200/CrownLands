@@ -1,6 +1,6 @@
 {
   "id": "core-v2-east-support-p2-p0",
-  "name": "East Support",
+  "name": "Eastmarch",
   "type": "starter",
   "gridX": 2,
   "gridY": 0,
@@ -1085,7 +1085,7 @@
         "start": 0.462,
         "end": 0.538,
         "type": "road",
-        "connectsToRegionId": "new-lands-l01-p010",
+        "connectsToRegionId": "new-lands-l01-p007",
         "arrowXNorm": 0.935,
         "arrowYNorm": 0.5,
         "intentionalOuter": false,
