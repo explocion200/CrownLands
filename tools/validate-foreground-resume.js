@@ -42,6 +42,7 @@ function functionSource(name) {
 assert.match(game, /const FOREGROUND_LONG_RESUME_MS = 60 \* 1000;/, "Long foreground catch-up must start after 60 seconds.");
 assert.match(game, /const FOREGROUND_RESUME_RETRY_DELAYS_MS = Object\.freeze\(\[2000, 8000\]\);/, "Foreground retries must use the planned 2s and 8s delays.");
 assert.match(game, /const GAME_SERVER_HEARTBEAT_TIMEOUT_MS = 15 \* 1000;/, "Realm heartbeats must release after the 15-second transport timeout.");
+assert.match(game, /let gameServerHeartbeatGeneration = 0;/, "Realm heartbeat lifecycles must invalidate stale async attempts.");
 for (const eventName of ["visibilitychange", "pagehide", "pageshow", "focus", "freeze", "resume", "online"]) {
   assert.match(game, new RegExp(`addEventListener\\("${eventName}"`), `Missing ${eventName} lifecycle handling.`);
 }
@@ -49,6 +50,13 @@ for (const eventName of ["visibilitychange", "pagehide", "pageshow", "focus", "f
 const foregroundSync = functionSource("synchronizeForegroundGame");
 const applyEconomyResult = functionSource("applyServerEconomyResult");
 const gameServerHeartbeat = functionSource("heartbeatGameServerMembership");
+const stopGameServerHeartbeat = functionSource("stopGameServerHeartbeat");
+assert.ok(
+  stopGameServerHeartbeat.includes("gameServerHeartbeatGeneration += 1")
+    && gameServerHeartbeat.includes("heartbeatGeneration !== gameServerHeartbeatGeneration")
+    && gameServerHeartbeat.includes("heartbeatGeneration === gameServerHeartbeatGeneration"),
+  "Realm heartbeat stop/restart does not invalidate stale responses and finalizers."
+);
 assert.ok(
   gameServerHeartbeat.includes("withTimeout(")
     && gameServerHeartbeat.includes("api.heartbeatGameServer(GAME_SERVER_ID)")
@@ -165,6 +173,7 @@ async function validateAsyncBehavior() {
   const heartbeatContext = {
     GAME_SERVER_ID: "crown-marches",
     GAME_SERVER_HEARTBEAT_TIMEOUT_MS: 10,
+    gameServerHeartbeatGeneration: 0,
     gameServerHeartbeatInFlight: false,
     hasActiveGameServerSlot: () => true,
     isWaitingForGameServerSlot: () => false,
@@ -202,6 +211,56 @@ async function validateAsyncBehavior() {
     { ...appliedMemberships[0] },
     { serverId: "crown-marches", status: "active" },
     "The successful retry did not apply the authoritative membership."
+  );
+
+  const lifecycleHeartbeatResolvers = [];
+  const lifecycleAppliedMemberships = [];
+  let lifecycleHeartbeatCalls = 0;
+  const heartbeatLifecycleContext = {
+    GAME_SERVER_ID: "crown-marches",
+    GAME_SERVER_HEARTBEAT_TIMEOUT_MS: 1000,
+    gameServerHeartbeatGeneration: 0,
+    gameServerHeartbeatInFlight: false,
+    gameServerHeartbeatIntervalId: 0,
+    hasActiveGameServerSlot: () => true,
+    isWaitingForGameServerSlot: () => false,
+    getOnlineApi: () => ({
+      isSignedIn: () => true,
+      heartbeatGameServer: () => {
+        lifecycleHeartbeatCalls += 1;
+        return new Promise(resolve => lifecycleHeartbeatResolvers.push(resolve));
+      },
+    }),
+    applyGameServerMembership: result => lifecycleAppliedMemberships.push(result),
+    console,
+    window: { setTimeout, clearTimeout, clearInterval: () => {} },
+    Error,
+    Promise,
+  };
+  vm.createContext(heartbeatLifecycleContext);
+  vm.runInContext(functionSource("withTimeout"), heartbeatLifecycleContext, { filename: "game.js" });
+  vm.runInContext(functionSource("stopGameServerHeartbeat"), heartbeatLifecycleContext, { filename: "game.js" });
+  vm.runInContext(gameServerHeartbeat, heartbeatLifecycleContext, { filename: "game.js" });
+
+  const staleHeartbeat = heartbeatLifecycleContext.heartbeatGameServerMembership();
+  heartbeatLifecycleContext.stopGameServerHeartbeat();
+  const currentHeartbeat = heartbeatLifecycleContext.heartbeatGameServerMembership();
+  assert.equal(lifecycleHeartbeatCalls, 2, "A restarted heartbeat lifecycle did not start one replacement request.");
+
+  lifecycleHeartbeatResolvers[0]({ serverId: "crown-marches", status: "active", response: "stale" });
+  assert.equal(await staleHeartbeat, false, "A stopped heartbeat lifecycle applied its late response.");
+  assert.equal(lifecycleAppliedMemberships.length, 0, "A stale heartbeat response replaced current membership state.");
+  assert.equal(heartbeatLifecycleContext.gameServerHeartbeatInFlight, true, "A stale heartbeat cleared the replacement request lock.");
+  assert.equal(await heartbeatLifecycleContext.heartbeatGameServerMembership(), false, "A third heartbeat overlapped the current replacement request.");
+  assert.equal(lifecycleHeartbeatCalls, 2, "A stale finalizer allowed an overlapping heartbeat request.");
+
+  lifecycleHeartbeatResolvers[1]({ serverId: "crown-marches", status: "active", response: "current" });
+  assert.equal(await currentHeartbeat, true, "The current heartbeat did not settle after a lifecycle restart.");
+  assert.equal(heartbeatLifecycleContext.gameServerHeartbeatInFlight, false, "The current heartbeat retained its in-flight lock.");
+  assert.deepEqual(
+    { ...lifecycleAppliedMemberships[0] },
+    { serverId: "crown-marches", status: "active", response: "current" },
+    "The lifecycle restart did not apply only the current heartbeat response."
   );
 
   const initialRefresh = economyContext.refreshServerEconomy(false, { renderCities: false });

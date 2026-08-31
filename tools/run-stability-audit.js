@@ -505,13 +505,13 @@ function buildFindings(report) {
       recommendation: "Decide whether global chat must remain always-on; otherwise make it view-scoped on a separate synchronized branch and restore the exact 17-listener base budget.",
     },
     {
-      id: "STAB-004", severity: "P2", classification: "suspected", status: "open",
-      title: "Heartbeat calls do not have a generic transport timeout",
+      id: "STAB-004", severity: "P2", classification: "confirmed", status: "fixed",
+      title: "Stopped heartbeat lifecycles could apply late responses",
       affectedEnvironment: "Web and itch.io session heartbeat",
-      reproduction: "Drop a callable response after the request reaches the transport and observe the in-flight heartbeat guard.",
-      evidence: "Repository inspection found higher-level realm timeouts, but no generic timeout in callServerFunction; a never-settling heartbeat can retain its in-flight state.",
+      reproduction: "Start a heartbeat, stop and restart the membership watcher before its response settles, then resolve the older request after the replacement begins.",
+      evidence: "The focused regression reproduced a stale membership application and an older finalizer clearing the replacement request lock. The 15-second timeout and lifecycle generation guard now ignore stopped attempts while preserving the current lock.",
       likelyOwner: "Login and session lifecycle",
-      recommendation: "Confirm with a focused emulator fault test, then fix on a separate synchronized branch if reproduced.",
+      recommendation: "Retain the timeout and lifecycle-generation regression coverage and verify interrupted-connection recovery during controlled release QA.",
     },
     {
       id: "STAB-005", severity: "P3", classification: "telemetry-required", status: "blocked",
@@ -592,7 +592,7 @@ Generated from commit \`${report.source.commit}\` on ${report.generatedAt}. This
 
 The isolated canonical-web fixture completed deterministic startup, slow-call, delayed-snapshot, bounded-failure, stale-callback, lifecycle, mobile-throttling, and second-session cases with zero uncaught errors, unhandled rejections, duplicate listener keys, or production-backend requests. It does **not** pass the exact listener acceptance budget: successful sessions settle at 18 active listeners because \`chat.global\` is always on in addition to the established 17 gameplay streams.
 
-Two audit-tool defects were confirmed and fixed. The audit also confirms that always-on global chat has raised the base authenticated session from the established 17-listener budget to 18; lifecycle cleanup still prevents duplicates. One session-heartbeat timeout risk remains suspected and should be reproduced in a focused branch before changing game code. Authenticated production and itch.io gameplay remain blocked because this audit did not receive an approved QA account or control the published itch.io session.
+Two audit-tool defects were confirmed and fixed. The audit also confirms that always-on global chat has raised the base authenticated session from the established 17-listener budget to 18; lifecycle cleanup still prevents duplicates. The session-heartbeat risk was confirmed and fixed with a bounded timeout plus lifecycle generation invalidation for stopped attempts. Authenticated production and itch.io gameplay remain blocked because this audit did not receive an approved QA account or control the published itch.io session.
 
 ## Scope and safety
 
@@ -654,7 +654,7 @@ The existing map benchmark remains the capacity authority for the A–E city/mar
 2. Run cold and warm canonical-web login, refresh, second-tab replacement, one interrupted connection, map switching, and logout without gameplay mutations.
 3. Inspect the exact published itch.io artifact for relative assets, login entry, manifest, caches, and backend contract compatibility.
 4. Decide and implement the STAB-003 chat-listener scope on a separate focused branch.
-5. Reproduce STAB-004 with a focused callable-response-loss emulator test; if confirmed, fix and roll out separately.
+5. Verify STAB-004's bounded timeout and stale-response recovery during the controlled interrupted-connection smoke test.
 `;
 }
 

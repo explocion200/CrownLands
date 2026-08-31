@@ -4230,14 +4230,14 @@
     {
       "id": "STAB-004",
       "severity": "P2",
-      "classification": "suspected",
-      "status": "open",
-      "title": "Heartbeat calls do not have a generic transport timeout",
+      "classification": "confirmed",
+      "status": "fixed",
+      "title": "Stopped heartbeat lifecycles could apply late responses",
       "affectedEnvironment": "Web and itch.io session heartbeat",
-      "reproduction": "Drop a callable response after the request reaches the transport and observe the in-flight heartbeat guard.",
-      "evidence": "Repository inspection found higher-level realm timeouts, but no generic timeout in callServerFunction; a never-settling heartbeat can retain its in-flight state.",
+      "reproduction": "Start a heartbeat, stop and restart the membership watcher before its response settles, then resolve the older request after the replacement begins.",
+      "evidence": "The focused regression reproduced a stale membership application and an older finalizer clearing the replacement request lock. The 15-second timeout and lifecycle generation guard now ignore stopped attempts while preserving the current lock.",
       "likelyOwner": "Login and session lifecycle",
-      "recommendation": "Confirm with a focused emulator fault test, then fix on a separate synchronized branch if reproduced."
+      "recommendation": "Retain the timeout and lifecycle-generation regression coverage and verify interrupted-connection recovery during controlled release QA."
     },
     {
       "id": "STAB-005",
