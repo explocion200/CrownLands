@@ -15,13 +15,27 @@ const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const beforeActivation = Date.parse("2026-08-31T23:59:59.999Z");
 const activation = Date.parse("2026-09-01T00:00:00.000Z");
 const october = Date.parse("2026-10-15T12:30:00.000Z");
+const enabledMonthlyConfig = Object.freeze({
+  ...releaseConfig,
+  realmMode: "monthly-shared",
+});
 
 const legacy = topology.getRealmIdentity(releaseConfig, beforeActivation);
 assert.equal(legacy.mode, "legacy");
 assert.equal(legacy.resetGeneration, releaseConfig.resetGeneration);
 assert.equal(legacy.worldId, releaseConfig.worldId);
 
-const septemberRealm = topology.getRealmIdentity(releaseConfig, activation);
+const heldAtActivation = topology.getRealmIdentity(releaseConfig, activation);
+assert.equal(heldAtActivation.mode, "legacy");
+assert.equal(heldAtActivation.resetGeneration, releaseConfig.resetGeneration);
+assert.equal(heldAtActivation.worldId, releaseConfig.worldId);
+
+const heldAfterActivation = topology.getRealmIdentity(releaseConfig, october);
+assert.equal(heldAfterActivation.mode, "legacy");
+assert.equal(heldAfterActivation.resetGeneration, releaseConfig.resetGeneration);
+assert.equal(heldAfterActivation.worldId, releaseConfig.worldId);
+
+const septemberRealm = topology.getRealmIdentity(enabledMonthlyConfig, activation);
 assert.deepEqual(
   {
     mode: septemberRealm.mode,
@@ -41,7 +55,7 @@ assert.deepEqual(
   }
 );
 
-const octoberRealm = topology.getRealmIdentity(releaseConfig, october);
+const octoberRealm = topology.getRealmIdentity(enabledMonthlyConfig, october);
 assert.equal(octoberRealm.resetGeneration, "realm-2026-10");
 assert.equal(octoberRealm.worldId, "main-realm-2026-10");
 assert.equal(octoberRealm.startsAtMs, Date.parse("2026-10-01T00:00:00.000Z"));
@@ -132,4 +146,4 @@ assert.match(
   "Clan leaderboard list reads must use the authoritative realm-storage path without an unqueryable document-field predicate."
 );
 
-console.log("Shared realm validation passed: 150 players map to one generation-isolated realm partition with no 50-player split.");
+console.log("Realm hold validation passed: production remains legacy while the enabled monthly model keeps 150 players in one generation-isolated realm partition.");

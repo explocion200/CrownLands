@@ -1,8 +1,14 @@
 # Monthly shared realm
 
-## Live model
+## Production reset hold
 
-Crownlands keeps the July 2026 realm and its existing island document paths unchanged until the configured activation time. Starting at `2026-09-01T00:00:00Z`, the server derives the active realm from UTC time:
+The September reset is paused until the Pending Core 5x5 world and expanding northern New Lands are implemented, validated, and explicitly approved for release. Production is configured with `realmMode: legacy`, so crossing `2026-09-01T00:00:00Z` does not change the active generation or world. The July 2026 realm and its existing island document paths remain active.
+
+Do not restore `monthly-shared` mode merely to meet the former September boundary. The corrected reset release must include the approved 25-map Core, the northward expansion topology, server-authoritative capacity transitions, and complete migration and rollback gates.
+
+## Target monthly shared model
+
+After the hold is lifted through a separately tested and authorized release, the server will derive the active realm from UTC time:
 
 - generation: `realm-YYYY-MM`
 - world: `main-realm-YYYY-MM`
@@ -14,9 +20,9 @@ Every player in a monthly generation is assigned to the same shared realm and ca
 
 Existing players without `realmShardId` are treated as `legacy`. Never rename or migrate their island documents in place.
 
-## Rollover
+## Rollover after the hold is lifted
 
-`activateMonthlyRealm` runs at `00:00 UTC` on the first day of each month. It only reconciles `realmConfig/current`; it does not delete the prior generation or pre-create every island. `getRealmInfo` performs the same idempotent reconciliation, so the first login repairs a missed scheduler run.
+`activateMonthlyRealm` runs at `00:00 UTC` on the first day of each month. While `realmMode` is `legacy`, it keeps the current legacy identity and cannot activate a monthly generation. After an approved release restores monthly mode, it only reconciles `realmConfig/current`; it does not delete the prior generation or pre-create every island. `getRealmInfo` performs the same idempotent reconciliation, so the first login repairs a missed scheduler run.
 
 The browser never calculates the active month. It calls `getRealmInfo`, adopts the server generation and canonical realm partition, then sends those values on every callable request. Firestore rules read `realmConfig/current` and the signed-in player's server-owned `realmShardId`.
 
