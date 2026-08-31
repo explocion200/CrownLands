@@ -1,6 +1,6 @@
 {
   "id": "core-v2-deed-camp-west-south-m2-p1",
-  "name": "Deed Camp West-South",
+  "name": "Thornmere",
   "type": "starter",
   "gridX": -2,
   "gridY": 1,
@@ -976,7 +976,7 @@
         "start": 0.462,
         "end": 0.538,
         "type": "road",
-        "connectsToRegionId": "new-lands-l01-p021",
+        "connectsToRegionId": "new-lands-l01-p018",
         "arrowXNorm": 0.065,
         "arrowYNorm": 0.5,
         "intentionalOuter": false,

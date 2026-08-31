@@ -97,9 +97,11 @@ function compatibilityRegion(summary) {
 
 for (const summarySource of stagedCoreCatalog.regions) {
   const sourceDefinition = JSON.parse(fs.readFileSync(path.join(coreSource, "regions", `${summarySource.id}.json`), "utf8"));
+  const regionName = topology.PREPARED_CORE_REGION_NAMES[summarySource.id];
+  if (!regionName) throw new Error(`No approved medieval name exists for Core map ${summarySource.id}.`);
   const definition = cleanDevelopmentFields({
     ...sourceDefinition,
-    name: String(sourceDefinition.name || summarySource.name).replace(/\s+—\s+Core v2 QA-1$/, ""),
+    name: regionName,
     imagePath: `assets/worlds/${topology.TOPOLOGY_VERSION}/maps/${summarySource.id}.webp`,
     thumbnailPath: `assets/worlds/${topology.TOPOLOGY_VERSION}/maps/${summarySource.id}.webp`,
   });
@@ -142,11 +144,20 @@ for (const summarySource of stagedCoreCatalog.regions) {
   });
 }
 
-outerRecords.forEach((record, activationOrdinal) => {
+const outerRecordsByCoordinate = new Map(outerRecords.map(record => [
+  `${record.coordinate.gridX},${record.coordinate.gridY}`,
+  record,
+]));
+if (outerRecordsByCoordinate.size !== outerRecords.length) {
+  throw new Error("The validated New Lands source contains duplicate map coordinates.");
+}
+
+for (let activationOrdinal = 0; activationOrdinal < outerRecords.length; activationOrdinal += 1) {
   const allocation = topology.getRegionAtActivationOrdinal(activationOrdinal);
-  if (allocation.gridX !== record.coordinate.gridX || allocation.gridY !== record.coordinate.gridY) {
-    throw new Error(`Outer record ${activationOrdinal + 1} does not match the approved north-clockwise allocation.`);
-  }
+  const record = outerRecordsByCoordinate.get(`${allocation.gridX},${allocation.gridY}`);
+  if (!record) throw new Error(`No validated New Lands source exists at ${allocation.gridX},${allocation.gridY}.`);
+  const regionName = topology.PREPARED_NEW_LANDS_REGION_NAMES[activationOrdinal];
+  if (!regionName) throw new Error(`No approved medieval name exists for New Lands map ${activationOrdinal + 1}.`);
   const id = allocation.id;
   const mapAsset = `assets/worlds/${topology.TOPOLOGY_VERSION}/maps/${id}.webp`;
   const thumbnailAsset = `assets/worlds/${topology.TOPOLOGY_VERSION}/thumbnails/${id}.webp`;
@@ -168,7 +179,7 @@ outerRecords.forEach((record, activationOrdinal) => {
   }));
   const definition = {
     id,
-    name: `New Lands ${activationOrdinal + 1}`,
+    name: regionName,
     type: "starter",
     gridX: allocation.gridX,
     gridY: allocation.gridY,
@@ -209,7 +220,7 @@ outerRecords.forEach((record, activationOrdinal) => {
     compatibilityRegion: null,
     connections: {},
   });
-});
+}
 
 const byCoordinate = new Map(regionSummaries.map(region => [`${region.gridX},${region.gridY}`, region]));
 const directions = {
@@ -276,7 +287,7 @@ const catalog = {
   schemaVersion: 4,
   worldId: "core-expansion-reset",
   worldName: "Crownlands Core and New Lands",
-  version: 2026083101,
+  version: 2026083102,
   topologyVersion: topology.TOPOLOGY_VERSION,
   globalSettings: {
     defaultMapWidth: 1448,
@@ -290,7 +301,7 @@ const catalog = {
     coreRadius: 2,
     coreWidth: 5,
     firstLayerMapCount: 24,
-    ringAnchor: "north-west",
+    ringAnchor: "north-center",
     ringDirection: "clockwise",
     connections: "cardinal-only",
     activationBatchSize: 2,
@@ -326,7 +337,7 @@ const catalog = {
 };
 const worldLayout = {
   schemaVersion: 2,
-  version: 2026083101,
+  version: 2026083102,
   topologyVersion: topology.TOPOLOGY_VERSION,
   worldId: "core-expansion-reset",
   mapCount: maps.length,

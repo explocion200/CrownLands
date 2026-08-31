@@ -1,6 +1,6 @@
 {
   "id": "core-v2-deed-camp-south-west-m1-p2",
-  "name": "Deed Camp South-West",
+  "name": "Brambleford",
   "type": "starter",
   "gridX": -1,
   "gridY": 2,
@@ -962,7 +962,7 @@
         "start": 0.472,
         "end": 0.528,
         "type": "road",
-        "connectsToRegionId": "new-lands-l01-p017",
+        "connectsToRegionId": "new-lands-l01-p014",
         "arrowXNorm": 0.5,
         "arrowYNorm": 0.935,
         "intentionalOuter": false,

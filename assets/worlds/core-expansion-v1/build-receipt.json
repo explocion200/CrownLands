@@ -8,8 +8,8 @@
   "preparedSecondLayerMapCount": 32,
   "newLandsCityCount": 2240,
   "objectiveCount": 17,
-  "catalogHash": "27e2d6dd15fc2b9e0e948962f766a0c4630170a7032e8df2599fb7bcf3375383",
-  "worldLayoutHash": "f07114823c368617d7d51e9e3d26c71c4f99277d957a36ee629a51af197c7364",
+  "catalogHash": "c02372eb7a8b81b91c78a121bb9eeb1ff355b0f2ba5ecb229644c6f2f1ef7cf3",
+  "worldLayoutHash": "f0783e2f4639261ca6e7e5ee21460b9c800b36f53a6149cb9087d0ed0aee0952",
   "assets": {
     "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-m2-m2.webp": {
       "bytes": 744808,
@@ -112,452 +112,452 @@
       "sha256": "6041ba0aefca214d88db61ed235e4f9c406a0697fe11bdb39bb18aa4d472395e"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p001.webp": {
-      "bytes": 326452,
-      "sha256": "eff3530b7b74828455a0cc8035aaa05db09eebee280b3d0fbdf5b14cb81f9363"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p001.webp": {
-      "bytes": 18546,
-      "sha256": "a07d75a4de6e03b664bd7e1fc89f4ef5d5b9fcde4ed4b1b7b0a673c4eaa77d8e"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p002.webp": {
-      "bytes": 319164,
-      "sha256": "624a452ba0a33cec92b4a674c825464f663c663ee1e70f79d9ebd75ff2cfd719"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p002.webp": {
-      "bytes": 18544,
-      "sha256": "53a2ea2e9cb265a4aa7fddca46618b3655f4b72cc1e8b439d017c8e1410b604f"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p003.webp": {
-      "bytes": 322814,
-      "sha256": "c1530620117c29caed9276b792bada3fca16f32db076eff309ccd90c6caa714c"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p003.webp": {
-      "bytes": 18386,
-      "sha256": "537a514cf298066a25fac1a370c837b30c90a2dbad77017f425a11960bbc62bd"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p004.webp": {
       "bytes": 321088,
       "sha256": "8d0b772c3f346a824926937c7a4b48c2f51f4378e1817d5cfb610beb94964552"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p004.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p001.webp": {
       "bytes": 18646,
       "sha256": "2f06e2db1ea13b64b18de6f5c8f57ee2a7c300fdad53d75e5f1f2c2754170c2d"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p005.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p002.webp": {
       "bytes": 399282,
       "sha256": "45a00324dd24b34089d97e28c7412ae66ede2872f028c93b702d13cb20b9080c"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p005.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p002.webp": {
       "bytes": 24128,
       "sha256": "bfb38ee09dc831fc0913a28abc1c5fb6a496eebce2152867a83595c0066897fa"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p006.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p003.webp": {
       "bytes": 351642,
       "sha256": "2fa67bc1cd2f972e32b1da61ad73a79b53dfaad368980f16d54d64adcd4f09e1"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p006.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p003.webp": {
       "bytes": 21628,
       "sha256": "1ec45849433514b2391296ff094364a80d8b7aa166f0f2c9e7ed5a1c0e0ee753"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p007.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p004.webp": {
       "bytes": 350702,
       "sha256": "3a69e9653fd41817034db48bd246b3c4152bdefb99b9a8a59369c68f6d3723d4"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p007.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p004.webp": {
       "bytes": 21376,
       "sha256": "f418e741645a558f504fc98ae17688cf9ecc51f365dd142b3b313a587647c4d0"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p008.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p005.webp": {
       "bytes": 283912,
       "sha256": "e4636304fd66319ece2cefb486e5de06b4feb1824b72d3e41acb3af77bce2561"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p008.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p005.webp": {
       "bytes": 18722,
       "sha256": "5098bc5ef4b0d2e24bd0e714391a2b33ed7697de087f761fff398305563e3bc4"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p009.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p006.webp": {
       "bytes": 287286,
       "sha256": "3cebc1bcff64dbd66591064139f17bbdff68b402c14459c6893ba9ccea55239a"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p009.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p006.webp": {
       "bytes": 18722,
       "sha256": "e13b52cd52a93c553ac3a16935073b9145a92066c7c228c0e94464a013825c6e"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p010.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p007.webp": {
       "bytes": 313474,
       "sha256": "9cc15907f92b994ed2dd9ee7f770b5d688e2093830d4fb3764732f89639f9f10"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p010.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p007.webp": {
       "bytes": 19674,
       "sha256": "caa3dd7f954b0bfd125228de756c8f18040fb0474d1f1d25d1b191963167cf21"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p011.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p008.webp": {
       "bytes": 285218,
       "sha256": "50f5ea08146d86530b486cd6401fd42705051cff9bebd5bbceb91520de310711"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p011.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p008.webp": {
       "bytes": 18602,
       "sha256": "cded691ac6761fd15edb7704fb4d6eff9bd598e2e4cbc951ebb7c29f9e618c48"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p012.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p009.webp": {
       "bytes": 314756,
       "sha256": "40d93b04ce49172da265724d8aaa27beb6ccc592025c30a795b7d4642e7acfe1"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p012.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p009.webp": {
       "bytes": 19852,
       "sha256": "0e2af2cba2e32dbd532729b1edd1ffc611df7037d7cf262ae2d281b889e1b040"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p013.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p010.webp": {
       "bytes": 216210,
       "sha256": "f31aad8e0a5595637d735baa04e1e49c972f438cf48b17816efafbddb51e4283"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p013.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p010.webp": {
       "bytes": 15058,
       "sha256": "a96f168aa93d9f6af7985acd7161bcc7a6e17416ded0b4abb3b6648a4106a3ea"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p014.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p011.webp": {
       "bytes": 222330,
       "sha256": "0b556f0dbf46fb25643c61c6dc24f14343d0e0c7d6d3cb2c4562f963ebd82f82"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p014.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p011.webp": {
       "bytes": 15424,
       "sha256": "4dfa80522eb9a3da16ae2fd205eac318bbb00f1086645ec3e77b88809b75d496"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p015.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p012.webp": {
       "bytes": 247204,
       "sha256": "344b9739fb2aab01ae4877d0209e21df36307de8e66d3ed40852d9dabe39a027"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p015.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p012.webp": {
       "bytes": 16922,
       "sha256": "b8336fd66e84a6e917b167dde4c094a16ea60e71f8b84a435c6ea581a14a1df1"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p016.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p013.webp": {
       "bytes": 224142,
       "sha256": "6b28974228fae0938244c7e5ddc6d063ef324dbd62c296d16d6a740aed9a2209"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p016.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p013.webp": {
       "bytes": 15738,
       "sha256": "30f11a5eaf39f8dd853f3802a3a7be4dd9772b7990499a7a60dc46f30a407184"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p017.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p014.webp": {
       "bytes": 223064,
       "sha256": "74bf0011c72cca76b3fe072e7aef5e1954697fadb805b6ca10fcc5dbf0b8f261"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p017.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p014.webp": {
       "bytes": 15540,
       "sha256": "9dc110466cae2e1f44fd2de6a8e5633a8540c005201e13ac22ead9bf8a743509"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p018.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p015.webp": {
       "bytes": 212898,
       "sha256": "be2b14e78e9c092e044fe06cff5a61f901f3ba3cad6f663b5fde6d01ebb4417b"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p018.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p015.webp": {
       "bytes": 14842,
       "sha256": "13b11d3fead9b2460d314577ccd2391e39fca247e768608c63b0b1d15e9dd7f1"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p019.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p016.webp": {
       "bytes": 222006,
       "sha256": "fc475c4d681d5eb75653acc8ee3cd5d4859f6b352a2507e2eda7ad5ae92d0c6c"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p019.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p016.webp": {
       "bytes": 15016,
       "sha256": "d147aa6cf2a10be15df64932625eaf507a4877a972622731ed34a2a10bf8f946"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p020.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p017.webp": {
       "bytes": 222880,
       "sha256": "e122e76dce9b4c1e1d5d4f71780590c95b8e1a8de62542bbdf1ca27a7e632c00"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p020.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p017.webp": {
       "bytes": 12762,
       "sha256": "44b1805e02eefdab359115a16a1d7b22bcea52ad8664cc65e09137e12f626bd5"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p021.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p018.webp": {
       "bytes": 296996,
       "sha256": "0f4c4fdf3c3d00c815116cc55e8554777b3400b43000c8d4badb74f022bf521e"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p021.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p018.webp": {
       "bytes": 17502,
       "sha256": "3c2231bea4620cdcbb6383e2b9acd9b8226ce254f3ff995da92daf79697647f4"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p022.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p019.webp": {
       "bytes": 259736,
       "sha256": "788948720de702cfd696b71f260a99766cbcc21261fd8a38470e01780cc4f90d"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p022.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p019.webp": {
       "bytes": 15746,
       "sha256": "45676823311ffb43313da62173f98a702a0d4db3314ae9e1643f4913183f296e"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p023.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p020.webp": {
       "bytes": 228184,
       "sha256": "9bf8ed1d8eca05bac70f8e412296ff631571c48175c34754f0d3ceee8614158d"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p023.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p020.webp": {
       "bytes": 13694,
       "sha256": "e17aef81649802dd8d292af14079afed372abcfb2e413b70bf778e9ce5cd5a04"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p024.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p021.webp": {
       "bytes": 222224,
       "sha256": "67dc02e21481bf531235e274eed37d18f792f400f10671cc695197b0a70e60cd"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p024.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p021.webp": {
       "bytes": 12748,
       "sha256": "72ff7e9a6b05b56790d8d929fbce227157ea6cba6cc4ebb156366e9c00bf3589"
     },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p022.webp": {
+      "bytes": 326452,
+      "sha256": "eff3530b7b74828455a0cc8035aaa05db09eebee280b3d0fbdf5b14cb81f9363"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p022.webp": {
+      "bytes": 18546,
+      "sha256": "a07d75a4de6e03b664bd7e1fc89f4ef5d5b9fcde4ed4b1b7b0a673c4eaa77d8e"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p023.webp": {
+      "bytes": 319164,
+      "sha256": "624a452ba0a33cec92b4a674c825464f663c663ee1e70f79d9ebd75ff2cfd719"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p023.webp": {
+      "bytes": 18544,
+      "sha256": "53a2ea2e9cb265a4aa7fddca46618b3655f4b72cc1e8b439d017c8e1410b604f"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l01-p024.webp": {
+      "bytes": 322814,
+      "sha256": "c1530620117c29caed9276b792bada3fca16f32db076eff309ccd90c6caa714c"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p024.webp": {
+      "bytes": 18386,
+      "sha256": "537a514cf298066a25fac1a370c837b30c90a2dbad77017f425a11960bbc62bd"
+    },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p001.webp": {
-      "bytes": 320052,
-      "sha256": "9a5b5c734e219cb36778b147f6720e40d4a13f91529e531595c37b621727c373"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p001.webp": {
-      "bytes": 18350,
-      "sha256": "04201f907f86f338c89b1c21eb9e9e979edf0de8d9c7262d7e1bab9b8ee7aa12"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p002.webp": {
-      "bytes": 396930,
-      "sha256": "2f6a877cb26288b254fd654ec443e9d5f67da7e53dc3e17c85456a9f1eb5b105"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p002.webp": {
-      "bytes": 24036,
-      "sha256": "90a8a26bf4b8a2991cb1c8c5a968cb8c9faca3bf3136d96b4aec0d365158ea12"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p003.webp": {
-      "bytes": 354228,
-      "sha256": "0831740ee57cd43c1874dfa83b2c72e04f6723bfbba7924939609ea27c01811f"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p003.webp": {
-      "bytes": 21866,
-      "sha256": "9d8472ab737960b7252c29fe70d14e85f15e2d13eb437c0014d647695ac2fdb1"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p004.webp": {
-      "bytes": 323712,
-      "sha256": "245c654d8bfee08f4150837840252d1e27597b344c5fb561099dcf5f6b94563b"
-    },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p004.webp": {
-      "bytes": 18828,
-      "sha256": "0d9c569f5c9cd72190e466bd7090cc7b0962d791ee1781722508ce8e9dbacc44"
-    },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p005.webp": {
       "bytes": 354260,
       "sha256": "2778519ee71d54908a52d281447e6473518e77b8d54a23afd459891f6e1a7ad5"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p005.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p001.webp": {
       "bytes": 21700,
       "sha256": "430e099689b39112388f58c52a63a8bcf22de5ffc2cd089859b1cf119ac9bcc6"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p006.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p002.webp": {
       "bytes": 320054,
       "sha256": "6301a88702604c26df209d05cf55885be98c2f3073172cd508c5a8582b11d666"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p006.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p002.webp": {
       "bytes": 18218,
       "sha256": "a682f1612972b88914fe1d6b8b7630913bbe19c0f4f4949def92df3d656e6153"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p007.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p003.webp": {
       "bytes": 351520,
       "sha256": "c41db1a2e66d6a09a1ae6d24e87117f9f70e7e4d17cea51fddbfe68b836c5e04"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p007.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p003.webp": {
       "bytes": 21318,
       "sha256": "ced392fc8525533677a072725685009837358067651f5e2322e4903a8008be46"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p008.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p004.webp": {
       "bytes": 324320,
       "sha256": "51ec390d954e05517a34a922278727fdc92726aae55e76a379c641a48fd6cfc2"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p008.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p004.webp": {
       "bytes": 18454,
       "sha256": "55854b36494576a96ceddfb3435f00b270f86fba1f1498ecdb8eececa4be0b75"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p009.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p005.webp": {
       "bytes": 322636,
       "sha256": "bafe4f61f68c9bb21eca093d2ee924cc2331b72fc150b8c320e7ccef099e16ce"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p009.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p005.webp": {
       "bytes": 18868,
       "sha256": "de9e0f1de811e70c4449d6f163154df716203955f49fb2368118f13419e35c27"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p010.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p006.webp": {
       "bytes": 308566,
       "sha256": "0a569629b04c2595cb9d89780ef435d861ac0d59f98be36051c59fad031d95db"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p010.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p006.webp": {
       "bytes": 19560,
       "sha256": "014cd692b5ad1bde0615748f608add4e42d3922a4c6751dc8b2855c9a82ec0f7"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p011.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p007.webp": {
       "bytes": 317530,
       "sha256": "53ccf16dddedc36c69f482cbcbb355015256aac90da346667c95503983ebb6b5"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p011.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p007.webp": {
       "bytes": 20024,
       "sha256": "170e3498839047a3ac75c6bd83a75e311777f52ff11e8f1fb8fb51c6500eb14b"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p012.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p008.webp": {
       "bytes": 287550,
       "sha256": "44e126cd4545aa5bdc24961a9ec86cd616b13ce4d87a5e89127e6f29f3704702"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p012.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p008.webp": {
       "bytes": 18704,
       "sha256": "36df63b50bd038598f787d9de88be07ba672bbeb0fa4aa644a9998bb1e0216eb"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p013.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p009.webp": {
       "bytes": 337778,
       "sha256": "a85465081d2d6c7ca11fb6c28579a58dea8e88fbbb5f199b03ca7715bbdf5c36"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p013.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p009.webp": {
       "bytes": 21632,
       "sha256": "6e20a635516e2efef424d2e5b64f60ccd5b4137e997c721b9f7069f4922398b9"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p014.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p010.webp": {
       "bytes": 285366,
       "sha256": "8b6d9b3455807a1a1d141597bcfd4e46964714ece993ba1f675f3cb6d95b041d"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p014.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p010.webp": {
       "bytes": 18696,
       "sha256": "aa27c6f581beeef84cdaf3979dc49a5cc95e6a2497fde414020f57e1d5b0552c"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p015.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p011.webp": {
       "bytes": 285026,
       "sha256": "9ca9bdd7cffb2df820dd51b05c3f027c1f649bc55c33b95ff8910a0f1fa231b0"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p015.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p011.webp": {
       "bytes": 18718,
       "sha256": "946d984f0c9e7bb9db5e9fc3492a9cbfd2aeb64139208c7c8f0d347e5c7d7a3e"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p016.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p012.webp": {
       "bytes": 309522,
       "sha256": "7de0a311984461aa6f255be3ce75c4d16474ee522557bc3041a1819ad2c5835e"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p016.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p012.webp": {
       "bytes": 19696,
       "sha256": "0392684eda10f71328c10b73b98d927ac419fd08a58d4faa81f114b3751b7a9d"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p017.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p013.webp": {
       "bytes": 214954,
       "sha256": "d278b1465f69243310ad20e3fc003b8f79fa9e030948b423c8838180a2cf4f0a"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p017.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p013.webp": {
       "bytes": 15020,
       "sha256": "d1eab28ed74d6d8550e58d4d91bb5633726bbbc494efae80deeaf3a2fb8c2e7d"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p018.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p014.webp": {
       "bytes": 215984,
       "sha256": "d21ad5b290cb1577b8d7a5039ca42b08ab901fbfc49549971b7850d5f7620729"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p018.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p014.webp": {
       "bytes": 14560,
       "sha256": "bf1edbd5865b96bf57ea9ef2df137b0ab24107e5b3d9746cbdf426279ac359dc"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p019.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p015.webp": {
       "bytes": 224662,
       "sha256": "76f1096142e68a8025bfb655607a6f018ae0e0c4d75285fbdc74f4d662393d08"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p019.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p015.webp": {
       "bytes": 15600,
       "sha256": "7962c2262faa24080e89e360f5a9aad21c46b59e1e025ff61ba4baf83f4a9344"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p020.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p016.webp": {
       "bytes": 249354,
       "sha256": "ff6ba81f39b864026800c248c22e9650fab0071402f57d54dc5b9e006442ac0d"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p020.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p016.webp": {
       "bytes": 17184,
       "sha256": "4ef9a2e37104281213c2be9a6a02ba756143525482a6bf23646bfc9061b9f52d"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p021.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p017.webp": {
       "bytes": 214606,
       "sha256": "054b078bc13888ff41168c755f70a0aa27a1bb1f3e1b9fae306b0682f48b5890"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p021.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p017.webp": {
       "bytes": 15046,
       "sha256": "d4377c724f0cbfc8bd7cb0a014dac2faf413935279fcdba1aa008253110342c2"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p022.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p018.webp": {
       "bytes": 282770,
       "sha256": "38973588230f409cfc4fc54928449108934334d173dfc7ef26ea2922a011af3a"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p022.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p018.webp": {
       "bytes": 19022,
       "sha256": "c315180a8c7349628da5a8a18b9c8bbea45c413bb5c3b62e24f9af1f5e3ada47"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p023.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p019.webp": {
       "bytes": 248672,
       "sha256": "00e8b0085c0c40518c06c9db298826c6b908b92d54b4e71e3ef426736bf25e30"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p023.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p019.webp": {
       "bytes": 16820,
       "sha256": "a7b703a42c921b7a6224cc12d2f49421be8fc1f24fdd6d215f2031c7d4c50850"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p024.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p020.webp": {
       "bytes": 250976,
       "sha256": "92185daf01dd6d0671c64c6c3649b8ddeb26f54e1b72fde3786ca1a9dc960b49"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p024.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p020.webp": {
       "bytes": 17074,
       "sha256": "fe6a3a605c6568ef96a8ccb3ca70429e2718c42b2ba6d28f7ec2b590f739b1ff"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p025.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p021.webp": {
       "bytes": 214804,
       "sha256": "997c2e0225f421cb4cdf5000915f5f98808b14ab41ac84bf04550934f1402100"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p025.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p021.webp": {
       "bytes": 14490,
       "sha256": "97e3f6f9d0af2b3e6af25b847142f268ee12be5bb2061164a39b6b1050a2007f"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p026.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p022.webp": {
       "bytes": 293150,
       "sha256": "5a663e6cffdfde1bfc9f0a202da61a29b7ea37e19985e477208232405ad6eee3"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p026.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p022.webp": {
       "bytes": 17350,
       "sha256": "540f3e9b1ab4ff531e8caceed2528395a43af9d156ab318483bb44f54f9d2e19"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p027.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p023.webp": {
       "bytes": 257840,
       "sha256": "ee4b6a7c09baf25429a9bcab8c43f094d33a0f08c917b40897af250ab9ac35ac"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p027.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p023.webp": {
       "bytes": 15710,
       "sha256": "3ac966093d52aba3de7e5f05a5dcfac2fbd6bc42fd190cd10804276640a162a7"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p028.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p024.webp": {
       "bytes": 260146,
       "sha256": "3c376a147f5e7238ccdef70cb10010dc221750b64c7a9f25ea2008f9845e3503"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p028.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p024.webp": {
       "bytes": 15940,
       "sha256": "c6fc917ab09135fa680176bfa93a98600b225e8d9cca33168a17f75741ae23d4"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p029.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p025.webp": {
       "bytes": 226172,
       "sha256": "a72d68939f8e6869d8bde74d3d6b81b0fd1a96e5b693eac7c97b79b6cbda54b2"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p029.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p025.webp": {
       "bytes": 13014,
       "sha256": "2a3947ed51c23d071efb0e2f0702edf7fa878bb47ac5e768c3614ec47e6eaab0"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p030.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p026.webp": {
       "bytes": 227706,
       "sha256": "f20bcb4cebd4832b9fb81ff4f74d38cef495bb162e9d2b9319b1799618e5b066"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p030.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p026.webp": {
       "bytes": 13594,
       "sha256": "414e60b8fb779792ebe45dd4940b42bc3a35eb21d57bb16b03b1d4edc5203d74"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p031.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p027.webp": {
       "bytes": 256610,
       "sha256": "e6af9b56de1378fda8fcc04e7fc4c592a1dfff979c0e37004938b89d56fd5535"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p031.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p027.webp": {
       "bytes": 15750,
       "sha256": "23847a4de8cfc0c02a2f7657708d1ff06ad2f242529ac81a1aead43b51771bc4"
     },
-    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p032.webp": {
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p028.webp": {
       "bytes": 219226,
       "sha256": "bf20b3dae23729546781f1ea91d71f27d85e0d0ce521c108d9916e00be7be32f"
     },
-    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p032.webp": {
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p028.webp": {
       "bytes": 13448,
       "sha256": "039410465a411d50d2fbc0eeda8964645b6b86d0097a5196c80f6af6aa08804a"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p029.webp": {
+      "bytes": 320052,
+      "sha256": "9a5b5c734e219cb36778b147f6720e40d4a13f91529e531595c37b621727c373"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p029.webp": {
+      "bytes": 18350,
+      "sha256": "04201f907f86f338c89b1c21eb9e9e979edf0de8d9c7262d7e1bab9b8ee7aa12"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p030.webp": {
+      "bytes": 396930,
+      "sha256": "2f6a877cb26288b254fd654ec443e9d5f67da7e53dc3e17c85456a9f1eb5b105"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p030.webp": {
+      "bytes": 24036,
+      "sha256": "90a8a26bf4b8a2991cb1c8c5a968cb8c9faca3bf3136d96b4aec0d365158ea12"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p031.webp": {
+      "bytes": 354228,
+      "sha256": "0831740ee57cd43c1874dfa83b2c72e04f6723bfbba7924939609ea27c01811f"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p031.webp": {
+      "bytes": 21866,
+      "sha256": "9d8472ab737960b7252c29fe70d14e85f15e2d13eb437c0014d647695ac2fdb1"
+    },
+    "assets/worlds/core-expansion-v1/maps/new-lands-l02-p032.webp": {
+      "bytes": 323712,
+      "sha256": "245c654d8bfee08f4150837840252d1e27597b344c5fb561099dcf5f6b94563b"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p032.webp": {
+      "bytes": 18828,
+      "sha256": "0d9c569f5c9cd72190e466bd7090cc7b0962d791ee1781722508ce8e9dbacc44"
     }
   }
 }

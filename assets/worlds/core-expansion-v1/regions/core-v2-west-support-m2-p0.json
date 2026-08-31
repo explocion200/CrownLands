@@ -1,6 +1,6 @@
 {
   "id": "core-v2-west-support-m2-p0",
-  "name": "West Support",
+  "name": "Westwych",
   "type": "starter",
   "gridX": -2,
   "gridY": 0,
@@ -1113,7 +1113,7 @@
         "start": 0.462,
         "end": 0.538,
         "type": "road",
-        "connectsToRegionId": "new-lands-l01-p022",
+        "connectsToRegionId": "new-lands-l01-p019",
         "arrowXNorm": 0.065,
         "arrowYNorm": 0.5,
         "intentionalOuter": false,
