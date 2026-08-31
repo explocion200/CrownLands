@@ -20,7 +20,7 @@ const rootFiles = [
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
   "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
-  "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
+  "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml", "weak-player-protection-guide.html",
   "styles.css", "support.html", "ui-layout-config.js", "ui-layout-runtime.js",
   "terms.html", "updates.html", "public-site.js", "world.html", "world-config.js",
 ];

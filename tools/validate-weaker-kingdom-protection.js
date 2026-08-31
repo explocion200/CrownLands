@@ -8,6 +8,14 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
 const firestoreRulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+const guideSource = fs.readFileSync(path.join(root, "weak-player-protection-guide.html"), "utf8");
+const guideHubSource = fs.readFileSync(path.join(root, "guides.html"), "utf8");
+const howToPlaySource = fs.readFileSync(path.join(root, "how-to-play.html"), "utf8");
+const publicStylesSource = fs.readFileSync(path.join(root, "site-info.css"), "utf8");
+const visualFixtureSource = fs.readFileSync(
+  path.join(root, "docs", "visual-qa", "weak-player-protection", "index.html"),
+  "utf8"
+);
 const realmConfig = JSON.parse(
   fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8")
 );
@@ -33,6 +41,28 @@ function readConstant(text, name) {
   const match = text.match(new RegExp(`const\\s+${name}\\s*=\\s*([^;]+);`));
   if (!match) throw new Error(`Missing ${name}.`);
   return match[1];
+}
+
+function readJpegDimensions(relativePath) {
+  const data = fs.readFileSync(path.join(root, relativePath));
+  if (data.length < 4 || data[0] !== 0xff || data[1] !== 0xd8) {
+    throw new Error(`${relativePath} is not a valid JPEG screenshot.`);
+  }
+  let offset = 2;
+  while (offset + 8 < data.length) {
+    if (data[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = data[offset + 1];
+    const segmentLength = data.readUInt16BE(offset + 2);
+    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+      return { width: data.readUInt16BE(offset + 7), height: data.readUInt16BE(offset + 5) };
+    }
+    if (segmentLength < 2) break;
+    offset += segmentLength + 2;
+  }
+  throw new Error(`${relativePath} does not contain JPEG dimensions.`);
 }
 
 const numericConstants = [
@@ -461,6 +491,74 @@ if (!/\.city-node\.enemy\.enemy-power-protected\s*\{[\s\S]*?--enemy-city-ui:\s*#
   || !/\.city-node\.enemy\.enemy-power-in-range\s*\{[\s\S]*?--enemy-city-ui:\s*#b3261e;/.test(stylesSource)
   || !/\.city-node\.enemy\.enemy-power-overpowering\s*\{[\s\S]*?--enemy-city-ui:\s*#4b1418;/.test(stylesSource)) {
   throw new Error("Enemy power bands are not using the fixed light, bright, and dark red palette.");
+}
+
+const guideMarkupFunction = readFunction(clientSource, "renderEnemyPowerBandGuideMarkup");
+if (!guideMarkupFunction.includes("getStableEnemyCityPowerBand(city)")
+  || !guideMarkupFunction.includes("getEnemyCityPowerBandLabel(powerBand, city)")
+  || guideMarkupFunction.includes("ATTACK_PROTECTION_ASSAULT_MIN_RATIO")
+  || guideMarkupFunction.includes("ATTACK_PROTECTION_RAID_MIN_RATIO")) {
+  throw new Error("The City Info guide entry must consume stabilized presentation state without duplicating attack thresholds.");
+}
+for (const snippet of [
+  'href="weak-player-protection-guide.html" target="_blank"',
+  "The server-confirmed attack screen is final.",
+  'name: "Light red"',
+  'name: "Red"',
+  'name: "Dark red"',
+]) {
+  if (!clientSource.includes(snippet)) throw new Error(`The City Info protection entry is missing: ${snippet}`);
+}
+
+const requiredGuideSnippets = [
+  "at least 2.0 times the defender",
+  "2.0&times; through below 2.5&times;",
+  "Exactly 2.5&times; and above",
+  "cannot capture",
+  "defender losses cannot exceed 10%",
+  "at least one defender remains",
+  "Every raider is lost with no Field Medics recovery",
+  "attacker receives 0 XP",
+  "double XP for their first protected battle against that attacker in the current world",
+  "same attacker&rsquo;s follow-up against that same city and defender",
+  "A change of ownership invalidates the breach",
+  "accepted protection mode stays with that march",
+  "Weak Player Protection applies only to ordinary player-owned cities",
+  "formerly owned transfer that converts into an attack can capture",
+  "converted clan reinforcement does not receive that capture exception",
+  "server-confirmed attack screen is final",
+];
+for (const snippet of requiredGuideSnippets) {
+  if (!guideSource.includes(snippet)) throw new Error(`Weak Player Protection guide drifted from verified behavior: ${snippet}`);
+}
+for (const [name, hex] of [["light-red", "#c9786f"], ["red", "#b3261e"], ["dark-red", "#4b1418"]]) {
+  const publicColor = new RegExp(`\\.opponent-color-card\\.${name} \\.opponent-color-swatch\\s*\\{\\s*background:\\s*${hex};`);
+  if (!publicColor.test(publicStylesSource)) throw new Error(`The public guide ${name} swatch no longer matches ${hex}.`);
+}
+for (const state of ["breach", "raid", "normal", "stronger", "shielded"]) {
+  if (!visualFixtureSource.includes(`data-state="${state}"`)) throw new Error(`Visual fixture is missing the ${state} state.`);
+}
+for (const markerClass of ["enemy-power-protected", "enemy-power-in-range", "enemy-power-overpowering", "peace-shielded"]) {
+  if (!visualFixtureSource.includes(markerClass)) throw new Error(`Visual fixture is missing production marker class ${markerClass}.`);
+}
+for (const [state, color] of [["breach", "#c9786f"], ["raid", "#c9786f"], ["normal", "#b3261e"], ["stronger", "#4b1418"], ["shielded", "#b3261e"]]) {
+  if (!visualFixtureSource.includes(`data-state="${state}" data-expected-color="${color}"`)) {
+    throw new Error(`Visual fixture ${state} does not assert ${color}.`);
+  }
+}
+for (const state of ["breach", "raid", "normal", "stronger", "shielded"]) {
+  const desktop = readJpegDimensions(`promo-screenshots/weak-player-protection-${state}.jpg`);
+  if (desktop.width !== 1440 || desktop.height !== 900) {
+    throw new Error(`The ${state} guide screenshot must be 1440×900, received ${desktop.width}×${desktop.height}.`);
+  }
+  const mobile = readJpegDimensions(`docs/visual-qa/weak-player-protection/mobile-${state}-844x390.jpg`);
+  if (mobile.width !== 844 || mobile.height !== 390) {
+    throw new Error(`The ${state} mobile QA screenshot must be 844×390, received ${mobile.width}×${mobile.height}.`);
+  }
+}
+if (!guideHubSource.includes('href="/weak-player-protection-guide.html"')
+  || !howToPlaySource.includes('href="/weak-player-protection-guide.html"')) {
+  throw new Error("The protection guide is not linked from Guides and How to Play.");
 }
 
 const requiredServerSnippets = [

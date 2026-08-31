@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weak Player Protection — Controlled UI States</title>
+  <link rel="stylesheet" href="../../../styles.css" />
+  <link rel="stylesheet" href="../../../interface-theme.css" />
+  <link rel="stylesheet" href="../../../daily-rewards.css" />
+  <link rel="stylesheet" href="../../../common-gear-ui.css" />
+  <link rel="stylesheet" href="../../../readability.css" />
+  <link rel="stylesheet" href="../../../manuscript-prototype.css" />
+  <link rel="stylesheet" href="../../../ui-contrast-correction.css" />
+  <link rel="stylesheet" href="../../../profile-theme.css" />
+  <link rel="stylesheet" href="../../../crownlands-palette.css" />
+  <link rel="stylesheet" href="../../../action-buttons.css" />
+  <link rel="stylesheet" href="../../../mobile-viewport.css" />
+  <link rel="stylesheet" href="../../../player-flag-editor.css" />
+  <link rel="stylesheet" href="../../../chat.css" />
+  <link rel="stylesheet" href="../../../clan-heraldry-v2.css" />
+  <style>
+    html, body { min-height: 100%; overflow: auto !important; background: #111a21; }
+    body.weak-protection-qa { margin: 0; padding: 40px 0; display: grid; gap: 36px; justify-items: center; color: #f6edd7; font-family: Inter, system-ui, sans-serif; }
+    .qa-capture, .qa-capture * { box-sizing: border-box; }
+    .qa-capture { width: 1280px; height: 720px; overflow: hidden; display: grid; grid-template-rows: 64px minmax(0, 1fr) 58px; color: #eaf4ff; border: 1px solid #667889; background: #0b1722; box-shadow: 0 24px 54px #0008; }
+    .qa-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; border-bottom: 1px solid #785d37; background: linear-gradient(180deg, #2f2419, #171713); }
+    .qa-brand { display: flex; align-items: center; gap: 11px; color: #f6d883; font-family: Cinzel, Georgia, serif; font-size: 20px; font-weight: 900; letter-spacing: .04em; }
+    .qa-brand img { width: 36px; height: 36px; }
+    .qa-state-label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid #94794f; border-radius: 4px; background: #0d2030; font-size: 14px; font-weight: 850; }
+    .qa-color-chip { width: 20px; height: 26px; display: block; border: 1px solid #fff9; clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%); background: var(--qa-state-color); }
+    .qa-main { min-height: 0; display: grid; grid-template-columns: 47% 53%; }
+    .qa-map { position: relative; min-width: 0; overflow: hidden; border-right: 1px solid #785d37; background: linear-gradient(#09203566, #09203566), url("../../../assets/worlds/world_01/maps/versioned/center-crownlands-heart-1783019616021-8ac9453f446b.webp") 45% 46% / cover no-repeat; }
+    .qa-map::after { content: "Crownlands Heart · controlled test state"; position: absolute; left: 18px; bottom: 16px; padding: 6px 9px; color: #ede1c5; border: 1px solid #cbb98c55; background: #1c1711dd; font-size: 11px; font-weight: 800; }
+    .qa-target-label { position: absolute; z-index: 30; left: 20px; top: 18px; display: grid; gap: 3px; padding: 10px 12px; color: #fff; border-left: 4px solid var(--qa-state-color); background: #081725e8; box-shadow: 0 7px 16px #0007; }
+    .qa-target-label span { color: #a9c5da; font-size: 11px; font-weight: 850; text-transform: uppercase; }
+    .qa-target-label strong { font-size: 17px; }
+    .qa-target-label small { color: #d3e3ee; font-size: 12px; }
+    .qa-map .city-node { left: 52%; top: 60%; z-index: 20; border: 0; background: transparent; overflow: visible; }
+    .qa-map .city-castle { pointer-events: none; }
+    .qa-map .city-label { pointer-events: none; }
+    .qa-panel-shell { min-width: 0; min-height: 0; padding: 24px 28px; display: grid; align-content: center; background: radial-gradient(circle at 100% 0, #174363 0, #0b2134 38%, #071522 100%); }
+    .qa-panel-title { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 14px; }
+    .qa-panel-title span, .qa-panel-title strong { display: block; }
+    .qa-panel-title span { color: #95c9ec; font-size: 11px; font-weight: 900; text-transform: uppercase; }
+    .qa-panel-title strong { color: #fff3c8; font-family: Cinzel, Georgia, serif; font-size: 22px; }
+    .qa-ratio { color: #ffd46e; font-size: 14px; font-weight: 950; white-space: nowrap; }
+    .qa-protection-notice { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; color: #f9e7df; border: 1px solid color-mix(in srgb, var(--qa-state-color) 72%, white); background: color-mix(in srgb, var(--qa-state-color) 34%, #111b27); }
+    .qa-protection-notice strong { color: #fff8db; font-size: 12px; }
+    .qa-protection-notice small { color: #f2ded9; font-size: 11px; line-height: 1.35; }
+    .qa-capture .troop-route-city :is(strong, span, small, b), .qa-capture .troop-slider-preview :is(strong, span, small) { color: #2f241a !important; }
+    .qa-footer { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; padding: 0 26px; color: #e6dcc4; border-top: 1px solid #745d3d; background: #211a13; font-size: 13px; line-height: 1.3; }
+    .qa-footer strong { color: #f6d27b; }
+    .qa-footer-copy { min-width: 0; display: flex; gap: .3rem; align-items: baseline; }
+    .qa-footer-copy > strong { flex: 0 0 auto; }
+    .qa-footer-copy > span { min-width: 0; }
+    .qa-computed { padding: 5px 8px; color: #fff; border: 1px solid #ffffff66; background: var(--qa-state-color); font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 900; }
+    .qa-capture[data-color-check="fail"] { outline: 5px solid #ff0b0b; }
+    .qa-shield-panel { display: grid; gap: 16px; }
+    .qa-shield-status { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; padding: 16px; border: 1px solid #d9b95a88; border-radius: 14px; background: #32260fb8; }
+    .qa-shield-status img { width: 64px; height: 64px; object-fit: contain; }
+    .qa-shield-status strong, .qa-shield-status small { display: block; }
+    .qa-shield-status strong { color: #ffe6a3; font-size: 17px; }
+    .qa-shield-status small { color: #e7d6ab; font-size: 12px; }
+    .qa-disabled-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .qa-disabled-actions .cl-action-button { position: relative !important; inset: auto !important; width: 100%; min-height: 70px; }
+    body[data-single-state] { min-height: 100vh; padding: 0; place-items: center; }
+    body[data-single-state] .qa-capture { display: none; }
+    body[data-single-state] .qa-capture[data-active="true"] { display: grid; width: min(1280px, 100vw); height: min(720px, 100vh); }
+    @media (max-width: 900px), (max-height: 500px) {
+      body.weak-protection-qa { padding: 12px 0; }
+      .qa-capture { width: min(844px, 100vw); height: 390px; grid-template-rows: 44px minmax(0, 1fr) 40px; }
+      .qa-header { padding: 0 12px; }
+      .qa-brand { font-size: 14px; }
+      .qa-brand img { width: 28px; height: 28px; }
+      .qa-state-label { padding: 4px 7px; font-size: 10px; }
+      .qa-color-chip { width: 14px; height: 19px; }
+      .qa-main { grid-template-columns: 43% 57%; }
+      .qa-target-label { left: 9px; top: 8px; padding: 6px 8px; }
+      .qa-target-label strong { font-size: 13px; }
+      .qa-target-label small { font-size: 9px; }
+      .qa-map .city-node { left: 52%; top: 66%; transform: translate(-50%, -50%) scale(.76); }
+      .qa-map::after { left: 7px; bottom: 6px; padding: 3px 5px; font-size: 8px; }
+      .qa-panel-shell { padding: 7px 10px; }
+      .qa-panel-title { margin-bottom: 5px; }
+      .qa-panel-title span { font-size: 8px; }
+      .qa-panel-title strong { font-size: 14px; }
+      .qa-ratio { font-size: 10px; }
+      .troop-slider-panel { gap: .34rem !important; }
+      .troop-route-summary { grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr) !important; gap: .26rem !important; }
+      .troop-route-city { padding: .3rem .4rem !important; }
+      .troop-command-icon { width: 32px !important; height: 32px !important; min-height: 0 !important; border-radius: 9px !important; font-size: .9rem !important; }
+      .troop-slider-preview > div { padding: .3rem .4rem !important; }
+      .troop-slider-preview span, .troop-slider-preview small { font-size: 8px !important; }
+      .troop-slider-preview strong { font-size: 10px !important; }
+      .qa-protection-notice { padding: 5px 7px; }
+      .qa-protection-notice strong { font-size: 9px; }
+      .qa-protection-notice small { font-size: 8px; }
+      .troop-slider-actions button { min-height: 30px !important; font-size: 10px !important; }
+      .qa-footer { gap: 7px; padding: 0 10px; font-size: 9px; }
+      .qa-computed { padding: 3px 5px; font-size: 9px; }
+      .qa-shield-panel { gap: 7px; }
+      .qa-shield-status { grid-template-columns: 38px minmax(0, 1fr); gap: 8px; padding: 7px; }
+      .qa-shield-status img { width: 38px; height: 38px; }
+      .qa-shield-status strong { font-size: 12px; }
+      .qa-shield-status small { font-size: 9px; }
+      .qa-disabled-actions { gap: 6px; }
+      .qa-disabled-actions .cl-action-button { min-height: 46px; }
+    }
+    body.weak-protection-qa[data-single-state] { padding: 0; overflow: hidden !important; }
+  </style>
+</head>
+<body class="weak-protection-qa">
+  <article class="qa-capture" data-state="breach" data-expected-color="#c9786f" style="--qa-state-color:#c9786f">
+    <header class="qa-header"><div class="qa-brand"><img src="../../../assets/icons/crownlands-icon-192.png" alt="" />Crownlands Combat</div><div class="qa-state-label"><i class="qa-color-chip" aria-hidden="true"></i><span>Light red · Protected Breach Assault</span></div></header>
+    <div class="qa-main"><section class="qa-map" aria-label="Map focused on Briarwatch"><div class="qa-target-label"><span>Target city</span><strong>Briarwatch</strong><small>Ruler Alder · Level 37</small></div><button class="city-node enemy selected castle-stage-3 enemy-power-protected" type="button" aria-label="Briarwatch. Ruler Alder. Level 37. Weaker kingdom protection: two-stage assault required."><span class="city-ring"></span><span class="city-castle stage-3" aria-hidden="true"><img class="city-art" src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span><span class="city-label foreign-city-label selected-foreign-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Ruler Alder</strong></span><span class="foreign-selected-banner"><span class="foreign-selected-level">37</span><span class="foreign-selected-crest"><span class="city-owner-flag"><span class="flag-symbol">A</span></span></span><span class="foreign-selected-data"><strong class="city-name">Briarwatch</strong><span class="foreign-garrison">42,000 troops</span></span></span></span></button></section>
+      <section class="qa-panel-shell"><div><div class="qa-panel-title"><div><span>Server-confirmed attack</span><strong>Attack Briarwatch</strong></div><div class="qa-ratio">220,000 vs 100,000 · 2.20×</div></div><div class="troop-slider-panel attack"><div class="troop-route-summary"><div class="troop-route-city"><span>From</span><strong>Crownwatch</strong><small>120,000 troops</small></div><div class="troop-command-icon" aria-hidden="true">⚔</div><div class="troop-route-city destination"><span>To</span><strong>Briarwatch</strong><small>Level 37</small></div></div><div class="troop-slider-preview win"><div><span>Scouted siege defense</span><strong>96,500 power</strong><small>Wall and garrison</small></div><div><span>Forecast at scout time</span><strong>Likely wall breach</strong><small>Capture is not permitted on this first assault</small></div></div><div class="qa-protection-notice"><strong>Protected Breach Assault · Maximum 48,000 troops</strong><small>First assault: a victory breaches the walls but cannot capture. Attacker earns 0 XP.</small></div><div class="troop-slider-actions"><button class="troop-slider-confirm attack" type="button"><span aria-hidden="true">⚔</span>Attack</button><button class="troop-slider-cancel" type="button">Cancel</button></div></div></div></section></div>
+    <footer class="qa-footer"><code class="qa-computed" data-computed-color>checking color…</code><div class="qa-footer-copy"><strong>What this shows:</strong><span>Briarwatch is attackable, but the first winning protected assault can breach it without capturing it.</span></div></footer>
+  </article>
+
+  <article class="qa-capture" data-state="raid" data-expected-color="#c9786f" style="--qa-state-color:#c9786f">
+    <header class="qa-header"><div class="qa-brand"><img src="../../../assets/icons/crownlands-icon-192.png" alt="" />Crownlands Combat</div><div class="qa-state-label"><i class="qa-color-chip" aria-hidden="true"></i><span>Light red · Protected Raid</span></div></header>
+    <div class="qa-main"><section class="qa-map" aria-label="Map focused on Mossford"><div class="qa-target-label"><span>Target city</span><strong>Mossford</strong><small>Ruler Birch · Level 28</small></div><button class="city-node enemy selected castle-stage-3 enemy-power-protected" type="button" aria-label="Mossford. Ruler Birch. Level 28. Weaker kingdom protection: raid only, no capture."><span class="city-ring"></span><span class="city-castle stage-3" aria-hidden="true"><img class="city-art" src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span><span class="city-label foreign-city-label selected-foreign-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Ruler Birch</strong></span><span class="foreign-selected-banner"><span class="foreign-selected-level">28</span><span class="foreign-selected-crest"><span class="city-owner-flag"><span class="flag-symbol">B</span></span></span><span class="foreign-selected-data"><strong class="city-name">Mossford</strong><span class="foreign-garrison">31,000 troops</span></span></span></span></button></section>
+      <section class="qa-panel-shell"><div><div class="qa-panel-title"><div><span>Server-confirmed attack</span><strong>Attack Mossford</strong></div><div class="qa-ratio">300,000 vs 100,000 · 3.00×</div></div><div class="troop-slider-panel attack"><div class="troop-route-summary"><div class="troop-route-city"><span>From</span><strong>Crownwatch</strong><small>120,000 troops</small></div><div class="troop-command-icon" aria-hidden="true">⚔</div><div class="troop-route-city destination"><span>To</span><strong>Mossford</strong><small>Level 28</small></div></div><div class="troop-slider-preview lose"><div><span>Scouted siege defense</span><strong>72,400 power</strong><small>Live defense may change</small></div><div><span>Forecast at scout time</span><strong>Protected raid — cannot capture</strong><small>Wall damage will not persist</small></div></div><div class="qa-protection-notice"><strong>Protected Raid · Maximum 19,000 troops</strong><small>No capture; defender damage is capped at 10%, at least one defender remains, all raiders are lost, and attacker earns 0 XP.</small></div><div class="troop-slider-actions"><button class="troop-slider-confirm attack" type="button"><span aria-hidden="true">⚔</span>Raid</button><button class="troop-slider-cancel" type="button">Cancel</button></div></div></div></section></div>
+    <footer class="qa-footer"><code class="qa-computed" data-computed-color>checking color…</code><div class="qa-footer-copy"><strong>What this shows:</strong><span>Mossford uses the same light-red shade, but the server confirms a non-capturing Protected Raid.</span></div></footer>
+  </article>
+
+  <article class="qa-capture" data-state="normal" data-expected-color="#b3261e" style="--qa-state-color:#b3261e">
+    <header class="qa-header"><div class="qa-brand"><img src="../../../assets/icons/crownlands-icon-192.png" alt="" />Crownlands Combat</div><div class="qa-state-label"><i class="qa-color-chip" aria-hidden="true"></i><span>Red · Normal Attack</span></div></header>
+    <div class="qa-main"><section class="qa-map" aria-label="Map focused on Oakmere"><div class="qa-target-label"><span>Target city</span><strong>Oakmere</strong><small>Ruler Cedar · Level 41</small></div><button class="city-node enemy selected castle-stage-3 enemy-power-in-range" type="button" aria-label="Oakmere. Ruler Cedar. Level 41. Within your King Power range."><span class="city-ring"></span><span class="city-castle stage-3" aria-hidden="true"><img class="city-art" src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span><span class="city-label foreign-city-label selected-foreign-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Ruler Cedar</strong></span><span class="foreign-selected-banner"><span class="foreign-selected-level">41</span><span class="foreign-selected-crest"><span class="city-owner-flag"><span class="flag-symbol">C</span></span></span><span class="foreign-selected-data"><strong class="city-name">Oakmere</strong><span class="foreign-garrison">55,000 troops</span></span></span></span></button></section>
+      <section class="qa-panel-shell"><div><div class="qa-panel-title"><div><span>Server-confirmed attack</span><strong>Attack Oakmere</strong></div><div class="qa-ratio">150,000 vs 100,000 · 1.50×</div></div><div class="troop-slider-panel attack"><div class="troop-route-summary"><div class="troop-route-city"><span>From</span><strong>Crownwatch</strong><small>120,000 troops</small></div><div class="troop-command-icon" aria-hidden="true">⚔</div><div class="troop-route-city destination"><span>To</span><strong>Oakmere</strong><small>Level 41</small></div></div><div class="troop-slider-preview win"><div><span>Scouted siege defense</span><strong>112,800 power</strong><small>Wall and garrison</small></div><div><span>Forecast at scout time</span><strong>Likely capture</strong><small>Normal capture and XP rules</small></div></div><div class="troop-slider-actions"><button class="troop-slider-confirm attack" type="button"><span aria-hidden="true">⚔</span>Attack</button><button class="troop-slider-cancel" type="button">Cancel</button></div></div></div></section></div>
+    <footer class="qa-footer"><code class="qa-computed" data-computed-color>checking color…</code><div class="qa-footer-copy"><strong>What this shows:</strong><span>Oakmere is in the normal King Power range. Another protection could still block the attack.</span></div></footer>
+  </article>
+
+  <article class="qa-capture" data-state="stronger" data-expected-color="#4b1418" style="--qa-state-color:#4b1418">
+    <header class="qa-header"><div class="qa-brand"><img src="../../../assets/icons/crownlands-icon-192.png" alt="" />Crownlands Combat</div><div class="qa-state-label"><i class="qa-color-chip" aria-hidden="true"></i><span>Dark red · Stronger Opponent</span></div></header>
+    <div class="qa-main"><section class="qa-map" aria-label="Map focused on Ironholt"><div class="qa-target-label"><span>Target city</span><strong>Ironholt</strong><small>Ruler Flint · Level 64</small></div><button class="city-node enemy selected castle-stage-4 enemy-power-overpowering" type="button" aria-label="Ironholt. Ruler Flint. Level 64. King Power above yours."><span class="city-ring"></span><span class="city-castle stage-4" aria-hidden="true"><img class="city-art" src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span><span class="city-label foreign-city-label selected-foreign-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Ruler Flint</strong></span><span class="foreign-selected-banner"><span class="foreign-selected-level">64</span><span class="foreign-selected-crest"><span class="city-owner-flag"><span class="flag-symbol">F</span></span></span><span class="foreign-selected-data"><strong class="city-name">Ironholt</strong><span class="foreign-garrison">92,000 troops</span></span></span></span></button></section>
+      <section class="qa-panel-shell"><div><div class="qa-panel-title"><div><span>Server-confirmed attack</span><strong>Attack Ironholt</strong></div><div class="qa-ratio">100,000 vs 160,000 · 0.63×</div></div><div class="troop-slider-panel attack"><div class="troop-route-summary"><div class="troop-route-city"><span>From</span><strong>Crownwatch</strong><small>120,000 troops</small></div><div class="troop-command-icon" aria-hidden="true">⚔</div><div class="troop-route-city destination"><span>To</span><strong>Ironholt</strong><small>Level 64</small></div></div><div class="troop-slider-preview lose"><div><span>Scouted siege defense</span><strong>224,600 power</strong><small>Wall and garrison</small></div><div><span>Forecast at scout time</span><strong>Likely defeat</strong><small>Normal rules; rival kingdom is stronger</small></div></div><div class="troop-slider-actions"><button class="troop-slider-confirm attack" type="button"><span aria-hidden="true">⚔</span>Attack</button><button class="troop-slider-cancel" type="button">Cancel</button></div></div></div></section></div>
+    <footer class="qa-footer"><code class="qa-computed" data-computed-color>checking color…</code><div class="qa-footer-copy"><strong>What this shows:</strong><span>Ironholt remains normally attackable, but the dark-red shade warns that its ruler has more King Power.</span></div></footer>
+  </article>
+
+  <article class="qa-capture" data-state="shielded" data-expected-color="#b3261e" style="--qa-state-color:#b3261e">
+    <header class="qa-header"><div class="qa-brand"><img src="../../../assets/icons/crownlands-icon-192.png" alt="" />Crownlands Combat</div><div class="qa-state-label"><i class="qa-color-chip" aria-hidden="true"></i><span>Red · Independent Blocker</span></div></header>
+    <div class="qa-main"><section class="qa-map" aria-label="Map focused on shielded Willowgate"><div class="qa-target-label"><span>Target city</span><strong>Willowgate</strong><small>Ruler Grove · Royal Peace Shield</small></div><button class="city-node enemy selected castle-stage-3 enemy-power-in-range peace-shielded" type="button" aria-label="Willowgate. Ruler Grove. Level 34. Within your King Power range. Royal Peace Shield active."><span class="city-ring"></span><span class="city-shield-field" aria-hidden="true"><img src="../../../assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" /></span><span class="city-castle stage-3" aria-hidden="true"><img class="city-art" src="../../../assets/optimized/castle-city-256x256-96961dc8d50b.webp" alt="" /></span><span class="city-label foreign-city-label selected-foreign-label"><span class="city-ruler-row"><strong class="foreign-ruler-name">Ruler Grove</strong></span><span class="foreign-selected-banner"><span class="foreign-selected-level">34</span><span class="foreign-selected-crest"><span class="city-owner-flag"><span class="flag-symbol">G</span></span></span><span class="foreign-selected-data"><strong class="city-name">Willowgate</strong><span class="foreign-garrison">? troops</span></span></span></span></button></section>
+      <section class="qa-panel-shell"><div class="qa-shield-panel"><div class="qa-panel-title"><div><span>Selected rival city</span><strong>Willowgate</strong></div><div class="qa-ratio">Red strength band</div></div><div class="qa-shield-status"><img src="../../../assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp" alt="" /><div><strong>Royal Peace Shield active</strong><small>Willowgate is protected from player attacks. The strength shade does not remove this blocker.</small></div></div><div class="qa-disabled-actions"><button class="city-wheel-action cl-action-button cl-action-scout" type="button"><span class="wheel-icon" aria-hidden="true">⌖</span><span class="wheel-action-name">Scout</span></button><button class="city-wheel-action cl-action-button cl-action-attack" type="button" disabled aria-label="Willowgate is protected by a Royal Peace Shield"><span class="wheel-icon" aria-hidden="true">⚔</span><span class="wheel-action-name">Shielded</span></button><button class="city-wheel-action cl-action-button cl-action-info" type="button"><span class="wheel-icon" aria-hidden="true">i</span><span class="wheel-action-name">Info</span></button></div></div></section></div>
+    <footer class="qa-footer"><code class="qa-computed" data-computed-color>checking color…</code><div class="qa-footer-copy"><strong>What this shows:</strong><span>Willowgate is red, but its Royal Peace Shield disables the Attack action.</span></div></footer>
+  </article>
+
+  <script>
+    function colorToHex(value) {
+      const channels = String(value || "").match(/[\d.]+/g)?.slice(0, 3).map(Number) || [];
+      return channels.length === 3 ? `#${channels.map(channel => Math.round(channel).toString(16).padStart(2, "0")).join("")}` : "";
+    }
+    document.querySelectorAll(".qa-capture").forEach(capture => {
+      const probe = capture.querySelector(".foreign-selected-data");
+      const computed = colorToHex(getComputedStyle(probe).backgroundColor);
+      const expected = capture.dataset.expectedColor.toLowerCase();
+      capture.dataset.computedColor = computed;
+      capture.dataset.colorCheck = computed === expected ? "pass" : "fail";
+      capture.querySelector("[data-computed-color]").textContent = `Computed ${computed}`;
+    });
+    const state = new URLSearchParams(location.search).get("state");
+    if (state) {
+      const active = document.querySelector(`.qa-capture[data-state="${CSS.escape(state)}"]`);
+      if (active) {
+        document.body.dataset.singleState = state;
+        active.dataset.active = "true";
+        document.title = `${active.querySelector(".qa-state-label span").textContent} — Crownlands QA`;
+      }
+    }
+  </script>
+</body>
+</html>

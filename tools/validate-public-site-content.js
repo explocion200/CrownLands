@@ -14,6 +14,7 @@ const publicPages = [
   "how-to-play.html",
   "battle-economy-guide.html",
   "battle-reports-guide.html",
+  "weak-player-protection-guide.html",
   "scouting-guide.html",
   "skills-presets-guide.html",
   "clans-rallies-guide.html",
@@ -74,6 +75,7 @@ const communitySource = read("community.html");
 const howToSource = read("how-to-play.html");
 const guidesSource = read("guides.html");
 const supportSource = read("support.html");
+const weakPlayerProtectionSource = read("weak-player-protection-guide.html");
 
 assert.match(indexSource, /name="google-adsense-account"\s+content="ca-pub-6031755025291372"/);
 assert.doesNotMatch(indexSource, /adsbygoogle|loginDisplayAd|login-display-ad/);
@@ -144,6 +146,15 @@ for (const anchor of ["first-five", "main-city", "first-city", "economy", "daily
 for (const anchor of ["cities-levels", "troops-marches", "combat-walls", "scouting-reports", "camps", "strongholds", "clans-rallies", "items-bag", "skills", "achievements", "leaderboards", "pwa-install"]) {
   assert.match(guidesSource, new RegExp(`id="${anchor}"`), `Guide hub is missing #${anchor}.`);
 }
+for (const phrase of ["Light red", "#c9786f", "Red", "#b3261e", "Dark red", "#4b1418", "Protected Breach Assault", "Protected Raid", "server-confirmed attack screen is final"]) {
+  assert.match(weakPlayerProtectionSource, new RegExp(phrase.replaceAll("#", "\\#"), "i"), `Weak Player Protection guide is missing ${phrase}.`);
+}
+for (const image of ["weak-player-protection-breach.jpg", "weak-player-protection-raid.jpg", "weak-player-protection-normal.jpg", "weak-player-protection-stronger.jpg", "weak-player-protection-shielded.jpg"]) {
+  assert.match(weakPlayerProtectionSource, new RegExp(image.replaceAll(".", "\\.")), `Weak Player Protection guide is missing ${image}.`);
+  assert.ok(fs.existsSync(path.join(root, "promo-screenshots", image)), `${image} is missing from promo-screenshots.`);
+}
+assert.match(guidesSource, /href="\/weak-player-protection-guide\.html"/);
+assert.match(howToSource, /href="\/weak-player-protection-guide\.html"/);
 for (const anchor of ["installation", "gameplay-questions", "known-limitations", "policies"]) {
   assert.match(supportSource, new RegExp(`id="${anchor}"`), `Support is missing #${anchor}.`);
 }
