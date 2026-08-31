@@ -842,12 +842,13 @@ The earlier broad statement that “items persist” is superseded by this allow
 - Scheduled work, leaderboards, clans, activity, combat, armies, reports, presence, and world reads execute once against the shared current-generation partition. Archived generations remain inaccessible and inactive but intact for rollback and historical retention.
 - Monthly generation and world identifiers remain `realm-YYYY-MM` and `main-realm-YYYY-MM`. Realm generation isolation remains mandatory even though population sharding is removed.
 
-**Status:** `IN DEVELOPMENT` on the single-shared-realm feature branch. This decision is not LIVE until the coordinated Functions, rules, client, and reset release is merged, deployed, and verified.
+**Status:** The shared-realm foundation is deployed, but activation is explicitly held in `legacy` mode. The reset must not proceed until the Pending Core 5x5 world and expanding northern New Lands are implemented, validated, and separately authorized.
 
 ### Implementation state
 
 - Season/reset persistence policy is confirmed design.
-- One shared monthly realm, five-island starter placement, and removal of the 50-player split are confirmed design and `IN DEVELOPMENT`.
+- One shared monthly realm and removal of the 50-player split are confirmed design. The temporary five-island starter placement is not the approved reset topology and remains inactive while the production reset is held.
+- The approved reset target is the 25-map Core with northward expanding New Lands. Exact expansion capacity triggers, left-to-right generation, additional-layer creation, routing, rollback, and migration behavior require implementation and validation before activation.
 - Production reset enforcement is `IN DEVELOPMENT`.
 - A previously reported staging reset rehearsal preserved flags, clans, and Common Gear data while resetting world/season state. The inspected current `origin/main` executable reset path does not preserve clans or Common Gear, so the rehearsal is not evidence of current code parity.
 - The production reset has not been verified as executed under this policy.

@@ -5,7 +5,7 @@
   "worldId": "main-fresh-2026-07-26-server-reset",
   "apiContractHash": "86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd",
   "inactivityPolicyMode": "enforce",
-  "realmMode": "monthly-shared",
+  "realmMode": "legacy",
   "monthlyResetStartsAt": "2026-09-01T00:00:00.000Z",
   "monthlyGenerationPrefix": "realm",
   "worldIdPrefix": "main",
