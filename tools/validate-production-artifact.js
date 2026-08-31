@@ -6,16 +6,16 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
-  "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
+  "index.html", "styles.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
   "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
-  "assets/map-editor-data.js", "assets/flag-symbols/runtime.svg", "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg", "assets/worlds/world_01/map-manifest.json", "audio/manifest.json", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js", "functions/flagRenderer.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
+  "assets/map-editor-data.js", "assets/flag-symbols/runtime.svg", "assets/clan-heraldry/art-set-v1/manifest.json", "assets/clan-heraldry/art-set-v1/charges-full.svg", "assets/clan-heraldry/art-set-v1/charges-micro.svg", "assets/worlds/world_01/map-manifest.json", "assets/worlds/core-expansion-v1/region-catalog.js", "assets/worlds/core-expansion-v1/build-receipt.json", "audio/manifest.json", "functions/clanQuestPeriod.js", "functions/playerFlagConfig.js", "functions/flagRenderer.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
   "artifact-manifest.json",
 ];
 const forbidden = [
   "tools", "functions/index.js", "functions/package.json", "assets/camps",
   "assets/castles", "assets/inner-castle", "assets/optimized/manifest.json",
-  "assets/worlds/world_01/regions", "assets/worlds/world_01/world-layout.json",
+  "assets/worlds/world_01/world-layout.json",
 ];
 
 for (const relativePath of required) {
@@ -62,12 +62,29 @@ function collect(directory) {
   }
 }
 collect(dist);
+const textInventory = files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))
+  .map(filePath => fs.readFileSync(filePath, "utf8"))
+  .join("\n");
+for (const fixtureMarker of ["core_fixture_", "layer_1_fixture_", "region_26_fixture", "fixture_clan"]) {
+  if (textInventory.includes(fixtureMarker)) throw new Error(`Development fixture ${fixtureMarker} leaked into production.`);
+}
 if (files.some(filePath => path.extname(filePath).toLowerCase() === ".wav")) {
   throw new Error("Production artifact contains WAV source masters.");
 }
 const totalBytes = files.reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
-if (totalBytes > 25 * 1024 * 1024) {
-  throw new Error(`Production artifact exceeds 25 MiB (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
+const preparedWorldRoot = `${path.join(dist, "assets", "worlds", "core-expansion-v1")}${path.sep}`;
+const preparedWorldBytes = files
+  .filter(filePath => filePath.startsWith(preparedWorldRoot))
+  .reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
+const baseClientBytes = totalBytes - preparedWorldBytes;
+if (baseClientBytes > 25 * 1024 * 1024) {
+  throw new Error(`Base production artifact exceeds 25 MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
+}
+if (preparedWorldBytes > 35 * 1024 * 1024) {
+  throw new Error(`Prepared Core-expansion world exceeds 35 MiB (${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB).`);
+}
+if (totalBytes > 60 * 1024 * 1024) {
+  throw new Error(`Combined production artifact exceeds 60 MiB (${(totalBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 
 for (const absolutePath of files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))) {
@@ -149,5 +166,5 @@ for (const coreFile of ["styles.css", "firebaseClient.js", "game.js", "assets/ma
 }
 
 console.log(
-  `Production artifact validation passed (${files.length} files, ${(totalBytes / 1024 / 1024).toFixed(2)} MiB; ${indexedRuntimeFiles.size} itch-relative index resources).`,
+  `Production artifact validation passed (${files.length} files, ${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB base + ${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB lazy world; ${indexedRuntimeFiles.size} itch-relative index resources).`,
 );

@@ -57,7 +57,7 @@ requireMatch(
 );
 requireMatch(
   callable,
-  /requireKnownWorldRegionId[\s\S]*?getServerWorldCampIds\(regionId\)\.has\(campId\)/,
+  /requireActiveWorldRegionId[\s\S]*?getServerWorldCampIds\(regionId\)\.has\(campId\)/,
   "The Camp payout callable does not restrict requests to authoritative Camp locations."
 );
 requireMatch(

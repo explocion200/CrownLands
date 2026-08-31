@@ -17,7 +17,7 @@ const rootFiles = [
   "daily-rewards.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "instant-economy-actions.js",
-  "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js",
+  "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",
   "privacy.html", "readability.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "interface-theme.css", "release-config.js", "release-manifest.js", "robots.txt",
   "roadmap.css", "roadmap-data.js", "roadmap.html", "roadmap.js",
   "route-worker.js", "scouting-guide.html", "service-worker.js", "site-info.css", "skills-presets-guide.html", "sitemap.xml",
@@ -68,6 +68,9 @@ copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crown
 copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
 copy("assets/worlds/world_01/map-manifest.json");
+copyDirectoryFiles("assets/worlds/core-expansion-v1", relativePath => (
+  /(?:\.webp|\.json|region-catalog\.js)$/i.test(relativePath)
+));
 const productionMapManifestPath = path.join(output, "assets", "worlds", "world_01", "map-manifest.json");
 const productionMapManifest = JSON.parse(fs.readFileSync(productionMapManifestPath, "utf8"));
 productionMapManifest.description = "Immutable regional gameplay maps included in this production artifact.";

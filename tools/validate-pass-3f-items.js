@@ -5,6 +5,7 @@ const path = require("node:path");
 const ROOT = path.resolve(__dirname, "..");
 const SOURCE_SIZE = 1254;
 const BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
+const CACHE_BUILD_ID = "20260831-core-expansion-prepared-r1";
 
 const expected = [
   ["item-common-gear-box", "assets/gear/common-gear-box.png", 192, "gear-box"],
@@ -114,7 +115,7 @@ assert.match(styles, /@keyframes cityShieldAuthority/);
 assert.match(styles, /\.city-node\.peace-shielded \.city-shield-field img\s*\{[^}]*drop-shadow\(0 0 1px rgba\(255, 255, 255, \.98\)\)[^}]*drop-shadow\(0 0 3px rgba\(255, 255, 255, \.76\)\)/s);
 assert.match(styles, /@keyframes crownlandsVfxRewardStamp/);
 assert(index.includes(`<meta name="crownlands-build" content="${BUILD_ID}"`), "Index build ID is stale.");
-assert(serviceWorker.includes(`const CACHE_VERSION = "${BUILD_ID}";`), "Service-worker cache version is stale.");
+assert(serviceWorker.includes(`const CACHE_VERSION = "${CACHE_BUILD_ID}";`), "Service-worker cache version is stale.");
 
 const retiredHashes = [
   "0f7ac5409316", "dcb8dddc35ea", "48ecb3c2150b", "eaa5b941fe82", "5d50be41ce93",

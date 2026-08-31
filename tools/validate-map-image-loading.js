@@ -68,10 +68,11 @@ assert(
   "Map images should continue using cache-first service-worker delivery."
 );
 assert(
-  worker.includes("const cache = await caches.open(CACHE_NAME)")
-    && worker.includes("const cached = await cache.match(request)")
-    && !worker.includes("const cached = await caches.match(request)"),
-  "Static assets must only resolve from the active build cache."
+  worker.includes("RUNTIME_CACHE_NAME")
+    && worker.includes("REGION_CACHE_NAME")
+    && worker.includes("WORLD_IMAGE_CACHE_NAME")
+    && worker.includes("keys.slice(0, Math.max(0, keys.length - maximumEntries))"),
+  "Runtime map, thumbnail, and region caches must remain build-scoped and bounded."
 );
 assert(
   worker.includes("function isWorldMapImageRequest(url)")
