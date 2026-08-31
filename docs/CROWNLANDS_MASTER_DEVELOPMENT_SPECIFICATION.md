@@ -54,52 +54,53 @@ When sources disagree, use the following evidence order for the specific questio
 
 ## FM-2. Current Production Snapshot
 
-Snapshot verified on August 27, 2026.
+Snapshot verified on August 31, 2026.
 
 | Item | Verified state |
 |---|---|
-| Canonical game web production | Build `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5` |
-| Canonical game deployment time | August 27, 2026 at 16:17:32 UTC / 12:17:32 PM EDT |
-| Canonical game Netlify production deploy | `6a90631243ff84feec4291b2` |
+| Canonical game web production | Build `fdf326a9462fab2982cbdd2cf9c8326060217159` |
+| Canonical game deployment time | August 31, 2026 at 00:05:05 UTC / August 30 at 8:05:05 PM EDT |
+| Canonical game Netlify production deploy | `6a94c517ebd65700085b9ad3` |
 | Primary-domain public site | Separately published surface; exact build and deployment ownership remain **NEEDS VERIFICATION**. Its Rally guide is current, but its beginner guide still exposes the superseded three-ruler Rally rules. |
 | Web world | 20 connected regions |
 | Web release ID | `crownlands-2026-09-monthly-sharded-realms-v1` |
 | Web reset generation | `fresh-2026-07-26-server-reset` |
 | Web world ID | `main-fresh-2026-07-26-server-reset` |
 | Web API contract hash | `86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd` |
-| Web manifest server-source fingerprint | `ea28d763ad5b9998a5d7e3f4450872a8302f5d66505cf9c7c595dfa4e366cbc5` |
-| Web manifest client-source fingerprint | `5c6c637b9c44718208d9316aa1bed8ccf0b6d40082d0d94ece37bf6377e84b45` |
+| Web manifest server-source fingerprint | `d69fb16ed79924c1721d818c88e6fccb9b37094da557f068132410a8cc09aa81` |
+| Web manifest client-source fingerprint | `2a20d12227d8d41b7879e34101ad2865d786f1226e993da2abe9173cd11c9ef2` |
 | Web manifest callable count | 109 |
-| Published itch.io client | Build `a561374b93b5a31849ddddbb4cfbfabf9be1dc94`; HTML5 build `#1920417` on upload `#18590779`; user version `2026-08-27-city-xp-instant-upgrades-a561374b` |
-| itch.io client date | August 27, 2026 at 13:26 UTC; public embed extraction completed at 13:28:26 UTC |
+| Published itch.io client | Build `fdf326a9462fab2982cbdd2cf9c8326060217159` on public HTML5 upload `#19037216`; the older Butler `html5` channel remains attached to upload `#18590779` and reports user version `2026-08-30-city-list-off-map-ownership-3390c83c` |
+| itch.io client date | August 31, 2026 at 00:15 UTC; public iframe and exact build extraction verified after publication |
 | itch.io world | 20 connected regions |
-| Authoritative repository commit inspected | `origin/main` at `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5` |
-| Remote `origin/main` verification | Local `main`, remote-tracking `origin/main`, and merged PR #201 build matched during the August 27 release audit |
+| Authoritative repository commit inspected | `origin/main` at `fdf326a9462fab2982cbdd2cf9c8326060217159` |
+| Remote `origin/main` verification | Local `main`, remote-tracking `origin/main`, and merged PR #220 build matched with `0 0` divergence during the August 30 release audit |
 | New-player initialization in inspected source | 100 Gold, 200 troops, one Level 1 Main City |
 | City XP and instant-upgrade release baseline | PR #199 merged as `a561374b93b5a31849ddddbb4cfbfabf9be1dc94` |
 | Skill controls and free-refund web release baseline | PR #201 merged as `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5` |
+| Session heartbeat recovery release baseline | PR #220 merged as `fdf326a9462fab2982cbdd2cf9c8326060217159`; the client bounds heartbeat responses at 15 seconds and invalidates stopped lifecycle generations before applying late responses or clearing replacement locks |
 | Current Cloud Functions deployment | 109 active Node.js 22 functions deployed from clean build `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5`; source generations span 16:08:33–16:15:57 UTC on August 27, 2026; shared Firebase Functions hash `322ab24baed05968ce263db586c2a6cacccfc018` |
 | Exact current Cloud Functions build ID | Deployment provenance, generated manifest, post-deploy 29-callable access audit, production rules parity check, and refreshed inventory verify build `291e5657...`; `adjustSkillLevels` is ACTIVE and the obsolete `enforceSkillPointSystemState` trigger is absent. Authenticated skill mutation and `getRealmInfo` remain manual smoke checks. |
 
-The web and itch.io clients use the same release ID, reset generation, world ID, and API contract hash, but no longer use the same client build. Web production is build `291e5657...`; itch.io remains on exact build `a561374b...`. The downloaded itch.io build matched all 279 locally validated files byte for byte, and its public embed loaded the sign-in surface, 20-region map entry, manifest, relative assets, and service worker without console errors or missing resources. Compatibility is preserved because the newer backend retains the legacy plus-only skill request paths used by the itch.io client.
+The web and itch.io clients now use the same exact client build `fdf326a...`, release ID, reset generation, world ID, and API contract hash. The locally packaged itch.io ZIP contains 279 files, passed all 57 relative-resource checks, and has SHA-256 `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D`. The public iframe serves upload `19037216`; its index, release manifest, service worker, heartbeat generation guard, and stale-response guard returned HTTP 200 and matched build `fdf326a...`. The older Butler `html5` channel metadata still reports build `3390c83c...`, so the latest-build API is not authoritative for the current web-uploaded public iframe.
 
-The August 24 and August 25 audits remain historical evidence. The August 27 release audit records current `origin/main`, web production, and Firebase Functions at build `291e5657...`, while itch.io remains on build `a561374b...`. Repository facts are not automatically proof that production data follows the same path; authenticated city and skill mutations were deliberately not executed because they would modify real player state. Legacy city-upgrade and plus-only skill requests remain available for the older itch.io client. The primary-domain public site remains a separate publication surface and is not proven current by the game Netlify deployment.
+The August 24 through August 27 audits remain historical evidence. The August 30 release audit records current `origin/main`, web production, and the public itch.io iframe at build `fdf326a...`; the existing Firebase Functions deployment was not changed by this client-only release. Repository and public-asset facts are not proof that authenticated production state follows the same path. Login, interrupted-connection recovery, and second-tab replacement remain manual production smoke tests because no approved QA account was used. The primary-domain public site remains a separate publication surface and is not proven current by the game Netlify deployment.
 
 ### Current cross-channel release ledger
 
 | Channel / artifact | Build and deployment time | Validation result | Known difference |
 |---|---|---|---|
 | Firebase Functions and Firestore release | Build `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5`; deployed August 27, 2026 | 109 Node.js 22 functions ACTIVE with shared hash `322ab24b...`; generated manifest recorded contract `86fc7b17...` and server source `ea28d763...`; 29 callable-access checks and production rules parity passed; `adjustSkillLevels` is active and the obsolete skill-state trigger is absent | Firestore rules and configured indexes deployed without deleting eight additional production indexes. A transient Functions mutation quota required automatic and narrow retries; final inventory is consistent. Authenticated skill and city mutations remain manual smoke checks. |
-| Current canonical game production | Build `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5`; deploy `6a90631243ff84feec4291b2`; published August 27, 2026 at 16:17:32 UTC | PR #201 passed Static validation, all 33 multiplayer emulator files, and Validate; live `/`, `/play/`, manifest, service worker, client wrapper, optimistic queue, game code, palette, and rules/help pages passed HTTP and exact-byte checks where Netlify did not normalize links | The web client includes free live refunds, free Reset Skills, signed optimistic adjustments, unified controls, and updated readability. Itch.io remains one client build behind. |
+| Current canonical game production | Build `fdf326a9462fab2982cbdd2cf9c8326060217159`; deploy `6a94c517ebd65700085b9ad3`; published August 31, 2026 at 00:05:05 UTC | PR #220 and the post-merge `main` run passed Static validation, all 33 multiplayer emulator files, and Validate; live manifest, index, service worker, game code, heartbeat generation counter, and stale-response guard passed direct HTTP checks on both canonical hostnames | Client-only heartbeat lifecycle release; no Functions, Firestore, schema, contract, or gameplay formula deployment was required. |
 | Primary-domain public pages | Exact build and deployment ownership **NEEDS VERIFICATION** | `clans-rallies-guide.html` exposes the current 2–20-player rules, but `how-to-play.html` still says a Rally holds up to three rulers, can target Reward Camps, removes the shield, may launch with inbound contributions, and uses the leader's march bonuses | The corrected beginner-guide source is merged and present on the canonical game host, but is not deployed to this separate public-site surface. Do not treat the game Netlify deploy as proof that these pages were refreshed. |
-| itch.io published client | Build `a561374b93b5a31849ddddbb4cfbfabf9be1dc94`; HTML5 build `#1920417`; published August 27, 2026 | Production artifact validation passed 279 files and 57 itch-relative resources; push preview found 34 modifications with no additions or deletions; the published build downloaded back as an exact 279-file byte match; public embed and relative assets returned HTTP 200 with no console errors; the latest-build API still reports `2026-08-27-city-xp-instant-upgrades-a561374b` | Google sign-in entry rendered, but authentication was not completed and no production economy mutation was performed. This client contains PR #199 city upgrades but not PR #201 skill controls. Local archive SHA-256: `95DF54631A3749B58724D7E9FEAE78817241851FDB91E8A9809C52EF61758B2B`. |
+| itch.io published client | Build `fdf326a9462fab2982cbdd2cf9c8326060217159`; public HTML5 upload `#19037216`; published August 31, 2026 at 00:15 UTC | Production artifact validation passed 279 files and 57 itch-relative resources; the public page points to `html-classic.itch.zone/html/19037216/`, whose manifest, index, service worker, heartbeat generation counter, and stale-response guard matched `fdf326a...` over HTTP | Authenticated itch.io gameplay was not exercised. The older Butler `html5` channel and latest-build API remain labeled `2026-08-30-city-list-off-map-ownership-3390c83c`, but they do not control the verified public iframe. Local ZIP SHA-256: `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D`. |
 
 ## FM-3. Release Channel Matrix
 
 | Capability | Web production | itch.io published client | Specification status |
 |---|---|---|---|
 | Core cities, economy, armies, combat, objectives, clans, rallies, chat, missions, achievements, Shop, Bag, and Common Gear foundation | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
-| Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; primary-domain beginner guide remains stale | Present in exact build `a561374b...` | `LIVE — ALL PUBLISHED CHANNELS` |
+| Ordinary Rally lifecycle correction: 2–20 participants, deterministic participant settlement, safe returns, and creator-departure recall | Present; primary-domain beginner guide remains stale | Present in exact build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS` |
 | Connected world size | 20 regions | 20 regions | `LIVE — ALL PUBLISHED CHANNELS` |
 | Gear skill stacking and same-level upgrade availability | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Gear Effects in battle reports | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
@@ -111,8 +112,9 @@ The August 24 and August 25 audits remain historical evidence. The August 27 rel
 | Identical Bag-item quantity stacking | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Shop ad-layout and carousel-stability fix | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
 | Touch map-selection Shop/Bag guard | Present | Present | `LIVE — ALL PUBLISHED CHANNELS` |
-| City XP model v2, uncapped 1% awards, ordered optimistic upgrades, and selected-city gold arrow action | Present | Present in exact build `a561374b...` | `LIVE — ALL PUBLISHED CHANNELS`; authenticated mutation smoke remains pending |
-| Unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and revised Skills readability | Present in build `291e5657...` | Absent from build `a561374b...` | `LIVE — WEB` |
+| City XP model v2, uncapped 1% awards, ordered optimistic upgrades, and selected-city gold arrow action | Present | Present in exact build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; authenticated mutation smoke remains pending |
+| Unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and revised Skills readability | Present in build `fdf326a...` | Present in build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; authenticated mutation smoke remains pending |
+| Bounded session heartbeat responses and lifecycle-safe late-response recovery | Present in build `fdf326a...` | Present in build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; public assets and 120-session emulator admission passed, while authenticated interrupted-connection smoke remains pending |
 | Next-reset regular-city Gold production curve | Absent from the audited production build | Absent from the audited published build | `IN DEVELOPMENT`; coordinated backend, web, and itch.io release required |
 | Holding Towers and Clan Treasury | Absent | Absent | `PLANNED`; confirmed design is preserved, but a clean current-main implementation has not started |
 | Pending 5×5 Core world | Absent | Absent | `IN DEVELOPMENT` |
@@ -262,11 +264,11 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Hero and skill progression
 
-- Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. On web, removing a live skill level is free and refunds the exact weighted point cost of that level, while Reset Skills is a free clear-all shortcut that changes no Gold and consumes no stored legacy reset credit. Existing legacy credit data remains stored and harmless. **Status:** base Hero progression and the weighted point ledger are `LIVE — ALL PUBLISHED CHANNELS`; free live refunds and free Reset Skills are `LIVE — WEB`. The itch.io build retains the prior reset behavior until republished.
+- Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Removing a live skill level is free and refunds the exact weighted point cost of that level, while Reset Skills is a free clear-all shortcut that changes no Gold and consumes no stored legacy reset credit. Existing legacy credit data remains stored and harmless. **Status:** base Hero progression, the weighted point ledger, free live refunds, and free Reset Skills are `LIVE — ALL PUBLISHED CHANNELS` in build `fdf326a...`.
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
-- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot; draft names and point changes remain local until Save, and Apply remains the only preset action that changes the live build for 1,000,000 Gold. **Status:** preset unlocks, isolated drafts, free saving, and paid application are `LIVE — ALL PUBLISHED CHANNELS`. Web build `291e5657...` additionally gives Current Build and every preset the compact `− | cost | +` control and settles live additions and removals through the replay-safe signed adjustment queue; those controls and live refunds are `LIVE — WEB`.
-- Applied preset tabs use the established red treatment. On web, the viewed tab uses Crownlands gold with dark readable text; a viewed applied preset remains red with a gold outline, inactive tabs remain tan, locked tabs remain distinct, and skill headings, descriptions, costs, and controls use explicit high-contrast colors. The repeated final-tier explanatory banner and card text are omitted because the segmented control exposes each next-level cost directly. **Status:** `LIVE — WEB`.
+- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. The Skills screen always opens on Current Build. Selecting an unlocked preset opens an isolated, all-zero draft for an empty slot or the stored allocation for a saved slot; draft names and point changes remain local until Save, and Apply remains the only preset action that changes the live build for 1,000,000 Gold. **Status:** preset unlocks, isolated drafts, free saving, paid application, compact `− | cost | +` controls, replay-safe signed adjustments, and live refunds are `LIVE — ALL PUBLISHED CHANNELS` in build `fdf326a...`.
+- Applied preset tabs use the established red treatment. The viewed tab uses Crownlands gold with dark readable text; a viewed applied preset remains red with a gold outline, inactive tabs remain tan, locked tabs remain distinct, and skill headings, descriptions, costs, and controls use explicit high-contrast colors. The repeated final-tier explanatory banner and card text are omitted because the segmented control exposes each next-level cost directly. **Status:** `LIVE — ALL PUBLISHED CHANNELS` in build `fdf326a...`.
 
 ### Confirmed Hero level-up Gold rewards
 
@@ -605,7 +607,7 @@ The Pending Core mappings are fixed:
 - Every participant receives the same Rally battle outcome snapshot with a clearly labeled breakdown of each participant's committed troops, losses, survivors, and contribution.
 - If a Rally return's original city is still owned by the participant, the army returns there. If it is neutral or clan-owned, the army returns to the participant's Main City. If an enemy owns it, the returning army attacks that city.
 - Ordinary objective Rallies are not restricted by ordinary-city attack protection, neutral-city caps, or anti-farming gates. Committing Rally troops does not remove a Royal Peace Shield.
-- The ordinary Rally lifecycle correction above is `LIVE — ALL PUBLISHED CHANNELS`. PR #171 merged as `1e5cdad...`, PR #180 merged the stale Rally-ownership correction as `1a0efbcb...`, and descendant build `a561374b...` established the verified cross-channel baseline. Current web build `291e5657...` retains the correction while itch.io remains on `a561374b...`. The corrected beginner guide remains live on the canonical game host and itch artifact but not on the separately published primary-domain public site.
+- The ordinary Rally lifecycle correction above is `LIVE — ALL PUBLISHED CHANNELS`. PR #171 merged as `1e5cdad...`, PR #180 merged the stale Rally-ownership correction as `1a0efbcb...`, and descendant build `a561374b...` established the first verified cross-channel baseline. Current web and itch.io build `fdf326a...` retains the correction. The corrected beginner guide remains live on the canonical game host and itch artifact but not on the separately published primary-domain public site.
 - The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `PLANNED`; its five-member minimum does not replace the ordinary Rally minimum globally.
 
 ### Clan Treasury
@@ -1046,16 +1048,16 @@ Before a status becomes LIVE:
 ### Current workflow issues
 
 - The historical August 24 audit used a local working branch behind GitHub `main`; that audit inspected the exact remote Git object without mutating the user's worktree. The August 25 Rally release audit used an isolated, current worktree.
-- The rebuilt local `dist` and canonical game production match build `291e5657...`; itch.io HTML5 build `#1920417` remains on `a561374b...`, whose downloaded artifact matched all 279 files byte for byte.
+- The rebuilt local `dist`, canonical game production, and public itch.io iframe match build `fdf326a...`. The public itch upload is `#19037216`; the locally retained 279-file ZIP has SHA-256 `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D`.
 - Exact deployment ownership of the primary-domain public pages and the target parity interval between web and itch.io are **NEEDS VERIFICATION**.
 
 ## 23. Current Development Status
 
-Status verified through August 27, 2026.
+Status verified through August 31, 2026.
 
 | System | Status | Notes |
 |---|---|---|
-| Core city/economy/army/combat game | `LIVE — ALL PUBLISHED CHANNELS` | Web is build `291e5657...`; itch.io is build `a561374b...`. |
+| Core city/economy/army/combat game | `LIVE — ALL PUBLISHED CHANNELS` | Web and the public itch.io iframe are exact client build `fdf326a...`. |
 | 20-region connected world | `LIVE — ALL PUBLISHED CHANNELS` | Five regions retain placeholder numeric names. |
 | Camps, Strongholds, Crown Citadel | `LIVE — ALL PUBLISHED CHANNELS` | Current contrast fixes are present on both channels. |
 | Clans and ordinary Rally foundation | `LIVE — ALL PUBLISHED CHANNELS` | Web and itch.io now share the corrected lifecycle. |
@@ -1066,9 +1068,10 @@ Status verified through August 27, 2026.
 | Scalable Shop pricing | `LIVE — ALL PUBLISHED CHANNELS` | Present in both current channel builds. |
 | Reworked/stacked Item Bag | `LIVE — ALL PUBLISHED CHANNELS` | Present in both current channel builds. |
 | Clan Heraldry v2 | `LIVE — ALL PUBLISHED CHANNELS` | v1 compatibility remains; v2 presentation is available on both channels. |
-| Hero reward curve, city XP model v2, and instant city upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Published channels retain the verified PR #199 baseline. Direct, targeted, silent-XP cross-map refinement is `IN DEVELOPMENT` pending merge and coordinated deployment. |
+| Hero reward curve, city XP model v2, and instant city upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Published channels now use descendant build `fdf326a...`; authenticated production mutation smoke remains pending. |
 | Hero level-up Gold 27-hour endgame ceiling | `IN DEVELOPMENT` | Levels 2-116 remain unchanged; Level 117 is the first reduced reward. Coordinated backend, web, and itch.io deployment is required before this balance is live. |
-| Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — WEB` | itch.io remains on the prior skill-control and reset behavior in build `a561374b...`. |
+| Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — ALL PUBLISHED CHANNELS` | Web and the public itch.io iframe now use exact client build `fdf326a...`; authenticated mutation smoke remains pending. |
+| Session heartbeat timeout and lifecycle recovery | `LIVE — ALL PUBLISHED CHANNELS` | Web and itch.io bound an individual heartbeat response at 15 seconds and ignore late responses from stopped lifecycle generations. Static, all 33 emulator files, the 120-session realm admission case, and direct public asset checks passed; authenticated interrupted-connection recovery remains manual QA. |
 | Holding Towers and Clan Treasury | `PLANNED` | Confirmed design is preserved in Section 8. Historical PR #159 is archived and must be replaced by a clean synchronized branch when prioritized. |
 | Pending 5×5 Core | `IN DEVELOPMENT` | Staged; not production. |
 | Production reset/persistence enforcement | `IN DEVELOPMENT` | Current source preserves flags/names and resets normal consumables, but conflicts with confirmed Common Gear and clan persistence. Backup/restore gate remains. |
@@ -1082,12 +1085,13 @@ Status verified through August 27, 2026.
 ### Verified current issues
 
 - The historical August 24 audit branch was behind GitHub `main`; the August 25 Rally release audit used an isolated branch containing current `origin/main`.
-- The locally rebuilt `dist` and web production represent build `291e5657...`; downloaded itch.io build `#1920417` remains the verified `a561374b...` artifact. Previous locally retained ZIPs remain historical artifacts.
+- The locally rebuilt `dist`, web production, and the public itch.io iframe represent exact build `fdf326a...`. The current itch artifact is upload `#19037216`; previous locally retained ZIPs remain historical artifacts.
 - Deployment provenance, the generated release manifest, and the post-deploy inventory verify all 109 Node.js 22 Functions were refreshed from clean build `291e5657...` with shared Firebase source hash `322ab24b...`. `adjustSkillLevels` is active and the obsolete skill-state trigger is absent. Authenticated `getRealmInfo`, skill, and city mutations were not performed.
 - The primary-domain `how-to-play.html` still documents superseded three-ruler Rally behavior even though corrected source is merged and published on the canonical game host. The public-site deployment owner and refresh path remain **NEEDS VERIFICATION**; no manual Netlify deployment was authorized in this audit.
 - The legacy direct `https://playcrownlands.com/play/` route serves the game shell while root game assets on that host return 404. Normal public Play actions point to the working canonical `https://game.playcrownlands.com/play/` route.
 - Web roadmap copy contains an internal 20-versus-15-region contradiction.
 - The descriptive release ID remains dated August 2 despite newer builds.
+- The itch.io Butler `html5` channel and latest-build API remain labeled `2026-08-30-city-list-off-map-ownership-3390c83c`, while the verified public iframe is web upload `#19037216` at build `fdf326a...`. This is release-metadata debt, not a playable-build mismatch.
 - Five web regions use placeholder numeric names.
 - Starting-resource documentation conflicts with the current source. `origin/main` initializes 100 Gold and 200 troops; deployed runtime parity remains unverified.
 - Production Player Flag saving needs a current smoke test.
@@ -1164,7 +1168,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Status | Major systems/features |
 |---|---|
 | `LIVE — ALL PUBLISHED CHANNELS` | 20-region world, core game, cities, economy, movement, combat, scouting, Camps, Strongholds, Citadel, clans, corrected ordinary Rally lifecycle, Global/Clan Chat, Daily Login, Daily Missions, 40 Achievements, Common Gear, Profile Inner Castle, Stronghold/Citadel contrast, scalable Shop, reworked/stacked Bag, Clan Heraldry v2, current Shop/map guards, Hero reward curve, city XP model v2, optimistic city upgrades, and the gold arrow Level action |
-| `LIVE — WEB` | Build `291e5657...`: unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and updated Skills tab/card readability. The separately hosted primary-domain public pages remain outside this client statement. |
+| `LIVE — ALL PUBLISHED CHANNELS` | Build `fdf326a...`: unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and updated Skills tab/card readability. The separately hosted primary-domain public pages remain outside this client statement. |
 | `LIVE — ITCH.IO` | No feature is known to be uniquely newer on itch.io |
 | `IMPLEMENTED BUT NOT LIVE` | Uniform two-minute pickup cadence and center-biased pickup placement |
 | `IN DEVELOPMENT` | Pending 5×5 Core, production reset enforcement including Common Gear/clan persistence corrections, dynamic map expansion, continuing UI/performance/onboarding work |
@@ -1177,7 +1181,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Topic | Earlier or conflicting source | Current ruling |
 |---|---|---|
 | Primary production authority | Web and itch.io could both be described broadly as published | Web is primary LIVE authority; itch.io is separately tracked and may lag |
-| World size | Earlier itch artifact contained 15 regions while web contained 20 | Both published game clients contain the same 20-region world. Build `a561374b...` is the verified cross-channel baseline, and current web descendant `291e5657...` retains it. |
+| World size | Earlier itch artifact contained 15 regions while web contained 20 | Both published game clients contain the same 20-region world. Build `a561374b...` established the verified cross-channel baseline, and current build `fdf326a...` retains it on web and itch.io. |
 | Starting resources | 100 Gold/200 troops versus 500 Gold/50 troops | Current `origin/main` initializes 100 Gold/200 troops. Deployed backend/runtime parity and long-term design confirmation remain **NEEDS VERIFICATION**. |
 | World structure | Single island, five islands, portals, disconnected or 100-city-map concepts | Superseded by connected regions and edge-route model |
 | Achievement count | Earlier proposal of 50 | Superseded; current confirmed count is 40 |
@@ -1200,14 +1204,14 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 | Source | Purpose | Audit note |
 |---|---|---|
-| [Canonical game release manifest](https://game.playcrownlands.com/release-manifest.js) | Deployed game build identity | Verified current build `291e5657...`, contract `86fc7b17...`, server fingerprint `ea28d763...`, client fingerprint `5c6c637b...`, and 109 callables |
+| [Canonical game release manifest](https://game.playcrownlands.com/release-manifest.js) | Deployed game build identity | Verified current build `fdf326a...`, contract `86fc7b17...`, server fingerprint `d69fb16e...`, client fingerprint `2a20d122...`, and 109 callables |
 | [Live world](https://playcrownlands.com/world) | Current player-facing web world | Verified 20 regions; five placeholder names |
 | [Game rules](https://playcrownlands.com/game-rules) | Current player-facing rules | Used for live rules baseline |
 | [Roadmap](https://playcrownlands.com/roadmap) | Public direction and status | Planning evidence only; contains stale 15-region copy |
 | [Updates](https://playcrownlands.com/updates) | Public release narrative | Used with release manifests, not alone |
-| [itch.io](https://crownlands.itch.io/crownlands) | Secondary published channel | HTML5 build `#1920417` on upload `#18590779`, user version `2026-08-27-city-xp-instant-upgrades-a561374b`, exact source build `a561374b...` |
-| [itch.io latest-build API](https://api.itch.io/wharf/latest?target=crownlands/crownlands&channel_name=html5) | Public itch.io channel-version evidence | Returned `2026-08-27-city-xp-instant-upgrades-a561374b` after publication |
-| [GitHub commit `289a9d82f167...`](https://github.com/explocion200/CrownLands/commit/289a9d82f16739fac8d73376a5c4c85e08aeadc5) | Historical itch.io artifact source point | Superseded by exact current build `a561374b...`; retained as the earlier subpath-fix baseline |
+| [itch.io](https://crownlands.itch.io/crownlands) | Secondary published channel | Public HTML5 iframe upload `#19037216`, exact source build `fdf326a...`, published August 31, 2026 at 00:15 UTC |
+| [itch.io latest-build API](https://api.itch.io/wharf/latest?target=crownlands/crownlands&channel_name=html5) | Legacy Butler channel-version evidence | Still returns `2026-08-30-city-list-off-map-ownership-3390c83c`; it does not identify the current web-uploaded public iframe and must not be used alone as playable-build evidence |
+| [GitHub commit `289a9d82f167...`](https://github.com/explocion200/CrownLands/commit/289a9d82f16739fac8d73376a5c4c85e08aeadc5) | Historical itch.io artifact source point | Superseded by exact current build `fdf326a...`; retained as the earlier subpath-fix baseline |
 | [GitHub commit `27105ae76fbb...`](https://github.com/explocion200/CrownLands/commit/27105ae76fbb329559151030ebbac652a9ee8119) | August 24 broad implementation audit source point | Historical audit baseline; no longer current web/main |
 | August 24 read-only implementation verification | Exact `origin/main` source audit of initialization, economy, King Power, objectives, Shop, rewards, reset persistence, rankings, and version gates | No checkout, code/config/data change, test run, build, commit, push, merge, deployment, or production mutation; deployed Functions parity remains unverified |
 | [GitHub PR #171](https://github.com/explocion200/CrownLands/pull/171) | Ordinary Rally lifecycle correction | Merged August 25, 2026 as `1e5cdad...`; records 2–20-player lifecycle, deterministic settlement, safe returns, and creator-departure recall |
@@ -1221,17 +1225,27 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | [Current-main release-gate run](https://github.com/explocion200/CrownLands/actions/runs/32875771534) | Current descendant-build validation | Static, all 26 multiplayer emulator files, and final validation jobs passed for exact build `09328e60...` |
 | [PR #199](https://github.com/explocion200/CrownLands/pull/199) | City XP model v2, optimistic city upgrades, and gold arrow Level action | Merged August 27, 2026 as `a561374b...`; Static validation, all 33 multiplayer emulator files, and Validate passed |
 | [PR #201](https://github.com/explocion200/CrownLands/pull/201) | Unified skill controls, live refunds, free Reset Skills, and Skills readability | Merged August 27, 2026 as `291e5657...`; Static validation, all 33 multiplayer emulator files, and Validate passed |
-| [Current canonical game Netlify deploy](https://api.netlify.com/api/v1/deploys/6a90631243ff84feec4291b2) | Current game production evidence | Ready production deploy of exact build `291e5657...`, published at 16:17:32 UTC; canonical game, manifest, service worker, client wrapper, optimistic queue, game code, palette, and rules/help pages passed live checks |
+| [PR #220](https://github.com/explocion200/CrownLands/pull/220) | Session heartbeat timeout and lifecycle-safe late-response recovery | Merged August 30, 2026 as `fdf326a...`; Static validation, all 33 multiplayer emulator files, Validate, and the 120-session realm-admission case passed |
+| [Post-merge `main` release-gate run](https://github.com/explocion200/CrownLands/actions/runs/33343482121) | Exact merged heartbeat-build validation | Static validation, all 33 multiplayer emulator files, and Validate passed for build `fdf326a...` |
+| [Current canonical game Netlify deploy](https://api.netlify.com/api/v1/deploys/6a94c517ebd65700085b9ad3) | Current game production evidence | Ready production deploy of exact build `fdf326a...`, published August 31, 2026 at 00:05:05 UTC; canonical manifest, index, service worker, heartbeat generation counter, and stale-response guard passed direct HTTP checks on both canonical hostnames |
 | [Primary-domain beginner guide](https://playcrownlands.com/how-to-play.html) | Separately published player-facing documentation | Live response still contains the superseded three-ruler, Reward Camp, shield-removal, inbound-launch, and leader-speed rules; refresh ownership and deployment remain **NEEDS VERIFICATION** |
 | August 27 post-deploy Firebase Functions listing | Current backend deployment metadata | Authorized full refresh from clean build `291e5657...`; 109 active Node.js 22 Functions share source hash `322ab24b...`, with source generations spanning 16:08:33–16:15:57 UTC. `adjustSkillLevels` is active, the obsolete skill-state trigger is absent, and the 29-callable access audit and production rules parity check passed; authenticated `getRealmInfo`, skill, and city mutations were not performed. |
 | [GitHub PR #159](https://github.com/explocion200/CrownLands/pull/159) | Historical Holding Towers/Clan Treasury implementation and design evidence | Archived, unmerged, not live, and not a merge candidate; the confirmed design is preserved in Section 8 and requires a clean current-main implementation when prioritized |
 | `README.md` | Historical mechanics and implementation documentation | Detailed but stale on world/build state |
 | `docs/CROWNLANDS_ART_BIBLE.md` | Visual direction | Incorporated by reference |
 | `docs/CROWNLANDS_VISUAL_MIGRATION.md` | Visual migration history | Historical implementation evidence |
-| Local `dist`, `Crownlands-current-build/crownlands-html5-a561374b93b5.zip`, and itch.io build `#1920417` | itch.io artifact inspection | Production validator passed 279 files and 57 itch-relative index resources; downloaded published build matched all 279 files byte for byte; ZIP SHA-256 `95DF54631A3749B58724D7E9FEAE78817241851FDB91E8A9809C52EF61758B2B` |
+| Local `dist`, `Crownlands-current-build/crownlands-html5-fdf326a9462f.zip`, and public itch.io upload `#19037216` | itch.io artifact inspection | Production validator passed 279 files and 57 itch-relative index resources; the public iframe's index, manifest, service worker, heartbeat generation counter, and stale-response guard matched build `fdf326a...`; ZIP SHA-256 `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D` |
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.27 — August 30, 2026
+
+- Recorded PR #220 and merged build `fdf326a...` as the session-heartbeat recovery baseline, retaining the 15-second response bound and invalidating stopped lifecycle generations before late responses can mutate state or clear replacement in-flight locks.
+- Recorded Netlify deploy `6a94c517ebd65700085b9ad3`, published August 31 at 00:05:05 UTC, and public itch.io iframe upload `#19037216`, published at 00:15 UTC, as exact cross-channel build `fdf326a...`.
+- Verified the canonical and itch.io public manifests, indexes, service workers, heartbeat generation counters, and stale-response guards; the local itch.io artifact passed 279-file validation and 57 relative-resource checks with ZIP SHA-256 `973137A3CC90023AF9340AFFC2D8B40FBA7A93B8DCE97F9FD0F9D1E9892A2C2D`.
+- Promoted bounded heartbeat response handling, lifecycle-safe recovery, and the unified Skills controls to `LIVE — ALL PUBLISHED CHANNELS`.
+- Recorded the stale legacy Butler `html5` latest-build metadata as release-metadata debt and retained authenticated login, interrupted-connection recovery, and second-tab replacement as manual QA because no approved production QA account was used.
 
 ## v1.26 — August 30, 2026
 
