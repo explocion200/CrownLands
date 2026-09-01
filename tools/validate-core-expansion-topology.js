@@ -8,6 +8,7 @@ assert.equal(topology.FIRST_LAYER_MAP_COUNT, 24);
 assert.equal(topology.NEW_LANDS_CITY_CAPACITY, 40);
 assert.equal(topology.EXPANSION_THRESHOLD_NPC_CITIES, 20);
 assert.equal(topology.EXPANSION_ACTIVATION_BATCH_SIZE, 2);
+assert.equal(topology.MAX_NEW_LANDS_REGIONS, 4095);
 assert.equal(Object.keys(topology.PREPARED_CORE_REGION_NAMES).length, 25);
 assert.equal(new Set(Object.values(topology.PREPARED_CORE_REGION_NAMES)).size, 25);
 
@@ -44,6 +45,24 @@ assert.equal(new Set([
 assert.equal(topology.getRegionAtActivationOrdinal(23).worldLayer, 1);
 assert.equal(topology.getRegionAtActivationOrdinal(24).worldLayer, 2);
 assert.equal(topology.getRegionAtActivationOrdinal(24).clockwiseOrderIndex, 0);
+assert.equal(topology.getRegionAtActivationOrdinal(56).worldLayer, 3);
+assert.equal(topology.getRegionAtActivationOrdinal(56).clockwiseOrderIndex, 0);
+assert.equal(topology.getRegionAtActivationOrdinal(56).gridX, 0);
+assert.equal(topology.getRegionAtActivationOrdinal(56).gridY, -5);
+assert.deepEqual(
+  topology.parseNewLandsRegionId(topology.getRegionAtActivationOrdinal(56).id),
+  {
+    id: "new-lands-l03-p001",
+    activationOrdinal: 56,
+    gridX: 0,
+    gridY: -5,
+    worldLayer: 3,
+    clockwiseOrderIndex: 0,
+  },
+);
+const generatedNames = Array.from({ length: topology.MAX_NEW_LANDS_REGIONS }, (_, ordinal) => topology.getNewLandsRegionName(ordinal));
+assert.equal(new Set(generatedNames).size, generatedNames.length, "Generated medieval map names must be unique.");
+assert(generatedNames.every(name => !/^New Lands \d+$/i.test(name)));
 
 const generation = "realm-2026-09";
 const initial = topology.createInitialExpansionState(generation);
@@ -66,17 +85,29 @@ const firstActivation = topology.planThresholdActivation({
   remainingNpcCities: 20,
 });
 assert.equal(firstActivation.changed, true);
-assert.deepEqual(firstActivation.activatedRegions.map(region => region.id), [
+assert.equal(firstActivation.reason, "threshold-preparing");
+assert.deepEqual(firstActivation.preparedRegions.map(region => region.id), [
   "new-lands-l01-p002",
   "new-lands-l01-p003",
 ]);
-assert.deepEqual(firstActivation.state.admittingRegionIds, [
+assert.deepEqual(firstActivation.state.admittingRegionIds, []);
+const firstFinalization = topology.finalizePendingActivation({
+  state: firstActivation.state,
+  eventId: firstActivation.eventId,
+  readyRegionIds: firstActivation.preparedRegions.map(region => region.id),
+});
+assert.equal(firstFinalization.changed, true);
+assert.deepEqual(firstFinalization.activatedRegions.map(region => region.id), [
+  "new-lands-l01-p002",
+  "new-lands-l01-p003",
+]);
+assert.deepEqual(firstFinalization.state.admittingRegionIds, [
   "new-lands-l01-p002",
   "new-lands-l01-p003",
 ]);
 
 const replay = topology.planThresholdActivation({
-  state: firstActivation.state,
+  state: firstFinalization.state,
   resetGeneration: generation,
   sourceRegionId: "new-lands-l01-p001",
   remainingNpcCities: 20,
@@ -84,17 +115,27 @@ const replay = topology.planThresholdActivation({
 assert.equal(replay.changed, false);
 assert.equal(replay.reason, "source-not-admitting");
 
-let state = firstActivation.state;
+let state = firstFinalization.state;
 for (let ordinal = 1; ordinal < 24; ordinal += 1) {
   const sourceRegionId = topology.getRegionAtActivationOrdinal(ordinal).id;
   if (!state.admittingRegionIds.includes(sourceRegionId)) continue;
-  state = topology.planThresholdActivation({
+  const prepared = topology.planThresholdActivation({
     state,
     resetGeneration: generation,
     sourceRegionId,
     remainingNpcCities: 20,
     thresholdRevision: ordinal,
-  }).state;
+  });
+  if (!prepared.changed) continue;
+  if (prepared.preparedRegions.length) {
+    state = topology.finalizePendingActivation({
+      state: prepared.state,
+      eventId: prepared.eventId,
+      readyRegionIds: prepared.preparedRegions.map(region => region.id),
+    }).state;
+  } else {
+    state = prepared.state;
+  }
 }
 assert(state.activeRegionIds.includes("new-lands-l01-p024"));
 assert(state.activeRegionIds.some(regionId => regionId === "new-lands-l02-p001"));

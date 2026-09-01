@@ -49,7 +49,7 @@ requireMatch(serverSource, /deedDailyLimitReached\s*=\s*isDeedCamp\s*&&\s*priorC
 requireMatch(serverSource, /status:\s*isDeedCamp[\s\S]*?"daily-limit"[\s\S]*?"no-eligible-city"/, "Deed Camp payout does not report its daily limit cleanly.");
 requireMatch(serverSource, /findEligibleDeedCampCity[\s\S]*?getServerWorldRegularCityIds[\s\S]*?where\("ownerUid",\s*"==",\s*null\)/, "Deed Camp payout is not using a bounded neutral-city query.");
 requireMatch(serverSource, /DEED_CAMP_EXCLUDED_REGION_ID\s*=\s*"center"/, "Crownlands Heart is not excluded from Deed Camp city awards.");
-requireMatch(serverSource, /function getDeedCampCandidateRegionIds[\s\S]*?SERVER_WORLD_MAPS[\s\S]*?regionId !== DEED_CAMP_EXCLUDED_REGION_ID[\s\S]*?stableDeedCampHash/, "Deed Camp candidate maps are not randomized across the full world outside Crownlands Heart.");
+requireMatch(serverSource, /function getDeedCampCandidateRegionIds[\s\S]*?getStaticActiveServerRegionIds[\s\S]*?regionId !== DEED_CAMP_EXCLUDED_REGION_ID[\s\S]*?stableDeedCampHash/, "Deed Camp candidate maps are not randomized across the full active world outside Crownlands Heart.");
 requireMatch(serverSource, /getDeedCampCandidateRegionIds\([\s\S]*?camp,[\s\S]*?holderUid,[\s\S]*?payoutAtMs,[\s\S]*?selectionEntropy,[\s\S]*?activeRegionIds/, "Deed Camp map randomization is not seeded to the payout transaction.");
 requireMatch(serverSource, /async function resolveRewardCampPayoutByRef[\s\S]*?crypto\.randomBytes\(16\)[\s\S]*?runTransactionWithInfrastructureRetry[\s\S]*?findEligibleDeedCampCity\(transaction, camp, holderUid, payoutAtMs, deedSelectionEntropy\)/, "Deed Camp selection does not use retry-stable random entropy created outside the transaction.");
 requireMatch(serverSource, /missingTargetCamp[\s\S]*?getAuthoritativeRewardCampSeed[\s\S]*?transaction\.set\(targetRef,[\s\S]*?missingTargetCamp/, "Missing authoritative camp documents are not repaired before an army launches.");
@@ -59,7 +59,7 @@ assert.equal(crownlandsHeart?.id, "center", "The validator could not identify Cr
 const candidateSandbox = {
   DEED_CAMP_EXCLUDED_REGION_ID: crownlandsHeart.id,
   SERVER_WORLD_MAPS: worldLayout.maps,
-  STATIC_ACTIVE_SERVER_REGION_IDS: new Set(worldLayout.maps.map(map => map.id)),
+  getStaticActiveServerRegionIds() { return new Set(worldLayout.maps.map(map => map.id)); },
   normalizeRegionId(value) { return String(value || "").trim().toLowerCase(); },
   safeString(value, limit = 160) { return String(value || "").slice(0, limit); },
   safeNumber(value, fallback = 0) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; },

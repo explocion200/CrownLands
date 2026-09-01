@@ -61,6 +61,16 @@ assert.equal(octoberRealm.worldId, "main-realm-2026-10");
 assert.equal(octoberRealm.startsAtMs, Date.parse("2026-10-01T00:00:00.000Z"));
 assert.equal(octoberRealm.endsAtMs, Date.parse("2026-11-01T00:00:00.000Z"));
 
+const midMonthActivation = Date.parse("2026-09-02T00:00:00.000Z");
+const delayedMonthlyConfig = Object.freeze({
+  ...enabledMonthlyConfig,
+  monthlyResetStartsAt: new Date(midMonthActivation).toISOString(),
+});
+const delayedSeptemberRealm = topology.getRealmIdentity(delayedMonthlyConfig, midMonthActivation);
+assert.equal(delayedSeptemberRealm.resetGeneration, "realm-2026-09");
+assert.equal(delayedSeptemberRealm.startsAtMs, midMonthActivation);
+assert.equal(delayedSeptemberRealm.endsAtMs, Date.parse("2026-10-01T00:00:00.000Z"));
+
 const capacity = topology.getSharedRealmStartingCityCapacity(releaseConfig);
 assert.equal(capacity, 363);
 const assignments = Array.from({ length: 150 }, (_, sequence) => (
@@ -110,8 +120,10 @@ assert.deepEqual(releaseConfig.legacyCompatibleClients, [{
 }]);
 assert.match(serverSource, /identity\.mode === "legacy"[\s\S]*?LEGACY_COMPATIBLE_CLIENTS\.some/);
 assert.match(serverSource, /function getRealmInfoResponseContract/);
-assert.match(serverSource, /nextPlayerSequence: sequence \+ 1/);
-assert.match(serverSource, /getSharedRealmAssignment\(sequence\)/);
+assert.match(serverSource, /getStableSharedRealmSlotIndex/);
+assert.match(serverSource, /getSharedRealmAssignment\(slotIndex\)/);
+assert.match(serverSource, /assignmentModel: "uid-distributed-v2"/);
+assert.doesNotMatch(serverSource, /nextPlayerSequence: sequence \+ 1/);
 assert.match(serverSource, /identity\.mode === "legacy" \? \[LEGACY_REALM_SHARD_ID\] : \[SHARED_REALM_ID\]/);
 assert.doesNotMatch(serverSource, /getRealmShardForSequence/);
 assert.match(serverSource, /realmShardCapacity:\s*realm\.startingCityCapacity/);

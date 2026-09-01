@@ -239,15 +239,16 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 **Confirmed design rule:** Every Crownlands region should ultimately have a medieval-authentic name consistent with the established world. Final names for Regions 16, 17, 19, 21, and 22 are **NEEDS VERIFICATION** and must not be invented in implementation work.
 
-### Pending Core world
+### Core world and automatic New Lands
 
-- A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges has been developed and staged. **Status:** `IN DEVELOPMENT`.
+- A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges has been developed and staged. The Core is never a new-player spawn pool. **Status:** `IMPLEMENTED — PENDING RELEASE`.
 - The first expansion layer contains exactly 24 maps: five maps along each cardinal side of the Core plus the four corner maps. Together with the 25-map Core, this forms a complete 7×7 footprint.
 - Later player-growth layers allocate positions in clockwise order. Every layer begins at its north-center cardinal position, never at a corner, so its first map has a direct south road into the immediately inner layer. Capacity expansion activates the next two positions together, and a later layer cannot begin until the preceding layer's allocation order is complete.
 - Every player-facing Core and New Lands map label uses a unique medieval-authentic place name. Numbered `New Lands` labels are internal planning identifiers only and must not appear as map names in the game.
 - Each generated New Lands map begins with 40 neutral NPC cities. When the currently admitting map reaches 20 remaining neutral NPC cities, the server activates the next two maps in clockwise allocation order for new-player placement. The threshold transition must be transactional, idempotent, and safe under concurrent claims.
-- The Core is intended to be non-spawnable where reserved central/objective rules require it. Exact current reservation data must come from the current branch. **Status:** `IN DEVELOPMENT`.
-- Future outward player regions are intended to expand the realm as population and capacity require. **Status:** `IN DEVELOPMENT`.
+- The Core is non-spawnable. New and returning accounts without current-generation progression spawn only in the currently admitting New Lands maps. **Status:** `IMPLEMENTED — PENDING RELEASE`.
+- Future outward player regions are materialized deterministically from validated New Lands templates, retain cardinal-only connections, receive unique medieval-authentic names, and are added to connected clients through the authoritative expansion-state subscription without requiring a frontend redeploy. The supported release envelope is 4,095 New Lands maps, or 81,900 threshold-managed starting placements. **Status:** `IMPLEMENTED — PENDING RELEASE`.
+- Reset activation fails closed: all 25 Core maps and the first New Lands map must be seeded and verified for the scheduled generation before the public realm pointer changes. The previous generation remains intact and inaccessible for pointer-based rollback. **Status:** `IMPLEMENTED — PENDING RELEASE`.
 - Production migration to this world has not occurred.
 
 ### Needs verification
@@ -841,8 +842,8 @@ The earlier broad statement that “items persist” is superseded by this allow
 
 - Every player in an active monthly generation belongs to one shared realm and may interact with every other player in that generation. A 50-player population split is not permitted.
 - The implementation may retain `shard_0001` as an internal canonical storage partition so existing generation-scoped paths, rules, and indexes remain isolated. It does not represent a separate player realm, and no `shard_0002` may be opened when player 51 joins.
-- New and returning players without current-generation world progression claim one server-authoritative starting city on exactly one of `region_11`, `region_12`, `region_13`, `region_14`, or `region_15` before gameplay subscriptions open.
-- Starting placement selects among the least-populated eligible starter islands with random tie breaking and remains replay-safe. The current five-island layout contains 363 neutral regular starting cities; exhaustion must fail explicitly instead of silently moving players into a different realm.
+- New and returning players without current-generation world progression claim one server-authoritative starting city on an active, admitting New Lands map before gameplay subscriptions open. The 25-map Core is excluded from starting placement.
+- Starting placement selects among the least-populated admitting New Lands maps with random tie breaking and remains replay-safe. Each New Lands map contains 40 neutral regular cities; when one reaches 20 neutral cities, it closes to new-player admission and the next two cardinally connected maps are prepared, verified, and activated together in clockwise order.
 - Scheduled work, leaderboards, clans, activity, combat, armies, reports, presence, and world reads execute once against the shared current-generation partition. Archived generations remain inaccessible and inactive but intact for rollback and historical retention.
 - Monthly generation and world identifiers remain `realm-YYYY-MM` and `main-realm-YYYY-MM`. Realm generation isolation remains mandatory even though population sharding is removed.
 
@@ -852,7 +853,7 @@ The earlier broad statement that “items persist” is superseded by this allow
 
 - Season/reset persistence policy is confirmed design.
 - One shared monthly realm and removal of the 50-player split are confirmed design. The temporary five-island starter placement is not the approved reset topology and remains inactive while the production reset is held.
-- The approved reset target is the 25-map Core, a complete 24-map first ring containing five maps on each cardinal side plus four corner maps, and later New Lands layers that begin at the north-center cardinal entrance and allocate clockwise. A layer may never begin on a corner because inter-map roads connect only north, east, south, and west. Every player-facing map label uses a unique medieval-authentic place name. Each New Lands map starts with 40 neutral NPC cities; at 20 remaining neutral cities on the current admitting map, the next two maps activate for incoming players. Routing, rollback, and migration behavior require implementation and validation before activation.
+- The approved reset target is the 25-map Core, a complete 24-map first ring containing five maps on each cardinal side plus four corner maps, and later New Lands layers that begin at the north-center cardinal entrance and allocate clockwise. A layer may never begin on a corner because inter-map roads connect only north, east, south, and west. Every player-facing map label uses a unique medieval-authentic place name. Each New Lands map starts with 40 neutral NPC cities; at 20 remaining neutral cities on the current admitting map, the next two maps activate for incoming players. Deterministic Layer 3+ generation, authoritative routing, live client discovery, reset-readiness gating, and retry-safe activation are implemented on the release branch and remain pending merge, deployment, and production verification.
 - Production reset enforcement is `IN DEVELOPMENT`.
 - A previously reported staging reset rehearsal preserved flags, clans, and Common Gear data while resetting world/season state. The inspected current `origin/main` executable reset path does not preserve clans or Common Gear, so the rehearsal is not evidence of current code parity.
 - The production reset has not been verified as executed under this policy.
@@ -1255,6 +1256,14 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.29 — September 1, 2026
+
+- Implemented deterministic New Lands generation beyond the two prepared outer layers, preserving north-center layer starts, clockwise allocation, cardinal-only roads, and unique medieval-authentic map names.
+- Required each threshold transition to prepare and verify the next two maps before exposing them, with queued concurrent triggers, bounded idempotency receipts, scheduled retry, and live client catalog refresh.
+- Added a fail-closed reset-readiness gate that seeds and verifies the 25-map Core plus the first New Lands map before publishing the scheduled realm pointer.
+- Removed the shared assignment counter bottleneck so simultaneous players enter the one canonical shared realm without contending on a global sequence document.
+- Defined the supported automatic-expansion envelope as 4,095 New Lands maps and 81,900 threshold-managed starting placements; this is an implementation safety bound, not a 50-player realm split.
 
 ## v1.28 — August 31, 2026
 

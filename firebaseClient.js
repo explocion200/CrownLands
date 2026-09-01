@@ -1191,6 +1191,28 @@
     return result;
   }
 
+  function subscribeCoreExpansionState(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    if (!doc || !onSnapshot) return () => {};
+    const stateRef = doc(client.db, "realmGenerations", RESET_GENERATION, "expansion", "current");
+    return onSnapshot(
+      stateRef,
+      { includeMetadataChanges: true },
+      snapshot => {
+        if (typeof handlers.onState === "function") {
+          handlers.onState(snapshot.exists() ? snapshot.data() || {} : null, {
+            fromCache: Boolean(snapshot.metadata?.fromCache),
+            hasPendingWrites: Boolean(snapshot.metadata?.hasPendingWrites),
+          });
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "coreExpansion");
+      }
+    );
+  }
+
   async function ensureMainIsland(payload = {}) {
     return callServerFunction("ensureMainIsland", payload);
   }
@@ -2907,6 +2929,7 @@
     getCombatPlayerIdentity,
     loadPublicPlayerProfile,
     getRealmInfo,
+    subscribeCoreExpansionState,
     getRealmIdentity,
     applyRealmIdentity,
     relinquishCity,

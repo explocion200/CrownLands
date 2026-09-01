@@ -195,7 +195,7 @@ assert.match(server, /backlogOldestExpiredByMs/);
 assert.match(server, /expiresAt:\s*Timestamp\.fromMillis\(nowMs \+ BULK_ORDER_IDEMPOTENCY_MS\)/,
   "Bulk idempotency records must include a Firestore TTL-compatible timestamp.");
 assert.match(server, /createAuthoritativeRoutePlanner/);
-assert.match(server, /AUTHORITATIVE_ROUTE_PLANNER\.calculate/,
+assert.match(server, /getAuthoritativeRoutePlannerForRegions\(\[sourceRegionId, targetRegionId\]\)\.calculate/,
   "Authoritative launches must use the canonical grid route planner.");
 assert.equal(
   fs.existsSync(path.join(root, "functions", "canonical-route-engine.js")),

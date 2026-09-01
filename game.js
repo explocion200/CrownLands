@@ -1,8 +1,38 @@
 ﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
 const MAP_EDITOR_DATA = window.CROWNLANDS_MAP_EDITOR_DATA || {};
-const CORE_EXPANSION_TOPOLOGY_ACTIVE = String(REALM_CONFIG.worldTopology || "legacy").toLowerCase()
-  === "core-expansion-v1";
+const CORE_EXPANSION_SERVER_ACTIVATION_KEY = "crownlands.core-expansion.server-activated.v1";
+function hasCoreExpansionServerActivationMarker() {
+  try {
+    return window.sessionStorage?.getItem(CORE_EXPANSION_SERVER_ACTIVATION_KEY) === String(REALM_CONFIG.monthlyResetStartsAt || "");
+  } catch (_) {
+    return false;
+  }
+}
+const CORE_EXPANSION_ACTIVATION_AT_MS = Date.parse(String(REALM_CONFIG.monthlyResetStartsAt || ""));
+const CORE_EXPANSION_TOPOLOGY_PREPARED = [REALM_CONFIG.worldTopology, REALM_CONFIG.preparedWorldTopology]
+  .some(value => String(value || "").toLowerCase() === "core-expansion-v1");
+const CORE_EXPANSION_TOPOLOGY_ACTIVE = CORE_EXPANSION_TOPOLOGY_PREPARED
+  && String(REALM_CONFIG.worldTopology || "legacy").toLowerCase() === "core-expansion-v1"
+  && REALM_CONFIG.resetActivationHeld === false
+  && Number.isFinite(CORE_EXPANSION_ACTIVATION_AT_MS)
+  && (Date.now() >= CORE_EXPANSION_ACTIVATION_AT_MS || hasCoreExpansionServerActivationMarker());
+function scheduleCoreExpansionActivationReload() {
+  if (
+    CORE_EXPANSION_TOPOLOGY_ACTIVE
+    || !CORE_EXPANSION_TOPOLOGY_PREPARED
+    || String(REALM_CONFIG.worldTopology || "legacy").toLowerCase() !== "core-expansion-v1"
+    || REALM_CONFIG.resetActivationHeld !== false
+    || !Number.isFinite(CORE_EXPANSION_ACTIVATION_AT_MS)
+  ) return;
+  const delayMs = CORE_EXPANSION_ACTIVATION_AT_MS - Date.now();
+  if (delayMs <= 0) {
+    window.location.reload();
+    return;
+  }
+  window.setTimeout(scheduleCoreExpansionActivationReload, Math.min(delayMs + 250, 60_000));
+}
+scheduleCoreExpansionActivationReload();
 const REGION_CATALOG = CORE_EXPANSION_TOPOLOGY_ACTIVE
   ? window.CROWNLANDS_REGION_CATALOG || {}
   : {};
@@ -33,7 +63,7 @@ const regionDefinitionLoadStats = REGION_DEFINITION_LOADER.stats;
 window.CROWNLANDS_REGION_LOADING_DEBUG = regionDefinitionLoadStats;
 const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, REGION_CATALOG.regions?.length ? REGION_CATALOG : MAP_EDITOR_DATA);
 const WORLD_REGIONS_BY_ID = new Map(WORLD_REGIONS.map(region => [region.id, region]));
-const WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
+let WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
 const STATIC_ACTIVE_WORLD_REGION_IDS = new Set(CORE_EXPANSION_TOPOLOGY_ACTIVE
   ? REGION_CATALOG.regions
       .filter(region => region?.permanentCore === true)
@@ -1950,6 +1980,8 @@ const reinforcementReturnRequests = new Set();
 let onlineHeldCampsUnsubscribe = null;
 let onlineServerReportsUnsubscribe = null;
 let onlineRealmActivityUnsubscribe = null;
+let onlineCoreExpansionUnsubscribe = null;
+let onlineCoreExpansionRefreshPromise = null;
 let onlineRealmActivityEvents = [];
 let realmActivityHydrated = false;
 let realmActivityAuthoritativeHydrated = false;
@@ -2763,8 +2795,54 @@ function isWorldRegionRuntimeActive(regionId) {
     || ACTIVE_WORLD_REGION_IDS.has(normalizeRegionId(regionId));
 }
 
+function registerCoreExpansionRegions(regions = []) {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE || !REGION_DEFINITION_LOADER?.register) return false;
+  const descriptors = (Array.isArray(regions) ? regions : [])
+    .filter(region => region?.id && region?.permanentCore !== true);
+  if (!descriptors.length) return false;
+  REGION_DEFINITION_LOADER.register(descriptors);
+  let changed = false;
+  for (const descriptor of descriptors) {
+    const regionId = cleanEditorRegionId(descriptor.id);
+    if (!regionId) continue;
+    const editorMap = buildCatalogEditorMap(descriptor);
+    const existing = WORLD_REGIONS_BY_ID.get(regionId);
+    const regionPatch = editorMap?.region && typeof editorMap.region === "object" ? editorMap.region : {};
+    if (existing) {
+      Object.assign(existing, regionPatch, {
+        id: regionId,
+        label: descriptor.name || descriptor.label || existing.label,
+        type: cleanRegionType(descriptor.type || existing.type),
+        gridX: Math.round(Number(descriptor.gridX) || 0),
+        gridY: Math.round(Number(descriptor.gridY) || 0),
+        newPlayerSpawnEligible: true,
+      });
+      continue;
+    }
+    const fallback = buildDefaultEditorRegion(editorMap || descriptor, WORLD_REGIONS.length, WORLD_CONFIG);
+    const next = {
+      ...fallback,
+      ...regionPatch,
+      id: regionId,
+      label: descriptor.name || descriptor.label || fallback.label,
+      type: cleanRegionType(descriptor.type || STARTER_REGION_TYPE),
+      gridX: Math.round(Number(descriptor.gridX) || 0),
+      gridY: Math.round(Number(descriptor.gridY) || 0),
+      newPlayerSpawnEligible: true,
+      palette: regionPatch.palette || "frontier",
+    };
+    WORLD_REGIONS.push(next);
+    WORLD_REGIONS_BY_ID.set(regionId, next);
+    changed = true;
+  }
+  if (changed) WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
+  return changed;
+}
+
 function applyCoreExpansionRealmState(realm = null) {
   if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return;
+  const previousRegionSignature = [...ACTIVE_WORLD_REGION_IDS].sort().join("|");
+  const regionsChanged = registerCoreExpansionRegions(realm?.coreExpansion?.regions || []);
   const dynamicRegionIds = Array.isArray(realm?.coreExpansion?.activeRegionIds)
     ? realm.coreExpansion.activeRegionIds.map(normalizeRegionId).filter(Boolean)
     : [];
@@ -2772,6 +2850,13 @@ function applyCoreExpansionRealmState(realm = null) {
     ...STATIC_ACTIVE_WORLD_REGION_IDS,
     ...dynamicRegionIds,
   ]);
+  const activeRegionsChanged = previousRegionSignature !== [...ACTIVE_WORLD_REGION_IDS].sort().join("|");
+  if (regionsChanged || activeRegionsChanged) {
+    updateIslandSwitcherUi();
+    if (modal?.open && modal.classList.contains("island-switcher-modal")) {
+      renderIslandSwitcherModalContent();
+    }
+  }
 }
 
 function getRegionLabel(regionId) {
@@ -14650,6 +14735,7 @@ function disconnectOnlineWorld() {
   clearOnlineHeldCampWatcher();
   clearOnlineServerReportWatcher();
   clearOnlineRealmActivityWatcher();
+  clearOnlineCoreExpansionWatcher();
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher();
   appliedServerReportRevisions = new Map();
@@ -15128,6 +15214,23 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
     10000,
     "The Crownlands server version check is taking too long."
   );
+  const serverCoreExpansionActive = String(realm?.worldTopology || "legacy").toLowerCase() === "core-expansion-v1";
+  if (CORE_EXPANSION_TOPOLOGY_PREPARED && serverCoreExpansionActive !== CORE_EXPANSION_TOPOLOGY_ACTIVE) {
+    try {
+      if (serverCoreExpansionActive) {
+        window.sessionStorage?.setItem(
+          CORE_EXPANSION_SERVER_ACTIVATION_KEY,
+          String(REALM_CONFIG.monthlyResetStartsAt || "")
+        );
+      } else {
+        window.sessionStorage?.removeItem(CORE_EXPANSION_SERVER_ACTIVATION_KEY);
+      }
+    } catch (_) {
+      // The timed reload still provides a fallback when session storage is unavailable.
+    }
+    window.location.reload();
+    throw new Error("The new Crownlands realm is opening. Reloading the map now.");
+  }
   const priorResetGeneration = RESET_GENERATION;
   const priorWorldId = ONLINE_WORLD_ID;
   applyVerifiedRealmIdentity(realm);
@@ -15556,6 +15659,7 @@ async function connectOnlineIsland(regionId, {
     subscribeOnlineHeldCamps();
     subscribeOnlineServerReports();
     subscribeOnlineRealmActivity();
+    subscribeOnlineCoreExpansion();
     subscribeOnlineGlobalStats();
     subscribeOnlineCrownCitadel();
     await recoverPendingOnlineArmyMovements();
@@ -17676,6 +17780,12 @@ function clearOnlineRealmActivityWatcher({ clear = true } = {}) {
   updateReportUnreadBadge();
 }
 
+function clearOnlineCoreExpansionWatcher() {
+  if (typeof onlineCoreExpansionUnsubscribe === "function") onlineCoreExpansionUnsubscribe();
+  onlineCoreExpansionUnsubscribe = null;
+  onlineCoreExpansionRefreshPromise = null;
+}
+
 function getArmyRouteSummary(route, source, target) {
   const regionIds = getRouteSegments(route, getCityRegionId(source)).map(segment => segment.regionId);
   const sourceRegionId = getCityRegionId(source);
@@ -17767,6 +17877,40 @@ function subscribeOnlineRealmActivity() {
       markOnlineRealtimeRecoveryNeeded(error);
       clearOnlineRealmActivityWatcher({ clear: false });
       console.warn("Could not subscribe to Realm Activity", error);
+    },
+  });
+}
+
+function subscribeOnlineCoreExpansion() {
+  const api = getOnlineApi();
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE || typeof onlineCoreExpansionUnsubscribe === "function") return;
+  if (!state || !api?.subscribeCoreExpansionState || !api?.isSignedIn?.()) return;
+  onlineCoreExpansionUnsubscribe = api.subscribeCoreExpansionState({
+    onState: (expansionState, metadata = {}) => {
+      if (!expansionState || metadata.fromCache === true || metadata.hasPendingWrites === true) return;
+      const revision = Math.max(0, Math.floor(Number(expansionState.revision) || 0));
+      const knownRevision = Math.max(0, Math.floor(Number(verifiedRealmInfo?.coreExpansion?.revision) || 0));
+      if (revision <= knownRevision || onlineCoreExpansionRefreshPromise) return;
+      const previousActiveCount = ACTIVE_WORLD_REGION_IDS.size;
+      onlineCoreExpansionRefreshPromise = verifyRealmCompatibility(api, { force: true })
+        .then(() => {
+          const openedCount = Math.max(0, ACTIVE_WORLD_REGION_IDS.size - previousActiveCount);
+          if (openedCount > 0) showToast(`${openedCount} new ${openedCount === 1 ? "map has" : "maps have"} opened in the New Lands.`);
+          updateIslandSwitcherUi();
+        })
+        .catch(error => {
+          onlineLastError = error?.message || String(error);
+          markOnlineRealtimeRecoveryNeeded(error);
+          console.warn("Could not refresh New Lands expansion state", error);
+        })
+        .finally(() => {
+          onlineCoreExpansionRefreshPromise = null;
+        });
+    },
+    onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineCoreExpansionWatcher();
+      console.warn("Could not subscribe to New Lands expansion", error);
     },
   });
 }
@@ -18008,6 +18152,7 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   clearOnlineHeldCampWatcher({ clear: false });
   clearOnlineServerReportWatcher();
   clearOnlineRealmActivityWatcher({ clear: false });
+  clearOnlineCoreExpansionWatcher();
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher({ clear: false });
   subscribeOnlineArmyWatchers(islandId);
@@ -18015,6 +18160,7 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   subscribeOnlineHeldCamps();
   subscribeOnlineServerReports();
   subscribeOnlineRealmActivity();
+  subscribeOnlineCoreExpansion();
   subscribeOnlineGlobalStats();
   subscribeOnlineCrownCitadel();
   watchGameServerMembership({ preserve: true });
