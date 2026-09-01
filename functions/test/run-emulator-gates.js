@@ -85,6 +85,9 @@ for (const fileName of orderedGates) {
         env: {
           ...process.env,
           METADATA_SERVER_DETECTION: "none",
+          CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: fileName === "emulator-core-expansion-state.js"
+            ? "1"
+            : "0",
         },
         stdio: "inherit",
       });

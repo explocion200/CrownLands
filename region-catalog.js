@@ -235,6 +235,53 @@
     return result;
   }
 
+  function materializeRegionDefinition(summary = {}, sourceDefinition = {}) {
+    const targetId = String(summary.id || "").trim().toLowerCase();
+    const templateRegionId = String(summary.templateRegionId || "").trim().toLowerCase();
+    const sourceId = String(sourceDefinition?.id || "").trim().toLowerCase();
+    const usesTemplate = Boolean(templateRegionId && targetId && targetId !== templateRegionId);
+    if (usesTemplate && sourceId !== templateRegionId) {
+      throw new Error(`${summary.name || targetId} template identity did not match ${templateRegionId}.`);
+    }
+    const definition = usesTemplate ? {
+      ...sourceDefinition,
+      id: targetId,
+      name: summary.name || targetId,
+      gridX: Number(summary.gridX) || 0,
+      gridY: Number(summary.gridY) || 0,
+      imagePath: summary.mapAsset || sourceDefinition.imagePath || "",
+      thumbnailPath: summary.thumbnailAsset || sourceDefinition.thumbnailPath || "",
+      cities: (Array.isArray(sourceDefinition.cities) ? sourceDefinition.cities : []).map((city, index) => ({
+        ...city,
+        id: `${targetId}-city-${String(index + 1).padStart(2, "0")}`,
+        name: `Frontier Hold ${index + 1}`,
+        regionId: targetId,
+        startPool: targetId,
+        templateCityId: city.id,
+      })),
+      strongholds: [],
+      camps: [],
+    } : { ...sourceDefinition };
+    const connectionEntries = Object.entries(summary.connections || {});
+    if (connectionEntries.length) {
+      definition.edgeConnections = Object.fromEntries(connectionEntries.map(([side, connection]) => [
+        side,
+        connection?.state === "open" && connection?.targetRegionId ? [{
+          id: `${side}_road`,
+          side,
+          start: side === "north" || side === "south" ? 0.472 : 0.462,
+          end: side === "north" || side === "south" ? 0.528 : 0.538,
+          type: "road",
+          connectsToRegionId: connection.targetRegionId,
+          arrowXNorm: side === "west" ? 0.065 : side === "east" ? 0.935 : 0.5,
+          arrowYNorm: side === "north" ? 0.065 : side === "south" ? 0.935 : 0.5,
+          intentionalOuter: false,
+        }] : [],
+      ]));
+    }
+    return definition;
+  }
+
   function createRegionDefinitionLoader({
     catalog = {},
     cacheLimit = REGION_DEFINITION_CACHE_LIMIT,
@@ -284,18 +331,19 @@
         cache.delete(id);
         cache.set(id, cached);
         stats.definitionCacheHits += 1;
-        return buildClientEditorMap(summary, cached.definition);
+        return buildClientEditorMap(summary, materializeRegionDefinition(summary, cached.definition));
       }
       if (loads.has(id)) return loads.get(id);
       if (typeof fetchJson !== "function") throw new Error("Region definition fetch is not configured.");
       stats.definitionRequests += 1;
       const load = Promise.resolve(fetchJson(summary.regionDefinitionPath, summary))
         .then(definition => {
-          if (String(definition?.id || "").toLowerCase() !== id) throw new Error(`${summary.name || id} definition identity did not match its catalog entry.`);
+          const materialized = materializeRegionDefinition(summary, definition);
+          if (String(materialized?.id || "").toLowerCase() !== id) throw new Error(`${summary.name || id} definition identity did not match its catalog entry.`);
           cache.set(id, { definition, loadedAtMs: Date.now() });
-          onLoad(id, definition);
+          onLoad(id, materialized);
           evict([id, ...protectedRegionIds]);
-          return buildClientEditorMap(summary, definition);
+          return buildClientEditorMap(summary, materialized);
         })
         .catch(error => {
           stats.definitionFailures += 1;
@@ -305,7 +353,22 @@
       loads.set(id, load);
       return load;
     };
-    return Object.freeze({ cache, loads, stats, ensure, evict, buildMap: buildClientEditorMap });
+    const register = summaries => {
+      for (const summary of Array.isArray(summaries) ? summaries : [summaries]) {
+        const id = String(summary?.id || "").trim().toLowerCase();
+        if (!id) continue;
+        const existing = byId.get(id);
+        if (existing) Object.assign(existing, summary, { id });
+        else {
+          const registered = { ...summary, id };
+          regions.push(registered);
+          byId.set(id, registered);
+        }
+      }
+      stats.catalogRegionCount = byId.size;
+      return byId.size;
+    };
+    return Object.freeze({ cache, loads, stats, ensure, evict, register, buildMap: buildClientEditorMap });
   }
 
   function buildRegionCatalog(layout = {}, regions = []) {
@@ -478,6 +541,7 @@
     getNextPlayerExpansionCoordinate,
     buildCompatibilityRegion,
     buildClientEditorMap,
+    materializeRegionDefinition,
     createRegionDefinitionLoader,
     buildRegionCatalog,
     validateCatalog,

@@ -83,7 +83,8 @@ const entrypointBudgets = {
   // bounded 44 KiB step without adding per-frame or map-render work.
   // Preset draft state, guarded navigation, and explicit save/apply handling
   // remain within one bounded 16 KiB client-runtime step.
-  "game.js": 1680 * 1024,
+  // Timed Core activation and live New Lands discovery add a bounded client control path.
+  "game.js": 1690 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,

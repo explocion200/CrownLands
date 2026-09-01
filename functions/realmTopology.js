@@ -83,7 +83,7 @@ function getRealmIdentity(config = {}, nowMs = Date.now()) {
     resetGeneration,
     worldId: `${worldIdPrefix}-${resetGeneration}`,
     monthKey,
-    startsAtMs: bounds.startsAtMs,
+    startsAtMs: Math.max(bounds.startsAtMs, monthlyResetStartsAtMs),
     endsAtMs: bounds.endsAtMs,
     activatedAtMs: Number(nowMs) || 0,
   });

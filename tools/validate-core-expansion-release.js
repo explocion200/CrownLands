@@ -83,6 +83,65 @@ assert.deepEqual(
 assert.equal(new Set(catalog.regions.map(region => region.name)).size, catalog.regions.length, "Map names must be unique.");
 assert(catalog.regions.every(region => !/^New Lands \d+$/i.test(region.name)), "Numbered New Lands labels are not player-facing map names.");
 
+const layerThreeAllocation = topology.getRegionAtActivationOrdinal(56);
+const templateSummary = newLands[0];
+const templateDefinition = readJson(templateSummary.regionDefinitionPath);
+const dynamicSummary = {
+  ...templateSummary,
+  id: layerThreeAllocation.id,
+  name: layerThreeAllocation.name,
+  gridX: layerThreeAllocation.gridX,
+  gridY: layerThreeAllocation.gridY,
+  worldLayer: layerThreeAllocation.worldLayer,
+  clockwiseOrderIndex: layerThreeAllocation.clockwiseOrderIndex,
+  activationOrdinal: layerThreeAllocation.activationOrdinal,
+  templateRegionId: templateSummary.id,
+  connections: {
+    north: { state: "gated", targetRegionId: "" },
+    east: { state: "gated", targetRegionId: "" },
+    south: { state: "open", targetRegionId: "new-lands-l02-p001" },
+    west: { state: "gated", targetRegionId: "" },
+  },
+};
+const dynamicDefinition = regionCatalogRuntime.materializeRegionDefinition(dynamicSummary, templateDefinition);
+assert.equal(dynamicDefinition.id, "new-lands-l03-p001");
+assert.equal(dynamicDefinition.name, topology.getNewLandsRegionName(56));
+assert.equal(dynamicDefinition.cities.length, 40);
+assert(dynamicDefinition.cities.every((city, index) => (
+  city.id === `new-lands-l03-p001-city-${String(index + 1).padStart(2, "0")}`
+  && city.regionId === "new-lands-l03-p001"
+)));
+assert.equal(dynamicDefinition.edgeConnections.south[0].connectsToRegionId, "new-lands-l02-p001");
+assert.equal(dynamicDefinition.edgeConnections.north.length, 0);
+
+const boundaryGeneration = "realm-boundary-test";
+const boundaryActiveRegions = Array.from({ length: 55 }, (_, ordinal) => topology.getRegionAtActivationOrdinal(ordinal).id);
+const boundaryState = {
+  ...topology.createInitialExpansionState(boundaryGeneration),
+  activeRegionIds: boundaryActiveRegions,
+  admittingRegionIds: [boundaryActiveRegions.at(-1)],
+  nextActivationOrdinal: 55,
+  revision: 55,
+};
+const boundaryPlan = topology.planThresholdActivation({
+  state: boundaryState,
+  resetGeneration: boundaryGeneration,
+  sourceRegionId: boundaryActiveRegions.at(-1),
+  remainingNpcCities: topology.EXPANSION_THRESHOLD_NPC_CITIES,
+  thresholdRevision: 20,
+});
+assert.deepEqual(boundaryPlan.preparedRegions.map(region => region.id), [
+  "new-lands-l02-p032",
+  "new-lands-l03-p001",
+], "A two-map batch must cross from Layer 2 into Layer 3 without skipping the north-center entrance.");
+const boundaryRollback = topology.rollbackPendingActivation({
+  state: boundaryPlan.state,
+  eventId: boundaryPlan.eventId,
+});
+assert(boundaryRollback.changed);
+assert.equal(boundaryRollback.state.nextActivationOrdinal, 55);
+assert.deepEqual(boundaryRollback.state.admittingRegionIds, [boundaryActiveRegions.at(-1)]);
+
 for (const layer of [1, 2]) {
   const first = newLands.find(region => region.worldLayer === layer && region.clockwiseOrderIndex === 0);
   assert(first, `Layer ${layer} must have a first map.`);
@@ -114,20 +173,28 @@ for (const [relativePath, expected] of Object.entries(receipt.assets)) {
 }
 
 const serverSource = read("functions/index.js");
-assert.match(serverSource, /CONFIGURED_CORE_EXPANSION_ACTIVE[\s\S]*core-expansion-world-layout\.json/);
+assert.match(serverSource, /core-expansion-world-layout\.json/);
+assert.match(serverSource, /CONFIGURED_CORE_EXPANSION_PREPARED/);
 assert.match(
   serverSource,
-  /STATIC_ACTIVE_SERVER_REGION_IDS[\s\S]*?filter\(region => region\?\.permanentCore === true\)/,
+  /CORE_PERMANENT_REGION_IDS[\s\S]*?filter\(region => region\?\.permanentCore === true\)/,
   "Only permanent Core maps may bypass the authoritative expansion-state activation list on the server.",
 );
 assert.match(serverSource, /ensureCoreExpansionState\(\)/);
+assert.match(serverSource, /ensureCoreExpansionResetReady[\s\S]*?CORE_PERMANENT_REGION_IDS[\s\S]*?verifyPreparedExpansionRegion/);
+assert.match(serverSource, /resetReadinessStatus:[\s\S]*?resetReadinessRevision:/);
+assert.match(serverSource, /getStableSharedRealmSlotIndex/);
+assert.match(serverSource, /CORE_EXPANSION_STARTING_CITY_CAPACITY/);
 assert.match(serverSource, /planThresholdActivation\(\{/);
-assert.match(serverSource, /transaction\.set\(expansionRef,[\s\S]*lastActivationEventId/);
-assert.match(serverSource, /activatedRegionIds[\s\S]*ensureMainIslandForPlayer/);
+assert.match(serverSource, /pendingActivationEventId:[\s\S]*completePendingExpansionActivation/);
+assert.match(serverSource, /completePendingExpansionActivation[\s\S]*verifyPreparedExpansionRegion/);
+assert.match(serverSource, /finalizePendingActivation/);
 assert.match(serverSource, /requireActiveWorldRegionIds[\s\S]*ensureCoreExpansionState/);
-assert.match(serverSource, /ensureMainIslandForPlayer[\s\S]*requireActiveWorldRegionId/);
+assert.match(serverSource, /ensureMainIslandForPlayer[\s\S]*allowExpansionPreparation[\s\S]*requireActiveWorldRegionId/);
 assert.match(serverSource, /sendArmyOrder[\s\S]*requireActiveWorldRegionIds/);
 assert.match(serverSource, /getDeedCampCandidateRegionIds[\s\S]*activeRegionIds\.has\(regionId\)/);
+assert.match(serverSource, /getCoreAuthoritativeRoutePlanner/);
+assert.match(serverSource, /CORE_TEMPLATE_WORLD_MAPS[\s\S]*templateRegionId/);
 const clientSource = read("game.js");
 assert.match(clientSource, /CORE_EXPANSION_TOPOLOGY_ACTIVE[\s\S]*worldTopology/);
 assert.match(
@@ -137,6 +204,11 @@ assert.match(
 );
 assert.match(clientSource, /isWorldRegionRuntimeActive\(targetRegionId\)/);
 assert.match(clientSource, /applyCoreExpansionRealmState\(realm\)/);
+assert.match(clientSource, /registerCoreExpansionRegions/);
+assert.match(clientSource, /subscribeOnlineCoreExpansion/);
+assert.match(read("firebaseClient.js"), /subscribeCoreExpansionState[\s\S]*realmGenerations[\s\S]*expansion[\s\S]*current/);
+assert.match(read("firestore.rules"), /match \/expansion\/\{stateId\}[\s\S]*allow read:[\s\S]*currentResetGeneration/);
+assert.match(read("functions/test/run-emulator-gates.js"), /CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:[\s\S]*emulator-core-expansion-state\.js/);
 const indexSource = read("index.html");
 assert.match(indexSource, /region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
 assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);

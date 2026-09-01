@@ -246,7 +246,7 @@ requires(
 );
 requires(
   server,
-  /SERVER_WORLD_OBJECTIVE_TARGET_KEYS[\s\S]*?objectiveOwnershipChanged[\s\S]*?rebuildClanBenefitsAndMemberStats/,
+  /getServerWorldObjectiveTargetKeys[\s\S]*?objectiveOwnershipChanged[\s\S]*?rebuildClanBenefitsAndMemberStats/,
   "Ordinary city captures unnecessarily rebuild every clan member's objective benefits."
 );
 requires(

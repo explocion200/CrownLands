@@ -20,7 +20,9 @@ requireMatch(serverSource, /GAME_SERVER_ID\s*=\s*"crown-marches"/, "The Crown Ma
 requireMatch(serverSource, /GAME_SERVER_NAME\s*=\s*"The Crown Marches"/, "The medieval server name is missing.");
 requireMatch(serverSource, /getSharedRealmStartingCityCapacity\(REALM_CONFIG\)/, "Shared-realm starting capacity is not configuration-driven.");
 requireMatch(serverSource, /async function ensureRealmShardAssignment/, "Missing server-authoritative realm assignment.");
-requireMatch(serverSource, /nextPlayerSequence:\s*sequence \+ 1/, "Realm assignment does not advance atomically.");
+requireMatch(serverSource, /getStableSharedRealmSlotIndex/, "Shared-realm assignment is not independently distributed by player.");
+requireMatch(serverSource, /assignmentModel:\s*"uid-distributed-v2"/, "Shared-realm assignment metadata does not identify the contention-free model.");
+assert.doesNotMatch(serverSource, /nextPlayerSequence:\s*sequence \+ 1/, "Realm assignment still contends on one global sequence document.");
 requireMatch(serverSource, /newlyAssigned:\s*false/, "Realm assignment is not retry-idempotent.");
 requireMatch(serverSource, /admissionModel:\s*"shared-realm-members-v1"/, "Realm admission is not using the shared member model.");
 requireMatch(serverSource, /waitingCount:\s*0/, "The removed global waiting room is still represented as active.");

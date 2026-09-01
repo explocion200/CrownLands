@@ -6,6 +6,8 @@ const FIRST_LAYER_MAP_COUNT = 24;
 const NEW_LANDS_CITY_CAPACITY = 40;
 const EXPANSION_THRESHOLD_NPC_CITIES = 20;
 const EXPANSION_ACTIVATION_BATCH_SIZE = 2;
+const MAX_NEW_LANDS_REGIONS = 4095;
+const ACTIVATION_RECEIPT_LIMIT = 256;
 const TOPOLOGY_VERSION = "core-expansion-v1";
 const PREPARED_CORE_REGION_NAMES = Object.freeze({
   "core-v2-warband-camp-m2-m2": "Frostwolf March",
@@ -92,6 +94,24 @@ const PREPARED_NEW_LANDS_REGION_NAMES = Object.freeze([
   "Wintermere",
   "Northwood",
 ]);
+const DYNAMIC_NAME_PREFIXES = Object.freeze([
+  "Alder", "Ashen", "Barrow", "Black", "Briar", "Bright", "Cedar", "Cold",
+  "Crow", "Dawn", "Dun", "Elder", "Ember", "Fair", "Falcon", "Flint",
+  "Frost", "Gilded", "Green", "Grey", "Hart", "High", "Iron", "King's",
+  "Mist", "Night", "Oak", "Raven", "Red", "Silver", "Stone", "White",
+]);
+const DYNAMIC_NAME_ROOTS = Object.freeze([
+  "barrow", "brook", "cliff", "crest", "fen", "field", "ford", "gate",
+  "glen", "haven", "heath", "hill", "holt", "keep", "mere", "moor",
+  "pine", "reach", "rest", "ridge", "scar", "shield", "stone", "vale",
+  "wall", "watch", "water", "wick", "wood", "wych", "ward", "march",
+]);
+const DYNAMIC_NAME_SUFFIXES = Object.freeze([
+  "Abbey", "Crossing", "Crownland", "Downs", "Fells", "Forest", "Hold", "Hundred",
+  "March", "Meadows", "Moor", "Pass", "Reach", "Riding", "Shire", "Vale",
+  "Ward", "Watch", "Weald", "Wilds", "Wold", "Wood", "Barony", "Bailiwick",
+  "Demesne", "Earldom", "Manor", "Palatinate", "Province", "Stead", "Terrace", "Wardenry",
+]);
 
 function integer(value, fallback = 0) {
   const number = Number(value);
@@ -139,8 +159,50 @@ function formatNewLandsRegionId(layer, clockwiseOrderIndex) {
   return `new-lands-l${String(layer).padStart(2, "0")}-p${String(clockwiseOrderIndex + 1).padStart(3, "0")}`;
 }
 
+function getActivationOrdinalForLayerPosition(layer, clockwiseOrderIndex) {
+  const normalizedLayer = Math.max(1, integer(layer, 1));
+  const normalizedPosition = Math.max(0, integer(clockwiseOrderIndex));
+  const layerCount = getLayerMapCount(normalizedLayer);
+  if (normalizedPosition >= layerCount) {
+    throw new Error("New Lands position exceeds its layer boundary.");
+  }
+  const precedingLayerCount = 4 * (normalizedLayer - 1) * (normalizedLayer + 4);
+  return precedingLayerCount + normalizedPosition;
+}
+
+function parseNewLandsRegionId(regionId = "") {
+  const match = /^new-lands-l(\d{2,5})-p(\d{3,6})$/.exec(String(regionId || "").trim().toLowerCase());
+  if (!match) return null;
+  const worldLayer = integer(match[1]);
+  const clockwiseOrderIndex = integer(match[2]) - 1;
+  if (worldLayer < 1 || clockwiseOrderIndex < 0 || clockwiseOrderIndex >= getLayerMapCount(worldLayer)) return null;
+  const activationOrdinal = getActivationOrdinalForLayerPosition(worldLayer, clockwiseOrderIndex);
+  if (activationOrdinal >= MAX_NEW_LANDS_REGIONS) return null;
+  const coordinate = getClockwiseLayerCoordinates(worldLayer)[clockwiseOrderIndex];
+  return Object.freeze({
+    id: formatNewLandsRegionId(worldLayer, clockwiseOrderIndex),
+    activationOrdinal,
+    ...coordinate,
+  });
+}
+
+function getNewLandsRegionName(activationOrdinal = 0) {
+  const ordinal = Math.max(0, integer(activationOrdinal));
+  if (ordinal >= MAX_NEW_LANDS_REGIONS) {
+    throw new Error("New Lands name ordinal exceeds the supported expansion range.");
+  }
+  if (PREPARED_NEW_LANDS_REGION_NAMES[ordinal]) return PREPARED_NEW_LANDS_REGION_NAMES[ordinal];
+  const prefixIndex = ordinal % DYNAMIC_NAME_PREFIXES.length;
+  const rootIndex = Math.floor(ordinal / DYNAMIC_NAME_PREFIXES.length) % DYNAMIC_NAME_ROOTS.length;
+  const suffixIndex = Math.floor(ordinal / (DYNAMIC_NAME_PREFIXES.length * DYNAMIC_NAME_ROOTS.length));
+  return `${DYNAMIC_NAME_PREFIXES[prefixIndex]}${DYNAMIC_NAME_ROOTS[rootIndex]} ${DYNAMIC_NAME_SUFFIXES[suffixIndex]}`;
+}
+
 function getRegionAtActivationOrdinal(ordinal = 0) {
   let remaining = Math.max(0, integer(ordinal));
+  if (remaining >= MAX_NEW_LANDS_REGIONS) {
+    throw new Error("New Lands activation ordinal exceeds the supported expansion range.");
+  }
   for (let layer = 1; layer <= 10000; layer += 1) {
     const coordinates = getClockwiseLayerCoordinates(layer);
     if (remaining < coordinates.length) {
@@ -151,6 +213,7 @@ function getRegionAtActivationOrdinal(ordinal = 0) {
         permanentCore: false,
         cityCapacity: NEW_LANDS_CITY_CAPACITY,
         activationOrdinal: Math.max(0, integer(ordinal)),
+        name: getNewLandsRegionName(ordinal),
         ...coordinate,
       });
     }
@@ -162,13 +225,15 @@ function getRegionAtActivationOrdinal(ordinal = 0) {
 function createInitialExpansionState(resetGeneration = "") {
   const first = getRegionAtActivationOrdinal(0);
   return Object.freeze({
-    schemaVersion: 1,
+    schemaVersion: 2,
     topologyVersion: TOPOLOGY_VERSION,
     resetGeneration: String(resetGeneration || ""),
     activeRegionIds: Object.freeze([first.id]),
     admittingRegionIds: Object.freeze([first.id]),
     nextActivationOrdinal: 1,
     activationReceipts: Object.freeze({}),
+    pendingActivation: null,
+    queuedActivationSources: Object.freeze([]),
     revision: 1,
   });
 }
@@ -180,8 +245,31 @@ function normalizeExpansionState(state = {}) {
   const admittingRegionIds = [...new Set((Array.isArray(state.admittingRegionIds) ? state.admittingRegionIds : [])
     .map(value => String(value || "").trim())
     .filter(value => value && activeRegionIds.includes(value)))];
+  const pendingSourceRegionId = String(state.pendingActivation?.sourceRegionId || "").trim();
+  const pendingRegionIds = [...new Set((Array.isArray(state.pendingActivation?.regionIds)
+    ? state.pendingActivation.regionIds
+    : []).map(value => String(value || "").trim()).filter(value => parseNewLandsRegionId(value)))];
+  const pendingActivation = pendingSourceRegionId && pendingRegionIds.length === EXPANSION_ACTIVATION_BATCH_SIZE
+    ? {
+        eventId: String(state.pendingActivation?.eventId || "").trim(),
+        sourceRegionId: pendingSourceRegionId,
+        regionIds: pendingRegionIds,
+        startActivationOrdinal: Math.max(0, integer(state.pendingActivation?.startActivationOrdinal)),
+        nextActivationOrdinal: Math.max(0, integer(state.pendingActivation?.nextActivationOrdinal)),
+        thresholdRevision: Math.max(0, integer(state.pendingActivation?.thresholdRevision)),
+        createdAtMs: Math.max(0, integer(state.pendingActivation?.createdAtMs)),
+      }
+    : null;
+  const queuedActivationSources = (Array.isArray(state.queuedActivationSources)
+    ? state.queuedActivationSources
+    : []).map(entry => ({
+      eventId: String(entry?.eventId || "").trim(),
+      sourceRegionId: String(entry?.sourceRegionId || "").trim(),
+      thresholdRevision: Math.max(0, integer(entry?.thresholdRevision)),
+      createdAtMs: Math.max(0, integer(entry?.createdAtMs)),
+    })).filter(entry => entry.eventId && entry.sourceRegionId);
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     topologyVersion: TOPOLOGY_VERSION,
     resetGeneration: String(state.resetGeneration || ""),
     activeRegionIds,
@@ -190,6 +278,8 @@ function normalizeExpansionState(state = {}) {
     activationReceipts: state.activationReceipts && typeof state.activationReceipts === "object"
       ? { ...state.activationReceipts }
       : {},
+    pendingActivation,
+    queuedActivationSources,
     revision: Math.max(0, integer(state.revision)),
   };
 }
@@ -231,42 +321,151 @@ function planThresholdActivation({
       activatedRegions: Object.freeze([]),
     });
   }
+  if (current.pendingActivation) {
+    if (current.queuedActivationSources.some(entry => entry.eventId === eventId)) {
+      return Object.freeze({
+        changed: false,
+        reason: "already-queued",
+        eventId,
+        state: Object.freeze(current),
+        activatedRegions: Object.freeze([]),
+        preparedRegions: Object.freeze([]),
+      });
+    }
+    const queued = {
+      eventId,
+      sourceRegionId: source,
+      thresholdRevision: Math.max(0, integer(thresholdRevision)),
+      createdAtMs: Date.now(),
+    };
+    const next = {
+      ...current,
+      admittingRegionIds: current.admittingRegionIds.filter(regionId => regionId !== source),
+      queuedActivationSources: [...current.queuedActivationSources, queued],
+      revision: current.revision + 1,
+    };
+    return Object.freeze({
+      changed: true,
+      reason: "activation-queued",
+      eventId,
+      state: Object.freeze(next),
+      activatedRegions: Object.freeze([]),
+      preparedRegions: Object.freeze([]),
+    });
+  }
 
-  const activatedRegions = [];
+  const preparedRegions = [];
+  const startActivationOrdinal = current.nextActivationOrdinal;
   let nextActivationOrdinal = current.nextActivationOrdinal;
-  while (activatedRegions.length < EXPANSION_ACTIVATION_BATCH_SIZE) {
+  while (preparedRegions.length < EXPANSION_ACTIVATION_BATCH_SIZE) {
     const candidate = getRegionAtActivationOrdinal(nextActivationOrdinal);
     nextActivationOrdinal += 1;
     if (current.activeRegionIds.includes(candidate.id)) continue;
-    activatedRegions.push(candidate);
+    preparedRegions.push(candidate);
   }
-  const activatedIds = activatedRegions.map(region => region.id);
+  const preparedIds = preparedRegions.map(region => region.id);
   const next = {
     ...current,
-    activeRegionIds: [...current.activeRegionIds, ...activatedIds],
-    admittingRegionIds: [
-      ...current.admittingRegionIds.filter(regionId => regionId !== source),
-      ...activatedIds,
-    ],
+    admittingRegionIds: current.admittingRegionIds.filter(regionId => regionId !== source),
     nextActivationOrdinal,
-    activationReceipts: {
-      ...current.activationReceipts,
-      [eventId]: {
-        sourceRegionId: source,
-        remainingNpcCities: EXPANSION_THRESHOLD_NPC_CITIES,
-        activatedRegionIds: activatedIds,
-        nextActivationOrdinal,
-      },
+    pendingActivation: {
+      eventId,
+      sourceRegionId: source,
+      regionIds: preparedIds,
+      startActivationOrdinal,
+      nextActivationOrdinal,
+      thresholdRevision: Math.max(0, integer(thresholdRevision)),
+      createdAtMs: Date.now(),
     },
     revision: current.revision + 1,
   };
   return Object.freeze({
     changed: true,
-    reason: "threshold-activated",
+    reason: "threshold-preparing",
     eventId,
     state: Object.freeze(next),
-    activatedRegions: Object.freeze(activatedRegions),
+    activatedRegions: Object.freeze([]),
+    preparedRegions: Object.freeze(preparedRegions),
   });
+}
+
+function finalizePendingActivation({ state, eventId = "", readyRegionIds = [] } = {}) {
+  const current = normalizeExpansionState(state);
+  const pending = current.pendingActivation;
+  if (!pending || pending.eventId !== String(eventId || "").trim()) {
+    return Object.freeze({ changed: false, reason: "pending-activation-mismatch", state: Object.freeze(current), activatedRegions: Object.freeze([]) });
+  }
+  const ready = new Set((Array.isArray(readyRegionIds) ? readyRegionIds : []).map(value => String(value || "").trim()));
+  if (!pending.regionIds.every(regionId => ready.has(regionId))) {
+    return Object.freeze({ changed: false, reason: "regions-not-ready", state: Object.freeze(current), activatedRegions: Object.freeze([]) });
+  }
+  const activatedRegions = pending.regionIds.map(regionId => getRegionAtActivationOrdinal(
+    parseNewLandsRegionId(regionId).activationOrdinal
+  ));
+  const queuedActivationSources = [...current.queuedActivationSources];
+  const queued = queuedActivationSources.shift() || null;
+  let nextActivationOrdinal = current.nextActivationOrdinal;
+  let nextPendingActivation = null;
+  if (queued) {
+    const regionIds = [];
+    const startActivationOrdinal = nextActivationOrdinal;
+    while (regionIds.length < EXPANSION_ACTIVATION_BATCH_SIZE) {
+      const candidate = getRegionAtActivationOrdinal(nextActivationOrdinal);
+      nextActivationOrdinal += 1;
+      if (current.activeRegionIds.includes(candidate.id) || pending.regionIds.includes(candidate.id)) continue;
+      regionIds.push(candidate.id);
+    }
+    nextPendingActivation = {
+      ...queued,
+      regionIds,
+      startActivationOrdinal,
+      nextActivationOrdinal,
+    };
+  }
+  const activationReceipts = Object.fromEntries([
+    ...Object.entries(current.activationReceipts),
+    [pending.eventId, {
+      sourceRegionId: pending.sourceRegionId,
+      remainingNpcCities: EXPANSION_THRESHOLD_NPC_CITIES,
+      activatedRegionIds: pending.regionIds,
+      nextActivationOrdinal: pending.nextActivationOrdinal,
+    }],
+  ].slice(-ACTIVATION_RECEIPT_LIMIT));
+  const next = {
+    ...current,
+    activeRegionIds: [...new Set([...current.activeRegionIds, ...pending.regionIds])],
+    admittingRegionIds: [...new Set([...current.admittingRegionIds, ...pending.regionIds])],
+    activationReceipts,
+    nextActivationOrdinal,
+    pendingActivation: nextPendingActivation,
+    queuedActivationSources,
+    revision: current.revision + 1,
+  };
+  return Object.freeze({
+    changed: true,
+    reason: "threshold-activated",
+    eventId: pending.eventId,
+    state: Object.freeze(next),
+    activatedRegions: Object.freeze(activatedRegions),
+    nextPendingActivation: nextPendingActivation ? Object.freeze({ ...nextPendingActivation }) : null,
+  });
+}
+
+function rollbackPendingActivation({ state, eventId = "" } = {}) {
+  const current = normalizeExpansionState(state);
+  const pending = current.pendingActivation;
+  if (!pending || pending.eventId !== String(eventId || "").trim()) {
+    return Object.freeze({ changed: false, reason: "pending-activation-mismatch", state: Object.freeze(current) });
+  }
+  const next = {
+    ...current,
+    admittingRegionIds: [...new Set([...current.admittingRegionIds, pending.sourceRegionId])],
+    nextActivationOrdinal: pending.startActivationOrdinal,
+    pendingActivation: null,
+    queuedActivationSources: [],
+    revision: current.revision + 1,
+  };
+  return Object.freeze({ changed: true, reason: "activation-rolled-back", state: Object.freeze(next) });
 }
 
 module.exports = Object.freeze({
@@ -276,15 +475,22 @@ module.exports = Object.freeze({
   NEW_LANDS_CITY_CAPACITY,
   EXPANSION_THRESHOLD_NPC_CITIES,
   EXPANSION_ACTIVATION_BATCH_SIZE,
+  MAX_NEW_LANDS_REGIONS,
+  ACTIVATION_RECEIPT_LIMIT,
   TOPOLOGY_VERSION,
   PREPARED_CORE_REGION_NAMES,
   PREPARED_NEW_LANDS_REGION_NAMES,
   getClockwiseLayerCoordinates,
   getLayerMapCount,
   formatNewLandsRegionId,
+  getActivationOrdinalForLayerPosition,
+  parseNewLandsRegionId,
+  getNewLandsRegionName,
   getRegionAtActivationOrdinal,
   createInitialExpansionState,
   normalizeExpansionState,
   buildActivationEventId,
   planThresholdActivation,
+  finalizePendingActivation,
+  rollbackPendingActivation,
 });

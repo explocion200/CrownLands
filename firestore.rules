@@ -240,6 +240,13 @@ service cloud.firestore {
       match /shards/{shardId} {
         allow read, write: if false;
       }
+
+      match /expansion/{stateId} {
+        allow read: if signedIn()
+          && resetGeneration == currentResetGeneration()
+          && stateId == 'current';
+        allow create, update, delete: if false;
+      }
     }
 
     match /players/{uid} {
