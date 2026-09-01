@@ -1,8 +1,14 @@
 "use strict";
 
+const { randomInt } = require("node:crypto");
 const { getApps, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const topology = require("../coreExpansionTopology.js");
+
+// Real claims only attempt a threshold transition when a placement reaches the
+// 20-city floor. Keep several transactions genuinely concurrent here without
+// creating an emulator-only 50-writer lock convoy against one state document.
+const THRESHOLD_STRESS_CONCURRENCY = 5;
 const releaseConfig = require("../release-config.json");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
@@ -87,7 +93,7 @@ async function callFunction(name, token, data = {}, identity = {}) {
   return body.result;
 }
 
-async function runRetriableTransaction(operation, maxAttempts = 8) {
+async function runRetriableTransaction(operation, maxAttempts = 12) {
   let lastError = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -97,7 +103,8 @@ async function runRetriableTransaction(operation, maxAttempts = 8) {
       const retryable = Number(error?.code) === 10
         || /transaction lock timeout|aborted/i.test(String(error?.message || error));
       if (!retryable || attempt >= maxAttempts) throw error;
-      await new Promise(resolve => setTimeout(resolve, 25 * attempt));
+      const delayCeilingMs = Math.min(2_500, 100 * (2 ** Math.min(attempt, 5)));
+      await new Promise(resolve => setTimeout(resolve, randomInt(50, delayCeilingMs + 1)));
     }
   }
   throw lastError;
@@ -151,9 +158,11 @@ async function main() {
   }
 
   const firstSource = initial.admittingRegionIds[0];
-  const firstWave = await Promise.all(Array.from({ length: 50 }, () => (
-    applyThreshold(firstSource, 20)
-  )));
+  const firstWave = await mapWithConcurrency(
+    Array.from({ length: 50 }),
+    THRESHOLD_STRESS_CONCURRENCY,
+    () => applyThreshold(firstSource, 20)
+  );
   assert(firstWave.filter(result => result.changed).length === 1,
     "Concurrent threshold retries activated more than one two-map batch.");
 
@@ -183,9 +192,14 @@ async function main() {
   assert(!belowThreshold.changed && belowThreshold.reason === "threshold-not-reached",
     "A map activated before it reached the 20-NPC threshold.");
 
-  const secondWave = await Promise.all(afterFirst.admittingRegionIds.flatMap((sourceRegionId, sourceIndex) => (
-    Array.from({ length: 25 }, () => applyThreshold(sourceRegionId, 40 + sourceIndex))
-  )));
+  const secondWaveRequests = afterFirst.admittingRegionIds.flatMap((sourceRegionId, sourceIndex) => (
+    Array.from({ length: 25 }, () => ({ sourceRegionId, thresholdRevision: 40 + sourceIndex }))
+  ));
+  const secondWave = await mapWithConcurrency(
+    secondWaveRequests,
+    THRESHOLD_STRESS_CONCURRENCY,
+    request => applyThreshold(request.sourceRegionId, request.thresholdRevision)
+  );
   assert(secondWave.filter(result => result.changed).length === 2,
     "Two qualifying source maps did not produce exactly two idempotent activation batches.");
 

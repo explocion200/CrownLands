@@ -31214,7 +31214,7 @@ exports.resolveDueArmyOrders = onSchedule({
   timeZone: "Etc/UTC",
   maxInstances: 1,
   timeoutSeconds: 180,
-  memory: "256MiB",
+  memory: "512MiB",
 }, async () => {
   const nowMs = Date.now();
   const startedAtMs = Date.now();
