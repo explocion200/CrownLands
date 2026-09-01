@@ -12,12 +12,20 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const apiSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 
-const beforeActivation = Date.parse("2026-08-31T23:59:59.999Z");
-const activation = Date.parse("2026-09-01T00:00:00.000Z");
+const activation = Date.parse(releaseConfig.monthlyResetStartsAt);
+assert(Number.isFinite(activation), "The monthly realm activation timestamp is invalid.");
+const beforeActivation = activation - 1;
 const october = Date.parse("2026-10-15T12:30:00.000Z");
 const enabledMonthlyConfig = Object.freeze({
   ...releaseConfig,
   realmMode: "monthly-shared",
+  resetActivationHeld: false,
+});
+const heldConfig = Object.freeze({
+  ...releaseConfig,
+  realmMode: "legacy",
+  worldTopology: "legacy",
+  resetActivationHeld: true,
 });
 
 const legacy = topology.getRealmIdentity(releaseConfig, beforeActivation);
@@ -25,12 +33,12 @@ assert.equal(legacy.mode, "legacy");
 assert.equal(legacy.resetGeneration, releaseConfig.resetGeneration);
 assert.equal(legacy.worldId, releaseConfig.worldId);
 
-const heldAtActivation = topology.getRealmIdentity(releaseConfig, activation);
+const heldAtActivation = topology.getRealmIdentity(heldConfig, activation);
 assert.equal(heldAtActivation.mode, "legacy");
 assert.equal(heldAtActivation.resetGeneration, releaseConfig.resetGeneration);
 assert.equal(heldAtActivation.worldId, releaseConfig.worldId);
 
-const heldAfterActivation = topology.getRealmIdentity(releaseConfig, october);
+const heldAfterActivation = topology.getRealmIdentity(heldConfig, october);
 assert.equal(heldAfterActivation.mode, "legacy");
 assert.equal(heldAfterActivation.resetGeneration, releaseConfig.resetGeneration);
 assert.equal(heldAfterActivation.worldId, releaseConfig.worldId);
@@ -158,4 +166,11 @@ assert.match(
   "Clan leaderboard list reads must use the authoritative realm-storage path without an unqueryable document-field predicate."
 );
 
-console.log("Realm hold validation passed: production remains legacy while the enabled monthly model keeps 150 players in one generation-isolated realm partition.");
+const configuredAtActivation = topology.getRealmIdentity(releaseConfig, activation);
+assert.equal(
+  configuredAtActivation.mode,
+  releaseConfig.resetActivationHeld === false ? "monthly-shared" : "legacy",
+  "The configured realm does not transition according to its reset hold.",
+);
+
+console.log("Realm activation validation passed: the scheduled boundary is fail-closed before activation and keeps 150 players in one generation-isolated realm partition after activation.");

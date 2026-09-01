@@ -5,6 +5,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const topology = require("../functions/coreExpansionTopology.js");
+const realmTopology = require("../functions/realmTopology.js");
 const regionCatalogRuntime = require("../region-catalog.js");
 
 const root = path.resolve(__dirname, "..");
@@ -26,11 +27,20 @@ const clientConfigSource = read("release-config.js");
 const clientConfig = JSON.parse(clientConfigSource.match(/Object\.freeze\((\{[\s\S]*\})\);/)?.[1] || "null");
 const serverConfig = readJson("functions/release-config.json");
 assert.deepEqual(clientConfig, serverConfig, "Client and server reset controls differ.");
-assert.equal(serverConfig.realmMode, "legacy", "The shared realm must remain held before reset time.");
-assert.equal(serverConfig.worldTopology, "legacy", "The Core expansion topology must remain inactive before reset time.");
 assert.equal(serverConfig.preparedWorldTopology, topology.TOPOLOGY_VERSION);
-assert.equal(serverConfig.resetActivationHeld, true);
-assert.equal(serverConfig.monthlyResetStartsAt, "2026-09-01T00:00:00.000Z");
+const activationAtMs = Date.parse(serverConfig.monthlyResetStartsAt);
+assert(Number.isFinite(activationAtMs), "The Core-expansion activation must use an explicit UTC timestamp.");
+const resetControlState = serverConfig.resetActivationHeld === false ? "armed" : "held";
+if (resetControlState === "armed") {
+  assert.equal(serverConfig.realmMode, "monthly-shared", "An armed reset must use the one shared monthly realm.");
+  assert.equal(serverConfig.worldTopology, topology.TOPOLOGY_VERSION, "An armed reset must select the Core-expansion topology.");
+  assert.equal(serverConfig.monthlyResetStartsAt, "2026-09-02T00:00:00.000Z");
+  assert.equal(realmTopology.getRealmIdentity(serverConfig, activationAtMs - 1).mode, "legacy");
+  assert.equal(realmTopology.getRealmIdentity(serverConfig, activationAtMs).mode, "monthly-shared");
+} else {
+  assert.equal(serverConfig.realmMode, "legacy", "A held reset must leave the current realm in legacy mode.");
+  assert.equal(serverConfig.worldTopology, "legacy", "A held reset must leave the current topology active.");
+}
 
 const layout = readJson("functions/core-expansion-world-layout.json");
 const catalog = readJson("functions/core-expansion-region-catalog.json");
@@ -218,4 +228,4 @@ for (const forbidden of ["developmentOnly", "productionActivated", "fixturePacka
   assert(!preparedText.includes(forbidden), `Prepared release leaked development marker ${forbidden}.`);
 }
 
-console.log("Validated the inactive Core-expansion release bundle, north-center cardinal layer starts, 81 unique medieval map names, 3,720 city definitions, 17 objectives, asset hashes, runtime wiring, and reset hold.");
+console.log(`Validated the ${resetControlState} Core-expansion release bundle, north-center cardinal layer starts, 81 unique medieval map names, 3,720 city definitions, 17 objectives, asset hashes, runtime wiring, and fail-closed reset controls.`);
