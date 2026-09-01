@@ -23881,7 +23881,14 @@ exports.sendRegroupOrders = timedCallable(
   }
 );
 
-exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
+exports.sendArmyOrder = timedCallable("sendArmyOrder", {
+  region: "us-central1",
+  timeoutSeconds: 180,
+  memory: "512MiB",
+  minInstances: 1,
+  maxInstances: 20,
+  invoker: "public",
+}, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
@@ -28000,7 +28007,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
   return resolution;
 }
 
-exports.resolveArmyOrder = timedCallable("resolveArmyOrder", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+exports.resolveArmyOrder = timedCallable("resolveArmyOrder", {
+  region: "us-central1",
+  timeoutSeconds: 180,
+  memory: "512MiB",
+  maxInstances: 30,
+  invoker: "public",
+}, async request => {
   const callerUid = requireAuth(request);
   const data = request.data || {};
   const armyId = safeString(data.armyId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");

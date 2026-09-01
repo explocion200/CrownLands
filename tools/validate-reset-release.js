@@ -70,6 +70,16 @@ requireMatch(
   /exports\.resolveDueArmyOrders = onSchedule\(\{[\s\S]*?memory:\s*"512MiB"/,
   "The scheduled army resolver must retain enough memory for the Core-expansion runtime bundle."
 );
+requireMatch(
+  server,
+  /exports\.sendArmyOrder = timedCallable\("sendArmyOrder",\s*\{[\s\S]*?timeoutSeconds:\s*180,[\s\S]*?memory:\s*"512MiB"/,
+  "Army launches must retain enough runtime memory and timeout headroom under concurrent arrivals."
+);
+requireMatch(
+  server,
+  /exports\.resolveArmyOrder = timedCallable\("resolveArmyOrder",\s*\{[\s\S]*?timeoutSeconds:\s*180,[\s\S]*?memory:\s*"512MiB"/,
+  "Direct army resolution must retain enough runtime memory and timeout headroom for reconnect bursts."
+);
 requireMatch(server, /serverBuildId:[\s\S]*contractHash:[\s\S]*releaseManifestVersion:/, "The server build-contract handshake is missing.");
 requireMatch(client, /clientReleaseId: APP_RELEASE_ID[\s\S]*clientResetGeneration: RESET_GENERATION/, "Callable requests do not carry release identity.");
 requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generationMatches[\s\S]*worldMatches[\s\S]*contractMatches/, "Gameplay does not fail closed on release or contract drift.");
