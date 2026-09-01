@@ -18,6 +18,12 @@ const manifestGenerator = read("tools/generate-release-manifest.js");
 const worldLayout = JSON.parse(read("assets/worlds/world_01/world-layout.json"));
 const serverWorldLayout = JSON.parse(read("functions/world-layout.json"));
 const topology = require("../functions/realmTopology.js");
+const coreTopology = require("../functions/coreExpansionTopology.js");
+const coreWorldLayout = JSON.parse(read("functions/core-expansion-world-layout.json"));
+const coreRegionCatalog = JSON.parse(read("functions/core-expansion-region-catalog.json"));
+const coreResetArmed = serverRealm.realmMode === "monthly-shared"
+  && serverRealm.worldTopology === coreTopology.TOPOLOGY_VERSION
+  && serverRealm.resetActivationHeld === false;
 
 for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId, serverRealm.apiContractHash]) {
   if (!value || !browserRealm.includes(JSON.stringify(value))) {
@@ -43,6 +49,16 @@ requireMatch(
 );
 requireMatch(server, /claimFreshStartingCity[\s\S]*leastPopulated[\s\S]*crypto\.randomInt/, "Starting islands are not balanced with random tie breaking.");
 requireMatch(server, /transaction\.set\(playerRef,[\s\S]*freshProfile[\s\S]*\}\);/, "Reset profiles must replace old gameplay state.");
+requireMatch(
+  server,
+  /createPersistentCommonGearForSeasonReset[\s\S]*commonGearBoxes:[\s\S]*instances:[\s\S]*equipped:[\s\S]*newMarkers:/,
+  "Permanent Common Gear is not preserved by the reset allowlist.",
+);
+requireMatch(
+  server,
+  /readClanSeasonPersistenceContext[\s\S]*applyClanSeasonPersistence[\s\S]*clanIdentityRevision/,
+  "Clan identity, roster, membership, and roles are not preserved across the reset.",
+);
 requireMatch(server, /writeOwnershipChangeEvent[\s\S]*processOwnershipChangeEvent/, "Ownership changes are not using the durable event pipeline.");
 if (/exports\.syncCityArmyTargetOwner|exports\.syncCampArmyTargetOwner/.test(server)) {
   throw new Error("Broad city/camp write triggers are still exported.");
@@ -91,35 +107,59 @@ for (const [label, source] of [["server", server], ["client", client]]) {
   }
 }
 
-const newPlayerSpawnMapCount = worldLayout.regions.filter(map => map.newPlayerSpawnEligible === true).length;
-if (newPlayerSpawnMapCount !== 5) {
-  throw new Error(`Expected 5 designated new-player spawn maps, found ${newPlayerSpawnMapCount}.`);
-}
-const spawnRegionIds = worldLayout.regions
-  .filter(map => map.newPlayerSpawnEligible === true)
-  .map(map => map.id);
-if (JSON.stringify(spawnRegionIds) !== JSON.stringify(["region_11", "region_12", "region_13", "region_14", "region_15"])) {
-  throw new Error(`The reset spawn allowlist drifted: ${JSON.stringify(spawnRegionIds)}.`);
-}
-const startingCityCapacity = serverWorldLayout.maps
-  .filter(map => spawnRegionIds.includes(map.id))
-  .reduce((total, map) => total + (Array.isArray(map.cities) ? map.cities.length : 0), 0);
-if (startingCityCapacity !== 363 || serverRealm.sharedRealmStartingCityCapacity !== startingCityCapacity) {
-  throw new Error(`Shared-realm starting capacity drifted: layout=${startingCityCapacity}, config=${serverRealm.sharedRealmStartingCityCapacity}.`);
-}
-for (let trial = 0; trial < 500; trial += 1) {
-  const counts = Array(newPlayerSpawnMapCount).fill(0);
-  for (let player = 0; player < 150; player += 1) {
-    const minimum = Math.min(...counts);
-    const candidates = counts.map((count, index) => count === minimum ? index : -1).filter(index => index >= 0);
-    const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-    counts[chosen] += 1;
-    if (Math.max(...counts) - Math.min(...counts) > 1) {
-      throw new Error(`Balanced allocation invariant failed: ${counts.join(",")}`);
-    }
+if (coreResetArmed) {
+  const permanentCore = coreRegionCatalog.regions.filter(region => region.permanentCore === true);
+  const newLands = coreRegionCatalog.regions.filter(region => region.permanentCore !== true);
+  if (permanentCore.length !== coreTopology.CORE_MAP_COUNT || permanentCore.some(region => region.spawnEligible || region.spawnReady)) {
+    throw new Error("The 25-map Core must remain completely excluded from starting placement.");
   }
-  if (counts.reduce((sum, count) => sum + count, 0) !== 150) {
-    throw new Error("The reset allocation model lost a player.");
+  if (newLands.length < coreTopology.FIRST_LAYER_MAP_COUNT
+    || newLands.some(region => Number(region.cityCapacity) !== coreTopology.NEW_LANDS_CITY_CAPACITY)) {
+    throw new Error("Prepared New Lands maps do not expose 40 neutral-city templates.");
+  }
+  const initialExpansion = coreTopology.createInitialExpansionState("realm-reset-validation");
+  if (JSON.stringify(initialExpansion.activeRegionIds) !== JSON.stringify(["new-lands-l01-p001"])
+    || JSON.stringify(initialExpansion.admittingRegionIds) !== JSON.stringify(["new-lands-l01-p001"])) {
+    throw new Error("The reset must begin at the north-center cardinal New Lands entrance.");
+  }
+  const firstNewLandsMap = coreWorldLayout.maps.find(map => map.id === initialExpansion.activeRegionIds[0]);
+  if (!firstNewLandsMap || firstNewLandsMap.cities?.length !== coreTopology.NEW_LANDS_CITY_CAPACITY) {
+    throw new Error("The first admitting New Lands map is not fully prepared.");
+  }
+  if (coreTopology.MAX_NEW_LANDS_REGIONS * coreTopology.EXPANSION_THRESHOLD_NPC_CITIES !== 81_900) {
+    throw new Error("The automatic New Lands capacity envelope drifted.");
+  }
+} else {
+  const newPlayerSpawnMapCount = worldLayout.regions.filter(map => map.newPlayerSpawnEligible === true).length;
+  if (newPlayerSpawnMapCount !== 5) {
+    throw new Error(`Expected 5 designated new-player spawn maps, found ${newPlayerSpawnMapCount}.`);
+  }
+  const spawnRegionIds = worldLayout.regions
+    .filter(map => map.newPlayerSpawnEligible === true)
+    .map(map => map.id);
+  if (JSON.stringify(spawnRegionIds) !== JSON.stringify(["region_11", "region_12", "region_13", "region_14", "region_15"])) {
+    throw new Error(`The reset spawn allowlist drifted: ${JSON.stringify(spawnRegionIds)}.`);
+  }
+  const startingCityCapacity = serverWorldLayout.maps
+    .filter(map => spawnRegionIds.includes(map.id))
+    .reduce((total, map) => total + (Array.isArray(map.cities) ? map.cities.length : 0), 0);
+  if (startingCityCapacity !== 363 || serverRealm.sharedRealmStartingCityCapacity !== startingCityCapacity) {
+    throw new Error(`Shared-realm starting capacity drifted: layout=${startingCityCapacity}, config=${serverRealm.sharedRealmStartingCityCapacity}.`);
+  }
+  for (let trial = 0; trial < 500; trial += 1) {
+    const counts = Array(newPlayerSpawnMapCount).fill(0);
+    for (let player = 0; player < 150; player += 1) {
+      const minimum = Math.min(...counts);
+      const candidates = counts.map((count, index) => count === minimum ? index : -1).filter(index => index >= 0);
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      counts[chosen] += 1;
+      if (Math.max(...counts) - Math.min(...counts) > 1) {
+        throw new Error(`Balanced allocation invariant failed: ${counts.join(",")}`);
+      }
+    }
+    if (counts.reduce((sum, count) => sum + count, 0) !== 150) {
+      throw new Error("The reset allocation model lost a player.");
+    }
   }
 }
 
@@ -133,4 +173,7 @@ if (JSON.stringify(shardCounts) !== JSON.stringify({ shard_0001: 150 })) {
   throw new Error(`Shared realm split or lost players: ${JSON.stringify(shardCounts)}.`);
 }
 
-console.log(`Reset release validation passed for ${serverRealm.resetGeneration}.`);
+const validationTarget = coreResetArmed
+  ? topology.getRealmIdentity(serverRealm, Date.parse(serverRealm.monthlyResetStartsAt)).resetGeneration
+  : serverRealm.resetGeneration;
+console.log(`Reset release validation passed for ${validationTarget}.`);

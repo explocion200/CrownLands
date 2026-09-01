@@ -117,8 +117,8 @@ The August 24 through August 27 audits remain historical evidence. The August 30
 | Bounded session heartbeat responses and lifecycle-safe late-response recovery | Present in build `fdf326a...` | Present in build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; public assets and 120-session emulator admission passed, while authenticated interrupted-connection smoke remains pending |
 | Next-reset regular-city Gold production curve | Absent from the audited production build | Absent from the audited published build | `IN DEVELOPMENT`; coordinated backend, web, and itch.io release required |
 | Holding Towers and Clan Treasury | Absent | Absent | `PLANNED`; confirmed design is preserved, but a clean current-main implementation has not started |
-| Pending 5×5 Core world | Absent | Absent | `IN DEVELOPMENT` |
-| Dynamic automatic map expansion | Absent | Absent | `IN DEVELOPMENT` |
+| Pending 5×5 Core world | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
+| Dynamic automatic map expansion | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
 
 The Release Channel Matrix must be updated whenever either published channel changes.
 
@@ -241,15 +241,15 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Core world and automatic New Lands
 
-- A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges has been developed and staged. The Core is never a new-player spawn pool. **Status:** `IMPLEMENTED — PENDING RELEASE`.
+- A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges is deployed behind the scheduled activation boundary. The Core is never a new-player spawn pool. **Status:** `DEPLOYED — SCHEDULED ACTIVATION`.
 - The first expansion layer contains exactly 24 maps: five maps along each cardinal side of the Core plus the four corner maps. Together with the 25-map Core, this forms a complete 7×7 footprint.
 - Later player-growth layers allocate positions in clockwise order. Every layer begins at its north-center cardinal position, never at a corner, so its first map has a direct south road into the immediately inner layer. Capacity expansion activates the next two positions together, and a later layer cannot begin until the preceding layer's allocation order is complete.
 - Every player-facing Core and New Lands map label uses a unique medieval-authentic place name. Numbered `New Lands` labels are internal planning identifiers only and must not appear as map names in the game.
 - Each generated New Lands map begins with 40 neutral NPC cities. When the currently admitting map reaches 20 remaining neutral NPC cities, the server activates the next two maps in clockwise allocation order for new-player placement. The threshold transition must be transactional, idempotent, and safe under concurrent claims.
-- The Core is non-spawnable. New and returning accounts without current-generation progression spawn only in the currently admitting New Lands maps. **Status:** `IMPLEMENTED — PENDING RELEASE`.
-- Future outward player regions are materialized deterministically from validated New Lands templates, retain cardinal-only connections, receive unique medieval-authentic names, and are added to connected clients through the authoritative expansion-state subscription without requiring a frontend redeploy. The supported release envelope is 4,095 New Lands maps, or 81,900 threshold-managed starting placements. **Status:** `IMPLEMENTED — PENDING RELEASE`.
-- Reset activation fails closed: all 25 Core maps and the first New Lands map must be seeded and verified for the scheduled generation before the public realm pointer changes. The previous generation remains intact and inaccessible for pointer-based rollback. **Status:** `IMPLEMENTED — PENDING RELEASE`.
-- Production migration to this world has not occurred.
+- The Core is non-spawnable. New and returning accounts without current-generation progression spawn only in the currently admitting New Lands maps. **Status:** `DEPLOYED — SCHEDULED ACTIVATION`.
+- Future outward player regions are materialized deterministically from validated New Lands templates, retain cardinal-only connections, receive unique medieval-authentic names, and are added to connected clients through the authoritative expansion-state subscription without requiring a frontend redeploy. The supported release envelope is 4,095 New Lands maps, or 81,900 threshold-managed starting placements. **Status:** `DEPLOYED — SCHEDULED ACTIVATION`.
+- Reset activation fails closed: all 25 Core maps and the first New Lands map must be seeded and verified for the scheduled generation before the public realm pointer changes. The previous generation remains intact and inaccessible for pointer-based rollback. **Status:** `DEPLOYED — SCHEDULED ACTIVATION`.
+- Production migration is scheduled for September 2, 2026 at 00:00 UTC and has not occurred at the time of this specification update.
 
 ### Needs verification
 
@@ -591,7 +591,7 @@ The Pending Core mappings are fixed:
 - Clan ID, clan name, clan tag, clan heraldry, member roster, and each member’s current role—including Leader, Officer, and Member—persist across seasons.
 - Clan Treasury balance and ledger, seasonal statistics, weekly-goal progress, rallies, reinforcements, donations/gifts activity, and ownership of Holding Towers, Strongholds, the Crown Citadel, or other world objectives reset each season.
 
-**Implementation conflict:** The inspected `origin/main` reset path does not preserve clan identity, roster, membership, or roles. Current clan documents and memberships are generation-scoped, and the reset emulator explicitly expects old clan state not to survive. The design rule above remains authoritative; implementation correction is `IN DEVELOPMENT`. See Section 15.
+The current reset path preserves clan identity, roster, membership, roles, name, tag, and heraldry while rebuilding generation-scoped clan state. The rollover is transactional and fails without partial season changes when a preserved clan record is incomplete or inconsistent. Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, gifts activity, benefits, leaderboards, and objective ownership are reset for the new generation. Emulator coverage includes concurrent member claims, replay safety, invalid rosters, missing records, disbanded clans, removed members, and the 30-member limit. **Status:** `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
 
 ### Clan Heraldry
 
@@ -693,13 +693,7 @@ The following Common Gear data persists across seasons/resets:
 - Associated Common Gear progression that belongs to the Gear system
 - Unopened Common Gear Boxes
 
-This is a confirmed design rule. Production reset enforcement remains `IN DEVELOPMENT` until verified.
-
-### Current implementation divergence
-
-The inspected `origin/main` reset initializer replaces the entire Gear state with a default empty state. It therefore resets owned Common Gear, equipped Common Gear, Gear levels, upgrades, duplicate/progression state, and unopened Common Gear Boxes. This is a **verified implementation conflict** with the confirmed persistence rule above.
-
-The current reset emulator test explicitly expects the old reset behavior. The test must be updated together with the implementation when the confirmed persistence policy is implemented; otherwise it will reject the intended fix.
+The reset initializer now applies an explicit Common Gear persistence allowlist covering unopened Boxes, instances, equipped slots, levels/upgrades, and new-item markers. Normal Bag consumables, timed item effects, and purchase cooldowns still reset. Emulator coverage verifies the preserved Gear can be viewed, equipped, unequipped, upgraded, and opened after the new-generation starting-city claim. **Status:** `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
 
 ### Planned progression
 
@@ -794,7 +788,7 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 - Player name, complete player flag design, account creation date, and notification preferences persist across seasons.
 - Clan ID, name, tag, heraldry, member roster, and member roles persist across seasons.
 - Authentication and active-session data may carry forward as technical account state, but they are not seasonal progression or player customization.
-- Current `origin/main` preserves the confirmed player identity fields but does not preserve clan identity/membership. The clan behavior is implementation divergence, not a change to the confirmed design policy.
+- Current reset source preserves the confirmed player identity fields and transactionally carries clan identity, membership, roster, and roles into the new generation while resetting clan-season activity.
 - Player Flag save reliability after the reported production issue is **NEEDS VERIFICATION** through a current production smoke test.
 
 ### Announcements and moderation
@@ -847,20 +841,20 @@ The earlier broad statement that “items persist” is superseded by this allow
 - Scheduled work, leaderboards, clans, activity, combat, armies, reports, presence, and world reads execute once against the shared current-generation partition. Archived generations remain inaccessible and inactive but intact for rollback and historical retention.
 - Monthly generation and world identifiers remain `realm-YYYY-MM` and `main-realm-YYYY-MM`. Realm generation isolation remains mandatory even though population sharding is removed.
 
-**Status:** The shared-realm foundation is deployed, but activation is explicitly held in `legacy` mode. The reset must not proceed until the Pending Core 5x5 world and expanding northern New Lands are implemented, validated, and separately authorized.
+**Status:** The shared-realm and Core-expansion foundation is deployed. Repository activation controls are armed for September 2, 2026 at 00:00 UTC; production must continue serving the legacy realm until that boundary. The scheduler and first eligible client handshake must seed and verify all 25 Core maps plus the first New Lands map before the current-realm pointer may change.
 
 ### Implementation state
 
 - Season/reset persistence policy is confirmed design.
-- One shared monthly realm and removal of the 50-player split are confirmed design. The temporary five-island starter placement is not the approved reset topology and remains inactive while the production reset is held.
-- The approved reset target is the 25-map Core, a complete 24-map first ring containing five maps on each cardinal side plus four corner maps, and later New Lands layers that begin at the north-center cardinal entrance and allocate clockwise. A layer may never begin on a corner because inter-map roads connect only north, east, south, and west. Every player-facing map label uses a unique medieval-authentic place name. Each New Lands map starts with 40 neutral NPC cities; at 20 remaining neutral cities on the current admitting map, the next two maps activate for incoming players. Deterministic Layer 3+ generation, authoritative routing, live client discovery, reset-readiness gating, and retry-safe activation are implemented on the release branch and remain pending merge, deployment, and production verification.
-- Production reset enforcement is `IN DEVELOPMENT`.
-- A previously reported staging reset rehearsal preserved flags, clans, and Common Gear data while resetting world/season state. The inspected current `origin/main` executable reset path does not preserve clans or Common Gear, so the rehearsal is not evidence of current code parity.
+- One shared monthly realm and removal of the 50-player split are implemented. The temporary five-island starter placement remains the legacy fallback only and is not used after the scheduled Core-expansion activation.
+- The approved reset target is the 25-map Core, a complete 24-map first ring containing five maps on each cardinal side plus four corner maps, and later New Lands layers that begin at the north-center cardinal entrance and allocate clockwise. A layer may never begin on a corner because inter-map roads connect only north, east, south, and west. Every player-facing map label uses a unique medieval-authentic place name. Each New Lands map starts with 40 neutral NPC cities; at 20 remaining neutral cities on the current admitting map, the next two maps activate for incoming players. Deterministic Layer 3+ generation, authoritative routing, live client discovery, reset-readiness gating, and retry-safe activation are merged and deployed in held production build `8d80b6a...`; activation remains scheduled and fail-closed.
+- Production reset enforcement for the explicit player/clan/Common Gear allowlist is `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
+- The current executable reset path and reset emulator preserve flags, clans, and Common Gear while resetting world and seasonal progression. Exact post-boundary production behavior remains to be verified after activation.
 - The production reset has not been verified as executed under this policy.
 
-### Verified current `origin/main` reset behavior
+### Verified current reset behavior
 
-No named, field-level persistence allowlist exists. The reset behavior is implicit in `createFreshResetPlayerProfile` and the generation-scoped data model.
+The reset path uses explicit Common Gear and clan persistence helpers around `createFreshResetPlayerProfile`, while the fresh profile replaces seasonal and world progression.
 
 | Data/system | Confirmed intended policy | Inspected `origin/main` behavior | Result |
 |---|---|---|---|
@@ -869,12 +863,12 @@ No named, field-level persistence allowlist exists. The reset behavior is implic
 | Account creation date | Persist | `createdAt` is carried forward | Matches design in source |
 | Notification preferences | Persist | Carried forward when present | Matches design in source |
 | Authentication and active-session state | May carry forward as technical state | Selected authentication fallbacks and active-session state are carried forward | Technical carry-forward; not progression |
-| Clan ID/name/tag/heraldry, roster, membership, and roles | Persist | Fresh profile omits clan identity/membership; clan and membership records are generation-scoped and old records fail current-generation checks | **CONFLICTS WITH SPECIFICATION** |
-| Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, donations/gifts activity, and objective ownership | Reset | Current clan/world activity is generation-scoped | Matches the reset direction in inspected source; exact future Treasury path is not LIVE |
-| Owned Common Gear | Persist | Gear state is replaced with an empty default | **CONFLICTS WITH SPECIFICATION** |
-| Equipped Common Gear | Persist | Equipment is reset | **CONFLICTS WITH SPECIFICATION** |
-| Common Gear levels/upgrades/progression | Persist | Gear progression is reset | **CONFLICTS WITH SPECIFICATION** |
-| Unopened Common Gear Boxes | Persist | Reset to zero | **CONFLICTS WITH SPECIFICATION** |
+| Clan ID/name/tag/heraldry, roster, membership, and roles | Persist | Transactionally migrated to the new generation; invalid/incomplete records fail without partial reset writes | Matches design in source and emulator coverage |
+| Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, donations/gifts activity, and objective ownership | Reset | Rebuilt or cleared for the new generation | Matches the reset direction in source; exact future Treasury path is not LIVE |
+| Owned Common Gear | Persist | Preserved through the explicit Gear reset helper | Matches design in source and emulator coverage |
+| Equipped Common Gear | Persist | Preserved with normalized slot state | Matches design in source and emulator coverage |
+| Common Gear levels/upgrades/progression | Persist | Instance and upgrade state is preserved | Matches design in source and emulator coverage |
+| Unopened Common Gear Boxes | Persist | Box count is preserved | Matches design in source and emulator coverage |
 | Normal Bag consumables | Reset | Counts reset to zero; effects and purchase cooldowns reset | Matches design in source |
 | Hero progression and skill presets | Reset | Hero returns to Level 1/XP 0/skill points 0; skill upgrades and presets return to defaults | Matches design in source |
 | Achievement progress, state, rewards, and history | Reset | Achievement cycles are reset-generation/month scoped; no permanent completion archive was found | Matches design in source |
@@ -884,24 +878,24 @@ No named, field-level persistence allowlist exists. The reset behavior is implic
 
 The initializer also carries forward selected authentication display/email/photo fallbacks and active-session state. These are technical implementation facts, not additions to player-facing seasonal progression.
 
-The reset emulator currently asserts that player name and flag survive while clan state, reports, normal items, and Hero/world progression reset. It therefore codifies the superseded clan-reset behavior and does not test the confirmed Common Gear persistence design.
+The reset emulator now verifies preserved player identity, clan identity/roster/roles, and Common Gear together with reset reports, normal consumables, Hero progression, skills, resources, cities, and other seasonal world state.
 
 ### Verified generation/versioning behavior
 
-- Current release ID: `crownlands-2026-08-02-single-active-skill-preset-v1`.
+- Current release ID: `crownlands-2026-09-monthly-sharded-realms-v1`.
 - Current reset generation: `fresh-2026-07-26-server-reset`.
 - Current world ID: `main-fresh-2026-07-26-server-reset`.
-- Current API contract hash: `e6029faf76eb863612cebf975f69bbd2e5116571153a916993825a7a7f674020`.
+- Current API contract hash: `86fc7b17ba028d02ee0ef6131f291f6673d5fdef4178a3463e04cf220bc35dbd`.
 - Client/server admission checks gate release ID, reset generation, and world ID; the client also checks the API contract through realm information.
-- Reset generation advances by static configuration change. No scheduler that automatically advances a season/reset generation was found.
+- The armed configuration advances to `realm-2026-09` / `main-realm-2026-09` at September 2, 2026 00:00 UTC. `activateMonthlyRealm` runs at 00:00 UTC daily, while authenticated realm initialization also reconciles the pointer. Both paths use the same fail-closed Core readiness gate.
 - Achievement cycles are monthly within a reset generation, using `{resetGeneration}_{YYYY-MM}`.
 
-These facts are verified in repository commit `27105ae...`. Exact deployed Functions source, production data, backup state, and real reset execution remain **NEEDS VERIFICATION**.
+The held Core-expansion Functions, rules, indexes, and web client were deployed from build `8d80b6a...` before the activation controls were armed. Exact post-reset production execution remains **NEEDS VERIFICATION** until the scheduled boundary passes.
 
 ### Operational gate
 
-- The planned production reset remains gated by verified backup completion and restore readiness.
-- Point-in-time recovery, retention, delete protection, and scheduled backup configuration were reported, but completed backup/restore proof was not available at the audit cutoff.
+- Production has a daily Firestore backup schedule with 35-day retention. Backup `3fb979ab-34ff-4c63-ab8a-abe49e8fd7bd`, snapshot time August 31, 2026 at 22:10:07 UTC, was verified `READY` and expires October 5, 2026.
+- The previous realm generation remains intact and inaccessible after the pointer switch. Pointer rollback is the first recovery action; full database restore remains available from the verified managed backup if pointer rollback is insufficient.
 
 ### Needs verification
 
@@ -1091,9 +1085,9 @@ Status verified through August 31, 2026.
 | Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — ALL PUBLISHED CHANNELS` | Web and the public itch.io iframe now use exact client build `fdf326a...`; authenticated mutation smoke remains pending. |
 | Session heartbeat timeout and lifecycle recovery | `LIVE — ALL PUBLISHED CHANNELS` | Web and itch.io bound an individual heartbeat response at 15 seconds and ignore late responses from stopped lifecycle generations. Static, all 33 emulator files, the 120-session realm admission case, and direct public asset checks passed; authenticated interrupted-connection recovery remains manual QA. |
 | Holding Towers and Clan Treasury | `PLANNED` | Confirmed design is preserved in Section 8. Historical PR #159 is archived and must be replaced by a clean synchronized branch when prioritized. |
-| Pending 5×5 Core | `IN DEVELOPMENT` | Staged; not production. |
-| Production reset/persistence enforcement | `IN DEVELOPMENT` | Current source preserves flags/names and resets normal consumables, but conflicts with confirmed Common Gear and clan persistence. Backup/restore gate remains. |
-| Dynamic map expansion | `IN DEVELOPMENT` | Not represented as live automatic growth. |
+| Pending 5×5 Core | `DEPLOYED — SCHEDULED ACTIVATION` | Held production build `8d80b6a...` contains the complete fail-closed Core seed/readiness path; repository activation is scheduled for September 2 at 00:00 UTC. |
+| Production reset/persistence enforcement | `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION` | Explicit identity, clan, and Common Gear persistence is covered by emulator tests; a READY managed backup and pointer rollback path are verified. |
+| Dynamic map expansion | `DEPLOYED — SCHEDULED ACTIVATION` | Held production build includes deterministic Layer 3+ growth and live client discovery; post-boundary production verification remains. |
 | Seasons | `PLANNED` | Cadence and reward policy unresolved. |
 | More Gear rarities | `PLANNED` | Detailed rules unresolved. |
 | Clan Wars / regional control / more world events | `PROPOSED` or roadmap-level `PLANNED` only | No authoritative detailed rules. |
@@ -1114,10 +1108,8 @@ Status verified through August 31, 2026.
 - Starting-resource documentation conflicts with the current source. `origin/main` initializes 100 Gold and 200 troops; deployed runtime parity remains unverified.
 - Production Player Flag saving needs a current smoke test.
 - Holding Towers/Clan Treasury have no active current-main implementation; historical PR #159 is archived and a clean implementation branch has not started.
-- Production reset backup/restore readiness is not fully evidenced.
-- Current reset implementation deletes Common Gear ownership/equipment/progression and unopened Gear Boxes instead of applying the confirmed persistence policy.
-- Current reset implementation removes clan identity, roster, membership, and roles instead of applying the confirmed persistence policy.
-- The reset emulator asserts the superseded clan-reset behavior and lacks coverage for required Common Gear persistence.
+- The latest verified managed Firestore backup is `READY`, and pointer rollback is implemented by retaining the previous realm generation. A full production restore has not been rehearsed during this release window.
+- Authenticated browser smoke testing remains manual because the local in-app browser-control runtime was unavailable during the reset-arming audit.
 - The King Power validator uses a hardcoded troop-production factor of 3 while executable economy configuration uses 10.
 - The Codex implementation audit reported War Drums at 5%, but executable economy configuration sets 30%; 5% is only a fallback. The specification records 30% as the current repository fact.
 - No automatic season-generation advance, final leaderboard lock/rewards, or historical leaderboard archive was found. Final-season leaderboard archival is now confirmed design with status `PLANNED`.
@@ -1189,7 +1181,8 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | `LIVE — ALL PUBLISHED CHANNELS` | Build `fdf326a...`: unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and updated Skills tab/card readability. The separately hosted primary-domain public pages remain outside this client statement. |
 | `LIVE — ITCH.IO` | No feature is known to be uniquely newer on itch.io |
 | `IMPLEMENTED BUT NOT LIVE` | Uniform two-minute pickup cadence and center-biased pickup placement |
-| `IN DEVELOPMENT` | Pending 5×5 Core, production reset enforcement including Common Gear/clan persistence corrections, dynamic map expansion, continuing UI/performance/onboarding work |
+| `IMPLEMENTED BUT NOT LIVE` | Armed 5×5 Core reset, clan/Common Gear persistence enforcement, and deterministic dynamic map expansion pending the September 2 UTC boundary and post-reset verification |
+| `IN DEVELOPMENT` | Continuing UI/performance/onboarding work |
 | `PLANNED` | Holding Towers and Clan Treasury, Seasons, final-season Kingdom/Clan leaderboard archives, higher Gear rarities |
 | `PROPOSED` | Detailed Clan Wars, regional-control scoring, unconfirmed world-event concepts, unconfirmed expanded sound/animation mechanics |
 | `NEEDS VERIFICATION` | Exact production runtime parity for repository-verified starting resources/formulas/reset behavior, ranking policy, monetization policy, moderation, SLOs, security posture, device matrix, and channel parity target |
@@ -1211,8 +1204,8 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Clan heraldry | v1 compatibility versus v2 presentation | v1 remains unchanged until deliberate v2 save; v2 is `LIVE — ALL PUBLISHED CHANNELS` |
 | Ordinary Rally lifecycle deployment | Older published behavior could limit ordinary Rallies to three participants and lacked the creator-departure safety recall | Corrected 2–20-player lifecycle and creator-departure recall are `LIVE — ALL PUBLISHED CHANNELS`, beginning with verified cross-channel baseline build `a561374b...`. |
 | Merge versus deployment | Completion reports sometimes implied live status | Merge never proves deployment; release evidence controls LIVE status |
-| Common Gear reset persistence | Confirmed design preserves owned/equipped/leveled/upgraded Common Gear and unopened Common Gear Boxes; current reset initializer creates an empty Gear state | Design remains authoritative; implementation is divergent and `IN DEVELOPMENT` |
-| Clan reset persistence | Confirmed design preserves clan ID/name/tag/heraldry, roster, membership, and roles; current reset initializer and generation gates remove them | Design remains authoritative; implementation and its emulator expectation are divergent and `IN DEVELOPMENT` |
+| Common Gear reset persistence | Earlier reset initializer created an empty Gear state | Superseded by the explicit Common Gear persistence helper and reset-emulator coverage; production verification is scheduled with the reset |
+| Clan reset persistence | Earlier reset path omitted clan identity and generation rollover | Superseded by transactional clan identity/roster/role migration with failure-safe and concurrency emulator coverage |
 | War Drums production bonus | Codex audit summary said 5%; executable config says 30% while server fallback is 5% | Repository fact is 30% at `27105ae...`; exact production runtime parity remains **NEEDS VERIFICATION** |
 | King Power replacement-power validator | Validator hardcodes three troops per progression point; executable config uses ten | Executable implementation uses ten; validator is stale technical debt |
 | City-upgrade XP warnings | Earlier model required a preview and confirmation before rebuilt-level suppression | Superseded by silent suppression and direct replay-safe submission; XP progression remains authoritative but city-upgrade XP messaging is hidden |
@@ -1256,6 +1249,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.30 — September 1, 2026
+
+- Armed the one shared `realm-2026-09` Core-expansion reset for September 2, 2026 at 00:00 UTC while keeping the legacy world active before the boundary.
+- Recorded successful held deployment of build `8d80b6a...`, mirrored client/server release identity, and fail-closed seeding of all 25 Core maps plus the first New Lands map before pointer publication.
+- Reconciled stale reset-audit text with the current explicit Common Gear persistence helper and transactional clan rollover implementation and emulator coverage.
+- Verified the daily managed Firestore backup schedule, 35-day retention, and READY August 31 snapshot; retained the previous generation for pointer rollback.
 
 ## v1.29 — September 1, 2026
 
