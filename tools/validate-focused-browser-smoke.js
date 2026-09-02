@@ -13,10 +13,15 @@ const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client");
 
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
+const BROWSER_STARTUP_ATTEMPTS = 3;
+const BROWSER_STARTUP_POLL_ATTEMPTS = 300;
+const BROWSER_STARTUP_RETRY_MS = 500;
 const BROWSER_EXIT_TIMEOUT_MS = 3000;
+const MAX_BROWSER_DIAGNOSTIC_CHARS = 4000;
 const PROFILE_CLEANUP_ATTEMPTS = 6;
 const PROFILE_CLEANUP_RETRY_MS = 100;
 const RETRYABLE_PROFILE_CLEANUP_ERRORS = new Set(["EBUSY", "EMFILE", "ENFILE", "ENOTEMPTY", "EPERM"]);
+const browserDiagnosticOutput = new WeakMap();
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
   [".gif", "image/gif"],
@@ -122,13 +127,14 @@ function focusedPages(paths) {
 }
 
 function launchBrowser(executable, debugPort, profilePath) {
-  return childProcess.spawn(executable, [
+  const browserProcess = childProcess.spawn(executable, [
     "--headless=new",
     "--no-sandbox",
     "--disable-background-networking",
     "--disable-breakpad",
     "--disable-component-update",
     "--disable-default-apps",
+    "--disable-dev-shm-usage",
     "--disable-extensions",
     "--disable-features=MediaRouter,OptimizationHints,Translate",
     "--disable-sync",
@@ -136,10 +142,63 @@ function launchBrowser(executable, debugPort, profilePath) {
     "--mute-audio",
     "--no-default-browser-check",
     "--no-first-run",
+    "--remote-debugging-address=127.0.0.1",
     `--remote-debugging-port=${debugPort}`,
     `--user-data-dir=${profilePath}`,
     "about:blank",
-  ], { stdio: "ignore", windowsHide: true });
+  ], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+  const diagnostics = { spawnError: null, value: "" };
+  browserDiagnosticOutput.set(browserProcess, diagnostics);
+  for (const stream of [browserProcess.stdout, browserProcess.stderr]) {
+    stream.setEncoding("utf8");
+    stream.on("data", chunk => {
+      diagnostics.value = `${diagnostics.value}${chunk}`.slice(-MAX_BROWSER_DIAGNOSTIC_CHARS);
+    });
+  }
+  browserProcess.on("error", error => {
+    diagnostics.spawnError = error;
+    diagnostics.value = `${diagnostics.value}\n${error.stack || error.message}`.slice(-MAX_BROWSER_DIAGNOSTIC_CHARS);
+  });
+  return browserProcess;
+}
+
+function readBrowserDiagnostics(browserProcess) {
+  return browserDiagnosticOutput.get(browserProcess)?.value.trim() || "Chrome produced no diagnostic output.";
+}
+
+function browserExited(browserProcess) {
+  return browserProcess.exitCode !== null || browserProcess.signalCode !== null;
+}
+
+async function waitForBrowserTargets(browserProcess, url, options = {}) {
+  const attempts = options.attempts || BROWSER_STARTUP_POLL_ATTEMPTS;
+  const retryDelayMs = options.retryDelayMs ?? 0;
+  const fetchTargets = options.fetchTargets || (targetUrl => fetchJson(targetUrl, {}, 1));
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const spawnError = browserDiagnosticOutput.get(browserProcess)?.spawnError;
+    if (spawnError) {
+      throw new Error(`Chrome process failed to launch: ${spawnError.message}. ${readBrowserDiagnostics(browserProcess)}`);
+    }
+    if (browserExited(browserProcess)) {
+      throw new Error(
+        `Chrome exited before DevTools became available (exit ${browserProcess.exitCode}, signal ${browserProcess.signalCode}). ` +
+        readBrowserDiagnostics(browserProcess),
+      );
+    }
+    try {
+      return await fetchTargets(url);
+    } catch (error) {
+      lastError = error;
+    }
+    if (retryDelayMs > 0 && attempt < attempts) {
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+    }
+  }
+  throw new Error(
+    `Chrome DevTools did not become available at ${url} after ${attempts} probes: ${lastError?.message || "unknown error"}. ` +
+    readBrowserDiagnostics(browserProcess),
+  );
 }
 
 function waitForProcessExit(browserProcess, timeoutMs = BROWSER_EXIT_TIMEOUT_MS) {
@@ -269,23 +328,55 @@ async function closeBrowser(client, browserProcess, profilePath) {
   }
 }
 
+async function startBrowserSession(executable, options = {}) {
+  const attempts = options.attempts || BROWSER_STARTUP_ATTEMPTS;
+  const retryDelayMs = options.retryDelayMs ?? BROWSER_STARTUP_RETRY_MS;
+  const getPort = options.getFreePort || getFreePort;
+  const createProfile = options.createProfile || (() => fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-browser-smoke-")));
+  const launch = options.launchBrowser || launchBrowser;
+  const waitForTargets = options.waitForTargets || waitForBrowserTargets;
+  const close = options.closeBrowser || closeBrowser;
+  const failures = [];
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const debugPort = await getPort();
+    const profilePath = createProfile();
+    let browserProcess;
+    try {
+      browserProcess = launch(executable, debugPort, profilePath);
+      const targets = await waitForTargets(browserProcess, `http://127.0.0.1:${debugPort}/json/list`);
+      return { browserProcess, profilePath, targets };
+    } catch (error) {
+      failures.push(`attempt ${attempt}: ${error.message}`);
+      if (browserProcess) await close(null, browserProcess, profilePath);
+      else await removeBrowserProfile(profilePath);
+      if (attempt < attempts && retryDelayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      }
+    }
+  }
+
+  throw new Error(`Chrome failed to start after ${attempts} attempts:\n- ${failures.join("\n- ")}`);
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const classification = classifyGitDiff(root, options);
   const pages = focusedPages(classification.files.map(item => item.path));
   const executable = findBrowser();
-  const debugPort = await getFreePort();
-  const profilePath = fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-browser-smoke-"));
   const server = createStaticServer();
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", resolve);
   });
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
-  const browserProcess = launchBrowser(executable, debugPort, profilePath);
+  let browserProcess;
+  let profilePath;
   let client;
   try {
-    const targets = await fetchJson(`http://127.0.0.1:${debugPort}/json/list`);
+    const session = await startBrowserSession(executable);
+    ({ browserProcess, profilePath } = session);
+    const { targets } = session;
     const target = targets.find(item => item.type === "page" && item.webSocketDebuggerUrl);
     assert.ok(target, "Chrome did not expose a page target for the browser smoke test.");
     client = await CdpClient.connect(target.webSocketDebuggerUrl);
@@ -305,7 +396,7 @@ async function main() {
     console.log(`[Crownlands] Focused production-browser smoke passed for ${pages.join(", ")} in desktop and landscape-mobile viewports.`);
   } finally {
     server.close();
-    await closeBrowser(client, browserProcess, profilePath);
+    if (browserProcess && profilePath) await closeBrowser(client, browserProcess, profilePath);
   }
 }
 
@@ -316,4 +407,10 @@ if (require.main === module) {
   });
 }
 
-module.exports = { focusedPages, removeBrowserProfile, waitForProcessExit };
+module.exports = {
+  focusedPages,
+  removeBrowserProfile,
+  startBrowserSession,
+  waitForBrowserTargets,
+  waitForProcessExit,
+};
