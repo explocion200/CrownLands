@@ -541,13 +541,13 @@
 
   async function joinGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
     const result = await callServerFunction("joinGameServer", createGameServerPayload(serverId));
-    applyRealmIdentity(result);
+    if (result?.resetGeneration && result?.worldId) applyRealmIdentity(result);
     return result;
   }
 
   async function heartbeatGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
     const result = await callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
-    applyRealmIdentity(result);
+    if (result?.resetGeneration && result?.worldId) applyRealmIdentity(result);
     registerGameInstallation().catch(error => {
       console.warn("Could not refresh this Crownlands installation", error);
     });

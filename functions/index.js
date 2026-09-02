@@ -1372,6 +1372,20 @@ function isInactivityLifecycleBlockingPlayer(receipt = {}) {
     && safeString(receipt.resetGeneration, 120) === RESET_GENERATION;
 }
 
+function isCurrentGameServerRealmRecord(record = {}) {
+  return safeString(record.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(record.resetGeneration, 120) === RESET_GENERATION;
+}
+
+function getGameServerRealmIdentity() {
+  return {
+    releaseId: REALM_RELEASE_ID,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
+  };
+}
+
 function writeGameServerMembership(transaction, entry, status, nowMs = Date.now()) {
   if (!entry?.uid) return;
   transaction.set(db.doc(`players/${entry.uid}/serverMembership/current`), {
@@ -1425,16 +1439,17 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       transaction.get(membershipRef),
       transaction.get(maintenanceRef),
     ]);
-    const priorMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const storedMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const priorMembership = isCurrentGameServerRealmRecord(storedMembership)
+      ? storedMembership
+      : {};
     const maintenance = maintenanceSnap.exists ? maintenanceSnap.data() || {} : {};
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
     const inactivityNotice = getInactivityNotice(priorMembership);
     const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
-    const realmShardId = REALM_TOPOLOGY.normalizeRealmShardId(
-      priorMembership.realmShardId || getCurrentRealmShardId()
-    );
+    const realmShardId = getCurrentRealmShardId();
     const activeEntry = cleanGameServerEntry({
       uid,
       sessionId,
@@ -1462,6 +1477,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
     }, { merge: true });
 
     return {
+      ...getGameServerRealmIdentity(),
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
       status: "active",
@@ -1490,10 +1506,16 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
-    const currentMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const storedMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const currentMembership = isCurrentGameServerRealmRecord(storedMembership)
+      ? storedMembership
+      : {};
     const inactivityNotice = getInactivityNotice(currentMembership);
     const welcomeBack = normalizeWelcomeBackSession(currentMembership);
-    const currentEntry = memberSnap.exists ? memberSnap.data() || {} : null;
+    const storedEntry = memberSnap.exists ? memberSnap.data() || {} : null;
+    const currentEntry = storedEntry && isCurrentGameServerRealmRecord(storedEntry)
+      ? storedEntry
+      : null;
     if (!currentEntry) return { status: "missing" };
     if (currentEntry.sessionId !== sessionId) {
       return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
@@ -1505,6 +1527,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       displayName,
       realmShardId: currentMembership.realmShardId || getCurrentRealmShardId(),
     });
+    entry.realmShardId = getCurrentRealmShardId();
     entry.displayName = displayName;
     entry.lastSeenAtMs = nowMs;
     writeGameServerMember(transaction, entry, status, nowMs);
@@ -1515,6 +1538,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       }, { merge: true });
     }
     return {
+      ...getGameServerRealmIdentity(),
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
       status,

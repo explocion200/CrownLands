@@ -14365,6 +14365,12 @@ function watchGameServerMembership({ preserve = false } = {}) {
   });
 }
 
+function isRealmAdmissionCompatibilityError(error = null) {
+  return String(error?.code || "")
+    .toLowerCase()
+    .replace(/^functions\//, "") === "failed-precondition";
+}
+
 async function joinSelectedGameServer() {
   if (gameServerJoinInFlight) return false;
   const api = getOnlineApi();
@@ -14372,7 +14378,16 @@ async function joinSelectedGameServer() {
   gameServerJoinInFlight = true;
   try {
     await verifyRealmCompatibility(api);
-    const result = await api.joinGameServer(GAME_SERVER_ID);
+    let result;
+    try {
+      result = await api.joinGameServer(GAME_SERVER_ID);
+    } catch (error) {
+      if (!isRealmAdmissionCompatibilityError(error)) throw error;
+      verifiedRealmInfo = null;
+      await verifyRealmCompatibility(api, { force: true });
+      result = await api.joinGameServer(GAME_SERVER_ID);
+    }
+    onlineLastError = "";
     applyGameServerMembership(result);
     pendingGameServerInactivityNotice = gameServerMembership?.inactivityNotice || null;
     pendingWelcomeBackSession = gameServerMembership?.welcomeBack?.eligible

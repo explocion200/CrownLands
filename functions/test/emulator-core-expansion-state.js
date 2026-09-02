@@ -251,6 +251,37 @@ async function main() {
     worldId: realmInfo.worldId,
     realmShardId: realmInfo.sharedRealmId,
   };
+  const staleMembershipRef = db.doc(`players/${users[0].uid}/serverMembership/current`);
+  await staleMembershipRef.set({
+    serverId: "crown-marches",
+    worldId: "main-archived-realm",
+    resetGeneration: "archived-realm",
+    realmShardId: "legacy",
+    status: "active",
+    sessionId: "archived-session",
+    joinedAtMs: 1,
+    admittedAtMs: 1,
+    lastSeenAtMs: 1,
+  });
+  const postResetJoin = await callFunction("joinGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "post-reset-session",
+    displayName: "Expansion Ruler 1",
+  }, identity);
+  assert(postResetJoin?.status === "active" && postResetJoin.realmShardId === realmInfo.sharedRealmId,
+    "A stale archived membership overrode the active Core-expansion realm assignment.");
+  const repairedMembership = (await staleMembershipRef.get()).data() || {};
+  assert(repairedMembership.resetGeneration === realmInfo.resetGeneration
+    && repairedMembership.worldId === realmInfo.worldId
+    && repairedMembership.realmShardId === realmInfo.sharedRealmId,
+    "Realm admission did not repair the archived membership to the active generation.");
+  const postResetHeartbeat = await callFunction("heartbeatGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "post-reset-session",
+    displayName: "Expansion Ruler 1",
+  }, identity);
+  assert(postResetHeartbeat?.status === "active" && postResetHeartbeat.realmShardId === realmInfo.sharedRealmId,
+    "The repaired post-reset membership could not heartbeat in the active realm.");
   const claims = await mapWithConcurrency(users, 10, (user, index) => callFunction(
     "claimStartingCity",
     user.token,
