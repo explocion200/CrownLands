@@ -88,6 +88,7 @@ for (const fileName of orderedGates) {
           CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: fileName === "emulator-core-expansion-state.js"
             ? "1"
             : "0",
+          CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR: fileName === resetGate ? "1" : "0",
         },
         stdio: "inherit",
       });
