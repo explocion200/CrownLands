@@ -1865,6 +1865,7 @@ const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
 const normalizedArmyPathCache = new WeakMap();
 const normalizedArmyPathSegmentsCache = new WeakMap();
+const alignedMissionRouteSegmentsCache = new WeakMap();
 const pathMetricCache = new WeakMap();
 const ROUTE_CACHE_LIMIT = 6000;
 const ROUTE_EDGE_PASSABLE_CACHE_LIMIT = 160000;
@@ -16709,6 +16710,55 @@ function getMissionRouteSegments(mission) {
   return [];
 }
 
+function getMissionDisplayRouteSegments(mission) {
+  const segments = getMissionRouteSegments(mission);
+  if (!segments.length || !mission) return segments;
+  const from = cityById(mission.fromId);
+  const to = getArmyTargetById(mission.toId);
+  const sourceId = normalizeRegionId(mission.sourceRegionId || getCityRegionId(from || mission.fromId));
+  const targetId = normalizeRegionId(mission.targetRegionId || getCityRegionId(to || mission.toId));
+  const fk = `${from?.x}:${from?.y}:${sourceId}`;
+  const tk = `${to?.x}:${to?.y}:${targetId}`;
+  const cached = alignedMissionRouteSegmentsCache.get(mission);
+  if (cached
+    && cached.ps === mission.pathSegments && cached.p === mission.path
+    && cached.f === fk && cached.t === tk) return cached.s;
+
+  const firstIndex = segments.findIndex(segment => segment.regionId === sourceId);
+  let lastIndex = segments.length - 1;
+  while (lastIndex >= 0 && segments[lastIndex].regionId !== targetId) lastIndex -= 1;
+  const aligned = segments.map((segment, index) => {
+    const points = segment.points;
+    if (!points.length) return segment;
+    let start = from && index === firstIndex
+      ? { x: +from.x - points[0].x, y: +from.y - points[0].y }
+      : null;
+    const final = points.at(-1);
+    let end = to && index === lastIndex
+      ? { x: +to.x - final.x, y: +to.y - final.y }
+      : null;
+    if (!start && !end) return segment;
+    start ||= end;
+    end ||= start;
+    if (![start.x, start.y, end.x, end.y].some(value => Math.abs(value) >= .5)) return segment;
+    const metrics = getPathMetrics(points);
+    let covered = 0;
+    const path = points.map((point, i) => {
+      if (i) covered += metrics.segments[i - 1]?.length || 0;
+      const progress = metrics.total ? covered / metrics.total : i / (points.length - 1);
+      return {
+        x: point.x + start.x + (end.x - start.x) * progress,
+        y: point.y + start.y + (end.y - start.y) * progress,
+      };
+    });
+    return { ...segment, points: path, length: routeLength(path) };
+  });
+  alignedMissionRouteSegmentsCache.set(mission, {
+    ps: mission.pathSegments, p: mission.path, f: fk, t: tk, s: aligned,
+  });
+  return aligned;
+}
+
 function getMissionRegionIds(mission) {
   const ids = getMissionRouteSegments(mission).map(segment => segment.regionId);
   const fromRegionId = getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "";
@@ -25661,7 +25711,7 @@ function formatIslandCameraNumber(value) {
 
 function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId()) {
   const activeRegionId = normalizeRegionId(regionId);
-  const missionSegments = getMissionRouteSegments(mission);
+  const missionSegments = getMissionDisplayRouteSegments(mission);
   const totalLength = Math.max(0.1, missionSegments.reduce((total, segment) => (
     total + Math.max(0.1, Number(segment.length) || routeLength(segment.points))
   ), 0));
@@ -25813,14 +25863,14 @@ function getArmyRouteRelationshipClass(mission) {
 }
 
 function getMissionPointAtProgress(mission, progress) {
-  const segments = getMissionRouteSegments(mission);
+  const segments = getMissionDisplayRouteSegments(mission);
   if (!segments.length) {
     const path = normalizeArmyPath(mission?.path);
     return path.length >= 2
       ? { regionId: getCityRegionId(mission?.fromId), point: pointAlongRoute(path, progress) }
       : null;
   }
-  const totalLength = Math.max(0.1, Number(mission?.pathLength) || segments.reduce((total, segment) => total + segment.length, 0));
+  const totalLength = Math.max(0.1, segments.reduce((total, segment) => total + segment.length, 0));
   let wanted = totalLength * clamp(progress, 0, 1);
   for (const segment of segments) {
     const length = Math.max(0.1, segment.length || routeLength(segment.points));
@@ -25849,7 +25899,11 @@ function renderPaths() {
   const signature = [
     activeRegionId,
     visibleArmySegments
-      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${getArmyRouteRelationshipClass(attack)}:${attack.owner || ""}:${attack.ownerUid || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
+      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${getArmyRouteRelationshipClass(attack)}:${attack.owner || ""}:${attack.ownerUid || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => {
+        const first = segment.points[0] || {};
+        const last = segment.points[segment.points.length - 1] || {};
+        return `${segment.points.length}:${formatPathNumber(first.x)}:${formatPathNumber(first.y)}:${formatPathNumber(last.x)}:${formatPathNumber(last.y)}`;
+      }).join(",")}`)
       .join("|"),
   ].join(";");
   if (signature === pathRenderSignature) return;

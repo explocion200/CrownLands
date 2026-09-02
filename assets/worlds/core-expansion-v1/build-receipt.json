@@ -8,8 +8,8 @@
   "preparedSecondLayerMapCount": 32,
   "newLandsCityCount": 2240,
   "objectiveCount": 17,
-  "catalogHash": "c02372eb7a8b81b91c78a121bb9eeb1ff355b0f2ba5ecb229644c6f2f1ef7cf3",
-  "worldLayoutHash": "f0783e2f4639261ca6e7e5ee21460b9c800b36f53a6149cb9087d0ed0aee0952",
+  "catalogHash": "3b3039c25fb7202db3fb85f4f95eef6ceaa64e35bd94892c91d0fc5494f25734",
+  "worldLayoutHash": "1a5a0ecb98c7e46c6ed60771426ac472dd2ee78339c9c3d97d8275b886fa7f77",
   "assets": {
     "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-m2-m2.webp": {
       "bytes": 744808,

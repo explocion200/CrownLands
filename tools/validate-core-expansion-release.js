@@ -60,8 +60,10 @@ assert.equal(receipt.newLandsCityCount, 2240);
 assert.equal(receipt.objectiveCount, 17);
 assert.equal(receipt.catalogHash, hash(catalog));
 assert.equal(receipt.worldLayoutHash, hash(layout));
-assert.equal(catalog.version, 2026083102);
-assert.equal(layout.version, 2026083102);
+assert.equal(catalog.version, 2026090201);
+assert.equal(layout.version, 2026090201);
+assert.deepEqual(layout.globalSettings, catalog.globalSettings,
+  "Functions and the browser must share one Core-expansion world coordinate system.");
 assert.equal(catalog.topology.ringAnchor, "north-center");
 assert.equal(catalog.topology.ringDirection, "clockwise");
 assert.equal(catalog.topology.connections, "cardinal-only");
@@ -228,8 +230,8 @@ assert.match(
   /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*fileName === coreExpansionGate/,
 );
 const indexSource = read("index.html");
-assert.match(indexSource, /region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
-assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
+assert.match(indexSource, /region-catalog\.js\?v=20260902-march-path-alignment-r1/);
+assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260902-march-path-alignment-r1/);
 
 const preparedText = [JSON.stringify(layout), JSON.stringify(catalog)].join("\n");
 for (const forbidden of ["developmentOnly", "productionActivated", "fixturePackageAvailabilityOnly", "Core v2 QA-1", "phase6d", "phase6f"]) {

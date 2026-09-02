@@ -9,8 +9,8 @@ const worker = read("service-worker.js");
 const build = read("tools/build-production-client.js");
 const releaseId = "20260819-player-flags-v2-r1";
 const buildId = "20260827-instant-cross-map-city-upgrades-r1";
-const cacheBuildId = "20260902-reset-region-bootstrap-r1";
-const gameBuildId = "20260902-reset-region-bootstrap-r1";
+const cacheBuildId = "20260902-march-path-alignment-r1";
+const gameBuildId = "20260902-march-path-alignment-r1";
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);

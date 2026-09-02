@@ -195,6 +195,10 @@ assert.match(server, /backlogOldestExpiredByMs/);
 assert.match(server, /expiresAt:\s*Timestamp\.fromMillis\(nowMs \+ BULK_ORDER_IDEMPOTENCY_MS\)/,
   "Bulk idempotency records must include a Firestore TTL-compatible timestamp.");
 assert.match(server, /createAuthoritativeRoutePlanner/);
+assert.match(server, /function getCanonicalArmyRouteEndpoint[\s\S]*?serverImagePointToWorld/,
+  "Authoritative routes must resolve current map coordinates instead of trusting stale city documents.");
+assert.match(server, /buildServerGeneratedArmyRoute[\s\S]*?getCanonicalArmyRouteEndpoint\(source[\s\S]*?getCanonicalArmyRouteEndpoint\(target/,
+  "Every generated army route must use canonical source and target endpoints.");
 assert.match(server, /getAuthoritativeRoutePlannerForRegions\(\[sourceRegionId, targetRegionId\]\)\.calculate/,
   "Authoritative launches must use the canonical grid route planner.");
 assert.equal(
