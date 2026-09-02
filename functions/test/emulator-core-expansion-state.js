@@ -321,7 +321,64 @@ async function main() {
   assert(Math.max(...populations.slice(1)) - Math.min(...populations.slice(1)) <= 1,
     `Successor-map placement was not balanced: ${populations.join("/")}.`);
 
-  console.log("Core-expansion emulator gate passed: reset readiness, 50 shared-realm claims, idempotent replays, balanced placement, and retry-safe two-map activation all held.");
+  const depletedRegionId = liveExpansion.admittingRegionIds[0];
+  const depletedIslandRef = db.doc(
+    `islands/${realmInfo.worldId}--shard_0001--${depletedRegionId}`
+  );
+  const depletedCitiesSnap = await depletedIslandRef.collection("cities").get();
+  const neutralCities = depletedCitiesSnap.docs.filter(snapshot => {
+    const city = snapshot.data() || {};
+    return String(city.ownerKind || "").toLowerCase() === "neutral"
+      && !String(city.ownerUid || "").trim()
+      && city.kind !== "stronghold"
+      && city.isStronghold !== true
+      && !String(city.strongholdType || "").trim();
+  });
+  assert(neutralCities.length === 25,
+    `The recovery fixture expected 25 neutral cities, found ${neutralCities.length}.`);
+  const gameplayCaptureBatch = db.batch();
+  for (const citySnap of neutralCities.slice(0, 8)) {
+    gameplayCaptureBatch.update(citySnap.ref, {
+      ownerKind: "player",
+      ownerUid: users[0].uid,
+      ownerName: "Expansion Ruler 1",
+    });
+  }
+  await gameplayCaptureBatch.commit();
+
+  const archivedGeneration = "archived-emulator-generation";
+  const archivedStateRef = db.doc(`realmGenerations/${archivedGeneration}/expansion/current`);
+  const archivedState = topology.createInitialExpansionState(archivedGeneration);
+  await archivedStateRef.set(archivedState);
+  const recoveryUser = await createAuthUser(50);
+  const recoveryClaim = await callFunction(
+    "claimStartingCity",
+    recoveryUser.token,
+    { playerName: "Expansion Recovery Ruler" },
+    identity
+  );
+  assert(recoveryClaim?.ok && recoveryClaim.mainRegionId !== depletedRegionId,
+    "An overdue gameplay-driven threshold still blocked the next starter-city claim.");
+  const recoveredExpansion = topology.normalizeExpansionState((await liveExpansionRef.get()).data() || {});
+  assert(recoveredExpansion.activeRegionIds.length === 5,
+    "An overdue threshold did not activate exactly two successor maps.");
+  assert(!recoveredExpansion.admittingRegionIds.includes(depletedRegionId),
+    "The overdue source map remained open for starter admission.");
+  assert(recoveredExpansion.admittingRegionIds.length === 3,
+    "Overdue recovery did not preserve the healthy source and add two successor maps.");
+  assert(!recoveredExpansion.pendingActivation,
+    "Overdue recovery left the successor maps pending instead of fully activated.");
+  const recoveryReceipt = Object.values(recoveredExpansion.activationReceipts)
+    .find(receipt => receipt.sourceRegionId === depletedRegionId);
+  assert(recoveryReceipt?.remainingNpcCities === 17,
+    "Overdue recovery did not record the authoritative 17-city threshold state.");
+  assert(
+    JSON.stringify(topology.normalizeExpansionState((await archivedStateRef.get()).data() || {}))
+      === JSON.stringify(topology.normalizeExpansionState(archivedState)),
+    "Active-realm admission recovery changed an archived generation.",
+  );
+
+  console.log("Core-expansion emulator gate passed: reset readiness, 50 shared-realm claims, idempotent replays, balanced placement, overdue gameplay-threshold recovery, current-generation isolation, and retry-safe two-map activation all held.");
 }
 
 main().catch(error => {
