@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -173,6 +174,53 @@ if (coreResetArmed) {
   }
   if (coreTopology.MAX_NEW_LANDS_REGIONS * coreTopology.EXPANSION_THRESHOLD_NPC_CITIES !== 81_900) {
     throw new Error("The automatic New Lands capacity envelope drifted.");
+  }
+
+  const mergeStart = game.indexOf("function getMergedWorldRegions");
+  const mergeEnd = game.indexOf("\nfunction getMergedLandBridges", mergeStart);
+  if (mergeStart < 0 || mergeEnd < 0) {
+    throw new Error("The client world-region merge could not be isolated for reset validation.");
+  }
+  const mergeSandbox = {
+    STARTER_REGION_TYPE: "starter",
+    cleanEditorRegionId: value => String(value || "").trim().toLowerCase(),
+    cleanRegionType: value => String(value || "").trim().toLowerCase(),
+    getEditorMapEntries: catalog => catalog.regions.map(region => ({
+      ...region,
+      id: region.id,
+      label: region.name,
+      region: region.compatibilityRegion,
+    })),
+    buildDefaultEditorRegion: map => ({
+      id: map.id,
+      label: map.name || map.id,
+      type: map.type,
+      palette: "heartland",
+    }),
+    catalog: coreRegionCatalog,
+  };
+  vm.runInNewContext(
+    `${game.slice(mergeStart, mergeEnd)}\nmergedRegions = getMergedWorldRegions({ regions: [{ id: "west", type: "starter" }] }, catalog);`,
+    mergeSandbox,
+  );
+  const mergedRegions = mergeSandbox.mergedRegions;
+  if (!Array.isArray(mergedRegions)) {
+    throw new Error("The client Core region merge did not produce a region list.");
+  }
+  const mergedCoreCount = mergedRegions.filter(region => region.permanentCore === true).length;
+  const mergedSpawnRegions = mergedRegions.filter(region => (
+    region.purpose === "player_region"
+    && region.spawnEligible === true
+    && region.spawnReady === true
+    && region.permanentCore === false
+    && region.lifecycle === "active"
+    && Number(region.npcCityCount) >= coreTopology.EXPANSION_THRESHOLD_NPC_CITIES
+  ));
+  if (mergedCoreCount !== coreTopology.CORE_MAP_COUNT) {
+    throw new Error(`The client discarded Core lifecycle metadata: expected ${coreTopology.CORE_MAP_COUNT}, found ${mergedCoreCount}.`);
+  }
+  if (JSON.stringify(mergedSpawnRegions.map(region => region.id)) !== JSON.stringify(["new-lands-l01-p001"])) {
+    throw new Error(`The client reset bootstrap selected the wrong New Lands maps: ${JSON.stringify(mergedSpawnRegions.map(region => region.id))}.`);
   }
 } else {
   const newPlayerSpawnMapCount = worldLayout.regions.filter(map => map.newPlayerSpawnEligible === true).length;
