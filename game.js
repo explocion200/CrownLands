@@ -41,6 +41,7 @@ const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
 const REGION_DEFINITION_CACHE_LIMIT = Math.max(1, Math.floor(Number(REGION_CATALOG.definitionCache?.maxRegions) || 4));
+const STARTER_REGION_TYPE = "starter";
 const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLoader({
   catalog: REGION_CATALOG,
   cacheLimit: REGION_DEFINITION_CACHE_LIMIT,
@@ -73,7 +74,6 @@ const STATIC_ACTIVE_WORLD_REGION_IDS = new Set(CORE_EXPANSION_TOPOLOGY_ACTIVE
 let ACTIVE_WORLD_REGION_IDS = new Set(STATIC_ACTIVE_WORLD_REGION_IDS);
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
-const STARTER_REGION_TYPE = "starter";
 const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = CORE_EXPANSION_TOPOLOGY_ACTIVE
   ? Math.max(20, Math.floor(Number(REGION_CATALOG.capacityPolicy?.minimumNpcCitiesForSpawn) || 20))
   : 10;

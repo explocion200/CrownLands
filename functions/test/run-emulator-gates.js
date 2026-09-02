@@ -12,6 +12,7 @@ const firebaseConfig = process.env.CROWNLANDS_FIREBASE_EMULATOR_CONFIG
 const firebaseConfigPath = path.resolve(functionsDirectory, firebaseConfig);
 const firebaseConfigTemplate = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 const resetGate = "emulator-reset-gate.js";
+const coreExpansionGate = "emulator-core-expansion-state.js";
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))
   .sort((left, right) => left.localeCompare(right));
@@ -85,9 +86,10 @@ for (const fileName of orderedGates) {
         env: {
           ...process.env,
           METADATA_SERVER_DETECTION: "none",
-          CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: fileName === "emulator-core-expansion-state.js"
+          CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: fileName === coreExpansionGate
             ? "1"
             : "0",
+          CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR: fileName === coreExpansionGate ? "0" : "1",
         },
         stdio: "inherit",
       });

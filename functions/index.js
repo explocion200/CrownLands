@@ -9,6 +9,8 @@ const { AsyncLocalStorage } = require("node:async_hooks");
 const REALM_CONFIG = require("./release-config.json");
 const FORCE_CORE_EXPANSION_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true"
   && process.env.CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR === "1";
+const FORCE_LEGACY_REALM_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true"
+  && process.env.CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR === "1";
 const RUNTIME_REALM_CONFIG = FORCE_CORE_EXPANSION_EMULATOR
   ? Object.freeze({
       ...REALM_CONFIG,
@@ -18,6 +20,14 @@ const RUNTIME_REALM_CONFIG = FORCE_CORE_EXPANSION_EMULATOR
       resetActivationHeld: false,
       monthlyResetStartsAt: "2026-01-01T00:00:00.000Z",
     })
+  : FORCE_LEGACY_REALM_EMULATOR
+    ? Object.freeze({
+        ...REALM_CONFIG,
+        realmMode: "legacy",
+        worldTopology: "legacy",
+        resetActivationHeld: true,
+        monthlyResetStartsAt: "9999-12-31T23:59:59.999Z",
+      })
   : REALM_CONFIG;
 const LEGACY_SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const CORE_EXPANSION_SERVER_WORLD_LAYOUT = require("./core-expansion-world-layout.json");
@@ -163,7 +173,7 @@ const LEGACY_COMPATIBLE_CLIENTS = Object.freeze(
 );
 const REALM_REQUEST_CONTEXT = new AsyncLocalStorage();
 const LEGACY_REALM_SHARD_ID = REALM_TOPOLOGY.LEGACY_REALM_SHARD_ID;
-let ACTIVE_REALM_IDENTITY = REALM_TOPOLOGY.getRealmIdentity(REALM_CONFIG, Date.now());
+let ACTIVE_REALM_IDENTITY = REALM_TOPOLOGY.getRealmIdentity(RUNTIME_REALM_CONFIG, Date.now());
 let RESET_GENERATION = ACTIVE_REALM_IDENTITY.resetGeneration;
 let ONLINE_WORLD_ID = ACTIVE_REALM_IDENTITY.worldId;
 

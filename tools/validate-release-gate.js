@@ -9,6 +9,7 @@ const requireMatch = (source, pattern, message) => assert.match(source, pattern,
 const packageJson = JSON.parse(read("functions/package.json"));
 const workflow = read(".github/workflows/crownlands-release-gate.yml");
 const emulatorRunner = read("functions/test/run-emulator-gates.js");
+const functionsSource = read("functions/index.js");
 const prePushHook = read(".githooks/pre-push");
 const rootPackageJson = JSON.parse(read("package.json"));
 const startFeature = read("tools/start-feature.js");
@@ -42,6 +43,9 @@ requireMatch(emulatorRunner, /resetGate,[\s\S]*discoveredGates\.filter/, "Reset 
 requireMatch(emulatorRunner, /node_modules["'],\s*["']firebase-tools["'],\s*["']lib["'],\s*["']bin["'],\s*["']firebase\.js["']/, "Emulator gate must launch the pinned CLI without a detachable Windows shim.");
 requireMatch(emulatorRunner, /for \(const fileName of orderedGates\)[\s\S]*emulators:exec/, "Each emulator gate must run in an isolated emulator lifecycle.");
 requireMatch(emulatorRunner, /--log-verbosity["'],\s*["']QUIET/, "Emulator gate must keep CI output bounded.");
+requireMatch(emulatorRunner, /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR:\s*fileName === coreExpansionGate \? ["']0["'] : ["']1["']/, "All legacy emulator fixtures must remain calendar-independent while the dedicated Core expansion gate exercises the active realm.");
+requireMatch(functionsSource, /FORCE_LEGACY_REALM_EMULATOR\s*=\s*process\.env\.FUNCTIONS_EMULATOR[\s\S]*CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR/, "The legacy reset fixture override must remain emulator-only.");
+requireMatch(functionsSource, /ACTIVE_REALM_IDENTITY\s*=\s*REALM_TOPOLOGY\.getRealmIdentity\(RUNTIME_REALM_CONFIG,\s*Date\.now\(\)\)/, "Scheduled emulator jobs must initialize from the same calendar-independent runtime realm config as callables.");
 requireMatch(prePushHook, /node tools\/pre-push-check\.js/, "Pre-push hook does not use the shared safety check.");
 requireMatch(startFeature, /fetchOrigin[\s\S]*switch[\s\S]*main[\s\S]*--ff-only[\s\S]*origin\/main/, "start-feature does not safely synchronize main.");
 requireMatch(preparePr, /runReleaseGate[\s\S]*writePreparationReceipt[\s\S]*push[\s\S]*pr/, "prepare-pr does not validate, receipt, push, and create or update a PR.");
