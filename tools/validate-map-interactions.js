@@ -56,6 +56,18 @@ function pointAlongRouteForTest(points = [], progress = 0) {
   return { ...points[points.length - 1] };
 }
 
+function getPathMetricsForTest(points = []) {
+  const segments = points.slice(1).map((point, index) => ({
+    length: Math.hypot(point.x - points[index].x, point.y - points[index].y),
+  }));
+  return {
+    segments,
+    total: segments.reduce((total, segment) => total + segment.length, 0),
+  };
+}
+
+const missionTargets = new Map();
+
 const context = {
   CROWDED_MAP_CITY_THRESHOLD: readNumberConstant("CROWDED_MAP_CITY_THRESHOLD"),
   CROWDED_MAP_ARMY_THRESHOLD: readNumberConstant("CROWDED_MAP_ARMY_THRESHOLD"),
@@ -80,8 +92,13 @@ const context = {
   clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)),
   normalizeTimestampMs: value => Math.max(0, Number(value) || 0),
   getMissionRouteSegments: mission => mission?.segments || [],
+  cityById: id => missionTargets.get(String(id || "")) || null,
+  getArmyTargetById: id => missionTargets.get(String(id || "")) || null,
+  normalizeRegionId: regionId => String(regionId || "west"),
   normalizeArmyPath: path => Array.isArray(path) ? path : [],
-  getCityRegionId: mission => mission?.sourceRegionId || "west",
+  getCityRegionId: target => target?.regionId || target?.sourceRegionId || "west",
+  alignedMissionRouteSegmentsCache: new WeakMap(),
+  getPathMetrics: getPathMetricsForTest,
   routeLength: routeLengthForTest,
   pointAlongRoute: pointAlongRouteForTest,
 };
@@ -100,6 +117,7 @@ vm.runInContext([
   extractFunction("getIslandMapPickerAnchoredCamera"),
   extractFunction("getIslandMapPickerZoomedCamera"),
   extractFunction("getIslandMapPinchGeometry"),
+  extractFunction("getMissionDisplayRouteSegments"),
   extractFunction("getMissionPointAtProgress"),
   extractFunction("getArmyTravelProgress"),
 ].join("\n"), context, { filename: gamePath });
@@ -389,6 +407,23 @@ for (const kind of ["attack", "scout", "transfer", "rally_join"]) {
   assert.equal(laterLocation.regionId, "north", `${kind} should move to its current cross-island route segment.`);
   assert.equal(laterLocation.point.x, 50);
 }
+missionTargets.set("aligned-source", { id: "aligned-source", regionId: "west", x: 118, y: 0 });
+missionTargets.set("aligned-target", { id: "aligned-target", regionId: "west", x: 218, y: 0 });
+const alignedMarch = {
+  fromId: "aligned-source",
+  toId: "aligned-target",
+  sourceRegionId: "west",
+  targetRegionId: "west",
+  segments: [{ regionId: "west", length: 100, points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] }],
+};
+const alignedSegments = context.getMissionDisplayRouteSegments(alignedMarch);
+assert.equal(alignedSegments[0].points[0].x, 118, "An in-flight route must begin on the rendered source city.");
+assert.equal(alignedSegments[0].points[0].y, 0, "An in-flight route must begin on the rendered source city.");
+assert.equal(alignedSegments[0].points.at(-1).x, 218, "An in-flight route must end on the rendered target city.");
+assert.equal(alignedSegments[0].points.at(-1).y, 0, "An in-flight route must end on the rendered target city.");
+const alignedMidpoint = context.getMissionPointAtProgress(alignedMarch, 0.5).point;
+assert.equal(alignedMidpoint.x, 168, "The moving troop marker must use the same corrected route as the visible march line.");
+assert.equal(alignedMidpoint.y, 0, "The moving troop marker must use the same corrected route as the visible march line.");
 const returningMarch = {
   ...twoIslandMarch,
   returning: true,

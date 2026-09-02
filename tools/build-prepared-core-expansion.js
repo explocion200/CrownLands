@@ -8,6 +8,15 @@ const vm = require("node:vm");
 const topology = require("../functions/coreExpansionTopology.js");
 
 const root = path.resolve(__dirname, "..");
+const CORE_EXPANSION_LAYOUT_VERSION = 2026090201;
+const CORE_EXPANSION_GLOBAL_SETTINGS = Object.freeze({
+  defaultMapWidth: 1448,
+  defaultMapHeight: 1086,
+  minimumCitySpacing: 68,
+  worldWidth: 23000,
+  worldHeight: 23000,
+  gridCellWorldSize: 2300,
+});
 const sourceRoot = path.resolve(process.argv[2] || process.env.CROWNLANDS_MAP_SCALING_ROOT || "");
 if (!process.argv[2] && !process.env.CROWNLANDS_MAP_SCALING_ROOT) {
   throw new Error("Pass the validated map-scaling worktree path or set CROWNLANDS_MAP_SCALING_ROOT.");
@@ -287,16 +296,9 @@ const catalog = {
   schemaVersion: 4,
   worldId: "core-expansion-reset",
   worldName: "Crownlands Core and New Lands",
-  version: 2026083102,
+  version: CORE_EXPANSION_LAYOUT_VERSION,
   topologyVersion: topology.TOPOLOGY_VERSION,
-  globalSettings: {
-    defaultMapWidth: 1448,
-    defaultMapHeight: 1086,
-    minimumCitySpacing: 68,
-    worldWidth: 23000,
-    worldHeight: 23000,
-    gridCellWorldSize: 2300,
-  },
+  globalSettings: CORE_EXPANSION_GLOBAL_SETTINGS,
   topology: {
     coreRadius: 2,
     coreWidth: 5,
@@ -337,9 +339,10 @@ const catalog = {
 };
 const worldLayout = {
   schemaVersion: 2,
-  version: 2026083102,
+  version: CORE_EXPANSION_LAYOUT_VERSION,
   topologyVersion: topology.TOPOLOGY_VERSION,
   worldId: "core-expansion-reset",
+  globalSettings: CORE_EXPANSION_GLOBAL_SETTINGS,
   mapCount: maps.length,
   coreMapCount: 25,
   firstLayerMapCount: 24,

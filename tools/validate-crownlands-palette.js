@@ -15,7 +15,7 @@ const artifactValidator = read("tools/validate-production-artifact.js");
 const budgetValidator = read("tools/validate-asset-performance-budgets.js");
 
 const releaseId = "20260827-instant-cross-map-city-upgrades-r1";
-const cacheVersion = "20260902-reset-region-bootstrap-r1";
+const cacheVersion = "20260902-march-path-alignment-r1";
 const paletteTag = `crownlands-palette.css?v=${releaseId}`;
 
 // The v2 heraldry cascade boundary is intentionally kept in the global

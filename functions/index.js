@@ -3010,9 +3010,12 @@ function getServerWorldCampIds(regionId = "") {
 
 function getServerWorldDimensions() {
   const settings = getCurrentServerWorldLayout()?.globalSettings || {};
+  const catalogSettings = isCoreExpansionTopologyActive()
+    ? SERVER_REGION_CATALOG?.globalSettings || {}
+    : {};
   return {
-    width: Math.max(1000, Math.floor(safeNumber(settings.worldWidth, 13000))),
-    height: Math.max(1000, Math.floor(safeNumber(settings.worldHeight, 17000))),
+    width: Math.max(1000, Math.floor(safeNumber(settings.worldWidth, safeNumber(catalogSettings.worldWidth, 13000)))),
+    height: Math.max(1000, Math.floor(safeNumber(settings.worldHeight, safeNumber(catalogSettings.worldHeight, 17000)))),
   };
 }
 
@@ -7334,12 +7337,30 @@ function reverseArmyRoute(pathSegments = []) {
   };
 }
 
+function getCanonicalArmyRouteEndpoint(endpoint = {}, regionId = "") {
+  const canonicalRegionId = requireKnownWorldRegionId(regionId || endpoint.regionId || endpoint.startPool);
+  const endpointId = safeString(endpoint.id, 96);
+  if (!endpointId) return { ...endpoint, regionId: canonicalRegionId };
+  const map = getServerWorldMap(canonicalRegionId);
+  const target = [
+    ...(Array.isArray(map?.cities) ? map.cities : []),
+    ...(Array.isArray(map?.objectives) ? map.objectives : []),
+    ...(Array.isArray(map?.camps) ? map.camps : []),
+  ].find(entry => safeString(entry?.id, 96) === endpointId);
+  const point = target ? serverImagePointToWorld(canonicalRegionId, target) : null;
+  return point
+    ? { ...endpoint, x: Math.round(point.x), y: Math.round(point.y), regionId: canonicalRegionId }
+    : { ...endpoint, regionId: canonicalRegionId };
+}
+
 function buildServerGeneratedArmyRoute(source = {}, target = {}) {
   const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
   const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
+  const canonicalSource = getCanonicalArmyRouteEndpoint(source, sourceRegionId);
+  const canonicalTarget = getCanonicalArmyRouteEndpoint(target, targetRegionId);
   const route = getAuthoritativeRoutePlannerForRegions([sourceRegionId, targetRegionId]).calculate(
-    { ...source, regionId: sourceRegionId },
-    { ...target, regionId: targetRegionId }
+    canonicalSource,
+    canonicalTarget
   );
   if (!route?.pathSegments?.length || !(route.pathLength > 0)) {
     throw new HttpsError("failed-precondition", "No safe route through the Crownlands terrain could be found.");
