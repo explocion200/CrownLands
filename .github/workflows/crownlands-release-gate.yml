@@ -4,17 +4,53 @@ on:
   push:
     branches: ["main"]
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  static:
-    name: Static validation
+  classify:
+    name: Classify validation risk
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
+    outputs:
+      tier: ${{ steps.risk.outputs.tier }}
+      requires_emulators: ${{ steps.risk.outputs.requires_emulators }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Fetch authoritative main ref
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+      - name: Classify complete branch diff
+        id: risk
+        env:
+          FORCE_FULL: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'validation:full') }}
+        run: |
+          args=(--base origin/main --github-output "$GITHUB_OUTPUT")
+          if [ "$FORCE_FULL" = "true" ]; then args+=(--force-full); fi
+          node tools/change-risk-classifier.js "${args[@]}"
+
+  static:
+    name: Static validation
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch authoritative main ref
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - uses: pnpm/setup@v2
         with:
           version: "11.9.0"
@@ -26,17 +62,34 @@ jobs:
       - name: Install locked dependencies
         working-directory: functions
         run: pnpm install --frozen-lockfile
-      - name: Run static release gate
+      - name: Run classified static gate
         working-directory: functions
-        run: pnpm run gate:static
+        env:
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
+        run: |
+          if [ "$VALIDATION_TIER" = "Fast" ]; then
+            pnpm run gate:fast
+          else
+            pnpm run gate:static
+          fi
 
   emulator:
     name: Multiplayer emulator validation
+    needs: classify
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Explain safe emulator skip
+        if: ${{ needs.classify.outputs.requires_emulators != 'true' }}
+        env:
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
+        run: echo "Multiplayer emulator validation is not required for this classified $VALIDATION_TIER change."
       - uses: actions/checkout@v6
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - uses: pnpm/setup@v2
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
           version: "11.9.0"
           runtime: "node@22"
@@ -45,27 +98,34 @@ jobs:
           package-json-file: functions/package.json
           install: false
       - uses: actions/setup-java@v5
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         with:
           distribution: "temurin"
           java-version: "21"
       - name: Install locked dependencies
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         working-directory: functions
         run: pnpm install --frozen-lockfile
       - name: Run multiplayer emulator gate
+        if: ${{ needs.classify.outputs.requires_emulators == 'true' }}
         working-directory: functions
         run: pnpm run test:emulators
 
   validate:
     name: Validate
     if: ${{ always() }}
-    needs: [static, emulator]
+    needs: [classify, static, emulator]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Confirm release gates passed
+      - name: Confirm classified release gates passed
         env:
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
           STATIC_RESULT: ${{ needs.static.result }}
           EMULATOR_RESULT: ${{ needs.emulator.result }}
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
         run: |
+          test "$CLASSIFY_RESULT" = "success"
           test "$STATIC_RESULT" = "success"
           test "$EMULATOR_RESULT" = "success"
+          echo "Validated the $VALIDATION_TIER tier with all required checks successful."

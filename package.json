@@ -6,6 +6,10 @@
   "scripts": {
     "start-feature": "node tools/start-feature.js",
     "prepare-pr": "node tools/prepare-pr.js",
+    "validation:classify": "node tools/change-risk-classifier.js",
+    "validation:run": "node tools/run-validation-tier.js",
+    "validation:full": "node tools/run-validation-tier.js --force-full",
+    "test:change-risk": "node tools/test-change-risk-classifier.js",
     "audit:stability": "node tools/run-stability-audit.js",
     "audit:stability:full": "node tools/run-stability-audit.js --full",
     "validate:stability-audit": "node tools/validate-stability-audit.js",

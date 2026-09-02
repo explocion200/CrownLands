@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { runValidationTier } = require("./run-validation-tier");
 
 const GENERATED_PATH_PATTERNS = [
   /^dist\//,
@@ -347,23 +348,17 @@ function printAudit(audit) {
   }
 }
 
-function resolvePnpm(repoRoot) {
-  const localPnpm = path.join(repoRoot, "functions", "node_modules", "pnpm", "bin", "pnpm.cjs");
-  if (fs.existsSync(localPnpm)) return { command: process.execPath, prefixArgs: [localPnpm] };
-  for (const candidate of process.platform === "win32" ? ["pnpm.cmd", "pnpm"] : ["pnpm"]) {
-    const result = run(candidate, ["--version"], { allowFailure: true });
-    if (result.status === 0) return { command: candidate, prefixArgs: [] };
-  }
-  throw new SafetyError("pnpm 11.9.0 is required. Install the locked Functions dependencies and retry.");
+function runRiskBasedValidation(repoRoot, options = {}) {
+  console.log("[Crownlands] Classifying the complete branch diff for Node 22 validation...");
+  return runValidationTier(repoRoot, {
+    baseRef: options.baseRef || "origin/main",
+    headRef: options.headRef || "HEAD",
+    forceFull: Boolean(options.forceFull),
+  });
 }
 
 function runReleaseGate(repoRoot) {
-  const pnpm = resolvePnpm(repoRoot);
-  console.log("[Crownlands] Running the complete Node 22 release gate...");
-  run(pnpm.command, [...pnpm.prefixArgs, "run", "gate:release"], {
-    cwd: path.join(repoRoot, "functions"),
-    stdio: "inherit",
-  });
+  return runRiskBasedValidation(repoRoot, { forceFull: true });
 }
 
 function assertGhAuthenticated(repoRoot) {
@@ -393,6 +388,11 @@ function verifyPreparationReceipt(repoRoot, branch) {
 function markdownAudit(audit) {
   const files = audit.changedFiles.map(item => `- \`${item.status}\` \`${item.path}\``).join("\n");
   const warnings = audit.warnings.length ? audit.warnings.map(item => `- ${item}`).join("\n") : "- None.";
+  const validation = audit.validation;
+  const validationTier = validation?.tier || "not recorded";
+  const emulatorResult = validation?.requiresEmulators
+    ? "complete multiplayer emulator gate passed"
+    : "not required for this classified change; required check remains successful with that explanation";
   return [
     "## Safety audit",
     "",
@@ -414,7 +414,9 @@ function markdownAudit(audit) {
     "## Validation",
     "",
     "- Node 22 confirmed",
-    "- `pnpm run gate:release` passed",
+    `- Risk classification: \`${validationTier}\` (${validation?.decisionReason || "classification unavailable"})`,
+    `- Multiplayer emulator validation: ${emulatorResult}`,
+    `- ${validationTier} validation gate passed`,
     "- Pre-push receipt matches the exact branch HEAD and latest `origin/main`",
   ].join("\n");
 }
@@ -444,6 +446,7 @@ module.exports = {
   revision,
   run,
   runGit,
+  runRiskBasedValidation,
   runReleaseGate,
   verifyPreparationReceipt,
   writeFeatureMetadata,

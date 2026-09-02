@@ -1014,6 +1014,17 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 
 The August 24 implementation verification did not execute tests or builds because the task was strictly read-only and repository scripts could generate artifacts. Test presence and assertions were inspected; passing CI/runtime status remains **NEEDS VERIFICATION**.
 
+### Confirmed risk-based release validation policy
+
+- Local `prepare-pr` and GitHub Actions must use one deterministic classifier over the complete `origin/main...HEAD` branch difference. Classification of only the latest commit is prohibited.
+- **Fast** is limited to non-operational documentation, wording in explicitly listed static public pages, CSS, crawl metadata, and non-map visual assets. It requires syntax/lint, applicable focused validators, production-client build and artifact validation, and focused desktop plus landscape-mobile browser smoke.
+- **Standard** is limited to explicitly allowlisted isolated frontend behavior that cannot affect multiplayer authority, stored gameplay state, realm selection, economy, combat, progression, resets, or deployment contracts. It requires the complete static gate, production-client build and artifact validation, and focused desktop plus landscape-mobile browser smoke.
+- **Full** requires the complete static gate and every automatically discovered multiplayer emulator gate. It is mandatory for Functions, Firestore rules/indexes, Firebase clients/config, authoritative or generation-scoped calls, login or realm admission, reset logic, gameplay logic, economy, combat, maps/routes, clans, progression, scheduled jobs, release/deployment contracts, package or validation infrastructure, production-data-affecting work, unknown paths, and any ambiguous change.
+- The highest-risk file determines the branch tier. Documentation, CSS, or other lower-risk files cannot disguise or downgrade a critical change, including a critical rename.
+- `validation:full` is an upgrade-only local/PR override. Manual selection and labels must never downgrade a Full classifier result.
+- The required GitHub checks remain `Static validation`, `Multiplayer emulator validation`, and `Validate`. When Fast or Standard safely skips emulators, the multiplayer check must succeed with an explicit not-required explanation.
+- Pushes to `main`, manual workflow runs, and the scheduled nightly validation always run Full.
+
 ### Verified test gap
 
 `tools/validate-king-power.js` hardcodes three troops per city progression point in its local calculation, while executable economy configuration uses ten. The validator can therefore disagree with live King Power replacement-power calculation and must be corrected with the implementation work. Reset emulator coverage also codifies clan reset and does not cover the confirmed Common Gear/clan persistence policy.
@@ -1032,7 +1043,7 @@ Before a status becomes LIVE:
 
 ### Needs verification
 
-- Required test suite by change category, acceptable flaky-test policy, production smoke ownership, supported real-device matrix, accessibility QA, load-test thresholds, rollback drills, backup restore drills, and defect severity/release-blocking policy.
+- Acceptable flaky-test policy, production smoke ownership, supported real-device matrix, accessibility QA, load-test thresholds, rollback drills, backup restore drills, and defect severity/release-blocking policy.
 
 ## 22. Git, PR & Deployment Workflow
 
@@ -1249,6 +1260,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.31 — September 2, 2026
+
+- Confirmed one fail-closed risk classifier shared by local `prepare-pr` and GitHub Actions over the complete branch difference from `origin/main`.
+- Defined Fast, Standard, and Full validation requirements, with critical, mixed, unknown, reset, backend, release-contract, and production-data-affecting work always selecting Full.
+- Preserved the three required GitHub check names, added upgrade-only Full overrides and explicit safe emulator-skip evidence, and required a nightly Full validation run.
 
 ## v1.30 — September 1, 2026
 

@@ -16,16 +16,18 @@ const {
   revision,
   run,
   runGit,
-  runReleaseGate,
+  runRiskBasedValidation,
   writePreparationReceipt,
 } = require("./safe-update-lib");
 
 function parseArgs(args) {
-  const options = { checkOnly: false, scopes: [] };
+  const options = { checkOnly: false, forceFull: false, scopes: [] };
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
     if (value === "--check-only") {
       options.checkOnly = true;
+    } else if (value === "--validation-full") {
+      options.forceFull = true;
     } else if (value === "--scope") {
       if (!args[index + 1]) throw new SafetyError("--scope requires a repository path.");
       options.scopes.push(normalizeRepoPath(args[index + 1]));
@@ -100,10 +102,14 @@ function main() {
   const scopes = options.scopes.length ? options.scopes : (metadata?.scopes || []);
   const audit = auditBranch(repoRoot, { baseRef: "origin/main", scopes });
   printAudit(audit);
-  runReleaseGate(repoRoot);
+  const classification = runRiskBasedValidation(repoRoot, {
+    baseRef: "origin/main",
+    forceFull: options.forceFull,
+  });
   assertClean(repoRoot);
   fetchOrigin(repoRoot);
   const finalAudit = auditBranch(repoRoot, { baseRef: "origin/main", scopes });
+  finalAudit.validation = classification;
   printAudit(finalAudit);
 
   writePreparationReceipt(repoRoot, {
@@ -111,6 +117,8 @@ function main() {
     head: revision(repoRoot, "HEAD"),
     originMain: revision(repoRoot, "origin/main"),
     scopes,
+    validationTier: classification.tier,
+    validationForcedFull: classification.forcedFull,
   });
   console.log("[Crownlands] Preparation receipt saved for this exact commit and origin/main state.");
   if (options.checkOnly) {
