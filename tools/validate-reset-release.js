@@ -94,9 +94,24 @@ requireMatch(
   "Concurrent login bootstrap does not share and adopt the authoritative realm-info response.",
 );
 requireMatch(
+  client,
+  /async function joinGameServer[\s\S]*?result\?\.resetGeneration && result\?\.worldId[\s\S]*?applyRealmIdentity\(result\)[\s\S]*?async function heartbeatGameServer[\s\S]*?result\?\.resetGeneration && result\?\.worldId[\s\S]*?applyRealmIdentity\(result\)/,
+  "Partial lobby responses can overwrite the authoritative realm identity during a reset deployment.",
+);
+requireMatch(
   game,
   /async function joinSelectedGameServer[\s\S]*?verifyRealmCompatibility\(api\)[\s\S]*?api\.joinGameServer\(GAME_SERVER_ID\)/,
   "Realm admission can run before the post-reset server identity is verified.",
+);
+requireMatch(
+  game,
+  /async function joinSelectedGameServer[\s\S]*?isRealmAdmissionCompatibilityError[\s\S]*?verifiedRealmInfo = null[\s\S]*?verifyRealmCompatibility\(api, \{ force: true \}\)[\s\S]*?api\.joinGameServer\(GAME_SERVER_ID\)/,
+  "Realm admission does not refresh and retry once when a reset bootstrap changes the authoritative realm assignment.",
+);
+requireMatch(
+  server,
+  /isCurrentGameServerRealmRecord[\s\S]*?const priorMembership = isCurrentGameServerRealmRecord\(storedMembership\)[\s\S]*?const realmShardId = getCurrentRealmShardId\(\)/,
+  "Archived server membership can still override the active reset realm assignment.",
 );
 requireMatch(rules, new RegExp(serverRealm.resetGeneration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "Firestore rules do not identify the active generation.");
 requireMatch(
