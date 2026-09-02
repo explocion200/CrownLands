@@ -522,9 +522,30 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
         : typeof existing?.newPlayerSpawnEligible === "boolean"
           ? existing.newPlayerSpawnEligible
           : type === STARTER_REGION_TYPE;
+    const runtimeMetadata = Object.fromEntries([
+      "purpose",
+      "objectivePurpose",
+      "permanentCore",
+      "spawnEligible",
+      "spawnReady",
+      "lifecycle",
+      "worldLayer",
+      "clockwiseOrderIndex",
+      "activationOrdinal",
+      "cityCapacity",
+      "npcCityCount",
+      "connections",
+      "regionDefinitionPath",
+      "templateRegionId",
+      "templateDefinitionPath",
+      "mapAsset",
+      "thumbnailAsset",
+    ]
+      .filter(field => Object.prototype.hasOwnProperty.call(map, field))
+      .map(field => [field, map[field]]));
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible };
+      ? { ...existing, ...runtimeMetadata, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...runtimeMetadata, ...regionPatch, ...gridPatch, id: map.id, label, type, newPlayerSpawnEligible };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
