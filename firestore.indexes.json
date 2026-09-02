@@ -953,6 +953,28 @@
       ]
     },
     {
+      "collectionGroup": "incomingArmies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "armies",
       "queryScope": "COLLECTION",
       "fields": [
