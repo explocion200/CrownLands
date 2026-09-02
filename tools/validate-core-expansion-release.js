@@ -207,6 +207,11 @@ assert.match(serverSource, /getCoreAuthoritativeRoutePlanner/);
 assert.match(serverSource, /CORE_TEMPLATE_WORLD_MAPS[\s\S]*templateRegionId/);
 const clientSource = read("game.js");
 assert.match(clientSource, /CORE_EXPANSION_TOPOLOGY_ACTIVE[\s\S]*worldTopology/);
+assert.ok(
+  clientSource.indexOf('const STARTER_REGION_TYPE = "starter";')
+    < clientSource.indexOf("const WORLD_REGIONS = getMergedWorldRegions"),
+  "The starter region type must be initialized before the active Core-expansion region catalog is merged."
+);
 assert.match(
   clientSource,
   /STATIC_ACTIVE_WORLD_REGION_IDS[\s\S]*?filter\(region => region\?\.permanentCore === true\)/,
