@@ -83,6 +83,21 @@ requireMatch(
 requireMatch(server, /serverBuildId:[\s\S]*contractHash:[\s\S]*releaseManifestVersion:/, "The server build-contract handshake is missing.");
 requireMatch(client, /clientReleaseId: APP_RELEASE_ID[\s\S]*clientResetGeneration: RESET_GENERATION/, "Callable requests do not carry release identity.");
 requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generationMatches[\s\S]*worldMatches[\s\S]*contractMatches/, "Gameplay does not fail closed on release or contract drift.");
+requireMatch(
+  client,
+  /async function registerGameInstallation[\s\S]*?getRealmInfo\(\)\.then\(\(\) => callServerFunction\("registerGameInstallation"/,
+  "Installation registration does not adopt the server realm before its first generation-scoped write.",
+);
+requireMatch(
+  client,
+  /async function getRealmInfo[\s\S]*?realmInfoPromise[\s\S]*?applyRealmIdentity\(result\)/,
+  "Concurrent login bootstrap does not share and adopt the authoritative realm-info response.",
+);
+requireMatch(
+  game,
+  /async function joinSelectedGameServer[\s\S]*?verifyRealmCompatibility\(api\)[\s\S]*?api\.joinGameServer\(GAME_SERVER_ID\)/,
+  "Realm admission can run before the post-reset server identity is verified.",
+);
 requireMatch(rules, new RegExp(serverRealm.resetGeneration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "Firestore rules do not identify the active generation.");
 requireMatch(
   client,
