@@ -164,7 +164,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=20260828-scrollable-selected-gear-panel-r1/, "The equipment stylesheet must load with the selected-panel scroll cache token.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-gear-upgrade-consumption-r1[\s\S]*game\.js\?v=20260830-heartbeat-lifecycle-recovery-r1/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=20260825-gear-upgrade-consumption-r1[\s\S]*game\.js\?v=20260902-reset-region-bootstrap-r1/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
