@@ -223,7 +223,10 @@ assert.match(clientSource, /registerCoreExpansionRegions/);
 assert.match(clientSource, /subscribeOnlineCoreExpansion/);
 assert.match(read("firebaseClient.js"), /subscribeCoreExpansionState[\s\S]*realmGenerations[\s\S]*expansion[\s\S]*current/);
 assert.match(read("firestore.rules"), /match \/expansion\/\{stateId\}[\s\S]*allow read:[\s\S]*currentResetGeneration/);
-assert.match(read("functions/test/run-emulator-gates.js"), /CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:[\s\S]*emulator-core-expansion-state\.js/);
+assert.match(
+  read("functions/test/run-emulator-gates.js"),
+  /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*fileName === coreExpansionGate/,
+);
 const indexSource = read("index.html");
 assert.match(indexSource, /region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
 assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260831-core-expansion-prepared-r2/);
