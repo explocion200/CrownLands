@@ -13,6 +13,10 @@ const { CdpClient, fetchJson } = require("./map-benchmark/cdp-client");
 
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
+const BROWSER_EXIT_TIMEOUT_MS = 3000;
+const PROFILE_CLEANUP_ATTEMPTS = 6;
+const PROFILE_CLEANUP_RETRY_MS = 100;
+const RETRYABLE_PROFILE_CLEANUP_ERRORS = new Set(["EBUSY", "EMFILE", "ENFILE", "ENOTEMPTY", "EPERM"]);
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
   [".gif", "image/gif"],
@@ -138,6 +142,42 @@ function launchBrowser(executable, debugPort, profilePath) {
   ], { stdio: "ignore", windowsHide: true });
 }
 
+function waitForProcessExit(browserProcess, timeoutMs = BROWSER_EXIT_TIMEOUT_MS) {
+  if (!browserProcess || browserProcess.exitCode !== null || browserProcess.signalCode !== null) {
+    return Promise.resolve(true);
+  }
+  return new Promise(resolve => {
+    const onExit = () => {
+      clearTimeout(timeout);
+      resolve(true);
+    };
+    const timeout = setTimeout(() => {
+      browserProcess.removeListener("exit", onExit);
+      resolve(browserProcess.exitCode !== null || browserProcess.signalCode !== null);
+    }, timeoutMs);
+    browserProcess.once("exit", onExit);
+  });
+}
+
+async function removeBrowserProfile(profilePath, options = {}) {
+  const expectedPrefix = path.join(os.tmpdir(), "crownlands-browser-smoke-");
+  if (!profilePath.startsWith(expectedPrefix)) {
+    throw new Error(`Refusing to clean unexpected browser profile: ${profilePath}`);
+  }
+  const remove = options.remove || fs.promises.rm;
+  const attempts = options.attempts || PROFILE_CLEANUP_ATTEMPTS;
+  const retryDelayMs = options.retryDelayMs ?? PROFILE_CLEANUP_RETRY_MS;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await remove(profilePath, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (!RETRYABLE_PROFILE_CLEANUP_ERRORS.has(error.code) || attempt === attempts) throw error;
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs * attempt));
+    }
+  }
+}
+
 function waitForEvent(client, method, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -215,15 +255,17 @@ async function closeBrowser(client, browserProcess, profilePath) {
       await client.send("Browser.close").catch(() => {});
       client.close();
     }
-    await Promise.race([
-      new Promise(resolve => browserProcess.once("exit", resolve)),
-      new Promise(resolve => setTimeout(resolve, 3000)),
-    ]);
-    if (browserProcess.exitCode === null) browserProcess.kill();
+    let exited = await waitForProcessExit(browserProcess);
+    if (!exited) {
+      browserProcess.kill();
+      exited = await waitForProcessExit(browserProcess);
+    }
+    if (!exited) {
+      browserProcess.kill("SIGKILL");
+      await waitForProcessExit(browserProcess, 1000);
+    }
   } finally {
-    const expectedPrefix = path.join(os.tmpdir(), "crownlands-browser-smoke-");
-    if (!profilePath.startsWith(expectedPrefix)) throw new Error(`Refusing to clean unexpected browser profile: ${profilePath}`);
-    fs.rmSync(profilePath, { recursive: true, force: true });
+    await removeBrowserProfile(profilePath);
   }
 }
 
@@ -274,4 +316,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { focusedPages };
+module.exports = { focusedPages, removeBrowserProfile, waitForProcessExit };
