@@ -14371,6 +14371,7 @@ async function joinSelectedGameServer() {
   if (!api?.joinGameServer || !api?.isSignedIn?.()) throw new Error("Sign in before entering a Crownlands realm.");
   gameServerJoinInFlight = true;
   try {
+    await verifyRealmCompatibility(api);
     const result = await api.joinGameServer(GAME_SERVER_ID);
     applyGameServerMembership(result);
     pendingGameServerInactivityNotice = gameServerMembership?.inactivityNotice || null;

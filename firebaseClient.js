@@ -54,6 +54,7 @@
     activeSessionRetryAtMs: 0,
     activeSessionRetryIndex: 0,
     sessionReplacementInFlight: false,
+    realmInfoPromise: null,
     installationRegisteredAtMs: 0,
     installationRegistrationPromise: null,
     activePresenceIslandId: "",
@@ -524,9 +525,9 @@
       };
     }
     if (client.installationRegistrationPromise) return client.installationRegistrationPromise;
-    client.installationRegistrationPromise = callServerFunction("registerGameInstallation", {
+    client.installationRegistrationPromise = getRealmInfo().then(() => callServerFunction("registerGameInstallation", {
       installationId: getGameInstallationId(),
-    }).then(result => {
+    })).then(result => {
       client.installationRegisteredAtMs = Math.max(
         nowMs,
         Number(result?.registeredAtMs) || 0
@@ -1182,13 +1183,18 @@
   }
 
   async function getRealmInfo() {
-    const result = await callServerFunction("getRealmInfo", {
+    if (client.realmInfoPromise) return client.realmInfoPromise;
+    client.realmInfoPromise = callServerFunction("getRealmInfo", {
       releaseId: APP_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
+    }).then(result => {
+      applyRealmIdentity(result);
+      return result;
+    }).finally(() => {
+      client.realmInfoPromise = null;
     });
-    applyRealmIdentity(result);
-    return result;
+    return client.realmInfoPromise;
   }
 
   function subscribeCoreExpansionState(handlers = {}) {
