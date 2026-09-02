@@ -46,6 +46,10 @@
 
 - Keep changes limited to the requested task.
 - Preserve unrelated files, behavior, and user changes.
+- Scope world-specific work to the topology and realm generation used by the current live release. Verify the current release contract in `release-config.js` and `functions/release-config.json`; when production state matters, also verify the authoritative current-realm pointer before editing.
+- Do not modify archived generations, inactive world topologies, or legacy-only world data unless the user explicitly requests that exact compatibility, rollback, or archival work.
+- Do not assume a legacy-named path is inactive. Some legacy paths provide shared assets or compatibility inputs to the live topology; inspect current runtime and production-build references, and change such a path only when the active live world demonstrably consumes it.
+- If the active live-world target cannot be proven from current repository and backend evidence, stop and ask for clarification rather than changing multiple world variants.
 - Do not perform broad rewrites, formatting passes, dependency upgrades, generated-file changes, or reversions unless required by the task.
 - Investigate the root cause before implementing a fix.
 - Check the complete difference from `origin/main` for unrelated deletions, reversions, or out-of-scope changes.
