@@ -43,7 +43,33 @@ Commit the finished work on the feature branch, then run:
 pnpm run prepare-pr
 ```
 
-`prepare-pr` fetches GitHub again, stops if the branch is behind `origin/main`, audits the complete three-dot diff, confirms Node 22, runs the canonical static/build checks and every emulator gate, records a local receipt for the exact commit, pushes without force, and creates or updates the pull request. It never merges or deploys production.
+`prepare-pr` fetches GitHub again, stops if the branch is behind `origin/main`, audits and classifies the complete branch diff (`origin/main...HEAD`), confirms Node 22, runs the required validation tier, records a local receipt for the exact commit and tier, pushes without force, and creates or updates the pull request. It never merges or deploys production.
+
+## Risk-based validation tiers
+
+The deterministic classifier in `tools/change-risk-classifier.js` is shared by `prepare-pr` and GitHub Actions. It is an allowlist: the highest-risk changed path determines the result, and an empty, unknown, renamed-from-critical, or otherwise ambiguous path is Full. A CSS, documentation, or other lower-risk file cannot mask a critical change elsewhere in the branch.
+
+| Tier | Eligible changes | Required gate |
+| --- | --- | --- |
+| Fast | Non-operational documentation, explicitly listed static public pages, CSS, crawl metadata, and non-map visual assets | Syntax/lint, applicable focused validators, classifier and release-gate validators, production-client build and artifact validation, and focused desktop/landscape-mobile browser smoke |
+| Standard | Explicitly listed isolated frontend modules for animation, audio, public-site/roadmap presentation, patch-note presentation, and local UI layout | The complete static gate, production-client build and artifact validation, and focused desktop/landscape-mobile browser smoke |
+| Full | Functions, Firestore, Firebase clients/config, authoritative or generation-scoped behavior, login/realm admission, resets, gameplay/state/economy/combat/maps/routes/clans/progression, scheduled work, package/CI/validation tooling, releases/deployment contracts, unknown paths, or any mixed change containing one of these | The complete static gate and every automatically discovered multiplayer emulator gate |
+
+The classifier prints every changed file and its reason. Fast and Standard output also explains why every path is on a reviewed lower-tier allowlist. GitHub preserves the required `Static validation`, `Multiplayer emulator validation`, and `Validate` check names. For Fast and Standard changes, `Multiplayer emulator validation` succeeds with the explicit message that emulators are not required for that classification.
+
+To force Full validation locally, use the upgrade-only override:
+
+```powershell
+pnpm run validation:full
+```
+
+To force Full validation as part of preparation, use:
+
+```powershell
+pnpm run prepare-pr -- --validation-full
+```
+
+The `validation:full` pull-request label is also an upgrade-only CI override. No label, workflow input, or local option can downgrade a classifier result. Pushes to `main`, manual workflow runs, and the scheduled nightly run always execute Full validation.
 
 To validate and authorize a later manual push without creating a pull request, use:
 
@@ -51,7 +77,7 @@ To validate and authorize a later manual push without creating a pull request, u
 pnpm run prepare-pr -- --check-only
 ```
 
-The pre-push hook permits only the exact prepared commit while it remains current with `origin/main`. A new commit or a newer `main` invalidates the receipt and requires `prepare-pr` again.
+The pre-push hook permits only the exact prepared commit while it remains current with `origin/main`. A new commit or a newer `main` invalidates the receipt and requires `prepare-pr` again. The receipt records the tier used for that exact complete branch diff.
 
 ## Recovery messages
 
@@ -63,6 +89,7 @@ The pre-push hook permits only the exact prepared commit while it remains curren
 | Branch already exists | Choose a new feature name or inspect and intentionally resume the existing branch. Never overwrite it. |
 | PR audit reports deleted/generated/out-of-scope files | Review the diff and remove unrelated changes. Expand declared scope only when those files are intentionally part of the feature. |
 | Validation failed | Fix the reported failure and rerun `prepare-pr`; no push or PR update occurred. |
+| Classification is unexpectedly Full | Inspect every printed path and reason. Unknown or ambiguous paths intentionally fail closed; update the classifier only in a separately reviewed release-process change. |
 | GitHub CLI is missing or signed out | Install `gh` if needed, run `gh auth login`, and retry. |
 | Pull-request checks are pending | Wait for GitHub. Do not merge until all required checks pass. |
 | Pull-request checks failed | Open the failed check, fix the branch, and run `prepare-pr` again. |

@@ -42,10 +42,27 @@ function createIsolatedFirebaseConfig(attemptId) {
       firestore: {
         ...((firebaseConfigTemplate.emulators || {}).firestore || {}),
         port: portBase + 1,
+        websocketPort: portBase + 3,
       },
       auth: {
         ...((firebaseConfigTemplate.emulators || {}).auth || {}),
         port: portBase + 2,
+      },
+      hub: {
+        ...((firebaseConfigTemplate.emulators || {}).hub || {}),
+        port: portBase + 4,
+      },
+      logging: {
+        ...((firebaseConfigTemplate.emulators || {}).logging || {}),
+        port: portBase + 5,
+      },
+      eventarc: {
+        ...((firebaseConfigTemplate.emulators || {}).eventarc || {}),
+        port: portBase + 6,
+      },
+      tasks: {
+        ...((firebaseConfigTemplate.emulators || {}).tasks || {}),
+        port: portBase + 7,
       },
       ui: {
         ...((firebaseConfigTemplate.emulators || {}).ui || {}),
