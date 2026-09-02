@@ -78,6 +78,25 @@ const belowThreshold = topology.planThresholdActivation({
 assert.equal(belowThreshold.changed, false);
 assert.equal(belowThreshold.reason, "threshold-not-reached");
 
+const overdueActivation = topology.planThresholdActivation({
+  state: initial,
+  resetGeneration: generation,
+  sourceRegionId: "new-lands-l01-p001",
+  remainingNpcCities: 17,
+  thresholdRevision: 2,
+});
+assert.equal(overdueActivation.changed, true);
+assert.equal(overdueActivation.reason, "threshold-preparing");
+assert.equal(overdueActivation.state.pendingActivation.remainingNpcCities, 17);
+const overdueFinalization = topology.finalizePendingActivation({
+  state: overdueActivation.state,
+  eventId: overdueActivation.eventId,
+  readyRegionIds: overdueActivation.preparedRegions.map(region => region.id),
+});
+assert.equal(overdueFinalization.changed, true);
+assert.equal(overdueFinalization.state.activationReceipts[overdueActivation.eventId].remainingNpcCities, 17,
+  "An overdue threshold repair must preserve the authoritative neutral-city count in its receipt.");
+
 const firstActivation = topology.planThresholdActivation({
   state: initial,
   resetGeneration: generation,

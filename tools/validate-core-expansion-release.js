@@ -198,6 +198,12 @@ assert.match(serverSource, /resetReadinessStatus:[\s\S]*?resetReadinessRevision:
 assert.match(serverSource, /getStableSharedRealmSlotIndex/);
 assert.match(serverSource, /CORE_EXPANSION_STARTING_CITY_CAPACITY/);
 assert.match(serverSource, /planThresholdActivation\(\{/);
+assert.match(serverSource, /reconcileNewPlayerAdmissionCapacity[\s\S]*?planOverdueNewPlayerExpansion/);
+assert.match(
+  serverSource,
+  /planOverdueNewPlayerExpansion[\s\S]*?expansionState\.resetGeneration !== RESET_GENERATION[\s\S]*?city\.worldId[\s\S]*?city\.realmShardId/,
+  "Overdue starter-capacity repair must remain scoped to the active generation, world, and realm shard.",
+);
 assert.match(serverSource, /pendingActivationEventId:[\s\S]*completePendingExpansionActivation/);
 assert.match(serverSource, /completePendingExpansionActivation[\s\S]*verifyPreparedExpansionRegion/);
 assert.match(serverSource, /finalizePendingActivation/);

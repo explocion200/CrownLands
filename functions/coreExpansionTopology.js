@@ -254,6 +254,10 @@ function normalizeExpansionState(state = {}) {
         eventId: String(state.pendingActivation?.eventId || "").trim(),
         sourceRegionId: pendingSourceRegionId,
         regionIds: pendingRegionIds,
+        remainingNpcCities: Math.max(0, integer(
+          state.pendingActivation?.remainingNpcCities,
+          EXPANSION_THRESHOLD_NPC_CITIES,
+        )),
         startActivationOrdinal: Math.max(0, integer(state.pendingActivation?.startActivationOrdinal)),
         nextActivationOrdinal: Math.max(0, integer(state.pendingActivation?.nextActivationOrdinal)),
         thresholdRevision: Math.max(0, integer(state.pendingActivation?.thresholdRevision)),
@@ -265,6 +269,10 @@ function normalizeExpansionState(state = {}) {
     : []).map(entry => ({
       eventId: String(entry?.eventId || "").trim(),
       sourceRegionId: String(entry?.sourceRegionId || "").trim(),
+      remainingNpcCities: Math.max(0, integer(
+        entry?.remainingNpcCities,
+        EXPANSION_THRESHOLD_NPC_CITIES,
+      )),
       thresholdRevision: Math.max(0, integer(entry?.thresholdRevision)),
       createdAtMs: Math.max(0, integer(entry?.createdAtMs)),
     })).filter(entry => entry.eventId && entry.sourceRegionId);
@@ -307,7 +315,8 @@ function planThresholdActivation({
   if (!current.admittingRegionIds.includes(source)) {
     return Object.freeze({ changed: false, reason: "source-not-admitting", state: Object.freeze(current), activatedRegions: Object.freeze([]) });
   }
-  if (integer(remainingNpcCities, -1) !== EXPANSION_THRESHOLD_NPC_CITIES) {
+  const currentRemainingNpcCities = integer(remainingNpcCities, -1);
+  if (currentRemainingNpcCities < 0 || currentRemainingNpcCities > EXPANSION_THRESHOLD_NPC_CITIES) {
     return Object.freeze({ changed: false, reason: "threshold-not-reached", state: Object.freeze(current), activatedRegions: Object.freeze([]) });
   }
 
@@ -335,6 +344,7 @@ function planThresholdActivation({
     const queued = {
       eventId,
       sourceRegionId: source,
+      remainingNpcCities: currentRemainingNpcCities,
       thresholdRevision: Math.max(0, integer(thresholdRevision)),
       createdAtMs: Date.now(),
     };
@@ -372,6 +382,7 @@ function planThresholdActivation({
       eventId,
       sourceRegionId: source,
       regionIds: preparedIds,
+      remainingNpcCities: currentRemainingNpcCities,
       startActivationOrdinal,
       nextActivationOrdinal,
       thresholdRevision: Math.max(0, integer(thresholdRevision)),
@@ -426,7 +437,7 @@ function finalizePendingActivation({ state, eventId = "", readyRegionIds = [] } 
     ...Object.entries(current.activationReceipts),
     [pending.eventId, {
       sourceRegionId: pending.sourceRegionId,
-      remainingNpcCities: EXPANSION_THRESHOLD_NPC_CITIES,
+      remainingNpcCities: pending.remainingNpcCities,
       activatedRegionIds: pending.regionIds,
       nextActivationOrdinal: pending.nextActivationOrdinal,
     }],

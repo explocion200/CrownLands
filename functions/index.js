@@ -856,6 +856,7 @@ async function ensureCoreExpansionState() {
 
 async function getNewPlayerSpawnRegionIdsForClaim() {
   if (!isCoreExpansionTopologyActive()) return [...LEGACY_NEW_PLAYER_SPAWN_REGION_IDS];
+  await completePendingExpansionActivation();
   const expansionState = await ensureCoreExpansionState();
   return expansionState.admittingRegionIds.filter(regionId => CORE_EXPANSION.parseNewLandsRegionId(regionId));
 }
@@ -17049,7 +17050,10 @@ async function loadNewPlayerSpawnAvailability(regionIds = null) {
     const islandRef = db.doc(`islands/${getOnlineIslandId(regionId)}`);
     const map = getServerWorldMap(regionId);
     const objectiveCount = Array.isArray(map?.objectives) ? map.objectives.length : 0;
-    const queryLimit = NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES + objectiveCount + 5;
+    const queryLimit = Math.max(
+      NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES + objectiveCount + 5,
+      MINIMUM_SPAWN_NPC_CITIES + objectiveCount + 1,
+    );
     const [islandSnap, neutralSnap] = await Promise.all([
       islandRef.get(),
       islandRef.collection("cities")
@@ -17082,6 +17086,110 @@ async function loadNewPlayerSpawnAvailability(regionIds = null) {
       ready: neutralCityCount >= NEW_PLAYER_SPAWN_MIN_READY_NEUTRAL_CITIES,
     };
   }));
+}
+
+async function planOverdueNewPlayerExpansion(regionId = "") {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  if (!CORE_EXPANSION.parseNewLandsRegionId(normalizedRegionId)) {
+    return { changed: false, reason: "not-new-lands", currentNpcCityCount: 0 };
+  }
+  const expansionRef = coreExpansionStateRef();
+  const islandRef = db.doc(`islands/${getOnlineIslandId(normalizedRegionId)}`);
+  const regularCityIds = [...getServerWorldRegularCityIds(normalizedRegionId)];
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [expansionSnap, islandSnap, ...citySnaps] = await Promise.all([
+      transaction.get(expansionRef),
+      transaction.get(islandRef),
+      ...regularCityIds.map(cityId => transaction.get(islandRef.collection("cities").doc(cityId))),
+    ]);
+    if (!expansionSnap.exists) {
+      throw new HttpsError("failed-precondition", "The New Lands expansion state is not initialized.");
+    }
+    const expansionState = CORE_EXPANSION.normalizeExpansionState(expansionSnap.data() || {});
+    if (expansionState.resetGeneration !== RESET_GENERATION) {
+      throw new HttpsError("failed-precondition", "The New Lands expansion state belongs to another generation.");
+    }
+    if (!expansionState.admittingRegionIds.includes(normalizedRegionId)) {
+      return { changed: false, reason: "source-not-admitting", currentNpcCityCount: 0 };
+    }
+    const island = islandSnap.exists ? islandSnap.data() || {} : {};
+    const currentIsland = islandSnap.exists
+      && safeString(island.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(island.resetGeneration, 120) === RESET_GENERATION
+      && REALM_TOPOLOGY.normalizeRealmShardId(island.realmShardId) === getCurrentRealmShardId();
+    if (!currentIsland) {
+      return { changed: false, reason: "island-identity-mismatch", currentNpcCityCount: 0 };
+    }
+    const currentNpcCityCount = citySnaps.filter(citySnap => {
+      if (!citySnap.exists) return false;
+      const city = { id: citySnap.id, ...citySnap.data() };
+      return safeString(city.worldId, 120) === ONLINE_WORLD_ID
+        && safeString(city.resetGeneration, 120) === RESET_GENERATION
+        && REALM_TOPOLOGY.normalizeRealmShardId(city.realmShardId) === getCurrentRealmShardId()
+        && safeString(city.ownerKind, 24).toLowerCase() === "neutral"
+        && !getOwnerUid(city)
+        && !isStronghold(city);
+    }).length;
+    if (currentNpcCityCount > MINIMUM_SPAWN_NPC_CITIES) {
+      return { changed: false, reason: "threshold-not-reached", currentNpcCityCount };
+    }
+    const plan = CORE_EXPANSION.planThresholdActivation({
+      state: expansionState,
+      resetGeneration: RESET_GENERATION,
+      sourceRegionId: normalizedRegionId,
+      remainingNpcCities: currentNpcCityCount,
+      thresholdRevision: expansionState.revision + 1,
+    });
+    if (plan.changed) {
+      transaction.set(expansionRef, {
+        ...plan.state,
+        worldId: ONLINE_WORLD_ID,
+        realmShardId: getCurrentRealmShardId(),
+        pendingActivationEventId: plan.state.pendingActivation?.eventId || "",
+        queuedActivationCount: plan.state.queuedActivationSources?.length || 0,
+        updatedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    return {
+      changed: plan.changed,
+      reason: plan.reason,
+      eventId: safeString(plan.eventId, 180),
+      currentNpcCityCount,
+    };
+  });
+}
+
+async function reconcileNewPlayerAdmissionCapacity(knownAvailability = null) {
+  if (!isCoreExpansionTopologyActive()) return { changed: false, state: null, plans: [] };
+  const startedAtMs = Date.now();
+  await completePendingExpansionActivation();
+  const initialState = await ensureCoreExpansionState();
+  const admittingRegionIds = initialState.admittingRegionIds.filter(
+    regionId => CORE_EXPANSION.parseNewLandsRegionId(regionId)
+  );
+  if (!admittingRegionIds.length) return { changed: false, state: initialState, plans: [] };
+  const availability = Array.isArray(knownAvailability)
+    ? knownAvailability.filter(entry => admittingRegionIds.includes(entry.regionId))
+    : await loadNewPlayerSpawnAvailability(admittingRegionIds);
+  const thresholdCandidates = availability.filter(entry => (
+    entry.currentIsland && entry.neutralCityCount <= MINIMUM_SPAWN_NPC_CITIES
+  ));
+  if (!thresholdCandidates.length) return { changed: false, state: initialState, plans: [] };
+  const plans = [];
+  for (const candidate of thresholdCandidates) {
+    plans.push(await planOverdueNewPlayerExpansion(candidate.regionId));
+  }
+  const changed = plans.some(plan => plan.changed);
+  if (changed) await completePendingExpansionActivation();
+  const finalState = await ensureCoreExpansionState();
+  logOperation("reconcileNewPlayerAdmissionCapacity", startedAtMs, null, "ok", {
+    generation: RESET_GENERATION,
+    checkedRegionCount: thresholdCandidates.length,
+    overdueRegionCount: plans.filter(plan => plan.changed).length,
+    admittingRegionCount: finalState.admittingRegionIds.length,
+  });
+  return { changed, state: finalState, plans };
 }
 
 function createRandomPlayerFlag() {
@@ -17508,6 +17616,14 @@ async function claimFreshStartingCityInAssignedShard(request) {
     spawnRegionIds.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
   );
   const spawnAvailability = await loadNewPlayerSpawnAvailability(spawnRegionIds);
+  if (isCoreExpansionTopologyActive()) {
+    const admissionRepair = await reconcileNewPlayerAdmissionCapacity(spawnAvailability);
+    const admissionAdvanced = admissionRepair.state.admittingRegionIds
+      .some(regionId => !spawnRegionIds.includes(regionId));
+    if (admissionRepair.changed || admissionAdvanced) {
+      return claimFreshStartingCityInAssignedShard(request);
+    }
+  }
   const spawnAvailabilityByRegion = new Map(
     spawnAvailability.map(entry => [entry.regionId, entry])
   );
@@ -17981,9 +18097,12 @@ async function claimFreshStartingCityInAssignedShard(request) {
       if (spawnIneligible) {
         ineligibleSpawnRegionIds.add(chosenIsland.regionId);
         if (isCoreExpansionTopologyActive()) {
-          const refreshedRegionIds = await getNewPlayerSpawnRegionIdsForClaim();
+          const admissionRepair = await reconcileNewPlayerAdmissionCapacity();
+          const refreshedRegionIds = admissionRepair.state.admittingRegionIds;
           const admissionAdvanced = refreshedRegionIds.some(regionId => !spawnRegionIds.includes(regionId));
-          if (admissionAdvanced) return claimFreshStartingCityInAssignedShard(request);
+          if (admissionRepair.changed || admissionAdvanced) {
+            return claimFreshStartingCityInAssignedShard(request);
+          }
         }
         continue;
       }
