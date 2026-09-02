@@ -2595,12 +2595,14 @@
           where("ownerUid", "==", uid),
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           where("status", "==", "active")
         )
       : firestoreQuery(
           collection(client.db, "players", uid, "incomingArmies"),
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           where("status", "==", "active")
         );
     const applySnapshot = (source, snapshot) => {
@@ -2629,6 +2631,7 @@
           .filter(army => (
             army.resetGeneration === RESET_GENERATION
             && army.worldId === ONLINE_WORLD_ID
+            && String(army.realmShardId || "legacy") === REALM_SHARD_ID
             && army.status === "active"
           ))
           .map(army => [army.id, army])));

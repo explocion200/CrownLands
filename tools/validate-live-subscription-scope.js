@@ -44,8 +44,8 @@ assert.match(subscribeIsland, /where\("status", "==", "active"\)/, "Island army 
 assert.match(subscribeIsland, /return \(\) => unsubscribers\.forEach\(unsubscribe => unsubscribe\(\)\)/, "Island listeners must expose one cleanup function.");
 
 const subscribePlayerArmies = extractFunction(clientSource, "subscribePlayerArmies");
-assert.match(subscribePlayerArmies, /collection\(client\.db, "armies"\)[\s\S]*?where\("ownerUid", "==", uid\)[\s\S]*?where\("status", "==", "active"\)/, "Global march knowledge must be limited to the player's active outgoing marches.");
-assert.match(subscribePlayerArmies, /collection\(client\.db, "players", uid, "incomingArmies"\)/, "Incoming threats must use the player's private projection.");
+assert.match(subscribePlayerArmies, /collection\(client\.db, "armies"\)[\s\S]*?where\("ownerUid", "==", uid\)[\s\S]*?where\("worldId", "==", ONLINE_WORLD_ID\)[\s\S]*?\.\.\.getRealmShardQueryConstraints\(where\)[\s\S]*?where\("status", "==", "active"\)/, "Global march knowledge must be limited to the player's active outgoing marches in the current realm shard.");
+assert.match(subscribePlayerArmies, /collection\(client\.db, "players", uid, "incomingArmies"\)[\s\S]*?where\("worldId", "==", ONLINE_WORLD_ID\)[\s\S]*?\.\.\.getRealmShardQueryConstraints\(where\)[\s\S]*?where\("status", "==", "active"\)/, "Incoming threats must use the player's private current-realm projection.");
 assert.doesNotMatch(subscribePlayerArmies, /collectionGroup\(/, "Player march listeners must not scan every island projection.");
 
 const subscribePlayerReinforcements = extractFunction(clientSource, "subscribePlayerReinforcements");

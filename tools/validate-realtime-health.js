@@ -22,8 +22,12 @@ function functionBody(source, functionName, nextFunctionName) {
 
 const armySubscription = functionBody(firebaseClient, "subscribePlayerArmies", "subscribePlayerReinforcements");
 assert(
-  /collection\(client\.db,\s*"players",\s*uid,\s*"incomingArmies"\)[\s\S]*where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*where\("status",\s*"==",\s*"active"\)/.test(armySubscription),
-  "Incoming armies must be queried by the exact active realm and status required by Firestore rules."
+  /collection\(client\.db,\s*"players",\s*uid,\s*"incomingArmies"\)[\s\S]*where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*\.\.\.getRealmShardQueryConstraints\(where\)[\s\S]*where\("status",\s*"==",\s*"active"\)/.test(armySubscription),
+  "Incoming armies must be queried by the exact active generation, world, realm shard, and status required by Firestore rules."
+);
+assert(
+  /collection\(client\.db,\s*"armies"\)[\s\S]*where\("ownerUid",\s*"==",\s*uid\)[\s\S]*where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*\.\.\.getRealmShardQueryConstraints\(where\)[\s\S]*where\("status",\s*"==",\s*"active"\)/.test(armySubscription),
+  "Outgoing armies must be queried by owner and the exact active realm shard required by Firestore rules."
 );
 assert(
   /retryDelaysMs\s*=\s*\[1000,\s*2000,\s*5000,\s*10000,\s*30000\]/.test(armySubscription),
@@ -117,6 +121,14 @@ assert(
 );
 const requiredIndexGroups = new Set(indexes.indexes.map(index => `${index.collectionGroup}:${index.queryScope}`));
 assert(requiredIndexGroups.has("incomingArmies:COLLECTION"), "The active incoming-army query index is missing.");
+const hasRealmScopedIncomingArmyIndex = indexes.indexes.some(index => (
+  index.collectionGroup === "incomingArmies"
+  && index.queryScope === "COLLECTION"
+  && ["resetGeneration", "worldId", "realmShardId", "status"].every(fieldPath => (
+    index.fields?.some(field => field.fieldPath === fieldPath && field.order === "ASCENDING")
+  ))
+));
+assert(hasRealmScopedIncomingArmyIndex, "The realm-scoped incoming-army query index is missing.");
 assert(requiredIndexGroups.has("presence:COLLECTION"), "The active presence query index is missing.");
 assert(
   fs.existsSync(path.join(root, "functions", "test", "emulator-army-listener-rules.js"))

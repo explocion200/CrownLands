@@ -27,7 +27,7 @@ requireMatch(game, /function stripServerEconomyProfileFields[\s\S]*clientWritabl
 requireMatch(game, /async function flushOnlineSave[\s\S]*Promise\.allSettled[\s\S]*isPermanentOnlineSaveError[\s\S]*target\.blocked = true[\s\S]*scheduleOnlineSaveRetry/, "Cloud saves do not isolate endpoints, circuit-break permission failures, and back off transient failures.");
 requireMatch(game, /if \(onlineSaveInFlight\) return onlineSavePromise \|\| false/, "Forced cloud flushes do not share the active save request.");
 
-const firebaseClientBuildId = "20260830-city-list-reliability-r1";
+const firebaseClientBuildId = "20260902-march-sync-realm-scope-r1";
 const gameBuildId = "20260902-reset-region-bootstrap-r1";
 for (const [label, source] of [["index", index], ["service worker", worker]]) {
   requireMatch(source, new RegExp(firebaseClientBuildId), `The ${label} does not carry the login-resilience cache version.`);

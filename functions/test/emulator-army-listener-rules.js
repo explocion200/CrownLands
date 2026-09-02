@@ -1,8 +1,6 @@
 const { getApps, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
-const realm = require("../release-config.json");
-
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
@@ -10,6 +8,10 @@ if (!firestoreHost) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
 if (!getApps().length) initializeApp({ projectId });
 const db = getFirestore();
+const RESET_GENERATION = "realm-2026-09";
+const WORLD_ID = "main-realm-2026-09";
+const REALM_SHARD_ID = "shard_0001";
+const FOREIGN_REALM_SHARD_ID = "shard_0002";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -41,14 +43,15 @@ function equality(fieldPath, stringValue) {
   };
 }
 
-function activeRealmFilters(extra = []) {
+function activeRealmFilters(extra = [], { includeRealmShard = true } = {}) {
   return {
     compositeFilter: {
       op: "AND",
       filters: [
         ...extra,
-        equality("resetGeneration", realm.resetGeneration),
-        equality("worldId", realm.worldId),
+        equality("resetGeneration", RESET_GENERATION),
+        equality("worldId", WORLD_ID),
+        ...(includeRealmShard ? [equality("realmShardId", REALM_SHARD_ID)] : []),
         equality("status", "active"),
       ],
     },
@@ -88,11 +91,16 @@ async function main() {
   const user = await createAuthUser();
   const otherUid = `other_${crypto.randomBytes(5).toString("hex")}`;
   const current = {
-    resetGeneration: realm.resetGeneration,
-    worldId: realm.worldId,
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+    realmShardId: REALM_SHARD_ID,
     status: "active",
   };
   const batch = db.batch();
+  batch.set(db.doc("realmConfig/current"), {
+    resetGeneration: RESET_GENERATION,
+    worldId: WORLD_ID,
+  });
   batch.set(db.doc(`players/${user.uid}`), { uid: user.uid, ...current });
   batch.set(db.doc(`armies/outgoing_current_${user.uid}`), {
     ...current,
@@ -113,6 +121,12 @@ async function main() {
     resetGeneration: "archived-generation",
     worldId: "archived-world",
     status: "active",
+    ownerUid: otherUid,
+    targetOwnerUid: user.uid,
+  });
+  batch.set(db.doc(`players/${user.uid}/incomingArmies/incoming_foreign_shard`), {
+    ...current,
+    realmShardId: FOREIGN_REALM_SHARD_ID,
     ownerUid: otherUid,
     targetOwnerUid: user.uid,
   });
@@ -140,6 +154,23 @@ async function main() {
   const incomingIds = returnedDocumentIds(incoming.body);
   assert(incomingIds.includes("incoming_current"), "Realm-scoped incoming query did not return the current army.");
   assert(!incomingIds.includes("incoming_stale"), "Realm-scoped incoming query leaked an archived army.");
+  assert(!incomingIds.includes("incoming_foreign_shard"), "Realm-scoped incoming query leaked an army from another realm shard.");
+
+  const missingShardIncoming = await runQuery(
+    user,
+    `players/${user.uid}`,
+    "incomingArmies",
+    activeRealmFilters([], { includeRealmShard: false })
+  );
+  assert(missingShardIncoming.response.status === 403, "Incoming-army query without a realm shard unexpectedly bypassed realm rules.");
+
+  const missingShardOutgoing = await runQuery(
+    user,
+    "",
+    "armies",
+    activeRealmFilters([equality("ownerUid", user.uid)], { includeRealmShard: false })
+  );
+  assert(missingShardOutgoing.response.status === 403, "Outgoing-army query without a realm shard unexpectedly bypassed realm rules.");
 
   const unscopedIncoming = await runQuery(user, `players/${user.uid}`, "incomingArmies");
   assert(unscopedIncoming.response.status === 403, "Unscoped incoming-army query unexpectedly bypassed generation rules.");
@@ -147,7 +178,7 @@ async function main() {
   const unscopedOutgoing = await runQuery(user, "", "armies", activeRealmFilters());
   assert(unscopedOutgoing.response.status === 403, "Unscoped global-army query unexpectedly bypassed owner rules.");
 
-  console.log("Army listener rules passed: current owner/incoming queries work and unscoped or archived reads remain blocked.");
+  console.log("Army listener rules passed: current-shard owner/incoming queries work and unscoped, archived, or cross-shard reads remain blocked.");
 }
 
 main().catch(error => {
