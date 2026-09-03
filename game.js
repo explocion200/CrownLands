@@ -413,6 +413,12 @@ function cleanEditorRegionId(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+const REGION_CATALOG_SUMMARIES_BY_ID = new Map(
+  (Array.isArray(REGION_CATALOG.regions) ? REGION_CATALOG.regions : [])
+    .map(region => [cleanEditorRegionId(region?.id), region])
+    .filter(([regionId]) => regionId)
+);
+
 function cleanRegionType(value) {
   return String(value || "")
     .trim()
@@ -482,7 +488,13 @@ async function ensureRegionDefinitionLoaded(regionId, { protectedRegionIds = [] 
 function getEditorMap(regionId) {
   const targetRegionId = cleanEditorRegionId(regionId);
   if (!targetRegionId) return null;
-  return getEditorMapEntries().find(map => map.id === targetRegionId) || null;
+  if (CORE_EXPANSION_TOPOLOGY_ACTIVE) {
+    const summary = REGION_CATALOG_SUMMARIES_BY_ID.get(targetRegionId);
+    return summary
+      ? buildCatalogEditorMap(summary, regionDefinitionCache.get(targetRegionId)?.definition)
+      : null;
+  }
+  return getEditorMapEntries(MAP_EDITOR_DATA).find(map => map.id === targetRegionId) || null;
 }
 
 function getBitmapIslandIds() {
@@ -2845,6 +2857,10 @@ function registerCoreExpansionRegions(regions = []) {
     .filter(region => region?.id && region?.permanentCore !== true);
   if (!descriptors.length) return false;
   REGION_DEFINITION_LOADER.register(descriptors);
+  for (const summary of Array.isArray(REGION_CATALOG.regions) ? REGION_CATALOG.regions : []) {
+    const regionId = cleanEditorRegionId(summary?.id);
+    if (regionId) REGION_CATALOG_SUMMARIES_BY_ID.set(regionId, summary);
+  }
   let changed = false;
   for (const descriptor of descriptors) {
     const regionId = cleanEditorRegionId(descriptor.id);

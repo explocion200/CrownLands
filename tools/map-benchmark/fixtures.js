@@ -8,12 +8,13 @@ const { loadAuthoritativeRealmContract } = require("./realm-contract.js");
 
 const ROOT_DIR = path.resolve(__dirname, "..", "..");
 const MAP_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
+const CORE_EXPANSION_CATALOG_PATH = path.join(ROOT_DIR, "assets", "worlds", "core-expansion-v1", "region-catalog.json");
 const RELEASE_CONFIG_PATH = path.join(ROOT_DIR, "functions", "release-config.json");
 
 const BENCHMARK_SEED = "crownlands-map-phase-0-v1";
 const FIXED_EPOCH_MS = Date.UTC(2040, 0, 1, 12, 0, 0);
-const PRIMARY_REGION_ID = "region_11";
-const NEIGHBOR_REGION_ID = "region_6";
+const PRIMARY_REGION_ID = "core-v2-north-support-p0-m2";
+const NEIGHBOR_REGION_ID = "core-v2-greybanner-hold-p0-m1";
 
 const SCENARIOS = Object.freeze({
   A: Object.freeze({ id: "A", slug: "moderate", label: "Moderate", cityCount: 50, marchCount: 25 }),
@@ -38,17 +39,43 @@ function createSeededRandom(seed) {
   };
 }
 
-function loadMapEditorData() {
+function loadLegacyMapEditorData() {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(MAP_DATA_PATH, "utf8"), context, { filename: MAP_DATA_PATH });
   return JSON.parse(JSON.stringify(context.window.CROWNLANDS_MAP_EDITOR_DATA));
+}
+
+function loadMapEditorData(releaseConfig) {
+  if (String(releaseConfig?.worldTopology || "").toLowerCase() !== "core-expansion-v1") {
+    return loadLegacyMapEditorData();
+  }
+  const catalog = JSON.parse(fs.readFileSync(CORE_EXPANSION_CATALOG_PATH, "utf8"));
+  const maps = [PRIMARY_REGION_ID, NEIGHBOR_REGION_ID].map(regionId => {
+    const summary = catalog.regions.find(region => region.id === regionId);
+    if (!summary?.regionDefinitionPath) {
+      throw new Error(`Benchmark region ${regionId} is missing from the active Core catalog.`);
+    }
+    const definitionPath = path.join(ROOT_DIR, ...summary.regionDefinitionPath.split("/"));
+    return {
+      ...JSON.parse(fs.readFileSync(definitionPath, "utf8")),
+      regionDefinitionPath: summary.regionDefinitionPath,
+    };
+  });
+  return {
+    version: catalog.version,
+    worldId: catalog.worldId,
+    worldName: catalog.worldName,
+    globalSettings: catalog.globalSettings,
+    maps,
+    landBridges: [],
+  };
 }
 
 function loadReleaseConfig() {
   return JSON.parse(fs.readFileSync(RELEASE_CONFIG_PATH, "utf8"));
 }
 
-function createBenchmarkCityDefinitions(count) {
+function createBenchmarkCityDefinitions(regionId, count) {
   const random = createSeededRandom(`${BENCHMARK_SEED}:cities`);
   const cells = [];
   const columns = 15;
@@ -74,8 +101,9 @@ function createBenchmarkCityDefinitions(count) {
     const x = Math.round(baseX + (random() - 0.5) * 22);
     const y = Math.round(baseY + (random() - 0.5) * 18);
     return {
-      id: `${PRIMARY_REGION_ID}_bench_${String(index + 1).padStart(3, "0")}`,
+      id: `${regionId}_bench_${String(index + 1).padStart(3, "0")}`,
       name: `Benchmark Hold ${String(index + 1).padStart(3, "0")}`,
+      regionId,
       x,
       y,
       xNorm: Number((x / 1448).toFixed(6)),
@@ -112,11 +140,12 @@ function createCitySnapshots(definitions) {
   });
 }
 
-function createCampDefinitions() {
+function createCampDefinitions(regionId) {
   return [
     {
-      id: `${PRIMARY_REGION_ID}_benchmark_gold_camp`,
+      id: `${regionId}_benchmark_gold_camp`,
       name: "Benchmark Gold Camp",
+      regionId,
       campType: "gold",
       type: "gold",
       x: 310,
@@ -126,8 +155,9 @@ function createCampDefinitions() {
       size: 140,
     },
     {
-      id: `${PRIMARY_REGION_ID}_benchmark_warband_camp`,
+      id: `${regionId}_benchmark_warband_camp`,
       name: "Benchmark Warband Camp",
+      regionId,
       campType: "troops",
       type: "troops",
       x: 1135,
@@ -170,11 +200,11 @@ function createRegionCitySnapshots(map, { playerOwnedCount = 0 } = {}) {
 
 function createFixture(scenarioId = "A") {
   const scenario = SCENARIOS[String(scenarioId || "A").toUpperCase()] || SCENARIOS.A;
-  const mapData = loadMapEditorData();
   const releaseConfig = loadReleaseConfig();
+  const mapData = loadMapEditorData(releaseConfig);
   const realmContract = loadAuthoritativeRealmContract();
-  const cityDefinitions = createBenchmarkCityDefinitions(scenario.cityCount);
-  const campDefinitions = createCampDefinitions();
+  const cityDefinitions = createBenchmarkCityDefinitions(PRIMARY_REGION_ID, scenario.cityCount);
+  const campDefinitions = createCampDefinitions(PRIMARY_REGION_ID);
   const primaryMap = mapData.maps.find(map => map.id === PRIMARY_REGION_ID);
   const neighborMap = mapData.maps.find(map => map.id === NEIGHBOR_REGION_ID);
   if (!primaryMap || !neighborMap) throw new Error("Benchmark regions are missing from map-editor-data.js.");

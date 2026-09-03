@@ -31,6 +31,8 @@ const simulationIntervalMs = readNumberConstant("SIMULATION_UPDATE_INTERVAL_MS")
 const routeCacheLimit = readNumberConstant("ROUTE_CACHE_LIMIT");
 const routeEdgeCacheLimit = readNumberConstant("ROUTE_EDGE_PASSABLE_CACHE_LIMIT");
 const frameSource = extractFunction("frame");
+const editorMapSource = extractFunction("getEditorMap");
+const registerCoreExpansionRegionsSource = extractFunction("registerCoreExpansionRegions");
 const renderableArmiesSource = extractFunction("getRenderableArmies");
 const fortificationRepairStatusSource = extractFunction("updateVisibleFortificationRepairStatus");
 const cameraInteractionStart = source.indexOf("function markCameraInteraction(");
@@ -54,6 +56,10 @@ assert.doesNotMatch(routeWorkerSource, /route(?:EdgePassable)?Cache\.clear\(\)/,
 assert.match(source, /WORLD_REGIONS_BY_ID\s*=\s*new Map[\s\S]*?WORLD_CAMPS_BY_ID\s*=\s*new Map/, "Static world lookups need indexed maps.");
 assert.match(source, /function getRegionById[\s\S]*?WORLD_REGIONS_BY_ID\.get/, "Region lookup still scans the world configuration.");
 assert.match(source, /function getCampTargetById[\s\S]*?WORLD_CAMPS_BY_ID\.get/, "Camp lookup still scans every camp during army rendering.");
+assert.match(source, /REGION_CATALOG_SUMMARIES_BY_ID\s*=\s*new Map/, "Core region summaries need an indexed lookup.");
+assert.match(editorMapSource, /REGION_CATALOG_SUMMARIES_BY_ID\.get\(targetRegionId\)/, "Core editor-map lookup still scans and rebuilds the whole region catalog.");
+assert.doesNotMatch(editorMapSource, /getEditorMapEntries\(\)\.find/, "Core editor-map lookup must not scan every catalog entry.");
+assert.match(registerCoreExpansionRegionsSource, /REGION_CATALOG_SUMMARIES_BY_ID\.set\(regionId, summary\)/, "New Lands registration must refresh the indexed region catalog.");
 assert.match(source, /playerCitiesFrameCacheActive = true[\s\S]*?playerCitiesFrameCacheActive = false/, "Owned-city scans are not shared within a display frame.");
 assert.match(source, /renderableRemoteArmyCache\s*=\s*new WeakMap\(\)[\s\S]*?function getRenderableRemoteArmy[\s\S]*?Object\.assign\(renderable, army/, "Remote army rendering still allocates a full object for every army tick.");
 assert.match(source, /renderablePendingArmyCache\s*=\s*new WeakMap\(\)[\s\S]*?function getRenderablePendingArmy[\s\S]*?Object\.assign\(renderable, mission/, "Pending army rendering still allocates a full object for every army tick.");

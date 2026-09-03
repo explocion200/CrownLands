@@ -108,8 +108,17 @@
   markPhaseOnce("session-activation-ready");
 
   function regionIdFromIsland(islandId) {
-    const suffix = String(islandId || "").split("-").pop();
-    return fixture.citiesByRegion[suffix] ? suffix : fixture.primaryRegionId;
+    const value = String(islandId || "");
+    const shardedPrefix = `${fixture.releaseConfig.worldId}--`;
+    if (value.startsWith(shardedPrefix)) {
+      const suffix = value.slice(shardedPrefix.length);
+      const separatorIndex = suffix.indexOf("--");
+      const regionId = separatorIndex > 0 ? suffix.slice(separatorIndex + 2) : "";
+      if (fixture.citiesByRegion[regionId]) return regionId;
+    }
+    const legacyPrefix = `${fixture.releaseConfig.worldId}-`;
+    const regionId = value.startsWith(legacyPrefix) ? value.slice(legacyPrefix.length) : "";
+    return fixture.citiesByRegion[regionId] ? regionId : fixture.primaryRegionId;
   }
 
   function listenerSnapshot() {
@@ -207,6 +216,7 @@
 
     getRealmInfo: async () => ({
       ...fixture.realmContract,
+      worldTopology: fixture.releaseConfig.worldTopology,
       serverBuildId: "phase-0-benchmark",
       serverTimeMs: Date.now(),
       authoritativeRoutesVersion: 1,
