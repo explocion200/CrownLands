@@ -185,7 +185,21 @@
     };
   }
 
-  function buildClientEditorMap(region, definition = null) {
+  function appendAssetVersion(source, assetVersion = "") {
+    const value = String(source || "").trim();
+    const version = String(assetVersion || "").trim();
+    if (!value || !version) return value;
+    const encodedVersion = encodeURIComponent(version);
+    if (/[?&]v=[^&#]*/i.test(value)) {
+      return value.replace(/([?&]v=)[^&#]*/i, `$1${encodedVersion}`);
+    }
+    const fragmentIndex = value.indexOf("#");
+    const pathAndQuery = fragmentIndex >= 0 ? value.slice(0, fragmentIndex) : value;
+    const fragment = fragmentIndex >= 0 ? value.slice(fragmentIndex) : "";
+    return `${pathAndQuery}${pathAndQuery.includes("?") ? "&" : "?"}v=${encodedVersion}${fragment}`;
+  }
+
+  function buildClientEditorMap(region, definition = null, assetVersion = "") {
     if (!region) return null;
     const width = Math.max(1, Math.floor(Number(region.width) || 2048));
     const height = Math.max(1, Math.floor(Number(region.height) || 1536));
@@ -193,8 +207,8 @@
       ...region,
       id: String(region.id || "").trim().toLowerCase(),
       label: region.name || region.label || region.id,
-      imageSrc: region.mapAsset || region.imagePath || region.imageSrc || "",
-      thumbnailSrc: region.thumbnailAsset || region.thumbnailPath || region.thumbnailSrc || "",
+      imageSrc: appendAssetVersion(region.mapAsset || region.imagePath || region.imageSrc || "", assetVersion),
+      thumbnailSrc: appendAssetVersion(region.thumbnailAsset || region.thumbnailPath || region.thumbnailSrc || "", assetVersion),
       imageWidth: width,
       imageHeight: height,
       region: region.compatibilityRegion || region.region || {},
@@ -331,7 +345,7 @@
         cache.delete(id);
         cache.set(id, cached);
         stats.definitionCacheHits += 1;
-        return buildClientEditorMap(summary, materializeRegionDefinition(summary, cached.definition));
+        return buildClientEditorMap(summary, materializeRegionDefinition(summary, cached.definition), catalog.assetVersion);
       }
       if (loads.has(id)) return loads.get(id);
       if (typeof fetchJson !== "function") throw new Error("Region definition fetch is not configured.");
@@ -343,7 +357,7 @@
           cache.set(id, { definition, loadedAtMs: Date.now() });
           onLoad(id, materialized);
           evict([id, ...protectedRegionIds]);
-          return buildClientEditorMap(summary, materialized);
+          return buildClientEditorMap(summary, materialized, catalog.assetVersion);
         })
         .catch(error => {
           stats.definitionFailures += 1;
@@ -368,7 +382,8 @@
       stats.catalogRegionCount = byId.size;
       return byId.size;
     };
-    return Object.freeze({ cache, loads, stats, ensure, evict, register, buildMap: buildClientEditorMap });
+    const buildMap = (region, definition = null) => buildClientEditorMap(region, definition, catalog.assetVersion);
+    return Object.freeze({ cache, loads, stats, ensure, evict, register, buildMap });
   }
 
   function buildRegionCatalog(layout = {}, regions = []) {
@@ -540,6 +555,7 @@
     getCurrentOuterPlayerLayer,
     getNextPlayerExpansionCoordinate,
     buildCompatibilityRegion,
+    appendAssetVersion,
     buildClientEditorMap,
     materializeRegionDefinition,
     createRegionDefinitionLoader,

@@ -456,7 +456,7 @@ function labelFromEditorRegionId(regionId) {
 }
 
 function buildCatalogEditorMap(region, definition = null) {
-  return REGION_CATALOG_RUNTIME.buildClientEditorMap(region, definition);
+  return REGION_CATALOG_RUNTIME.buildClientEditorMap(region, definition, REGION_CATALOG.assetVersion);
 }
 
 function getEditorMapEntries(data = REGION_CATALOG.regions?.length ? REGION_CATALOG : MAP_EDITOR_DATA) {

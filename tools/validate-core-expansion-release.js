@@ -60,6 +60,10 @@ assert.equal(receipt.newLandsCityCount, 2240);
 assert.equal(receipt.objectiveCount, 17);
 assert.equal(receipt.catalogHash, hash(catalog));
 assert.equal(receipt.worldLayoutHash, hash(layout));
+assert.match(catalog.assetVersion, /^[0-9a-f]{12}$/);
+assert.equal(catalog.assetVersion, hash(receipt.assets).slice(0, 12));
+assert.equal(layout.assetVersion, catalog.assetVersion);
+assert.equal(receipt.assetVersion, catalog.assetVersion);
 assert.equal(catalog.version, 2026090201);
 assert.equal(layout.version, 2026090201);
 assert.deepEqual(layout.globalSettings, catalog.globalSettings,
@@ -125,6 +129,15 @@ assert(dynamicDefinition.cities.every((city, index) => (
 )));
 assert.equal(dynamicDefinition.edgeConnections.south[0].connectsToRegionId, "new-lands-l02-p001");
 assert.equal(dynamicDefinition.edgeConnections.north.length, 0);
+const dynamicEditorMap = regionCatalogRuntime.buildClientEditorMap(dynamicSummary, dynamicDefinition, catalog.assetVersion);
+assert.equal(new URL(`https://crownlands.test/${dynamicEditorMap.imageSrc}`).searchParams.get("v"), catalog.assetVersion);
+assert.equal(new URL(`https://crownlands.test/${dynamicEditorMap.thumbnailSrc}`).searchParams.get("v"), catalog.assetVersion);
+
+for (const regionId of ["new-lands-l01-p001", "new-lands-l01-p006", "new-lands-l01-p007"]) {
+  const editorMap = regionCatalogRuntime.buildClientEditorMap(regionsById.get(regionId), null, catalog.assetVersion);
+  assert.equal(new URL(`https://crownlands.test/${editorMap.imageSrc}`).searchParams.get("v"), catalog.assetVersion);
+  assert.equal(new URL(`https://crownlands.test/${editorMap.thumbnailSrc}`).searchParams.get("v"), catalog.assetVersion);
+}
 
 const boundaryGeneration = "realm-boundary-test";
 const boundaryActiveRegions = Array.from({ length: 55 }, (_, ordinal) => topology.getRegionAtActivationOrdinal(ordinal).id);
@@ -236,8 +249,8 @@ assert.match(
   /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*fileName === coreExpansionGate/,
 );
 const indexSource = read("index.html");
-assert.match(indexSource, /region-catalog\.js\?v=20260902-march-path-alignment-r1/);
-assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260902-march-path-alignment-r1/);
+assert.match(indexSource, /region-catalog\.js\?v=20260903-cache-safe-map-art-r1/);
+assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260903-cache-safe-map-art-r1/);
 
 const preparedText = [JSON.stringify(layout), JSON.stringify(catalog)].join("\n");
 for (const forbidden of ["developmentOnly", "productionActivated", "fixturePackageAvailabilityOnly", "Core v2 QA-1", "phase6d", "phase6f"]) {
