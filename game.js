@@ -2912,16 +2912,33 @@ function normalizeRegionId(regionId) {
   return getRegionById(value)?.id || DEFAULT_ONLINE_REGION_ID;
 }
 
+function getDynamicNewLandsCityIdentity(cityId) {
+  const value = String(cityId || "");
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE || !value) return null;
+  const regionId = getRegionIds()
+    .filter(candidate => /^new-lands-l\d{2,5}-p\d{3,6}$/.test(candidate))
+    .sort((left, right) => right.length - left.length)
+    .find(candidate => value.startsWith(`${candidate}-city-`));
+  if (!regionId) return null;
+  const cityOrdinalText = value.slice(`${regionId}-city-`.length);
+  if (!/^\d{2}$/.test(cityOrdinalText)) return null;
+  const cityOrdinal = Number(cityOrdinalText);
+  const cityCapacity = Math.max(0, Math.floor(Number(getRegionById(regionId)?.cityCapacity) || 0));
+  if (!cityCapacity || cityOrdinal < 1 || cityOrdinal > cityCapacity) return null;
+  return { id: value, regionId };
+}
+
 function getCityRegionId(cityOrId) {
   if (cityOrId && typeof cityOrId === "object") {
     return normalizeRegionId(cityOrId.regionId || cityOrId.startPool);
   }
   const cityId = String(cityOrId || "");
   const base = getPlayableBaseCityById(cityId);
+  const dynamicNewLandsCity = getDynamicNewLandsCityIdentity(cityId);
   const prefixedRegionId = [...WORLD_REGION_IDS]
     .sort((left, right) => right.length - left.length)
     .find(regionId => cityId.startsWith(`${regionId}_`));
-  return normalizeRegionId(base?.regionId || base?.startPool || prefixedRegionId);
+  return normalizeRegionId(base?.regionId || base?.startPool || dynamicNewLandsCity?.regionId || prefixedRegionId);
 }
 
 function getKnownCityId(cityId) {
@@ -2929,6 +2946,7 @@ function getKnownCityId(cityId) {
   if (!value) return "";
   if (getPlayableBaseCityById(value)) return value;
   if (state?.cities?.some(city => city?.id === value)) return value;
+  if (getDynamicNewLandsCityIdentity(value)) return value;
   const regionId = [...WORLD_REGION_IDS]
     .sort((left, right) => right.length - left.length)
     .find(candidate => value.startsWith(`${candidate}_`));
