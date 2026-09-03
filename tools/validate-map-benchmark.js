@@ -5,7 +5,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const { BENCHMARK_SEED, SCENARIOS, createFixture } = require("./map-benchmark/fixtures.js");
+const {
+  BENCHMARK_SEED,
+  NEIGHBOR_REGION_ID,
+  PRIMARY_REGION_ID,
+  SCENARIOS,
+  createFixture,
+} = require("./map-benchmark/fixtures.js");
 const { loadAuthoritativeRealmContract } = require("./map-benchmark/realm-contract.js");
 const { createMapBenchmarkServer } = require("./map-benchmark/server.js");
 
@@ -22,6 +28,17 @@ assert.equal(BENCHMARK_SEED, "crownlands-map-phase-0-v1");
 assert.equal(packageJson.scripts["benchmark:map"], "node tools/map-benchmark/run-map-benchmark.js");
 assert.ok(!productionGame.includes("__CROWNLANDS_BENCHMARK__"), "Benchmark API leaked into production game.js.");
 assert.ok(!productionGame.includes("Benchmark Ruler"), "Benchmark account leaked into production game.js.");
+assert.match(productionGame, /const REGION_CATALOG_SUMMARIES_BY_ID = new Map\(/, "The Core region catalog lookup index is missing.");
+assert.match(
+  productionGame,
+  /REGION_CATALOG_SUMMARIES_BY_ID\.get\(targetRegionId\)/,
+  "Hot-path region lookups must use the indexed Core catalog instead of scanning every region."
+);
+assert.match(
+  productionGame,
+  /REGION_DEFINITION_LOADER\.register\(descriptors\);[\s\S]{0,400}REGION_CATALOG_SUMMARIES_BY_ID\.set\(regionId, summary\)/,
+  "New Lands registration must refresh the indexed Core region catalog."
+);
 
 const authoritativeRealmContract = loadAuthoritativeRealmContract();
 assert.equal(authoritativeRealmContract.skillPointSystemVersion, 2, "The benchmark did not derive the current server skill progression version.");
@@ -44,8 +61,9 @@ for (const [id, [cityCount, marchCount]] of Object.entries(expected)) {
   assert.equal(SCENARIOS[id].marchCount, marchCount);
   assert.equal(first.scenario.cityCount, cityCount);
   assert.equal(first.scenario.marchCount, marchCount);
-  assert.equal(first.primaryRegionId, "region_11");
-  assert.equal(first.neighborRegionId, "region_6");
+  assert.equal(first.primaryRegionId, PRIMARY_REGION_ID);
+  assert.equal(first.neighborRegionId, NEIGHBOR_REGION_ID);
+  assert.equal(first.releaseConfig.worldTopology, "core-expansion-v1");
   assert.deepEqual(first.realmContract, authoritativeRealmContract, `Scenario ${id} drifted from the authoritative realm contract.`);
   const mapIds = first.mapData.maps.map(map => map.id);
   assert.deepEqual(Object.keys(first.citiesByRegion).sort(), [...mapIds].sort(), `Scenario ${id} does not expose city fixtures for every map.`);
@@ -142,6 +160,15 @@ async function validateBenchmarkServerAssetBase() {
     const gameResponse = await fetch(`${address.url}/__benchmark__/game.js?scenario=A&pickupQa=true`);
     assert.equal(gameResponse.status, 200, "The benchmark game bundle was not served.");
     assert.match(await gameResponse.text(), /installCrownlandsPickupQaRuntime/, "The loopback bundle did not include pickup QA diagnostics.");
+
+    const heavyFixture = createFixture("C");
+    const heavyRegion = heavyFixture.mapData.maps.find(map => map.id === heavyFixture.primaryRegionId);
+    const definitionResponse = await fetch(`${address.url}/${heavyRegion.regionDefinitionPath}`, {
+      headers: { referer: `${address.url}/__benchmark__/?scenario=C` },
+    });
+    assert.equal(definitionResponse.status, 200, "The active Core benchmark region definition was not served.");
+    const definition = await definitionResponse.json();
+    assert.equal(definition.cities.length, heavyFixture.scenario.cityCount, "The benchmark region definition lost its requested scenario.");
   } finally {
     await server.close();
   }

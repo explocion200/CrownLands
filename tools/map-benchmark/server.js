@@ -39,8 +39,16 @@ function send(response, status, body, contentType, extraHeaders = {}) {
   response.end(payload);
 }
 
-function getScenarioId(requestUrl) {
-  const id = String(requestUrl.searchParams.get("scenario") || "A").toUpperCase();
+function getScenarioId(requestUrl, request = null) {
+  let requestedId = requestUrl.searchParams.get("scenario");
+  if (!requestedId && request?.headers?.referer) {
+    try {
+      requestedId = new URL(request.headers.referer).searchParams.get("scenario");
+    } catch (_error) {
+      requestedId = "";
+    }
+  }
+  const id = String(requestedId || "A").toUpperCase();
   return SCENARIOS[id] ? id : "A";
 }
 
@@ -147,7 +155,7 @@ function createMapBenchmarkServer() {
       return;
     }
     const requestUrl = new URL(request.url || "/", `http://${hostHeader || HOST}`);
-    const scenarioId = getScenarioId(requestUrl);
+    const scenarioId = getScenarioId(requestUrl, request);
     const fixture = applyVisualQaOverrides(createFixture(scenarioId), requestUrl);
     requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId });
 
@@ -201,6 +209,14 @@ function createMapBenchmarkServer() {
     }
     if (requestUrl.pathname === "/service-worker.js") {
       send(response, 404, "Benchmark service worker disabled.", "text/plain; charset=utf-8");
+      return;
+    }
+
+    const benchmarkRegion = fixture.mapData?.maps?.find(map => (
+      `/${String(map.regionDefinitionPath || "").replaceAll("\\", "/")}` === requestUrl.pathname
+    ));
+    if (benchmarkRegion) {
+      send(response, 200, `${JSON.stringify(benchmarkRegion)}\n`, "application/json; charset=utf-8");
       return;
     }
 

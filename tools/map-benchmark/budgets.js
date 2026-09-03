@@ -19,6 +19,27 @@ const SURFACE_BUDGETS = Object.freeze({
   E: { totalNodes: 3150, mapNodes: 2550, svg: 280, paths: 210 },
 });
 
+const CORE_EXPANSION_SURFACE_BUDGETS = Object.freeze({
+  A: { totalNodes: 1900, mapNodes: 1200, svg: 115, paths: 55 },
+  B: { totalNodes: 3000, mapNodes: 2300, svg: 220, paths: 110 },
+  D: { totalNodes: 2100, mapNodes: 1400, svg: 110, paths: 0 },
+  E: { totalNodes: 3250, mapNodes: 2550, svg: 280, paths: 210 },
+});
+
+const LEGACY_RUNTIME_BUDGET = Object.freeze({
+  activeListeners: 17,
+  requestCount: 80,
+  encodedBytes: 8 * MIB,
+  mapAssetRequests: 5,
+});
+
+const CORE_EXPANSION_RUNTIME_BUDGET = Object.freeze({
+  activeListeners: 18,
+  requestCount: 130,
+  encodedBytes: 12 * MIB,
+  mapAssetRequests: 14,
+});
+
 const CAPACITY_PROFILES = Object.freeze({
   "B/desktop": { fps: [30, 30, 20], idleP95: 100, readyMs: 15000 },
   "B/mobile-landscape": { fps: [24, 24, 15], idleP95: 150, readyMs: 15000 },
@@ -38,6 +59,11 @@ function evaluateBudgets(report) {
     group.failures.push(message);
   }
 
+  function usesCoreExpansion(run) {
+    return Array.isArray(run?.runtime?.worldRegionIds)
+      && run.runtime.worldRegionIds.some(regionId => String(regionId || "").startsWith("core-v2-"));
+  }
+
   for (const [key, budget] of Object.entries(REGRESSION_PROFILES)) {
     const run = byKey.get(key);
     check(regression, Boolean(run), `${key}: required regression profile is unavailable.`);
@@ -54,7 +80,9 @@ function evaluateBudgets(report) {
   for (const run of report.runs) {
     const key = `${run.scenario.id}/${run.profile.id}`;
     const nominal = run.profile.cpuRate === 1;
-    const surface = SURFACE_BUDGETS[run.scenario.id];
+    const coreExpansion = usesCoreExpansion(run);
+    const runtimeBudget = coreExpansion ? CORE_EXPANSION_RUNTIME_BUDGET : LEGACY_RUNTIME_BUDGET;
+    const surface = (coreExpansion ? CORE_EXPANSION_SURFACE_BUDGETS : SURFACE_BUDGETS)[run.scenario.id];
     if (surface) {
       check(regression, run.runtime.dom.totalNodes <= surface.totalNodes, `${key}: DOM ${run.runtime.dom.totalNodes} > ${surface.totalNodes}.`);
       check(regression, run.runtime.dom.mapWorldNodes <= surface.mapNodes, `${key}: map DOM ${run.runtime.dom.mapWorldNodes} > ${surface.mapNodes}.`);
@@ -65,14 +93,14 @@ function evaluateBudgets(report) {
     const initialMarches = run.initialRuntime?.dataMarchCount ?? run.scenario.marchCount;
     check(regression, initialCities === run.scenario.cityCount, `${key}: initial city count ${initialCities} != ${run.scenario.cityCount}.`);
     check(regression, initialMarches === run.scenario.marchCount, `${key}: initial march count ${initialMarches} != ${run.scenario.marchCount}.`);
-    check(regression, run.runtime.realtime.listeners.active === 17, `${key}: active listeners ${run.runtime.realtime.listeners.active} != 17.`);
+    check(regression, run.runtime.realtime.listeners.active === runtimeBudget.activeListeners, `${key}: active listeners ${run.runtime.realtime.listeners.active} != ${runtimeBudget.activeListeners}.`);
     check(regression, run.runtime.realtime.listeners.duplicates.length === 0, `${key}: duplicate listeners detected.`);
-    check(regression, run.samples.mapSwitch.actionResult.after.active === 17, `${key}: listener count after switch is not 17.`);
+    check(regression, run.samples.mapSwitch.actionResult.after.active === runtimeBudget.activeListeners, `${key}: listener count after switch is not ${runtimeBudget.activeListeners}.`);
     check(regression, run.samples.mapSwitch.actionResult.after.duplicates.length === 0, `${key}: duplicate listeners after switch.`);
     check(regression, run.network.productionBackendRequestCount === 0, `${key}: production backend request detected.`);
-    check(regression, run.network.requestCount <= 80, `${key}: browser requests ${run.network.requestCount} > 80.`);
-    check(regression, run.network.encodedBytes <= 8 * MIB, `${key}: encoded bytes ${run.network.encodedBytes} > 8 MiB.`);
-    check(regression, run.network.mapAssetRequests <= 5, `${key}: map requests ${run.network.mapAssetRequests} > 5.`);
+    check(regression, run.network.requestCount <= runtimeBudget.requestCount, `${key}: browser requests ${run.network.requestCount} > ${runtimeBudget.requestCount}.`);
+    check(regression, run.network.encodedBytes <= runtimeBudget.encodedBytes, `${key}: encoded bytes ${run.network.encodedBytes} > ${runtimeBudget.encodedBytes / MIB} MiB.`);
+    check(regression, run.network.mapAssetRequests <= runtimeBudget.mapAssetRequests, `${key}: map requests ${run.network.mapAssetRequests} > ${runtimeBudget.mapAssetRequests}.`);
     check(regression, run.heap.usedSize <= (run.profile.cpuRate > 1 ? 24 : 16) * MIB, `${key}: heap exceeds budget.`);
     check(regression, run.runtime.images.decodedBytesEstimate <= 12 * MIB, `${key}: decoded image estimate exceeds 12 MiB.`);
     if (nominal) {
@@ -96,4 +124,12 @@ function evaluateBudgets(report) {
   return { generatedAt: new Date().toISOString(), sourceGeneratedAt: report.generatedAt, regression, capacity };
 }
 
-module.exports = { CAPACITY_PROFILES, REGRESSION_PROFILES, SURFACE_BUDGETS, evaluateBudgets };
+module.exports = {
+  CAPACITY_PROFILES,
+  CORE_EXPANSION_RUNTIME_BUDGET,
+  CORE_EXPANSION_SURFACE_BUDGETS,
+  LEGACY_RUNTIME_BUDGET,
+  REGRESSION_PROFILES,
+  SURFACE_BUDGETS,
+  evaluateBudgets,
+};
