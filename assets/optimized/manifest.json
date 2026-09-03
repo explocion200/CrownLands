@@ -355,6 +355,50 @@
       "hasAlpha": true
     },
     {
+      "id": "holding-tower-1",
+      "category": "holding-tower-object",
+      "source": "assets/holding-towers/tower-1.png",
+      "output": "assets/optimized/holding-tower-1-384x384-4ecfb3a8b86d.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 24276,
+      "sha256": "4ecfb3a8b86dcc3022a07eeca1381d568782deb0ca7e4a3735b8cec070635b1d",
+      "hasAlpha": true
+    },
+    {
+      "id": "holding-tower-2",
+      "category": "holding-tower-object",
+      "source": "assets/holding-towers/tower-2.png",
+      "output": "assets/optimized/holding-tower-2-384x384-65f5ac41f3ac.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 23064,
+      "sha256": "65f5ac41f3ac98173b2f9f46448f1bbe7bd839562ff1c7c4737de278545ba11b",
+      "hasAlpha": true
+    },
+    {
+      "id": "holding-tower-3",
+      "category": "holding-tower-object",
+      "source": "assets/holding-towers/tower-3.png",
+      "output": "assets/optimized/holding-tower-3-384x384-6c19186b65e2.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 22280,
+      "sha256": "6c19186b65e23f9eafb8b9419062a4547abfa33e9b4f576210ed253a9002d00c",
+      "hasAlpha": true
+    },
+    {
+      "id": "holding-tower-4",
+      "category": "holding-tower-object",
+      "source": "assets/holding-towers/tower-4.png",
+      "output": "assets/optimized/holding-tower-4-384x384-d0e38c326d09.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 26950,
+      "sha256": "d0e38c326d09a8549a71b81980fed4ac514fb44316a70915b74a4b8ee6129fc0",
+      "hasAlpha": true
+    },
+    {
       "id": "castle-shack",
       "category": "city-object",
       "source": "assets/castles/shack.png",

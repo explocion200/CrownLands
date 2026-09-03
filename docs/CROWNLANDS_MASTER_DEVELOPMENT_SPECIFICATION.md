@@ -116,7 +116,7 @@ The August 24 through August 27 audits remain historical evidence. The August 30
 | Unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and revised Skills readability | Present in build `fdf326a...` | Present in build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; authenticated mutation smoke remains pending |
 | Bounded session heartbeat responses and lifecycle-safe late-response recovery | Present in build `fdf326a...` | Present in build `fdf326a...` | `LIVE — ALL PUBLISHED CHANNELS`; public assets and 120-session emulator admission passed, while authenticated interrupted-connection smoke remains pending |
 | Next-reset regular-city Gold production curve | Absent from the audited production build | Absent from the audited published build | `IN DEVELOPMENT`; coordinated backend, web, and itch.io release required |
-| Holding Towers and Clan Treasury | Absent | Absent | `PLANNED`; confirmed design is preserved, but a clean current-main implementation has not started |
+| Holding Towers and Clan Treasury | Absent | Absent | `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`; not live on either published channel |
 | Pending 5×5 Core world | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
 | Dynamic automatic map expansion | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
 
@@ -159,8 +159,8 @@ Status describes implementation and deployment state. It does not replace the di
 | Camp | A timed neutral reward objective: Gold, Warband/Troop, Relic, or Deed. |
 | Stronghold | One of four major regional objectives that grants a specialized realm bonus. |
 | Crown Citadel | The central prestige objective with a Reign Ledger and scheduled Citadel Legion pressure. |
-| Holding Tower | A planned clan-owned military objective with shared garrison and no passive bonus. It is not currently LIVE. |
-| Clan Treasury | The planned clan-owned Gold balance used for Holding Tower services. It is not currently LIVE. |
+| Holding Tower | A clan-owned military objective with shared, personally attributed garrisons and no passive bonus. The implementation is pending merge and authorized deployment and is not currently LIVE. |
+| Clan Treasury | The generation-scoped clan-owned Gold balance used for Holding Tower services. The implementation is pending merge and authorized deployment and is not currently LIVE. |
 | Rally | A coordinated clan attack formed under the rules for its target type. |
 | Reinforcement | Troops sent to support a valid friendly destination without transferring ownership. |
 | Raw production | Base production used for scaling before temporary items, Gear, skills, objectives, or similar bonuses unless a rule explicitly says otherwise. Exact calculation scope must be configuration-backed. |
@@ -514,18 +514,18 @@ The objective logic and explicit validator coverage are verified in `origin/main
 
 ### Deployment status
 
-Holding Towers and Clan Treasury are `PLANNED`. The confirmed design remains authoritative below, but a clean current-main implementation has not started. Historical [PR #159](https://github.com/explocion200/CrownLands/pull/159) at commit `e1abf11b46ab66d0586faeab06da083363fd565c` is archived, unmerged, and not live; it must not be merged into current `main`. When this feature is prioritized, implementation must begin on a new synchronized `codex/` feature branch and be reconciled with the current world, economy, clan, Rally, scouting, reset, security, and release contracts.
+Holding Towers and Clan Treasury are `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`. The current synchronized implementation is reconciled with the current world, economy, clan, Rally, scouting, reset, security, and release contracts, but it is not live on either published channel. Historical [PR #159](https://github.com/explocion200/CrownLands/pull/159) at commit `e1abf11b46ab66d0586faeab06da083363fd565c` remains archived, unmerged, and not live; it must not be merged into current `main`.
 
-Holding Towers remain gated to the future Pending Core 5×5/reset world. The current authoritative live-world Tower count is zero. No merge by itself authorizes a world reset, world switch, Tower seeding, or Pending Core activation.
+Holding Towers are hard-gated to the dynamically resolved current Core world, current reset generation, and current shared realm shard. Current-world maintenance may reconcile only the 25 permanent Core maps and current Tower records; it must not scan or mutate archived or inactive worlds. No merge by itself authorizes production seeding, a world reset, a world switch, or deployment.
 
 ### Confirmed design specification
 
-- Four Holding Towers are planned:
+- Four Holding Towers are confirmed:
   - Ravenwatch — northwest
   - Highguard — northeast
   - Blackthorn — southwest
   - Stoneward — southeast
-The Pending Core mappings are fixed:
+The current Core mappings are fixed:
 
 | Tower | Stable ID | Region | Grid | Coordinate |
 |---|---|---|---:|---:|
@@ -576,11 +576,11 @@ The Pending Core mappings are fixed:
 - The normal target-driven Scout action automatically selects the closest eligible origin from either the player's personally owned Cities or a clan Holding Tower where that player has personally stationed troops and remains Tower-eligible.
 - Tower screens use the established Crownlands burgundy manuscript headers, parchment and ivory surfaces, tan information boxes, dark readable ink, and existing action-button treatments. Desktop and 844×390 landscape layouts must remain readable.
 
-### Needs verification before deployment
+### Implementation verification before deployment
 
-- Future clean implementation parity with every rule above.
-- Exact UI states, permissions, notification behavior, concurrent attack behavior, disconnect handling, refund guarantees, logs, admin recovery, migration, test coverage, and production rollout plan.
-- Production smoke-test matrix and rollback procedure.
+- The implementation includes deterministic unit/static coverage, Firestore Rules emulator coverage, Treasury concurrency coverage, current-world Camp/Tower reconciliation checks, and the existing complete multiplayer emulator gate. **Status:** `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`.
+- Authenticated production smoke testing, production runtime parity, notification delivery, and rollback rehearsal remain required before the feature may be described as live.
+- Deployment must target only the current Core world and current generation. Archived and inactive worlds remain untouched.
 
 ## 9. Clans, Rallies & Clan Treasury
 
@@ -605,19 +605,19 @@ The current reset path preserves clan identity, roster, membership, roles, name,
 - Any active clan member may join. Only Clan Leaders and Officers may create a Rally. Only the Rally creator or the Clan Leader may manually launch or cancel a forming Rally; only the creator may recall the launched combined army.
 - If the creator of a launched Rally leaves the clan, is removed from it, or changes clans, the server automatically recalls the complete combined Rally army. This automatic safety recall preserves the committed combined force for participant settlement, consumes no Recall Horn, and records `rally_creator_clan_departure` as the reason. A non-creator leaving the clan does not recall another creator's launched Rally.
 - A launch is atomic and must be blocked with a clear explanation unless every participant is still an eligible clan member, every contribution has arrived and is Ready, the creator still owns the assembly city, the objective is still eligible and hostile, and at least two participants remain. An invalid non-creator contribution is removed and returned; an invalid creator cancels the Rally.
-- Ordinary Rallies may target only Strongholds and the Crown Citadel. Reward Camps and ordinary cities are not Rally targets. The future four Holding Towers will also be Rally targets under their separate Tower rules.
+- Ordinary Rallies may target only Strongholds and the Crown Citadel. Reward Camps and ordinary cities are not Rally targets. The four Holding Towers are Rally targets under their separate Tower rules once this implementation is authorized and deployed.
 - A launched Rally travels at its slowest participant's march speed, locked at launch. Each participant keeps that ruler's own attack skills, Common Gear, applicable bonuses, casualty recovery, and troop ownership. Combat resolves all participant packages together against live arrival-time defense.
 - Attacker losses are allocated proportionally to troops contributed, with deterministic whole-troop rounding. A defeated Rally has no surviving attackers.
-- On victory, the Rally creator becomes the personal controller of a Stronghold or Crown Citadel and the clan receives its shared benefit. The creator's survivors hold the objective; allied survivors remain there as individually attributable reinforcements their owners may recall. Future Holding Towers remain clan-owned and all survivors are stationed as attributed clan garrison troops rather than creating a personal owner.
+- On victory, the Rally creator becomes the personal controller of a Stronghold or Crown Citadel and the clan receives its shared benefit. The creator's survivors hold the objective; allied survivors remain there as individually attributable reinforcements their owners may recall. Holding Towers remain clan-owned and all eligible survivors are stationed as attributed clan garrison troops rather than creating a personal owner.
 - Every participant receives the same Rally battle outcome snapshot with a clearly labeled breakdown of each participant's committed troops, losses, survivors, and contribution.
 - If a Rally return's original city is still owned by the participant, the army returns there. If it is neutral or clan-owned, the army returns to the participant's Main City. If an enemy owns it, the returning army attacks that city.
 - Ordinary objective Rallies are not restricted by ordinary-city attack protection, neutral-city caps, or anti-farming gates. Committing Rally troops does not remove a Royal Peace Shield.
 - The ordinary Rally lifecycle correction above is `LIVE — ALL PUBLISHED CHANNELS`. PR #171 merged as `1e5cdad...`, PR #180 merged the stale Rally-ownership correction as `1a0efbcb...`, and descendant build `a561374b...` established the first verified cross-channel baseline. Current web and itch.io build `fdf326a...` retains the correction. The corrected beginner guide remains live on the canonical game host and itch artifact but not on the separately published primary-domain public site.
-- The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `PLANNED`; its five-member minimum does not replace the ordinary Rally minimum globally.
+- The five-member Holding Tower conquest rule documented in Section 8 is target-specific and `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`; its five-member minimum does not replace the ordinary Rally minimum globally.
 
 ### Clan Treasury
 
-- Clan Treasury is `PLANNED` as part of Holding Towers.
+- Clan Treasury is `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT` as part of Holding Towers.
 - Treasury funds are donated personal Gold and cannot be withdrawn.
 - All members may donate; only Leaders and Officers may spend.
 - Treasury balance resets each season and when the clan disbands.
@@ -864,7 +864,7 @@ The reset path uses explicit Common Gear and clan persistence helpers around `cr
 | Notification preferences | Persist | Carried forward when present | Matches design in source |
 | Authentication and active-session state | May carry forward as technical state | Selected authentication fallbacks and active-session state are carried forward | Technical carry-forward; not progression |
 | Clan ID/name/tag/heraldry, roster, membership, and roles | Persist | Transactionally migrated to the new generation; invalid/incomplete records fail without partial reset writes | Matches design in source and emulator coverage |
-| Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, donations/gifts activity, and objective ownership | Reset | Rebuilt or cleared for the new generation | Matches the reset direction in source; exact future Treasury path is not LIVE |
+| Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, donations/gifts activity, and objective ownership | Reset | Rebuilt or cleared for the new generation | Matches the reset direction in source; the generation-scoped Treasury implementation is pending merge and authorized deployment |
 | Owned Common Gear | Persist | Preserved through the explicit Gear reset helper | Matches design in source and emulator coverage |
 | Equipped Common Gear | Persist | Preserved with normalized slot state | Matches design in source and emulator coverage |
 | Common Gear levels/upgrades/progression | Persist | Instance and upgrade state is preserved | Matches design in source and emulator coverage |
@@ -1084,7 +1084,7 @@ Status verified through August 31, 2026.
 | 20-region connected world | `LIVE — ALL PUBLISHED CHANNELS` | Five regions retain placeholder numeric names. |
 | Camps, Strongholds, Crown Citadel | `LIVE — ALL PUBLISHED CHANNELS` | Current contrast fixes are present on both channels. |
 | Clans and ordinary Rally foundation | `LIVE — ALL PUBLISHED CHANNELS` | Web and itch.io now share the corrected lifecycle. |
-| Ordinary Rally lifecycle correction | `LIVE — ALL PUBLISHED CHANNELS` | 2–20 participants, deterministic settlement and safe returns, plus automatic complete-army recall when the creator leaves, is removed, or changes clans. Holding Tower Rally rules remain separate and are not live. |
+| Ordinary Rally lifecycle correction | `LIVE — ALL PUBLISHED CHANNELS` | 2–20 participants, deterministic settlement and safe returns, plus automatic complete-army recall when the creator leaves, is removed, or changes clans. Holding Tower Rally rules remain separate and are implemented but not live. |
 | Global and Clan Chat | `LIVE — ALL PUBLISHED CHANNELS` | Moderation expansion is unresolved. |
 | Daily Login, Daily Missions, 40 Achievements | `LIVE — ALL PUBLISHED CHANNELS` | Reward calculations are verified in source; complete definitions and production runtime parity remain open. |
 | Common Gear foundation and upgrades | `LIVE — ALL PUBLISHED CHANNELS` | Future rarities are planned. |
@@ -1095,7 +1095,7 @@ Status verified through August 31, 2026.
 | Hero level-up Gold 27-hour endgame ceiling | `IN DEVELOPMENT` | Levels 2-116 remain unchanged; Level 117 is the first reduced reward. Coordinated backend, web, and itch.io deployment is required before this balance is live. |
 | Unified skill controls, free live refunds, free Reset Skills, and Skills readability update | `LIVE — ALL PUBLISHED CHANNELS` | Web and the public itch.io iframe now use exact client build `fdf326a...`; authenticated mutation smoke remains pending. |
 | Session heartbeat timeout and lifecycle recovery | `LIVE — ALL PUBLISHED CHANNELS` | Web and itch.io bound an individual heartbeat response at 15 seconds and ignore late responses from stopped lifecycle generations. Static, all 33 emulator files, the 120-session realm admission case, and direct public asset checks passed; authenticated interrupted-connection recovery remains manual QA. |
-| Holding Towers and Clan Treasury | `PLANNED` | Confirmed design is preserved in Section 8. Historical PR #159 is archived and must be replaced by a clean synchronized branch when prioritized. |
+| Holding Towers and Clan Treasury | `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT` | Current-Core-only implementation covers the four Towers, attributed garrisons, target-specific Rallies, scouting, walls, repairs, Veil, Treasury, reset/departure handling, security, and current-map reconciliation. It is not live. |
 | Pending 5×5 Core | `DEPLOYED — SCHEDULED ACTIVATION` | Held production build `8d80b6a...` contains the complete fail-closed Core seed/readiness path; repository activation is scheduled for September 2 at 00:00 UTC. |
 | Production reset/persistence enforcement | `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION` | Explicit identity, clan, and Common Gear persistence is covered by emulator tests; a READY managed backup and pointer rollback path are verified. |
 | Dynamic map expansion | `DEPLOYED — SCHEDULED ACTIVATION` | Held production build includes deterministic Layer 3+ growth and live client discovery; post-boundary production verification remains. |
@@ -1118,7 +1118,7 @@ Status verified through August 31, 2026.
 - Five web regions use placeholder numeric names.
 - Starting-resource documentation conflicts with the current source. `origin/main` initializes 100 Gold and 200 troops; deployed runtime parity remains unverified.
 - Production Player Flag saving needs a current smoke test.
-- Holding Towers/Clan Treasury have no active current-main implementation; historical PR #159 is archived and a clean implementation branch has not started.
+- Holding Towers/Clan Treasury are implemented on a synchronized feature branch but remain pending merge, authorized deployment, and authenticated production verification. Historical PR #159 remains archived and must not be merged.
 - The latest verified managed Firestore backup is `READY`, and pointer rollback is implemented by retaining the previous realm generation. A full production restore has not been rehearsed during this release window.
 - Authenticated browser smoke testing remains manual because the local in-app browser-control runtime was unavailable during the reset-arming audit.
 - The King Power validator uses a hardcoded troop-production factor of 3 while executable economy configuration uses 10.
@@ -1138,7 +1138,7 @@ These source-level items are **NEEDS VERIFICATION** against current `main` befor
 
 ### Confirmed active direction
 
-- When prioritized, create a clean synchronized Holding Tower branch, implement the confirmed Section 8 design against current contracts, and complete production validation and an authorized rollout. Current status: `PLANNED`.
+- Complete review and validation of the clean synchronized Holding Tower implementation, then perform an explicitly authorized rollout with current-Core-only production verification. Current status: `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`.
 - Prepare the pending 5×5 Core and safe reset path. Current status: `IN DEVELOPMENT`.
 - Develop scalable outward map expansion. Current status: `IN DEVELOPMENT`.
 - Define and deliver Seasons using the persistence policy in Section 15. Current status: `PLANNED`.
@@ -1192,9 +1192,9 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | `LIVE — ALL PUBLISHED CHANNELS` | Build `fdf326a...`: unified `− | cost | +` skill controls, free live refunds, free Reset Skills, signed optimistic adjustments, and updated Skills tab/card readability. The separately hosted primary-domain public pages remain outside this client statement. |
 | `LIVE — ITCH.IO` | No feature is known to be uniquely newer on itch.io |
 | `IMPLEMENTED BUT NOT LIVE` | Uniform two-minute pickup cadence and center-biased pickup placement |
-| `IMPLEMENTED BUT NOT LIVE` | Armed 5×5 Core reset, clan/Common Gear persistence enforcement, and deterministic dynamic map expansion pending the September 2 UTC boundary and post-reset verification |
+| `IMPLEMENTED BUT NOT LIVE` | Armed 5×5 Core reset, clan/Common Gear persistence enforcement, deterministic dynamic map expansion pending the September 2 UTC boundary and post-reset verification, and Holding Towers/Clan Treasury pending merge and authorized deployment |
 | `IN DEVELOPMENT` | Continuing UI/performance/onboarding work |
-| `PLANNED` | Holding Towers and Clan Treasury, Seasons, final-season Kingdom/Clan leaderboard archives, higher Gear rarities |
+| `PLANNED` | Seasons, final-season Kingdom/Clan leaderboard archives, higher Gear rarities |
 | `PROPOSED` | Detailed Clan Wars, regional-control scoring, unconfirmed world-event concepts, unconfirmed expanded sound/animation mechanics |
 | `NEEDS VERIFICATION` | Exact production runtime parity for repository-verified starting resources/formulas/reset behavior, ranking policy, monetization policy, moderation, SLOs, security posture, device matrix, and channel parity target |
 
@@ -1209,7 +1209,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Achievement count | Earlier proposal of 50 | Superseded; current confirmed count is 40 |
 | Season item persistence | Earlier broad statement that items persist | Superseded by explicit player identity, clan, and Common Gear allowlist; normal consumables do not persist |
 | Bag stacking | Earlier limited-stacking discussion versus all-identical-item request | Both published clients group identical Bag items by quantity |
-| Rally size | 2–20-player ordinary Rally versus five-member-minimum Tower conquest Rally | Both apply to different target types; Tower rule is not live |
+| Rally size | 2–20-player ordinary Rally versus five-member-minimum Tower conquest Rally | Both apply to different target types; Tower rule is implemented pending merge and authorized deployment and is not live |
 | Mobile portrait | Earlier portrait Gear QA | Does not establish portrait game support; landscape is authoritative |
 | Item pricing | Older fixed prices versus scalable pricing | Scalable formula is confirmed and `LIVE — ALL PUBLISHED CHANNELS` |
 | Clan heraldry | v1 compatibility versus v2 presentation | v1 remains unchanged until deliberate v2 save; v2 is `LIVE — ALL PUBLISHED CHANNELS` |
@@ -1252,7 +1252,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | [Current canonical game Netlify deploy](https://api.netlify.com/api/v1/deploys/6a94c517ebd65700085b9ad3) | Current game production evidence | Ready production deploy of exact build `fdf326a...`, published August 31, 2026 at 00:05:05 UTC; canonical manifest, index, service worker, heartbeat generation counter, and stale-response guard passed direct HTTP checks on both canonical hostnames |
 | [Primary-domain beginner guide](https://playcrownlands.com/how-to-play.html) | Separately published player-facing documentation | Live response still contains the superseded three-ruler, Reward Camp, shield-removal, inbound-launch, and leader-speed rules; refresh ownership and deployment remain **NEEDS VERIFICATION** |
 | August 27 post-deploy Firebase Functions listing | Current backend deployment metadata | Authorized full refresh from clean build `291e5657...`; 109 active Node.js 22 Functions share source hash `322ab24b...`, with source generations spanning 16:08:33–16:15:57 UTC. `adjustSkillLevels` is active, the obsolete skill-state trigger is absent, and the 29-callable access audit and production rules parity check passed; authenticated `getRealmInfo`, skill, and city mutations were not performed. |
-| [GitHub PR #159](https://github.com/explocion200/CrownLands/pull/159) | Historical Holding Towers/Clan Treasury implementation and design evidence | Archived, unmerged, not live, and not a merge candidate; the confirmed design is preserved in Section 8 and requires a clean current-main implementation when prioritized |
+| [GitHub PR #159](https://github.com/explocion200/CrownLands/pull/159) | Historical Holding Towers/Clan Treasury implementation and design evidence | Archived, unmerged, not live, and not a merge candidate; the current synchronized implementation supersedes it while preserving the confirmed Section 8 design |
 | `README.md` | Historical mechanics and implementation documentation | Detailed but stale on world/build state |
 | `docs/CROWNLANDS_ART_BIBLE.md` | Visual direction | Incorporated by reference |
 | `docs/CROWNLANDS_VISUAL_MIGRATION.md` | Visual migration history | Historical implementation evidence |

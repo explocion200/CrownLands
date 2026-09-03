@@ -27,6 +27,7 @@ function extractFunction(name) {
 }
 
 const directScout = extractFunction("scoutTarget");
+const automaticServerScout = extractFunction("launchAutomaticServerScout");
 const nearestScout = extractFunction("findNearestScoutSourceAsync");
 const nearbyScout = extractFunction("getNearbyScoutOptionsAsync");
 const regroup = extractFunction("getNearbyRegroupOptionsAsync");
@@ -34,8 +35,9 @@ for (const [label, source] of Object.entries({ directScout, nearestScout, nearby
   assert.doesNotMatch(source, /findLandRoute\s*\(|findRoute\s*\(/, `${label} must not run synchronous routing on the interaction thread.`);
 }
 assert.match(directScout, /pendingDirectScoutTargets\.has/, "Direct scout clicks must suppress duplicate calculations.");
-assert.match(directScout, /findNearestOwnedSourceCandidate/, "Online direct scouts must select a source without waiting for route batches.");
-assert.match(directScout, /createInstantOrderRoute/, "Online direct scouts must create an immediate route intent.");
+assert.match(directScout, /usesServerArmyAuthority\(\)[\s\S]*launchAutomaticServerScout/, "Online direct scouts must dispatch target-only without waiting for route batches.");
+assert.match(automaticServerScout, /api\.sendArmyOrder/, "Online direct scouts must use the canonical server army action.");
+assert.doesNotMatch(automaticServerScout, /fromId|sourceRegionId\s*:/, "The client must not choose an origin for an automatic online scout.");
 assert.match(nearestScout, /await findRoutesAsync/, "Nearest scout selection must use the route worker batch.");
 assert.match(nearbyScout, /await findRoutesAsync/, "Scout Nearby must use the route worker batch.");
 assert.match(regroup, /await findRoutesAsync/, "Regroup must use the route worker batch.");

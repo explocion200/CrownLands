@@ -40,7 +40,7 @@ requires(server, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/
 requires(client, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The client rally assembly travel multiplier drifted from the server.");
 requires(server, /function isRallyObjectiveTarget[\s\S]*?targetType === "city" && isStronghold\(target\)/, "Rallies are not restricted to Strongholds and the Crown Citadel.");
 requires(server, /activeRalliesQuery[\s\S]*?RALLY_STATUS_FORMING[\s\S]*?RALLY_STATUS_LAUNCHED[\s\S]*?RALLY_STATUS_RECALLING[\s\S]*?activeRallyIds\.length >= CLAN_ACTIVE_RALLY_LIMIT/, "The five-active-Rally clan limit is not transactionally enforced.");
-requires(server, /activeRallyParticipants\(rally\)\.length >= RALLY_MAX_PARTICIPANTS/, "The 20-player participant limit is missing.");
+requires(server, /participantLimit\s*=\s*rally\.targetType === "tower" \? CLAN_MEMBER_LIMIT : RALLY_MAX_PARTICIPANTS[\s\S]*?activeRallyParticipants\(rally\)\.length >= participantLimit/, "The established 20-player limit is not preserved for normal rallies while Tower rallies use the clan-roster limit.");
 requires(server, /getRallyParticipant\(rally,\s*uid\)[\s\S]*?duplicate:\s*true/, "Duplicate contributions are not idempotent.");
 requires(server, /exports\.createClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*target\)[\s\S]*?exports\.joinClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*assembly\)/, "Leader and ally rally routes are not rebuilt by the canonical server planner.");
 assert.doesNotMatch(server.slice(server.indexOf("exports.createClanRally"), server.indexOf("exports.joinClanRally")), /getRallyShieldDeactivation/, "Creating a Rally still removes a Peace Shield.");

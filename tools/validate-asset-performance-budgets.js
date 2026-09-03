@@ -50,7 +50,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // controls, and dirty-exit dialog add under 16 KiB across the precached client.
 // The staged wall and production helpers add under 16 KiB while keeping the
 // full offline shell bounded. Advance the allowance by one 16 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3520 * 1024;
+// Holding Tower controls and the two existing heraldry sprites used by Tower
+// ownership crests add under one bounded 128 KiB offline-shell step.
+const MAX_INSTALL_PRECACHE_BYTES = 3648 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -64,6 +66,7 @@ const categoryFileBudgets = {
   status: 24 * 1024,
   item: 16 * 1024,
   objective: 80 * 1024,
+  "holding-tower-object": 48 * 1024,
   "stronghold-object": 80 * 1024,
   "camp-object": 80 * 1024,
   "citadel-object": 80 * 1024,
@@ -84,13 +87,19 @@ const entrypointBudgets = {
   // Preset draft state, guarded navigation, and explicit save/apply handling
   // remain within one bounded 16 KiB client-runtime step.
   // Timed Core activation and live New Lands discovery add a bounded client control path.
-  "game.js": 1690 * 1024,
+  // Holding Tower map interaction, automatic scouting, Treasury controls, and
+  // movement composers add under one bounded 32 KiB runtime step.
+  "game.js": 1722 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add
   // under one bounded 4 KiB stylesheet step.
-  "styles.css": 404 * 1024,
+  // Map markers and the complete responsive Tower/Treasury panel add under one
+  // bounded 16 KiB shared-style step.
+  "styles.css": 420 * 1024,
+  "holding-tower-ui.css": 24 * 1024,
+  "holding-tower-ui.js": 24 * 1024,
   "common-gear-ui.css": 40 * 1024,
   "interface-theme.css": 128 * 1024,
   "manuscript-prototype.css": 64 * 1024,
@@ -245,6 +254,7 @@ for (const requiredShellFile of [
   "index.html",
   "manifest.webmanifest",
   "styles.css",
+  "holding-tower-ui.css",
   "interface-theme.css",
   "manuscript-prototype.css",
   "ui-contrast-correction.css",
@@ -254,6 +264,7 @@ for (const requiredShellFile of [
   "mobile-viewport.css",
   "base-cities.js",
   "instant-economy-actions.js",
+  "holding-tower-ui.js",
   "game.js",
   "animation-manager.js",
   "firebaseClient.js",

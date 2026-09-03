@@ -56,6 +56,68 @@ assert(
   game.includes('if (pendingImage) pendingImage.fetchPriority = "high"'),
   "A selected island should promote an in-progress background preload."
 );
+assert(
+  /async function ensureRegionDefinitionLoaded[\s\S]*?refreshWorldCampSlotsForRegion\(normalizedRegionId\);[\s\S]*?refreshWorldHoldingTowerSlotsForRegion\(normalizedRegionId\);/.test(game),
+  "Lazy-loaded Core maps must refresh both Camp and Holding Tower marker collections."
+);
+assert(
+  /function refreshWorldCampSlotsForRegion[\s\S]*?WORLD_CAMPS\.splice[\s\S]*?WORLD_CAMPS_BY_ID\.clear\(\)[\s\S]*?WORLD_CAMPS_BY_ID\.set/.test(game),
+  "Camp marker refresh must replace the loaded region and rebuild its lookup map."
+);
+assert(
+  /function refreshWorldHoldingTowerSlotsForRegion[\s\S]*?WORLD_HOLDING_TOWERS\.splice[\s\S]*?WORLD_HOLDING_TOWERS\.push/.test(game),
+  "Holding Tower marker refresh must replace the loaded region without touching other maps."
+);
+
+const refreshedCamps = [
+  { id: "stale-current-camp", regionId: "core-v2-center" },
+  { id: "preserved-other-camp", regionId: "archived-world-region" },
+];
+const refreshedCampsById = new Map(refreshedCamps.map(camp => [camp.id, camp]));
+const refreshWorldCampSlotsForRegion = vm.runInNewContext(
+  `(${extractFunction(game, "refreshWorldCampSlotsForRegion")})`,
+  {
+    WORLD_CAMPS: refreshedCamps,
+    WORLD_CAMPS_BY_ID: refreshedCampsById,
+    cleanEditorRegionId: value => String(value || "").trim(),
+    generateWorldCampSlots: () => [
+      { id: "fresh-current-camp", regionId: "core-v2-center" },
+      { id: "generated-but-not-loaded", regionId: "archived-world-region" },
+    ],
+  }
+);
+refreshWorldCampSlotsForRegion("core-v2-center");
+assert(
+  refreshedCamps.map(camp => camp.id).sort().join(",") === "fresh-current-camp,preserved-other-camp",
+  "Refreshing a lazy-loaded Camp region must preserve every other world or map."
+);
+assert(
+  refreshedCampsById.has("fresh-current-camp")
+    && refreshedCampsById.has("preserved-other-camp")
+    && !refreshedCampsById.has("stale-current-camp"),
+  "The Camp lookup must be rebuilt from the safely refreshed marker collection."
+);
+
+const refreshedTowers = [
+  { id: "stale-current-tower", regionId: "core-v2-north-west-holding-tower-m1-m1" },
+  { id: "preserved-other-tower", regionId: "archived-world-region" },
+];
+const refreshWorldHoldingTowerSlotsForRegion = vm.runInNewContext(
+  `(${extractFunction(game, "refreshWorldHoldingTowerSlotsForRegion")})`,
+  {
+    WORLD_HOLDING_TOWERS: refreshedTowers,
+    cleanEditorRegionId: value => String(value || "").trim(),
+    generateCurrentCoreHoldingTowerSlots: () => [
+      { id: "fresh-current-tower", regionId: "core-v2-north-west-holding-tower-m1-m1" },
+      { id: "generated-but-not-loaded", regionId: "archived-world-region" },
+    ],
+  }
+);
+refreshWorldHoldingTowerSlotsForRegion("core-v2-north-west-holding-tower-m1-m1");
+assert(
+  refreshedTowers.map(tower => tower.id).sort().join(",") === "fresh-current-tower,preserved-other-tower",
+  "Refreshing a lazy-loaded Holding Tower region must preserve every other world or map."
+);
 
 const backgroundStart = game.indexOf("function setImageMapBackground");
 const backgroundEnd = game.indexOf("function renderWorldMap", backgroundStart);
@@ -183,6 +245,10 @@ const normalizeOnlineCampState = vm.runInNewContext(
     readVisualSize(value, fallback) {
       const parsed = Math.floor(Number(value));
       return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+    },
+    getCampRenderSize(camp) {
+      const parsed = Math.floor(Number(camp?.visualSize || camp?.size));
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 132;
     },
     normalizeRegionId: value => String(value || ""),
     getRegionIdFromOnlineIslandId: value => String(value || "").replace(/^crownlands-/, ""),
