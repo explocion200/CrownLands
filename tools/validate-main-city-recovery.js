@@ -24,10 +24,29 @@ const decisionSource = sourceBetween(
   "function resolveMainCityRecoveryResult",
   "async function setupOnlineWorld"
 );
+const cityIdentitySource = sourceBetween(
+  gameSource,
+  "function getDynamicNewLandsCityIdentity",
+  "function normalizeRealmShardId"
+);
+const activeRegionIds = ["west", "region_11", "region_12", "new-lands-l01-p002"];
 const decisionSandbox = {
-  getKnownCityId: value => (/^[a-z0-9_-]+$/i.test(String(value || "")) ? String(value) : ""),
-  getRegionIds: () => ["west", "region_11", "region_12"],
-  getCityRegionId: cityId => String(cityId || "").split("_city_")[0] || "west",
+  CORE_EXPANSION_TOPOLOGY_ACTIVE: true,
+  WORLD_REGION_IDS: [...activeRegionIds, "new-lands-l01-p003"],
+  DEFAULT_ONLINE_REGION_ID: "west",
+  state: null,
+  getPlayableBaseCityById: value => (/^region_(11|12)_city_\d{3}$/.test(String(value || ""))
+    ? { id: String(value), regionId: String(value).split("_city_")[0] }
+    : null),
+  getRegionIds: () => activeRegionIds,
+  getRegionById: regionId => ({
+    west: { id: "west", cityCapacity: 50 },
+    region_11: { id: "region_11", cityCapacity: 50 },
+    region_12: { id: "region_12", cityCapacity: 50 },
+    "new-lands-l01-p002": { id: "new-lands-l01-p002", cityCapacity: 40 },
+    "new-lands-l01-p003": { id: "new-lands-l01-p003", cityCapacity: 40 },
+  }[regionId] || null),
+  normalizeRegionId: regionId => (activeRegionIds.includes(regionId) ? regionId : "west"),
   getOnlineIslandId: regionId => `main-${regionId}`,
   withTimeout: (promise, timeoutMs, message) => Promise.race([
     promise,
@@ -36,11 +55,37 @@ const decisionSandbox = {
 };
 vm.createContext(decisionSandbox);
 vm.runInContext(
-  `${decisionSource}; this.resolveMainCityRecoveryResult = resolveMainCityRecoveryResult; this.requestAuthoritativeMainCityRecovery = requestAuthoritativeMainCityRecovery;`,
+  `${cityIdentitySource}\n${decisionSource}; this.resolveMainCityRecoveryResult = resolveMainCityRecoveryResult; this.requestAuthoritativeMainCityRecovery = requestAuthoritativeMainCityRecovery; this.getKnownCityId = getKnownCityId; this.getCityRegionId = getCityRegionId;`,
   decisionSandbox
 );
 const decide = decisionSandbox.resolveMainCityRecoveryResult;
 const requestRecovery = decisionSandbox.requestAuthoritativeMainCityRecovery;
+
+assert.equal(
+  decisionSandbox.getKnownCityId("new-lands-l01-p002-city-38"),
+  "new-lands-l01-p002-city-38",
+  "An active canonical New Lands city was rejected when it was absent from the local city cache."
+);
+assert.equal(
+  decisionSandbox.getCityRegionId("new-lands-l01-p002-city-38"),
+  "new-lands-l01-p002",
+  "An active canonical New Lands city did not resolve to its exact region."
+);
+for (const cityId of [
+  "new-lands-l01-p003-city-01",
+  "new-lands-l01-p002-city-00",
+  "new-lands-l01-p002-city-41",
+  "new-lands-l01-p002-city-1",
+  "new-lands-l01-p002-city-038",
+  "new-lands-l01-p002-city-38-extra",
+  "NEW-LANDS-L01-P002-CITY-38",
+]) {
+  assert.equal(
+    decisionSandbox.getKnownCityId(cityId),
+    "",
+    `A noncanonical, inactive, or out-of-capacity New Lands city was accepted: ${cityId}`
+  );
+}
 
 assert.deepEqual(
   JSON.parse(JSON.stringify(decide({
@@ -72,6 +117,16 @@ assert.equal(decide({
     mainIslandId: "main-region_11",
   },
 }).status, "valid", "A valid existing city was not accepted.");
+assert.equal(decide({
+  ok: true,
+  requiresStartingCityClaim: false,
+  mainCityRecoveryStatus: "valid",
+  currentUser: {
+    mainCityId: "new-lands-l01-p002-city-38",
+    mainRegionId: "new-lands-l01-p002",
+    mainIslandId: "main-new-lands-l01-p002",
+  },
+}).status, "valid", "A valid authoritative New Lands city was not accepted without a local city cache entry.");
 assert.throws(
   () => decide({ requiresStartingCityClaim: true, mainCityRecoveryStatus: "claim-required" }),
   /authoritative recovery result/i,
@@ -145,6 +200,36 @@ for (const [label, response] of [
     requiresStartingCityClaim: false,
     mainCityRecoveryStatus: "valid",
     currentUser: { mainCityId: "region_11_city_001", mainRegionId: "region_12", mainIslandId: "main-region_12" },
+  }],
+  ["New Lands city-region mismatch", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: {
+      mainCityId: "new-lands-l01-p002-city-38",
+      mainRegionId: "new-lands-l01-p003",
+      mainIslandId: "main-new-lands-l01-p003",
+    },
+  }],
+  ["inactive New Lands city", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: {
+      mainCityId: "new-lands-l01-p003-city-01",
+      mainRegionId: "new-lands-l01-p003",
+      mainIslandId: "main-new-lands-l01-p003",
+    },
+  }],
+  ["out-of-capacity New Lands city", {
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: {
+      mainCityId: "new-lands-l01-p002-city-41",
+      mainRegionId: "new-lands-l01-p002",
+      mainIslandId: "main-new-lands-l01-p002",
+    },
   }],
 ]) {
   assert.throws(
