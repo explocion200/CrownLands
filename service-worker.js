@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260902-march-path-alignment-r1";
+const CACHE_VERSION = "20260902-holding-towers-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -35,6 +35,7 @@ const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/holding-tower-ui.css?v=20260902-holding-towers-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
@@ -58,14 +59,17 @@ const STATIC_CACHE_URLS = [
   "/functions/clanHeraldryLegacyV1.js?v=20260823-clan-heraldry-live-ui-r1",
   "/functions/clanHeraldryRenderer.js?v=20260823-clan-heraldry-live-ui-r1",
   "/firebaseClient.js?v=20260902-march-sync-realm-scope-r1",
+  "/holding-tower-ui.js?v=20260902-holding-towers-r1",
   "/animation-manager.js?v=20260810-daily-mission-camp-fix-v1",
   "/instant-economy-actions.js?v=20260829-city-upgrade-queue-stability-r1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260902-march-path-alignment-r1",
+  "/game.js?v=20260902-holding-towers-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",
+  "/assets/clan-heraldry/art-set-v1/charges-full.svg",
+  "/assets/clan-heraldry/art-set-v1/charges-micro.svg",
   "/assets/optimized/login-background-1448x1086-c8507d1988d6.webp",
   "/assets/optimized/loading-ring-256x256-38fb3df7217c.webp"
 ];

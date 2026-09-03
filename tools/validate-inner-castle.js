@@ -85,9 +85,9 @@ function getWebpMetadata(buffer) {
 }
 
 const BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
-const CACHE_BUILD_ID = "20260902-march-path-alignment-r1";
+const CACHE_BUILD_ID = "20260902-holding-towers-r1";
 const STYLE_BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
-const GAME_BUILD_ID = "20260902-march-path-alignment-r1";
+const GAME_BUILD_ID = "20260902-holding-towers-r1";
 const GEAR_UI_BUILD_ID = "20260825-gear-upgrade-consumption-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
