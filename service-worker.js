@@ -35,7 +35,7 @@ const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
-  "/holding-tower-ui.css?v=20260902-holding-towers-r1",
+  "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
   "/interface-theme.css?v=20260814-readability-r38",
   "/readability.css?v=20260819-player-flags-v2-r1",
   "/manuscript-prototype.css?v=20260819-player-flags-v2-r1",
