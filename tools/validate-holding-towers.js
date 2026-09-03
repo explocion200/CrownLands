@@ -424,6 +424,9 @@ for (const tower of towers.TOWERS) {
 assert.doesNotMatch(server, /holdingTower[\s\S]{0,80}(productionBonus|attackBonus|marchBonus|xpBonus|territoryBonus)/i, "A forbidden passive Holding Tower bonus was introduced.");
 requires(firebaseClient, /getHoldingTowerState[\s\S]*?getClanTreasuryStatus[\s\S]*?donateClanTreasuryGold/, "Holding Tower client callable wrappers are incomplete.");
 requires(client, /holding-tower-node[\s\S]*?openHoldingTower/, "The approved Tower art is not interactive.");
+requires(holdingTowerStyles, /\.holding-tower-node\s*\{[\s\S]*?position:\s*absolute[\s\S]*?width:\s*var\(--holding-tower-width[\s\S]*?pointer-events:\s*auto/, "Holding Tower markers are not positioned, sized, and interactive on the map.");
+requires(holdingTowerStyles, /\.holding-tower-art\s*\{[\s\S]*?width:\s*100%[\s\S]*?height:\s*100%[\s\S]*?object-fit:\s*contain/, "Holding Tower art does not fill its map marker.");
+requires(holdingTowerStyles, /\.holding-tower-map-label\s*\{[\s\S]*?position:\s*absolute[\s\S]*?white-space:\s*nowrap/, "Holding Tower map labels are not anchored to their markers.");
 requires(client, /function scoutTarget[\s\S]*?usesServerArmyAuthority\(\)[\s\S]*?launchAutomaticServerScout/, "The normal Scout action does not use the target-only automatic server flow.");
 requires(client, /async function ensureRegionDefinitionLoaded[\s\S]*?refreshWorldCampSlotsForRegion\(normalizedRegionId\)[\s\S]*?refreshWorldHoldingTowerSlotsForRegion\(normalizedRegionId\)/, "Lazy Core map loading does not refresh Camp and Holding Tower markers for the active map.");
 requires(client, /function refreshWorldHoldingTowerSlotsForRegion[\s\S]*?WORLD_HOLDING_TOWERS\.splice[\s\S]*?WORLD_HOLDING_TOWERS\.push/, "Holding Tower refresh can leave stale or missing markers after a lazy map load.");
