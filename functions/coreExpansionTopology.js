@@ -9,6 +9,24 @@ const EXPANSION_ACTIVATION_BATCH_SIZE = 2;
 const MAX_NEW_LANDS_REGIONS = 4095;
 const ACTIVATION_RECEIPT_LIMIT = 256;
 const TOPOLOGY_VERSION = "core-expansion-v1";
+const MAIN_CITY_RESTRICTED_REGION_IDS = Object.freeze([
+  "core-v2-north-west-holding-tower-m1-m1",
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-north-east-holding-tower-p1-m1",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-aurum-keep-m1-p0",
+  "core-v2-south-west-holding-tower-m1-p1",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-south-east-holding-tower-p1-p1",
+]);
+const RED_TRIM_REGION_IDS = Object.freeze([
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-aurum-keep-m1-p0",
+]);
 const PREPARED_CORE_REGION_NAMES = Object.freeze({
   "core-v2-warband-camp-m2-m2": "Frostwolf March",
   "core-v2-relic-camp-north-west-m1-m2": "Ravenscar",
@@ -489,6 +507,8 @@ module.exports = Object.freeze({
   MAX_NEW_LANDS_REGIONS,
   ACTIVATION_RECEIPT_LIMIT,
   TOPOLOGY_VERSION,
+  MAIN_CITY_RESTRICTED_REGION_IDS,
+  RED_TRIM_REGION_IDS,
   PREPARED_CORE_REGION_NAMES,
   PREPARED_NEW_LANDS_REGION_NAMES,
   getClockwiseLayerCoordinates,

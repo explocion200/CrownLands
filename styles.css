@@ -4721,6 +4721,16 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .island-map-picker .island-map-icon.home {
   border-color: rgba(255, 214, 126, .78);
 }
+.island-map-picker .island-map-icon.red-trim::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  z-index: 4;
+  border: 3px solid #b51f2e;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgba(255, 179, 153, .72), 0 0 12px rgba(181, 31, 46, .7);
+  pointer-events: none;
+}
 .island-map-thumb {
   position: relative;
   z-index: 1;

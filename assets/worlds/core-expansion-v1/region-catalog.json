@@ -4,6 +4,29 @@
   "worldName": "Crownlands Core and New Lands",
   "version": 2026090201,
   "topologyVersion": "core-expansion-v1",
+  "mainCityPolicy": {
+    "version": 1,
+    "restrictedRegionIds": [
+      "core-v2-north-west-holding-tower-m1-m1",
+      "core-v2-greybanner-hold-p0-m1",
+      "core-v2-north-east-holding-tower-p1-m1",
+      "core-v2-swiftgate-p1-p0",
+      "core-v2-crown-citadel-p0-p0",
+      "core-v2-aurum-keep-m1-p0",
+      "core-v2-south-west-holding-tower-m1-p1",
+      "core-v2-ironwatch-p0-p1",
+      "core-v2-south-east-holding-tower-p1-p1"
+    ]
+  },
+  "mapPresentation": {
+    "redTrimRegionIds": [
+      "core-v2-greybanner-hold-p0-m1",
+      "core-v2-crown-citadel-p0-p0",
+      "core-v2-swiftgate-p1-p0",
+      "core-v2-ironwatch-p0-p1",
+      "core-v2-aurum-keep-m1-p0"
+    ]
+  },
   "globalSettings": {
     "defaultMapWidth": 1448,
     "defaultMapHeight": 1086,
@@ -5452,5 +5475,6 @@
         }
       }
     }
-  ]
+  ],
+  "assetVersion": "13ac3fe62ecd"
 }

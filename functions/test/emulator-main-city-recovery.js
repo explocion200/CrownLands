@@ -3,6 +3,8 @@ const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
 const worldLayout = require("../world-layout.json");
+const coreWorldLayout = require("../core-expansion-world-layout.json");
+let runtimeRealm = { ...realm };
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -68,9 +70,10 @@ async function callFunctionResult(name, token, data = {}) {
     body: JSON.stringify({
       data: {
         ...data,
-        clientReleaseId: realm.releaseId,
-        clientResetGeneration: realm.resetGeneration,
-        clientWorldId: realm.worldId,
+        clientReleaseId: runtimeRealm.releaseId,
+        clientResetGeneration: runtimeRealm.resetGeneration,
+        clientWorldId: runtimeRealm.worldId,
+        clientRealmShardId: runtimeRealm.realmShardId || "legacy",
       },
     }),
   });
@@ -89,16 +92,23 @@ function updateTimeMs(snapshot) {
 }
 
 function getRegionIdFromIslandId(islandId = "") {
-  return String(islandId).replace(`${realm.worldId}-`, "");
+  return String(islandId).replace(`${runtimeRealm.worldId}-`, "");
+}
+
+function getLeaderboardEntryRef(uid = "") {
+  const storageId = runtimeRealm.realmShardId === "legacy"
+    ? runtimeRealm.resetGeneration
+    : `${runtimeRealm.resetGeneration}--${runtimeRealm.realmShardId}`;
+  return db.doc(`leaderboards/${storageId}/entries/${uid}`);
 }
 
 function getRegularCityIds(regionId = "") {
-  const map = worldLayout.maps.find(entry => entry.id === regionId);
+  const map = [...coreWorldLayout.maps, ...worldLayout.maps].find(entry => entry.id === regionId);
   return (Array.isArray(map?.cities) ? map.cities : []).map(city => city.id).filter(Boolean);
 }
 
 function getStrongholdSeed() {
-  for (const map of worldLayout.maps) {
+  for (const map of [...coreWorldLayout.maps, ...worldLayout.maps]) {
     const objective = Array.isArray(map.objectives) ? map.objectives[0] : null;
     if (objective?.id) return { ...objective, regionId: map.id };
   }
@@ -132,21 +142,30 @@ function persistentGearFixture() {
 }
 
 async function main() {
-  const [player, stranger, archivedPlayer, noCityPlayer] = await Promise.all([
+  const [player, stranger, archivedPlayer, noCityPlayer, restrictedOnlyPlayer] = await Promise.all([
     createAuthUser("player"),
     createAuthUser("stranger"),
     createAuthUser("archived"),
     createAuthUser("no-city"),
+    createAuthUser("restricted-only"),
   ]);
-  const [claim, strangerClaim, noCityClaim] = await Promise.all([
+  const realmInfo = await callFunction("getRealmInfo", player.token);
+  runtimeRealm = {
+    releaseId: realmInfo.currentReleaseId || realm.releaseId,
+    resetGeneration: realmInfo.resetGeneration || realm.resetGeneration,
+    worldId: realmInfo.worldId || realm.worldId,
+    realmShardId: realmInfo.sharedRealmId || realmInfo.realmShardId || "legacy",
+  };
+  const [claim, strangerClaim, noCityClaim, restrictedOnlyClaim] = await Promise.all([
     callFunction("claimStartingCity", player.token, { playerName: "Recovery Ruler" }),
     callFunction("claimStartingCity", stranger.token, { playerName: "Other Ruler" }),
     callFunction("claimStartingCity", noCityPlayer.token, { playerName: "Replacement Ruler" }),
+    callFunction("claimStartingCity", restrictedOnlyPlayer.token, { playerName: "Restricted Ruler" }),
   ]);
 
   const playerRef = db.doc(`players/${player.uid}`);
   const mainCityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
-  const regionId = getRegionIdFromIslandId(claim.islandId);
+  const regionId = claim.mainRegionId || getRegionIdFromIslandId(claim.islandId);
   const regularIds = getRegularCityIds(regionId);
   const citySnaps = await db.collection(`islands/${claim.islandId}/cities`).get();
   const cityById = new Map(citySnaps.docs.map(doc => [doc.id, doc]));
@@ -164,8 +183,8 @@ async function main() {
       ...secondSeed,
       id: secondCityId,
       regionId,
-      worldId: realm.worldId,
-      resetGeneration: realm.resetGeneration,
+      worldId: runtimeRealm.worldId,
+      resetGeneration: runtimeRealm.resetGeneration,
       ownerKind: "player",
       ownerUid: player.uid,
       ownerName: "Recovery Ruler",
@@ -179,8 +198,8 @@ async function main() {
       ...otherOwnerSeed,
       id: otherOwnerCityId,
       regionId,
-      worldId: realm.worldId,
-      resetGeneration: realm.resetGeneration,
+      worldId: runtimeRealm.worldId,
+      resetGeneration: runtimeRealm.resetGeneration,
       ownerKind: "player",
       ownerUid: stranger.uid,
       ownerName: "Other Ruler",
@@ -247,7 +266,9 @@ async function main() {
 
   // stronghold cannot become main
   const stronghold = getStrongholdSeed();
-  const strongholdIslandId = `${realm.worldId}-${stronghold.regionId}`;
+  const strongholdIslandId = claim.islandId.endsWith(regionId)
+    ? `${claim.islandId.slice(0, -regionId.length)}${stronghold.regionId}`
+    : `${runtimeRealm.worldId}-${stronghold.regionId}`;
   const strongholdRef = db.doc(`islands/${strongholdIslandId}/cities/${stronghold.id}`);
   await Promise.all([
     strongholdRef.set({
@@ -255,8 +276,8 @@ async function main() {
       id: stronghold.id,
       regionId: stronghold.regionId,
       kind: "stronghold",
-      worldId: realm.worldId,
-      resetGeneration: realm.resetGeneration,
+      worldId: runtimeRealm.worldId,
+      resetGeneration: runtimeRealm.resetGeneration,
       ownerKind: "player",
       ownerUid: player.uid,
       ownerName: "Recovery Ruler",
@@ -272,8 +293,99 @@ async function main() {
   assert(recovery.currentUser?.mainCityId === secondCityId, "A stronghold displaced the valid owned regular city.");
   assert((await strongholdRef.get()).data()?.isMainCity === false, "The stronghold retained an invalid main-city flag.");
 
+  // restricted Main City uses the authoritative city path, not spoofed stored or client region data
+  const restrictedRegionId = "core-v2-greybanner-hold-p0-m1";
+  const restrictedMap = coreWorldLayout.maps.find(map => map.id === restrictedRegionId);
+  const [restrictedSeed, restrictedOnlySeed] = restrictedMap?.cities || [];
+  assert(restrictedSeed?.id && restrictedOnlySeed?.id, "The restricted Main City test requires two regular Greybanner Hold cities.");
+  const restrictedIslandId = claim.islandId.endsWith(regionId)
+    ? `${claim.islandId.slice(0, -regionId.length)}${restrictedRegionId}`
+    : `${runtimeRealm.worldId}-${restrictedRegionId}`;
+  const restrictedRef = db.doc(`islands/${restrictedIslandId}/cities/${restrictedSeed.id}`);
+  await Promise.all([
+    restrictedRef.set({
+      ...restrictedSeed,
+      id: restrictedSeed.id,
+      regionId,
+      worldId: runtimeRealm.worldId,
+      resetGeneration: runtimeRealm.resetGeneration,
+      ownerKind: "player",
+      ownerUid: player.uid,
+      ownerName: "Recovery Ruler",
+      isMainCity: true,
+    }),
+    playerRef.set({
+      mainCityId: restrictedSeed.id,
+      mainIslandId: restrictedIslandId,
+      mainRegionId: restrictedRegionId,
+    }, { merge: true }),
+  ]);
+  recovery = await callFunction("repairMainCityAssignment", player.token);
+  assert(recovery.currentUser?.mainCityId === secondCityId, "A restricted-map city displaced an eligible owned city.");
+  assert((await restrictedRef.get()).data()?.isMainCity === false, "Restricted Main City recovery did not clear the invalid city flag.");
+  const spoofedChange = await callFunctionResult("changeMainCity", player.token, {
+    cityId: restrictedSeed.id,
+    regionId,
+  });
+  assert(
+    !spoofedChange.ok && spoofedChange.error?.status === "FAILED_PRECONDITION",
+    "A spoofed eligible client region bypassed the authoritative restricted-map check."
+  );
+
+  // a player with only a restricted regular city must have every Main City projection cleared
+  const restrictedOnlyProfileRef = db.doc(`players/${restrictedOnlyPlayer.uid}`);
+  const restrictedOnlyOriginalRef = db.doc(`islands/${restrictedOnlyClaim.islandId}/cities/${restrictedOnlyClaim.cityId}`);
+  const restrictedOnlyRef = db.doc(`islands/${restrictedIslandId}/cities/${restrictedOnlySeed.id}`);
+  const restrictedOnlyStatsRef = db.doc(`players/${restrictedOnlyPlayer.uid}/stats/global`);
+  const restrictedOnlyLeaderboardRef = getLeaderboardEntryRef(restrictedOnlyPlayer.uid);
+  const restrictedProjection = {
+    mainCityId: restrictedOnlySeed.id,
+    mainIslandId: restrictedIslandId,
+    mainRegionId: restrictedRegionId,
+  };
+  await Promise.all([
+    restrictedOnlyOriginalRef.set({ ownerKind: "neutral", ownerUid: "", ownerName: "", isMainCity: false }, { merge: true }),
+    restrictedOnlyRef.set({
+      ...restrictedOnlySeed,
+      id: restrictedOnlySeed.id,
+      regionId: restrictedOnlyClaim.mainRegionId || getRegionIdFromIslandId(restrictedOnlyClaim.islandId),
+      worldId: runtimeRealm.worldId,
+      resetGeneration: runtimeRealm.resetGeneration,
+      ownerKind: "player",
+      ownerUid: restrictedOnlyPlayer.uid,
+      ownerName: "Restricted Ruler",
+      isMainCity: true,
+    }),
+    restrictedOnlyProfileRef.set(restrictedProjection, { merge: true }),
+    restrictedOnlyStatsRef.set(restrictedProjection, { merge: true }),
+    restrictedOnlyLeaderboardRef.set(restrictedProjection, { merge: true }),
+  ]);
+  const restrictedOnlyRecovery = await callFunction("repairMainCityAssignment", restrictedOnlyPlayer.token);
+  assert(
+    restrictedOnlyRecovery.requiresStartingCityClaim === true
+      && restrictedOnlyRecovery.mainCityRecoveryStatus === "claim-required",
+    "A restricted-only player did not enter the explicit starting-city claim path."
+  );
+  const [restrictedOnlyProfile, restrictedOnlyStats, restrictedOnlyLeaderboard, restrictedOnlyCity] = await Promise.all([
+    restrictedOnlyProfileRef.get(),
+    restrictedOnlyStatsRef.get(),
+    restrictedOnlyLeaderboardRef.get(),
+    restrictedOnlyRef.get(),
+  ]);
+  for (const [label, projection] of [
+    ["profile", restrictedOnlyProfile.data()],
+    ["Global Stats", restrictedOnlyStats.data()],
+    ["leaderboard", restrictedOnlyLeaderboard.data()],
+  ]) {
+    assert(
+      projection?.mainCityId === "" && projection?.mainIslandId === "" && projection?.mainRegionId === "",
+      `Restricted-only recovery did not clear the ${label} Main City projection.`
+    );
+  }
+  assert(restrictedOnlyCity.data()?.isMainCity === false, "Restricted-only recovery did not clear the city Main City flag.");
+
   const playerStatsRef = db.doc(`players/${player.uid}/stats/global`);
-  const playerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${player.uid}`);
+  const playerLeaderboardRef = getLeaderboardEntryRef(player.uid);
   const staleProjection = {
     mainCityId: claim.cityId,
     mainIslandId: claim.islandId,
@@ -360,7 +472,7 @@ async function main() {
 
   // missing projection documents
   const strangerStatsRef = db.doc(`players/${stranger.uid}/stats/global`);
-  const strangerLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${stranger.uid}`);
+  const strangerLeaderboardRef = getLeaderboardEntryRef(stranger.uid);
   await Promise.all([strangerStatsRef.delete(), strangerLeaderboardRef.delete()]);
   const strangerRecovery = await callFunction("repairMainCityAssignment", stranger.token);
   const [missingStatsAfterRecovery, missingLeaderboardAfterRecovery] = await Promise.all([
@@ -427,7 +539,7 @@ async function main() {
     }, { merge: true }),
   ]);
   const noCityStatsRef = db.doc(`players/${noCityPlayer.uid}/stats/global`);
-  const noCityLeaderboardRef = db.doc(`leaderboards/${realm.resetGeneration}/entries/${noCityPlayer.uid}`);
+  const noCityLeaderboardRef = getLeaderboardEntryRef(noCityPlayer.uid);
   const [noCityProfileBefore, noCityStatsBefore, noCityLeaderboardBefore] = await Promise.all([
     noCityProfileRef.get(),
     noCityStatsRef.get(),
@@ -460,7 +572,7 @@ async function main() {
   assert(replacementEconomy?.ok !== false, "collectEconomy was blocked after the replacement starting-city claim.");
 
   assert(strangerClaim.cityId, "The another player's city fixture was not created.");
-  console.log("Emulator main-city recovery passed: archived player, false main-city flag, multiple main-city flags, stale main-city pointer, another player's city, stronghold, no valid regular city, preserved recovery state, and collectEconomy coverage.");
+  console.log("Emulator main-city recovery passed: archived player, false and multiple flags, stale pointers, another player's city, strongholds, restricted Main Cities, spoofed regions, no valid regular city, preserved recovery state, and collectEconomy coverage.");
 }
 
 main()
