@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const ANTI_HANDOFF = require("../functions/anti-handoff-policy.js");
 
 const root = path.resolve(__dirname, "..");
 const serverPath = path.join(root, "functions", "index.js");
@@ -93,6 +94,7 @@ requireMatch(
 
 const dayMs = 24 * 60 * 60 * 1000;
 const sandbox = {
+  ANTI_HANDOFF,
   INACTIVITY_SURRENDER_MS: 15 * dayMs,
   INACTIVITY_REMOVAL_MS: 20 * dayMs,
   Number,

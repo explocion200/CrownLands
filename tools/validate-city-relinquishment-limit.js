@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const ANTI_HANDOFF = require("../functions/anti-handoff-policy.js");
 
 const root = path.resolve(__dirname, "..");
 const gamePath = path.join(root, "game.js");
@@ -99,6 +100,7 @@ for (const getPolicy of [
 }
 
 const cleanupContext = {
+  ANTI_HANDOFF,
   CLAN_IDENTITY_REVISION_VERSION: 1,
   Date,
   clampCityLevel: value => Math.max(1, Math.floor(Number(value) || 1)),

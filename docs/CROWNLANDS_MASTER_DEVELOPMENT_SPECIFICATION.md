@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.33
+**Version:** 1.34
 **Effective date:** September 4, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** September 4, 2026
@@ -269,6 +269,12 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 - Captured regular cities lose one level and never fall below Level 1. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Neutral regular NPC cities are always Level 1. A repair may set a current neutral regular city back to Level 1, but it must never alter a player-owned city or an archived realm.
 - Neutral captures are limited to 30 per player-local day, and neutral capture is blocked after the player owns 30 cities. Expansion beyond that ownership threshold must come from players. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
+- Anti-Handoff Policy v2 applies only when Player A captures a regular neutral city, still owns it at resolution, and Player B successfully takes ownership no later than 20 minutes after A's server-recorded neutral capture. The claim must carry a unique server-generated event ID. The battle-resolution timestamp, not launch time or a client timestamp, determines qualification.
+- Qualifying handoffs are counted as the directed pair `A → B` across all maps in a rolling 24-hour window. Events 1-3 are allowed; event 4 is allowed and warns both players; events 5-6 are allowed with the updated count; event 7 is allowed with a final warning to both players; an eighth distinct qualifying transfer is canceled while seven events remain in the window. Expiry naturally frees a slot, and blocked or failed attempts never extend the window.
+- Failed attacks, non-capturing battles, duplicate use of the same neutral-claim event for the same direction, Main Cities, Camps, Strongholds, Holding Towers, the Crown Citadel, other objectives, scouts, reinforcements, recalls, friendly transfers, and captures resolved after the 20-minute window do not count. Established-city combat, older-city captures, unrelated combat, and the reverse player direction remain available.
+- Launch performs a server-authoritative precheck using the projected arrival time, and arrival repeats the check atomically with the ownership transfer and counter record. A march that becomes disallowed in transit resolves no combat or casualties, safely returns its troops, refunds an applicable march consumable, preserves or restores an otherwise incorrectly deactivated Peace Shield, and creates a persistent explanatory report. Regular-city attacks from Holding Towers use the same server helper.
+- A regular city's neutral lineage records the immutable neutral-claim event ID, server capture time, claimant, current and previous owner, ownership-change time, and policy version. Player-to-player ownership changes preserve that lineage through its 20-minute eligibility window; a new claim ID is created only after legitimate neutralization and reclamation. Directed operational counters expire after their rolling window, while bounded minimal audit records remain available for support.
+- The independent same-installation/shared-device restriction retains its existing 30-day behavior and is not weakened by Policy v2 or its legacy cleanup. **Status:** `IMPLEMENTED`; live status additionally requires a matching merged build, production cleanup receipt, coordinated backend/client deployment, and controlled-account verification.
 - A city remains owned, productive, and defensible across the connected realm regardless of the region currently displayed. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - A regular city may become the player's Main City in any eligible Core or New Lands map, subject to the existing ownership, reinforcement, and cooldown rules. The only map-level exclusions are Stoneward, Greybanner Hold, Lionwatch, Swiftgate, Crown Citadel, Aurum Keep, Oakwatch, Ironwatch, and Roseguard. This placement rule is independent from new-player spawning: all 25 Core maps remain excluded from the new-player spawn pool. **Status:** `IMPLEMENTED BUT NOT LIVE`.
 - The server must enforce Main City map eligibility from the authoritative city document path. Stored city metadata and a client-supplied region cannot override the city path. Direct selection, ordinary gameplay participation, canonical fallback, and repair/recovery must all reject or exclude a Main City in one of the nine restricted maps. Recovery relocates the Main City to an eligible owned regular city when one exists; otherwise it clears invalid Main City flags and projections before returning the normal starting-city claim requirement. No production repair is implied or authorized by this rule. **Status:** `IMPLEMENTED BUT NOT LIVE`.
@@ -1273,6 +1279,12 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.34 — September 4, 2026
+
+- Replaced the legacy fresh-neutral 24-hour/two-event/seven-day pair block with Anti-Handoff Policy v2: a 20-minute neutral lineage window and seven successful directed handoffs per rolling 24 hours.
+- Required warnings to both players at counts 4 and 7, arrival-time authority, atomic launch/arrival enforcement, replay-safe claim IDs, safe troop/item/shield cancellation behavior, Holding Tower origin coverage, bounded counter cleanup, and an auditable fail-closed legacy cleanup.
+- Preserved the independent 30-day same-installation protection and all player progress.
 
 ## v1.33 — September 4, 2026
 
