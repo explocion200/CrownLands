@@ -7,6 +7,52 @@ const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const stylesSource = `${fs.readFileSync(path.join(root, "styles.css"), "utf8")}\n${fs.readFileSync(path.join(root, "interface-theme.css"), "utf8")}`;
+const coreCatalog = JSON.parse(fs.readFileSync(
+  path.join(root, "functions", "core-expansion-region-catalog.json"),
+  "utf8"
+));
+const expectedRestrictedRegionIds = [
+  "core-v2-north-west-holding-tower-m1-m1",
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-north-east-holding-tower-p1-m1",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-aurum-keep-m1-p0",
+  "core-v2-south-west-holding-tower-m1-p1",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-south-east-holding-tower-p1-p1",
+];
+const expectedRedTrimRegionIds = [
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-aurum-keep-m1-p0",
+];
+
+assert.deepEqual(
+  coreCatalog.mainCityPolicy?.restrictedRegionIds,
+  expectedRestrictedRegionIds,
+  "Main-city restriction must apply to exactly the nine confirmed maps."
+);
+assert.deepEqual(
+  coreCatalog.mapPresentation?.redTrimRegionIds,
+  expectedRedTrimRegionIds,
+  "Red trim must apply to exactly the five confirmed map-switcher tiles."
+);
+const coreRegions = coreCatalog.regions.filter(region => region.permanentCore === true);
+assert.equal(coreRegions.length, 25, "The Core must retain all 25 maps.");
+assert.equal(coreRegions.every(region => region.spawnEligible === false), true, "Every Core map must remain new-player spawn-ineligible.");
+assert.equal(
+  coreRegions.filter(region => !expectedRestrictedRegionIds.includes(region.id)).length,
+  16,
+  "Exactly 16 Core maps must remain eligible for Main City placement."
+);
+assert.equal(
+  coreCatalog.regions.filter(region => !region.permanentCore).every(region => !expectedRestrictedRegionIds.includes(region.id)),
+  true,
+  "New Lands maps must remain eligible for Main City placement."
+);
 
 function sourceBetween(source, startMarker, endMarker) {
   const start = source.indexOf(startMarker);
@@ -29,6 +75,20 @@ const sandbox = {
   },
   isStronghold(city) {
     return city?.kind === "stronghold" || Boolean(city?.strongholdType);
+  },
+  isEligibleMainCityEntry(entry) {
+    return Boolean(entry?.city)
+      && entry.city.kind !== "stronghold"
+      && !entry.city.strongholdType
+      && entry.city.regionId !== expectedRestrictedRegionIds[0];
+  },
+  getCityEntryRegionId(entry) {
+    return String(entry?.city?.regionId || "");
+  },
+  HttpsError: class HttpsError extends Error {
+    constructor(_code, message) {
+      super(message);
+    }
   },
 };
 vm.createContext(sandbox);
@@ -176,11 +236,23 @@ assert.equal(
   ]),
   "Cross-map city updates must identify both the demoted and promoted city."
 );
+const restrictedCandidate = {
+  ref: { path: "islands/restricted/cities/restricted_keep" },
+  city: { id: "restricted_keep", regionId: expectedRestrictedRegionIds[0], isMainCity: false },
+};
+assert.throws(
+  () => sandbox.createSingleMainCityPatches([westOldMain, restrictedCandidate], restrictedCandidate.ref),
+  /cannot become your main city/i,
+  "Internal main-city patch creation must reject a restricted-map target."
+);
 
 assert.match(serverSource, /const MAIN_CITY_CHANGE_CITY_LIMIT = 30;/, "Server city-count cooldown boundary changed.");
 assert.match(serverSource, /MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000;/, "Server 7-day cooldown is missing.");
 assert.match(serverSource, /MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 \* 24 \* 60 \* 60 \* 1000;/, "Server 14-day cooldown is missing.");
 assert.match(serverSource, /exports\.changeMainCity[\s\S]*?getOwnerUid\(targetEntry\.city\) !== uid \|\| isStronghold\(targetEntry\.city\)/, "Server must reject unowned cities and Strongholds.");
+assert.match(serverSource, /function getCityEntryRegionId[\s\S]*?ref\?\.parent\?\.parent\?\.id[\s\S]*?if \(referencedIslandId\) return getRegionIdFromOnlineIslandId\(referencedIslandId\)[\s\S]*?city\?\.regionId/, "Server region identity must prefer the authoritative city document path over stored metadata.");
+assert.match(serverSource, /exports\.changeMainCity[\s\S]*?const targetRegionId = getCityEntryRegionId\(targetEntry, regionId\);[\s\S]*?!isMainCityRegionEligible\(targetRegionId\)[\s\S]*?const regularOwnedCount[\s\S]*?stationedReinforcementsForTargetQuery/, "Server must reject a restricted authoritative target before cooldown or reinforcement processing, even when the client spoofs a region.");
+assert.match(serverSource, /function assertCurrentSeasonMainCity[\s\S]*?!isMainCityRegionEligible\(cityRegionId\)/, "Normal gameplay participation must reject a restricted-map Main City.");
 assert.match(serverSource, /exports\.changeMainCity[\s\S]*?mainCityId: targetEntry\.city\.id[\s\S]*?mainIslandId: targetIslandId[\s\S]*?mainRegionId: targetRegionId[\s\S]*?mainCityChangedAtMs: nowMs/, "Server must update every main-city profile pointer and the cooldown timestamp.");
 assert.match(serverSource, /exports\.changeMainCity[\s\S]*?createSingleMainCityPatches\(economy\.cityEntries, targetEntry\.ref\)[\s\S]*?writePreparedEconomy/, "Server switch must atomically repair all owned city flags.");
 assert.match(serverSource, /writeGlobalStatsFromEconomy[\s\S]*?mainCityId: stats\.mainCityId[\s\S]*?mainRegionId: stats\.mainRegionId[\s\S]*?mainIslandId: stats\.mainIslandId/, "Leaderboard/global stats must receive the new main-city location.");
@@ -189,6 +261,9 @@ assert.match(serverSource, /const defenderMainCityProfile = getMainCityProtectio
 assert.match(serverSource, /if \(isProtectedMainCity\(target, attackerUid, defenderProfile\)\)[\s\S]*?blocked: "main_city"/, "Server arrival authority must return armies if the destination is the defender's main city.");
 
 assert.match(clientSource, /function changeMainCity[\s\S]*?state\.mainCityId = nextMainCityId[\s\S]*?normalizeSingleMainCityAssignment\(nextMainCityId/, "Client must apply the new main-city ID before normalizing city flags.");
+assert.match(clientSource, /function getMainCityChangeStatus[\s\S]*?locationEligible[\s\S]*?isMainCityRegionEligible\(getCityRegionId\(city\)\)[\s\S]*?canChange:[\s\S]*?locationEligible/, "Client main-city changes must fail closed on restricted maps.");
+assert.match(clientSource, /const mainCityBlock = mainCityStatus\.isMain[\s\S]*?: !mainCityStatus\.locationEligible[\s\S]*?\? ""[\s\S]*?: `[\s\S]*?main-city-action-panel/, "Restricted-map City Info must omit the Main City move action instead of disabling it.");
+assert.match(clientSource, /function renderIslandMapTile[\s\S]*?RED_TRIM_REGION_IDS\.has\(regionId\)[\s\S]*?"red-trim"/, "The map switcher must apply red trim from the exact catalog policy.");
 assert.match(clientSource, /mainCityStatus\.reason && !mainCityStatus\.cooldownText/, "City info must keep the main-city cooldown inside the change button instead of repeating it below.");
 assert.match(clientSource, /normalizeSingleMainCityAssignment[\s\S]*?const shouldBeMain = Boolean\(mainCityId && city\.id === mainCityId\)/, "Client must demote every loaded city except the selected main city.");
 assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map[\s\S]*?city\.id === mainCityId && !isStronghold\(city\)/, "Cross-map owned-city cache must retain exactly one main city.");
@@ -200,5 +275,6 @@ assert.match(clientSource, /if \(cachedIdentity\?\.mainCityId\) return identityM
 assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
 assert.match(stylesSource, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background: #454b54;/, "The current player's main-city UI must use the protected-home dark gray.");
 assert.match(stylesSource, /\.city-node\.enemy\.main-city-node \.foreign-city-shield,[\s\S]*?\.city-node\.enemy\.main-city-node \.foreign-selected-data[\s\S]*?background: #454b54;/, "Enemy main-city UI must render dark gray.");
+assert.match(stylesSource, /\.island-map-picker \.island-map-icon\.red-trim::before[\s\S]*?border: 3px solid #b51f2e;[\s\S]*?pointer-events: none;/, "The five designated map tiles must receive a visible non-interactive red trim.");
 
-console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and semantic home-base UI colors.");
+console.log("Validated exact-nine Main City restrictions, five red-trim map tiles, authoritative paths, atomic switching, recovery guards, cooldowns, and home-base protection.");

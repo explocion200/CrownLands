@@ -501,7 +501,7 @@ const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
 const GLOBAL_PLAYER_STATS_VERSION = 11;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
-const MAIN_CITY_ASSIGNMENT_VERSION = 2;
+const MAIN_CITY_ASSIGNMENT_VERSION = 3;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
 const ECONOMY_MAX_CITY_CHECKPOINT_WRITES = 300;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 250;
@@ -2644,6 +2644,20 @@ const CORE_PERMANENT_REGION_IDS = Object.freeze(SERVER_CATALOG_REGIONS
   .filter(region => region?.permanentCore === true)
   .map(region => normalizeRegionId(region?.id))
   .filter(Boolean));
+const MAIN_CITY_RESTRICTED_REGION_IDS = Object.freeze(Array.from(new Set(
+  (Array.isArray(SERVER_REGION_CATALOG?.mainCityPolicy?.restrictedRegionIds)
+    ? SERVER_REGION_CATALOG.mainCityPolicy.restrictedRegionIds
+    : [])
+    .map(regionId => safeString(regionId, 160))
+    .filter(Boolean)
+    .map(regionId => normalizeRegionId(regionId))
+)));
+const MAIN_CITY_RESTRICTED_REGION_ID_SET = new Set(MAIN_CITY_RESTRICTED_REGION_IDS);
+
+function isMainCityRegionEligible(regionId = "") {
+  const value = safeString(regionId, 160);
+  return !value || !MAIN_CITY_RESTRICTED_REGION_ID_SET.has(normalizeRegionId(value));
+}
 const CORE_TEMPLATE_WORLD_MAPS = Object.freeze(CORE_STATIC_SERVER_WORLD_MAPS
   .filter(map => CORE_EXPANSION.parseNewLandsRegionId(map?.id))
   .sort((left, right) => (
@@ -11090,6 +11104,7 @@ function assertCurrentSeasonMainCity(
     || getOwnerUid(city) !== uid
     || (!allowMainCityRepair && city.isMainCity !== true)
     || isStronghold(city)
+    || !isMainCityRegionEligible(cityRegionId)
     || safeString(profile.mainCityId, 96) !== mainCitySnap.id) {
     throw new HttpsError("failed-precondition", "Verify your current Crownlands main city before using gameplay.");
   }
@@ -12811,6 +12826,21 @@ function getCityEntryPath(entry = {}) {
   return safeString(entry?.ref?.path, 240);
 }
 
+function getCityEntryRegionId(entry = {}, fallbackRegionId = "") {
+  const referencedIslandId = safeString(entry?.ref?.parent?.parent?.id, 160);
+  if (referencedIslandId) return getRegionIdFromOnlineIslandId(referencedIslandId);
+  const storedRegionId = safeString(entry?.city?.regionId, 160);
+  if (storedRegionId) return normalizeRegionId(storedRegionId);
+  const fallback = safeString(fallbackRegionId, 160);
+  return fallback ? normalizeRegionId(fallback) : "";
+}
+
+function isEligibleMainCityEntry(entry = {}) {
+  return Boolean(entry?.city)
+    && !isStronghold(entry.city)
+    && isMainCityRegionEligible(getCityEntryRegionId(entry));
+}
+
 function getCityEntryClaimedAtMs(entry = {}) {
   const city = entry.city || {};
   const timestamps = [
@@ -12830,7 +12860,7 @@ function compareMainCityCandidates(a = {}, b = {}) {
 }
 
 function getCanonicalMainCityEntry(profile = {}, cityEntries = []) {
-  const regularEntries = cityEntries.filter(entry => entry?.city && !isStronghold(entry.city));
+  const regularEntries = cityEntries.filter(isEligibleMainCityEntry);
   if (!regularEntries.length) return null;
   const profileMainCityId = safeString(profile.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const profileIslandId = safeString(profile.mainIslandId, 160);
@@ -12875,13 +12905,32 @@ function createOwnedCityEntriesFromSnapshot(uid, ownedSnap) {
 function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) {
   const cityPatches = [];
   const cityUpdates = [];
+  const allRegularEntries = cityEntries.filter(entry => entry?.city && !isStronghold(entry.city));
   const mainCityEntry = getCanonicalMainCityEntry(rawProfile, cityEntries);
   const mainCityEntryPath = getCityEntryPath(mainCityEntry);
   const canonicalMainCityId = mainCityEntry?.city?.id || "";
-  const canonicalMainIslandId = mainCityEntry ? getCityEntryIslandId(mainCityEntry) : safeString(rawProfile.mainIslandId, 160);
+  const profileMainCityId = safeString(rawProfile.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const profileMainIslandId = safeString(rawProfile.mainIslandId, 160);
+  const profileMainRegionId = profileMainIslandId
+    ? getRegionIdFromOnlineIslandId(profileMainIslandId)
+    : (safeString(rawProfile.mainRegionId, 160) ? normalizeRegionId(rawProfile.mainRegionId) : "");
+  const profileMainEntry = profileMainCityId
+    ? allRegularEntries.find(entry => (
+        entry.city.id === profileMainCityId
+        && (!profileMainIslandId || getCityEntryIslandId(entry) === profileMainIslandId)
+      ))
+    : null;
+  const restrictedMainCityDetected = Boolean(
+    (profileMainEntry && !isEligibleMainCityEntry(profileMainEntry))
+    || (!profileMainEntry && profileMainRegionId && !isMainCityRegionEligible(profileMainRegionId))
+    || allRegularEntries.some(entry => entry.city.isMainCity && !isEligibleMainCityEntry(entry))
+  );
+  const canonicalMainIslandId = mainCityEntry
+    ? getCityEntryIslandId(mainCityEntry)
+    : (restrictedMainCityDetected ? "" : profileMainIslandId);
   const canonicalMainRegionId = mainCityEntry
-    ? normalizeRegionId(mainCityEntry.city.regionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId))
-    : normalizeRegionId(rawProfile.mainRegionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId));
+    ? getCityEntryRegionId(mainCityEntry)
+    : (restrictedMainCityDetected ? "" : profileMainRegionId);
 
   cityEntries.forEach(entry => {
     if (!entry?.city) return;
@@ -12891,7 +12940,7 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
     cityPatches.push({ ref: entry.ref, city: entry.city, patch });
     cityUpdates.push({
       id: entry.city.id,
-      regionId: entry.city.regionId,
+      regionId: getCityEntryRegionId(entry),
       ...patch,
     });
     entry.city = { ...entry.city, ...patch };
@@ -12903,6 +12952,10 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
         mainCityId: canonicalMainCityId,
         mainIslandId: canonicalMainIslandId,
         mainRegionId: canonicalMainRegionId,
+      } : restrictedMainCityDetected ? {
+        mainCityId: "",
+        mainIslandId: "",
+        mainRegionId: "",
       } : {}),
   };
 
@@ -12912,6 +12965,7 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
     canonicalMainCityId,
     canonicalMainIslandId,
     canonicalMainRegionId,
+    restrictedMainCityDetected,
     profileFields,
     cityPatches,
     cityUpdates,
@@ -12920,19 +12974,18 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
 
 function isCurrentRegularOwnedCityEntry(entry = {}, uid = "") {
   if (!entry?.ref || !entry.city || getOwnerUid(entry.city) !== uid || isStronghold(entry.city)) return false;
-  const regionId = normalizeRegionId(
-    entry.city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry))
-  );
+  const regionId = getCityEntryRegionId(entry);
   return getServerWorldRegularCityIds(regionId).has(entry.city.id);
 }
 
 function getMainCityRecoveryEntries(uid = "", ownedSnap = null) {
   const ownedEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
-  const regularEntries = ownedEntries.filter(entry => isCurrentRegularOwnedCityEntry(entry, uid));
+  const allRegularEntries = ownedEntries.filter(entry => isCurrentRegularOwnedCityEntry(entry, uid));
+  const regularEntries = allRegularEntries.filter(isEligibleMainCityEntry);
   const strongholdEntries = ownedEntries.filter(entry => entry?.city && isStronghold(entry.city));
   return {
     regularEntries,
-    repairEntries: [...regularEntries, ...strongholdEntries],
+    repairEntries: [...allRegularEntries, ...strongholdEntries],
   };
 }
 
@@ -12950,8 +13003,7 @@ function mainCityRecoveryProjectionChanged(projection = {}, repair = {}) {
   const storedRegionId = safeString(projection.mainRegionId, 160);
   return safeString(projection.mainCityId, 96) !== repair.canonicalMainCityId
     || safeString(projection.mainIslandId, 160) !== repair.canonicalMainIslandId
-    || !storedRegionId
-    || normalizeRegionId(storedRegionId) !== repair.canonicalMainRegionId;
+    || (storedRegionId ? normalizeRegionId(storedRegionId) : "") !== repair.canonicalMainRegionId;
 }
 
 async function recoverCurrentSeasonMainCity(transaction, {
@@ -12979,20 +13031,7 @@ async function recoverCurrentSeasonMainCity(transaction, {
     transaction.get(leaderboardRef),
   ]);
   const { regularEntries, repairEntries } = getMainCityRecoveryEntries(playerUid, ownedSnap);
-  if (!regularEntries.length) {
-    return {
-      ok: true,
-      repairedMainCity: false,
-      requiresStartingCityClaim: true,
-      mainCityRecoveryStatus: "claim-required",
-      recoveryReason: "no-valid-owned-regular-city",
-    };
-  }
-
   const repair = createMainCityAssignmentRepair(playerUid, profile, repairEntries);
-  if (!repair.canonicalMainCityId || !repair.mainCityEntry) {
-    throw new HttpsError("failed-precondition", "No valid current-season main city could be recovered.");
-  }
   const pointerChanged = mainCityRecoveryProjectionChanged(profile, repair);
   const versionChanged = Math.max(0, Math.floor(safeNumber(profile.mainCityAssignmentVersion, 0))) < MAIN_CITY_ASSIGNMENT_VERSION;
   const assignmentChanged = pointerChanged || versionChanged || repair.cityPatches.length > 0;
@@ -13001,11 +13040,47 @@ async function recoverCurrentSeasonMainCity(transaction, {
   const leaderboardProjectionChanged = leaderboardSnap.exists
     && mainCityRecoveryProjectionChanged(leaderboardSnap.data() || {}, repair);
   const recoveryChanged = assignmentChanged || statsProjectionChanged || leaderboardProjectionChanged;
+  const projectionPatch = mainCityRecoveryProjectionPatch(repair, nowMs);
+
+  if (!regularEntries.length) {
+    if (!repair.restrictedMainCityDetected) {
+      return {
+        ok: true,
+        repairedMainCity: false,
+        requiresStartingCityClaim: true,
+        mainCityRecoveryStatus: "claim-required",
+        recoveryReason: "no-valid-owned-regular-city",
+      };
+    }
+    if (assignmentChanged) {
+      repair.cityPatches.forEach(entry => {
+        transaction.set(entry.ref, cleanCityUpdate(entry.city, entry.patch), { merge: true });
+      });
+      transaction.set(resolvedProfileRef, {
+        ...repair.profileFields,
+        mainCityRepairUpdatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    if (statsProjectionChanged) transaction.set(statsRef, projectionPatch, { merge: true });
+    if (leaderboardProjectionChanged) transaction.set(leaderboardRef, projectionPatch, { merge: true });
+    return {
+      ok: true,
+      repairedMainCity: recoveryChanged,
+      requiresStartingCityClaim: true,
+      mainCityRecoveryStatus: "claim-required",
+      recoveryReason: "no-valid-owned-regular-city",
+      cityUpdates: repair.cityUpdates,
+    };
+  }
+
+  if (!repair.canonicalMainCityId || !repair.mainCityEntry) {
+    throw new HttpsError("failed-precondition", "No valid current-season main city could be recovered.");
+  }
   const recoveredProfile = {
     ...profile,
     ...repair.profileFields,
   };
-  const projectionPatch = mainCityRecoveryProjectionPatch(repair, nowMs);
   const recoveredStats = statsSnap.exists
     ? { ...statsSnap.data(), ...projectionPatch }
     : null;
@@ -13047,6 +13122,10 @@ async function recoverCurrentSeasonMainCity(transaction, {
 
 function createSingleMainCityPatches(cityEntries = [], mainRef = null) {
   const mainPath = safeString(mainRef?.path, 240);
+  const mainEntry = cityEntries.find(entry => getCityEntryPath(entry) === mainPath);
+  if (mainPath && !isEligibleMainCityEntry(mainEntry)) {
+    throw new HttpsError("failed-precondition", "Cities in this map cannot become your main city.");
+  }
   const cityPatches = [];
   const cityUpdates = [];
   cityEntries.forEach(entry => {
@@ -13057,12 +13136,34 @@ function createSingleMainCityPatches(cityEntries = [], mainRef = null) {
     cityPatches.push({ ref: entry.ref, city: entry.city, patch });
     cityUpdates.push({
       id: entry.city.id,
-      regionId: entry.city.regionId,
+      regionId: getCityEntryRegionId(entry),
       ...patch,
     });
     entry.city = { ...entry.city, ...patch };
   });
   return { cityPatches, cityUpdates };
+}
+
+function getMainCityProjectionAfterRepair(profile = {}, repair = {}) {
+  if (repair.canonicalMainCityId) {
+    return {
+      mainCityId: repair.canonicalMainCityId,
+      mainRegionId: repair.canonicalMainRegionId,
+      mainIslandId: repair.canonicalMainIslandId,
+    };
+  }
+  if (repair.restrictedMainCityDetected) {
+    return { mainCityId: "", mainRegionId: "", mainIslandId: "" };
+  }
+  const fallbackIslandId = safeString(profile.mainIslandId, 160);
+  const fallbackRegionId = fallbackIslandId
+    ? getRegionIdFromOnlineIslandId(fallbackIslandId)
+    : (safeString(profile.mainRegionId, 160) ? normalizeRegionId(profile.mainRegionId) : "");
+  return {
+    mainCityId: safeString(profile.mainCityId, 96),
+    mainRegionId: fallbackRegionId,
+    mainIslandId: fallbackIslandId || (fallbackRegionId ? getOnlineIslandId(fallbackRegionId) : ""),
+  };
 }
 
 function createEmptyPendingAwayProduction(observedAtMs = 0) {
@@ -13848,10 +13949,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     bonuses: objectiveBonuses,
     nowMs,
   });
-  const mainRegionId = mainRepair.canonicalMainRegionId
-    || normalizeRegionId(profile.mainRegionId || getRegionIdFromOnlineIslandId(profile.mainIslandId));
-  const mainIslandId = mainRepair.canonicalMainIslandId || profile.mainIslandId || getOnlineIslandId(mainRegionId);
-  const mainCityId = mainRepair.canonicalMainCityId || safeString(profile.mainCityId, 96);
+  const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(profile, mainRepair);
   const writes = [
     {
       ref: profileRef,
@@ -15598,6 +15696,10 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
     if (!targetEntry?.city || getOwnerUid(targetEntry.city) !== uid || isStronghold(targetEntry.city)) {
       throw new HttpsError("failed-precondition", "Only one of your regular cities can become your main city.");
     }
+    const targetRegionId = getCityEntryRegionId(targetEntry, regionId);
+    if (!isMainCityRegionEligible(targetRegionId)) {
+      throw new HttpsError("failed-precondition", "Cities in this map cannot become your main city.");
+    }
 
     const regularOwnedCount = economy.cityEntries.filter(entry => (
       entry?.city
@@ -15608,7 +15710,6 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
       ? MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS
       : MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS;
 
-    const targetRegionId = normalizeRegionId(targetEntry.city.regionId || regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(targetEntry)));
     const targetIslandId = getCityEntryIslandId(targetEntry) || getOnlineIslandId(targetRegionId);
     const targetKey = getReinforcementTargetKey("city", targetRegionId, targetEntry.city.id);
     const stationedReinforcementsSnap = await transaction.get(stationedReinforcementsForTargetQuery(targetKey));
@@ -16339,10 +16440,10 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     };
   });
   const mainCityRepair = createMainCityAssignmentRepair(uid, profile, ownedCityEntries);
-  const mainCityId = mainCityRepair.canonicalMainCityId || safeString(profile.mainCityId, 80);
-  const mainRegionId = mainCityRepair.canonicalMainRegionId
-    || normalizeRegionId(profile.mainRegionId || getRegionIdFromOnlineIslandId(profile.mainIslandId));
-  const mainIslandId = mainCityRepair.canonicalMainIslandId || profile.mainIslandId || getOnlineIslandId(mainRegionId);
+  const { mainCityId, mainRegionId, mainIslandId } = getMainCityProjectionAfterRepair(
+    profile,
+    mainCityRepair
+  );
   const profileForStats = {
     ...profile,
     playerName: identity.ownerName,

@@ -15,6 +15,13 @@ const DESKTOP_VIEWPORT = { width: 1200, height: 800 };
 const TOUCH_VIEWPORT = { width: 844, height: 390 };
 const READY_TIMEOUT_MS = 30000;
 const ACTION_TIMEOUT_MS = 10000;
+const RED_TRIM_REGION_IDS = [
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-aurum-keep-m1-p0",
+];
 
 function delay(milliseconds) {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -420,6 +427,43 @@ async function validateDesktopWheelZoom(client, serverUrl) {
   assert.equal(telemetry.modalOpen, true, "Wheel zooming must leave the map picker open.");
 }
 
+async function validateRedTrimPresentation(client, serverUrl, viewport, touch, label) {
+  await loadFixture(client, serverUrl, viewport, touch);
+  await openPicker(client, touch);
+  const result = await evaluate(client, `(() => {
+    const picker = document.querySelector(".island-map-picker");
+    const trimmed = [...picker.querySelectorAll("[data-island-region].red-trim")];
+    return {
+      regionIds: trimmed.map(tile => tile.dataset.islandRegion),
+      styles: trimmed.map(tile => {
+        const trim = getComputedStyle(tile, "::before");
+        const tileStyle = getComputedStyle(tile);
+        const rect = tile.getBoundingClientRect();
+        return {
+          trimBorderWidth: trim.borderTopWidth,
+          trimBorderColor: trim.borderTopColor,
+          trimPointerEvents: trim.pointerEvents,
+          tileBorderColor: tileStyle.borderTopColor,
+          width: rect.width,
+          height: rect.height,
+        };
+      }),
+    };
+  })()`);
+  assert.deepEqual(
+    result.regionIds.slice().sort(),
+    RED_TRIM_REGION_IDS.slice().sort(),
+    `${label} must render red trim on exactly the five confirmed maps.`
+  );
+  result.styles.forEach(style => {
+    assert.equal(style.trimBorderWidth, "3px", `${label} red trim must remain visually distinct.`);
+    assert.equal(style.trimBorderColor, "rgb(181, 31, 46)", `${label} red trim color changed.`);
+    assert.equal(style.trimPointerEvents, "none", `${label} red trim must not block map selection.`);
+    assert.notEqual(style.tileBorderColor, style.trimBorderColor, `${label} red trim must not replace active/home tile borders.`);
+    assert(style.width > 40 && style.height > 30, `${label} red-trim map tile collapsed.`);
+  });
+}
+
 async function validateTouchTap(client, serverUrl) {
   await loadFixture(client, serverUrl, TOUCH_VIEWPORT, true);
   await openPicker(client, true);
@@ -513,10 +557,12 @@ async function main() {
       await validateKeyboardActivation(client, serverAddress.url, "Enter");
       await validateKeyboardActivation(client, serverAddress.url, "Space");
       await validateDesktopWheelZoom(client, serverAddress.url);
+      await validateRedTrimPresentation(client, serverAddress.url, DESKTOP_VIEWPORT, false, "Desktop map picker");
       await validateTouchTap(client, serverAddress.url);
       await validateTouchDragAndPinch(client, serverAddress.url);
+      await validateRedTrimPresentation(client, serverAddress.url, TOUCH_VIEWPORT, true, "Mobile map picker");
       assert.deepEqual(consoleErrors, [], `Map picker interaction checks must not emit console errors:\n${consoleErrors.join("\n")}`);
-      console.log("Validated desktop click, immediate post-drag click, keyboard activation, wheel zoom, touch tap, touch drag, pinch behavior, and a clean browser console in the live map picker UI.");
+      console.log("Validated desktop/mobile red-trim presentation, click, immediate post-drag click, keyboard activation, wheel zoom, touch tap, touch drag, pinch behavior, and a clean browser console in the live map picker UI.");
     } finally {
       removeConsoleListener();
       removeExceptionListener();

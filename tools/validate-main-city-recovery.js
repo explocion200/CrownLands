@@ -29,24 +29,32 @@ const cityIdentitySource = sourceBetween(
   "function getDynamicNewLandsCityIdentity",
   "function normalizeRealmShardId"
 );
-const activeRegionIds = ["west", "region_11", "region_12", "new-lands-l01-p002"];
+const restrictedRegionId = "core-v2-greybanner-hold-p0-m1";
+const activeRegionIds = ["west", "region_11", "region_12", restrictedRegionId, "new-lands-l01-p002"];
 const decisionSandbox = {
   CORE_EXPANSION_TOPOLOGY_ACTIVE: true,
   WORLD_REGION_IDS: [...activeRegionIds, "new-lands-l01-p003"],
   DEFAULT_ONLINE_REGION_ID: "west",
   state: null,
-  getPlayableBaseCityById: value => (/^region_(11|12)_city_\d{3}$/.test(String(value || ""))
-    ? { id: String(value), regionId: String(value).split("_city_")[0] }
-    : null),
+  getPlayableBaseCityById: value => {
+    const cityId = String(value || "");
+    if (/^region_(11|12)_city_\d{3}$/.test(cityId)) {
+      return { id: cityId, regionId: cityId.split("_city_")[0] };
+    }
+    if (cityId === "restricted_city_001") return { id: cityId, regionId: restrictedRegionId };
+    return null;
+  },
   getRegionIds: () => activeRegionIds,
   getRegionById: regionId => ({
     west: { id: "west", cityCapacity: 50 },
     region_11: { id: "region_11", cityCapacity: 50 },
     region_12: { id: "region_12", cityCapacity: 50 },
+    [restrictedRegionId]: { id: restrictedRegionId, cityCapacity: 60 },
     "new-lands-l01-p002": { id: "new-lands-l01-p002", cityCapacity: 40 },
     "new-lands-l01-p003": { id: "new-lands-l01-p003", cityCapacity: 40 },
   }[regionId] || null),
   normalizeRegionId: regionId => (activeRegionIds.includes(regionId) ? regionId : "west"),
+  isMainCityRegionEligible: regionId => regionId !== restrictedRegionId,
   getOnlineIslandId: regionId => `main-${regionId}`,
   withTimeout: (promise, timeoutMs, message) => Promise.race([
     promise,
@@ -127,6 +135,20 @@ assert.equal(decide({
     mainIslandId: "main-new-lands-l01-p002",
   },
 }).status, "valid", "A valid authoritative New Lands city was not accepted without a local city cache entry.");
+assert.throws(
+  () => decide({
+    ok: true,
+    requiresStartingCityClaim: false,
+    mainCityRecoveryStatus: "valid",
+    currentUser: {
+      mainCityId: "restricted_city_001",
+      mainRegionId: restrictedRegionId,
+      mainIslandId: `main-${restrictedRegionId}`,
+    },
+  }),
+  /authoritative recovery result/i,
+  "The client accepted a recovered Main City in a restricted map."
+);
 assert.throws(
   () => decide({ requiresStartingCityClaim: true, mainCityRecoveryStatus: "claim-required" }),
   /authoritative recovery result/i,
@@ -303,6 +325,16 @@ assert.match(
   "Server recovery does not expose an explicit no-valid-city result."
 );
 assert.match(
+  sourceBetween(serverSource, "function getCanonicalMainCityEntry", "function createOwnedCityEntriesFromSnapshot"),
+  /cityEntries\.filter\(isEligibleMainCityEntry\)/,
+  "Canonical Main City selection does not exclude restricted-map cities."
+);
+assert.match(
+  serverRecoverySource,
+  /const repair = createMainCityAssignmentRepair[\s\S]*?if \(!regularEntries\.length\)[\s\S]*?repair\.cityPatches\.forEach[\s\S]*?transaction\.set\(resolvedProfileRef[\s\S]*?statsProjectionChanged[\s\S]*?leaderboardProjectionChanged/,
+  "Recovery must clear or relocate restricted Main City flags and projections before entering the claim path."
+);
+assert.match(
   serverRecoverySource,
   /statsProjectionChanged[\s\S]*?leaderboardProjectionChanged[\s\S]*?recoveryChanged/,
   "Recovery does not compare existing projections independently."
@@ -330,6 +362,8 @@ for (const evidence of [
   "stale main-city pointer",
   "another player's city",
   "stronghold",
+  "restricted Main Cities",
+  "spoofed regions",
   "no valid regular city",
   "preserved recovery state",
   "stale Global Stats projection",
@@ -412,6 +446,7 @@ function createSyncSandbox() {
     isOnlineWorldActive: () => true,
     getKnownCityId: value => (/^[a-z0-9_-]+$/i.test(String(value || "")) ? String(value) : ""),
     getRegionIds: () => ["west", "region_11", "region_12"],
+    isMainCityRegionEligible: () => true,
     getCityRegionId: cityId => String(cityId || "").split("_city_")[0] || "west",
     getOnlineIslandId: regionId => `main-${regionId}`,
     refreshAllOwnedCities: async () => true,

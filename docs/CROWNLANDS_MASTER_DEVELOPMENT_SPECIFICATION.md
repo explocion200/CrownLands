@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.28
-**Effective date:** August 31, 2026
+**Version:** 1.32
+**Effective date:** September 4, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** August 31, 2026
+**Evidence reviewed through:** September 4, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -119,6 +119,7 @@ The August 24 through August 27 audits remain historical evidence. The August 30
 | Holding Towers and Clan Treasury | Absent | Absent | `IMPLEMENTED — PENDING MERGE AND AUTHORIZED DEPLOYMENT`; not live on either published channel |
 | Pending 5×5 Core world | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
 | Dynamic automatic map expansion | Deployed behind the UTC activation boundary | Not yet republished for this reset | `DEPLOYED — SCHEDULED ACTIVATION` on web |
+| Exact-nine Main City map restriction and five-map red trim | Present in the repository implementation | No verified published-channel deployment | `IMPLEMENTED BUT NOT LIVE`; coordinated backend, web, and itch.io release required |
 
 The Release Channel Matrix must be updated whenever either published channel changes.
 
@@ -266,6 +267,9 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 - Captured regular cities lose one level and never fall below Level 1. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Neutral captures are limited to 30 per player-local day, and neutral capture is blocked after the player owns 30 cities. Expansion beyond that ownership threshold must come from players. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
 - A city remains owned, productive, and defensible across the connected realm regardless of the region currently displayed. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- A regular city may become the player's Main City in any eligible Core or New Lands map, subject to the existing ownership, reinforcement, and cooldown rules. The only map-level exclusions are Stoneward, Greybanner Hold, Lionwatch, Swiftgate, Crown Citadel, Aurum Keep, Oakwatch, Ironwatch, and Roseguard. This placement rule is independent from new-player spawning: all 25 Core maps remain excluded from the new-player spawn pool. **Status:** `IMPLEMENTED BUT NOT LIVE`.
+- The server must enforce Main City map eligibility from the authoritative city document path. Stored city metadata and a client-supplied region cannot override the city path. Direct selection, ordinary gameplay participation, canonical fallback, and repair/recovery must all reject or exclude a Main City in one of the nine restricted maps. Recovery relocates the Main City to an eligible owned regular city when one exists; otherwise it clears invalid Main City flags and projections before returning the normal starting-city claim requirement. No production repair is implied or authorized by this rule. **Status:** `IMPLEMENTED BUT NOT LIVE`.
+- City Info must omit the entire Move/Change Main City action for every city in the nine restricted maps rather than presenting a disabled control. Other city gameplay and information remain unchanged. In the map switcher, Greybanner Hold, Crown Citadel, Swiftgate, Ironwatch, and Aurum Keep alone receive the red trim; active-map and home-map states remain independently visible. **Status:** `IMPLEMENTED BUT NOT LIVE`.
 
 ### Hero and skill progression
 
@@ -354,7 +358,7 @@ These are **verified implementation facts**, not an independent balance-design c
 
 - Whether production Cloud Functions execute the inspected 100 Gold/200 troop initialization path: **NEEDS VERIFICATION** through a controlled runtime claim or authenticated deployment record.
 - Whether 100 Gold and 200 troops should be promoted from current implementation values to explicitly confirmed long-term balance rules: **NEEDS VERIFICATION** by design decision.
-- Current Hero XP curve, per-battle XP caps, Main City relocation rules, inactivity release rules, city level maximum, and every city-upgrade cost/time value: **NEEDS VERIFICATION** against current configuration.
+- Current Hero XP curve, per-battle XP caps, inactivity release rules, city level maximum, and every city-upgrade cost/time value: **NEEDS VERIFICATION** against current configuration.
 
 ## 4. Economy & Resources
 
@@ -1260,6 +1264,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.32 — September 4, 2026
+
+- Replaced the proposed blanket Core Main City exclusion with the exact confirmed nine-map restriction: Stoneward, Greybanner Hold, Lionwatch, Swiftgate, Crown Citadel, Aurum Keep, Oakwatch, Ironwatch, and Roseguard.
+- Kept every other Core and New Lands map eligible under existing Main City rules while preserving the separate rule that all 25 Core maps remain new-player spawn-ineligible.
+- Required authoritative-path server enforcement, safe canonical repair/recovery, complete omission of the restricted-map City Info action, and red map-switcher trim only on Greybanner Hold, Crown Citadel, Swiftgate, Ironwatch, and Aurum Keep.
+- Classified the implementation as `IMPLEMENTED BUT NOT LIVE`; no production repair, deployment, or published-channel verification occurred as part of this decision.
 
 ## v1.31 — September 2, 2026
 

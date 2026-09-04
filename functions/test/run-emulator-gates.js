@@ -13,6 +13,7 @@ const firebaseConfigPath = path.resolve(functionsDirectory, firebaseConfig);
 const firebaseConfigTemplate = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 const resetGate = "emulator-reset-gate.js";
 const coreExpansionGate = "emulator-core-expansion-state.js";
+const coreExpansionGates = new Set([coreExpansionGate, "emulator-main-city-recovery.js"]);
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))
   .sort((left, right) => left.localeCompare(right));
@@ -90,6 +91,7 @@ for (const fileName of orderedGates) {
     const isolatedConfigPath = createIsolatedFirebaseConfig(`${fileName}-${attempt}`);
     console.log(`\n[Crownlands emulator gate] ${fileName}${attemptSuffix}`);
     try {
+      const forceCoreExpansion = coreExpansionGates.has(fileName);
       result = spawnSync(process.execPath, [
         firebaseCli,
         "emulators:exec",
@@ -103,10 +105,8 @@ for (const fileName of orderedGates) {
         env: {
           ...process.env,
           METADATA_SERVER_DETECTION: "none",
-          CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: fileName === coreExpansionGate
-            ? "1"
-            : "0",
-          CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR: fileName === coreExpansionGate ? "0" : "1",
+          CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR: forceCoreExpansion ? "1" : "0",
+          CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR: forceCoreExpansion ? "0" : "1",
         },
         stdio: "inherit",
       });

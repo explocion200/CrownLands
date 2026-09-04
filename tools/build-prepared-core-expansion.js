@@ -299,6 +299,13 @@ const catalog = {
   version: CORE_EXPANSION_LAYOUT_VERSION,
   assetVersion: hash(assetReceipt).slice(0, 12),
   topologyVersion: topology.TOPOLOGY_VERSION,
+  mainCityPolicy: {
+    version: 1,
+    restrictedRegionIds: topology.MAIN_CITY_RESTRICTED_REGION_IDS,
+  },
+  mapPresentation: {
+    redTrimRegionIds: topology.RED_TRIM_REGION_IDS,
+  },
   globalSettings: CORE_EXPANSION_GLOBAL_SETTINGS,
   topology: {
     coreRadius: 2,

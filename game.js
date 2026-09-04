@@ -111,7 +111,7 @@ const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 60;
 const ONLINE_PRESENCE_STALE_SECONDS = 180;
 const SERVER_ECONOMY_SYNC_SECONDS = 120;
-const MAIN_CITY_ASSIGNMENT_VERSION = 2;
+const MAIN_CITY_ASSIGNMENT_VERSION = 3;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
@@ -418,6 +418,25 @@ const REGION_CATALOG_SUMMARIES_BY_ID = new Map(
     .map(region => [cleanEditorRegionId(region?.id), region])
     .filter(([regionId]) => regionId)
 );
+const MAIN_CITY_RESTRICTED_REGION_IDS = new Set(
+  (Array.isArray(REGION_CATALOG?.mainCityPolicy?.restrictedRegionIds)
+    ? REGION_CATALOG.mainCityPolicy.restrictedRegionIds
+    : [])
+    .map(cleanEditorRegionId)
+    .filter(Boolean)
+);
+const RED_TRIM_REGION_IDS = new Set(
+  (Array.isArray(REGION_CATALOG?.mapPresentation?.redTrimRegionIds)
+    ? REGION_CATALOG.mapPresentation.redTrimRegionIds
+    : [])
+    .map(cleanEditorRegionId)
+    .filter(Boolean)
+);
+
+function isMainCityRegionEligible(regionId = "") {
+  const normalizedRegionId = cleanEditorRegionId(regionId);
+  return !normalizedRegionId || !MAIN_CITY_RESTRICTED_REGION_IDS.has(normalizedRegionId);
+}
 
 function cleanRegionType(value) {
   return String(value || "")
@@ -7397,6 +7416,7 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   const cooldownMs = getMainCityChangeCooldownRemainingMs(now, ownedCount);
   const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
   const isMain = isMainCityForList(city);
+  const locationEligible = Boolean(city) && isMainCityRegionEligible(getCityRegionId(city));
   const hasAlliedReinforcements = getStationedReinforcementsForTarget(city).length > 0;
   let reason = "";
 
@@ -7404,17 +7424,19 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   else if (!city) reason = "City is not available.";
   else if (city.owner !== "player") reason = "Only owned cities can become your main city.";
   else if (isStronghold(city)) reason = "Strongholds cannot become your main city.";
+  else if (!locationEligible) reason = "Cities in this map cannot become your main city.";
   else if (isMain) reason = "This city is already your main city.";
   else if (hasAlliedReinforcements) reason = "Send all clan reinforcements home before making this your main city.";
   else if (cooldownMs > 0) reason = `Main city can change again in ${cooldownText}.`;
 
   return {
-    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && !hasAlliedReinforcements && cooldownMs <= 0),
+    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && locationEligible && !isMain && !hasAlliedReinforcements && cooldownMs <= 0),
     cooldownDurationMs,
     cooldownMs,
     cooldownText,
     ownedCount,
     isMain,
+    locationEligible,
     hasAlliedReinforcements,
     reason,
   };
@@ -13829,13 +13851,14 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const summaryText = getIslandTileSummaryText(regionId);
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
+  const hasRedTrim = RED_TRIM_REGION_IDS.has(regionId);
   const previewSrc = getIslandPreviewArtSrc(regionId) || getIslandMapArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
   return `
     <button
-      class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${escapeHtml(region.palette || "heartland")}"
+      class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${hasRedTrim ? "red-trim" : ""} ${escapeHtml(region.palette || "heartland")}"
       data-island-region="${escapeHtml(regionId)}"
       style="${getIslandMapIconStyle(region)}"
       type="button"
@@ -15808,6 +15831,7 @@ function resolveMainCityRecoveryResult(result = null) {
     || (recoveryStatus !== "valid" && recoveryStatus !== "repaired")
     || !mainCityId
     || !getRegionIds().includes(mainRegionId)
+    || !isMainCityRegionEligible(mainRegionId)
     || getCityRegionId(mainCityId) !== mainRegionId
     || mainIslandId !== getOnlineIslandId(mainRegionId)
   ) {
@@ -31158,6 +31182,8 @@ function showCityInfoModal(cityId) {
           ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" data-enter-inner-castle="${escapeHtml(city.id)}">Enter Inner Castle</button>`
           : ""}
       </div>`
+    : !mainCityStatus.locationEligible
+    ? ""
     : `
       <div class="main-city-action-panel">
         <div class="main-city-action-copy">

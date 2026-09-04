@@ -44,10 +44,12 @@ if (resetControlState === "armed") {
 
 const layout = readJson("functions/core-expansion-world-layout.json");
 const catalog = readJson("functions/core-expansion-region-catalog.json");
+const browserJsonCatalog = readJson("assets/worlds/core-expansion-v1/region-catalog.json");
 const browserCatalog = JSON.parse(read("assets/worlds/core-expansion-v1/region-catalog.js")
   .match(/Object\.freeze\((\{[\s\S]*\})\);/)?.[1] || "null");
 const receipt = readJson("assets/worlds/core-expansion-v1/build-receipt.json");
 assert.deepEqual(browserCatalog, catalog);
+assert.deepEqual(browserJsonCatalog, catalog);
 assert.deepEqual(regionCatalogRuntime.validateCatalog(catalog), []);
 assert.equal(layout.maps.length, 81);
 assert.equal(catalog.regions.length, 81);
@@ -80,11 +82,39 @@ assert.equal(new Set(catalog.regions.map(region => `${region.gridX},${region.gri
 
 const core = catalog.regions.filter(region => region.permanentCore);
 const newLands = catalog.regions.filter(region => !region.permanentCore);
+const expectedMainCityRestrictedRegionIds = [
+  "core-v2-north-west-holding-tower-m1-m1",
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-north-east-holding-tower-p1-m1",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-aurum-keep-m1-p0",
+  "core-v2-south-west-holding-tower-m1-p1",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-south-east-holding-tower-p1-p1",
+];
+const expectedRedTrimRegionIds = [
+  "core-v2-greybanner-hold-p0-m1",
+  "core-v2-crown-citadel-p0-p0",
+  "core-v2-swiftgate-p1-p0",
+  "core-v2-ironwatch-p0-p1",
+  "core-v2-aurum-keep-m1-p0",
+];
 assert.equal(core.length, 25);
 assert(core.every(region => region.worldLayer === 0 && !region.spawnEligible && !region.spawnReady));
 assert(core.every(region => region.purpose !== "player_region"));
 assert(core.every(region => region.name === topology.PREPARED_CORE_REGION_NAMES[region.id]));
+assert.deepEqual(topology.MAIN_CITY_RESTRICTED_REGION_IDS, expectedMainCityRestrictedRegionIds);
+assert.deepEqual(catalog.mainCityPolicy?.restrictedRegionIds, expectedMainCityRestrictedRegionIds);
+assert.deepEqual(topology.RED_TRIM_REGION_IDS, expectedRedTrimRegionIds);
+assert.deepEqual(catalog.mapPresentation?.redTrimRegionIds, expectedRedTrimRegionIds);
+assert.equal(new Set(expectedMainCityRestrictedRegionIds).size, 9);
+assert.equal(new Set(expectedRedTrimRegionIds).size, 5);
+assert(expectedMainCityRestrictedRegionIds.every(regionId => core.some(region => region.id === regionId)));
+assert(expectedRedTrimRegionIds.every(regionId => expectedMainCityRestrictedRegionIds.includes(regionId)));
+assert.equal(core.filter(region => !expectedMainCityRestrictedRegionIds.includes(region.id)).length, 16);
 assert.equal(newLands.length, 56);
+assert(newLands.every(region => !expectedMainCityRestrictedRegionIds.includes(region.id)));
 assert(newLands.every(region => region.purpose === "player_region" && region.cityCapacity === 40));
 assert(newLands.every(region => mapsById.get(region.id)?.cities?.length === 40));
 assert.equal(newLands.filter(region => region.worldLayer === 1).length, 24);
@@ -246,7 +276,7 @@ assert.match(read("firebaseClient.js"), /subscribeCoreExpansionState[\s\S]*realm
 assert.match(read("firestore.rules"), /match \/expansion\/\{stateId\}[\s\S]*allow read:[\s\S]*currentResetGeneration/);
 assert.match(
   read("functions/test/run-emulator-gates.js"),
-  /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*fileName === coreExpansionGate/,
+  /const coreExpansionGates\s*=\s*new Set\(\[coreExpansionGate, "emulator-main-city-recovery\.js"\]\)[\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*forceCoreExpansion/,
 );
 const indexSource = read("index.html");
 assert.match(indexSource, /region-catalog\.js\?v=20260903-cache-safe-map-art-r1/);
@@ -257,4 +287,4 @@ for (const forbidden of ["developmentOnly", "productionActivated", "fixturePacka
   assert(!preparedText.includes(forbidden), `Prepared release leaked development marker ${forbidden}.`);
 }
 
-console.log(`Validated the ${resetControlState} Core-expansion release bundle, north-center cardinal layer starts, 81 unique medieval map names, 3,720 city definitions, 17 objectives, asset hashes, runtime wiring, and fail-closed reset controls.`);
+console.log(`Validated the ${resetControlState} Core-expansion release bundle, exact-nine Main City policy, five red-trim maps, 25 non-spawnable Core maps, medieval map names, assets, runtime wiring, and fail-closed reset controls.`);

@@ -7,6 +7,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const paths = Object.freeze({
   browserCatalog: path.join(root, "assets", "worlds", "core-expansion-v1", "region-catalog.js"),
+  browserJsonCatalog: path.join(root, "assets", "worlds", "core-expansion-v1", "region-catalog.json"),
   serverCatalog: path.join(root, "functions", "core-expansion-region-catalog.json"),
   serverLayout: path.join(root, "functions", "core-expansion-world-layout.json"),
   receipt: path.join(root, "assets", "worlds", "core-expansion-v1", "build-receipt.json"),
@@ -74,6 +75,7 @@ function syncCoreExpansionAssets({ checkOnly = false } = {}) {
   };
 
   validateOrWrite(paths.serverCatalog, stableJson(nextCatalog), "Server Core-expansion catalog", checkOnly);
+  validateOrWrite(paths.browserJsonCatalog, stableJson(nextCatalog), "Browser Core-expansion JSON catalog", checkOnly);
   validateOrWrite(paths.serverLayout, stableJson(nextLayout), "Server Core-expansion layout", checkOnly);
   validateOrWrite(paths.receipt, stableJson(nextReceipt), "Core-expansion build receipt", checkOnly);
   validateOrWrite(
