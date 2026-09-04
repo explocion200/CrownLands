@@ -2322,6 +2322,7 @@
           entriesRef,
           where("resetGeneration", "==", RESET_GENERATION),
           where("worldId", "==", ONLINE_WORLD_ID),
+          ...getRealmShardQueryConstraints(where),
           orderBy("kingPower", "desc"),
           firestoreLimit(safeLimit)
         )

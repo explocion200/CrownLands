@@ -67,6 +67,28 @@
       ]
     },
     {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "realmShardId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "kingPower",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "cities",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

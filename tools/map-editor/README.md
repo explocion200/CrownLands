@@ -62,7 +62,7 @@ The editor supports separate marker types for:
 - Swiftgate - march speed bonus
 - Upgrade Discount Stronghold
 
-Resource strongholds default to Level 50 with 50 million troops. The Crown Citadel defaults to Level 100 with 50 million troops.
+Resource strongholds default to Level 50 with 50 million troops. The Crown Citadel defaults to Level 100 with 100 million troops.
 
 ## Camp Rewards
 

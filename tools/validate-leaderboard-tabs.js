@@ -5,6 +5,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const client = read("game.js");
+const firebaseClient = read("firebaseClient.js");
+const firestoreIndexes = JSON.parse(read("firestore.indexes.json"));
 const profileTheme = read("profile-theme.css");
 const finalPalette = read("crownlands-palette.css");
 const visualQa = read("docs/visual-qa/report-leaderboard-readability/index.html");
@@ -23,6 +25,20 @@ const modalSource = client.slice(
   client.indexOf("function showLeaderboardModal()"),
   client.indexOf("function showLogModal(")
 );
+const leaderboardLoader = firebaseClient.slice(
+  firebaseClient.indexOf("async function loadKingPowerLeaderboard"),
+  firebaseClient.indexOf("async function loadPlayerIdentities")
+);
+
+assert.match(leaderboardLoader, /where\("resetGeneration", "==", RESET_GENERATION\)[\s\S]*?where\("worldId", "==", ONLINE_WORLD_ID\)[\s\S]*?\.\.\.getRealmShardQueryConstraints\(where\)[\s\S]*?orderBy\("kingPower", "desc"\)[\s\S]*?firestoreLimit\(safeLimit\)/, "Player ranks must use the authorized current-shard Top 100 query.");
+assert.ok(
+  firestoreIndexes.indexes.some(index => index.collectionGroup === "entries"
+    && index.queryScope === "COLLECTION"
+    && index.fields.map(field => `${field.fieldPath}:${field.order}`).join(",")
+      === "resetGeneration:ASCENDING,worldId:ASCENDING,realmShardId:ASCENDING,kingPower:DESCENDING"),
+  "The current-shard King Power ranking query is missing its production composite index."
+);
+assert.doesNotMatch(client.match(/function mergeLeaderboardEntries[\s\S]*?(?=function formatLeaderboardAge)/)?.[0] || "", /getCurrentLeaderboardEntry|getKingPowerLeaderboardSnapshot/, "Local unsaved power must not be injected into authoritative global ranks.");
 
 assert.match(modalSource, /role="tablist"[\s\S]*?data-leaderboard-tab="players">Top \$\{formatNumber\(KING_POWER_LEADERBOARD_LIMIT\)\}[\s\S]*?data-leaderboard-tab="clans"[\s\S]*?>Top Clans</, "Leaderboard category tabs are missing or out of order.");
 assert.match(modalSource, /modal\.className\s*=\s*"modal leaderboard-modal";/, "Opening the leaderboard does not clear stale modal variants that can hide ranks.");

@@ -22,6 +22,11 @@
     west: Object.freeze({ dx: -1, dy: 0, opposite: "east" }),
   });
 
+  function isKnownCoreCityId(cityId = "", regionId = "", summaries = null) {
+    return /^core_[a-f0-9]{18}$/i.test(String(cityId || ""))
+      && summaries?.has?.(String(regionId || "").trim().toLowerCase());
+  }
+
   function coordinateKey(gridX, gridY) {
     return `${Math.round(Number(gridX) || 0)},${Math.round(Number(gridY) || 0)}`;
   }
@@ -559,6 +564,7 @@
     buildClientEditorMap,
     materializeRegionDefinition,
     createRegionDefinitionLoader,
+    isKnownCoreCityId,
     buildRegionCatalog,
     validateCatalog,
   });

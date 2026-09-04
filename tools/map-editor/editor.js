@@ -88,7 +88,7 @@
       bonusType: "crownDominion",
       bonusAmount: 10,
       level: 100,
-      troops: 50000000,
+      troops: 100000000,
       artSrc: "assets/crown-citadel.png?v=20260703-crown-citadel-art",
       size: CROWN_CITADEL_VISUAL_SIZE,
     },
