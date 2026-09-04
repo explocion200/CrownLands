@@ -52,6 +52,7 @@ const CHAT = require("./chat.js");
 const REALM_TOPOLOGY = require("./realmTopology.js");
 const CORE_EXPANSION = require("./coreExpansionTopology.js");
 const HOLDING_TOWERS = require("./holding-towers.js");
+const ANTI_HANDOFF = require("./anti-handoff-policy.js");
 let RELEASE_MANIFEST = Object.freeze({ schemaVersion: 0, buildId: "development", contractHash: "" });
 try {
   RELEASE_MANIFEST = Object.freeze(require("./release-manifest.json"));
@@ -252,15 +253,10 @@ const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const CITY_RELINQUISH_DAILY_LIMIT = 1;
-const ANTI_FARM_POLICY_VERSION = 1;
+const ANTI_FARM_POLICY_VERSION = 2;
 const ANTI_FARM_INSTALLATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-const ANTI_FARM_FRESH_NEUTRAL_WINDOW_MS = 24 * 60 * 60 * 1000;
-const ANTI_FARM_HANDOFF_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const ANTI_FARM_ALLOWED_FRESH_HANDOFFS = 2;
-const ANTI_FARM_PAIR_BLOCK_MS = 7 * 24 * 60 * 60 * 1000;
 const ANTI_FARM_MAX_ACCOUNT_INSTALLATIONS = 8;
 const ANTI_FARM_MAX_INSTALLATION_ACCOUNTS = 12;
-const ANTI_FARM_MAX_HANDOFF_HISTORY = 24;
 const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 60);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 30);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 30);
@@ -7847,6 +7843,21 @@ function antiFarmAccountRef(uid = "") {
   return db.doc(`realmSecurity/${RESET_GENERATION}/accounts/${accountHash}`);
 }
 
+function antiHandoffPairRef(fromUid = "", toUid = "") {
+  const normalizedFromUid = safeString(fromUid, 128);
+  const normalizedToUid = safeString(toUid, 128);
+  if (!normalizedFromUid || !normalizedToUid || normalizedFromUid === normalizedToUid) return null;
+  const directionId = antiFarmHash(`anti-handoff-v2\n${normalizedFromUid}\n${normalizedToUid}`);
+  return db.doc(`realmSecurity/${RESET_GENERATION}/antiHandoffPairs/${directionId}`);
+}
+
+function antiHandoffAuditRef(eventId = "", fromUid = "", toUid = "") {
+  const normalizedEventId = safeString(eventId, 220);
+  if (!normalizedEventId) return null;
+  const auditId = antiFarmHash(`anti-handoff-v2-audit\n${fromUid}\n${toUid}\n${normalizedEventId}`);
+  return db.doc(`realmSecurity/${RESET_GENERATION}/antiHandoffAudit/${auditId}`);
+}
+
 function normalizeAntiFarmInstallationEntries(entries = [], nowMs = Date.now()) {
   return (Array.isArray(entries) ? entries : [])
     .map(entry => ({
@@ -7879,74 +7890,42 @@ function normalizeAntiFarmInstallationAccounts(accounts = [], nowMs = Date.now()
     .slice(0, ANTI_FARM_MAX_INSTALLATION_ACCOUNTS);
 }
 
-function normalizeFreshHandoffHistory(entries = [], nowMs = Date.now()) {
-  return (Array.isArray(entries) ? entries : [])
-    .map(entry => ({
-      eventId: safeString(entry?.eventId, 160),
-      atMs: Math.max(0, timestampToMs(entry?.atMs)),
-      attackerUid: safeString(entry?.attackerUid, 128),
-      defenderUid: safeString(entry?.defenderUid, 128),
-      targetKey: safeString(entry?.targetKey, 220),
-      neutralClaimedAtMs: Math.max(0, timestampToMs(entry?.neutralClaimedAtMs)),
-    }))
-    .filter(entry => (
-      entry.eventId
-      && entry.atMs > nowMs - ANTI_FARM_HANDOFF_WINDOW_MS
-      && entry.attackerUid
-      && entry.defenderUid
-      && entry.attackerUid !== entry.defenderUid
-    ))
-    .sort((left, right) => left.atMs - right.atMs)
-    .filter((entry, index, all) => all.findIndex(candidate => candidate.eventId === entry.eventId) === index)
-    .slice(-ANTI_FARM_MAX_HANDOFF_HISTORY);
+function createNeutralClaimEventId(target = {}, attackerUid = "", sourceResolutionId = "") {
+  const material = [
+    "neutral-claim-v2",
+    ONLINE_WORLD_ID,
+    RESET_GENERATION,
+    normalizeRegionId(target.regionId),
+    safeString(target.id, 96),
+    safeString(attackerUid, 128),
+    safeString(sourceResolutionId, 160),
+  ].join("\n");
+  return `nc_${antiFarmHash(material)}`;
 }
 
-function isFreshNeutralClaimTarget(target = {}, defenderUid = "", nowMs = Date.now()) {
-  const ownerUid = getOwnerUid(target);
-  const claimedByUid = safeString(target.neutralClaimedByUid, 128);
-  const claimedAtMs = Math.max(0, timestampToMs(target.neutralClaimedAtMs));
-  return Boolean(
-    defenderUid
-    && ownerUid === defenderUid
-    && target.neutralClaimOpen === true
-    && claimedByUid === defenderUid
-    && claimedAtMs > nowMs - ANTI_FARM_FRESH_NEUTRAL_WINDOW_MS
-    && claimedAtMs <= nowMs
-    && !isStronghold(target)
-    && !target.isMainCity
-    && !target.targetType
-    && !target.campType
-  );
-}
-
-function getNeutralClaimCapturePatch(target = {}, attackerUid = "", nowMs = Date.now(), source = "attack") {
-  if (isStronghold(target) || target.isMainCity || target.targetType || target.campType) return {};
-  if (!getOwnerUid(target)) {
-    return {
-      neutralClaimOpen: true,
-      neutralClaimedByUid: safeString(attackerUid, 128),
-      neutralClaimedAtMs: nowMs,
-      neutralClaimSource: safeString(source, 32) || "attack",
-      neutralClaimClosedAtMs: 0,
-    };
-  }
-  return {
-    neutralClaimOpen: false,
-    neutralClaimedByUid: "",
-    neutralClaimedAtMs: 0,
-    neutralClaimSource: "",
-    neutralClaimClosedAtMs: nowMs,
-  };
+function getNeutralClaimCapturePatch(
+  target = {},
+  attackerUid = "",
+  nowMs = Date.now(),
+  source = "attack",
+  sourceResolutionId = ""
+) {
+  if (!ANTI_HANDOFF.isRegularCity(target, "city")) return {};
+  const neutralClaimEventId = !getOwnerUid(target)
+    ? createNeutralClaimEventId(target, attackerUid, sourceResolutionId)
+    : "";
+  return ANTI_HANDOFF.getLineageCapturePatch({
+    target: { ...target, ownerUid: getOwnerUid(target) },
+    targetType: "city",
+    nextOwnerUid: attackerUid,
+    atMs: nowMs,
+    source,
+    neutralClaimEventId,
+  });
 }
 
 function getNeutralClaimClearedPatch(nowMs = Date.now()) {
-  return {
-    neutralClaimOpen: false,
-    neutralClaimedByUid: "",
-    neutralClaimedAtMs: 0,
-    neutralClaimSource: "",
-    neutralClaimClosedAtMs: nowMs,
-  };
+  return ANTI_HANDOFF.getClearedLineagePatch(nowMs);
 }
 
 function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
@@ -7977,79 +7956,52 @@ function getCityRelinquishNeutralPatch(city = {}, nowMs = Date.now()) {
   };
 }
 
-function normalizeAntiFarmPairState(data = {}, nowMs = Date.now()) {
+function normalizeAntiFarmPairState(data = {}, _nowMs = Date.now()) {
   return {
     sharedInstallationLastSeenAtMs: Math.max(0, timestampToMs(data.sharedInstallationLastSeenAtMs)),
-    blockedUntilMs: Math.max(0, timestampToMs(data.blockedUntilMs)),
-    blockReason: safeString(data.blockReason, 48),
-    freshHandoffs: normalizeFreshHandoffHistory(data.freshHandoffs, nowMs),
+    sharedInstallationExpiresAtMs: Math.max(0, timestampToMs(data.sharedInstallationExpiresAtMs)),
   };
 }
 
-function createAntiFarmPolicy(blocked = false, reason = "", blockedUntilMs = 0) {
+function createAntiFarmPolicy(blocked = false, reason = "", blockedUntilMs = 0, details = {}) {
   return {
     blocked: Boolean(blocked),
     reason: safeString(reason, 48),
     blockedUntilMs: Math.max(0, Math.floor(safeNumber(blockedUntilMs, 0))),
+    ...(details && typeof details === "object" ? details : {}),
   };
 }
 
 function evaluateAntiFarmPairData({
   pairData = {},
-  target = {},
   attackerUid = "",
   defenderUid = "",
   nowMs = Date.now(),
-  checkFreshHandoff = true,
 } = {}) {
   const pairState = normalizeAntiFarmPairState(pairData, nowMs);
-  const freshNeutralHandoff = Boolean(
-    checkFreshHandoff && isFreshNeutralClaimTarget(target, defenderUid, nowMs)
-  );
   if (!attackerUid || !defenderUid || attackerUid === defenderUid) {
     return {
       policy: createAntiFarmPolicy(),
       internalReason: "",
-      activatesPairBlock: false,
-      freshNeutralHandoff: false,
       pairState,
     };
   }
-  if (pairState.blockedUntilMs > nowMs) {
-    return {
-      policy: createAntiFarmPolicy(true, "linked-account-activity", pairState.blockedUntilMs),
-      internalReason: pairState.blockReason || "repeated-fresh-neutral-handoffs",
-      activatesPairBlock: false,
-      freshNeutralHandoff,
-      pairState,
-    };
-  }
-  const sharedInstallationUntilMs = pairState.sharedInstallationLastSeenAtMs
-    ? pairState.sharedInstallationLastSeenAtMs + ANTI_FARM_INSTALLATION_RETENTION_MS
-    : 0;
+  const sharedInstallationUntilMs = Math.max(
+    pairState.sharedInstallationExpiresAtMs,
+    pairState.sharedInstallationLastSeenAtMs
+      ? pairState.sharedInstallationLastSeenAtMs + ANTI_FARM_INSTALLATION_RETENTION_MS
+      : 0
+  );
   if (sharedInstallationUntilMs > nowMs) {
     return {
       policy: createAntiFarmPolicy(true, "linked-account-activity", sharedInstallationUntilMs),
       internalReason: "shared-installation",
-      activatesPairBlock: false,
-      freshNeutralHandoff,
-      pairState,
-    };
-  }
-  if (freshNeutralHandoff && pairState.freshHandoffs.length >= ANTI_FARM_ALLOWED_FRESH_HANDOFFS) {
-    return {
-      policy: createAntiFarmPolicy(true, "linked-account-activity", nowMs + ANTI_FARM_PAIR_BLOCK_MS),
-      internalReason: "repeated-fresh-neutral-handoffs",
-      activatesPairBlock: true,
-      freshNeutralHandoff,
       pairState,
     };
   }
   return {
     policy: createAntiFarmPolicy(),
     internalReason: "",
-    activatesPairBlock: false,
-    freshNeutralHandoff,
     pairState,
   };
 }
@@ -8069,6 +8021,9 @@ function getAntiFarmBlockedMessage(policy = {}, nowMs = Date.now()) {
   const suffix = blockedUntilMs > nowMs
     ? ` Available again in ${formatAntiFarmDuration(blockedUntilMs - nowMs)}.`
     : "";
+  if (policy.reason === "rapid-neutral-handoff-limit") {
+    return `Rapid neutral-city handoff limit reached: 7 of 7 for this direction.${suffix}`;
+  }
   return `These kingdoms cannot attack each other because repeated linked-account activity was detected.${suffix}`;
 }
 
@@ -8128,50 +8083,48 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
   target = {},
   targetType = "city",
   targetRegionId = "",
-  checkFreshHandoff = true,
+  checkRapidHandoff = true,
   attemptId = "",
   phase = "launch",
   nowMs = Date.now(),
+  handoffAtMs = nowMs,
 } = {}) {
   const pairRef = antiFarmPairRef(attackerUid, defenderUid);
-  if (!pairRef) {
-    return {
-      pairRef: null,
-      pairData: {},
-      ...evaluateAntiFarmPairData({
-        attackerUid,
-        defenderUid,
-        target,
-        nowMs,
-        checkFreshHandoff,
-      }),
-    };
-  }
-  const pairSnap = await transaction.get(pairRef);
-  const pairData = pairSnap.exists ? pairSnap.data() || {} : {};
-  const decision = evaluateAntiFarmPairData({
+  const handoffFromUid = ANTI_HANDOFF.getNeutralClaimLineage(target).claimantUid;
+  const handoffPairRef = checkRapidHandoff ? antiHandoffPairRef(handoffFromUid, attackerUid) : null;
+  const [pairSnap, handoffPairSnap] = await Promise.all([
+    pairRef ? transaction.get(pairRef) : Promise.resolve(null),
+    handoffPairRef ? transaction.get(handoffPairRef) : Promise.resolve(null),
+  ]);
+  const pairData = pairSnap?.exists ? pairSnap.data() || {} : {};
+  const sharedDecision = evaluateAntiFarmPairData({
     pairData,
-    target,
     attackerUid,
     defenderUid,
     nowMs,
-    checkFreshHandoff,
   });
-  if (decision.policy.blocked) {
-    if (decision.activatesPairBlock) {
-      transaction.set(pairRef, {
-        version: ANTI_FARM_POLICY_VERSION,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        pairUids: getAntiFarmPairUids(attackerUid, defenderUid),
-        freshHandoffs: decision.pairState.freshHandoffs,
-        blockedUntilMs: decision.policy.blockedUntilMs,
-        blockReason: decision.internalReason,
-        blockedAtMs: nowMs,
-        blockedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
+  const handoffPairData = handoffPairSnap?.exists ? handoffPairSnap.data() || {} : {};
+  const rapidHandoff = ANTI_HANDOFF.evaluateAntiHandoff({
+    pairData: handoffPairData,
+    target: { ...target, ownerUid: getOwnerUid(target) },
+    targetType,
+    fromUid: handoffFromUid,
+    toUid: attackerUid,
+    atMs: handoffAtMs,
+  });
+  const rapidPolicy = rapidHandoff.blocked
+    ? createAntiFarmPolicy(true, "rapid-neutral-handoff-limit", rapidHandoff.nextSlotAtMs, {
+      count: rapidHandoff.count,
+      limit: rapidHandoff.limit,
+      nextSlotAtMs: rapidHandoff.nextSlotAtMs,
+      policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
+    })
+    : createAntiFarmPolicy();
+  const policy = sharedDecision.policy.blocked ? sharedDecision.policy : rapidPolicy;
+  const internalReason = sharedDecision.policy.blocked
+    ? sharedDecision.internalReason
+    : rapidHandoff.blocked ? "rapid-neutral-handoff-limit" : "";
+  if (policy.blocked) {
     writeAntiFarmAudit(transaction, pairRef, {
       eventId: `blocked_${phase}_${attemptId || target.id}_${nowMs}`,
       attackerUid,
@@ -8179,16 +8132,126 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
       target,
       targetType,
       targetRegionId,
-      internalReason: decision.internalReason,
-      policy: decision.policy,
+      internalReason,
+      policy,
       phase,
       nowMs,
     });
+    if (rapidHandoff.blocked) {
+      writeAntiHandoffAudit(transaction, {
+        eventId: `blocked_${phase}_${attemptId || target.id}_${nowMs}`,
+        attackerUid,
+        defenderUid,
+        target,
+        targetType,
+        targetRegionId,
+        phase,
+        decision: rapidHandoff,
+        nowMs,
+        outcome: "blocked",
+      });
+    }
   }
-  return { pairRef, pairData, ...decision };
+  return {
+    pairRef,
+    pairData,
+    handoffPairRef,
+    handoffPairData,
+    pairState: sharedDecision.pairState,
+    rapidHandoff,
+    rapidHandoffCandidate: rapidHandoff.qualifying,
+    policy,
+    internalReason,
+  };
 }
 
-function recordSuccessfulFreshNeutralHandoff(transaction, context = {}, {
+function writeAntiHandoffAudit(transaction, {
+  eventId = "",
+  attackerUid = "",
+  defenderUid = "",
+  fromUid = "",
+  target = {},
+  targetType = "city",
+  targetRegionId = "",
+  phase = "capture",
+  decision = {},
+  nowMs = Date.now(),
+  outcome = "counted",
+} = {}) {
+  const directionFromUid = safeString(decision.fromUid || fromUid || defenderUid, 128);
+  const ref = antiHandoffAuditRef(eventId, directionFromUid, attackerUid);
+  if (!transaction || !ref) return;
+  transaction.set(ref, {
+    policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
+    fromUid: directionFromUid,
+    toUid: safeString(attackerUid, 128),
+    neutralClaimEventId: safeString(decision.lineage?.eventId || target.neutralClaimEventId, 160),
+    targetKey: getAntiFarmTargetKey(target, targetType, targetRegionId),
+    targetId: safeString(target.id, 96),
+    targetRegionId: normalizeRegionId(targetRegionId || target.regionId),
+    phase: safeString(phase, 32),
+    outcome: safeString(outcome, 32),
+    count: Math.max(0, Math.floor(safeNumber(decision.nextCount, decision.count))),
+    limit: ANTI_HANDOFF.ANTI_HANDOFF_SUCCESS_LIMIT,
+    nextSlotAtMs: Math.max(0, timestampToMs(decision.nextSlotAtMs)),
+    occurredAtMs: nowMs,
+    expiresAtMs: nowMs + ANTI_HANDOFF.ANTI_HANDOFF_AUDIT_RETENTION_MS,
+    createdAt: FieldValue.serverTimestamp(),
+  }, { merge: false });
+}
+
+function writeAntiHandoffNotice(transaction, {
+  uid = "",
+  perspective = "attacker",
+  opponentUid = "",
+  opponentName = "",
+  target = {},
+  targetRegionId = "",
+  decision = {},
+  nowMs = Date.now(),
+} = {}) {
+  if (!uid || !decision.warning) return null;
+  const count = Math.max(0, Math.floor(safeNumber(decision.nextCount, 0)));
+  const isFinal = decision.finalWarning === true;
+  const reportId = `anti_handoff_v2_${safeString(decision.lineage?.eventId, 120)}_${uid}`;
+  const nextSlotText = decision.nextSlotAtMs > nowMs
+    ? new Date(decision.nextSlotAtMs).toISOString()
+    : "available now";
+  const report = makeReport({
+    id: reportId,
+    uid,
+    type: perspective === "defender" ? "defense" : "attack",
+    outcome: "defeat",
+    eventKind: "anti_handoff_v2_notice",
+    city: { ...target, regionId: targetRegionId || target.regionId },
+    opponentUid,
+    opponentName,
+    summary: `${isFinal ? "Final warning" : "Rapid handoff warning"}: ${count} of 7 qualifying neutral-city handoffs in this direction. Trigger: ${target.name || target.id}. Next slot: ${nextSlotText}. Support/appeals: /support.html.`,
+    nowMs,
+  });
+  report.antiHandoff = {
+    policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
+    count,
+    limit: ANTI_HANDOFF.ANTI_HANDOFF_SUCCESS_LIMIT,
+    finalWarning: isFinal,
+    nextSlotAtMs: Math.max(0, timestampToMs(decision.nextSlotAtMs)),
+    neutralClaimEventId: safeString(decision.lineage?.eventId, 160),
+    fromUid: safeString(decision.fromUid, 128),
+    toUid: safeString(decision.toUid, 128),
+    trigger: safeString(target.name || target.id, 80),
+  };
+  transaction.set(reportRef(uid, report.id), {
+    ...report,
+    realmShardId: getCurrentRealmShardId(),
+    createdAt: FieldValue.serverTimestamp(),
+  }, { merge: false });
+  return report;
+}
+
+function recordSuccessfulRapidNeutralHandoff(transaction, context = {}, {
   eventId = "",
   attackerUid = "",
   defenderUid = "",
@@ -8196,43 +8259,73 @@ function recordSuccessfulFreshNeutralHandoff(transaction, context = {}, {
   targetType = "city",
   targetRegionId = "",
   nowMs = Date.now(),
+  attackerName = "",
+  defenderName = "",
 } = {}) {
-  if (!context.pairRef || !context.freshNeutralHandoff || targetType === "camp") return false;
-  const normalizedEventId = safeString(eventId, 160);
-  if (!normalizedEventId) return false;
-  const prior = normalizeFreshHandoffHistory(context.pairState?.freshHandoffs, nowMs);
-  if (prior.some(entry => entry.eventId === normalizedEventId)) return false;
-  const handoff = {
-    eventId: normalizedEventId,
-    atMs: nowMs,
-    attackerUid: safeString(attackerUid, 128),
-    defenderUid: safeString(defenderUid, 128),
-    targetKey: getAntiFarmTargetKey(target, targetType, targetRegionId),
-    neutralClaimedAtMs: Math.max(0, timestampToMs(target.neutralClaimedAtMs)),
-  };
-  const freshHandoffs = [...prior, handoff].slice(-ANTI_FARM_MAX_HANDOFF_HISTORY);
-  transaction.set(context.pairRef, {
-    version: ANTI_FARM_POLICY_VERSION,
+  if (!context.handoffPairRef || !context.rapidHandoff?.wouldCount || context.rapidHandoff.blocked) return false;
+  const directionFromUid = safeString(context.rapidHandoff.fromUid, 128);
+  const appended = ANTI_HANDOFF.appendSuccessfulEvent(
+    context.rapidHandoff,
+    getAntiFarmTargetKey(target, targetType, targetRegionId)
+  );
+  if (!appended.recorded) return false;
+  const lastEventAtMs = appended.events.at(-1)?.atMs || nowMs;
+  transaction.set(context.handoffPairRef, {
+    policyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
-    pairUids: getAntiFarmPairUids(attackerUid, defenderUid),
-    freshHandoffs,
-    lastFreshHandoffAtMs: nowMs,
+    realmShardId: getCurrentRealmShardId(),
+    fromUid: directionFromUid,
+    toUid: safeString(attackerUid, 128),
+    events: appended.events,
+    count: appended.count,
+    lastEventAtMs,
+    expiresAtMs: lastEventAtMs + ANTI_HANDOFF.ANTI_HANDOFF_ROLLING_WINDOW_MS,
     updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  writeAntiFarmAudit(transaction, context.pairRef, {
-    eventId: `handoff_${normalizedEventId}`,
+  }, { merge: false });
+  const countedDecision = {
+    ...context.rapidHandoff,
+    nextCount: appended.count,
+    nextSlotAtMs: appended.count >= ANTI_HANDOFF.ANTI_HANDOFF_SUCCESS_LIMIT
+      ? appended.events[0].atMs + ANTI_HANDOFF.ANTI_HANDOFF_ROLLING_WINDOW_MS
+      : nowMs,
+    warning: appended.count >= ANTI_HANDOFF.ANTI_HANDOFF_NOTICE_START_COUNT,
+    finalWarning: appended.count === ANTI_HANDOFF.ANTI_HANDOFF_SUCCESS_LIMIT,
+  };
+  writeAntiHandoffAudit(transaction, {
+    eventId: `counted_${safeString(eventId, 160)}_${countedDecision.lineage.eventId}`,
     attackerUid,
     defenderUid,
     target,
     targetType,
     targetRegionId,
-    internalReason: "fresh-neutral-handoff-recorded",
-    policy: createAntiFarmPolicy(),
     phase: "capture",
+    decision: countedDecision,
     nowMs,
-    neutralClaimedAtMs: handoff.neutralClaimedAtMs,
+    outcome: "counted",
   });
+  if (appended.count >= ANTI_HANDOFF.ANTI_HANDOFF_NOTICE_START_COUNT) {
+    writeAntiHandoffNotice(transaction, {
+      uid: attackerUid,
+      perspective: "attacker",
+      opponentUid: directionFromUid,
+      opponentName: directionFromUid === safeString(defenderUid, 128) ? defenderName : "",
+      target,
+      targetRegionId,
+      decision: countedDecision,
+      nowMs,
+    });
+    writeAntiHandoffNotice(transaction, {
+      uid: directionFromUid,
+      perspective: "defender",
+      opponentUid: attackerUid,
+      opponentName: attackerName,
+      target,
+      targetRegionId,
+      decision: countedDecision,
+      nowMs,
+    });
+  }
   return true;
 }
 
@@ -14977,7 +15070,7 @@ exports.registerGameInstallation = timedCallable(
 );
 
 async function cleanupExpiredAntiFarmInstallations(nowMs = Date.now()) {
-  const [installationSnap, accountSnap] = await Promise.all([
+  const [installationSnap, accountSnap, handoffPairSnap, handoffAuditSnap] = await Promise.all([
     db.collection(`realmSecurity/${RESET_GENERATION}/installations`)
       .where("expiresAtMs", "<=", nowMs)
       .limit(400)
@@ -14986,16 +15079,33 @@ async function cleanupExpiredAntiFarmInstallations(nowMs = Date.now()) {
       .where("lastSeenAtMs", "<=", nowMs - ANTI_FARM_INSTALLATION_RETENTION_MS)
       .limit(400)
       .get(),
+    db.collection(`realmSecurity/${RESET_GENERATION}/antiHandoffPairs`)
+      .where("expiresAtMs", "<=", nowMs)
+      .limit(400)
+      .get(),
+    db.collection(`realmSecurity/${RESET_GENERATION}/antiHandoffAudit`)
+      .where("expiresAtMs", "<=", nowMs)
+      .limit(400)
+      .get(),
   ]);
   const expiredDocs = [
     ...installationSnap.docs,
     ...accountSnap.docs,
+    ...handoffPairSnap.docs,
+    ...handoffAuditSnap.docs,
   ];
-  if (!expiredDocs.length) return { deleted: 0 };
-  const batch = db.batch();
-  expiredDocs.forEach(document => batch.delete(document.ref));
-  await batch.commit();
-  return { deleted: expiredDocs.length };
+  for (let start = 0; start < expiredDocs.length; start += 450) {
+    const batch = db.batch();
+    expiredDocs.slice(start, start + 450).forEach(document => batch.delete(document.ref));
+    await batch.commit();
+  }
+  return {
+    deleted: expiredDocs.length,
+    installations: installationSnap.size,
+    accounts: accountSnap.size,
+    handoffPairs: handoffPairSnap.size,
+    handoffAudits: handoffAuditSnap.size,
+  };
 }
 
 exports.joinGameServer = timedCallable("joinGameServer", {
@@ -17070,9 +17180,14 @@ async function ensureMainIslandForPlayer(uid, data = {}, options = {}) {
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
         neutralClaimOpen: false,
+        neutralClaimEventId: "",
         neutralClaimedByUid: "",
         neutralClaimedAtMs: 0,
         neutralClaimSource: "",
+        neutralClaimCurrentOwnerUid: "",
+        neutralClaimPreviousOwnerUid: "",
+        neutralClaimOwnershipChangedAtMs: 0,
+        neutralClaimPolicyVersion: ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION,
         neutralClaimClosedAtMs: 0,
       }),
       ...(alreadyExists ? {} : { createdAt: FieldValue.serverTimestamp() }),
@@ -23109,9 +23224,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       : isRallyTargetFriendly(targetOwnerUid, targetOwnerProfile, rally)) {
       throw new HttpsError("failed-precondition", "The objective is currently owned by you or a current clan ally.");
     }
-    const antiFarmContext = {
+    let antiFarmContext = {
       policy: createAntiFarmPolicy(),
-      freshNeutralHandoff: false,
+      rapidHandoffCandidate: false,
+      rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
       pairState: normalizeAntiFarmPairState({}, nowMs),
     };
     const launchOrder = {
@@ -23271,6 +23387,31 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       kind: "attack",
       speedMultiplier: Number.isFinite(slowestMarchSpeedMultiplier) ? slowestMarchSpeedMultiplier : 1,
     });
+    const arrivesAtMs = nowMs + Math.ceil(duration * 1000);
+    if (rally.targetType === "city" && targetOwnerUid && targetOwnerUid !== creatorUid) {
+      antiFarmContext = await evaluateHostileAntiFarmPolicy(transaction, {
+        attackerUid: creatorUid,
+        defenderUid: targetOwnerUid,
+        target,
+        targetType: "city",
+        targetRegionId: rally.targetRegionId,
+        checkRapidHandoff: true,
+        attemptId: launchOrder.id,
+        phase: "rally-launch",
+        nowMs,
+        handoffAtMs: arrivesAtMs,
+      });
+    }
+    if (antiFarmContext.policy.blocked) {
+      return {
+        ok: false,
+        status: "blocked",
+        message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
+        antiFarmPolicy: antiFarmContext.policy,
+        rally: rallyForClient(rally),
+        movement: null,
+      };
+    }
     const movement = {
       id: launchOrder.id,
       worldId: ONLINE_WORLD_ID,
@@ -23317,7 +23458,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       defenseCombatVersion: DEFENSE_COMBAT_VERSION,
       rallyMarchSpeedMultiplier: Number.isFinite(slowestMarchSpeedMultiplier) ? slowestMarchSpeedMultiplier : 1,
       launchedAtMs: nowMs,
-      arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+      arrivesAtMs,
       status: "active",
       createdByServer: true,
       rallyModelVersion: RALLY_MODEL_VERSION,
@@ -25664,6 +25805,34 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
           skillMultiplier(profileAfter, "marchOrders") * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100)
         ),
       });
+      const arrivesAtMs = nowMs + Math.ceil(duration * 1000);
+      const antiFarmContext = kind === "attack" && targetType === "city" && targetOwnerUid && targetOwnerUid !== uid
+        ? await evaluateHostileAntiFarmPolicy(transaction, {
+          attackerUid: uid,
+          defenderUid: targetOwnerUid,
+          target,
+          targetType,
+          targetRegionId: order.targetRegionId,
+          checkRapidHandoff: true,
+          attemptId: order.id,
+          phase: "tower-origin-launch",
+          nowMs,
+          handoffAtMs: arrivesAtMs,
+        })
+        : {
+          policy: createAntiFarmPolicy(),
+          rapidHandoffCandidate: false,
+          rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
+          pairState: normalizeAntiFarmPairState({}, nowMs),
+        };
+      if (antiFarmContext.policy.blocked) {
+        return {
+          ok: false,
+          status: "blocked",
+          message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
+          antiFarmPolicy: antiFarmContext.policy,
+        };
+      }
       const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
       const movement = {
         id: order.id,
@@ -25702,7 +25871,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         siegeCombatVersion: targetType === "city" ? SIEGE_COMBAT_VERSION : 0,
         defenseCombatVersion: targetType === "city" ? DEFENSE_COMBAT_VERSION : 0,
         launchedAtMs: nowMs,
-        arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+        arrivesAtMs,
         status: "active",
         createdByServer: true,
         serverAuthorityVersion: 3,
@@ -25739,18 +25908,35 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         });
       }
       let peaceShieldDeactivated = false;
-      if (kind === "reinforce" || shouldDeactivatePeaceShieldForAttack(target, targetType, uid, kind)) {
+      const deactivatesPeaceShield = kind === "reinforce"
+        || shouldDeactivatePeaceShieldForAttack(target, targetType, uid, kind);
+      if (
+        deactivatesPeaceShield
+        && safeString(profileAfter.antiHandoffShieldDeactivatedByArmyId, 96)
+        && safeString(profileAfter.antiHandoffShieldDeactivatedByArmyId, 96) !== movement.id
+      ) {
+        profilePatch.antiHandoffShieldDeactivatedByArmyId = FieldValue.delete();
+        profilePatch.antiHandoffShieldRestoreExpiresAtMs = FieldValue.delete();
+      }
+      if (deactivatesPeaceShield) {
         const itemEffects = { ...(economy.itemEffects || {}) };
-        const shieldIsActive = safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs
-          || economy.cityEntries.some(entry => (
-            entry?.city
-            && !isStronghold(entry.city)
-            && getShieldExpiresAtMs(entry.city) > nowMs
-          ));
+        const shieldRestoreExpiresAtMs = Math.max(
+          safeNumber(itemEffects.shieldExpiresAtMs, 0),
+          ...economy.cityEntries.map(entry => (
+            entry?.city && !isStronghold(entry.city) ? getShieldExpiresAtMs(entry.city) : 0
+          ))
+        );
+        const shieldIsActive = shieldRestoreExpiresAtMs > nowMs;
         if (shieldIsActive) {
           itemEffects.shieldExpiresAtMs = 0;
           profilePatch = { ...profilePatch, itemEffects };
           peaceShieldDeactivated = true;
+          if (antiFarmContext.rapidHandoffCandidate) {
+            movement.antiHandoffShieldRestoreExpiresAtMs = shieldRestoreExpiresAtMs;
+            movement.antiHandoffShieldRestorePolicyVersion = ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION;
+            profilePatch.antiHandoffShieldDeactivatedByArmyId = movement.id;
+            profilePatch.antiHandoffShieldRestoreExpiresAtMs = shieldRestoreExpiresAtMs;
+          }
           economy.cityEntries.forEach(entry => {
             if (!entry?.ref || !entry.city || isStronghold(entry.city)) return;
             const patch = { ownerShieldExpiresAtMs: 0 };
@@ -25999,31 +26185,12 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       }, nowMs);
       throw new HttpsError("failed-precondition", "You cannot scout or attack a clan ally.");
     }
-    const antiFarmContext = resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid
-      ? await evaluateHostileAntiFarmPolicy(transaction, {
-        attackerUid: uid,
-        defenderUid: targetOwnerUid,
-        target,
-        targetType: order.targetType,
-        targetRegionId: order.targetRegionId,
-        checkFreshHandoff: order.targetType !== "camp",
-        attemptId: order.id,
-        phase: "launch",
-        nowMs,
-      })
-      : {
-        policy: createAntiFarmPolicy(),
-        freshNeutralHandoff: false,
-        pairState: normalizeAntiFarmPairState({}, nowMs),
-      };
-    if (antiFarmContext.policy.blocked) {
-      return {
-        ok: false,
-        status: "blocked",
-        message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
-        antiFarmPolicy: antiFarmContext.policy,
-      };
-    }
+    let antiFarmContext = {
+      policy: createAntiFarmPolicy(),
+      rapidHandoffCandidate: false,
+      rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
+      pairState: normalizeAntiFarmPairState({}, nowMs),
+    };
     const neutralCaptureBlockReason = resolvedKind === "attack" && order.targetType !== "camp"
       ? getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target)
       : "";
@@ -26181,6 +26348,28 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       : 0;
     const duration = useSwiftMarchOrder ? swiftMarchDurationMs / 1000 : originalDuration;
     const arrivesAtMs = useSwiftMarchOrder ? nowMs + swiftMarchDurationMs : originalArrivesAtMs;
+    if (resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid) {
+      antiFarmContext = await evaluateHostileAntiFarmPolicy(transaction, {
+        attackerUid: uid,
+        defenderUid: targetOwnerUid,
+        target,
+        targetType: order.targetType,
+        targetRegionId: order.targetRegionId,
+        checkRapidHandoff: order.targetType !== "camp",
+        attemptId: order.id,
+        phase: "launch",
+        nowMs,
+        handoffAtMs: arrivesAtMs,
+      });
+    }
+    if (antiFarmContext.policy.blocked) {
+      return {
+        ok: false,
+        status: "blocked",
+        message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
+        antiFarmPolicy: antiFarmContext.policy,
+      };
+    }
     const movement = {
       id: order.id,
       worldId: ONLINE_WORLD_ID,
@@ -26275,18 +26464,35 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
     let peaceShieldDeactivated = false;
     const launchCityPatches = [];
     const launchCityUpdates = [];
-    if (resolvedKind === "reinforce" || shouldDeactivatePeaceShieldForAttack(target, order.targetType, uid, resolvedKind)) {
+    const deactivatesPeaceShield = resolvedKind === "reinforce"
+      || shouldDeactivatePeaceShieldForAttack(target, order.targetType, uid, resolvedKind);
+    if (
+      deactivatesPeaceShield
+      && safeString(attackerProfile.antiHandoffShieldDeactivatedByArmyId, 96)
+      && safeString(attackerProfile.antiHandoffShieldDeactivatedByArmyId, 96) !== movement.id
+    ) {
+      profileOverrides.antiHandoffShieldDeactivatedByArmyId = FieldValue.delete();
+      profileOverrides.antiHandoffShieldRestoreExpiresAtMs = FieldValue.delete();
+    }
+    if (deactivatesPeaceShield) {
       const itemEffects = { ...(attackerEconomy.itemEffects || {}) };
-      const shieldIsActive = safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs
-        || attackerEconomy.cityEntries.some(entry => (
-          entry?.city
-          && !isStronghold(entry.city)
-          && getShieldExpiresAtMs(entry.city) > nowMs
-        ));
+      const shieldRestoreExpiresAtMs = Math.max(
+        safeNumber(itemEffects.shieldExpiresAtMs, 0),
+        ...attackerEconomy.cityEntries.map(entry => (
+          entry?.city && !isStronghold(entry.city) ? getShieldExpiresAtMs(entry.city) : 0
+        ))
+      );
+      const shieldIsActive = shieldRestoreExpiresAtMs > nowMs;
       if (shieldIsActive) {
         itemEffects.shieldExpiresAtMs = 0;
         profileOverrides = { ...profileOverrides, itemEffects };
         peaceShieldDeactivated = true;
+        if (antiFarmContext.rapidHandoffCandidate) {
+          movement.antiHandoffShieldRestoreExpiresAtMs = shieldRestoreExpiresAtMs;
+          movement.antiHandoffShieldRestorePolicyVersion = ANTI_HANDOFF.ANTI_HANDOFF_POLICY_VERSION;
+          profileOverrides.antiHandoffShieldDeactivatedByArmyId = movement.id;
+          profileOverrides.antiHandoffShieldRestoreExpiresAtMs = shieldRestoreExpiresAtMs;
+        }
         attackerEconomy.cityEntries.forEach(entry => {
           if (!entry?.ref || !entry.city || isStronghold(entry.city)) return;
           const patch = { ownerShieldExpiresAtMs: 0 };
@@ -27611,6 +27817,40 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
       return null;
     };
+    const restoreAntiHandoffShield = () => {
+      const markerArmyId = safeString(attackerProfile.antiHandoffShieldDeactivatedByArmyId, 96);
+      const restoreExpiresAtMs = Math.max(
+        0,
+        timestampToMs(army.antiHandoffShieldRestoreExpiresAtMs),
+        timestampToMs(attackerProfile.antiHandoffShieldRestoreExpiresAtMs)
+      );
+      if (markerArmyId !== armyId || !attackerEconomy) return { restored: false, profilePatch: {} };
+      const profilePatch = {
+        antiHandoffShieldDeactivatedByArmyId: FieldValue.delete(),
+        antiHandoffShieldRestoreExpiresAtMs: FieldValue.delete(),
+      };
+      const currentShieldExpiresAtMs = Math.max(0, timestampToMs(attackerEconomy.itemEffects?.shieldExpiresAtMs));
+      if (restoreExpiresAtMs <= nowMs || currentShieldExpiresAtMs > nowMs) {
+        return { restored: false, profilePatch };
+      }
+      const itemEffects = { ...(attackerEconomy.itemEffects || {}), shieldExpiresAtMs: restoreExpiresAtMs };
+      attackerEconomy.itemEffects = itemEffects;
+      attackerEconomy.profilePatch.itemEffects = itemEffects;
+      attackerEconomy.cityEntries.forEach(entry => {
+        if (!entry?.ref || !entry.city || isStronghold(entry.city) || getOwnerUid(entry.city) !== attackerUid) return;
+        const patch = { ownerShieldExpiresAtMs: restoreExpiresAtMs };
+        transaction.set(entry.ref, cleanCityUpdate(entry.city, patch), { merge: true });
+        appendEconomyCityPatch(attackerEconomy, entry.ref, entry.city, patch);
+        cityUpdates.push({ id: entry.city.id, regionId: entry.city.regionId, ...patch });
+      });
+      return { restored: true, profilePatch: { ...profilePatch, itemEffects } };
+    };
+    const clearResolvedAntiHandoffShieldMarker = () => {
+      if (!attackerEconomy) return;
+      if (safeString(attackerProfile.antiHandoffShieldDeactivatedByArmyId, 96) !== armyId) return;
+      attackerEconomy.profilePatch.antiHandoffShieldDeactivatedByArmyId = FieldValue.delete();
+      attackerEconomy.profilePatch.antiHandoffShieldRestoreExpiresAtMs = FieldValue.delete();
+    };
     const troopRewardDestinationForCaller = (attackerReward = null, defenderReward = null) => {
       const reward = callerUid === attackerUid
         ? attackerReward
@@ -28098,14 +28338,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         target,
         targetType,
         targetRegionId,
-        checkFreshHandoff: targetType !== "camp",
+        checkRapidHandoff: targetType !== "camp",
         attemptId: armyId,
         phase: rallyAttack ? "rally-arrival" : "arrival",
         nowMs,
       })
       : {
         policy: createAntiFarmPolicy(),
-        freshNeutralHandoff: false,
+        rapidHandoffCandidate: false,
+        rapidHandoff: ANTI_HANDOFF.evaluateAntiHandoff(),
         pairState: normalizeAntiFarmPairState({}, nowMs),
       };
     // Firestore transactions require every combat read to finish before this
@@ -28145,6 +28386,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       : null;
     if (antiFarmContext.policy.blocked) {
       const message = getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs);
+      const shieldRestoration = antiFarmContext.policy.reason === "rapid-neutral-handoff-limit"
+        ? restoreAntiHandoffShield()
+        : { restored: false, profilePatch: {} };
       let refundedSwiftMarchOrders = 0;
       if (army.swiftMarchUsedAtMs && !army.swiftMarchRefundedAtMs && attackerEconomy) {
         const ownedOrders = Math.max(
@@ -28175,7 +28419,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           transaction.set(targetRef, campPatch, { merge: true });
           campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
         }
-        writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
+        writeParticipantEconomies(shieldRestoration.profilePatch, {}, { addActiveArmies: [movement] });
         transaction.set(rallyAttackDocumentRef, {
           status: RALLY_STATUS_RECALLING,
           antiFarmReturnStartedAtMs: nowMs,
@@ -28201,6 +28445,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           movement,
           campUpdate,
           refundedSwiftMarchOrders,
+          peaceShieldRestored: shieldRestoration.restored,
           returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
           cityUpdates: withEconomyCityUpdates([]),
           currentUser: {
@@ -28211,7 +28456,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
 
       const returnedArmy = returnRecalledTroops(troopCount);
-      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      writeParticipantEconomies(shieldRestoration.profilePatch, {}, {
+        statsCityPatches: getLatestSourceReturnStatsPatches(),
+      });
       let campUpdate = null;
       if (targetType === "camp" && targetSnap.exists && target) {
         const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);
@@ -28246,6 +28493,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         blocked: "anti_farm_policy",
         returned: returnedArmy.returned,
         refundedSwiftMarchOrders,
+        peaceShieldRestored: shieldRestoration.restored,
         antiFarmPolicy: antiFarmContext.policy,
       });
       return {
@@ -28268,6 +28516,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         },
       };
     }
+    clearResolvedAntiHandoffShieldMarker();
     let currentBattleId = "";
     const applyReinforcementDefenseSettlement = ({
       allocation = null,
@@ -29117,7 +29366,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           alliedReinforcementTroops: alliedVictoryTroops,
           relinquishedAtMs: 0,
           relocatedAtMs: 0,
-          ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "rally_attack"),
+          ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "attack", armyId),
           ...(carriedFortificationState ? { fortificationState: carriedFortificationState } : {}),
         };
         targetUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
@@ -29346,7 +29595,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             nowMs,
           });
         }
-        recordSuccessfulFreshNeutralHandoff(transaction, antiFarmContext, {
+        recordSuccessfulRapidNeutralHandoff(transaction, antiFarmContext, {
           eventId: `army_${armyId}_${targetType}_${target.id}`,
           attackerUid,
           defenderUid: oldOwnerUid,
@@ -29354,6 +29603,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           targetType,
           targetRegionId,
           nowMs,
+          attackerName,
+          defenderName,
         });
         writeOwnershipChangeEvent(transaction, {
           eventId: `army_${armyId}_${targetType}_${target.id}`,
@@ -30471,11 +30722,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         alliedReinforcementTroops: 0,
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
-        ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "attack"),
+        ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "attack", armyId),
         ...(carriedFortificationState ? { fortificationState: carriedFortificationState } : {}),
       };
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
-      recordSuccessfulFreshNeutralHandoff(transaction, antiFarmContext, {
+      recordSuccessfulRapidNeutralHandoff(transaction, antiFarmContext, {
         eventId: `army_${armyId}_city_${target.id}`,
         attackerUid,
         defenderUid: oldOwnerUid,
@@ -30483,6 +30734,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         targetType: "city",
         targetRegionId,
         nowMs,
+        attackerName,
+        defenderName,
       });
       writeRealmActivityCaptureEvent(transaction, {
         eventId: `army_${armyId}_city_${target.id}`,
@@ -32550,7 +32803,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         relocatedAtMs: 0,
         deedAwardedAtMs: nowMs,
         deedCampId: camp.id,
-        ...getNeutralClaimCapturePatch(deedCityAward.city, holderUid, nowMs, "deed_camp"),
+        ...getNeutralClaimCapturePatch(deedCityAward.city, holderUid, nowMs, "deed_camp", camp.id),
       };
       transaction.set(
         deedCityAward.ref,
@@ -34126,7 +34379,7 @@ exports.cleanupAntiFarmInstallations = onSchedule({
   memory: "256MiB",
 }, async () => {
   const result = await cleanupExpiredAntiFarmInstallations(Date.now());
-  console.log("Expired Crownlands installation links cleaned", result);
+  console.log("Expired Crownlands anti-abuse records cleaned", result);
 });
 
 async function cleanupExpiredChatCollectionGroup(collectionId = "", nowMs = Date.now(), maxBatches = 8) {

@@ -47,7 +47,7 @@ requires(
 );
 requires(
   server,
-  /resolvedKind === "reinforce" \|\| shouldDeactivatePeaceShieldForAttack[\s\S]*?shieldExpiresAtMs = 0/,
+  /const deactivatesPeaceShield = resolvedKind === "reinforce"[\s\S]*?shouldDeactivatePeaceShieldForAttack[\s\S]*?if \(deactivatesPeaceShield\)[\s\S]*?shieldExpiresAtMs = 0/,
   "An accepted reinforcement launch does not remove the sender's shield."
 );
 requires(

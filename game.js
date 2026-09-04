@@ -37357,18 +37357,11 @@ function renderLegacyBattleComparison(report = null, siege = null) {
 }
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
+  message ||= report.summary;
   const siege = normalizeCombatFortificationSnapshot(report.fortification);
   const { attacker, defender } = getLegacyBattleSides(report, siege);
-  const viewerRole = report?.type === "defense" ? "defender" : "attacker";
-  const left = viewerRole === "defender" ? defender : attacker;
-  const right = viewerRole === "defender" ? attacker : defender;
-  const target = {
-    name: report.cityName,
-    level: report.cityLevel,
-    regionId: report.regionId,
-    targetType: report.targetType === "camp" ? "camp" : "city",
-    strongholdType: "",
-  };
+  const [left, right] = report?.type === "defense" ? [defender, attacker] : [attacker, defender];
+  const target = { name: report.cityName, level: report.cityLevel, regionId: report.regionId, targetType: report.targetType === "camp" ? "camp" : "city", strongholdType: "" };
   return `
     <div class="battle-report-detail battle-visual-report detailed-battle-report ${badge.tone}">
       ${renderBattleReportNavigation(report, target)}
@@ -37538,6 +37531,7 @@ async function showBattleReportDetail(reportId) {
 }
 
 function getBattleReportBadge(report) {
+  if(report.eventKind==="anti_handoff_v2_notice")return{label:/^F/.test(report.summary)?"FINAL WARNING":"HANDOFF WARNING",tone:"defeat"};
   if (isDefenderScoutReport(report)) return { label: "YOU WERE SCOUTED", tone: "scout" };
   if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
   if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") return { label: "DAMAGED", tone: "defeat" };

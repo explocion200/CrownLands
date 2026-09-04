@@ -197,9 +197,14 @@ function expectedCityPatch(map, city, index) {
     relinquishedAtMs: 0,
     relocatedAtMs: 0,
     neutralClaimOpen: false,
+    neutralClaimEventId: "",
     neutralClaimedByUid: "",
     neutralClaimedAtMs: 0,
     neutralClaimSource: "",
+    neutralClaimCurrentOwnerUid: "",
+    neutralClaimPreviousOwnerUid: "",
+    neutralClaimOwnershipChangedAtMs: 0,
+    neutralClaimPolicyVersion: 2,
     neutralClaimClosedAtMs: 0,
   };
 }
