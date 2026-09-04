@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const clientSource = fs.readFileSync(path.resolve(__dirname, "..", "firebaseClient.js"), "utf8");
 const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "utf8");
 const controllerSource = fs.readFileSync(path.resolve(__dirname, "..", "instant-economy-actions.js"), "utf8");
+const regionCatalogSource = fs.readFileSync(path.resolve(__dirname, "..", "region-catalog.js"), "utf8");
 const serverSource = fs.readFileSync(path.resolve(__dirname, "..", "functions", "index.js"), "utf8");
 const styles = fs.readFileSync(path.resolve(__dirname, "..", "styles.css"), "utf8");
 const actionButtons = fs.readFileSync(path.resolve(__dirname, "..", "action-buttons.css"), "utf8");
@@ -44,6 +45,8 @@ assert.match(gameSource, /function getOwnedCitySnapshotForUpgrade[\s\S]*?getAllO
 assert.match(gameSource, /function getOwnedCitySnapshotForUpgrade[\s\S]*?getActiveMapRegionId\(\)[\s\S]*?getCityRegionId\(activeCity\) === activeRegionId[\s\S]*?getOwnedCitySnapshotById/, "Off-map upgrades must not prefer stale inactive-map state over the owned-city roster.");
 assert.match(gameSource, /function getOwnedCityCacheKey[\s\S]*?resolvedRegionId[\s\S]*?cityId/, "Owned-city identity must use a region-and-city composite key.");
 assert.match(gameSource, /const islandRegionId = rawIslandId \? getRegionIdFromOnlineIslandId[\s\S]*?getOnlineIslandId\(islandRegionId\) !== rawIslandId[\s\S]*?islandRegionId \|\| raw\.regionId/, "Owned-city snapshots must require and prefer their canonical island path over stale stored region metadata.");
+assert.match(regionCatalogSource, /function isKnownCoreCityId[\s\S]*?\^core_\[a-f0-9\]\{18\}\$/i, "The region catalog must recognize generated Core city IDs.");
+assert.match(gameSource, /REGION_CATALOG_RUNTIME\.isKnownCoreCityId\(value, cleanEditorRegionId\(canonicalRegionId\), REGION_CATALOG_SUMMARIES_BY_ID\)[\s\S]*?getKnownCityId\(raw\.id, islandRegionId\)/, "Unloaded Core-map city IDs must be accepted only against a canonical catalog island path.");
 assert.match(serverSource, /function getRegionIdFromCityDoc[\s\S]*?doc\?\.ref\?\.parent\?\.parent\?\.id[\s\S]*?if \(islandId\) return getRegionIdFromOnlineIslandId\(islandId\)[\s\S]*?data\.regionId/, "The server must prefer the city document path over stale stored region metadata.");
 assert.match(gameSource, /const sameIdIndexes = onlineOwnedCitiesCache[\s\S]*?if \(sameIdIndexes\.length === 1\) existingIndex = sameIdIndexes\[0\]/, "Stale-region repair must not overwrite one of multiple same-ID cities.");
 assert.match(gameSource, /const currentRegionId = getCityRegionId\(city\)[\s\S]*?const updateRegionId = normalizeRegionId[\s\S]*?if \(currentRegionId !== updateRegionId\) continue;/, "Off-map updates must not mutate a same-ID city on the active map.");
@@ -110,6 +113,31 @@ assert.ok(completenessContext.checkCompleteness({ invalidRecordCount: 1 }).lengt
 assert.ok(completenessContext.checkCompleteness({ duplicateKeyCount: 1 }).length > 0, "Duplicate canonical city identities were marked complete.");
 assert.ok(completenessContext.checkCompleteness({ regularCityCount: 2, expectedRegularCityCount: 3 }).length > 0, "A count-mismatched roster was marked complete.");
 assert.ok(completenessContext.checkCompleteness({ regularCityCount: 3, expectedRegularCityCount: 3, missingLoadedCity: true }).length > 0, "A roster missing an already-loaded city was marked complete.");
+
+const knownCityStart = gameSource.indexOf("function getKnownCityId");
+const knownCityEnd = gameSource.indexOf("function normalizeRealmShardId", knownCityStart);
+assert.ok(knownCityStart >= 0 && knownCityEnd > knownCityStart, "Core catalog city identity helpers must exist.");
+const knownCityContext = {
+  CORE_EXPANSION_TOPOLOGY_ACTIVE: true,
+  REGION_CATALOG_RUNTIME: require(path.resolve(__dirname, "..", "region-catalog.js")),
+  REGION_CATALOG_SUMMARIES_BY_ID: new Map([["core-v2-support", { id: "core-v2-support" }]]),
+  WORLD_REGION_IDS: ["core-v2-support"],
+  state: null,
+  cleanEditorRegionId: value => String(value || "").toLowerCase(),
+  getPlayableBaseCityById: () => null,
+  getDynamicNewLandsCityIdentity: () => null,
+};
+vm.createContext(knownCityContext);
+vm.runInContext(`${gameSource.slice(knownCityStart, knownCityEnd)}\nthis.getKnownCityId = getKnownCityId;`, knownCityContext);
+const largeUnloadedCoreRoster = Array.from({ length: 42 }, (_, index) => (
+  `core_${index.toString(16).padStart(18, "0")}`
+));
+assert.equal(
+  largeUnloadedCoreRoster.filter(cityId => knownCityContext.getKnownCityId(cityId, "core-v2-support")).length,
+  42,
+  "A player with more than 30 cities lost unloaded Core-map holdings from the roster."
+);
+assert.equal(knownCityContext.getKnownCityId(largeUnloadedCoreRoster[0], "unknown-region"), "", "Opaque Core city IDs must not be accepted without a canonical catalog region.");
 
 const upgradeLookupStart = gameSource.indexOf("function getOwnedCitySnapshotForUpgrade");
 const upgradeLookupEnd = gameSource.indexOf("function ownedCities", upgradeLookupStart);

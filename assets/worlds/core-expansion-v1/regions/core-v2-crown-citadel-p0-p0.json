@@ -925,7 +925,7 @@
       "bonus": "all",
       "bonusPercent": 25,
       "level": 100,
-      "troops": 500000,
+      "troops": 100000000,
       "artSrc": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
       "size": 260,
       "bonusType": "all",

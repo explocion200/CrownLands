@@ -4522,7 +4522,39 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .island-map-shell {
   width: min(100%, 920px);
   display: grid;
+  gap: .42rem;
   margin: .25rem auto .1rem;
+}
+.island-map-feature-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .38rem .7rem;
+  color: #eaf5fb;
+  font-size: .7rem;
+  font-weight: 900;
+}
+.island-map-feature-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .28rem;
+}
+.island-map-feature-legend strong,
+.island-map-feature-badge strong {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: inline-grid;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+  color: #081b14;
+  background: #59d47a;
+  line-height: 1;
+}
+.island-map-feature-legend strong.camp,
+.island-map-feature-badge.camp strong {
+  color: #35250b;
+  background: #f5d889;
 }
 .island-map-picker {
   position: relative;
@@ -4730,6 +4762,70 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   border-radius: 14px;
   box-shadow: 0 0 0 1px rgba(255, 179, 153, .72), 0 0 12px rgba(181, 31, 46, .7);
   pointer-events: none;
+}
+.island-map-feature-trim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.island-map-icon.has-clan-tower .island-map-feature-trim::before,
+.island-map-icon.has-camp .island-map-feature-trim::after {
+  content: "";
+  position: absolute;
+  border-radius: 15px;
+  pointer-events: none;
+}
+.island-map-icon.has-clan-tower .island-map-feature-trim::before {
+  inset: -10px;
+  border: calc(5px * var(--island-map-indicator-scale, 1)) solid #59d47a;
+  box-shadow: 0 0 0 1px rgba(222, 255, 229, .72), 0 0 14px rgba(54, 190, 91, .78);
+}
+.island-map-icon.has-camp .island-map-feature-trim::after {
+  inset: -4px;
+  border: calc(4px * var(--island-map-indicator-scale, 1)) solid #f5d889;
+  box-shadow: 0 0 0 1px rgba(255, 249, 214, .78), inset 0 0 9px rgba(119, 80, 13, .5);
+}
+.island-map-feature-badges {
+  position: absolute;
+  top: .32rem;
+  left: 50%;
+  z-index: 5;
+  transform: translateX(-50%);
+  display: flex;
+  gap: .26rem;
+  pointer-events: none;
+}
+.island-map-feature-badge {
+  min-height: 1.42rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  padding: .08rem .3rem .08rem .1rem;
+  border-radius: 6px;
+  color: #eaffef;
+  background: rgba(9, 50, 25, .94);
+  border: 1px solid rgba(151, 239, 174, .88);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .48);
+  white-space: nowrap;
+}
+.island-map-feature-badge.camp {
+  color: #fff6d4;
+  background: rgba(71, 48, 11, .94);
+  border-color: rgba(255, 231, 156, .9);
+}
+.island-map-feature-badge strong {
+  width: 1rem;
+  height: 1rem;
+  font-size: .62rem;
+  border-width: 1px;
+}
+.island-map-feature-badge small {
+  color: inherit;
+  font-size: .58rem;
+  font-weight: 1000;
+  line-height: 1;
 }
 .island-map-thumb {
   position: relative;

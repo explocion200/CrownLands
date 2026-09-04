@@ -791,7 +791,7 @@ const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;
 const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const CROWN_CITADEL_LEVEL = 100;
-const CROWN_CITADEL_START_TROOPS = 50000000;
+const CROWN_CITADEL_START_TROOPS = 100000000;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -1518,12 +1518,9 @@ function getStrongholdDefenseLevel(city) {
 }
 
 function getStrongholdStartTroops(city) {
-  if (Number.isFinite(Number(city?.startTroops))) return Math.max(0, Math.floor(Number(city.startTroops) || 0));
+  if (!isStronghold(city)) return 0;
   if (isCrownCitadel(city)) return CROWN_CITADEL_START_TROOPS;
-  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_START_TROOPS;
-  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_START_TROOPS;
-  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_START_TROOPS;
-  return isStronghold(city) ? GOLD_STRONGHOLD_START_TROOPS : 0;
+  return GOLD_STRONGHOLD_START_TROOPS;
 }
 
 function getStrongholdProductionLabel(city) {
@@ -2976,12 +2973,13 @@ function getCityRegionId(cityOrId) {
   return normalizeRegionId(base?.regionId || base?.startPool || dynamicNewLandsCity?.regionId || prefixedRegionId);
 }
 
-function getKnownCityId(cityId) {
+function getKnownCityId(cityId, canonicalRegionId = "") {
   const value = String(cityId || "");
   if (!value) return "";
   if (getPlayableBaseCityById(value)) return value;
   if (state?.cities?.some(city => city?.id === value)) return value;
   if (getDynamicNewLandsCityIdentity(value)) return value;
+  if (CORE_EXPANSION_TOPOLOGY_ACTIVE && REGION_CATALOG_RUNTIME.isKnownCoreCityId(value, cleanEditorRegionId(canonicalRegionId), REGION_CATALOG_SUMMARIES_BY_ID)) return value;
   const regionId = [...WORLD_REGION_IDS]
     .sort((left, right) => right.length - left.length)
     .find(candidate => value.startsWith(`${candidate}_`));
@@ -13615,6 +13613,7 @@ function updateIslandMapTileSummariesInPlace() {
     if (summary && summary.textContent !== summaryText) summary.textContent = summaryText;
 
     const ariaParts = [getRegionLabel(regionId), getIslandTileAriaSummary(regionId)];
+    ariaParts.push(...islandMapFeatures(regionId).ariaPhrases);
     if (regionId === activeRegionId) ariaParts.push("current map");
     if (regionId === homeRegionId) ariaParts.push("home island");
     button.setAttribute("aria-label", ariaParts.join(", "));
@@ -13845,6 +13844,10 @@ function renderIslandMapConnections() {
   return `<svg class="island-map-connections" viewBox="0 0 ${Math.round(layout.stageWidth)} ${Math.round(layout.stageHeight)}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
 }
 
+function islandMapFeatures(regionId) {
+  return HOLDING_TOWER_UI.createMapFeaturePresentation(normalizeRegionId(regionId), HOLDING_TOWER_DEFINITIONS, REGION_CATALOG_SUMMARIES_BY_ID, WORLD_CAMPS);
+}
+
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const regionId = normalizeRegionId(region.id);
   const label = region.label || regionId;
@@ -13852,13 +13855,15 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
   const hasRedTrim = RED_TRIM_REGION_IDS.has(regionId);
+  const feature = islandMapFeatures(regionId);
   const previewSrc = getIslandPreviewArtSrc(regionId) || getIslandMapArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
+  ariaParts.push(...feature.ariaPhrases);
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
   return `
     <button
-      class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${hasRedTrim ? "red-trim" : ""} ${escapeHtml(region.palette || "heartland")}"
+      class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${hasRedTrim ? "red-trim" : ""} ${feature.classNames} ${escapeHtml(region.palette || "heartland")}"
       data-island-region="${escapeHtml(regionId)}"
       style="${getIslandMapIconStyle(region)}"
       type="button"
@@ -13869,6 +13874,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
+      ${feature.markup}
       ${isActive ? `<span class="island-map-active-label">Current map</span>` : ""}
       ${isHome ? `<span class="island-map-home-label">Home map</span>` : ""}
     </button>
@@ -13881,6 +13887,7 @@ function renderIslandSwitcherModalContent() {
   const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
   modalBody.innerHTML = `
     <div class="island-map-shell">
+      ${HOLDING_TOWER_UI.mapFeatureLegend}
       <div class="island-map-picker" style="${getIslandMapPickerStyle()}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
         <div class="island-map-stage">
           <div class="island-map-canvas-frame">
@@ -14059,6 +14066,7 @@ function createIslandMapPickerCameraController(picker) {
     islandMapPickerViewState.zoom = current.zoom;
     islandMapPickerViewState.hasView = true;
     picker.dataset.islandMapZoom = String(current.zoom);
+    picker.style.setProperty("--island-map-indicator-scale", formatIslandCameraNumber(1 / current.zoom));
     if (frame) frame.style.transform = `translate3d(${formatIslandCameraNumber(current.x)}px, ${formatIslandCameraNumber(current.y)}px, 0) scale(${formatIslandCameraNumber(current.zoom)})`;
   };
 
@@ -14209,6 +14217,7 @@ function updateIslandMapHomeMarkerInPlace(homeRegionId = getMainCityRegionId()) 
     }
 
     const ariaParts = [getRegionLabel(regionId), getIslandTileAriaSummary(regionId)];
+    ariaParts.push(...islandMapFeatures(regionId).ariaPhrases);
     if (isActive) ariaParts.push("current map");
     if (isHome) ariaParts.push("home island");
     button.setAttribute("aria-label", ariaParts.join(", "));
@@ -19352,12 +19361,12 @@ function playerRegularCities() {
 }
 
 function normalizeOwnedCitySnapshot(raw = {}) {
-  const id = getKnownCityId(raw.id);
-  if (!id) return null;
-  const base = getPlayableBaseCityById(id) || {};
   const rawIslandId = String(raw.islandId || "").trim();
   const islandRegionId = rawIslandId ? getRegionIdFromOnlineIslandId(rawIslandId) : "";
   if (rawIslandId && (!islandRegionId || getOnlineIslandId(islandRegionId) !== rawIslandId)) return null;
+  const id = getKnownCityId(raw.id, islandRegionId);
+  if (!id) return null;
+  const base = getPlayableBaseCityById(id) || {};
   const regionId = normalizeRegionId(islandRegionId || raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
@@ -36053,20 +36062,8 @@ function normalizeLeaderboardEntry(raw) {
   };
 }
 
-function getCurrentLeaderboardEntry() {
-  const uid = getCurrentOnlineUid();
-  if (!uid || !state) return null;
-  return normalizeLeaderboardEntry({
-    uid,
-    ...getKingPowerLeaderboardSnapshot(),
-  });
-}
-
 function mergeLeaderboardEntries(rows = []) {
   const byUid = new Map();
-  const currentEntry = getCurrentLeaderboardEntry();
-  if (currentEntry) byUid.set(currentEntry.uid, currentEntry);
-
   (Array.isArray(rows) ? rows : []).forEach(row => {
     const entry = normalizeLeaderboardEntry(row);
     if (!entry) return;

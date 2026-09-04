@@ -925,7 +925,7 @@
       "bonus": "gold",
       "bonusPercent": 20,
       "level": 50,
-      "troops": 150000,
+      "troops": 50000000,
       "artSrc": "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp",
       "size": 154,
       "bonusType": "gold",

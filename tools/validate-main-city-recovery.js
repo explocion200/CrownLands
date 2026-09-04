@@ -33,6 +33,8 @@ const restrictedRegionId = "core-v2-greybanner-hold-p0-m1";
 const activeRegionIds = ["west", "region_11", "region_12", restrictedRegionId, "new-lands-l01-p002"];
 const decisionSandbox = {
   CORE_EXPANSION_TOPOLOGY_ACTIVE: true,
+  REGION_CATALOG_RUNTIME: require(path.join(root, "region-catalog.js")),
+  REGION_CATALOG_SUMMARIES_BY_ID: new Map(),
   WORLD_REGION_IDS: [...activeRegionIds, "new-lands-l01-p003"],
   DEFAULT_ONLINE_REGION_ID: "west",
   state: null,
@@ -54,6 +56,7 @@ const decisionSandbox = {
     "new-lands-l01-p003": { id: "new-lands-l01-p003", cityCapacity: 40 },
   }[regionId] || null),
   normalizeRegionId: regionId => (activeRegionIds.includes(regionId) ? regionId : "west"),
+  cleanEditorRegionId: value => String(value || "").trim().toLowerCase(),
   isMainCityRegionEligible: regionId => regionId !== restrictedRegionId,
   getOnlineIslandId: regionId => `main-${regionId}`,
   withTimeout: (promise, timeoutMs, message) => Promise.race([

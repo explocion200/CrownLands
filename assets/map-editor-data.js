@@ -1278,8 +1278,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "bonus": "crowndominion",
           "bonusPercent": 10,
           "level": 100,
-          "troops": 50000000,
-          "startTroops": 50000000,
+          "troops": 100000000,
+          "startTroops": 100000000,
           "artSrc": "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp",
           "size": 215,
           "flipX": false

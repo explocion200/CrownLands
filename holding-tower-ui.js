@@ -29,6 +29,22 @@
     return Math.min(100, Math.max(0, Math.floor((nowMs - started) * 100 / (complete - started))));
   };
 
+  function createMapFeaturePresentation(regionId = "", towerDefinitions = [], catalogSummaries = null, camps = []) {
+    const normalized = String(regionId || "").trim().toLowerCase();
+    const catalogSummary = catalogSummaries?.get?.(normalized) || catalogSummaries;
+    const hasClanTower = towerDefinitions.some(tower => String(tower?.regionId || "").trim().toLowerCase() === normalized);
+    const hasCamp = Math.max(0, Math.floor(Number(catalogSummary?.campCount) || 0)) > 0
+      || camps.some(camp => String(camp?.regionId || "").trim().toLowerCase() === normalized);
+    return {
+      hasClanTower,
+      hasCamp,
+      classNames: `${hasClanTower ? "has-clan-tower" : ""} ${hasCamp ? "has-camp" : ""}`,
+      ariaPhrases: [hasClanTower ? "contains a Clan Tower" : "", hasCamp ? "contains a camp" : ""].filter(Boolean),
+      markup: hasClanTower || hasCamp ? `<span class="island-map-feature-trim" aria-hidden="true"></span><span class="island-map-feature-badges" aria-hidden="true">${hasClanTower ? '<span class="island-map-feature-badge clan-tower" title="Clan Tower"><strong>T</strong><small>Tower</small></span>' : ""}${hasCamp ? '<span class="island-map-feature-badge camp" title="Camp"><strong>C</strong><small>Camp</small></span>' : ""}</span>` : "",
+    };
+  }
+  const mapFeatureLegend = '<div class="island-map-feature-legend" aria-label="Map feature indicators"><span><strong class="clan-tower" aria-hidden="true">T</strong> Clan Tower</span><span><strong class="camp" aria-hidden="true">C</strong> Camp</span></div>';
+
   function createQaSnapshot(tower, scenario = "owner") {
     const nowMs = Date.now();
     const neutral = scenario === "neutral";
@@ -236,5 +252,5 @@
       </article>`;
   }
 
-  global.CROWNLANDS_HOLDING_TOWER_UI = Object.freeze({ createQaSnapshot, renderPanel });
+  global.CROWNLANDS_HOLDING_TOWER_UI = Object.freeze({ createMapFeaturePresentation, createQaSnapshot, mapFeatureLegend, renderPanel });
 })(window);

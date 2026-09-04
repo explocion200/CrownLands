@@ -40,6 +40,11 @@ requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.
 requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
 requires(server, /function assertNoClan[\s\S]*?clanJoinCooldownUntilMs[\s\S]*?cooldownUntilMs\s*>\s*nowMs[\s\S]*?wait before joining another clan/, "Clan joining and applications must enforce the authoritative leave cooldown.");
 requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
+requires(server, /function createResetClanWorldBenefits[\s\S]*?resetGeneration: RESET_GENERATION,[\s\S]*?realmShardId: getCurrentRealmShardId\(\)/, "Reset clan benefits must carry the active realm shard.");
+requires(server, /function createResetClanGiftActivity[\s\S]*?resetGeneration: RESET_GENERATION,[\s\S]*?realmShardId: getCurrentRealmShardId\(\)/, "Reset clan gift activity must carry the active realm shard.");
+requires(server, /function createResetClanMember[\s\S]*?resetGeneration: RESET_GENERATION,[\s\S]*?realmShardId: getCurrentRealmShardId\(\)/, "Preserved clan roster members must carry the active realm shard.");
+requires(server, /function readClanSeasonPersistenceContext[\s\S]*?requiresRealmShardRepair[\s\S]*?current clan roster contains mixed realm data/i, "Current shardless clans need a non-destructive shard repair path with mixed-realm protection.");
+requires(server, /function applyClanSeasonPersistence[\s\S]*?requiresRealmShardRepair[\s\S]*?entry\.snapshot\.ref, \{ realmShardId: getCurrentRealmShardId\(\) \}[\s\S]*?clanWorldBenefitsRef[\s\S]*?giftActivitySnap\.ref/, "Clan rollover repair must stamp the root, complete roster, benefits, and gift activity without replacing relationship state.");
 const changeClanRoleSource = server.slice(
   server.indexOf("async function changeClanRole"),
   server.indexOf("exports.promoteClanMember")

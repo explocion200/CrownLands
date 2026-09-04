@@ -1146,7 +1146,7 @@
       "bonusAmount": 10,
       "startingOwner": "neutral",
       "level": 100,
-      "troops": 50000000,
+      "troops": 100000000,
       "artSrc": "assets/crown-citadel.png?v=20260703-crown-citadel-art",
       "size": 215,
       "flipX": false,

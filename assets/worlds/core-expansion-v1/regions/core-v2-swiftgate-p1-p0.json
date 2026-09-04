@@ -925,7 +925,7 @@
       "bonus": "march_speed",
       "bonusPercent": 20,
       "level": 50,
-      "troops": 150000,
+      "troops": 50000000,
       "artSrc": "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp",
       "size": 154,
       "bonusType": "march_speed",

@@ -772,6 +772,8 @@ const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const CROWN_CITADEL_ID = "center_crown_citadel";
+const NEUTRAL_STRONGHOLD_INITIAL_TROOPS = 50_000_000;
+const NEUTRAL_CITADEL_INITIAL_TROOPS = 100_000_000;
 const CITADEL_ASSAULT_REGION_ID = "center";
 const CITADEL_ASSAULT_EVENT_KIND = "citadel_npc_assault";
 const CITADEL_ASSAULT_NPC_NAME = "Citadel Legion";
@@ -7035,6 +7037,9 @@ function campUpdateForClient(campId, regionId, patch = {}) {
 function cleanServerCityLayoutSeed(city = {}) {
   const cityId = safeString(city.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
+  const initialObjectiveTroops = isStrongholdCity
+    ? (isCrownCitadel({ ...city, id: cityId }) ? NEUTRAL_CITADEL_INITIAL_TROOPS : NEUTRAL_STRONGHOLD_INITIAL_TROOPS)
+    : 0;
   return {
     id: cityId,
     worldId: ONLINE_WORLD_ID,
@@ -7050,8 +7055,8 @@ function cleanServerCityLayoutSeed(city = {}) {
     bonusPercent: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.bonusPercent, 0))) : 0,
     size: isStrongholdCity ? getServerStrongholdVisualSize(city) : 0,
     artSrc: isStrongholdCity ? safeString(city.artSrc, 180) : "",
-    startTroops: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.startTroops, safeNumber(city.troops, 0)))) : 0,
-    level: clampCityLevel(city.level || (isStrongholdCity ? 50 : 1)),
+    startTroops: initialObjectiveTroops,
+    level: isStrongholdCity ? clampCityLevel(city.level || 50) : 1,
     defense: 1,
   };
 }
@@ -17548,6 +17553,7 @@ function createResetClanWorldBenefits(clanId = "", nowMs = Date.now()) {
     clanId,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
     status: "active",
     objectives: [],
@@ -17569,6 +17575,7 @@ function createResetClanGiftActivity(nowMs = Date.now()) {
   return {
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     recentDonations: [],
     createdAtMs: nowMs,
     updatedAtMs: nowMs,
@@ -17622,11 +17629,34 @@ async function readClanSeasonPersistenceContext(transaction, { uid = "", previou
   const alreadyCurrent = safeString(clan.resetGeneration, 120) === RESET_GENERATION
     && safeString(clan.worldId, 120) === ONLINE_WORLD_ID;
   if (alreadyCurrent) {
+    const storedClanShardId = safeString(clan.realmShardId, 48);
+    if (storedClanShardId
+      && REALM_TOPOLOGY.normalizeRealmShardId(storedClanShardId) !== getCurrentRealmShardId()) {
+      throw new HttpsError("failed-precondition", "The current clan belongs to another realm shard.");
+    }
     if (safeString(member.resetGeneration, 120) !== RESET_GENERATION
-      || safeString(member.worldId, 120) !== ONLINE_WORLD_ID) {
+      || safeString(member.worldId, 120) !== ONLINE_WORLD_ID
+      || (safeString(member.realmShardId, 48)
+        && REALM_TOPOLOGY.normalizeRealmShardId(member.realmShardId) !== getCurrentRealmShardId())) {
       throw new HttpsError("failed-precondition", "The current clan roster is not synchronized with this season.");
     }
-    const benefitsSnap = await transaction.get(clanWorldBenefitsRef(clanId));
+    const requiresRealmShardRepair = !storedClanShardId;
+    const [benefitsSnap, giftActivitySnap, membersSnap] = await Promise.all([
+      transaction.get(clanWorldBenefitsRef(clanId)),
+      requiresRealmShardRepair ? transaction.get(clanGiftActivityRef(clanId)) : Promise.resolve(null),
+      requiresRealmShardRepair ? transaction.get(db.collection(`clans/${clanId}/members`)) : Promise.resolve(null),
+    ]);
+    const memberEntries = requiresRealmShardRepair
+      ? membersSnap.docs.map(snapshot => ({ snapshot, uid: snapshot.id, member: snapshot.data() || {} }))
+      : [];
+    if (memberEntries.some(entry => (
+      safeString(entry.member.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(entry.member.worldId, 120) !== ONLINE_WORLD_ID
+      || (safeString(entry.member.realmShardId, 48)
+        && REALM_TOPOLOGY.normalizeRealmShardId(entry.member.realmShardId) !== getCurrentRealmShardId())
+    ))) {
+      throw new HttpsError("failed-precondition", "The current clan roster contains mixed realm data.");
+    }
     return {
       clanId,
       clanRef,
@@ -17635,6 +17665,9 @@ async function readClanSeasonPersistenceContext(transaction, { uid = "", previou
       member,
       role,
       alreadyCurrent: true,
+      requiresRealmShardRepair,
+      memberEntries,
+      giftActivitySnap,
       benefits: benefitsSnap.exists ? benefitsSnap.data() || {} : createResetClanWorldBenefits(clanId, nowMs),
     };
   }
@@ -17701,6 +17734,7 @@ function createResetClanMember(entry = {}, { claimantUid = "", claimantProfile =
     uid: entry.uid,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
+    realmShardId: getCurrentRealmShardId(),
     role: entry.role,
     displayName,
     flag,
@@ -17726,6 +17760,7 @@ function applyClanSeasonPersistence(transaction, context, { uid = "", freshProfi
     currentClan = {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       releaseId: REALM_RELEASE_ID,
       name: context.name.display,
       normalizedName: context.name.normalized,
@@ -17780,8 +17815,27 @@ function applyClanSeasonPersistence(transaction, context, { uid = "", freshProfi
       0,
       Math.floor(safeNumber(context.clan.totalKingPower, 0)) - previousPower + claimantPower
     );
-    currentClan = { ...context.clan, totalKingPower };
+    currentClan = {
+      ...context.clan,
+      ...(context.requiresRealmShardRepair ? { realmShardId: getCurrentRealmShardId() } : {}),
+      totalKingPower,
+    };
+    if (context.requiresRealmShardRepair) {
+      context.memberEntries.forEach(entry => {
+        transaction.set(entry.snapshot.ref, { realmShardId: getCurrentRealmShardId() }, { merge: true });
+      });
+      benefits = { ...benefits, realmShardId: getCurrentRealmShardId() };
+      transaction.set(clanWorldBenefitsRef(context.clanId), {
+        realmShardId: getCurrentRealmShardId(),
+      }, { merge: true });
+      if (context.giftActivitySnap?.exists) {
+        transaction.set(context.giftActivitySnap.ref, {
+          realmShardId: getCurrentRealmShardId(),
+        }, { merge: true });
+      }
+    }
     transaction.set(context.memberRef, {
+      realmShardId: getCurrentRealmShardId(),
       displayName: freshProfile.playerName,
       flag: freshProfile.flag,
       kingPower: claimantPower,
@@ -17791,6 +17845,7 @@ function applyClanSeasonPersistence(transaction, context, { uid = "", freshProfi
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     transaction.set(context.clanRef, {
+      realmShardId: getCurrentRealmShardId(),
       totalKingPower,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
@@ -19752,6 +19807,7 @@ function clanGiftActivityForClient(value = {}) {
   return {
     worldId: safeString(value.worldId, 128) || ONLINE_WORLD_ID,
     resetGeneration: safeString(value.resetGeneration, 128) || RESET_GENERATION,
+    realmShardId: REALM_TOPOLOGY.normalizeRealmShardId(value.realmShardId || getCurrentRealmShardId()),
     recentDonations: normalizeRecentClanGiftDonations(value.recentDonations),
     updatedAtMs: Math.max(0, timestampToMs(value.updatedAtMs)),
   };
@@ -21688,6 +21744,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
       uid,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       lastGiftSentAtMs: nowMs,
       giftCountSent: nextSentCount,
       updatedAtMs: nowMs,
@@ -21707,6 +21764,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
         uid: memberDoc.id,
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         pendingGiftGoldMinutes: FieldValue.increment(CLAN_GIFT_PRODUCTION_MINUTES),
         giftCountReceived: FieldValue.increment(1),
         updatedAtMs: nowMs,
@@ -21716,6 +21774,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
     transaction.set(giftActivityRef, {
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       recentDonations,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
@@ -21747,6 +21806,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
       giftActivity: clanGiftActivityForClient({
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         recentDonations,
         updatedAtMs: nowMs,
       }),
@@ -21795,6 +21855,7 @@ exports.claimClanGiftPool = onCall({ region: "us-central1", maxInstances: 20, in
       uid,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       pendingGiftGoldMinutes: 0,
       giftGoldMinutesClaimed: totalClaimedMinutes,
       lastGiftClaimedAtMs: nowMs,
@@ -21922,6 +21983,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
           clanId,
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
+          realmShardId: getCurrentRealmShardId(),
           questPeriodId: historicalPeriodId,
           questClaims: previousClaims,
           archivedAtMs: nowMs,
@@ -21933,6 +21995,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       uid,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       questPeriodId: questPeriod.questPeriodId,
       questClaims: nextClaims,
       updatedAtMs: nowMs,
@@ -31191,6 +31254,7 @@ async function recordClanConquest(change = {}, eventId = "") {
       regionId: safeString(change.regionId, 80),
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      realmShardId: getCurrentRealmShardId(),
       questPeriodId: questPeriod.questPeriodId,
       weekKey: questPeriod.weekKey,
       captureEventAtMs,
