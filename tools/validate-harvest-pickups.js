@@ -20,15 +20,25 @@ assert.deepEqual(serverEconomyConfig.pickups, JSON.parse(JSON.stringify(economyC
 assert.equal(economyConfig.pickups.initialSpawnDelayMinutes, 2, "The first pickup must use a two-minute delay.");
 assert.equal(economyConfig.pickups.respawnAfterCollectionMinutes, 2, "Successful collections must start a two-minute respawn.");
 assert.equal(economyConfig.pickups.expireMinutes, 20, "Pickup expiration must remain twenty minutes.");
+assert.equal(economyConfig.pickups.goldAwardProductionMinutes, 30, "Gold pickups must grant exactly half of the former production-hour reward.");
+assert.equal(economyConfig.pickups.troopAwardProductionMinutes, 30, "Troop pickups must grant exactly half of the former production-hour reward.");
+assert.equal(economyConfig.pickups.minimumGold, 125, "The Gold pickup floor must be exactly half of its former value.");
+assert.equal(economyConfig.pickups.minimumTroops, 125, "The troop pickup floor must be exactly half of its former value.");
+assert.equal(economyConfig.pickups.dailyGoldCap, 30, "The per-player UTC Gold pickup cap must be 30.");
+assert.equal(economyConfig.pickups.dailyTroopCap, 30, "The per-player UTC troop pickup cap must be 30.");
+assert.equal(economyConfig.pickups.dailyTotalCap, 60, "The aggregate cap must allow both independent 30-pickup type limits.");
 
 assert.match(howToPlaySource, /first active-map pickup appears after two minutes/i, "How to Play must describe the two-minute initial pickup wait.");
 assert.match(howToPlaySource, /successful collection starts a two-minute wait/i, "How to Play must describe the two-minute post-collection wait.");
 assert.match(dailyRewardsGuideSource, /first pickup appears after two minutes/i, "The Daily Rewards Guide must describe the two-minute initial pickup wait.");
 assert.match(dailyRewardsGuideSource, /next appears two minutes later/i, "The Daily Rewards Guide must describe the two-minute post-collection wait.");
+assert.match(howToPlaySource, /thirty minutes of stored gold production and thirty minutes of stored troop production/i, "How to Play must describe the halved pickup rewards.");
+assert.match(howToPlaySource, /daily limits are 30 of each type, 60 total/i, "How to Play must describe both independent type caps.");
+assert.match(dailyRewardsGuideSource, /daily limit is thirty of each type, sixty total/i, "The Daily Rewards Guide must describe both independent type caps.");
 assert.match(battleEconomyGuideSource, /initialPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the initial pickup wait.");
 assert.match(battleEconomyGuideSource, /respawnPickupMinutes === 1 \? "" : "s"/, "The Battle & Economy Guide must pluralize the post-collection pickup wait.");
-assert.match(battleEconomyGuideHtml, /economy-config\.js\?v=20260828-two-minute-pickup-cadence-r1/, "The Battle & Economy Guide must request the current pickup configuration.");
-assert.match(battleEconomyGuideHtml, /battle-economy-guide\.js\?v=20260828-two-minute-pickup-cadence-r1/, "The Battle & Economy Guide must request its updated timer wording runtime.");
+assert.match(battleEconomyGuideHtml, /economy-config\.js\?v=20260904-layer1-travel-balance-r1/, "The Battle & Economy Guide must request the current pickup configuration.");
+assert.match(battleEconomyGuideHtml, /battle-economy-guide\.js\?v=20260904-layer1-travel-balance-r1/, "The Battle & Economy Guide must request its current wording runtime.");
 
 assert.match(
   styleSource,
@@ -89,6 +99,59 @@ vm.runInContext(extractFunction(serverSource, "getCurrentDateKey"), context);
 const utcRollover = new Date("2026-07-22T00:30:00.000Z");
 assert.equal(context.currentDailyDateKey(utcRollover), "2026-07-22");
 assert.equal(context.getCurrentDateKey(utcRollover), "2026-07-22");
+assert.equal(context.getCurrentDateKey(new Date("2026-07-21T23:59:59.999Z")), "2026-07-21");
+
+const dailyLimitContext = {
+  HARVEST_BONUS_DAILY_LIMIT: economyConfig.pickups.dailyTotalCap,
+  HARVEST_BONUS_DAILY_GOLD_LIMIT: economyConfig.pickups.dailyGoldCap,
+  HARVEST_BONUS_DAILY_TROOP_LIMIT: economyConfig.pickups.dailyTroopCap,
+  DAILY_NEUTRAL_CAPTURE_LIMIT: 30,
+  Date,
+  Math,
+  Number,
+  safeString(value, maxLength = 160) {
+    return String(value || "").trim().slice(0, maxLength);
+  },
+  clampInt(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, Math.floor(Number(value) || 0)));
+  },
+};
+vm.createContext(dailyLimitContext);
+for (const functionName of [
+  "getCurrentDateKey",
+  "normalizeDaily",
+  "getHarvestBonusRemaining",
+  "incrementHarvestDailyTracker",
+]) {
+  vm.runInContext(extractFunction(serverSource, functionName), dailyLimitContext);
+}
+const currentUtcDate = dailyLimitContext.getCurrentDateKey(new Date());
+let cappedDaily = dailyLimitContext.normalizeDaily({ date: currentUtcDate });
+for (let index = 0; index < 30; index += 1) {
+  cappedDaily = dailyLimitContext.incrementHarvestDailyTracker("gold", cappedDaily);
+}
+assert.equal(cappedDaily.harvestedGoldBonuses, 30, "Gold pickup counting stopped before its per-type cap.");
+assert.equal(dailyLimitContext.getHarvestBonusRemaining("gold", cappedDaily), 0, "Gold pickups remained available after 30 claims.");
+assert.equal(dailyLimitContext.getHarvestBonusRemaining("troops", cappedDaily), 30, "Gold claims reduced the independent troop allowance.");
+for (let index = 0; index < 30; index += 1) {
+  cappedDaily = dailyLimitContext.incrementHarvestDailyTracker("troops", cappedDaily);
+}
+assert.deepEqual(
+  JSON.parse(JSON.stringify(cappedDaily)),
+  {
+    date: currentUtcDate,
+    neutralCaptures: 0,
+    harvestedBonuses: 60,
+    harvestedGoldBonuses: 30,
+    harvestedTroopBonuses: 30,
+  },
+  "Gold and troop pickups did not independently reach 30 under the aggregate cap.",
+);
+assert.equal(dailyLimitContext.getHarvestBonusRemaining("troops", cappedDaily), 0, "Troop pickups remained available after 30 claims.");
+const resetDaily = dailyLimitContext.normalizeDaily(cappedDaily, new Date("2099-01-02T00:00:00.000Z"));
+assert.equal(resetDaily.harvestedBonuses, 0, "Pickup claims did not reset at a new UTC date.");
+assert.equal(resetDaily.harvestedGoldBonuses, 0, "Gold pickup claims survived a UTC reset.");
+assert.equal(resetDaily.harvestedTroopBonuses, 0, "Troop pickup claims survived a UTC reset.");
 
 const collectStart = gameSource.indexOf("async function collectHarvestBonus");
 const collectEnd = gameSource.indexOf("function getOfflineProgressSeconds", collectStart);
@@ -315,10 +378,10 @@ assert.doesNotMatch(
 );
 
 const serverRewardContext = {
-  HARVEST_BONUS_GOLD_SECONDS: 3600,
-  HARVEST_BONUS_TROOP_SECONDS: 3600,
-  HARVEST_BONUS_MIN_GOLD: 250,
-  HARVEST_BONUS_MIN_TROOPS: 250,
+  HARVEST_BONUS_GOLD_SECONDS: economyConfig.pickups.goldAwardProductionMinutes * 60,
+  HARVEST_BONUS_TROOP_SECONDS: economyConfig.pickups.troopAwardProductionMinutes * 60,
+  HARVEST_BONUS_MIN_GOLD: economyConfig.pickups.minimumGold,
+  HARVEST_BONUS_MIN_TROOPS: economyConfig.pickups.minimumTroops,
   HARVEST_BONUS_MAX_TROOPS: Number.MAX_SAFE_INTEGER,
   rawRates: { goldPerHour: 10_000, troopsPerHour: 7_200 },
   getRewardedAdBaseRates() { return serverRewardContext.rawRates; },
@@ -328,24 +391,24 @@ const serverRewardContext = {
 };
 vm.createContext(serverRewardContext);
 vm.runInContext(serverRewardSource, serverRewardContext);
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 10_000);
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 7_200);
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 5_000, "Gold pickup reward was not halved from 10,000 to 5,000.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 3_600, "Troop pickup reward was not halved from 7,200 to 3,600.");
 serverRewardContext.rawRates = { goldPerHour: 10_000.9, troopsPerHour: 7_200.9 };
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 10_000, "Gold pickup rewards must floor fractional production.");
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 7_200, "Troop pickup rewards must floor fractional production.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 5_000, "Gold pickup rewards must floor fractional production.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 3_600, "Troop pickup rewards must floor fractional production.");
 serverRewardContext.rawRates = { goldPerHour: 100, troopsPerHour: 100 };
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 250, "Gold pickup minimums must remain intact.");
-assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 250, "Troop pickup minimums must remain intact.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "gold"), 125, "Gold pickup minimum must be exactly half of the former 250.");
+assert.equal(serverRewardContext.getHarvestBonusReward({}, "troops"), 125, "Troop pickup minimum must be exactly half of the former 250.");
 
 const localCities = [
   { baseGold: 10_000, baseTroops: 7_200, boostedGold: 19_000, boostedTroops: 13_000 },
 ];
 const localStatOptions = [];
 const localRewardContext = {
-  HARVEST_BONUS_GOLD_SECONDS: 3600,
-  HARVEST_BONUS_TROOP_SECONDS: 3600,
-  HARVEST_BONUS_MIN_GOLD: 250,
-  HARVEST_BONUS_MIN_TROOPS: 250,
+  HARVEST_BONUS_GOLD_SECONDS: economyConfig.pickups.goldAwardProductionMinutes * 60,
+  HARVEST_BONUS_TROOP_SECONDS: economyConfig.pickups.troopAwardProductionMinutes * 60,
+  HARVEST_BONUS_MIN_GOLD: economyConfig.pickups.minimumGold,
+  HARVEST_BONUS_MIN_TROOPS: economyConfig.pickups.minimumTroops,
   HARVEST_BONUS_MAX_TROOPS: Number.MAX_SAFE_INTEGER,
   playerRegularCities: () => localCities.filter(city => !city.isStronghold),
   getCityStats(city, options) {
@@ -369,19 +432,19 @@ for (const functionName of [
 ]) {
   vm.runInContext(extractFunction(gameSource, functionName), localRewardContext);
 }
-assert.equal(localRewardContext.getHarvestBonusGoldReward(), 10_000, "Local Gold pickups must ignore the 19,000/hour boosted rate.");
-assert.equal(localRewardContext.getHarvestBonusTroopReward(), 7_200, "Local troop pickups must ignore the 13,000/hour boosted rate.");
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 5_000, "Local Gold pickups must halve the raw 10,000/hour rate and ignore the boosted rate.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 3_600, "Local troop pickups must halve the raw 7,200/hour rate and ignore the boosted rate.");
 assert.deepEqual(
   JSON.parse(JSON.stringify(localStatOptions.at(-1))),
   { includeSkillBoosts: false, includeStrongholdBoosts: false, includeTimedItemBoosts: false },
   "Local pickup base-rate calculation must explicitly disable every local production-bonus category.",
 );
 localCities.push({ baseGold: 2_500, baseTroops: 1_200, boostedGold: 9_999_999, boostedTroops: 9_999_999 });
-assert.equal(localRewardContext.getHarvestBonusGoldReward(), 12_500, "A normal-city raw production increase must increase the local Gold pickup.");
-assert.equal(localRewardContext.getHarvestBonusTroopReward(), 8_400, "A normal-city raw production increase must increase the local troop pickup.");
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 6_250, "A normal-city raw production increase must increase the halved local Gold pickup.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 4_200, "A normal-city raw production increase must increase the halved local troop pickup.");
 localCities.push({ isStronghold: true, baseGold: 5_000_000, baseTroops: 5_000_000, boostedGold: 9_999_999, boostedTroops: 9_999_999 });
-assert.equal(localRewardContext.getHarvestBonusGoldReward(), 12_500, "Stronghold production must not increase the local Gold pickup.");
-assert.equal(localRewardContext.getHarvestBonusTroopReward(), 8_400, "Stronghold production must not increase the local troop pickup.");
+assert.equal(localRewardContext.getHarvestBonusGoldReward(), 6_250, "Stronghold production must not increase the local Gold pickup.");
+assert.equal(localRewardContext.getHarvestBonusTroopReward(), 4_200, "Stronghold production must not increase the local troop pickup.");
 
 const profileButton = { id: "profile-button" };
 const profileTroopTotal = { id: "profile-troops", hidden: false, getClientRects: () => [] };
@@ -441,4 +504,4 @@ destinationContext.profileScreen.classList.contains = value => value === "open";
 profileTroopTotal.getClientRects = () => [{}];
 assert.equal(destinationContext.getVisibleTroopRewardDestination(), profileTroopTotal);
 
-console.log("Validated UTC pickup counters, authoritative Main City crediting, and cross-region profile animation routing.");
+console.log("Validated halved raw-production pickup rewards, independent 30-per-type UTC caps, authoritative Main City crediting, and cross-region profile animation routing.");

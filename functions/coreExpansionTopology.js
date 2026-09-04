@@ -256,6 +256,13 @@ function createInitialExpansionState(resetGeneration = "") {
   });
 }
 
+function getFirstLayerRegionIds() {
+  return Object.freeze(Array.from(
+    { length: FIRST_LAYER_MAP_COUNT },
+    (_, activationOrdinal) => getRegionAtActivationOrdinal(activationOrdinal).id,
+  ));
+}
+
 function normalizeExpansionState(state = {}) {
   const activeRegionIds = [...new Set((Array.isArray(state.activeRegionIds) ? state.activeRegionIds : [])
     .map(value => String(value || "").trim())
@@ -497,6 +504,61 @@ function rollbackPendingActivation({ state, eventId = "" } = {}) {
   return Object.freeze({ changed: true, reason: "activation-rolled-back", state: Object.freeze(next) });
 }
 
+function planFirstLayerCompletion({ state, resetGeneration = "", readyRegionIds = [] } = {}) {
+  const current = normalizeExpansionState(state);
+  const generation = String(resetGeneration || current.resetGeneration || "").trim();
+  if (!generation || current.resetGeneration !== generation) {
+    throw new Error("Expansion state does not match the active reset generation.");
+  }
+  if (current.pendingActivation || current.queuedActivationSources.length) {
+    return Object.freeze({
+      changed: false,
+      reason: "expansion-busy",
+      state: Object.freeze(current),
+      activatedRegions: Object.freeze([]),
+    });
+  }
+  const firstLayerRegionIds = getFirstLayerRegionIds();
+  const missingRegionIds = firstLayerRegionIds.filter(regionId => !current.activeRegionIds.includes(regionId));
+  if (!missingRegionIds.length) {
+    return Object.freeze({
+      changed: false,
+      reason: "already-complete",
+      state: Object.freeze(current),
+      activatedRegions: Object.freeze([]),
+    });
+  }
+  const ready = new Set((Array.isArray(readyRegionIds) ? readyRegionIds : [])
+    .map(value => String(value || "").trim()));
+  const unreadyRegionIds = firstLayerRegionIds.filter(regionId => !ready.has(regionId));
+  if (unreadyRegionIds.length) {
+    return Object.freeze({
+      changed: false,
+      reason: "regions-not-ready",
+      state: Object.freeze(current),
+      missingRegionIds: Object.freeze(missingRegionIds),
+      unreadyRegionIds: Object.freeze(unreadyRegionIds),
+      activatedRegions: Object.freeze([]),
+    });
+  }
+  const next = {
+    ...current,
+    activeRegionIds: [...new Set([...current.activeRegionIds, ...firstLayerRegionIds])],
+    // Preserve closed/filled maps and admit only the newly prepared capacity.
+    admittingRegionIds: [...new Set([...current.admittingRegionIds, ...missingRegionIds])],
+    nextActivationOrdinal: Math.max(current.nextActivationOrdinal, FIRST_LAYER_MAP_COUNT),
+    revision: current.revision + 1,
+  };
+  return Object.freeze({
+    changed: true,
+    reason: "first-layer-completed",
+    state: Object.freeze(next),
+    activatedRegions: Object.freeze(missingRegionIds.map(regionId => Object.freeze(
+      getRegionAtActivationOrdinal(parseNewLandsRegionId(regionId).activationOrdinal)
+    ))),
+  });
+}
+
 module.exports = Object.freeze({
   CORE_RADIUS,
   CORE_MAP_COUNT,
@@ -518,10 +580,12 @@ module.exports = Object.freeze({
   parseNewLandsRegionId,
   getNewLandsRegionName,
   getRegionAtActivationOrdinal,
+  getFirstLayerRegionIds,
   createInitialExpansionState,
   normalizeExpansionState,
   buildActivationEventId,
   planThresholdActivation,
   finalizePendingActivation,
   rollbackPendingActivation,
+  planFirstLayerCompletion,
 });

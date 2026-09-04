@@ -50,6 +50,11 @@ assert.equal(topology.getRegionAtActivationOrdinal(56).clockwiseOrderIndex, 0);
 assert.equal(topology.getRegionAtActivationOrdinal(56).gridX, 0);
 assert.equal(topology.getRegionAtActivationOrdinal(56).gridY, -5);
 assert.deepEqual(
+  topology.getFirstLayerRegionIds(),
+  Array.from({ length: 24 }, (_, ordinal) => topology.getRegionAtActivationOrdinal(ordinal).id),
+  "The Layer 1 rollout list must contain the authoritative first ring in activation order.",
+);
+assert.deepEqual(
   topology.parseNewLandsRegionId(topology.getRegionAtActivationOrdinal(56).id),
   {
     id: "new-lands-l03-p001",
@@ -124,6 +129,51 @@ assert.deepEqual(firstFinalization.state.admittingRegionIds, [
   "new-lands-l01-p002",
   "new-lands-l01-p003",
 ]);
+
+const partiallyActiveState = {
+  ...topology.createInitialExpansionState(generation),
+  activeRegionIds: topology.getFirstLayerRegionIds().slice(0, 7),
+  admittingRegionIds: topology.getFirstLayerRegionIds().slice(3, 7),
+  nextActivationOrdinal: 7,
+  revision: 7,
+};
+const unreadyCompletion = topology.planFirstLayerCompletion({
+  state: partiallyActiveState,
+  resetGeneration: generation,
+  readyRegionIds: topology.getFirstLayerRegionIds().slice(0, 23),
+});
+assert.equal(unreadyCompletion.changed, false, "Layer 1 activated before every island verified.");
+assert.equal(unreadyCompletion.reason, "regions-not-ready");
+assert.deepEqual(unreadyCompletion.state.activeRegionIds, partiallyActiveState.activeRegionIds,
+  "A failed Layer 1 readiness check changed active state.");
+const completedFirstLayer = topology.planFirstLayerCompletion({
+  state: partiallyActiveState,
+  resetGeneration: generation,
+  readyRegionIds: topology.getFirstLayerRegionIds(),
+});
+assert.equal(completedFirstLayer.changed, true);
+assert.deepEqual(completedFirstLayer.state.activeRegionIds, topology.getFirstLayerRegionIds());
+assert.deepEqual(
+  completedFirstLayer.state.admittingRegionIds,
+  topology.getFirstLayerRegionIds().slice(3),
+  "The rollout reopened already closed maps or failed to admit newly prepared maps.",
+);
+assert.equal(completedFirstLayer.state.nextActivationOrdinal, 24);
+assert.equal(completedFirstLayer.state.revision, 8);
+const replayedCompletion = topology.planFirstLayerCompletion({
+  state: completedFirstLayer.state,
+  resetGeneration: generation,
+  readyRegionIds: topology.getFirstLayerRegionIds(),
+});
+assert.equal(replayedCompletion.changed, false, "The Layer 1 rollout was not idempotent.");
+assert.equal(replayedCompletion.reason, "already-complete");
+const busyCompletion = topology.planFirstLayerCompletion({
+  state: firstActivation.state,
+  resetGeneration: generation,
+  readyRegionIds: topology.getFirstLayerRegionIds(),
+});
+assert.equal(busyCompletion.changed, false, "The Layer 1 rollout overwrote a pending dynamic activation.");
+assert.equal(busyCompletion.reason, "expansion-busy");
 
 const replay = topology.planThresholdActivation({
   state: firstFinalization.state,

@@ -239,7 +239,7 @@ for (const key of [
 }
 assert.equal(economyConfig.cityUpgradeXp.enabled, true, "City-upgrade XP is not enabled.");
 assert.equal(economyConfig.cityUpgradeXp.modelVersion, 2, "City-upgrade XP is not using model version 2.");
-assert.equal(economyConfig.cityUpgradeXp.fixedXpRate, 0.01, "City-upgrade XP is not using the approved 1% rate.");
+assert.equal(economyConfig.cityUpgradeXp.fixedXpRate, 0.005, "City-upgrade XP is not using the approved 0.5% rate.");
 assert.equal(
   economyConfig.cityUpgradeXp.legacyRequestsEnabled,
   true,
@@ -562,18 +562,20 @@ vm.runInContext(
   { filename: "functions/index.js" }
 );
 
-const cityXpAnchors = new Map([
-  [1, 2],
-  [10, 47],
-  [25, 274],
-  [50, 2976],
-  [75, 32246],
-  [100, 349376],
-  [125, 3785396],
-  [150, 41013656],
-]);
-for (const [level, expected] of cityXpAnchors) {
-  assert.equal(cityUpgradeSandbox.cityUpgradeFixedXp(level), expected, `City level ${level} XP anchor changed.`);
+const cityXpAnchors = [
+  { level: 1, oldXp: 2, newXp: 1 },
+  { level: 10, oldXp: 47, newXp: 23 },
+  { level: 25, oldXp: 274, newXp: 137 },
+  { level: 50, oldXp: 2976, newXp: 1488 },
+  { level: 75, oldXp: 32246, newXp: 16123 },
+  { level: 100, oldXp: 349376, newXp: 174688 },
+  { level: 125, oldXp: 3785396, newXp: 1892698 },
+  { level: 150, oldXp: 41013656, newXp: 20506828 },
+];
+for (const { level, oldXp, newXp } of cityXpAnchors) {
+  const requirement = xpRequired(level);
+  assert.equal(Math.max(1, Math.floor(requirement * 0.01)), oldXp, `City level ${level} former XP anchor changed.`);
+  assert.equal(cityUpgradeSandbox.cityUpgradeFixedXp(level), newXp, `City level ${level} halved XP anchor changed.`);
 }
 
 const modernCityUpgradeRequest = cityUpgradeSandbox.resolveCityUpgradeRequestCompatibility("modern-request-1");
@@ -645,7 +647,7 @@ const uncappedAt50 = cityUpgradeSandbox.calculateCityUpgradeXpReceipt({
   endingCityLevel: 151,
 });
 assert.equal(uncappedAt50.awardedXp, uncappedAt50.rawXp, "Hero Level 50 still caps city-upgrade XP.");
-assert.equal(uncappedAt50.awardedXp, cityUpgradeSandbox.cityUpgradeFixedXp(150), "The Level-150 city XP award is not the full 1% amount.");
+assert.equal(uncappedAt50.awardedXp, cityUpgradeSandbox.cityUpgradeFixedXp(150), "The Level-150 city XP award is not the full 0.5% amount.");
 assert.equal(uncappedAt50.capSuppressedXp, 0, "The compatibility receipt reported capped XP.");
 assert.equal(uncappedAt50.dailyCapActive, false, "The uncapped receipt marked a daily cap active.");
 assert.equal(uncappedAt50.dailyCapXp, 0, "The uncapped receipt returned a daily allowance.");
@@ -903,4 +905,4 @@ assert.equal(xpRequired(500), Number.MAX_SAFE_INTEGER, "Extreme hero levels must
 assert.ok(xpRequired(100) > xpRequired(50) * 10, "Levels 50-100 are not scaling enough.");
 assert.ok(xpRequired(150) > xpRequired(100) * 10, "Levels above 100 are not endgame-scaled.");
 
-console.log("Validated aligned battle XP, uncapped 1% city-upgrade XP, legacy rollout compatibility, progression, and the level-up reward curve.");
+console.log("Validated aligned battle XP, uncapped 0.5% city-upgrade XP, exact pre/post rebalance anchors, legacy rollout compatibility, progression, and the level-up reward curve.");

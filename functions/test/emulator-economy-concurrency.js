@@ -33,7 +33,7 @@ function getXpRequiredForLevel(level) {
 
 function getCityUpgradeXp(level) {
   return Math.max(1, Math.floor(
-    getXpRequiredForLevel(level) * Number(economyConfig.cityUpgradeXp?.fixedXpRate || 0.01)
+    getXpRequiredForLevel(level) * Number(economyConfig.cityUpgradeXp?.fixedXpRate || 0.005)
   ));
 }
 
@@ -381,7 +381,7 @@ async function main() {
     acknowledgedCapSuppressedXp: Number.MAX_SAFE_INTEGER,
     acknowledgedRebuildSuppressedXp: Number(uncappedPreview.cityUpgradeXp?.rebuildSuppressedXp || 0),
   });
-  assert(Number(uncappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getCityUpgradeXp(150), "Hero Level 50 did not receive the full 1% city XP award.");
+  assert(Number(uncappedUpgrade.cityUpgradeXp?.awardedXp || 0) === getCityUpgradeXp(150), "Hero Level 50 did not receive the full 0.5% city XP award.");
   assert(Number(uncappedUpgrade.cityUpgradeXp?.capSuppressedXp || 0) === 0, "The uncapped receipt reported cap-suppressed XP.");
   assert(uncappedUpgrade.cityUpgradeXp?.dailyCapActive === false, "The uncapped receipt marked a daily cap active.");
   assert(uncappedUpgrade.cityUpgradeXp?.capReferenceHeroLevel == null, "The uncapped receipt froze a Hero-level cap reference.");

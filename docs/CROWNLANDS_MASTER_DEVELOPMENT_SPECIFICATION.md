@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.32
+**Version:** 1.33
 **Effective date:** September 4, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** September 4, 2026
@@ -244,6 +244,8 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 - A 5×5 Core layout containing 25 maps, approximately 1,480 cities, 17 configured objectives, 40 reciprocal internal connections, and 20 gated outward edges is deployed behind the scheduled activation boundary. The Core is never a new-player spawn pool. **Status:** `DEPLOYED — SCHEDULED ACTIVATION`.
 - The first expansion layer contains exactly 24 maps: five maps along each cardinal side of the Core plus the four corner maps. Together with the 25-map Core, this forms a complete 7×7 footprint.
+- The authoritative clockwise Layer 1 map order is Northgate March, Frostmere, Highwatch Vale, Ravenstone, Eastwall Reach, Kingsroad March, Redwych, Ashford Vale, Emberfield, Sunward Ford, Goldbarrow, Southwatch, Dunmere, Blackthorn Reach, Westervale, Stoneford, Greyfen, Oakshield, Briar March, Wolfpine, Alderwatch, Moorhaven, Crownsward, and Ironwood Vale.
+- The current monthly realm must expose the complete 24-map first layer. Completing a partially activated first layer is a create-only, idempotent rollout: existing islands and cities are verified in place; player-owned city documents are never overwritten; missing neutral cities are seeded at Level 1; all 24 maps are verified before the expansion-state activation is committed with a version precondition.
 - Later player-growth layers allocate positions in clockwise order. Every layer begins at its north-center cardinal position, never at a corner, so its first map has a direct south road into the immediately inner layer. Capacity expansion activates the next two positions together, and a later layer cannot begin until the preceding layer's allocation order is complete.
 - Every player-facing Core and New Lands map label uses a unique medieval-authentic place name. Numbered `New Lands` labels are internal planning identifiers only and must not appear as map names in the game.
 - Each generated New Lands map begins with 40 neutral NPC cities, and every newly seeded or returned-to-neutral regular NPC city starts at exactly Level 1. When the currently admitting map reaches 20 remaining neutral NPC cities, the server activates the next two maps in clockwise allocation order for new-player placement. The threshold transition must be transactional, idempotent, and safe under concurrent claims.
@@ -304,9 +306,9 @@ The following Hero-progression reward curve is confirmed design and is `LIVE —
 
 ### Confirmed city-upgrade Hero XP
 
-The following city-progression reward model is confirmed design and is `LIVE — ALL PUBLISHED CHANNELS`, beginning with verified cross-channel baseline build `a561374b...`; an authenticated production upgrade was not executed during release verification:
+The following city-progression reward model is confirmed design. The original model-v2 baseline at 1% is `LIVE — ALL PUBLISHED CHANNELS` beginning with verified cross-channel build `a561374b...`; this release changes only future eligible city upgrades to the 0.5% award below, without altering stored Hero XP or any other XP source:
 
-- City-upgrade XP model version 2 is the confirmed model. Upgrading a regular owned city from Level `L` to Level `L + 1` offers `max(1, floor(HeroXpRequired(L) × 0.01))` Hero XP. The source city level is the only balance input; Gold cost, discounts, skills, Gear, objectives, items, production, and the receiving Hero level do not change the raw award.
+- City-upgrade XP model version 2 is the confirmed model. Upgrading a regular owned city from Level `L` to Level `L + 1` offers `max(1, floor(HeroXpRequired(L) × 0.005))` Hero XP. This is exactly 50% of the previous fixed rate before the existing floor and minimum-one rounding are applied. The source city level is the only balance input; Gold cost, discounts, skills, Gear, objectives, items, production, and the receiving Hero level do not change the raw award.
 - A bulk upgrade evaluates every crossed city level independently and sums those fixed awards.
 - Each player has a seasonal high-watermark for each region-and-city identity. On the first encounter with this feature, the current pre-upgrade city level becomes the baseline and grants no retroactive XP. Only newly developed levels above the stored high-watermark are eligible. Capture, loss, relinquishment, recapture, or rebuilding does not reset the high-watermark. The high-watermark is generation-scoped and server-protected.
 - Every eligible city-upgrade XP award is uncapped at every Hero level. Model version 2 does not read or write daily city-XP allowance state. Existing model-version-1 allowance data remains harmless stored data and is not migrated or deleted.
@@ -435,6 +437,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 
 - Armies move in real time along valid routes for attacks, scouting, transfers, support, regrouping, and rallies. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Cross-region movement must use configured region connections. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- Normal troop-march duration has no maximum cap. The authoritative route distance continues through every traversed map, and the existing distance, order-kind, troop-band, speed-skill, Gear, Stronghold, and minimum-duration rules calculate the full travel time even when it exceeds 30 minutes. The server rebuilds the route and duration from trusted endpoints and modifiers; client-provided geometry, distance, ETA, or duration cannot shorten an authoritative march.
 - The attacking army’s launch-time attack value is locked when dispatched. Defender troops, reinforcements, ownership, wall repair, and applicable live defensive state may change until arrival. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 
 ### Combat
@@ -476,7 +479,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Each production-scaled Gold or troop Camp payout is `max(minimum reward, floor(raw kingdom production per hour × reward hours))`.
 - A Relic Camp uses a 30-minute hold and permits five item rewards per player per UTC day. Its item weights are War Drums 35, Veil of Silence 25, Swift March Order 18, Royal Tax Decree 12, Recall Horn 8, and Royal Peace Shield 2, plus a separate 1% Common Gear Box chance.
 - A Deed Camp uses a 60-minute hold and permits one reward per player per UTC day. It grants one eligible neutral regular non-center city at that city’s existing level with zero troops.
-- A ruler's first world pickup appears after two minutes. Each successful collection starts a two-minute respawn, while rejected or failed collections preserve the active pickup and its existing deadline. Pickups favor terrain-safe positions toward the center of the active map, expire after 20 minutes, and grant one hour of raw Gold or troop production with a minimum of 250. Daily caps are 50 total, 25 Gold, and 25 troop pickups, with at most one active pickup per player. Failed placement attempts retry after five seconds. **Status:** the base pickup system is live; the uniform two-minute cadence and center-biased placement are `IMPLEMENTED BUT NOT LIVE` until deployed and verified.
+- A ruler's first world pickup appears after two minutes. Each successful collection starts a two-minute respawn, while rejected or failed collections preserve the active pickup and its existing deadline. Pickups favor terrain-safe positions toward the center of the active map, expire after 20 minutes, and grant 30 minutes of raw, non-boosted Gold or troop production with a minimum of 125. The per-player UTC-day caps are 60 total, 30 Gold, and 30 troop pickups, so collecting one type does not reduce the other type below its independent 30-pickup allowance; at most one pickup is active per player. Failed placement attempts retry after five seconds. Camps, Relics, Deeds, Daily Missions, Achievements, advertisements, and Shop rewards are unchanged by this pickup balance rule. **Status:** the balance change is confirmed for this release and becomes live only after coordinated backend/client deployment verification.
 
 These are verified repository facts for commit `27105ae...`; exact deployed backend parity remains **NEEDS VERIFICATION**.
 
@@ -1270,6 +1273,13 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 | Crownlands Work conversations and Codex completion reports | Design and implementation history | Decisions used only when confirmed; reports do not prove deployment |
 
 # Appendix D — Change Log
+
+## v1.33 — September 4, 2026
+
+- Confirmed the complete 24-map Layer 1 first ring as the current monthly-realm target and required a create-only, version-checked rollout that verifies all maps before activation and never overwrites player cities.
+- Removed the 30-minute troop-travel maximum while preserving the existing formula, bonuses, minimums, server-generated routes, and server-authoritative arrival validation.
+- Reduced future city-upgrade Hero XP from 1% to 0.5% of the matching Hero XP requirement under the existing floor/minimum rule without changing stored player XP.
+- Reduced regular Gold and troop world pickups from one raw-production hour to 30 minutes, reduced their minimums from 250 to 125, and increased independent per-type UTC-day caps from 25 to 30 with an aggregate cap of 60.
 
 ## v1.32 — September 4, 2026
 

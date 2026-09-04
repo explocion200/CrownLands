@@ -1045,19 +1045,19 @@ const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours
 const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
 const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
-const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
-const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
-const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
+const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 60);
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 30);
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 30);
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
 const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 2) * 60;
 const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 2) * 60;
 const HARVEST_BONUS_MAX_TIMER_SECONDS = Math.max(HARVEST_BONUS_INITIAL_SPAWN_SECONDS, HARVEST_BONUS_RESPAWN_SECONDS);
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
-const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 10) * 60;
-const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 50);
-const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 10) * 60;
-const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 10);
+const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 30) * 60;
+const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 125);
+const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 30) * 60;
+const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 125);
 const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
 const HARVEST_BONUS_TRANSITION_CLEARANCE = 148;
@@ -1101,7 +1101,6 @@ const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
-const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
 const CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT = 2;
 const ORDINARY_CITY_REINFORCEMENT_CAPACITY = 5;
@@ -1134,7 +1133,7 @@ const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEn
 const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 108);
 const CITY_UPGRADE_XP_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.enabled !== false;
-const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.01));
+const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.005));
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
@@ -22171,10 +22170,9 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
   const demoAttack = kind === "attack" ? normalizeDemoAttackSnapshot(options.demoAttack) : null;
   const demoMultiplier = demoAttack?.travelMultiplier || 1;
   const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
-  return clamp(
-    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / Math.max(0.1, speed),
+  return Math.max(
     minSeconds,
-    ARMY_TRAVEL_MAX_SECONDS,
+    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / Math.max(0.1, speed),
   );
 }
 

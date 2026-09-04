@@ -261,13 +261,13 @@ const ANTI_FARM_PAIR_BLOCK_MS = 7 * 24 * 60 * 60 * 1000;
 const ANTI_FARM_MAX_ACCOUNT_INSTALLATIONS = 8;
 const ANTI_FARM_MAX_INSTALLATION_ACCOUNTS = 12;
 const ANTI_FARM_MAX_HANDOFF_HISTORY = 24;
-const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
-const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
-const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
-const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 10) * 60;
-const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 50);
-const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 10) * 60;
-const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 10);
+const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 60);
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 30);
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 30);
+const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 30) * 60;
+const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 125);
+const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 30) * 60;
+const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 125);
 const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
 const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = economyNumber("pickups.initialSpawnDelayMinutes", 2) * 60;
 const HARVEST_BONUS_RESPAWN_SECONDS = economyNumber("pickups.respawnAfterCollectionMinutes", 2) * 60;
@@ -297,7 +297,6 @@ const BATTLE_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
-const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
 const ARMY_ORDER_KINDS = Object.freeze(["attack", "transfer", "reinforce", "rally_join", "scout"]);
 const REINFORCEMENT_STATUS_STATIONED = "stationed";
@@ -403,7 +402,7 @@ const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximum
 const CITY_UPGRADE_XP_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.enabled !== false;
 const CITY_UPGRADE_XP_MODEL_VERSION = Math.max(1, Math.floor(economyNumber("cityUpgradeXp.modelVersion", 1)));
 const CITY_UPGRADE_XP_LEGACY_REQUESTS_ENABLED = ECONOMY_CONFIG?.cityUpgradeXp?.legacyRequestsEnabled === true;
-const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.01));
+const CITY_UPGRADE_XP_FIXED_RATE = Math.max(0, economyNumber("cityUpgradeXp.fixedXpRate", 0.005));
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
@@ -5746,9 +5745,12 @@ function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", 
   const demoMultiplier = normalizeDemoAttackSnapshot(demoAttack)?.travelMultiplier || 1;
   const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
   const speed = Math.max(0.1, safeNumber(speedMultiplier, 1));
-  const computed = clamp(distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / speed, minSeconds, ARMY_TRAVEL_MAX_SECONDS);
+  const computed = Math.max(
+    minSeconds,
+    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / speed
+  );
   const requested = safeNumber(requestedTotal, computed);
-  return clamp(Math.max(computed, requested), minSeconds, ARMY_TRAVEL_MAX_SECONDS);
+  return Math.max(computed, requested, minSeconds);
 }
 
 function normalizePoint(point = {}) {

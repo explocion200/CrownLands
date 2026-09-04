@@ -20,7 +20,7 @@
     "test:clan-heraldry": "node --check clanHeraldryConfig.js && node --check clanHeraldryLegacyV1.js && node --check clanHeraldryAssets.js && node --check clanHeraldryRenderer.js && node ../tools/validate-clan-heraldry-v2.js",
     "test:route-parity": "node ../tools/validate-server-route-parity.js",
     "test:realm-sharding": "node ../tools/validate-realm-sharding.js",
-    "test:core-expansion": "node ../tools/validate-player-region-capacity.js && node ../tools/validate-core-expansion-topology.js && node ../tools/validate-core-expansion-release.js",
+    "test:core-expansion": "node ../tools/validate-player-region-capacity.js && node ../tools/validate-core-expansion-topology.js && node ../tools/validate-core-expansion-release.js && node ../tools/validate-layer1-travel.js",
     "test:holding-towers": "node ../tools/validate-holding-towers.js",
     "pretest:emulators": "node ../tools/generate-release-manifest.js",
     "test:emulators": "node test/run-emulator-gates.js",
