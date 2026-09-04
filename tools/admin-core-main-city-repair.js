@@ -11,10 +11,13 @@ const firebaseToolsRoot = path.dirname(requireFromFunctions.resolve("firebase-to
 const auth = require(path.join(firebaseToolsRoot, "lib", "auth"));
 const { Client } = require(path.join(firebaseToolsRoot, "lib", "apiv2"));
 const regionCatalog = require(path.join(functionsDirectory, "core-expansion-region-catalog.json"));
+const releaseConfig = require(path.join(functionsDirectory, "release-config.json"));
 const realmTopology = require(path.join(functionsDirectory, "realmTopology.js"));
 
-const SELECTION_VERSION = "core-main-city-repair-v1";
+const SELECTION_VERSION = "core-main-city-repair-v2";
 const FIRESTORE_COMMIT_WRITE_LIMIT = 500;
+const GLOBAL_PLAYER_STATS_VERSION = 11;
+const CLAN_IDENTITY_REVISION_VERSION = 1;
 
 function readArgument(name, fallback = "") {
   const index = process.argv.indexOf(`--${name}`);
@@ -34,6 +37,7 @@ const options = Object.freeze({
   worldId: readArgument("world"),
   resetGeneration: readArgument("reset-generation"),
   apply: process.argv.includes("--apply"),
+  grantNeutralCityForBlocked: process.argv.includes("--grant-neutral-city-for-blocked"),
   confirmTargetCount: integerArgument("confirm-target-count", null),
   confirmBlockedCount: integerArgument("confirm-blocked-count", null),
   confirmPlanHash: readArgument("confirm-plan-hash"),
@@ -74,6 +78,14 @@ function fromValue(value = {}) {
   if (Object.prototype.hasOwnProperty.call(value, "doubleValue")) return Number(value.doubleValue);
   if (Object.prototype.hasOwnProperty.call(value, "booleanValue")) return Boolean(value.booleanValue);
   if (Object.prototype.hasOwnProperty.call(value, "timestampValue")) return value.timestampValue;
+  if (Object.prototype.hasOwnProperty.call(value, "arrayValue")) {
+    return (value.arrayValue?.values || []).map(fromValue);
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "mapValue")) {
+    return Object.fromEntries(
+      Object.entries(value.mapValue?.fields || {}).map(([key, entry]) => [key, fromValue(entry)])
+    );
+  }
   return undefined;
 }
 
@@ -121,6 +133,14 @@ function isCurrentRealmDocument(document) {
 
 function isPlayerOwnedCity(city) {
   return field(city.document, "ownerKind") === "player" && Boolean(field(city.document, "ownerUid"));
+}
+
+function isEligibleNeutralGrantCity(city) {
+  return !permanentCoreRegionIds.has(city.regionId)
+    && !isStronghold(city)
+    && field(city.document, "ownerKind") === "neutral"
+    && !field(city.document, "ownerUid")
+    && field(city.document, "neutralClaimOpen") !== true;
 }
 
 function isStronghold(city) {
@@ -203,6 +223,8 @@ function targetFingerprint(target) {
     profilePath: target.profilePath,
     sourcePath: target.sourcePath,
     destinationPath: target.destination.path,
+    destinationUpdateTime: target.destination.updateTime,
+    grantOwnership: target.grantOwnership,
     cityPatchPaths: target.cityPatches.map(entry => entry.path),
   };
 }
@@ -234,7 +256,7 @@ async function loadCurrentRealmState(client) {
   return { profiles: currentProfiles, cities };
 }
 
-function buildPlan({ profiles, cities }) {
+function buildPlan({ profiles, cities }, { allowNeutralGrant = options.grantNeutralCityForBlocked } = {}) {
   const citiesByOwner = new Map();
   for (const city of cities) {
     if (!isPlayerOwnedCity(city)) continue;
@@ -245,7 +267,11 @@ function buildPlan({ profiles, cities }) {
 
   const targets = [];
   const blocked = [];
-  for (const profile of profiles) {
+  const neutralGrantCandidates = cities
+    .filter(isEligibleNeutralGrantCity)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const reservedNeutralPaths = new Set();
+  for (const profile of [...profiles].sort((left, right) => documentPath(left).localeCompare(documentPath(right)))) {
     const uid = documentId(profile);
     const ownedCities = (citiesByOwner.get(uid) || []).filter(city => !isStronghold(city));
     const profileMainCityId = String(field(profile, "mainCityId") || "");
@@ -268,6 +294,39 @@ function buildPlan({ profiles, cities }) {
       .filter(city => !permanentCoreRegionIds.has(city.regionId))
       .sort((left, right) => left.path.localeCompare(right.path));
     if (!candidates.length) {
+      const availableNeutralCities = neutralGrantCandidates.filter(city => !reservedNeutralPaths.has(city.path));
+      if (allowNeutralGrant && availableNeutralCities.length) {
+        const destination = availableNeutralCities[stableRandomIndex(uid, availableNeutralCities.length)];
+        reservedNeutralPaths.add(destination.path);
+        const cityPatches = ownedCities
+          .filter(city => field(city.document, "isMainCity") === true)
+          .map(city => ({
+            path: city.path,
+            name: city.document.name,
+            updateTime: city.document.updateTime,
+            isMainCity: false,
+          }))
+          .sort((left, right) => left.path.localeCompare(right.path));
+        targets.push({
+          uid,
+          profile,
+          profilePath: documentPath(profile),
+          sourcePath: pointerCity?.path || flaggedCoreCities[0]?.path || "",
+          sourceRegionId: pointerCity?.regionId || profileRegionId || flaggedCoreCities[0]?.regionId || "unknown",
+          destination: {
+            path: destination.path,
+            name: destination.document.name,
+            updateTime: destination.document.updateTime,
+            document: destination.document,
+            cityId: destination.cityId,
+            islandId: destination.islandId,
+            regionId: destination.regionId,
+          },
+          grantOwnership: true,
+          cityPatches,
+        });
+        continue;
+      }
       blocked.push({
         uid,
         profilePath: documentPath(profile),
@@ -297,10 +356,14 @@ function buildPlan({ profiles, cities }) {
       sourceRegionId: pointerCity?.regionId || profileRegionId || flaggedCoreCities[0]?.regionId || "unknown",
       destination: {
         path: destination.path,
+        name: destination.document.name,
+        updateTime: destination.document.updateTime,
+        document: destination.document,
         cityId: destination.cityId,
         islandId: destination.islandId,
         regionId: destination.regionId,
       },
+      grantOwnership: false,
       cityPatches,
     });
   }
@@ -331,6 +394,85 @@ function createUpdateWrite(document, fields, fieldPaths) {
   };
 }
 
+function createOwnershipEventWrite(target, eventId, nowMs, targetType, reason) {
+  const realmId = realmStorageId(target.profile);
+  const eventPath = `realmEvents/${encodeURIComponent(realmId)}/ownershipChanges/${encodeURIComponent(eventId)}`;
+  const eventName = `projects/${options.projectId}/databases/(default)/documents/${eventPath}`;
+  // The deployed ownership processor rebuilds player stats for camp events. A
+  // collision-proof synthetic camp target lets this exceptional admin grant use
+  // that canonical rebuild path without impersonating a player or deploying code.
+  const syntheticStatsRebuild = targetType === "camp";
+  const targetId = syntheticStatsRebuild
+    ? `admin_stats_${crypto.createHash("sha256").update(eventId).digest("hex").slice(0, 20)}`
+    : target.destination.cityId;
+  return {
+    path: eventPath,
+    write: {
+      update: {
+        name: eventName,
+        fields: fieldsFromObject({
+          eventId,
+          worldId: options.worldId,
+          resetGeneration: options.resetGeneration,
+          realmShardId: realmTopology.normalizeRealmShardId(field(target.profile, "realmShardId")),
+          releaseId: String(releaseConfig.releaseId || ""),
+          targetType,
+          targetId,
+          regionId: target.destination.regionId,
+          targetKey: `${target.destination.regionId}:${targetId}`,
+          beforeOwnerUid: "",
+          afterOwnerUid: target.uid,
+          reason,
+          status: "pending",
+          attempts: 0,
+          createdAtMs: nowMs,
+          updatedAtMs: nowMs,
+        }),
+      },
+      currentDocument: { exists: false },
+    },
+  };
+}
+
+function createNeutralCityGrantWrite(target, nowMs) {
+  const profile = target.profile;
+  const itemEffects = field(profile, "itemEffects") || {};
+  const shieldExpiresAtMs = Math.max(0, Number(itemEffects.shieldExpiresAtMs) || 0);
+  const fields = {
+    ownerKind: "player",
+    ownerUid: target.uid,
+    ownerName: String(field(profile, "playerName") || field(profile, "displayName") || "Ruler"),
+    ownerFlag: field(profile, "flag") || null,
+    ownerKingPower: Math.max(0, Math.floor(Number(field(profile, "kingPower")) || 0)),
+    kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+    ownerClanId: String(field(profile, "clanId") || ""),
+    ownerClanName: String(field(profile, "clanName") || ""),
+    ownerClanTag: String(field(profile, "clanTag") || ""),
+    ownerClanIdentityRevision: Math.max(0, Math.floor(Number(field(profile, "clanIdentityRevision")) || 0)),
+    ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    ownerShieldExpiresAtMs: shieldExpiresAtMs > nowMs ? shieldExpiresAtMs : 0,
+    troops: 0,
+    troopFloat: 0,
+    level: Math.max(1, Math.floor(Number(field(target.destination.document, "level")) || 1)),
+    defense: 1,
+    investedGold: 0,
+    alliedReinforcementTroops: 0,
+    productionUpdatedAtMs: nowMs,
+    lastCapturedAtMs: nowMs,
+    isMainCity: true,
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
+    neutralClaimOpen: false,
+    neutralClaimedByUid: "",
+    neutralClaimedAtMs: 0,
+    neutralClaimSource: "",
+    neutralClaimClosedAtMs: nowMs,
+    mainCityRepairGrantedAtMs: nowMs,
+    updatedAtMs: nowMs,
+  };
+  return createUpdateWrite(target.destination.document, fields, Object.keys(fields));
+}
+
 function createWrites(plan, operationId, planHash, createdAt) {
   const nowMs = Date.parse(createdAt);
   const receiptPath = `adminOperations/${operationId}`;
@@ -347,6 +489,8 @@ function createWrites(plan, operationId, planHash, createdAt) {
     createdAt,
     targetCount: plan.targets.length,
     blockedCount: plan.blocked.length,
+    grantNeutralCityForBlocked: options.grantNeutralCityForBlocked,
+    grantedCityCount: plan.targets.filter(target => target.grantOwnership).length,
     blocked: plan.blocked,
     targets: plan.targets.map(target => ({
       uid: target.uid,
@@ -354,6 +498,8 @@ function createWrites(plan, operationId, planHash, createdAt) {
       sourceRegionId: target.sourceRegionId,
       destinationPath: target.destination.path,
       destinationRegionId: target.destination.regionId,
+      destinationUpdateTime: target.destination.updateTime,
+      grantOwnership: target.grantOwnership,
       profileUpdateTime: target.profile.updateTime,
       cityPatches: target.cityPatches.map(entry => ({
         path: entry.path,
@@ -366,6 +512,7 @@ function createWrites(plan, operationId, planHash, createdAt) {
     update: { name: operationName, fields: fieldsFromObject(receipt) },
     currentDocument: { exists: false },
   }];
+  const eventPaths = [];
   for (const target of plan.targets) {
     const projection = {
       mainCityId: target.destination.cityId,
@@ -394,8 +541,86 @@ function createWrites(plan, operationId, planHash, createdAt) {
         currentDocument: { updateTime: cityPatch.updateTime },
       });
     }
+    if (target.grantOwnership) {
+      writes.push(createNeutralCityGrantWrite(target, nowMs));
+      const ownershipEvent = createOwnershipEventWrite(
+        target,
+        `${operationId}_ownership`,
+        nowMs,
+        "city",
+        "admin_core_main_city_repair"
+      );
+      const statsEvent = createOwnershipEventWrite(
+        target,
+        `${operationId}_stats`,
+        nowMs,
+        "camp",
+        "admin_core_main_city_repair_stats_rebuild"
+      );
+      writes.push(ownershipEvent.write, statsEvent.write);
+      eventPaths.push(ownershipEvent.path, statsEvent.path);
+    }
   }
-  return { receiptPath, writes };
+  return { receiptPath, writes, eventPaths };
+}
+
+async function waitForProcessedEvents(client, eventPaths, timeoutMs = 45_000) {
+  const pending = new Set(eventPaths);
+  const deadline = Date.now() + timeoutMs;
+  while (pending.size && Date.now() < deadline) {
+    const snapshots = await Promise.all([...pending].map(async eventPath => [
+      eventPath,
+      await getDocument(client, eventPath),
+    ]));
+    snapshots.forEach(([eventPath, document]) => {
+      if (document && field(document, "status") === "processed") pending.delete(eventPath);
+    });
+    if (pending.size) await new Promise(resolve => setTimeout(resolve, 1_000));
+  }
+  if (pending.size) {
+    throw new Error(`Timed out waiting for ${pending.size} authoritative ownership/stat event(s) to process.`);
+  }
+}
+
+async function verifyAppliedTargets(client, targets, state) {
+  for (const target of targets) {
+    const destination = state.cities.find(city => city.path === target.destination.path);
+    const ownedRegularCities = state.cities.filter(city => (
+      !isStronghold(city) && field(city.document, "ownerUid") === target.uid
+    ));
+    const statsPath = `players/${encodeURIComponent(target.uid)}/stats/global`;
+    const leaderboardPath = `leaderboards/${encodeURIComponent(realmStorageId(target.profile))}/entries/${encodeURIComponent(target.uid)}`;
+    const [profile, stats, leaderboard] = await Promise.all([
+      getDocument(client, target.profilePath),
+      getDocument(client, statsPath),
+      getDocument(client, leaderboardPath),
+    ]);
+    const expected = target.destination;
+    const projections = [profile, stats, leaderboard];
+    if (!destination
+      || field(destination.document, "ownerKind") !== "player"
+      || field(destination.document, "ownerUid") !== target.uid
+      || field(destination.document, "isMainCity") !== true
+      || projections.some(document => (
+        !document
+        || field(document, "mainCityId") !== expected.cityId
+        || field(document, "mainIslandId") !== expected.islandId
+        || field(document, "mainRegionId") !== expected.regionId
+      ))) {
+      throw new Error("Verification failed: the repaired main-city ownership or projection is inconsistent.");
+    }
+    if (target.grantOwnership) {
+      const totalCities = field(stats, "totalCities");
+      const leaderboardCityCount = field(leaderboard, "cityCount");
+      const statsKingPower = field(stats, "kingPower");
+      if (totalCities !== ownedRegularCities.length
+        || leaderboardCityCount !== ownedRegularCities.length
+        || field(profile, "kingPower") !== statsKingPower
+        || field(leaderboard, "kingPower") !== statsKingPower) {
+        throw new Error("Verification failed: the authoritative city-count or king-power projections are inconsistent.");
+      }
+    }
+  }
 }
 
 async function main() {
@@ -414,7 +639,8 @@ async function main() {
     .digest("hex");
   const summary = summarize(plan);
   const projectedWriteCount = 1 + plan.targets.reduce((count, target) => (
-    count + 1 + Number(Boolean(target.stats)) + Number(Boolean(target.leaderboard)) + target.cityPatches.length
+    count + 1 + Number(Boolean(target.stats)) + Number(Boolean(target.leaderboard))
+      + target.cityPatches.length + (target.grantOwnership ? 3 : 0)
   ), 0);
   console.log(JSON.stringify({
     mode: options.apply ? "apply" : "dry-run",
@@ -422,6 +648,7 @@ async function main() {
     worldId: options.worldId,
     resetGeneration: options.resetGeneration,
     selectionVersion: SELECTION_VERSION,
+    grantNeutralCityForBlocked: options.grantNeutralCityForBlocked,
     scannedPlayerCount: state.profiles.length,
     scannedCityCount: state.cities.length,
     targetCount: plan.targets.length,
@@ -451,7 +678,7 @@ async function main() {
 
   const createdAt = new Date().toISOString();
   const operationId = `core_main_city_repair_${createdAt.replace(/[^0-9]/g, "").slice(0, 14)}z`;
-  const { receiptPath, writes } = createWrites(plan, operationId, planHash, createdAt);
+  const { receiptPath, writes, eventPaths } = createWrites(plan, operationId, planHash, createdAt);
   if (writes.length > FIRESTORE_COMMIT_WRITE_LIMIT) {
     throw new Error(`Refusing ${writes.length} writes because Firestore permits at most ${FIRESTORE_COMMIT_WRITE_LIMIT} per commit.`);
   }
@@ -459,21 +686,24 @@ async function main() {
     `/v1/projects/${options.projectId}/databases/(default)/documents:commit`,
     { writes }
   );
+  await waitForProcessedEvents(client, eventPaths);
 
   const verificationState = await loadCurrentRealmState(client);
-  const remainingPlan = buildPlan(verificationState);
-  if (remainingPlan.targets.length || remainingPlan.blocked.length !== plan.blocked.length) {
+  const remainingPlan = buildPlan(verificationState, { allowNeutralGrant: false });
+  if (remainingPlan.targets.length || remainingPlan.blocked.length) {
     throw new Error(
-      `Verification failed: ${remainingPlan.targets.length} repairable and ${remainingPlan.blocked.length} blocked Core main-city assignments remain; expected 0 and ${plan.blocked.length}.`
+      `Verification failed: ${remainingPlan.targets.length} repairable and ${remainingPlan.blocked.length} blocked Core main-city assignments remain; expected 0 and 0.`
     );
   }
+  await verifyAppliedTargets(client, plan.targets, verificationState);
   console.log(JSON.stringify({
     applied: true,
     operationId,
     receiptPath,
     commitTime: response.body.commitTime,
     repairedPlayerCount: plan.targets.length,
-    remainingCoreMainCityCount: remainingPlan.blocked.length,
+    grantedCityCount: plan.targets.filter(target => target.grantOwnership).length,
+    remainingCoreMainCityCount: remainingPlan.targets.length + remainingPlan.blocked.length,
     remainingBlockedCount: remainingPlan.blocked.length,
   }, null, 2));
 }
