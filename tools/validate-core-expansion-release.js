@@ -274,10 +274,26 @@ assert.match(clientSource, /registerCoreExpansionRegions/);
 assert.match(clientSource, /subscribeOnlineCoreExpansion/);
 assert.match(read("firebaseClient.js"), /subscribeCoreExpansionState[\s\S]*realmGenerations[\s\S]*expansion[\s\S]*current/);
 assert.match(read("firestore.rules"), /match \/expansion\/\{stateId\}[\s\S]*allow read:[\s\S]*currentResetGeneration/);
-assert.match(
-  read("functions/test/run-emulator-gates.js"),
-  /const coreExpansionGates\s*=\s*new Set\(\[coreExpansionGate, "emulator-main-city-recovery\.js"\]\)[\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*forceCoreExpansion/,
+const emulatorGateSource = read("functions/test/run-emulator-gates.js");
+assert.match(emulatorGateSource, /const coreExpansionGates\s*=\s*new Set\(\[[\s\S]*?\]\)/);
+assert.match(emulatorGateSource, /"emulator-main-city-recovery\.js"/);
+assert.match(emulatorGateSource, /"emulator-first-time-onboarding\.js"/);
+assert.match(emulatorGateSource, /CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*forceCoreExpansion/);
+const layer1RolloutSource = read("tools/admin-complete-layer1-world.js");
+assert.match(layer1RolloutSource, /--apply requires --confirm-plan-hash from a fresh dry run/);
+assert.match(layer1RolloutSource, /currentDocument:\s*\{ exists: false \}/,
+  "New Layer 1 records must use create-only Firestore preconditions.");
+assert.match(layer1RolloutSource, /currentDocument:\s*\{ updateTime: currentExpansionDocument\.updateTime \}/,
+  "Layer 1 activation must use the observed expansion-state version as a precondition.");
+assert.ok(
+  layer1RolloutSource.indexOf("const readyRegionIds = await verifyLayer1")
+    < layer1RolloutSource.indexOf("const completion = topology.planFirstLayerCompletion"),
+  "Every Layer 1 map must verify before the activation plan is calculated.",
 );
+assert.match(layer1RolloutSource, /if \(ownerUid\) observations\.preservedPlayerCityCount \+= 1/,
+  "The Layer 1 rollout must count and preserve player-controlled cities.");
+assert.match(layer1RolloutSource, /if \(existingCitiesById\.has\(city\.id\)\) return/,
+  "The Layer 1 rollout must never overwrite an existing city document.");
 const indexSource = read("index.html");
 assert.match(indexSource, /region-catalog\.js\?v=20260903-cache-safe-map-art-r1/);
 assert.match(indexSource, /assets\/worlds\/core-expansion-v1\/region-catalog\.js\?v=20260903-cache-safe-map-art-r1/);

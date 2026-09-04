@@ -57,12 +57,12 @@ for (const campType of ["gold", "troops", "items", "deed"]) {
 }
 assert.equal(
   serverConfig.pickups.dailyGoldCap * serverConfig.pickups.goldAwardProductionMinutes,
-  1_500,
+  900,
   "Daily gold pickup production-time budget changed unexpectedly."
 );
 assert.equal(
   serverConfig.pickups.dailyTroopCap * serverConfig.pickups.troopAwardProductionMinutes,
-  1_500,
+  900,
   "Daily troop pickup production-time budget changed unexpectedly."
 );
 assert.equal(serverConfig.pickups.initialSpawnDelayMinutes, 2);

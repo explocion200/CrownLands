@@ -180,11 +180,14 @@ const dailyTroopSources = {
 };
 const dailyGoldMaximum = Object.values(dailyGoldSources).reduce((sum, value) => sum + value, 0);
 const dailyTroopMaximum = Object.values(dailyTroopSources).reduce((sum, value) => sum + value, 0);
-const legacyBoostedPickupTroopsPerDay = baseTroopsPerHour * permanentTroopMultiplier * pickupTroopHours;
-const legacyDailyTroopMaximum = dailyTroopMaximum
+const preRebalancePickupTroopHours = 25;
+const preRebalanceBoostedPickupTroopsPerDay = baseTroopsPerHour
+  * permanentTroopMultiplier
+  * preRebalancePickupTroopHours;
+const preRebalanceDailyTroopMaximum = dailyTroopMaximum
   - dailyTroopSources.pickups
-  + legacyBoostedPickupTroopsPerDay;
-const rawPickupProductionDayAdjustment = legacyDailyTroopMaximum / dailyTroopMaximum;
+  + preRebalanceBoostedPickupTroopsPerDay;
+const pickupBalanceProductionDayAdjustment = preRebalanceDailyTroopMaximum / dailyTroopMaximum;
 const clanGiftGoldHoursPerDay = (constants.clanMemberLimit - 1)
   * (24 * 60 / constants.clanGiftCooldownMinutes)
   * (constants.clanGiftProductionMinutes / 60);
@@ -219,11 +222,13 @@ assert.ok(
   minimumCaptureTroops >= siege.minimumCaptureTroops && minimumCaptureTroops <= siege.maximumCaptureTroops,
   `Level-150 capture threshold ${minimumCaptureTroops} left the ${siege.minimumCaptureTroops}-${siege.maximumCaptureTroops} guardrail.`
 );
-const adjustedMinimumProductionDays = siege.minimumProductionDays * rawPickupProductionDayAdjustment;
-const adjustedMaximumProductionDays = siege.maximumProductionDays * rawPickupProductionDayAdjustment;
+assert.equal(pickupGoldHours, 15, "The pickup rebalance must provide at most 15 raw Gold-production hours per UTC day.");
+assert.equal(pickupTroopHours, 15, "The pickup rebalance must provide at most 15 raw troop-production hours per UTC day.");
+const adjustedMinimumProductionDays = siege.minimumProductionDays * pickupBalanceProductionDayAdjustment;
+const adjustedMaximumProductionDays = siege.maximumProductionDays * pickupBalanceProductionDayAdjustment;
 assert.ok(
   productionDays >= adjustedMinimumProductionDays && productionDays <= adjustedMaximumProductionDays,
-  `Level-150 siege replacement time ${productionDays.toFixed(2)} days left the raw-pickup ${adjustedMinimumProductionDays.toFixed(2)}-${adjustedMaximumProductionDays.toFixed(2)}-day guardrail.`
+  `Level-150 siege replacement time ${productionDays.toFixed(2)} days left the rebalanced-pickup ${adjustedMinimumProductionDays.toFixed(2)}-${adjustedMaximumProductionDays.toFixed(2)}-day guardrail.`
 );
 assert.equal(
   dailyGoldSources.pickups,

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260902-holding-towers-r1";
+const CACHE_VERSION = "20260904-layer1-travel-balance-r1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `crownlands-runtime-${CACHE_VERSION}`;
 const REGION_CACHE_NAME = `crownlands-regions-${CACHE_VERSION}`;
@@ -49,7 +49,7 @@ const STATIC_CACHE_URLS = [
   "/clan-heraldry-v2.css?v=20260825-clan-shield-surfaces-r1",
   "/release-config.js",
   "/world-config.js",
-  "/economy-config.js?v=20260827-instant-cross-map-city-upgrades-r1",
+  "/economy-config.js?v=20260904-layer1-travel-balance-r1",
   "/common-gear.js?v=20260825-gear-upgrade-consumption-r1",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
   "/functions/playerFlagConfig.js?v=20260825-player-flags-audit-r1",
@@ -64,7 +64,7 @@ const STATIC_CACHE_URLS = [
   "/instant-economy-actions.js?v=20260829-city-upgrade-queue-stability-r1",
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
-  "/game.js?v=20260902-holding-towers-r1",
+  "/game.js?v=20260904-layer1-travel-balance-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260813-editor-layout-r1",

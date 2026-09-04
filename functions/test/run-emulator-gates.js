@@ -13,7 +13,11 @@ const firebaseConfigPath = path.resolve(functionsDirectory, firebaseConfig);
 const firebaseConfigTemplate = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
 const resetGate = "emulator-reset-gate.js";
 const coreExpansionGate = "emulator-core-expansion-state.js";
-const coreExpansionGates = new Set([coreExpansionGate, "emulator-main-city-recovery.js"]);
+const coreExpansionGates = new Set([
+  coreExpansionGate,
+  "emulator-first-time-onboarding.js",
+  "emulator-main-city-recovery.js",
+]);
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))
   .sort((left, right) => left.localeCompare(right));

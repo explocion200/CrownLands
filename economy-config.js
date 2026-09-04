@@ -201,14 +201,14 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "initialSpawnDelayMinutes": 2,
     "respawnAfterCollectionMinutes": 2,
     "expireMinutes": 20,
-    "goldAwardProductionMinutes": 60,
-    "troopAwardProductionMinutes": 60,
-    "dailyTotalCap": 50,
-    "dailyGoldCap": 25,
-    "dailyTroopCap": 25,
+    "goldAwardProductionMinutes": 30,
+    "troopAwardProductionMinutes": 30,
+    "dailyTotalCap": 60,
+    "dailyGoldCap": 30,
+    "dailyTroopCap": 30,
     "maxActivePerPlayer": 1,
-    "minimumGold": 250,
-    "minimumTroops": 250
+    "minimumGold": 125,
+    "minimumTroops": 125
   },
   "cityEconomy": {
     "productionVpBase": 19,
@@ -314,7 +314,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "enabled": true,
     "modelVersion": 2,
     "legacyRequestsEnabled": true,
-    "fixedXpRate": 0.01
+    "fixedXpRate": 0.005
   },
   "camps": {
     "gold": {

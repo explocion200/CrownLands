@@ -64,8 +64,8 @@ for (const isolatedPort of [/websocketPort:\s*portBase \+ 3/, /hub:[\s\S]*port:\
 requireMatch(emulatorRunner, /--log-verbosity["'],\s*["']QUIET/, "Emulator gate must keep CI output bounded.");
 requireMatch(
   emulatorRunner,
-  /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*const coreExpansionGates\s*=\s*new Set\(\[coreExpansionGate,\s*["']emulator-main-city-recovery\.js["']\]\)[\s\S]*const forceCoreExpansion\s*=\s*coreExpansionGates\.has\(fileName\)[\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*forceCoreExpansion \? ["']1["'] : ["']0["'][\s\S]*CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR:\s*forceCoreExpansion \? ["']0["'] : ["']1["']/,
-  "All legacy emulator fixtures must remain calendar-independent while only Core expansion state and Main City recovery exercise the active realm.",
+  /const coreExpansionGate\s*=\s*["']emulator-core-expansion-state\.js["'][\s\S]*const coreExpansionGates\s*=\s*new Set\(\[[\s\S]*?coreExpansionGate[\s\S]*?["']emulator-first-time-onboarding\.js["'][\s\S]*?["']emulator-main-city-recovery\.js["'][\s\S]*?\]\)[\s\S]*const forceCoreExpansion\s*=\s*coreExpansionGates\.has\(fileName\)[\s\S]*CROWNLANDS_FORCE_CORE_EXPANSION_EMULATOR:\s*forceCoreExpansion \? ["']1["'] : ["']0["'][\s\S]*CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR:\s*forceCoreExpansion \? ["']0["'] : ["']1["']/,
+  "All legacy emulator fixtures must remain calendar-independent while only Core expansion, onboarding, and Main City recovery exercise the active realm.",
 );
 requireMatch(functionsSource, /FORCE_LEGACY_REALM_EMULATOR\s*=\s*process\.env\.FUNCTIONS_EMULATOR[\s\S]*CROWNLANDS_FORCE_LEGACY_REALM_EMULATOR/, "The legacy reset fixture override must remain emulator-only.");
 requireMatch(functionsSource, /ACTIVE_REALM_IDENTITY\s*=\s*REALM_TOPOLOGY\.getRealmIdentity\(RUNTIME_REALM_CONFIG,\s*Date\.now\(\)\)/, "Scheduled emulator jobs must initialize from the same calendar-independent runtime realm config as callables.");
