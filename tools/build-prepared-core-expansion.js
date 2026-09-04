@@ -297,6 +297,7 @@ const catalog = {
   worldId: "core-expansion-reset",
   worldName: "Crownlands Core and New Lands",
   version: CORE_EXPANSION_LAYOUT_VERSION,
+  assetVersion: hash(assetReceipt).slice(0, 12),
   topologyVersion: topology.TOPOLOGY_VERSION,
   globalSettings: CORE_EXPANSION_GLOBAL_SETTINGS,
   topology: {
@@ -340,6 +341,7 @@ const catalog = {
 const worldLayout = {
   schemaVersion: 2,
   version: CORE_EXPANSION_LAYOUT_VERSION,
+  assetVersion: catalog.assetVersion,
   topologyVersion: topology.TOPOLOGY_VERSION,
   worldId: "core-expansion-reset",
   globalSettings: CORE_EXPANSION_GLOBAL_SETTINGS,
@@ -360,6 +362,7 @@ writeJson(path.join(root, "functions", "core-expansion-world-layout.json"), worl
 const receipt = {
   schemaVersion: 1,
   topologyVersion: topology.TOPOLOGY_VERSION,
+  assetVersion: catalog.assetVersion,
   coreMapCount: 25,
   coreCityCount: maps.filter(map => map.permanentCore).reduce((sum, map) => sum + map.cities.length, 0),
   newLandsMapCount: outerRecords.length,
