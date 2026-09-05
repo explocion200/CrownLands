@@ -317,8 +317,8 @@ async function main() {
   assert(globalData.senderUid === outsider.uid, "Global message sender was not assigned from auth.");
   assert(globalData.senderDisplayName === "Outer Ruler", "Global message display name was not assigned from the profile.");
   assert(globalData.text === "Hail, Crownlands!", "Global message text changed unexpectedly.");
-  assert(globalData.expiresAtMs > Date.now() + 6 * 24 * 60 * 60 * 1000, "Global message retention is shorter than expected.");
-  assert(globalData.expiresAtMs < Date.now() + 8 * 24 * 60 * 60 * 1000, "Global message retention is longer than expected.");
+  assert(globalData.expiresAtMs > Date.now() + 23 * 60 * 60 * 1000, "Global message retention is shorter than expected.");
+  assert(globalData.expiresAtMs < Date.now() + 25 * 60 * 60 * 1000, "Global message retention is longer than expected.");
 
   assert((await clientDocument(outsider, globalPath)).status === 200, "A current authenticated player could not read Global Chat.");
   assert((await runChatQuery(outsider, `globalChat/${realm.resetGeneration}`)).status === 200, "A current player could not subscribe to the scoped Global Chat query.");

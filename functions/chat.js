@@ -2,7 +2,7 @@ const crypto = require("node:crypto");
 
 const CHAT_SCHEMA_VERSION = 1;
 const CHAT_MESSAGE_MAX_LENGTH = 250;
-const CHAT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
 const CHAT_REQUEST_RETENTION_MS = 24 * 60 * 60 * 1000;
 const CHAT_SEND_COOLDOWN_MS = 3 * 1000;
 const CHAT_CHANNELS = Object.freeze(["global", "clan"]);

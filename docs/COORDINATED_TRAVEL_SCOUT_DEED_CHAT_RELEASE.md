@@ -1,0 +1,52 @@
+# Travel, scouting, Deed rewards, and chat release
+
+## Scope and authority
+
+One coordinated update on `codex/travel-scout-deed-chat-release`, starting from `95768a11e9cc71beecb6518c5b22a35531f16acb` (PR #253). The release contracts select `core-expansion-v1`. The production `realmConfig/current` read on September 5, 2026 identified `main-realm-2026-09`, `realm-2026-09`, and shared server `shard_0001`. The authoritative expansion record had all 24 Layer 1 New Lands regions active: 25 permanent Core maps plus 24 expansion maps, 49 total. No archived world data was changed.
+
+The user confirmed the new 24-hour Global/permanent Clan policy and authorized the coordinated production migration, merge, and deployment after verification. This document records implementation and controlled verification; the final release handoff records actual PR, merge, deployment, and migration evidence. A source change or merge alone does not establish production deployment.
+
+## Confirmed causes and changes
+
+- **Travel:** the modal mixed itinerary, portal count, individual modifiers, attack modifiers, and advisory text in the timing card. It now shows two rows: total Travel bonus and Travel time. `previewArmyRoute` exposes the exact multiplier it supplies to the travel calculation. Skill and objective multipliers retain their multiplication, with applicable Gear added to that multiplier. For example, `1.6 × 1.08 + 0.0115 = 1.7395`, displayed as **73.95%**, rather than adding the individual percentages. A valid selected Swift March Order includes its actual reduction and minimum-time clamp. Local estimates use the same local speed helper as their travel formula. Existing accepted-march countdowns remain based on arrival time. Errors and relevant action notices remain near controls.
+- **Scouting:** launching a batch was already atomic and report delivery already used independent live snapshots. The measured bottleneck was concurrent arrival transactions that all read/write the same player's economy/profile and owned-city state. Unbounded same-player calls spent seconds settling/retrying; limiting the client to two concurrent scout settlements materially reduced this delay. Each result still updates independently, a failed target releases its worker, and one slow target leaves the other worker available. Existing launch and arrival receipts prevent duplicate charges/results. The report subscription remains account-scoped across maps; stopped listeners cannot apply late callbacks. No travel, cost, cooldown, permission, intelligence duration, or report contents changed.
+- **Deed:** the prior selection shuffled maps, selected the first contributing map, and read only 50 neutral cities there. It now pages every eligible active map, includes both supported empty-owner representations, and chooses a city from the full pool. A random seed is fixed outside each transaction's retries; SHA-256 draws use rejection sampling to avoid modulo bias. Transaction reads include expansion state and eligible city records, so concurrent captures or rewards trigger conflict handling instead of overwriting ownership. The former `center` map exclusion is retained; it excludes none of today's 49 active maps. Regular cities on the Crown Citadel map remain eligible, while objectives and Main Cities do not. An empty pool creates a durable reservation for the original holder and consumes that earning day's reward allowance. Camp reset and troop return continue, and the scheduler retries the reservation until a city is available.
+- **Chat:** both channels previously received seven-day expiry fields, and shared cleanup deleted any expired `messages` document. Global now filters at 24 hours on initial load, snapshots, pagination, cached merges, and open-client timers. A fresh realm response anchors the client clock to server time; replayed action receipts cannot reset that clock. Cleanup runs every five minutes against Global creation timestamps, independently of TTL. New Clan messages have no expiry fields. The release disables the shared `messages.expiresAt` TTL policy and runs the metadata-only migration to strip old Clan expiry fields and remove already-expired Global messages.
+
+## Measured scouting timings
+
+Measurements used the Firebase Auth, Firestore, and Functions emulators with the current world and actual launch/arrival callables. The same six canonical target routes were used before and after. Only stored arrival deadlines were advanced in the emulator to measure settlement separately from intended travel. The listener measured receipt of each report, not a batch completion notification. Millisecond observations vary with cold function startup and transaction backoff; these are controlled comparisons, not production latency claims.
+
+| Measurement | Before | After |
+| --- | ---: | ---: |
+| Single scout launch response, cold | 3,549 ms | 3,261 ms |
+| Single scout intended travel | 27,577 ms | 27,577 ms |
+| Single scout report delivery after forced arrival, cold | 3,591 ms | 3,649 ms |
+| Five-scout launch response, warm | 415 ms | 350 ms |
+| Five-scout intended travel per target | 27,577 / 79,764 / 108,028 / 83,065 / 57,047 ms | unchanged |
+| Five report deliveries after all targets became due | 305 / 4,690 / 7,382 / 8,208 / 8,528 ms | 221 / 486 / 688 / 939 / 3,239 ms |
+
+The final report in that controlled batch arrived about **62% sooner** after arrival. Four arrived within one second. Single cold resolution did not materially improve; its several-second startup cost remains visible in these measurements. Follow-up runs retained the same pattern, with the fifth report around 3.3–3.5 seconds. Report snapshot delivery itself followed transaction completion closely (roughly 10–25 ms), with no evidence of waiting for the full batch. Intended route duration was the largest part of total scouting time for these targets. The existing one-minute offline scheduler can add up to one scheduling interval plus execution time when no client is settling arrivals; this cadence was not changed or counted as intended travel.
+
+## Regression evidence
+
+- `tools/validate-coordinated-release.js`: actual current-world descriptors; 49 active maps; unequal candidate populations; a map with 60 candidates to cross the former cap; all-map reachability; 35,000 seeded draws across 175 eligible cities (chi-square 178.74); invalid/empty pool behavior; one stalled scout plus successful and failed independent work; exact chat expiry boundaries and cached merges; migration write preconditions and Clan content preservation.
+- `functions/test/emulator-coordinated-release.js`: actual scout launch/arrival callables, repeated request IDs, exact costs/troops, intended arrival timestamp, individual report snapshots, mixed due/not-due results, reconnect/reopen subscription, Deed early hold rejection, duplicate payout races, two holders competing for one city, capture/recovery race, empty-pool reservation and later original-holder award, production/ownership stats, real cleanup, repeatable migration, and retained Clan contents. All destructive setup is emulator-only.
+- `functions/test/emulator-world-travel.js`: preview multiplier and accepted timing/route parity for scout, attack, transfer, reinforcement, and multi-map paths. Existing reward-camp, siege, scouting, and realm gates protect hold ownership changes, cooldowns, permissions, report contents, and current routing.
+- `tools/validate-coordinated-browser.js`: real game/chat code in the repository's isolated browser fixtures; desktop 1440×900 and landscape 844×390; attack/transfer 0% and stacked bonus rows; visible timing/action controls; report subscription across map switches; expiry while chat stays open; delayed pagination while switching channel; reopening, reconnect, stale callbacks, and old Clan history. Screenshots are generated under ignored `release-artifacts/` and visually inspected. The transfer dialog remains scrollable on short landscape screens.
+
+## Production rollout and safe verification
+
+Use the repository's `prepare-pr` gate and required GitHub checks, then merge normally. Deploy merged Firestore indexes and Functions through Firebase, and the merged frontend through the existing Netlify Git integration. No rules change is needed: message reads retain their current realm/clan authorization, while client filtering and server cleanup enforce Global visibility.
+
+After disabling shared message TTL and deploying the new cleanup function, run:
+
+```text
+node tools/admin-migrate-chat-retention.js --project crown-land-b15e0
+node tools/admin-migrate-chat-retention.js --project crown-land-b15e0 --apply
+node tools/admin-migrate-chat-retention.js --project crown-land-b15e0
+```
+
+The migration scans only timestamp/expiry metadata and prints aggregate counts. It checks TTL is disabled before production writes, deletes only Global messages older than the cutoff, and removes only Clan expiry fields. Update-time preconditions preserve concurrent moderation/deletion. A conflict stops the affected batch and rerunning resumes safely; invalid timestamps are preserved and reported. The pre-release dry run found 46 messages, 33 expired Global messages, and 10 Clan messages with legacy expiry fields. Actual post-deployment counts may differ.
+
+Verify the public `https://playcrownlands.com/play/` redirect to `https://game.playcrownlands.com/play/`, HTML/asset build stamps, client manifest commit, deployed Functions source/manifest, ready Firestore index, disabled shared TTL, active cleanup schedule, and a zero-remainder migration dry run. Use signed-out browser smoke checks and infrastructure metadata; do not create marches, spend real resources, capture cities, or send test chat to production. Synchronize clean local `main` with `origin/main` and verify matching hashes and zero divergence after merge.

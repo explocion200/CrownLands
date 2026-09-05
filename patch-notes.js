@@ -1,8 +1,19 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260808-soldier-defense-v1",
-    generatedAt: "2026-08-08T12:00:00.000Z",
+    buildId: "20260905-travel-scout-deed-chat-v1",
+    generatedAt: "2026-09-05T12:00:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260905-travel-scout-deed-chat-v1",
+        dateKey: "2026-09-05",
+        publishedAt: "2026-09-05T12:00:00.000Z",
+        notes: Object.freeze([
+          "Attack and movement dialogs now show a compact total travel bonus and travel time, with the same routes and speed rules.",
+          "Multiple completed scouts deliver reports independently with less settlement delay, while preserving scouting travel, costs, and report duration.",
+          "Deed Camps choose uniformly from eligible cities across every active map in your realm. An earned reward waits safely if no eligible city is available.",
+          "Global chat messages disappear individually after 24 hours. Clan chat history stays until explicitly deleted.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260808-soldier-defense-v1",
         dateKey: "2026-08-08",

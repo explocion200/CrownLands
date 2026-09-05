@@ -222,6 +222,7 @@ async function main() {
   vm.runInContext([
     extractFunction(clientSource, "getTroopTravelBandIndex"),
     extractFunction(clientSource, "getTroopTravelMultiplier"),
+    extractFunction(clientSource, "getTravelSpeedMultiplier"),
     extractFunction(clientSource, "travelTime"),
     "this.travelTime = travelTime;",
   ].join("\n"), clientMovementContext, { filename: "game.js" });

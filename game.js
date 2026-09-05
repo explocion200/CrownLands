@@ -16796,7 +16796,7 @@ async function requestDueRewardCampPayout(camp) {
           ? "You already received a Deed Camp city today. The camp reset to neutral."
           : result.awardedCity
           ? `${config.name} reward: ${result.awardedCity.name} in ${result.awardedCity.regionName} is now yours.`
-          : "No eligible neutral city was available. The Deed Camp reset to neutral."
+          : "No eligible neutral city is available. Your earned reward is reserved and will be awarded automatically when a city becomes eligible."
         : config?.type === "items"
           ? result.status === "daily-limit"
             ? "Daily Relic Camp reward limit reached. The camp reset to neutral."
@@ -18321,22 +18321,6 @@ function clearOnlineCoreExpansionWatcher() {
   onlineCoreExpansionRefreshPromise = null;
 }
 
-function getArmyRouteSummary(route, source, target) {
-  const regionIds = getRouteSegments(route, getCityRegionId(source)).map(segment => segment.regionId);
-  const sourceRegionId = getCityRegionId(source);
-  const targetRegionId = getCityRegionId(target);
-  if (sourceRegionId) regionIds.unshift(sourceRegionId);
-  if (targetRegionId) regionIds.push(targetRegionId);
-  const orderedRegionIds = regionIds
-    .map(normalizeRegionId)
-    .filter((regionId, index, values) => regionId && (index === 0 || regionId !== values[index - 1]));
-  const portalCount = Math.max(0, orderedRegionIds.length - 1);
-  const chain = orderedRegionIds.map(getRegionLabel).join(" -> ");
-  return portalCount > 0
-    ? `${portalCount} portal ${portalCount === 1 ? "crossing" : "crossings"}: ${chain}`
-    : `Same-island route: ${chain || getRegionLabel(sourceRegionId)}`;
-}
-
 function clearOnlineGlobalStatsWatcher() {
   if (typeof onlineGlobalStatsUnsubscribe === "function") onlineGlobalStatsUnsubscribe();
   onlineGlobalStatsUnsubscribe = null;
@@ -18831,11 +18815,36 @@ function resolveOverdueOnlineArmy(army) {
     });
 }
 
+function createScoutResolutionQueue(limit = 2) {
+  const pending = [];
+  let active = 0;
+  function drain() {
+    while (active < limit && pending.length) {
+      const { work, resolve, reject } = pending.shift();
+      active += 1;
+      Promise.resolve().then(work).then(resolve, reject).finally(() => {
+        active -= 1;
+        drain();
+      });
+    }
+  }
+  return work => new Promise((resolve, reject) => {
+    pending.push({ work, resolve, reject });
+    drain();
+  });
+}
+
+// Two independent workers bound transaction contention on the same player's
+// economy without making other reports wait for one slow or failed target.
+const queueScoutResolution = createScoutResolutionQueue();
+
 async function resolveServerArmyMission(mission) {
   if (!usesServerArmyAuthority()) return false;
   const onlineId = getOnlineArmyResolutionId(mission);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
   const api = getOnlineApi();
+  const requestedUid = getCurrentOnlineUid();
+  const requestedGeneration = RESET_GENERATION;
   const routeRegionIds = mission.onlineRegionIds?.length
     ? mission.onlineRegionIds
     : getMissionRegionIds(mission);
@@ -18844,10 +18853,12 @@ async function resolveServerArmyMission(mission) {
   if (resolvingOnlineArmyIds.has(onlineId)) return false;
   resolvingOnlineArmyIds.add(onlineId);
   try {
-    const result = await api.resolveArmyOrder({
-      armyId: onlineId,
-      routeRegionIds,
-    });
+    const resolveArrival = () => {
+      if (requestedUid !== getCurrentOnlineUid() || requestedGeneration !== RESET_GENERATION) return null;
+      return api.resolveArmyOrder({ armyId: onlineId, routeRegionIds });
+    };
+    const result = await (mission.kind === "scout" ? queueScoutResolution(resolveArrival) : resolveArrival());
+    if (!result || requestedUid !== getCurrentOnlineUid() || requestedGeneration !== RESET_GENERATION) return false;
     const shouldBackfillScoutReports = mission?.kind === "scout"
       && (!Array.isArray(result?.reports) || result.reports.length === 0);
     const resolutionComplete = result?.status === "resolved"
@@ -20556,6 +20567,7 @@ function cloneRoute(route) {
         }))
       : undefined,
     authoritativeDurationSeconds: Math.max(0, Number(route.authoritativeDurationSeconds) || 0),
+    authoritativeSpeedMultiplier: Number(route.authoritativeSpeedMultiplier) || null,
     authoritativeArrivesAtMs: normalizeTimestampMs(route.authoritativeArrivesAtMs),
     authoritativeRequestedTroops: Math.max(0, Math.floor(Number(route.authoritativeRequestedTroops) || 0)),
     authoritativeError: String(route.authoritativeError || ""),
@@ -22095,10 +22107,7 @@ function getTroopTravelMultiplier(troops) {
   return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[index] || 1;
 }
 
-function travelTime(source, target, owner, pathLength = null, troopCount = 1, kind = "attack", options = {}) {
-  const distance = Number.isFinite(pathLength) && pathLength > 0
-    ? pathLength
-    : Math.hypot(source.x - target.x, source.y - target.y);
+function getTravelSpeedMultiplier(owner, kind) {
   const gearSpeedPercent = owner === "player"
     ? kind === "scout"
       ? getCommonGearBonuses().scoutSpeed
@@ -22106,9 +22115,16 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
         ? getCommonGearBonuses().enemyMarchSpeed
         : getCommonGearBonuses().ownedMarchSpeed
     : 0;
-  const speed = owner === "player"
+  return owner === "player"
     ? skillMultiplier("marchOrders") * getStrongholdMarchSpeedMultiplier(owner) + Math.max(0, Number(gearSpeedPercent) || 0) / 100
     : 1;
+}
+
+function travelTime(source, target, owner, pathLength = null, troopCount = 1, kind = "attack", options = {}) {
+  const distance = Number.isFinite(pathLength) && pathLength > 0
+    ? pathLength
+    : Math.hypot(source.x - target.x, source.y - target.y);
+  const speed = getTravelSpeedMultiplier(owner, kind);
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
   const demoAttack = kind === "attack" ? normalizeDemoAttackSnapshot(options.demoAttack) : null;
@@ -27838,7 +27854,7 @@ function showRewardCampInfoModal(campId) {
     ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
     : rewardCampProgressMarkup(config, null, "loading");
   const rewardConditionMarkup = isDeedCamp
-    ? `<p class="deed-camp-condition">Hold for ${formatNumber(holdMinutes)} minutes to receive one random neutral city from any map except Crownlands Heart. One award per player per UTC day; normal neutral-city limits are separate.</p>`
+    ? `<p class="deed-camp-condition">Hold for ${formatNumber(holdMinutes)} minutes to receive one random neutral city from any active map in your realm (the former Crownlands Heart is excluded). One award per player per UTC day; normal neutral-city limits are separate.</p>`
     : isRelicCamp
       ? `<p class="deed-camp-condition">Hold this camp for ${formatNumber(holdMinutes)} minutes to receive one random usable item. Up to ${formatNumber(config.maxDailyRewards || RELIC_CAMP_DAILY_REWARD_LIMIT)} Relic Camp item rewards can be earned per player each UTC day.</p>`
       : "";
@@ -29274,6 +29290,7 @@ function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", request
     }],
     length: Math.max(0, Number(raw.length ?? raw.distance) || measuredLength),
     authoritativeDurationSeconds: Math.max(0, Number(raw.durationMs) || 0) / 1000,
+    authoritativeSpeedMultiplier: Number(raw.speedMultiplier) || null,
     authoritativeArrivesAtMs: normalizeTimestampMs(raw.arrivesAtMs),
     authoritativeRequestedTroops: Math.max(1, Math.floor(Number(raw.requestedTroops) || requestedTroops || 1)),
     previewStatus: "authoritative",
@@ -29647,6 +29664,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ` : ""}
 
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
+      <div id="troopSliderActionNotice" class="reinforcement-limit-note" role="status" hidden></div>
 
       <div class="troop-slider-actions">
         <button id="troopSliderConfirm" class="troop-slider-confirm ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
@@ -29685,7 +29703,6 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
 function updateTroopSliderModal(source, target, route) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
-  const routeSummary = getArmyRouteSummary(route, source, target);
   const legalSendLimit = getTroopSliderSendLimit(source, target);
   const sliderSendLimit = legalSendLimit;
   const sliderMinimum = 1;
@@ -29702,6 +29719,8 @@ function updateTroopSliderModal(source, target, route) {
   if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
   const orderKind = getTroopOrderKind(target, activeTroopOrderKind);
+  const actionNotice = modalBody.querySelector("#troopSliderActionNotice");
+  if (actionNotice) { actionNotice.textContent = ""; actionNotice.hidden = true; }
   const routeIsEstimated = route?.previewStatus === "estimated";
   const confirmButton = modalBody.querySelector("#troopSliderConfirm");
   if (confirmButton) {
@@ -29747,11 +29766,11 @@ function updateTroopSliderModal(source, target, route) {
         baseTravel * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER
       )
     : baseTravel;
-  const previewMarchKind = orderKind === "rally_create" ? "attack" : orderKind;
-  const marchSourceSummary = getMarchSpeedSourceSummary(previewMarchKind, {
-    swiftMarch: activeSwiftMarchOrderSelected,
-  });
-  const attackSourceSummary = getAttackBonusSourceSummary(activeCombatForecastPreview);
+  const speedMultiplier = authoritativePreviewMatches && route.authoritativeSpeedMultiplier
+    ? route.authoritativeSpeedMultiplier
+    : getTravelSpeedMultiplier("player", orderKind === "rally_create" ? "attack" : orderKind);
+  const effectiveSpeedMultiplier = speedMultiplier * baseTravel / travel;
+  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(Math.max(0, (effectiveSpeedMultiplier - 1) * 100))}%</strong><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : ""}${formatDuration(travel)}</strong></div>`;
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (!isOrderRouteReady(route)) {
     previewEl.className = "troop-slider-preview unknown";
@@ -29766,10 +29785,14 @@ function updateTroopSliderModal(source, target, route) {
   }
   if (isRallyTroopOrderKind(orderKind)) {
     const isJoin = orderKind === "rally_join";
+    if (actionNotice) {
+      actionNotice.textContent = "Rally commitment does not remove an active Royal Peace Shield.";
+      actionNotice.hidden = false;
+    }
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
       <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
-      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Rally commitment does not remove an active Royal Peace Shield</small></div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29777,7 +29800,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29789,7 +29812,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce";
     previewEl.innerHTML = `
       <div><span>Your stationed support</span><strong>${formatNumber(afterArrival)} troops</strong><small>Owned by you and merged at this holding</small></div>
-      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29800,7 +29823,7 @@ function updateTroopSliderModal(source, target, route) {
       previewEl.className = "troop-slider-preview unknown";
       previewEl.innerHTML = `
         <div><span>Battle forecast</span><strong>Camp defenses hidden</strong><small>Scout report required</small></div>
-        <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack is still available</small></div>
+        ${travelSummary}
       `;
       return;
     }
@@ -29817,7 +29840,8 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
       <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
-      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
+      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong></div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29827,10 +29851,12 @@ function updateTroopSliderModal(source, target, route) {
     const attackProtection = normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
       || createAttackProtectionSnapshot(source, target, selectedTroopAmount, "player");
     const protectionNotice = getAttackProtectionNotice(attackProtection);
+    const notice = modalBody.querySelector("#troopSliderActionNotice");
+    if (notice) { notice.textContent = protectionNotice || ""; notice.hidden = !protectionNotice; }
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack is still available</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29842,7 +29868,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>New scout required</strong><small>This report predates the current wall-and-garrison combat model.</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small><small>${escapeHtml(attackSourceSummary)}</small><small>Attack remains available, but this older report cannot provide a reliable forecast.</small></div>
+      ${travelSummary}
     `;
     return;
   }
@@ -29874,7 +29900,8 @@ function updateTroopSliderModal(source, target, route) {
   previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
     <div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
-    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>
+    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>
+    ${travelSummary}
   `;
 }
 

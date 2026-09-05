@@ -462,6 +462,19 @@
       : [whereFactory("realmShardId", "==", REALM_SHARD_ID)];
   }
 
+  const GLOBAL_CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
+  let serverClock = null;
+  function getServerNowMs() {
+    return serverClock
+      ? serverClock.atMs + Math.max(0, performance.now() - serverClock.receivedAt)
+      : Date.now();
+  }
+  function visibleChatMessages(messages, channel) {
+    if (channel !== "global") return messages;
+    const cutoff = getServerNowMs() - GLOBAL_CHAT_RETENTION_MS;
+    return messages.filter(message => message.createdAtMs > cutoff);
+  }
+
   async function callServerFunction(name, payload = {}) {
     await init();
     const uid = requireSignedIn();
@@ -470,6 +483,7 @@
       throw new Error("Firebase Functions did not load.");
     }
     const callable = client.modules.functions.httpsCallable(client.functions, name);
+    const startedAt = performance.now();
     const result = await callable(sanitizeForFirestore({
       ...payload,
       clientReleaseId: APP_RELEASE_ID,
@@ -477,6 +491,13 @@
       clientWorldId: ONLINE_WORLD_ID,
       clientRealmShardId: REALM_SHARD_ID,
     }) || {});
+    const receivedAt = performance.now();
+    const serverTime = Number(result?.data?.serverTimeMs || result?.data?.serverNowMs);
+    // Realm information is freshly sampled; replayed action receipts are not clocks.
+    if (name === "getRealmInfo" && serverTime > 0) {
+      serverClock = { atMs: serverTime + (receivedAt - startedAt) / 2, receivedAt };
+      window.dispatchEvent(new Event("crownlands:server-clock-updated"));
+    }
     return result?.data || null;
   }
 
@@ -904,6 +925,7 @@
       where("worldId", "==", ONLINE_WORLD_ID),
       ...getRealmShardQueryConstraints(where),
       where("status", "==", "visible"),
+      ...(channel === "global" ? [where("createdAtMs", ">", getServerNowMs() - GLOBAL_CHAT_RETENTION_MS)] : []),
       orderBy("createdAtMs", "desc"),
       limit(safeLimit)
     );
@@ -911,7 +933,7 @@
     return onSnapshot(
       messagesQuery,
       snapshot => {
-        const messages = snapshot.docs.map(cleanChatMessage).reverse();
+        const messages = visibleChatMessages(snapshot.docs.map(cleanChatMessage).reverse(), channel);
         const changes = snapshot.docChanges().map(change => ({
           type: change.type,
           message: cleanChatMessage(change.doc),
@@ -945,12 +967,13 @@
       where("worldId", "==", ONLINE_WORLD_ID),
       ...getRealmShardQueryConstraints(where),
       where("status", "==", "visible"),
+      ...(channel === "global" ? [where("createdAtMs", ">", getServerNowMs() - GLOBAL_CHAT_RETENTION_MS)] : []),
       orderBy("createdAtMs", "desc"),
     ];
     if (safeBefore) constraints.push(startAfter(safeBefore));
     constraints.push(limit(safeLimit));
     const snapshot = await getDocs(query(messagesRef, ...constraints));
-    return snapshot.docs.map(cleanChatMessage).reverse();
+    return visibleChatMessages(snapshot.docs.map(cleanChatMessage).reverse(), channel);
   }
 
   async function loadClan(clanId = "") {
@@ -2569,10 +2592,12 @@
     const reportsQuery = firestoreQuery && orderBy && limit
       ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(120))
       : reportsRef;
+    let stopped = false;
     const unsubscribe = onSnapshot(
       reportsQuery,
       { includeMetadataChanges: true },
       snapshot => {
+        if (stopped) return;
         if (typeof handlers.onReports === "function") {
           handlers.onReports(
             snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
@@ -2584,10 +2609,11 @@
         }
       },
       error => {
+        if (stopped) return;
         if (typeof handlers.onError === "function") handlers.onError(error, "serverReports");
       }
     );
-    return unsubscribe;
+    return () => { stopped = true; unsubscribe(); };
   }
 
   function subscribePlayerArmies(handlers = {}) {
@@ -2969,6 +2995,7 @@
     sendClanGift,
     claimClanGiftPool,
     claimClanQuestReward,
+    getServerNowMs,
     sendChatMessage,
     loadClan,
     searchClans,

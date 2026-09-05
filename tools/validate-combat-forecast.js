@@ -58,7 +58,8 @@ const attackModalSource = readFunction(clientSource, "updateTroopSliderModal");
 [
   '<div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
   '<div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
-  '<div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${escapeHtml(attackSourceSummary)}</small><small>${escapeHtml(marchSourceSummary)}</small></div>',
+  '<div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>',
+  '<span>Travel bonus</span>',
 ].forEach(snippet => {
   if (!attackModalSource.includes(snippet)) throw new Error(`Missing compact scouted forecast UI: ${snippet}`);
 });

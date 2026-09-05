@@ -2,6 +2,14 @@
   "indexes": [
     {
       "collectionGroup": "messages",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "channel", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMs", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -1066,6 +1074,7 @@
     }
   ],
   "fieldOverrides": [
+    { "collectionGroup": "messages", "fieldPath": "expiresAt", "ttl": false, "indexes": [] },
     {
       "collectionGroup": "cities",
       "fieldPath": "ownerUid",

@@ -87,6 +87,7 @@ async function march(actor, source, target, kind, minimumMaps) {
     sourceRegionId: source.regionId, targetRegionId: target.regionId, kind, requestedTroops: troops });
   assert(preview.routeRegionIds.length >= minimumMaps);
   assert(Number.isFinite(preview.durationMs) && preview.durationMs > 0);
+  assert.equal(preview.speedMultiplier, 1.1, "Travel bonus must expose the multiplier used by the authoritative five-level March Orders calculation.");
   const id = `travel_${kind}_${randomUUID().replaceAll("-", "")}`;
   const request = payload(id, source, target, kind, troops);
   const launched = await call("sendArmyOrder", actor, request);

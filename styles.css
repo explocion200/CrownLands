@@ -7062,6 +7062,13 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .troop-slider-preview span { color: var(--muted); font-size: .68rem; font-weight: 900; }
 .troop-slider-preview strong { color: #fff; font-size: .9rem; }
 .troop-slider-preview small { color: var(--muted); font-size: .66rem; }
+.troop-slider-preview > .travel-time-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: baseline;
+  gap: .2rem .65rem;
+}
 .troop-slider-preview.win > div { border-color: rgba(126,179,95,.48); }
 .troop-slider-preview.lose > div { border-color: rgba(237,74,69,.52); }
 .troop-slider-preview.transfer > div { border-color: rgba(102,201,112,.44); }

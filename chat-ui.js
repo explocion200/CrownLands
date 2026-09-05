@@ -9,6 +9,12 @@
   const CHAT_QUICK_MESSAGE_LIMIT = 3;
   const CHAT_BOTTOM_THRESHOLD_PX = 56;
   const CHAT_SEND_COOLDOWN_MS = 3 * 1000;
+  const GLOBAL_CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+  function filterExpiredGlobalMessages(messages = [], nowMs = Date.now()) {
+    return messages.filter(message => message.channel === "clan"
+      || message.createdAtMs > nowMs - GLOBAL_CHAT_RETENTION_MS);
+  }
   const CHAT_QUICK_MIN_READABLE_WIDTH = 160;
   const CHAT_QUICK_TWO_MESSAGE_WIDTH = 210;
   const CHAT_QUICK_THREE_MESSAGE_WIDTH = 280;
@@ -359,6 +365,32 @@
     let quickMessageLimit = CHAT_QUICK_MESSAGE_LIMIT;
     let quickPreviewVisible = false;
     let lastQuickGeometry = null;
+    let expiryTimer = null;
+    let sessionGeneration = 0;
+    const chatNow = () => options.now?.() ?? api?.getServerNowMs?.() ?? Date.now();
+    const scheduleTimer = options.setTimeout || windowRef?.setTimeout?.bind(windowRef);
+    const cancelTimer = options.clearTimeout || windowRef?.clearTimeout?.bind(windowRef);
+
+    function pruneGlobalMessages() {
+      messages.global = filterExpiredGlobalMessages(messages.global, chatNow());
+    }
+
+    function scheduleExpiry() {
+      if (expiryTimer !== null) cancelTimer?.(expiryTimer);
+      expiryTimer = null;
+      pruneGlobalMessages();
+      if (!uid || !messages.global.length || !scheduleTimer) return;
+      const expiresAt = Math.min(...messages.global.map(message => message.createdAtMs + GLOBAL_CHAT_RETENTION_MS));
+      expiryTimer = scheduleTimer(() => {
+        expiryTimer = null;
+        pruneGlobalMessages();
+        renderQuick();
+        if (channel === "global") renderMessages();
+        unread.global = latestMessageAtMs("global") > (Number(lastReadAtMs.global) || 0);
+        renderUnread();
+        scheduleExpiry();
+      }, Math.max(1, Math.ceil(expiresAt - chatNow())));
+    }
 
     const cooldown = createChatCooldownTimer({
       now: typeof options.now === "function" ? options.now : () => Date.now(),
@@ -418,6 +450,8 @@
     function handleMessages(targetChannel, incoming, metadata = {}) {
       const wasAtBottom = targetChannel === channel && isMessageListNearBottom(elements.list);
       messages[targetChannel] = mergeMessages(messages[targetChannel], incoming);
+      pruneGlobalMessages();
+      scheduleExpiry();
       const removedIds = new Set((metadata.changes || [])
         .filter(change => change?.type === "removed")
         .map(change => String(change?.message?.id || ""))
@@ -503,6 +537,7 @@
     }
 
     function renderQuick() {
+      pruneGlobalMessages();
       if (!elements.quickMessages) return;
       const current = messages[channel].slice(-quickMessageLimit);
       elements.quickMessages.replaceChildren();
@@ -528,6 +563,7 @@
     }
 
     function renderMessages({ scrollToBottom = false, preserveFromTop = false } = {}) {
+      pruneGlobalMessages();
       const priorHeight = elements.list.scrollHeight;
       const priorTop = elements.list.scrollTop;
       elements.list.replaceChildren();
@@ -626,6 +662,9 @@
         return;
       }
       loadingOlder = true;
+      const requestedChannel = channel;
+      const requestedClanId = clanId;
+      const requestedGeneration = sessionGeneration;
       elements.loadOlder.disabled = true;
       elements.loadOlder.textContent = "Loading...";
       let preserveFromTop = false;
@@ -636,10 +675,13 @@
           beforeCreatedAtMs: messages[channel][0].createdAtMs,
           limitCount: requestedLimit,
         });
-        messages[channel] = mergeMessages(older, messages[channel]);
+        if (requestedGeneration !== sessionGeneration || requestedClanId !== clanId) return;
+        messages[requestedChannel] = mergeMessages(older, messages[requestedChannel]);
+        pruneGlobalMessages();
+        scheduleExpiry();
         preserveFromTop = older.length > 0;
-        if (older.length < requestedLimit || messages[channel].length >= CHAT_RENDER_LIMIT) {
-          hasOlder[channel] = false;
+        if (older.length < requestedLimit || messages[requestedChannel].length >= CHAT_RENDER_LIMIT) {
+          hasOlder[requestedChannel] = false;
         }
         if (!older.length) setStatus("No older messages remain.");
       } catch (error) {
@@ -708,6 +750,7 @@
       uid = nextUid;
       clanId = nextClanId;
       if (accountChanged) {
+        sessionGeneration += 1;
         cooldown.stop();
         messages = { global: [], clan: [] };
         hasOlder = { global: true, clan: true };
@@ -721,6 +764,7 @@
         setMode("quick");
       }
       subscriptions.start(api, uid, clanId);
+      scheduleExpiry();
       renderUnread();
       renderQuick();
       renderComposer();
@@ -747,6 +791,9 @@
     }
 
     function dispose(options = {}) {
+      sessionGeneration += 1;
+      if (expiryTimer !== null) cancelTimer?.(expiryTimer);
+      expiryTimer = null;
       const resetSession = options.resetSession === true;
       cooldown.stop();
       subscriptions.stop();
@@ -841,6 +888,13 @@
     });
     elements.loadOlder.addEventListener("click", loadOlder);
     windowRef?.addEventListener?.("resize", positionQuickPanel);
+    function refreshExpiry() {
+      scheduleExpiry();
+      renderQuick();
+      renderMessages();
+    }
+    windowRef?.addEventListener?.("focus", refreshExpiry);
+    windowRef?.addEventListener?.("crownlands:server-clock-updated", refreshExpiry);
     windowRef?.addEventListener?.("crownlands:ui-layout-applied", positionQuickPanel);
     windowRef?.addEventListener?.("crownlands:hud-occupancy-changed", positionQuickPanel);
 
@@ -862,6 +916,8 @@
     CHAT_INITIAL_MESSAGE_LIMIT,
     CHAT_RENDER_LIMIT,
     CHAT_SEND_COOLDOWN_MS,
+    GLOBAL_CHAT_RETENTION_MS,
+    filterExpiredGlobalMessages,
     CHAT_QUICK_MIN_READABLE_WIDTH,
     CHAT_MODES,
     CHAT_CHANNELS,
