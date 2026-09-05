@@ -5155,14 +5155,6 @@ function getEdgeTransitionArrowSymbol(side) {
   return "\u2192";
 }
 
-function getOppositeEdgeSide(side) {
-  if (side === "north") return "south";
-  if (side === "south") return "north";
-  if (side === "east") return "west";
-  if (side === "west") return "east";
-  return "";
-}
-
 function createEditorPortalFromEdgeConnection(regionId, zone) {
   const routePoint = getEdgeConnectionImagePoint(regionId, zone, "route");
   const arrowPoint = getEdgeConnectionImagePoint(regionId, zone, "arrow");
@@ -5195,12 +5187,6 @@ function getEditorPortalDefinitions(regionId) {
 
 function getEditorPortalLinkId(portal) {
   return String(portal?.targetPortalId || portal?.targetPortal || portal?.linkedPortalId || portal?.connectedPortalId || "");
-}
-
-function getEditorPortalById(regionId, portalId) {
-  const targetPortalId = String(portalId || "");
-  if (!targetPortalId) return null;
-  return getEditorPortalDefinitions(regionId).find(portal => String(portal?.id || "") === targetPortalId) || null;
 }
 
 function hasEditorPortalDefinitions(regionId) {
