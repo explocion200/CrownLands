@@ -2,7 +2,7 @@ const { onCall: firebaseOnCall, HttpsError } = require("firebase-functions/v2/ht
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Filter, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
@@ -20183,8 +20183,10 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       realmShardId: getCurrentRealmShardId(),
       createdAtMs: nowMs,
       createdAt: FieldValue.serverTimestamp(),
-      expiresAtMs,
-      expiresAt: Timestamp.fromMillis(expiresAtMs),
+      ...(channel === "global" ? {
+        expiresAtMs,
+        expiresAt: Timestamp.fromMillis(expiresAtMs),
+      } : {}),
     });
     transaction.create(requestRef, {
       chatSchemaVersion: CHAT.CHAT_SCHEMA_VERSION,
@@ -24103,12 +24105,13 @@ exports.previewArmyRoute = timedCallable(
           globalStats.personalStrongholdMarchSpeedBonusPercent
         )
       );
+      const speedMultiplier = addCommonGearMarchSpeed(profile, kind, skillMultiplier(profile, "marchOrders")
+        * (1 + marchSpeedBonusPercent / 100));
       const durationSeconds = calculateTravelTime({
         pathLength: route.pathLength,
         troopCount: troops,
         kind,
-        speedMultiplier: addCommonGearMarchSpeed(profile, kind, skillMultiplier(profile, "marchOrders")
-          * (1 + marchSpeedBonusPercent / 100)),
+        speedMultiplier,
       });
       const durationMs = Math.ceil(durationSeconds * 1000);
       return {
@@ -24122,6 +24125,7 @@ exports.previewArmyRoute = timedCallable(
         length: route.pathLength,
         distance: route.pathLength,
         durationMs,
+        speedMultiplier,
         arrivesAtMs: nowMs + durationMs,
         sourceCity: {
           id: source.id,
@@ -32484,86 +32488,143 @@ function normalizeRelicCampRewardsToday(claimData = {}, today = "", maxDailyRewa
   })).filter(entry => entry.itemId && SHOP_ITEMS[entry.itemId]);
 }
 
-function stableDeedCampHash(seed = "") {
-  let hash = 2166136261;
-  for (const character of String(seed || "")) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
 function stableDeedCampChoiceIndex(seed = "", count = 0) {
   const size = Math.max(0, Math.floor(safeNumber(count, 0)));
-  return size ? stableDeedCampHash(seed) % size : -1;
+  if (!size) return -1;
+  const range = 2 ** 48;
+  if (size > range) throw new Error("Deed reward pool exceeds the random draw range.");
+  const ceiling = range - range % size;
+  for (let attempt = 0; ; attempt += 1) {
+    const draw = crypto.createHash("sha256").update(`${seed}:${attempt}`).digest().readUIntBE(0, 6);
+    if (draw < ceiling) return draw % size;
+  }
 }
 
-function getDeedCampCandidateRegionIds(
-  camp = {},
-  holderUid = "",
-  payoutAtMs = 0,
-  selectionEntropy = "",
-  activeRegionIds = getStaticActiveServerRegionIds(),
-) {
-  const seed = `${safeString(selectionEntropy, 64)}:${safeString(camp.id, 96)}:${Math.max(0, Math.floor(safeNumber(payoutAtMs, 0)))}:${safeString(holderUid, 128)}`;
-  return [...activeRegionIds]
-    .map(normalizeRegionId)
-    .filter(regionId => (
-      regionId
-      && activeRegionIds.has(regionId)
-      && regionId !== DEED_CAMP_EXCLUDED_REGION_ID
-      && getServerWorldRegularCityIds(regionId).size
-    ))
-    .sort((left, right) => (
-      stableDeedCampHash(`${seed}:${left}`) - stableDeedCampHash(`${seed}:${right}`)
-      || left.localeCompare(right)
-    ));
+function getDeedCampCandidateRegionIds(activeRegionIds = getStaticActiveServerRegionIds()) {
+  return [...activeRegionIds].map(normalizeRegionId).filter(regionId => (
+    activeRegionIds.has(regionId) && regionId !== DEED_CAMP_EXCLUDED_REGION_ID
+    && getServerWorldRegularCityIds(regionId).size
+  )).sort();
 }
 
 async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", payoutAtMs = 0, selectionEntropy = "") {
   const expansionSnap = isCoreExpansionTopologyActive()
-    ? await transaction.get(coreExpansionStateRef())
-    : null;
+    ? await transaction.get(coreExpansionStateRef()) : null;
   const activeRegionIds = getActiveServerRegionIds(expansionSnap?.exists ? expansionSnap.data() : null);
-  for (const regionId of getDeedCampCandidateRegionIds(
-    camp,
-    holderUid,
-    payoutAtMs,
-    selectionEntropy,
-    activeRegionIds,
-  )) {
+  const candidates = [];
+  await processWithConcurrency(getDeedCampCandidateRegionIds(activeRegionIds), 8, async regionId => {
     const regularCityIds = getServerWorldRegularCityIds(regionId);
-    if (!regularCityIds.size) continue;
-    const neutralQuery = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
-      .where("ownerUid", "==", null)
-      .limit(DEED_CAMP_CITY_QUERY_LIMIT);
-    const snapshot = await transaction.get(neutralQuery);
-    const candidates = snapshot.docs
-      .filter(cityDoc => {
-        const city = cityDoc.data() || {};
-        return regularCityIds.has(cityDoc.id)
-          && !getOwnerUid(city)
-          && !isStronghold(city)
-          && !city.targetType
-          && !city.campType;
-      })
-      .sort((left, right) => left.id.localeCompare(right.id));
-    if (!candidates.length) continue;
-    const selectedIndex = stableDeedCampChoiceIndex(
-      `${selectionEntropy}:${camp.id}:${payoutAtMs}:${holderUid}:${regionId}`,
-      candidates.length
-    );
-    const selected = candidates[selectedIndex];
-    const city = { id: selected.id, ...selected.data(), regionId };
-    const map = getServerWorldMap(regionId);
-    return {
-      ref: selected.ref,
-      city,
-      regionId,
-      regionName: safeString(map?.label || map?.name || regionId, 80),
+    let cursor = null;
+    while (true) {
+      let query = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
+        // Production IN does not match null owners. Explicit equality compiles
+        // to IS_NULL, while the emulator also accepts the misleading IN form.
+        .where(Filter.or(Filter.where("ownerUid", "==", null), Filter.where("ownerUid", "==", "")))
+        .orderBy(FieldPath.documentId()).limit(DEED_CAMP_CITY_QUERY_LIMIT);
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await transaction.get(query);
+      for (const doc of snapshot.docs) {
+        const city = doc.data() || {};
+        if (!regularCityIds.has(doc.id) || getOwnerUid(city) || isStronghold(city)
+          || city.isMainCity || city.campType || (city.targetType && city.targetType !== "city")
+          || safeString(city.worldId, 120) !== ONLINE_WORLD_ID
+          || safeString(city.resetGeneration, 120) !== RESET_GENERATION
+          || REALM_TOPOLOGY.normalizeRealmShardId(city.realmShardId) !== getCurrentRealmShardId()) continue;
+        const map = getServerWorldMap(regionId);
+        candidates.push({ ref: doc.ref, city: { ...city, id: doc.id, regionId }, regionId,
+          regionName: safeString(map?.label || map?.name || regionId, 80) });
+      }
+      if (snapshot.size < DEED_CAMP_CITY_QUERY_LIMIT) break;
+      cursor = snapshot.docs.at(-1);
+    }
+  });
+  candidates.sort((left, right) => left.ref.path.localeCompare(right.ref.path));
+  return candidates[stableDeedCampChoiceIndex(`${selectionEntropy}:${camp.id}:${payoutAtMs}:${holderUid}`, candidates.length)] || null;
+}
+
+function writeDeedCityAward(transaction, { campRef, camp, player, holderUid, payoutAtMs, nowMs, deedCityAward }) {
+  let deedCityPatch = null;
+  let deedHistoryEntry = null;
+  if (deedCityAward) {
+    const playerName = normalizePlayerName(player.playerName || camp.holderName, "Ruler");
+    const deedCityName = getServerCanonicalCityName(deedCityAward.city, deedCityAward.regionId);
+    const playerKingPower = Math.max(0, Math.floor(safeNumber(
+      player.globalStats?.kingPower,
+      safeNumber(player.kingPower, 0)
+    )));
+    const itemEffects = normalizeItemEffects(player.itemEffects);
+    const activeShieldExpiresAtMs = itemEffects.shieldExpiresAtMs > nowMs
+      ? itemEffects.shieldExpiresAtMs
+      : 0;
+    deedCityPatch = {
+      id: deedCityAward.city.id,
+      name: deedCityName,
+      regionId: deedCityAward.regionId,
+      ownerKind: "player",
+      ownerUid: holderUid,
+      ownerName: playerName,
+      ownerFlag: player.flag || camp.holderFlag || null,
+      ownerKingPower: playerKingPower,
+      ownerShieldExpiresAtMs: activeShieldExpiresAtMs,
+      troops: 0,
+      troopFloat: 0,
+      level: clampCityLevel(deedCityAward.city.level || 1),
+      defense: 1,
+      investedGold: 0,
+      productionUpdatedAtMs: nowMs,
+      lastCapturedAtMs: nowMs,
+      isMainCity: false,
+      relinquishedAtMs: 0,
+      relocatedAtMs: 0,
+      deedAwardedAtMs: nowMs,
+      deedCampId: camp.id,
+      ...getNeutralClaimCapturePatch(deedCityAward.city, holderUid, nowMs, "deed_camp", camp.id),
     };
+    transaction.set(
+      deedCityAward.ref,
+      cleanCityUpdate(deedCityAward.city, deedCityPatch),
+      { merge: true }
+    );
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `camp_payout_${camp.id}_city_${deedCityAward.city.id}_${payoutAtMs}`,
+      targetType: "city",
+      targetId: deedCityAward.city.id,
+      regionId: deedCityAward.regionId,
+      beforeOwnerUid: getOwnerUid(deedCityAward.city),
+      afterOwnerUid: holderUid,
+      reason: "deed_city_awarded",
+      nowMs,
+    });
+    deedHistoryEntry = {
+      campId: camp.id,
+      cityId: deedCityAward.city.id,
+      cityName: safeString(deedCityName, 80),
+      regionId: deedCityAward.regionId,
+      regionName: deedCityAward.regionName,
+      awardedToPlayerId: holderUid,
+      awardedToDisplayName: playerName,
+      awardedAtMs: nowMs,
+      source: "deed_camp",
+    };
+    const historyId = safeString(`${payoutAtMs}_${deedCityAward.city.id}`, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
+    transaction.set(db.doc(`${campRef.path}/rewardHistory/${historyId}`), {
+      ...deedHistoryEntry,
+      awardedAt: FieldValue.serverTimestamp(),
+    });
+    enqueueDailyMissionEvent(transaction, {
+      uid: holderUid,
+      eventId: `deed_camp_completed_${camp.id}_${deedCityAward.city.id}_${payoutAtMs}`,
+      type: "DEED_CAMP_COMPLETED",
+      occurredAtMs: nowMs,
+      targetCategory: "camp",
+      cityId: deedCityAward.city.id,
+      campType: "deed",
+      deedCompleted: true,
+      success: true,
+    });
   }
-  return null;
+
+  return { deedCityPatch, deedHistoryEntry };
 }
 
 async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerUid = "") {
@@ -32691,7 +32752,8 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? await findEligibleDeedCampCity(transaction, camp, holderUid, payoutAtMs, deedSelectionEntropy)
       : null;
     if (isDeedCamp && !deedCityAward) reward = 0;
-    if (deedCityAward) nextClaims = priorClaims + 1;
+    const pendingCity = isDeedCamp && !deedDailyLimitReached && !deedCityAward;
+    if (deedCityAward || pendingCity) nextClaims = priorClaims + 1;
     const returnDestination = ownedReturnSource || ownedMainCity;
     if (!returnDestination) {
       throw new HttpsError("failed-precondition", `${config.name} holder has no owned city available for returning troops.`);
@@ -32780,86 +32842,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       writeArmyMovementCopies(transaction, returnArmy, { includeCreatedAt: true });
     }
 
-    let deedCityPatch = null;
-    let deedHistoryEntry = null;
-    if (deedCityAward) {
-      const playerName = normalizePlayerName(player.playerName || camp.holderName, "Ruler");
-      const deedCityName = getServerCanonicalCityName(deedCityAward.city, deedCityAward.regionId);
-      const playerKingPower = Math.max(0, Math.floor(safeNumber(
-        player.globalStats?.kingPower,
-        safeNumber(player.kingPower, 0)
-      )));
-      const itemEffects = normalizeItemEffects(player.itemEffects);
-      const activeShieldExpiresAtMs = itemEffects.shieldExpiresAtMs > nowMs
-        ? itemEffects.shieldExpiresAtMs
-        : 0;
-      deedCityPatch = {
-        id: deedCityAward.city.id,
-        name: deedCityName,
-        regionId: deedCityAward.regionId,
-        ownerKind: "player",
-        ownerUid: holderUid,
-        ownerName: playerName,
-        ownerFlag: player.flag || camp.holderFlag || null,
-        ownerKingPower: playerKingPower,
-        ownerShieldExpiresAtMs: activeShieldExpiresAtMs,
-        troops: 0,
-        troopFloat: 0,
-        level: clampCityLevel(deedCityAward.city.level || 1),
-        defense: 1,
-        investedGold: 0,
-        productionUpdatedAtMs: nowMs,
-        lastCapturedAtMs: nowMs,
-        isMainCity: false,
-        relinquishedAtMs: 0,
-        relocatedAtMs: 0,
-        deedAwardedAtMs: nowMs,
-        deedCampId: camp.id,
-        ...getNeutralClaimCapturePatch(deedCityAward.city, holderUid, nowMs, "deed_camp", camp.id),
-      };
-      transaction.set(
-        deedCityAward.ref,
-        cleanCityUpdate(deedCityAward.city, deedCityPatch),
-        { merge: true }
-      );
-      writeOwnershipChangeEvent(transaction, {
-        eventId: `camp_payout_${camp.id}_city_${deedCityAward.city.id}_${payoutAtMs}`,
-        targetType: "city",
-        targetId: deedCityAward.city.id,
-        regionId: deedCityAward.regionId,
-        beforeOwnerUid: getOwnerUid(deedCityAward.city),
-        afterOwnerUid: holderUid,
-        reason: "deed_city_awarded",
-        nowMs,
-      });
-      deedHistoryEntry = {
-        campId: camp.id,
-        cityId: deedCityAward.city.id,
-        cityName: safeString(deedCityName, 80),
-        regionId: deedCityAward.regionId,
-        regionName: deedCityAward.regionName,
-        awardedToPlayerId: holderUid,
-        awardedToDisplayName: playerName,
-        awardedAtMs: nowMs,
-        source: "deed_camp",
-      };
-      const historyId = safeString(`${payoutAtMs}_${deedCityAward.city.id}`, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
-      transaction.set(db.doc(`${campRef.path}/rewardHistory/${historyId}`), {
-        ...deedHistoryEntry,
-        awardedAt: FieldValue.serverTimestamp(),
-      });
-      enqueueDailyMissionEvent(transaction, {
-        uid: holderUid,
-        eventId: `deed_camp_completed_${camp.id}_${deedCityAward.city.id}_${payoutAtMs}`,
-        type: "DEED_CAMP_COMPLETED",
-        occurredAtMs: nowMs,
-        targetCategory: "camp",
-        cityId: deedCityAward.city.id,
-        campType: "deed",
-        deedCompleted: true,
-        success: true,
-      });
-    }
+    const { deedCityPatch, deedHistoryEntry } = writeDeedCityAward(transaction, { campRef, camp, player, holderUid, payoutAtMs, nowMs, deedCityAward });
 
     let relicRewardEntry = null;
     let rewardedShopItems = null;
@@ -32978,7 +32961,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but you already received a Deed Camp city today. The camp reset to neutral.${returnSummary}`
         : deedCityPatch
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. No battle XP was awarded.${returnSummary}`
-        : `Held ${camp.name || config.name} for ${holdMinutes} minutes, but no eligible neutral city was available. The camp reset to neutral.${returnSummary}`
+        : `Held ${camp.name || config.name} for ${holdMinutes} minutes, but no eligible neutral city was available. Your earned city is reserved and will be awarded automatically when a city becomes eligible. The camp reset to neutral.${returnSummary}`
       : isRelicCamp
         ? relicDailyLimitReached
           ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but the daily limit of ${config.maxDailyRewards} Relic Camp rewards was already reached. The camp reset to neutral.${returnSummary}`
@@ -33045,6 +33028,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       heldSinceMs,
       payoutAtMs,
       completedAtMs: nowMs,
+      realmShardId: getCurrentRealmShardId(),
+      pendingCity,
+      ...(pendingCity ? { campPath: campRef.path, campSnapshot: camp, selectionEntropy: deedSelectionEntropy } : {}),
       status: "completed",
       result: isDeedCamp
         ? deedDailyLimitReached ? "daily-limit" : deedCityPatch ? "paid" : "no-eligible-city"
@@ -33100,6 +33086,43 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         : null,
     };
   });
+}
+
+async function recoverPendingDeedCity(receiptRef, nowMs = Date.now()) {
+  await ensureTravelNetworkContext();
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
+    const snapshot = await transaction.get(receiptRef);
+    const receipt = snapshot.data() || {};
+    if (!receipt.pendingCity || receipt.worldId !== ONLINE_WORLD_ID || receipt.resetGeneration !== RESET_GENERATION
+      || REALM_TOPOLOGY.normalizeRealmShardId(receipt.realmShardId) !== getCurrentRealmShardId()) return null;
+    const holderUid = safeString(receipt.holderUid, 128);
+    const camp = receipt.campSnapshot;
+    if (!camp || !holderUid || !getAuthoritativeRewardCampSeed(receipt.regionId, receipt.campId)) return null;
+    const playerSnap = await transaction.get(db.doc(`players/${holderUid}`));
+    const player = playerSnap.data() || {};
+    if (player.worldId !== ONLINE_WORLD_ID || player.resetGeneration !== RESET_GENERATION
+      || REALM_TOPOLOGY.normalizeRealmShardId(player.realmShardId) !== getCurrentRealmShardId()) return null;
+    const deedCityAward = await findEligibleDeedCampCity(transaction, camp, holderUid, receipt.payoutAtMs, receipt.selectionEntropy);
+    if (!deedCityAward) return null;
+    const { deedCityPatch, deedHistoryEntry } = writeDeedCityAward(transaction, {
+      campRef: db.doc(receipt.campPath), camp, player, holderUid, payoutAtMs: receipt.payoutAtMs, nowMs, deedCityAward,
+    });
+    const report = makeReport({
+      id: `deed_recovery_${snapshot.id}`, uid: holderUid, type: "defense", outcome: "held",
+      eventKind: "deed_camp_completed", rewardEventId: `deed_recovery_${snapshot.id}`,
+      rewardSourceId: camp.id, rewardSourceRegionId: camp.regionId,
+      city: { ...deedCityAward.city, ...deedCityPatch }, opponentName: camp.name || "Deed Camp",
+      campReward: { rewardType: "city", amount: 1, cityId: deedCityPatch.id, cityName: deedHistoryEntry.cityName,
+        cityRegionId: deedHistoryEntry.regionId, cityRegionName: deedHistoryEntry.regionName },
+      summary: `Your reserved Deed Camp reward is ready: ${deedHistoryEntry.cityName} in ${deedHistoryEntry.regionName} is now yours.`, nowMs,
+    });
+    writeReport(transaction, holderUid, report, playerSnap);
+    transaction.update(receiptRef, { pendingCity: false, result: "paid", awardedAtMs: nowMs,
+      awardedCityId: deedCityPatch.id, campSnapshot: FieldValue.delete(), selectionEntropy: FieldValue.delete() });
+    return { holderUid };
+  });
+  if (result?.holderUid) await rebuildGlobalStatsForPlayer(result.holderUid);
+  return result;
 }
 
 async function resolveRewardCampPayoutAndStats(campRef, nowMs = Date.now(), callerUid = "") {
@@ -34413,9 +34436,29 @@ async function cleanupExpiredChatCollectionGroup(collectionId = "", nowMs = Date
   return { deleted, batches, backlogPossible: batches >= maxBatches };
 }
 
+// Only Global messages have an age limit. Never delete a shared collection
+// group by expiry: older Clan messages may still carry legacy expiry fields.
+async function cleanupGlobalChat(nowMs = Date.now(), maxBatches = 8) {
+  let deleted = 0;
+  for (let index = 0; index < maxBatches; index += 1) {
+    const snapshot = await db.collectionGroup("messages")
+      .where("channel", "==", "global")
+      .where("createdAtMs", "<=", nowMs - CHAT.CHAT_RETENTION_MS)
+      .limit(450).get();
+    const expired = snapshot.docs.filter(doc => /^globalChat\/[^/]+\/messages\/[^/]+$/.test(doc.ref.path));
+    if (!expired.length) break;
+    const batch = db.batch();
+    expired.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += expired.length;
+    if (snapshot.size < 450) break;
+  }
+  return { deleted };
+}
+
 exports.cleanupExpiredChat = onSchedule({
   region: "us-central1",
-  schedule: "every 1 hours",
+  schedule: "every 5 minutes",
   timeZone: "Etc/UTC",
   maxInstances: 1,
   timeoutSeconds: 120,
@@ -34423,7 +34466,7 @@ exports.cleanupExpiredChat = onSchedule({
 }, async () => {
   const nowMs = Date.now();
   const [messages, requests] = await Promise.all([
-    cleanupExpiredChatCollectionGroup("messages", nowMs),
+    cleanupGlobalChat(nowMs),
     cleanupExpiredChatCollectionGroup("chatSendRequests", nowMs),
   ]);
   console.log("Expired Crownlands chat data cleaned", { messages, requests });
@@ -34624,7 +34667,7 @@ exports.resolveDueRewardCampPayouts = onSchedule({
       else {
         skipped += 1;
         if (result?.status === "no-eligible-city") {
-          console.warn("Deed Camp payout reset without an eligible neutral city", {
+          console.warn("Deed Camp city reserved until an eligible city is available", {
             campId: campDoc.id,
             holderUid: result.holderUid || "",
           });
@@ -34639,5 +34682,13 @@ exports.resolveDueRewardCampPayouts = onSchedule({
       });
     }
   }
+  const pendingDeeds = await db.collection(`rewardCampPayoutReceipts/${RESET_GENERATION}/entries`)
+    .where("pendingCity", "==", true).get();
+  await processWithConcurrency(pendingDeeds.docs, 2, async receipt => {
+    try {
+      await runWithRealmShard(REALM_TOPOLOGY.normalizeRealmShardId(receipt.data()?.realmShardId),
+        () => recoverPendingDeedCity(receipt.ref, nowMs));
+    } catch (error) { failed += 1; console.error("Pending Deed city retry failed", { code: error?.code || "", message: error?.message }); }
+  });
   console.log("Scheduled reward camp payouts finished", { scanned: due.size, paid, skipped, failed });
 });

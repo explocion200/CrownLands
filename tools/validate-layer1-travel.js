@@ -145,6 +145,7 @@ const clientTravelContext = {
 vm.createContext(clientTravelContext);
 vm.runInContext([
   ...commonTravelFunctions.map(name => extractFunction(clientSource, name)),
+  extractFunction(clientSource, "getTravelSpeedMultiplier"),
   extractFunction(clientSource, "travelTime"),
 ].join("\n"), clientTravelContext);
 

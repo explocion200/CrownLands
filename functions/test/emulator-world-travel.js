@@ -4,6 +4,7 @@ const { randomUUID } = require("node:crypto");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const realm = require("../release-config.json");
+const economy = require("../economy-config.json");
 const { createTravelFixture, canonicalCity } = require("../../tools/world-travel-test-fixtures.js");
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("This test requires the Firestore emulator.");
 const projectId = process.env.GCLOUD_PROJECT || "crown-land-b15e0";
@@ -87,6 +88,9 @@ async function march(actor, source, target, kind, minimumMaps) {
     sourceRegionId: source.regionId, targetRegionId: target.regionId, kind, requestedTroops: troops });
   assert(preview.routeRegionIds.length >= minimumMaps);
   assert(Number.isFinite(preview.durationMs) && preview.durationMs > 0);
+  const marchOrders = economy.skills.marchOrders;
+  const expectedSpeedMultiplier = 1 + Math.min(5 * marchOrders.percentPerLevel, marchOrders.maxPercent) / 100;
+  assert.equal(preview.speedMultiplier, expectedSpeedMultiplier, "Travel bonus must expose the configured five-level March Orders multiplier.");
   const id = `travel_${kind}_${randomUUID().replaceAll("-", "")}`;
   const request = payload(id, source, target, kind, troops);
   const launched = await call("sendArmyOrder", actor, request);
