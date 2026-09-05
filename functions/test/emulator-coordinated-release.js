@@ -12,7 +12,7 @@ const db = getFirestore();
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
 let functionsHost;
 let identity = { releaseId: realm.releaseId, resetGeneration: realm.resetGeneration, worldId: realm.worldId, realmShardId: "legacy" };
-const fixture = createTravelFixture();
+const fixture = createTravelFixture(26);
 
 async function user(label) {
   const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake`, {
@@ -61,6 +61,14 @@ async function main() {
  const claim = await call("claimStartingCity", actor, { playerName: actor.label });
  const other = await user("Other reward holder");
  const otherClaim = await call("claimStartingCity", other, { playerName: other.label });
+ await db.doc(`realmGenerations/${identity.resetGeneration}/expansion/current`).set({
+   activeRegionIds: fixture.activeRegionIds, admittingRegionIds: fixture.activeRegionIds,
+   nextActivationOrdinal: fixture.activeRegionIds.length }, {merge:true});
+ // Materialize the full currently active production topology in this isolated
+ // emulator so the transaction also covers the observed 51-map pool size.
+ for (let i = 0; i < fixture.descriptors.length; i += 4) {
+   await Promise.all(fixture.descriptors.slice(i,i+4).map(region => call("ensureMainIsland", actor, {regionId:region.id})));
+ }
  const mainIds = new Set([claim.cityId, otherClaim.cityId]);
  const candidates = Array.from({length:30}, (_,i) => canonicalCity(fixture.planner, fixture.activeRegionIds[0], i + 10))
    .filter(city => !mainIds.has(city.id));

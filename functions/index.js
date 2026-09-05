@@ -2,7 +2,7 @@ const { onCall: firebaseOnCall, HttpsError } = require("firebase-functions/v2/ht
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Filter, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
@@ -32517,7 +32517,9 @@ async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", 
     let cursor = null;
     while (true) {
       let query = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
-        .where("ownerUid", "in", [null, ""])
+        // Production IN does not match null owners. Explicit equality compiles
+        // to IS_NULL, while the emulator also accepts the misleading IN form.
+        .where(Filter.or(Filter.where("ownerUid", "==", null), Filter.where("ownerUid", "==", "")))
         .orderBy(FieldPath.documentId()).limit(DEED_CAMP_CITY_QUERY_LIMIT);
       if (cursor) query = query.startAfter(cursor);
       const snapshot = await transaction.get(query);

@@ -8,9 +8,9 @@ const { createTravelFixture, extractFunction, serverSource, clientSource } = req
 const UI = require("../chat-ui");
 
 async function main() {
-  const fixture = createTravelFixture();
+  const fixture = createTravelFixture(26); // Observed active Layer 2 expansion, September 5.
   const active = new Set(fixture.descriptors.map(region => region.id));
-  assert.equal(active.size, 49);
+  assert.equal(active.size, 51);
   const rows = new Map();
   const world = "test-world", generation = "test-generation";
   let pool = [];
@@ -29,6 +29,7 @@ async function main() {
   const scope = {
     crypto, ONLINE_WORLD_ID: world, RESET_GENERATION: generation, DEED_CAMP_CITY_QUERY_LIMIT: 50,
     DEED_CAMP_EXCLUDED_REGION_ID: "center", FieldPath: { documentId: () => "id" },
+    Filter: { where: (field, operator, value) => ({field, operator, value}), or: (...filters) => ({filters}) },
     REALM_TOPOLOGY: { normalizeRealmShardId: value => value || "legacy" },
     safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
     safeString: value => String(value || ""), normalizeRegionId: value => value,
@@ -41,7 +42,12 @@ async function main() {
     processWithConcurrency: async (items, _count, worker) => Promise.all(items.map(worker)),
     db: { collection: location => {
       const query = { region: location.split("/")[1], cursor: null, size: Infinity,
-        where() { return this; }, orderBy() { return this; }, limit(n) { this.size = n; return this; },
+        where(condition) {
+          assert.equal(condition.filters?.length, 2, "Use explicit null/empty equality; production IN does not match null owners.");
+          assert.equal(condition.filters[0].value, null);
+          assert.equal(condition.filters[1].value, "");
+          return this;
+        }, orderBy() { return this; }, limit(n) { this.size = n; return this; },
         startAfter(cursor) { this.cursor = cursor; return this; } };
       return query;
     } },
@@ -71,6 +77,18 @@ async function main() {
   for (let i = 0; i < draws; i += 1) histogram[scope.stableDeedCampChoiceIndex(`distribution${i}`, pool.length)] += 1;
   const chiSquared = histogram.reduce((sum, count) => sum + (count - 200) ** 2 / 200, 0);
   assert(chiSquared < pool.length + 6 * Math.sqrt(2 * pool.length), "City probabilities are unexpectedly uneven.");
+  const futureRegion = require("../functions/coreExpansionTopology").getRegionAtActivationOrdinal(26).id;
+  const futureCity = fixture.scope.getServerWorldMap(futureRegion).cities[0];
+  rows.set(futureRegion, [{id:futureCity.id, ref:{path:`islands/${futureRegion}/cities/${futureCity.id}`},
+    data:() => ({...futureCity,ownerUid:null,worldId:world,resetGeneration:generation,realmShardId:"shard_0001"})}]);
+  assert(!Array.from(scope.getDeedCampCandidateRegionIds()).includes(futureRegion), "An inactive map entered the pool.");
+  active.add(futureRegion);
+  let reachedExpansion = false;
+  for (let i = 0; i < 2000 && !reachedExpansion; i += 1) {
+    reachedExpansion = (await scope.findEligibleDeedCampCity(transaction, {id:"camp"}, "holder", 100, `expansion${i}`)).regionId === futureRegion;
+  }
+  assert(reachedExpansion, "A newly activated map was missed by a stale candidate list.");
+  active.delete(futureRegion);
   const excludedDoc = rows.values().next().value[0];
   const invalid = excludedDoc.data();
   invalid.isMainCity = true;
