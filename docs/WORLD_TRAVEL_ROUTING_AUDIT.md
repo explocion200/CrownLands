@@ -19,6 +19,8 @@ Read-only production checks identified current pointer world `main-realm-2026-09
 
 Authoritative active map descriptors -> shared `functions/world-travel-network.js` road definitions and reciprocal-link validation -> client connectivity check -> server terrain-weighted route -> unchanged order/troop/speed duration -> authoritative march transaction -> persisted per-map segments and views -> existing arrival and report resolution.
 
+Search tracks road entrances and predecessors iteratively. A march cannot re-enter a map already in its path, including a cheaper detour back into its source map; no fixed hop count or recursion is used.
+
 The troop panel opens immediately, then verifies its route and selected troop-band ETA with `previewArmyRoute`. Confirmation requires a matching authoritative quote. Failed previews show a reason and retry action. Estimated or rejected local geometry cannot enable an online launch. `sendArmyOrder` independently rebuilds the route; client-provided points, distance, and ETA cannot shorten it. Automatic scouting uses server origin selection and the returned authoritative movement.
 
 | Mechanic | Dispatch / route authority | Arrival / return authority |

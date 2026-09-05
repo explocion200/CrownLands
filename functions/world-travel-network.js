@@ -146,6 +146,11 @@
       for (const exit of getPortals(current.regionId) || []) {
         const destinationId = targetId(exit);
         if (!known.has(destinationId)) continue;
+        // Different entrances are separate search states, but a march must not
+        // revisit a map it already crossed, even when that detour looks cheaper.
+        let prior = current;
+        while (prior && prior.regionId !== destinationId) prior = prior.previous;
+        if (prior) continue;
         const arrival = getArrivalPortal(getPortals, current.regionId, exit);
         if (!arrival) continue;
         const key = `${destinationId}:${arrival.id}`;

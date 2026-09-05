@@ -103,6 +103,7 @@ async function main() {
   assert.equal(futureClient.findEditorPortalRouteRegionChain(cornerA.id, cornerB.id).length, 21);
   const futureRoute = future.planner.calculate(futureSource, futureTarget);
   assert(futureRoute?.pathSegments.length > 20, "Layer 3 route must exceed the old persistence limit.");
+  assert.equal(new Set(futureRoute.routeRegionIds).size, futureRoute.routeRegionIds.length);
   const templateLoader = runtime.createRegionDefinitionLoader({ catalog: { regions: future.descriptors },
     fetchJson: file => JSON.parse(fs.readFileSync(path.join(root, file), "utf8")) });
   const futureLoaded = await templateLoader.ensure(cornerA.id);
@@ -147,7 +148,12 @@ async function main() {
     (regionId, start, end) => ({ regionId, points: [start, end], length: Math.hypot(end.x - start.x, end.y - start.y) }));
   assert.equal(shortest.length, 4);
   assert.deepEqual(shortest.segments.map(segment => segment.regionId), ["a", "c", "d", "b"]);
-  assert.equal(network.findShortestRoute(["isolated", "a"], () => [], { regionId: "isolated" }, { regionId: "a" }, () => null), null);
+  assert.equal(network.findShortestRoute(["isolated", "a"], () => [],
+    { regionId: "isolated", x: 0, y: 0 }, { regionId: "a", x: 1, y: 1 }, () => null), null);
+  const loop = network.findShortestRoute(portals.keys(), id => portals.get(id),
+    { id: "source", regionId: "a", x: 0, y: 0 }, { id: "target", regionId: "a", x: 101, y: 0 },
+    (regionId, start, end) => ({ regionId, points: [start, end], length: Math.hypot(end.x - start.x, end.y - start.y) }));
+  assert.deepEqual(loop.segments.map(segment => segment.regionId), ["a"], "A cheaper cycle must not revisit the source map.");
 
   client.supportsAuthoritativeArmyRoutes = () => true;
   client.getTroopTravelBandIndex = troops => troops > 100 ? 1 : 0;
