@@ -2869,7 +2869,7 @@ function isWorldRegionRuntimeActive(regionId) {
 function registerCoreExpansionRegions(regions = []) {
   if (!CORE_EXPANSION_TOPOLOGY_ACTIVE || !REGION_DEFINITION_LOADER?.register) return false;
   const descriptors = (Array.isArray(regions) ? regions : [])
-    .filter(region => region?.id && region?.permanentCore !== true);
+    .filter(region => region?.id);
   if (!descriptors.length) return false;
   REGION_DEFINITION_LOADER.register(descriptors);
   for (const summary of Array.isArray(REGION_CATALOG.regions) ? REGION_CATALOG.regions : []) {
@@ -2890,7 +2890,7 @@ function registerCoreExpansionRegions(regions = []) {
         type: cleanRegionType(descriptor.type || existing.type),
         gridX: Math.round(Number(descriptor.gridX) || 0),
         gridY: Math.round(Number(descriptor.gridY) || 0),
-        newPlayerSpawnEligible: true,
+        newPlayerSpawnEligible: descriptor.permanentCore !== true,
       });
       continue;
     }
@@ -2903,7 +2903,7 @@ function registerCoreExpansionRegions(regions = []) {
       type: cleanRegionType(descriptor.type || STARTER_REGION_TYPE),
       gridX: Math.round(Number(descriptor.gridX) || 0),
       gridY: Math.round(Number(descriptor.gridY) || 0),
-      newPlayerSpawnEligible: true,
+      newPlayerSpawnEligible: descriptor.permanentCore !== true,
       palette: regionPatch.palette || "frontier",
     };
     WORLD_REGIONS.push(next);
@@ -5092,6 +5092,7 @@ function renderHarvestBonuses() {
 }
 
 function getEditorEdgeConnectionDefinitions(regionId) {
+  if (CORE_EXPANSION_TOPOLOGY_ACTIVE && !isWorldRegionRuntimeActive(regionId)) return [];
   const map = getEditorMap(regionId);
   const edgeConnections = map?.edgeConnections && typeof map.edgeConnections === "object"
     ? map.edgeConnections
@@ -5109,7 +5110,8 @@ function getEditorEdgeConnectionDefinitions(regionId) {
 
 function getEdgeConnectionTargetRegionId(zone) {
   const targetRegionId = cleanEditorRegionId(zone?.connectsToRegionId || zone?.targetRegionId || zone?.target);
-  return getRegionById(targetRegionId) ? targetRegionId : "";
+  return WORLD_REGIONS_BY_ID.has(targetRegionId)
+    && (!CORE_EXPANSION_TOPOLOGY_ACTIVE || isWorldRegionRuntimeActive(targetRegionId)) ? targetRegionId : "";
 }
 
 function getEdgeConnectionMidpoint(zone) {
@@ -5250,57 +5252,16 @@ function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
 }
 
 function getLinkedEditorArrivalPortal(sourceRegionId, targetRegionId, sourcePortal) {
-  const linkedPortalId = getEditorPortalLinkId(sourcePortal);
-  if (linkedPortalId) {
-    return getEditorPortalById(targetRegionId, linkedPortalId);
-  }
-  const sourcePortalId = String(sourcePortal?.id || "");
-  if (sourcePortalId) {
-    const backLinked = getEditorPortalForRoute(targetRegionId, sourceRegionId, { targetPortalId: sourcePortalId });
-    if (backLinked) return backLinked;
-  }
-  const sourceSide = String(sourcePortal?.side || "");
-  const oppositeSide = getOppositeEdgeSide(sourceSide);
-  const sourceMidpoint = getEdgeConnectionMidpoint(sourcePortal);
-  const candidates = getEditorPortalDefinitions(targetRegionId)
-    .filter(portal => cleanEditorRegionId(portal?.targetRegionId || portal?.target) === cleanEditorRegionId(sourceRegionId))
-    .filter(portal => !oppositeSide || portal.side === oppositeSide);
-  if (candidates.length) {
-    candidates.sort((a, b) => Math.abs(getEdgeConnectionMidpoint(a) - sourceMidpoint) - Math.abs(getEdgeConnectionMidpoint(b) - sourceMidpoint));
-    return candidates[0];
-  }
-  return getEditorPortalForRoute(targetRegionId, sourceRegionId);
+  if (!sourcePortal || getEdgeConnectionTargetRegionId(sourcePortal) !== cleanEditorRegionId(targetRegionId)) return null;
+  return window.CROWNLANDS_WORLD_TRAVEL.getArrivalPortal(getEditorPortalDefinitions,
+    cleanEditorRegionId(sourceRegionId), sourcePortal);
 }
 
 function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
-  const sourceRegionId = normalizeRegionId(fromRegionId);
-  const targetRegionId = normalizeRegionId(toRegionId);
-  if (sourceRegionId === targetRegionId) return [sourceRegionId];
-  const adjacency = new Map();
-  for (const map of getEditorMapEntries()) {
-    const source = normalizeRegionId(map.id);
-    for (const portal of getEditorPortalDefinitions(source)) {
-      const target = getEdgeConnectionTargetRegionId(portal);
-      if (!target || target === source) continue;
-      if (!adjacency.has(source)) adjacency.set(source, new Set());
-      adjacency.get(source).add(target);
-    }
-  }
-  if (!adjacency.has(sourceRegionId)) return null;
-  const queue = [[sourceRegionId]];
-  const visited = new Set([sourceRegionId]);
-  while (queue.length) {
-    const chain = queue.shift();
-    const current = chain[chain.length - 1];
-    for (const next of adjacency.get(current) || []) {
-      if (visited.has(next)) continue;
-      const nextChain = [...chain, next];
-      if (next === targetRegionId) return nextChain;
-      visited.add(next);
-      queue.push(nextChain);
-    }
-  }
-  return null;
+  return window.CROWNLANDS_WORLD_TRAVEL.findRegionChain(
+    getRegionIds(), getEditorPortalDefinitions,
+    cleanEditorRegionId(fromRegionId), cleanEditorRegionId(toRegionId)
+  );
 }
 
 function getActiveIslandTeleporters() {
@@ -5325,12 +5286,7 @@ function getPortalWorldPoint(regionId, targetRegionId = "center", options = {}) 
 }
 
 function getPortalRouteRegionChain(fromRegionId, toRegionId) {
-  const sourceRegionId = normalizeRegionId(fromRegionId);
-  const targetRegionId = normalizeRegionId(toRegionId);
-  if (sourceRegionId === targetRegionId) return [sourceRegionId];
-  const editorChain = findEditorPortalRouteRegionChain(sourceRegionId, targetRegionId);
-  if (editorChain?.length) return editorChain;
-  return null;
+  return findEditorPortalRouteRegionChain(fromRegionId, toRegionId);
 }
 
 function renderWorldDefs() {
@@ -20616,6 +20572,8 @@ function cloneRoute(route) {
     authoritativeDurationSeconds: Math.max(0, Number(route.authoritativeDurationSeconds) || 0),
     authoritativeArrivesAtMs: normalizeTimestampMs(route.authoritativeArrivesAtMs),
     authoritativeRequestedTroops: Math.max(0, Math.floor(Number(route.authoritativeRequestedTroops) || 0)),
+    authoritativeError: String(route.authoritativeError || ""),
+    authoritativeFailedBand: Number.isInteger(route.authoritativeFailedBand) ? route.authoritativeFailedBand : -1,
     previewStatus: ["estimated", "local", "authoritative"].includes(route.previewStatus)
       ? route.previewStatus
       : "local",
@@ -28391,8 +28349,12 @@ function attackForeignCity(cityId) {
   if (!sourceOption) {
     const rememberedSource = getLastSelectedOwnedAttackCity();
     rejectGameAction(rememberedSource
-      ? `${rememberedSource.name} needs troops and a portal connection to attack this target.`
-      : "No owned city with troops has a portal connection to this target.");
+      ? Math.floor(Number(rememberedSource.troops) || 0) < 1
+        ? `${rememberedSource.name} has no troops available to attack.`
+        : `No connected road route from ${rememberedSource.name} to this target.`
+      : playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0)
+        ? "No owned city with troops can reach this target by road."
+        : "No owned city has troops available to attack.");
     return;
   }
   selectedSourceId = sourceOption.city.id;
@@ -29377,11 +29339,10 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
     });
     const route = normalizeAuthoritativeRoutePreview(result, getCityRegionId(source), safeRequestedTroops);
     if (route?.points?.length) return route;
-    console.warn("The server returned an unusable route preview; using the route worker preview.");
+    return { authoritativeError: "The route could not be verified. Please try again." };
   } catch (error) {
-    console.warn("Could not load the authoritative route preview; the server will still verify launch timing.", error);
+    return { authoritativeError: error?.message || "The route could not be verified. Please try again." };
   }
-  return null;
 }
 
 function cancelAuthoritativeRoutePreviewRefresh() {
@@ -29398,6 +29359,7 @@ function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKi
     return;
   }
   const selectedBand = getTroopTravelBandIndex(selectedTroopAmount);
+  if (route.authoritativeError && route.authoritativeFailedBand === selectedBand) return;
   const previewBand = route.authoritativeDurationSeconds > 0
     ? getTroopTravelBandIndex(route.authoritativeRequestedTroops)
     : -1;
@@ -29413,7 +29375,6 @@ function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKi
     const refreshedRoute = await requestAuthoritativeOrderRoute(source, target, orderKind, requestedTroops);
     if (
       requestId !== authoritativeRoutePreviewRequestId
-      || !refreshedRoute?.points?.length
       || !troopSliderActive
       || !modal.open
       || !modal.classList.contains("troop-slider-modal")
@@ -29421,6 +29382,15 @@ function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKi
       || activeTroopSliderRoute?.targetId !== target.id
       || getTroopTravelBandIndex(selectedTroopAmount) !== getTroopTravelBandIndex(requestedTroops)
     ) return;
+    if (!refreshedRoute?.points?.length) {
+      route.authoritativeError = refreshedRoute?.authoritativeError || "The route could not be verified. Please try again.";
+      route.authoritativeFailedBand = getTroopTravelBandIndex(requestedTroops);
+      activeTroopSliderRoute.route = cloneRoute(route);
+      updateTroopSliderModal(source, target, activeTroopSliderRoute.route);
+      return;
+    }
+    route.authoritativeError = "";
+    route.authoritativeFailedBand = -1;
     Object.assign(route, refreshedRoute);
     activeTroopSliderRoute.route = cloneRoute(route);
     updateTroopSliderModal(source, target, route);
@@ -29487,7 +29457,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   });
   recordMarchInteractionTiming("troop-panel-interactive", panelStartedAt);
 
-  void findRouteAsync(source, target).then(localRoute => {
+  if (!supportsAuthoritativeArmyRoutes()) void findRouteAsync(source, target).then(localRoute => {
     if (
       requestId !== activeTroopRouteRequestId
       || !localRoute?.points?.length
@@ -29544,6 +29514,14 @@ function showMainCityProtectedAttackModal(target) {
   `;
   modalBody.querySelector("#mainCityProtectedClose")?.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
+}
+
+function isOrderRouteReady(route, troops = selectedTroopAmount) {
+  if (!route?.points?.length || route.authoritativeError) return false;
+  if (!supportsAuthoritativeArmyRoutes()) return route.previewStatus !== "estimated";
+  return route.previewStatus === "authoritative"
+    && Number.isFinite(route.authoritativeDurationSeconds) && route.authoritativeDurationSeconds > 0
+    && getTroopTravelBandIndex(route.authoritativeRequestedTroops) === getTroopTravelBandIndex(troops);
 }
 
 function getTroopSliderSendLimit(source, target) {
@@ -29741,9 +29719,9 @@ function updateTroopSliderModal(source, target, route) {
   const routeIsEstimated = route?.previewStatus === "estimated";
   const confirmButton = modalBody.querySelector("#troopSliderConfirm");
   if (confirmButton) {
-    const waitingForOfflineRoute = routeIsEstimated && !usesServerArmyAuthority();
-    confirmButton.disabled = waitingForOfflineRoute;
-    confirmButton.setAttribute("aria-disabled", waitingForOfflineRoute ? "true" : "false");
+    const waitingForRoute = !isOrderRouteReady(route);
+    confirmButton.disabled = waitingForRoute;
+    confirmButton.setAttribute("aria-disabled", waitingForRoute ? "true" : "false");
   }
   const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
   const swiftMarchOrderCount = Math.max(
@@ -29789,6 +29767,17 @@ function updateTroopSliderModal(source, target, route) {
   });
   const attackSourceSummary = getAttackBonusSourceSummary(activeCombatForecastPreview);
   const previewEl = modalBody.querySelector("#troopSliderPreview");
+  if (!isOrderRouteReady(route)) {
+    previewEl.className = "troop-slider-preview unknown";
+    previewEl.innerHTML = `<div><span>Travel route</span><strong>${route.authoritativeError ? "Route unavailable" : "Calculating travel time…"}</strong><small>${escapeHtml(route.authoritativeError || "Checking the connected roads and arrival time.")}</small>${route.authoritativeError ? '<button id="retryTravelRoute" type="button">Try again</button>' : ""}</div>`;
+    previewEl.querySelector("#retryTravelRoute")?.addEventListener("click", () => {
+      route.authoritativeError = "";
+      route.authoritativeFailedBand = -1;
+      activeTroopSliderRoute.route = cloneRoute(route);
+      updateTroopSliderModal(source, target, activeTroopSliderRoute.route);
+    });
+    return;
+  }
   if (isRallyTroopOrderKind(orderKind)) {
     const isJoin = orderKind === "rally_join";
     previewEl.className = "troop-slider-preview transfer reinforce rally";
@@ -30049,8 +30038,8 @@ async function confirmTroopSliderOrder() {
     rejectGameAction("Route is still calculating.");
     return;
   }
-  if (cachedRoute.previewStatus === "estimated" && !usesServerArmyAuthority()) {
-    rejectGameAction("The local route is still calculating.");
+  if (!isOrderRouteReady(cachedRoute)) {
+    rejectGameAction(cachedRoute.authoritativeError || "The route and travel time are still being verified.");
     return;
   }
   if (

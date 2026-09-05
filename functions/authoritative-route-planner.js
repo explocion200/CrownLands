@@ -1,6 +1,7 @@
 "use strict";
 
 const { calculateRoute: calculateCanonicalRoute } = require("./canonical-route-engine.js");
+const worldTravel = require("./world-travel-network.js");
 const { getAuthoritativeTerrainBlockers } = require("./authoritative-route-policy.js");
 
 const DEFAULT_WORLD_WIDTH = 13000;
@@ -20,12 +21,6 @@ const DEFAULT_CAMP_SIZE = 132;
 const CROWN_CITADEL_SIZE = 260;
 const BASE_BITMAP_REGION_IDS = new Set(["west", "north", "east", "south", "center"]);
 const SIDES = Object.freeze(["north", "south", "east", "west"]);
-const OPPOSITE_SIDE = Object.freeze({
-  north: "south",
-  south: "north",
-  east: "west",
-  west: "east",
-});
 
 function clamp(value, minimum, maximum) {
   return Math.max(minimum, Math.min(maximum, value));
@@ -290,53 +285,13 @@ function getPortalForRoute(models, regionId, targetRegionId, options = {}) {
 }
 
 function getLinkedArrivalPortal(models, sourceRegionId, targetRegionId, sourcePortal) {
-  const targetModel = models.get(cleanRegionId(targetRegionId));
-  if (!targetModel || !sourcePortal) return null;
-  const linkedPortalId = getConnectionLinkId(sourcePortal);
-  if (linkedPortalId) {
-    return targetModel.portals.find(portal => portal.id === linkedPortalId) || null;
-  }
-  if (sourcePortal.id) {
-    const backLinked = getPortalForRoute(models, targetRegionId, sourceRegionId, {
-      targetPortalId: sourcePortal.id,
-    });
-    if (backLinked) return backLinked;
-  }
-  const oppositeSide = OPPOSITE_SIDE[String(sourcePortal.side || "").toLowerCase()] || "";
-  const sourceMidpoint = getConnectionMidpoint(sourcePortal);
-  const candidates = targetModel.portals
-    .filter(portal => portal.targetRegionId === cleanRegionId(sourceRegionId))
-    .filter(portal => !oppositeSide || portal.side === oppositeSide);
-  if (candidates.length) {
-    candidates.sort((a, b) => (
-      Math.abs(getConnectionMidpoint(a) - sourceMidpoint)
-      - Math.abs(getConnectionMidpoint(b) - sourceMidpoint)
-    ));
-    return candidates[0];
-  }
-  return getPortalForRoute(models, targetRegionId, sourceRegionId);
+  if (!sourcePortal || sourcePortal.targetRegionId !== cleanRegionId(targetRegionId)) return null;
+  return worldTravel.getArrivalPortal(id => models.get(id)?.portals || [], cleanRegionId(sourceRegionId), sourcePortal);
 }
 
 function findAuthoritativeRegionChain(models, sourceRegionId, targetRegionId) {
-  const sourceId = cleanRegionId(sourceRegionId);
-  const targetId = cleanRegionId(targetRegionId);
-  if (!models.has(sourceId) || !models.has(targetId)) return null;
-  if (sourceId === targetId) return [sourceId];
-  const queue = [[sourceId]];
-  const visited = new Set([sourceId]);
-  while (queue.length) {
-    const chain = queue.shift();
-    const current = chain[chain.length - 1];
-    for (const portal of models.get(current)?.portals || []) {
-      const next = portal.targetRegionId;
-      if (!models.has(next) || visited.has(next)) continue;
-      const nextChain = [...chain, next];
-      if (next === targetId) return nextChain;
-      visited.add(next);
-      queue.push(nextChain);
-    }
-  }
-  return null;
+  return worldTravel.findRegionChain(models.keys(), id => models.get(id)?.portals || [],
+    cleanRegionId(sourceRegionId), cleanRegionId(targetRegionId));
 }
 
 function makeRoutePoint(point = {}, fallback = "point") {
@@ -436,6 +391,17 @@ function normalizeRouteResult(route) {
 
 function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
   const routeData = createAuthoritativeRouteModels(layout, options);
+  const calculateLeg = (regionId, start, end) => {
+    // A* tie-breaking and simplification can differ by search direction. Always
+    // solve a pair in the same orientation, regardless of instance/cache history,
+    // so independently served preview, launch, and reverse journeys agree.
+    const key = point => JSON.stringify([point.x, point.y, point.id || ""]);
+    const reversed = key(start) > key(end);
+    const job = buildAuthoritativeRouteJob(routeData,
+      { ...(reversed ? end : start), regionId }, { ...(reversed ? start : end), regionId });
+    const leg = job ? calculateCanonicalRoute(job)?.segments?.[0] || null : null;
+    return leg && reversed ? { ...leg, points: [...leg.points].reverse() } : leg;
+  };
   return Object.freeze({
     routeData,
     getModel: regionId => routeData.models.get(cleanRegionId(regionId)) || null,
@@ -445,6 +411,13 @@ function createAuthoritativeRoutePlanner(layout = {}, options = {}) {
     buildLegs: (source, target) => buildAuthoritativeRouteLegs(routeData.models, source, target),
     buildJob: (source, target) => buildAuthoritativeRouteJob(routeData, source, target),
     calculate(source, target) {
+      if (options.shortestTravelTime) {
+        return normalizeRouteResult(worldTravel.findShortestRoute(
+          routeData.models.keys(), regionId => routeData.models.get(regionId)?.portals || [],
+          { ...source, regionId: getTargetRegionId(source) },
+          { ...target, regionId: getTargetRegionId(target) }, calculateLeg
+        ));
+      }
       const job = buildAuthoritativeRouteJob(routeData, source, target);
       return job ? normalizeRouteResult(calculateCanonicalRoute(job)) : null;
     },

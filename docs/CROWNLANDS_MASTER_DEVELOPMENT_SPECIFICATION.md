@@ -443,6 +443,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 
 - Armies move in real time along valid routes for attacks, scouting, transfers, support, regrouping, and rallies. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Cross-region movement must use configured region connections. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- Connected travel must work regardless of how many map definitions are currently cached. The current Core/New Lands network uses the lowest total terrain-route distance across its active reciprocal roads; new Layer 2/3 maps join through their authoritative configuration. Troop bands and existing speed modifiers still determine duration. There is no fixed 20-map journey limit. The cross-map routing audit records implementation and release evidence in `docs/WORLD_TRAVEL_ROUTING_AUDIT.md`.
 - Normal troop-march duration has no maximum cap. The authoritative route distance continues through every traversed map, and the existing distance, order-kind, troop-band, speed-skill, Gear, Stronghold, and minimum-duration rules calculate the full travel time even when it exceeds 30 minutes. The server rebuilds the route and duration from trusted endpoints and modifiers; client-provided geometry, distance, ETA, or duration cannot shorten an authoritative march.
 - The attacking army’s launch-time attack value is locked when dispatched. Defender troops, reinforcements, ownership, wall repair, and applicable live defensive state may change until arrival. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 

@@ -87,6 +87,7 @@ copyDirectoryFiles("assets/worlds/world_01/thumbnails/versioned", relativePath =
 copy("audio/manifest.json");
 copyDirectoryFiles("audio", relativePath => /\.(?:mp3|ogg)$/i.test(relativePath));
 copy("functions/clanQuestPeriod.js");
+copy("functions/world-travel-network.js");
 copy("functions/playerFlagConfig.js");
 copy("functions/flagRenderer.js");
 copy("functions/clanHeraldryConfig.js");

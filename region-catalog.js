@@ -1,8 +1,9 @@
 (function (root, factory) {
-  const api = factory();
+  const api = factory(typeof module === "object" && module.exports
+    ? require("./functions/world-travel-network.js") : root.CROWNLANDS_WORLD_TRAVEL);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.CROWNLANDS_REGION_CATALOG_RUNTIME = Object.freeze(api);
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (worldTravel) {
   "use strict";
 
   const CORE_RADIUS = 2;
@@ -217,8 +218,13 @@
       imageWidth: width,
       imageHeight: height,
       region: region.compatibilityRegion || region.region || {},
+      // Roads belong to the world catalog, not the four-entry artwork/city cache.
+      // Materialize cached templates against the latest descriptor as well: their
+      // saved edge IDs may still refer to the template or a previously gated map.
+      edgeConnections: buildRegionEdgeConnections(region),
     };
     if (!definition) return result;
+    definition = materializeRegionDefinition(region, definition);
     result.cities = Array.isArray(definition.cities) ? definition.cities.map(city => ({
       ...city,
       x: Math.round(Number(city.xNorm) * width),
@@ -259,10 +265,10 @@
     const templateRegionId = String(summary.templateRegionId || "").trim().toLowerCase();
     const sourceId = String(sourceDefinition?.id || "").trim().toLowerCase();
     const usesTemplate = Boolean(templateRegionId && targetId && targetId !== templateRegionId);
-    if (usesTemplate && sourceId !== templateRegionId) {
+    if (usesTemplate && sourceId !== templateRegionId && sourceId !== targetId) {
       throw new Error(`${summary.name || targetId} template identity did not match ${templateRegionId}.`);
     }
-    const definition = usesTemplate ? {
+    const definition = usesTemplate && sourceId !== targetId ? {
       ...sourceDefinition,
       id: targetId,
       name: summary.name || targetId,
@@ -281,24 +287,12 @@
       strongholds: [],
       camps: [],
     } : { ...sourceDefinition };
-    const connectionEntries = Object.entries(summary.connections || {});
-    if (connectionEntries.length) {
-      definition.edgeConnections = Object.fromEntries(connectionEntries.map(([side, connection]) => [
-        side,
-        connection?.state === "open" && connection?.targetRegionId ? [{
-          id: `${side}_road`,
-          side,
-          start: side === "north" || side === "south" ? 0.472 : 0.462,
-          end: side === "north" || side === "south" ? 0.528 : 0.538,
-          type: "road",
-          connectsToRegionId: connection.targetRegionId,
-          arrowXNorm: side === "west" ? 0.065 : side === "east" ? 0.935 : 0.5,
-          arrowYNorm: side === "north" ? 0.065 : side === "south" ? 0.935 : 0.5,
-          intentionalOuter: false,
-        }] : [],
-      ]));
-    }
+    definition.edgeConnections = buildRegionEdgeConnections(summary, definition.edgeConnections);
     return definition;
+  }
+
+  function buildRegionEdgeConnections(summary = {}, fallback = {}) {
+    return worldTravel.buildEdgeConnections(summary, fallback);
   }
 
   function createRegionDefinitionLoader({

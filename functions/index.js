@@ -82,6 +82,7 @@ const {
   applySeasonalAchievementEvent,
 } = require("./seasonalAchievements.js");
 const { createAuthoritativeRoutePlanner } = require("./authoritative-route-planner.js");
+const WORLD_TRAVEL = require("./world-travel-network.js");
 const {
   AUTHORITATIVE_ROUTES_VERSION,
   BULK_ORDERS_VERSION,
@@ -504,8 +505,9 @@ const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 120;
 const SCHEDULED_ARMY_RESOLVE_CONCURRENCY = 8;
 const SCHEDULED_ARMY_RESOLVE_MAX_PAGES = 4;
 const SCHEDULED_ARMY_RESOLVE_RUNTIME_BUDGET_MS = 150 * 1000;
-const MAX_ROUTE_REGION_COUNT = 20;
-const MAX_ROUTE_SEGMENT_COUNT = 20;
+// Bound untrusted payloads by the supported world, never by the old 20-map release.
+const MAX_ROUTE_REGION_COUNT = CORE_EXPANSION.CORE_MAP_COUNT + CORE_EXPANSION.MAX_NEW_LANDS_REGIONS;
+const MAX_ROUTE_SEGMENT_COUNT = MAX_ROUTE_REGION_COUNT;
 const MAX_ROUTE_POINTS_PER_SEGMENT = 160;
 const ARMY_LAUNCH_RATE_CALL_LIMIT = 20;
 const ARMY_LAUNCH_RATE_WEIGHT_LIMIT = 80;
@@ -829,7 +831,7 @@ function coreExpansionStateRef(resetGeneration = RESET_GENERATION) {
 async function ensureCoreExpansionState() {
   if (!isCoreExpansionTopologyActive()) return null;
   const stateRef = coreExpansionStateRef();
-  return runTransactionWithInfrastructureRetry(async transaction => {
+  const state = await runTransactionWithInfrastructureRetry(async transaction => {
     const snapshot = await transaction.get(stateRef);
     if (snapshot.exists) {
       const state = CORE_EXPANSION.normalizeExpansionState(snapshot.data() || {});
@@ -850,6 +852,9 @@ async function ensureCoreExpansionState() {
     });
     return state;
   });
+  const context = REALM_REQUEST_CONTEXT.getStore();
+  if (context) context.activeTravelRegionIds = state.activeRegionIds;
+  return state;
 }
 
 async function getNewPlayerSpawnRegionIdsForClaim() {
@@ -2839,22 +2844,12 @@ const CARDINAL_REGION_DIRECTIONS = Object.freeze({
 function connectServerWorldMaps(maps = []) {
   const byCoordinate = new Map(maps.map(map => [`${map.gridX},${map.gridY}`, map]));
   return maps.map(map => {
-    const edgeConnections = {};
+    const connections = {};
     for (const [side, direction] of Object.entries(CARDINAL_REGION_DIRECTIONS)) {
       const neighbor = byCoordinate.get(`${Number(map.gridX) + direction.dx},${Number(map.gridY) + direction.dy}`);
-      edgeConnections[side] = neighbor ? [{
-        id: `${side}_road`,
-        side,
-        start: side === "north" || side === "south" ? 0.472 : 0.462,
-        end: side === "north" || side === "south" ? 0.528 : 0.538,
-        type: "road",
-        connectsToRegionId: neighbor.id,
-        arrowXNorm: side === "west" ? 0.065 : side === "east" ? 0.935 : 0.5,
-        arrowYNorm: side === "north" ? 0.065 : side === "south" ? 0.935 : 0.5,
-        intentionalOuter: false,
-      }] : [];
+      connections[side] = { state: neighbor ? "open" : "gated", targetRegionId: neighbor?.id || "" };
     }
-    return { ...map, edgeConnections };
+    return { ...map, edgeConnections: WORLD_TRAVEL.buildEdgeConnections({ connections }) };
   });
 }
 
@@ -2911,6 +2906,7 @@ function getCoreAuthoritativeRoutePlanner(maximumActivationOrdinal = -1) {
     maps: connectServerWorldMaps([...coreMaps, ...newLandsMaps]),
   };
   const planner = createAuthoritativeRoutePlanner(layout, {
+    shortestTravelTime: true,
     getTerrainBlockers: getAuthoritativeTerrainBlockers,
   });
   CORE_ROUTE_PLANNER_CACHE.set(ordinal, planner);
@@ -2922,10 +2918,19 @@ function getCoreAuthoritativeRoutePlanner(maximumActivationOrdinal = -1) {
 
 function getAuthoritativeRoutePlannerForRegions(regionIds = []) {
   if (!isCoreExpansionTopologyActive()) return LEGACY_AUTHORITATIVE_ROUTE_PLANNER;
-  const maximumActivationOrdinal = (Array.isArray(regionIds) ? regionIds : [])
+  const maximumActivationOrdinal = [
+    ...(Array.isArray(regionIds) ? regionIds : []),
+    ...(REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds || []),
+  ]
     .map(regionId => CORE_EXPANSION.parseNewLandsRegionId(regionId)?.activationOrdinal ?? -1)
     .reduce((maximum, ordinal) => Math.max(maximum, ordinal), -1);
   return getCoreAuthoritativeRoutePlanner(maximumActivationOrdinal);
+}
+
+async function ensureTravelNetworkContext() {
+  if (isCoreExpansionTopologyActive() && !REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds) {
+    await ensureCoreExpansionState();
+  }
 }
 
 function getServerWorldTargetIds(regionId = "") {
@@ -12653,6 +12658,7 @@ async function beginReinforcementReturn({
   reason = "recalled",
   nowMs = Date.now(),
 } = {}) {
+  await ensureTravelNetworkContext();
   const id = safeString(reinforcementId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!id) throw new HttpsError("invalid-argument", "Choose reinforcements to return.");
   const contributionRef = db.doc(`reinforcements/${id}`);
@@ -12840,6 +12846,7 @@ async function beginOutboundReinforcementReturn({
   reason = "reinforcement_capacity_overflow",
   nowMs = Date.now(),
 } = {}) {
+  await ensureTravelNetworkContext();
   const id = safeString(armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!id) return { ok: true, status: "missing" };
   const armyRef = canonicalArmyRef(id);
@@ -22795,6 +22802,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
 
 async function withdrawClanRallyContributionRequest(request) {
   const uid = requireAuth(request);
+  await ensureTravelNetworkContext();
   const serverReconciliation = request.auth?.token?.serverReconciliation === true;
   if (!serverReconciliation) await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
@@ -22921,6 +22929,7 @@ exports.withdrawClanRallyContribution = timedCallable(
 
 async function cancelClanRallyRequest(request) {
   const uid = requireAuth(request);
+  await ensureTravelNetworkContext();
   const serverReconciliation = request.auth?.token?.serverReconciliation === true;
   if (!serverReconciliation) await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
@@ -23118,6 +23127,7 @@ async function reconcileInvalidRallyParticipantsBeforeLaunch({ callerUid = "", c
 
 exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  await ensureTravelNetworkContext();
   await requireCurrentClanActorProfile(uid);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
@@ -23719,7 +23729,7 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
     fromId,
     toId,
     targetType,
-    kind: normalizeMarchKind(data.kind, "attack"),
+    kind: data.kind === "rally_join" ? "rally_join" : normalizeMarchKind(data.kind, "attack"),
     requestedTroops: Math.max(1, Math.floor(safeNumber(data.requestedTroops || data.troops, 1))),
   };
 }
@@ -24074,8 +24084,8 @@ exports.previewArmyRoute = timedCallable(
       const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
 
       const targetOwnerUid = getOwnerUid(target);
-      const kind = order.kind === "scout"
-        ? "scout"
+      const kind = order.kind === "scout" || order.kind === "rally_join"
+        ? order.kind
         : targetOwnerUid === uid
           ? "transfer"
           : order.kind;
@@ -27437,6 +27447,7 @@ async function resolveHoldingTowerRallyById({ armyId = "", callerUid = "", nowMs
 }
 
 async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
+  await ensureTravelNetworkContext();
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
   const canonicalMarkerSnap = await canonicalArmyRef(armyId).get();
   if (canonicalMarkerSnap.exists) {
@@ -32556,6 +32567,7 @@ async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", 
 }
 
 async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerUid = "") {
+  await ensureTravelNetworkContext();
   const deedSelectionEntropy = crypto.randomBytes(16).toString("hex");
   return runTransactionWithInfrastructureRetry(async transaction => {
     const campSnap = await transaction.get(campRef);

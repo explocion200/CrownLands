@@ -17,6 +17,7 @@ const coreExpansionGates = new Set([
   coreExpansionGate,
   "emulator-first-time-onboarding.js",
   "emulator-main-city-recovery.js",
+  "emulator-world-travel.js",
 ]);
 const discoveredGates = fs.readdirSync(testDirectory)
   .filter(fileName => /^emulator-.*\.js$/.test(fileName))
