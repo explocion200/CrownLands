@@ -1,6 +1,6 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.37
+**Version:** 1.38
 **Effective date:** September 6, 2026
 **Document status:** Authoritative baseline with implementation and release verification
 **Evidence reviewed through:** September 6, 2026
@@ -208,6 +208,16 @@ Status describes implementation and deployment state. It does not replace the di
 - Formal target audience, session-length goals, retention goals, accessibility standard, and product success metrics: **NEEDS VERIFICATION**.
 
 ## 2. Current World & Map Structure
+
+### Confirmed illustrated map presentation — September 6, 2026
+
+The approved art direction is a hand-painted medieval atlas with fine dark outlines, soft painted shading, moss-green land, ochre details, angular mountains and rounded forest clusters. Terrain fills all four image edges, leaves clear city space and contains no rivers. Roads have individual shapes, worn dirt edges and wagon marks. All structures face south; objective entrances meet their roads. Player cities do not require individual approach roads.
+
+The current `core-expansion-v1` release receives this artwork across all 81 prepared maps: 25 Core maps, 24 first-layer New Lands and 32 second-layer New Lands. Only the authoritative expansion state controls which maps are playable. The September 6 pre-release backend check found 53 active maps, including four second-layer maps. Archived topologies and prior realm generations are excluded from this update.
+
+City identities, ownership, Main City designation, progression and troops are preserved. Only coordinates may move to clear roads, decorations and the full height of Clan Towers. The game and server use matching city coordinates. Existing marches keep their recorded timing and align their displayed endpoints to the current city markers. Gameplay structures and scenery remain separate from the playable background. The map picker displays Camps, Strongholds, the Citadel and Clan Towers at their actual image coordinates.
+
+Prepared maps have 81 distinct road networks. Future generated regions inherit the revised art and city clearance of their selected prepared template. This does not change map activation, capacity, adjacency, travel bonuses or combat rules. Implementation and release verification are recorded in [the illustrated map release notes](illustrated-map-release.md); the older production snapshot below is historical evidence, not this update's deployment status.
 
 ### Current production
 

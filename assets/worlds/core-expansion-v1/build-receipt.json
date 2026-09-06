@@ -8,557 +8,773 @@
   "preparedSecondLayerMapCount": 32,
   "newLandsCityCount": 2240,
   "objectiveCount": 17,
-  "catalogHash": "20a55a7de0d6ad376a789201b3b744d908ecadbb737c9b6d228d07198581fae1",
-  "worldLayoutHash": "5f0db7655f3f5d02f293386b305c0010828b1f1b5c4a5ffd35b1c10fbdb383ff",
+  "catalogHash": "74e7eb4ba5f4692ba123b6afa0a8341ffc9555cc908e570f6b82d7928e39b289",
+  "worldLayoutHash": "e9e069e0fd640d5d2db363f06ce121fa81e3469f40f499ffd45ed91a7d882334",
   "assets": {
     "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-m2-m2.webp": {
-      "bytes": 744808,
-      "sha256": "cb1b4fdd6e1baaa0a11ce2ac40bdcc22a8bb5aa161a263521f77ed6dfe178008"
+      "bytes": 155578,
+      "sha256": "e48ae44556567e4f6f34d19b25823dd707893233880734f4a7e120d113a2e0a7"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-warband-camp-m2-m2.webp": {
+      "bytes": 15180,
+      "sha256": "0fc7d82a0b43e8ff943f2ae8066842ab9774fec8bdc578d7eda446e50e4e6895"
+    },
+    "assets/worlds/core-expansion-v1/art/broadleaf-9e9d959c0cd3.webp": {
+      "bytes": 23266,
+      "sha256": "9e9d959c0cd330a7c95defd2a15fe1c0922032f4616409daf58a35c279d72fa1"
+    },
+    "assets/worlds/core-expansion-v1/art/pine-cc5cd6efe9f8.webp": {
+      "bytes": 14728,
+      "sha256": "cc5cd6efe9f80945222f4a3ee6ea64706dd33e15648b71fb633f041a0784e60a"
+    },
+    "assets/worlds/core-expansion-v1/art/bushes-00333def70be.webp": {
+      "bytes": 19064,
+      "sha256": "00333def70be30acac05696c0882780e9fde8cf75f6d2f65e552b464c5c5a08c"
+    },
+    "assets/worlds/core-expansion-v1/art/rocks-e8c670bc6084.webp": {
+      "bytes": 17736,
+      "sha256": "e8c670bc6084a1795dfd25d19f45b205cba4c63b24b1e34fa87b4107aac3c77a"
+    },
+    "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp": {
+      "bytes": 25746,
+      "sha256": "2bb9352998c8a310b87e65b1202b093e459283e04f51f6a6b8bdc39764497d12"
+    },
+    "assets/worlds/core-expansion-v1/art/city-shack-7acf6bfddaa7.webp": {
+      "bytes": 21050,
+      "sha256": "7acf6bfddaa75bc7c0cc96a4df06b90a49c1df42e194e42a850c67a95f0ebdc0"
+    },
+    "assets/worlds/core-expansion-v1/art/city-fort-804504bf13a8.webp": {
+      "bytes": 22892,
+      "sha256": "804504bf13a8a697812ce72894afdac8efb4de63d865509bb678c91678c5615b"
+    },
+    "assets/worlds/core-expansion-v1/art/city-keep-eff443c6c279.webp": {
+      "bytes": 26566,
+      "sha256": "eff443c6c2795307ec67714b4c9648224a909442910a57c0b20a52cb01e6d263"
+    },
+    "assets/worlds/core-expansion-v1/art/city-castle-0f453b4a11b2.webp": {
+      "bytes": 28842,
+      "sha256": "0f453b4a11b2937a8f3aa220d0c7766d66ce1974f9ec29c25bf96b7317eb9931"
+    },
+    "assets/worlds/core-expansion-v1/art/city-city-47cad1d12242.webp": {
+      "bytes": 27862,
+      "sha256": "47cad1d12242366e2a4070a1adc0cc679a429cb2583c4e92cd09e7c9ea6278a1"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-north-west-m1-m2.webp": {
-      "bytes": 696300,
-      "sha256": "63e1dff9ea54badbeb5daeb95f4f26a2d80ac475f20e413f74e7e1bb15ced040"
+      "bytes": 157774,
+      "sha256": "ad9ccfca5582571932256e76add1c9157f5d57d1f3464c1c83f9313bc25f304c"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-relic-camp-north-west-m1-m2.webp": {
+      "bytes": 14894,
+      "sha256": "96a17758da1bf82d090374a37d98419488ee355927b15e597ca028cdce8cfe6b"
+    },
+    "assets/worlds/core-expansion-v1/art/camp-brightmere-6916ecf1850c.webp": {
+      "bytes": 28872,
+      "sha256": "6916ecf1850cacb855517133ef6fcdd3d5d0763bc5083718288fed156ff6bb26"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-north-support-p0-m2.webp": {
-      "bytes": 723068,
-      "sha256": "6d997fcf592762ce621584964120b657f950fdf7594d65f6925d03e730f30927"
+      "bytes": 140636,
+      "sha256": "8168afb24a9b9320bce097d458d9480278cd1e74d161c92803075c2dd0b62fb5"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-north-support-p0-m2.webp": {
+      "bytes": 10262,
+      "sha256": "dd731e2310b2117d400affce198c367a057e8f05cabd228c891a8361367017aa"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-north-east-p1-m2.webp": {
-      "bytes": 816098,
-      "sha256": "15c80b6aeeb702b7fec508a997114865e83063cf3d726cda0d55692d6a175ed2"
+      "bytes": 218814,
+      "sha256": "f300e1131b3250d04db07b2c2a52a5067640948798c97927dcf45b65dce92d56"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-deed-camp-north-east-p1-m2.webp": {
+      "bytes": 16960,
+      "sha256": "feba3dde8998dd66bbba8b72a412717fb6601aa575cb6efd93f6111169efcca9"
+    },
+    "assets/worlds/core-expansion-v1/art/boundary-35ab7e8f4228.webp": {
+      "bytes": 20318,
+      "sha256": "35ab7e8f422854b4981754c498f6963b34cc3ef95130f56bbc6b8b0e7d2bd0d7"
+    },
+    "assets/worlds/core-expansion-v1/art/camp-brambleford-59426d2cd404.webp": {
+      "bytes": 31720,
+      "sha256": "59426d2cd404f2f58ac349ce9d46c163b4426d9e6f070bbeb0b66f0ee0bcb84f"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-north-east-p2-m2.webp": {
-      "bytes": 641874,
-      "sha256": "91b5d719acd2d673c50fd2bb44c9251d70aa119c01313c20730bfae2c4e2d7c7"
+      "bytes": 156740,
+      "sha256": "44bfcc5c2a4c516ff94194e662462f1e3081a34bd2702e9ab4eb876fbec23023"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-gold-camp-north-east-p2-m2.webp": {
+      "bytes": 15862,
+      "sha256": "1f098f7f509c138b1cdd72f4f183526b166d8b239e7b2d3679132989b762006a"
+    },
+    "assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp": {
+      "bytes": 26236,
+      "sha256": "d9ba98b26c6106376a069531090c21e4cd351355ff761cf444c4751a917311ac"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-west-north-m2-m1.webp": {
-      "bytes": 535650,
-      "sha256": "e837a84d685f13e58631a9f3e27596153b3527d7290b023d975b9232a0bc9e89"
+      "bytes": 219706,
+      "sha256": "4ef05eaf560b776040b2e83e8aef316e4b48007c909f93ea3b347bed8713d779"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-relic-camp-west-north-m2-m1.webp": {
+      "bytes": 16210,
+      "sha256": "e7a925233ffc62693e3696f3844f91fcb7f4759f7091d6c63f92f27995099cf8"
+    },
+    "assets/worlds/core-expansion-v1/art/relicstones-fc00d53dbafb.webp": {
+      "bytes": 15052,
+      "sha256": "fc00d53dbafb1bd062df70052db685774e2f2b405d2d58a3aee74005d7570a4c"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-north-west-holding-tower-m1-m1.webp": {
-      "bytes": 570784,
-      "sha256": "46eafe0a682239cb9cb9def37175be6f2e66ace8703e6c4436d26f360915fd6b"
+      "bytes": 177686,
+      "sha256": "d9db21ed143e3e8bc85c8cab27e1b899857160bfed20ca146d68553028a27914"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-north-west-holding-tower-m1-m1.webp": {
+      "bytes": 16026,
+      "sha256": "c12a99ecae6dfbabf3873e71db9ea9c66f73ec69a92b7867363d87bfd804ed76"
+    },
+    "assets/worlds/core-expansion-v1/art/garrison-42ab8b5de1fb.webp": {
+      "bytes": 21816,
+      "sha256": "42ab8b5de1fbd230c79f51bc4042e22a58778fcbc21bdb3bbf7a1ac812c2c2ac"
+    },
+    "assets/worlds/core-expansion-v1/art/tower-ravenwatch-3966d0772018.webp": {
+      "bytes": 28432,
+      "sha256": "3966d0772018ef58ee72be65e386f9ef13f1eccae1d0e56c7bb808ebde2cb3e2"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-greybanner-hold-p0-m1.webp": {
-      "bytes": 621358,
-      "sha256": "569cae5831f61550494009fbcd89abe04e5fbfd8cd0687fba6119caaa2a9dbd1"
+      "bytes": 202092,
+      "sha256": "7c5dca1e79221317b92171b3afa44bdd31c92121f6eb60e6f1438eae9c1eca1e"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-greybanner-hold-p0-m1.webp": {
+      "bytes": 19270,
+      "sha256": "ab1c2a828a3ed9d39432749f3f875d6291e8a4334d9bec62fb20abeab9620ef1"
+    },
+    "assets/worlds/core-expansion-v1/art/stronghold-training-c4a177cc4335.webp": {
+      "bytes": 39664,
+      "sha256": "c4a177cc4335537d440a3ee616978d747fe12844ddfec6c7bd062858d33ee5cf"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-north-east-holding-tower-p1-m1.webp": {
-      "bytes": 716554,
-      "sha256": "d66234cc3c2242fa7007010e405bb7bf53725d00f0136553c853cc5da4a0fdd4"
+      "bytes": 193206,
+      "sha256": "7db3cc31fde0b724ee533560a8d9b7a9118d151de889d8d3861f8ac3b2444bf2"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-north-east-holding-tower-p1-m1.webp": {
+      "bytes": 12612,
+      "sha256": "89f1f7e525202db1866b274651d11857ca838bb60ac0ab322c3d28f559961eb7"
+    },
+    "assets/worlds/core-expansion-v1/art/tower-highguard-4ca346633579.webp": {
+      "bytes": 34014,
+      "sha256": "4ca3466335797387d3f8b9cbfd1fbe478c57e1fd4e0493a2e50db2f9080dd362"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-east-north-p2-m1.webp": {
-      "bytes": 698616,
-      "sha256": "34d669e9312b09b8600a1018fdf9e85913b36f9755bed94fe54e234d38a13b73"
+      "bytes": 248824,
+      "sha256": "930b5dcff1a349226201e5c1f36ab166efbe8b47f16af9b98fa27222afb46a22"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-deed-camp-east-north-p2-m1.webp": {
+      "bytes": 18712,
+      "sha256": "87ea1201424f91ea9265fafb47ada873db63848288b0a03d420fbbb2d56411b7"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-west-support-m2-p0.webp": {
-      "bytes": 635552,
-      "sha256": "be5a31f89cd9da52c3b5b1708ab0da01d13a8f2150e7b2f48e5921d6f2853d80"
+      "bytes": 190640,
+      "sha256": "da47ae96e1dd7bccbc5ac180c0e128bb209fad8e0a6df4ef053e0569b75850b7"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-west-support-m2-p0.webp": {
+      "bytes": 13202,
+      "sha256": "3097184e9efa5a658f8b8fada11e5de32b1c1de0cf2c85cd40f54c288da5e8a3"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-aurum-keep-m1-p0.webp": {
-      "bytes": 735076,
-      "sha256": "04e5d6970a3eac0d3ab8614c1d7e477af38b88577c2a7e4a7e6a965c6e8e0f14"
+      "bytes": 177114,
+      "sha256": "5a5462aecaaf379864eb0d6deb987e55478ea99d3ac4c36e1a95e335db8740d8"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-aurum-keep-m1-p0.webp": {
+      "bytes": 17826,
+      "sha256": "e494088823ae4683636fa7cc4ba23ee4d6abd0ace94d98d22664e445faa18e80"
+    },
+    "assets/worlds/core-expansion-v1/art/cultivation-757191267193.webp": {
+      "bytes": 16352,
+      "sha256": "757191267193d3c4c95e3b8770c276845e35ee368bf2105cd9cbece9e24089f2"
+    },
+    "assets/worlds/core-expansion-v1/art/stronghold-gold-37d993bdce7f.webp": {
+      "bytes": 42902,
+      "sha256": "37d993bdce7f9bb8075e8e2f6fc2aedd1ac93967009db56d0b491b8092325a64"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-crown-citadel-p0-p0.webp": {
-      "bytes": 492960,
-      "sha256": "d047f52f7fdafcb67146cca79ed8af8c9d1807a37b45a7031f07f78401c9b503"
+      "bytes": 167752,
+      "sha256": "91da7147ec5e4285992ab0888f335c8e6d211080b60d141edfe87d704bf3b36e"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-crown-citadel-p0-p0.webp": {
+      "bytes": 13932,
+      "sha256": "b526d2576c7dbaf1c811d612d244aa9eee5314c0e4c45ab5e84d8c1ff8ae104f"
+    },
+    "assets/worlds/core-expansion-v1/art/ceremonial-d6a48daef27b.webp": {
+      "bytes": 14310,
+      "sha256": "d6a48daef27b7417328a955a3e6dd6d5f270404b4c42a2a716a2af436cca0afe"
+    },
+    "assets/worlds/core-expansion-v1/art/citadel-crown-a81fc4688947.webp": {
+      "bytes": 46616,
+      "sha256": "a81fc468894715403cb4ab1cb0411650a8a71dbb61dcc6c91e7cd208b3bd2d77"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-swiftgate-p1-p0.webp": {
-      "bytes": 703558,
-      "sha256": "8d47039c22b500370cec586d35d4a6b804fb9050be00da3e9595d277caee44ed"
+      "bytes": 153456,
+      "sha256": "ecd0a0db5161bfcd2054b23d750deca433feeaf1469e8752f72d5ba65d5f776e"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-swiftgate-p1-p0.webp": {
+      "bytes": 15530,
+      "sha256": "02e242e435fc8fa6142e3b7637a9bb8b2de6e276698e575c0980dc6629aa00ce"
+    },
+    "assets/worlds/core-expansion-v1/art/stronghold-movement-b202e3da8557.webp": {
+      "bytes": 41784,
+      "sha256": "b202e3da8557d23951f4a5199f180b17291d2dc508043dd9e81933716a9cfb49"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-east-support-p2-p0.webp": {
-      "bytes": 637808,
-      "sha256": "440dc64e1af0655fe9c3b12658d4fcefcde317a2aac36fba53fe3928aa382744"
+      "bytes": 128186,
+      "sha256": "56018f51b600edb8c3c0c290a6a114ce4ccfdeab64f79b93c26b8a70e5b3b478"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-east-support-p2-p0.webp": {
+      "bytes": 11356,
+      "sha256": "62bf1a9edfc37a51aa226661a1bc1fcf8bf9cf7fc516c693ca78195a879020ff"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-west-south-m2-p1.webp": {
-      "bytes": 681748,
-      "sha256": "30bcdbd48f6e62adfd3daf678be36ceb17e53238c89de98905a57b0c661e3f21"
+      "bytes": 148484,
+      "sha256": "47b0e99744bb503ce8f7043ad5181f5cbb5d854da3428b2d2defc43072afeb39"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-deed-camp-west-south-m2-p1.webp": {
+      "bytes": 14876,
+      "sha256": "466ba98383c8dd31cdac175e0b42668bcfe2b15173607fe7db7c601d64e4be2d"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-south-west-holding-tower-m1-p1.webp": {
-      "bytes": 673758,
-      "sha256": "53bd6a27fe6e43313365473022e5d5083bf8397671f8c34ecc94efa7e66a3007"
+      "bytes": 187010,
+      "sha256": "7be2bd42dc0c8656cc38491b28d90ec0e55213eacb86dbeeb325a6656ee3c7ca"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-south-west-holding-tower-m1-p1.webp": {
+      "bytes": 14130,
+      "sha256": "7c826f05c0566ac7b487fcb4613d54476e77688b041dc77a229ded2c0c56127f"
+    },
+    "assets/worlds/core-expansion-v1/art/tower-blackthorn-a85bdbe2d2b4.webp": {
+      "bytes": 27734,
+      "sha256": "a85bdbe2d2b466a521e9a06061d4691350d2cb3e6fb6729771ebaa24215b0acb"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-ironwatch-p0-p1.webp": {
-      "bytes": 604578,
-      "sha256": "40d1a0d40726166174f547e54f5e90bdff5eccf4ec00f74aacfc7f01100d3622"
+      "bytes": 139082,
+      "sha256": "72755eadd77cd671f4ca2b01e7f46e92dcc149aa36dc5701e6674423eb884d7e"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-ironwatch-p0-p1.webp": {
+      "bytes": 13910,
+      "sha256": "ec91065947abc23b889a95066429da43c06e30529faeab28abdc3ab64339dc8b"
+    },
+    "assets/worlds/core-expansion-v1/art/stronghold-defense-bc42b1436d02.webp": {
+      "bytes": 42826,
+      "sha256": "bc42b1436d02c10f96fc578382d510c7ff1a5d2fec3d90480109067c3387e6bc"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-south-east-holding-tower-p1-p1.webp": {
-      "bytes": 680488,
-      "sha256": "1ea409afce1718c84cc1135ebc01e657e566c96abf6b199bc751c1752c3df529"
+      "bytes": 206574,
+      "sha256": "7eb5eebaf8c3c6cb94e257aaeea0ab4e66338446f37c9fffb69382952fc70da7"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-south-east-holding-tower-p1-p1.webp": {
+      "bytes": 14238,
+      "sha256": "c8fce603c3cbbd1e53e22d57b8b265f31cc01d28460027035c4314e86f286b22"
+    },
+    "assets/worlds/core-expansion-v1/art/tower-stoneward-57c29f4d6846.webp": {
+      "bytes": 30152,
+      "sha256": "57c29f4d6846bb9991ec1a1df4b73d01b5f8a53322726ccf7d7e3b1176e634cc"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-east-south-p2-p1.webp": {
-      "bytes": 608784,
-      "sha256": "a44b7e62176c617a8b8509aea520da6b4773a43b6e4259d21e2b959757c18aab"
+      "bytes": 180522,
+      "sha256": "0901428d79aa82232b2d14e72db4a420768fc6eaa9e480f4b152b8c1b1379137"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-relic-camp-east-south-p2-p1.webp": {
+      "bytes": 15672,
+      "sha256": "6c0812d7c9d2488fb6aba9693a3784c349446a315292cc9e7b38330f4dd17a1d"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-south-west-m2-p2.webp": {
-      "bytes": 643198,
-      "sha256": "a35136f89057f05ef5923b28139a0e7f14ccd61e4db540f9b85a66b6b278bc40"
+      "bytes": 198694,
+      "sha256": "2c38a7a3e67d171e991d1ef2abff7b699e493c07415206e32bf564f826006475"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-gold-camp-south-west-m2-p2.webp": {
+      "bytes": 16272,
+      "sha256": "253909271a5cabc1eaef1929de9362d6b687604f1bc945ab30906a54391bdaff"
+    },
+    "assets/worlds/core-expansion-v1/art/trade-c7be8c614064.webp": {
+      "bytes": 19732,
+      "sha256": "c7be8c614064971dc870e70ed8483d1c7720bc0d949ead7d2d2c9117b6a7b698"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-south-west-m1-p2.webp": {
-      "bytes": 715934,
-      "sha256": "af190ee12c108bcb51a027657a9d99f7b109720ca39b567385e9ac615e21924c"
+      "bytes": 214722,
+      "sha256": "c914838f35101636e394d38c70785cda534ae8aa3e01b20318ecfcb35674e78e"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-deed-camp-south-west-m1-p2.webp": {
+      "bytes": 16998,
+      "sha256": "b7e950bfcbcc22fd2f97b5c7a2f2d6ea355dde7efb7dbacc06ff69b81b237a19"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-south-support-p0-p2.webp": {
-      "bytes": 700176,
-      "sha256": "85e161689bc1146f616b7287bcc70ee6a67e87b984ae958766f4831748d0e99b"
+      "bytes": 177826,
+      "sha256": "29404ac2f14be29a98eaacc07b82aead444d2910cfeb12fb34a437319fb074bf"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-south-support-p0-p2.webp": {
+      "bytes": 14078,
+      "sha256": "6e76bb17957d4ba8977195faa02ee3bf67e265e14eb19beb3d53ab887e45699f"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-south-east-p1-p2.webp": {
-      "bytes": 653056,
-      "sha256": "07311f58843e5fdf5f7ecd50cd580c3935b5a2734e5a4f8cbbb5b6aab5a7b92b"
+      "bytes": 207636,
+      "sha256": "e039ace46758931ce7be9d8a7984e227af694be23513bcfcef1585462182ce31"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-relic-camp-south-east-p1-p2.webp": {
+      "bytes": 16926,
+      "sha256": "df7586d2c453d4bda48efbbedfc2bf376a81942d0ef053a239c8fbb21c966b5f"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-south-east-p2-p2.webp": {
-      "bytes": 697400,
-      "sha256": "6041ba0aefca214d88db61ed235e4f9c406a0697fe11bdb39bb18aa4d472395e"
+      "bytes": 211778,
+      "sha256": "e151a5a31410c8236ddb8f020170744cc944ef64a2074668c49420d8a99d97b0"
+    },
+    "assets/worlds/core-expansion-v1/thumbnails/core-v2-warband-camp-south-east-p2-p2.webp": {
+      "bytes": 17216,
+      "sha256": "a2b37abe6e2463a0c5dbdd5c3ec8ff1c8c95bfb03adc98521d6646b64acfdfc1"
+    },
+    "assets/worlds/core-expansion-v1/art/training-b180d7053b7c.webp": {
+      "bytes": 21084,
+      "sha256": "b180d7053b7cb22264879fbcc6097a7c3a88f1e263c7d89d4e95d16f5b90cba7"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p001.webp": {
-      "bytes": 316548,
-      "sha256": "f973243a06b5ef3681a39d84d794aeb0af234fd240c0b706e2f0999842530350"
+      "bytes": 120600,
+      "sha256": "baf4bd9401896627b56415e4d65e87421f6af0f258ca9482dae558f2b111bc7a"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p001.webp": {
-      "bytes": 16602,
-      "sha256": "ae6b2ef0679c354355b0824b881266d88ba3cb0dfef245cc7dcb454031d61627"
+      "bytes": 11388,
+      "sha256": "a034c38726d529cbd5d6706046a8f932d85d594768619ae3242110aea82d3aa3"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p002.webp": {
-      "bytes": 399282,
-      "sha256": "45a00324dd24b34089d97e28c7412ae66ede2872f028c93b702d13cb20b9080c"
+      "bytes": 120404,
+      "sha256": "1d09ac11b54a75fa5493f2100b1274f6e4388f702f049f750b743b36146fbf2c"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p002.webp": {
-      "bytes": 24128,
-      "sha256": "bfb38ee09dc831fc0913a28abc1c5fb6a496eebce2152867a83595c0066897fa"
+      "bytes": 11374,
+      "sha256": "ab3abc0209b58e572cb0d2306a940ae01ad642f016e533bccdf21aa267254ca2"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p003.webp": {
-      "bytes": 314154,
-      "sha256": "bba6afb3adfef74a23d73140290d31e7559a45e12250bf511288baa4abc8c8a0"
+      "bytes": 120402,
+      "sha256": "e47fb4c00f9440897d45141da8b45334fea82fd1c8a800c2f964d5882c123f87"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p003.webp": {
-      "bytes": 17174,
-      "sha256": "e3046d09e0df13ae1b787be4b5f0a06713f50c01c3ff01877d54ae422e22dab8"
+      "bytes": 11476,
+      "sha256": "a2f47f1a2c9198ece4495194c41676b065d62e0ee1511fc2fd502ad7c58b2004"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p004.webp": {
-      "bytes": 320542,
-      "sha256": "73ea1bf0a6468972ff439aeee56cc4172fa15b7283eef4f61d9f9b636368aec6"
+      "bytes": 120724,
+      "sha256": "3c479c6e2265177f6a39c0e070134e33561c7f8aa1e27e696850eae54577fc1c"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p004.webp": {
-      "bytes": 17840,
-      "sha256": "57c64328985f0092321932ef73852ed021e94ce1bf2e9cef601b702d0ebe8ebe"
+      "bytes": 11324,
+      "sha256": "39b61bee9301053becf5b1443f2019a1ff4eabbd1c062ba85935e0f323f7072e"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p005.webp": {
-      "bytes": 326986,
-      "sha256": "b70118d40b3b54b478e98e1345c2a23cfad0c6ca0f0cc1d9203ecd33d8856a70"
+      "bytes": 127460,
+      "sha256": "a0260fc3340ddc65c591b60526837677d0b804b331a979a10b7a97e9505336a0"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p005.webp": {
-      "bytes": 16866,
-      "sha256": "bcbc2f0489d5b9c880c13981c8e09d36fc84baa16dfc088cde49331e21e4f058"
+      "bytes": 10948,
+      "sha256": "845d1fbc0d8237b7d1c53109e2b76cd7afe95f7c54c9245a6ddc481e13d14768"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p006.webp": {
-      "bytes": 306662,
-      "sha256": "ecc667982fe46cedb5fcd321471f52bb319434de7324d675d2fe1e13aba8a9be"
+      "bytes": 128082,
+      "sha256": "e7f1533d25d731ecc6d71627c067286d09d16a139ba5c029e94720a2d879cdae"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p006.webp": {
-      "bytes": 16984,
-      "sha256": "f08b893118cd99ba64647b50d22a7a5a48e3325d43cee3df635d65d6680469e1"
+      "bytes": 11188,
+      "sha256": "888c90c3c8de2565ca9640966895f1f366c5f6a32797b4ac52048a6d7bf58b54"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p007.webp": {
-      "bytes": 309800,
-      "sha256": "48fae3d3b53b824e575ca2fdfbf0c1a5ce4e96bb9d83d22aee30ba6f2b9d0cc1"
+      "bytes": 128178,
+      "sha256": "2bd25f0e3b03f3b54161153d2edf868a5149f2353c17fea67d3a83f97bcde378"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p007.webp": {
-      "bytes": 17656,
-      "sha256": "eb860f650966cc26b4aab469073c02d8b7e34248a101bb9eab7c80a8dd67036a"
+      "bytes": 11224,
+      "sha256": "5b1647b193c8189246e72f71bb3f8ac8461058acd1bffd4f9ac596a5a89ed09c"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p008.webp": {
-      "bytes": 316222,
-      "sha256": "a1de47b6de83898224105e0aceb1c1a0f0c9f5a374a2b89ed0682312aa2fa4c1"
+      "bytes": 128596,
+      "sha256": "9aa930d940fd1ba995ecb32f76c4f114f183911a32e03f0c0b16e08c4c79b9fe"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p008.webp": {
-      "bytes": 18416,
-      "sha256": "3be90e2ee807ce5c95d7140011c5e27dff922dc81b7552045359d6ff42165693"
+      "bytes": 11318,
+      "sha256": "1b1f0cb09dd25a2d665ab0b0c1f1cc3719871974fd28fb5f512c08820492ec6c"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p009.webp": {
-      "bytes": 350724,
-      "sha256": "3db8bb72f17655f8b32f02b2a253f75baefb173860a3f59852343e8e042b839a"
+      "bytes": 127636,
+      "sha256": "81787b18b46169b806465eb4093f5905585d21f0b9442330bb60f3194326e169"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p009.webp": {
-      "bytes": 16838,
-      "sha256": "0e159b42e7e667bada9e6d5e8cbdfe9a43a3b67d9134aa77030f89867d108f61"
+      "bytes": 11154,
+      "sha256": "4cee205c36e6b5ea758690f1bc47482829ae29fa67879418b89d6d37899be4bb"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p010.webp": {
-      "bytes": 313024,
-      "sha256": "1ebff649f35d5e941bcb61095945ab9eed861c3e65a19fb40b0c5f0dc43f7cfa"
+      "bytes": 140182,
+      "sha256": "77eff9ffab1591392999d998a29200b722b4d2f77afdfe0f2362d451ad2d3d97"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p010.webp": {
-      "bytes": 15126,
-      "sha256": "843ecf066f293fa6ea8671dd229957f64b3ea65d5e71024f089e15d463ed7814"
+      "bytes": 12148,
+      "sha256": "627f5ce60557c72844ab0b5b0d4cf8b9042f796f49c0ac806207d82bfc933b04"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p011.webp": {
-      "bytes": 262344,
-      "sha256": "7e70950975f0b958f517ea3b8c42adf4a429238daeb2c9de1eaaeecd09e7cc1c"
+      "bytes": 140194,
+      "sha256": "d66435d0f147ef729212c3050c293f5b1987d350646edadecdc5fee4c39beb5b"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p011.webp": {
-      "bytes": 16020,
-      "sha256": "4f59c1fc27701c99a91e390b0b7411d1cd01d6bff8b9fea373d0280d7566645c"
+      "bytes": 11994,
+      "sha256": "26fdb1cb79c02ac9e7759fb95c0a1c7c4428e6c0d9eaadec12f78d502a840e38"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p012.webp": {
-      "bytes": 315414,
-      "sha256": "1f19fe2b614e71c458e59551ce1f86d980c3b63eb855801a27a259709534e85a"
+      "bytes": 141650,
+      "sha256": "2149819f9ac2cfcf2528983e001b51a1c9a01addec04ff3cd7bcb61d91f1893f"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p012.webp": {
-      "bytes": 19960,
-      "sha256": "3acbcac961683e31db7b1afe935a5668b6768b3917e35aeec8c01f297e197594"
+      "bytes": 12242,
+      "sha256": "142d55820861f5ecb534b79502e6e291549e020f26c8ded2677c6eae01b26c16"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p013.webp": {
-      "bytes": 237834,
-      "sha256": "00b3eca9d9b9c6ca142e066bde827fe9c4ad2aded98619eac5eef2522fa4fce8"
+      "bytes": 140332,
+      "sha256": "2a7a984796d20a463c0f325313442d396a7a86c42efa217c59122516e21a9e86"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p013.webp": {
-      "bytes": 17262,
-      "sha256": "2a5a3de0863276a569745a20a7dbea00910cf744ff4ee8b4985f40d64685c9d5"
+      "bytes": 12056,
+      "sha256": "30f306c47929346142b82875979428b539bc677a452c7c009423a2bc505e7d1d"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p014.webp": {
-      "bytes": 262296,
-      "sha256": "6166f060591ad31e8f65cbf4ba63a423a02a4bb6c03c78ebe87011ba5ed5e5da"
+      "bytes": 140448,
+      "sha256": "61dfbe312f29a72c19177eb89002b05a72263c867cb7c5bb233c25618e907647"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p014.webp": {
-      "bytes": 15708,
-      "sha256": "9020a43d2935498e3916249859165b85b486fd1fd1174655951a30e2aa98233c"
+      "bytes": 12058,
+      "sha256": "f126891930c8906f616002450f7d64a1f1ec160b1200f0ff9b53fdc139cd8d6f"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p015.webp": {
-      "bytes": 237174,
-      "sha256": "646f1055febd1b54352dcca226c1caa9a6f70c0ad183ad41bf187a54e4c00d66"
+      "bytes": 139586,
+      "sha256": "dacf13ae0a0bfcd726771dd1614a8ea89277988f35f19c68da922d8d32b484a9"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p015.webp": {
-      "bytes": 14950,
-      "sha256": "ad0ce0f8dead401f503d7111c66d5e1766b3f403dc31abb68fb035670fe8f8f5"
+      "bytes": 12218,
+      "sha256": "2c61ebf8ef65fafbacaa3a3af3203b9ef62c9080c2ca2c571246a212d3438ece"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p016.webp": {
-      "bytes": 265256,
-      "sha256": "45331fd3478719db1a33fe765cb43b2b7c5d199032439070f65b7bf029f71dcb"
+      "bytes": 139608,
+      "sha256": "601a55bd281c15c38e79ff1dd94be6900df90e4cbab24f17cf8786480bd45d1c"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p016.webp": {
-      "bytes": 13118,
-      "sha256": "e8324fb779a981577796f743acbeac47e9464a443514464f42f17956bcf1b8e4"
+      "bytes": 11994,
+      "sha256": "26d07fa15461c8e3f7d4daff8c0ee5aab7b6a8518821410d68fd6fca3f647ea8"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p017.webp": {
-      "bytes": 276808,
-      "sha256": "bf52284d07e71b2707406b4a383db787c7d9238cd2b98d78ec6a88386f549ff7"
+      "bytes": 190796,
+      "sha256": "19dc93ef792eb91cd54ed2908283dfff61b1ab3ce35fc861f3a051f4ccdb65ec"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p017.webp": {
-      "bytes": 14210,
-      "sha256": "a6809cd4993d7b4c4f0f53ddb0b88f52c4404b672a7f5aaada77336e60ba3d55"
+      "bytes": 13248,
+      "sha256": "29f79837bde419bca0d97208840cd18a8b347443d31fde6fbdc7ed973912a945"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p018.webp": {
-      "bytes": 296996,
-      "sha256": "0f4c4fdf3c3d00c815116cc55e8554777b3400b43000c8d4badb74f022bf521e"
+      "bytes": 191378,
+      "sha256": "f9f1494aec4c459c64ba88240f12def9723bb82e006cb34f90f939dcc7a87937"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p018.webp": {
-      "bytes": 17502,
-      "sha256": "3c2231bea4620cdcbb6383e2b9acd9b8226ce254f3ff995da92daf79697647f4"
+      "bytes": 13404,
+      "sha256": "c3e377d099b7e2bd4243d686cab8efe47ca7a5dfd6ecb397847b686ae1564767"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p019.webp": {
-      "bytes": 322350,
-      "sha256": "8f794156b7c54befc8f3f2ffbb9fec2b299cb899c1319849550c62813cb49619"
+      "bytes": 190796,
+      "sha256": "4dc6457f76b9720ffcfee081844d70838161acb1bb1c9008f6fc58ca31f9ffd6"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p019.webp": {
-      "bytes": 14362,
-      "sha256": "af5853ccb42c4ee62c742613c194f8a8644c0b50f5e88899110d5810b4143b91"
+      "bytes": 13366,
+      "sha256": "71a61534fb0ea3b7d9692569c900ef11524e46663c29f8f3b725c730469e52cb"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p020.webp": {
-      "bytes": 188242,
-      "sha256": "be7746336363712b0d84a8882a11b9a7f1790e7de5dfe772e26e44e1864398b1"
+      "bytes": 190244,
+      "sha256": "05cb1283118a65c1f4898479456894c9b88b27892815a71209d17738893adec0"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p020.webp": {
-      "bytes": 11184,
-      "sha256": "ad1d9e5cee8ce2cb4e1cb90a50dfd3c516867e50728b2e8d700759ad12ceea67"
+      "bytes": 13058,
+      "sha256": "a30ff52f94afb4d252d11b434c24eb8531e2ca9fbf157651a426c9ed8bd3c770"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p021.webp": {
-      "bytes": 240154,
-      "sha256": "b2464d4e4c9ae4b6f8a28e21d4b298c464edb19e04690fba8d0e875d8358734b"
+      "bytes": 191010,
+      "sha256": "ad72611d9feb676d1daac64751f18f98625b491ee27ec1c0a33fad0da32be435"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p021.webp": {
-      "bytes": 9544,
-      "sha256": "902889f72171417336faa4487f83906c6eadfe2ee040f50aaf760c7d920ad396"
+      "bytes": 13190,
+      "sha256": "57cd2ec9429b0678a3894eaf04193e3155a9eaa465d2519ecae5017f6de55a04"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p022.webp": {
-      "bytes": 314974,
-      "sha256": "9b6ead070d62d4d85e240d49d26da35c34f0756b02bdc2e93ee7a7b425c03473"
+      "bytes": 120614,
+      "sha256": "9d5ae8af9c53d6b5467f708fe25d64b10ad2904373fad7ed41268506f8e43d81"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p022.webp": {
-      "bytes": 17164,
-      "sha256": "6743c1e1eb6f676123724c6261421f5c508cd0c968256795a120bce507ae2d58"
+      "bytes": 11340,
+      "sha256": "260a9eb4a1fabe453ffdd635d5593cf6257a6e2e1acd4a14889d1d3ad9844aa1"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p023.webp": {
-      "bytes": 358632,
-      "sha256": "8df87fa691202d2a81adb107fe9cc599a50b55022f8e9fa96db0d5d25daa8273"
+      "bytes": 120538,
+      "sha256": "6f70b5b4fe93f087743a543c424efbc1301705b782f286cf4744566323f9c995"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p023.webp": {
-      "bytes": 17150,
-      "sha256": "c8bd846fb6d562eab94accd87ea2184b55515d9c5cdfeda261aa9e92cd7c4666"
+      "bytes": 11420,
+      "sha256": "ad5cd727dce4bb98ca31cb3909aa94fb439e52df3db48220cffb5fd9c6dfc6ec"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l01-p024.webp": {
-      "bytes": 315602,
-      "sha256": "4f95af084f8e3cfe7f705c4ebedf5fd5edb84c9f61430e8cc8fc7908c356a8e3"
+      "bytes": 120224,
+      "sha256": "cefeca1166b6233e2cc4c90751afe1cf3daa854af3505ab15550c8a9487a1161"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l01-p024.webp": {
-      "bytes": 16958,
-      "sha256": "cc5796170c1637d0b5322a77740c9429abd4a7d5fd28ed002756363a9258c4c5"
+      "bytes": 11320,
+      "sha256": "cba3d5cafc087ff79584b6298f09a84f2545932a5b9ef457987f191e4e6d4f5c"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p001.webp": {
-      "bytes": 354248,
-      "sha256": "50669b82e23203c55640b39d3477908dccfc12d426f378bd3cd488e57e3ca5a7"
+      "bytes": 120968,
+      "sha256": "77893b189ee73dfb889820e4d205a0beca31151491aaa2913894a430000eb579"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p001.webp": {
-      "bytes": 18308,
-      "sha256": "8e821f167a3373c6af62d232de4cbc4ef38fd0dca179cf66b298c03c76bda1c5"
+      "bytes": 11378,
+      "sha256": "d150570a7865cddb03912654106e3fc02b61427b578577b17e92ef237a88dd75"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p002.webp": {
-      "bytes": 364240,
-      "sha256": "9ac5368a1a3ce75f42778b413d4d234606073e6382830b5f8c4846878f822850"
+      "bytes": 139908,
+      "sha256": "cf686a265a26aeb8eeeae653fef00c7fa89e1e6ae3bac17892910677288e8677"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p002.webp": {
-      "bytes": 18740,
-      "sha256": "c7f932978e9f76ed6eefb14490002a68a69d04af2ca1f41a52e9ab9b1b19d9af"
+      "bytes": 12038,
+      "sha256": "02e8a814068f699b928e159eb6a579b982a9a471a869321abd9028e3d6c39af8"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p003.webp": {
-      "bytes": 342966,
-      "sha256": "96b40c9ff9de76216f8a8818f0c1e93ddc47239ea22054e652be3a382f7c0eb6"
+      "bytes": 120194,
+      "sha256": "30bd5adc1c827459b2852a04d2e0493b3305d4a0d7764dadc8a6f780e43ee509"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p003.webp": {
-      "bytes": 17702,
-      "sha256": "04693bacba18157b210452b410dbaa4f2750a6f9eadc2809583c14e8e43a4982"
+      "bytes": 11332,
+      "sha256": "75ad6d36f4265cc06647588898290ffc561a18bc1a9036c60506cb70cebf036f"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p004.webp": {
-      "bytes": 363314,
-      "sha256": "e89b5c9749b7506ee5d5db08f4bd01de3c7e43781cd8ca024d00cb3928c627fd"
+      "bytes": 120406,
+      "sha256": "cb03486ff23623decb4c51c3a33674625b1a9cf2dcd8a7457f5ba1532ec1de23"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p004.webp": {
-      "bytes": 18232,
-      "sha256": "7fdf25dc3fa3b694fbe1e21d01f72b8522ba47355617efe7ef20b0e3e7d9e260"
+      "bytes": 11360,
+      "sha256": "e33dcaec65b7c68a012991ca9c515fca4b55702fcd144782870b8c17e30fade5"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p005.webp": {
-      "bytes": 348818,
-      "sha256": "6b1df6ae62b1b1bbbb145795e2424a8fd27cb81c8510f6a1e498d6896697bffa"
+      "bytes": 120592,
+      "sha256": "356fcae07fe759ed8e92165fa611be29e4506570fe196ae7d80cca294b49a865"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p005.webp": {
-      "bytes": 15860,
-      "sha256": "fb10a6ed1ef8066876bdd3c9d0cc68f41deefd1b3dc5064904e04dc27598f672"
+      "bytes": 11432,
+      "sha256": "49380a775ea046ae7a45768c0e089d192784fa43f1561b8745e5e3e53661174a"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p006.webp": {
-      "bytes": 308788,
-      "sha256": "e82d44dc301e98792e9d1d1e47f516f1c4a6bef7ddb91c4880c165bfea4a4ce2"
+      "bytes": 127950,
+      "sha256": "15faeaba57cf0dda974b6e356794c482ce150ec854131aa887d4c24bf95d8f86"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p006.webp": {
-      "bytes": 17428,
-      "sha256": "b30cc47377a8acd5bc4a707dff508910d232b97ad8e1d8dfddec08b94f968712"
+      "bytes": 11296,
+      "sha256": "9c7e789b4bbe3df6843fdb66d5d0ef441c47c016a99b0b6ea71199e5bbcbf94f"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p007.webp": {
-      "bytes": 295128,
-      "sha256": "e09daecb201bc13360c8a82318dd7a28e9251699f5cb18e369a7f5dde0a50215"
+      "bytes": 128270,
+      "sha256": "b66919287baf96238f997eeca8a99047a5a94b610d133187a3d9488fd14708d2"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p007.webp": {
-      "bytes": 18828,
-      "sha256": "41a86b029656a2bb13ff65c44f0c7a213a2825fe0b8d3c7116530d69930d7679"
+      "bytes": 11094,
+      "sha256": "ffc3c28a09c11fd5655d2e266f39c71fc23f1a77197b1d2e35417de3d85a557e"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p008.webp": {
-      "bytes": 327212,
-      "sha256": "74985b34c4178f570724cbd8fde72464dd5cc21b7d49f3ffcf9d587f9b515d50"
+      "bytes": 127926,
+      "sha256": "b8e1bb63d801631fa1dae6b4e9166e349e7c273c8ea153785de8d9a686dd51e5"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p008.webp": {
-      "bytes": 16076,
-      "sha256": "ae6a907e301f4f9f9debb9aabec9e3a53277f3d2a79ada6d584d04c9a9a8cfca"
+      "bytes": 11320,
+      "sha256": "035d0f856d568fe5fdc119e1d8efdecb2486584bd9447245d7d4b8e17709ea71"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p009.webp": {
-      "bytes": 337778,
-      "sha256": "a85465081d2d6c7ca11fb6c28579a58dea8e88fbbb5f199b03ca7715bbdf5c36"
+      "bytes": 128198,
+      "sha256": "536ef1221ee2f501a10db39332d7526560538d5c20083c5b21c26c987d7c72e4"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p009.webp": {
-      "bytes": 21632,
-      "sha256": "6e20a635516e2efef424d2e5b64f60ccd5b4137e997c721b9f7069f4922398b9"
+      "bytes": 11138,
+      "sha256": "3f81d5ef9a90fc2a6efac1dd38e344962b6e37e8a71f5ab20ba8ebee6511a017"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p010.webp": {
-      "bytes": 351482,
-      "sha256": "3b991bf2ba9db531060878483df0609554e55971480eca219454a1abfadd484a"
+      "bytes": 127600,
+      "sha256": "988005074e1b9975f06a5f8702913a652fbfff14ee1ae6045629fcf7c702564e"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p010.webp": {
-      "bytes": 16576,
-      "sha256": "10ceceea16ce834d3106caa6d7574d21d24370f409093c65865a8f83a63c60c0"
+      "bytes": 11054,
+      "sha256": "b0a81ba9d0b700b0a871c56a85dfb4a69ddfbeca795304210d1045c8ffabc81d"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p011.webp": {
-      "bytes": 262266,
-      "sha256": "3d56e1d49401e3ff4b3aaa86acc7f49ec4955c2cce13c9e12359c2092a47f01e"
+      "bytes": 140214,
+      "sha256": "2e8ca40989654bb88014e06aa3660bb512a7d835e0d20535d546552883b13da1"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p011.webp": {
-      "bytes": 14980,
-      "sha256": "51c6c975dc9587ddb79280062961f5664cefa847a2029eaa5ca760a1ae5b9c25"
+      "bytes": 11936,
+      "sha256": "9c614d75cca770f68a3e10c7d1ac18676b7dd4acbbccb25c1cd8ce372f3ed458"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p012.webp": {
-      "bytes": 313038,
-      "sha256": "a9840ca57016915dab6c6f2cbf0f5a2255c6f33bb339fd7143e8ca46b2e67841"
+      "bytes": 139702,
+      "sha256": "d1da1de138667c18521364a4521d74796dda3214a71f3b99d78fc1bf2b2a3de2"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p012.webp": {
-      "bytes": 19230,
-      "sha256": "f2e2c7e2ae990dcbc0e254306824f01b6b1040173ec37689f40e96718160ee3e"
+      "bytes": 12082,
+      "sha256": "70444c30308af8f2711535595beb03d7b1a7c8667b3b53e7b26fe17422924500"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p013.webp": {
-      "bytes": 259180,
-      "sha256": "00b36fe742a88b870b84e209c3df01db34a23064fa97670a652d36c2ff4d87c8"
+      "bytes": 140090,
+      "sha256": "c5b779accf01ef2435bc1c6aa6205b8f25db03de4196514a4b6922a17dd001f5"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p013.webp": {
-      "bytes": 15124,
-      "sha256": "8b07e42467d1d92dac3889367d8647d76df52e6bac16679bbf61490244d145f8"
+      "bytes": 12034,
+      "sha256": "f8cc7ed5735a1a92283ecba04a4b5a3f0348b506e5a094df86f6bb3694d40cae"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p014.webp": {
-      "bytes": 260630,
-      "sha256": "f52bc6f741666b57c21824895188c06983363eaf4a171c4e4e4017abbb72b8f9"
+      "bytes": 139176,
+      "sha256": "a2c4d42f68b00d7c4c123d3332027e7a10d06dfe81fdc32ca42855d4dffd476c"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p014.webp": {
-      "bytes": 13146,
-      "sha256": "4f52411b2780482caf40211f7890ff0b4d52cf9a6b3a0666e2b5144e89a979bc"
+      "bytes": 12102,
+      "sha256": "4f15dd727f3ffe7724354a12df32ff66fedebb2bda6812a64d875d9be5d55403"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p015.webp": {
-      "bytes": 285948,
-      "sha256": "9ac95db8cb99266d3b3c2e51efb370f6bb7ad1a43e4ebb8412cd98b6b516ce99"
+      "bytes": 139634,
+      "sha256": "52b3fe4056fc724c617d4f4ec724e2d4446ca4cb07ccb2fef9632d2a4eb9e25b"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p015.webp": {
-      "bytes": 12810,
-      "sha256": "e2a62f794952c892c1190e10e3a0a074c2c92bbc902dd58d9bc4ed6f1ceb976e"
+      "bytes": 12172,
+      "sha256": "747ac0ffa408a4b31b6c12085b23449851b8fb4be962fec2d5703f7162df84ce"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p016.webp": {
-      "bytes": 253830,
-      "sha256": "d3d1e3271fa7486b96f7b13262d0e6b911188435ec01edf6fc9264cfd888bd76"
+      "bytes": 140270,
+      "sha256": "0032b9b42c5dd1daf51892959ca274fae00a7c80ce02ec0f50d227d7459f862b"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p016.webp": {
-      "bytes": 15450,
-      "sha256": "97c34b2014cce2ee05b84c90709c6701e14d361d9a99dd00c50453071af9bb3f"
+      "bytes": 12044,
+      "sha256": "d3e64427dda02c527f173906514c897271bb0ed78ec8edb901b901298823cfc5"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p017.webp": {
-      "bytes": 301326,
-      "sha256": "1312dc3b17d486fafa1f05c269d261b6279d9f45d39160a9fa4ddb5030892ab5"
+      "bytes": 190800,
+      "sha256": "e09985c3cb67a2f7b158e7bd34f86e6f75513f99b7406d65f264409d67a4f64e"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p017.webp": {
-      "bytes": 14238,
-      "sha256": "f83a69e4c8a42afd1f11a1b151c6f40c50e2d05835baf4d71a9652952aa58495"
+      "bytes": 13232,
+      "sha256": "14f7479268219baf6f5dc08166c87a25d4479e70acae8bd2891a714f2a4a024a"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p018.webp": {
-      "bytes": 282770,
-      "sha256": "38973588230f409cfc4fc54928449108934334d173dfc7ef26ea2922a011af3a"
+      "bytes": 191618,
+      "sha256": "63cb696866cfc074645f077fdaf5ebe2fa1e6f44838be0a628be4a7f2b11efd7"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p018.webp": {
-      "bytes": 19022,
-      "sha256": "c315180a8c7349628da5a8a18b9c8bbea45c413bb5c3b62e24f9af1f5e3ada47"
+      "bytes": 13246,
+      "sha256": "bbca30085abe4d9926c08410e40766095cd0165d4dab09866dddd407bf029ae8"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p019.webp": {
-      "bytes": 273000,
-      "sha256": "2524c33fbf7a5da75570e38b131a8319801ab00fa46922ad86a212f190a969c0"
+      "bytes": 190914,
+      "sha256": "8f8e09f6b3dfcd31c721b0b86d5adca93b54a962f9d99d02eacb6eefb36d2996"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p019.webp": {
-      "bytes": 14804,
-      "sha256": "84a587705fbe94d205db4ed034917d126b6eb8326ee6840a043313ac829c99b4"
+      "bytes": 13078,
+      "sha256": "8d15dad2208315efc41421c9dca7b99f85bb3dae48c6121b0fa090e2decd6e1e"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p020.webp": {
-      "bytes": 300594,
-      "sha256": "eb412278dace19979e6c6e802df932a6c663a80e8edbdb994ad9fd2e0587ac6d"
+      "bytes": 190880,
+      "sha256": "48e451db2d7f207510a5287eb71938c655967e7de85e99cfe3c1c7d3ecdc6a3c"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p020.webp": {
-      "bytes": 14530,
-      "sha256": "ffce924599cd091af798676bf212026c5a90572782b48aa210d8de891d64256f"
+      "bytes": 13060,
+      "sha256": "faec46014d0f1f5a86a53a04d34c530e3a7ca2fac504cdd0c8709862c19b99dd"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p021.webp": {
-      "bytes": 304468,
-      "sha256": "e6bcb7646ebcdeb3d90138e562124f5449535cd0c5bc2b2f46df608c7e70ebf1"
+      "bytes": 190894,
+      "sha256": "8d1b1519ce1c819701b157e38fc90a964757bfb42cf12dd33bf3ace276bb57b8"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p021.webp": {
-      "bytes": 15208,
-      "sha256": "ad7ba6f652ad6525ecf64a15cd9d5a2539ef5a9fb94f3995ce7ead6f2e98f39a"
+      "bytes": 13302,
+      "sha256": "9fe84c071fb02208802e0c90befc3102acac3428ed7274fdd99e7019d8398918"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p022.webp": {
-      "bytes": 293150,
-      "sha256": "5a663e6cffdfde1bfc9f0a202da61a29b7ea37e19985e477208232405ad6eee3"
+      "bytes": 120482,
+      "sha256": "ac072e8170134c6ad7ce5e04d595019f07255e92814e74c533b86d34ff6e1748"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p022.webp": {
-      "bytes": 17350,
-      "sha256": "540f3e9b1ab4ff531e8caceed2528395a43af9d156ab318483bb44f54f9d2e19"
+      "bytes": 11294,
+      "sha256": "182014e22c9008f53481ddf966c1c01f0b9eb444bdb193a6ef4281612c7f65df"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p023.webp": {
-      "bytes": 237726,
-      "sha256": "7b4210617db0ed806ac86c6e8b2b6a121166f455e0787a0e2e27d1b1068be84f"
+      "bytes": 120120,
+      "sha256": "96ae1ba11510a29d2ab0f94c715b8359a6b5f6d5b05bacbe625dd5b388b272c1"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p023.webp": {
-      "bytes": 11952,
-      "sha256": "0c38b6a801b2b9504862520a44f419db488d24d60ea7948e1951f68d30da338b"
+      "bytes": 11412,
+      "sha256": "0ccb396596b053ce88d98475ccf129daf54bbebd96e0fa93d55f86d8ae683c79"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p024.webp": {
-      "bytes": 287958,
-      "sha256": "22d34319da9b62d3a506f8856e29e0ad06fc0c2f1734b05470f62b9e7c80bf98"
+      "bytes": 120062,
+      "sha256": "07357d9d22bdb9a610a40c70e6e8f498dd59616dc18aba9ddd24237da595e39d"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p024.webp": {
-      "bytes": 11432,
-      "sha256": "a592a5600a2fb31ae3b67d4429b212d21552cfb2bb63a38342f87c6a78b59030"
+      "bytes": 11300,
+      "sha256": "49240d8fe275a1967174e53c790eadda32566bf7e37b792c564cc1c3cc3a0d7a"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p025.webp": {
-      "bytes": 289806,
-      "sha256": "880bfed391ba5458e97e0788ecb3e4c34cba925075dcea65b2d4bd861161d314"
+      "bytes": 120748,
+      "sha256": "d8853193548e1a7e683cc88fdb1f77161b72cfe30809f44eb63b299e0c97c7ef"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p025.webp": {
-      "bytes": 12046,
-      "sha256": "24abbebd7570c3fa74fdc168d41f690ce7751fe357743ef046c5afd8c86b34a2"
+      "bytes": 11238,
+      "sha256": "5f9df917f425fdc4d628cc0d037d3a45f6f62da4268000ebd2049d07baa5703d"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p026.webp": {
-      "bytes": 263156,
-      "sha256": "28e7bc5edab93f43032747a93fb73b1d97537de0b2045addf962ca3739f3eeed"
+      "bytes": 140466,
+      "sha256": "0dae5e7655792190324e533ba36b5d998a1534384e65de0e33d3fd072f34ddf6"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p026.webp": {
-      "bytes": 11438,
-      "sha256": "5330b12c60781f7885d545a999075c90e58eeaff0099f9f10f33666e7a8e71bc"
+      "bytes": 12062,
+      "sha256": "1c226b09e97ca76fcaf8d1091f2c7b78797afb3d6a33372ece8b2826031b5700"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p027.webp": {
-      "bytes": 241546,
-      "sha256": "e4ea4a7ee83dfc7458d4afd6eb49ccd26f77b002f1602dcd909882e7752e0f6b"
+      "bytes": 120706,
+      "sha256": "8b1ff214a176dd8d9ec05065fddf2ad5f9585ba4e5fe71cfa11c12bb5faf7a87"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p027.webp": {
-      "bytes": 12982,
-      "sha256": "c876f7478208b18a569e3474538df45c64bd85f4c992ea956477b9cc092449a6"
+      "bytes": 11452,
+      "sha256": "0cef3eaaef4f5da1c9728f08bc5900e1f2db33efee705bb1a2c8ba6da7b2d5cc"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p028.webp": {
-      "bytes": 292376,
-      "sha256": "294c3eca49617816db73a025ebbd47e221a1e7d596366c5c810b2352825973e2"
+      "bytes": 120210,
+      "sha256": "2dcd8b11b3e29dae03c916ef268f4ec13360a9722bc495a666822d41cd622dd6"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p028.webp": {
-      "bytes": 13966,
-      "sha256": "091570b3c22470e90eda6250da36aed26ef4e09351c63a4635a9e1123a614285"
+      "bytes": 11336,
+      "sha256": "d16289b572553dcfb0fdce7c27f9d9aeab56460c9453ef65474b8df7caf3503a"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p029.webp": {
-      "bytes": 320344,
-      "sha256": "ca2d913445b4ac4a1e011c7040a35f26516fa66868ced73ff4b318d69167a3d1"
+      "bytes": 120410,
+      "sha256": "d351b77fa7a1cc21ddf82d1826fb15ba16a200a44b9fb1c5c97a5c070046c83a"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p029.webp": {
-      "bytes": 16014,
-      "sha256": "fc7ed502f7228bd73e035640346fc814bfc0b14227d49a86e32ddea3c9eea0a2"
+      "bytes": 11362,
+      "sha256": "d58cedf4708ef27ec5e9e94103937ea9406655f10933fa765fdf7ecda4fa0e3d"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p030.webp": {
-      "bytes": 396930,
-      "sha256": "2f6a877cb26288b254fd654ec443e9d5f67da7e53dc3e17c85456a9f1eb5b105"
+      "bytes": 128394,
+      "sha256": "e3f4e1d89ba455f173a6a0bfe43952ee4a347b602c8e9027cece50942436b7da"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p030.webp": {
-      "bytes": 24036,
-      "sha256": "90a8a26bf4b8a2991cb1c8c5a968cb8c9faca3bf3136d96b4aec0d365158ea12"
+      "bytes": 11238,
+      "sha256": "87b128d6f9d153594a5f409d29fa63f583a0809cb2fae92f8f4112cf9a917aae"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p031.webp": {
-      "bytes": 306726,
-      "sha256": "02a0901c66480bef870a01dc1ff0a0e8dd32b55f0044728ba3dfa5050de6ebd5"
+      "bytes": 128012,
+      "sha256": "f2427195b3e47b21049189384324b4a0b2e5540eb73e4fa2d4245646b7448ac2"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p031.webp": {
-      "bytes": 17200,
-      "sha256": "7710cfc6723d9a923c1ca8b7ae9e3c452aa8acb0d3ac7e98a379b0d87ce261bc"
+      "bytes": 11234,
+      "sha256": "2e2f4eafbe1130d63bfc30ba0d378f21c06500b8aa6ac7fa841ef15c00eeb211"
     },
     "assets/worlds/core-expansion-v1/maps/new-lands-l02-p032.webp": {
-      "bytes": 339630,
-      "sha256": "f00b292709875b0aa82fccfdb44d1f84f871f9d09157a873afd80639304f1600"
+      "bytes": 127914,
+      "sha256": "99d667e452aa6a088e007eec139b029baf2f44faf72010460f5c83044cd5b2df"
     },
     "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p032.webp": {
-      "bytes": 18940,
-      "sha256": "58f036ec184fc8bf43cdf6c91d33188902ac19aec776ed5e86c3ff67c1082c3d"
+      "bytes": 11204,
+      "sha256": "55b6e78efe25aa9e1cc5da94f27b5dcf8cf9a969c34f41e419b9c4f01ffff6b5"
     }
   },
-  "assetVersion": "13ac3fe62ecd"
+  "assetVersion": "2d0983ce5812"
 }

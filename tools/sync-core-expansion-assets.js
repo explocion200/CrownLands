@@ -35,7 +35,11 @@ function readJson(filePath) {
 function createAssetReceipt(catalog) {
   const relativePaths = new Set();
   for (const region of Array.isArray(catalog.regions) ? catalog.regions : []) {
-    for (const source of [region.mapAsset, region.thumbnailAsset]) {
+    const presentation = region.artPresentation || {};
+    for (const source of [region.mapAsset, region.thumbnailAsset,
+      ...(presentation.scenery || []).map(item => item.asset),
+      ...(presentation.landmarks || []).map(item => item.asset),
+      ...Object.values(catalog.mapPresentation?.cityStageAssets || {})]) {
       const relativePath = String(source || "").trim();
       if (!relativePath.startsWith("assets/worlds/core-expansion-v1/")) {
         throw new Error(`${region.id || "Unknown region"} has an invalid Core-expansion asset path.`);
