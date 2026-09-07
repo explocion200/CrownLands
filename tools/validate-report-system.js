@@ -359,4 +359,52 @@ assert.match(client, /function updateScoutReportLifecycle[\s\S]*?delete modal\.d
 assert.match(client, /function normalizeBattleReports[\s\S]*?historyExpiresAtMs && historyExpiresAtMs <= nowMs\) return;/, "Expired reports are not removed from the Reports list.");
 assert.match(server, /function cleanupExpiredReportDocuments[\s\S]*?reportDeletions[\s\S]*?battleSnapshotDeletions/, "Expired report documents and detailed battle snapshots are not cleaned.");
 
+const historySandbox = {
+  BATTLE_REPORT_RETENTION_MS: 24 * 60 * 60 * 1000,
+  LEGACY_SCOUT_REPORT_SECONDS: 120,
+  WORLD_CAMPS_BY_ID: new Map(),
+  getKnownCityId: value => value,
+  getCityRegionId: () => "",
+  normalizeRegionId: value => value,
+  clampCityLevel: value => value,
+};
+for (const name of [
+  "normalizeDefenderScoutDisclosure", "normalizeLevelUpRewardReceipt", "normalizeCampReportReward",
+  "normalizeBattleCasualtyRecovery", "normalizeBattleGearEffects", "normalizeCombatFortificationSnapshot",
+  "normalizeAttackProtectionSnapshot", "normalizeCombatForecast",
+]) historySandbox[name] = value => value || null;
+vm.createContext(historySandbox);
+for (const name of [
+  "normalizeTimestampMs", "isSuccessfulScoutIntelBattleReport", "getScoutBattleReportExpiresAtMs",
+  "getBattleReportRevisionMs", "getBattleReportOccurredAtMs", "getBattleReportHistoryExpiresAtMs",
+  "normalizeBattleReports", "compareBattleReportsNewestFirst",
+]) vm.runInContext(functionBody(client, name), historySandbox);
+const historyNowMs = Date.now();
+const descendingHistory = Array.from({ length: 120 }, (_, index) => ({
+  id: `history-${120 - index}`,
+  type: "attack",
+  cityId: "history-city",
+  occurredAtMs: historyNowMs - (index + 1) * 1000,
+}));
+const latestReport = { id: "latest", type: "defense", cityId: "history-city", occurredAtMs: historyNowMs };
+for (const incomingHistory of [descendingHistory, [...descendingHistory].reverse()]) {
+  const loadedHistory = historySandbox.normalizeBattleReports(incomingHistory);
+  const retainedHistory = historySandbox.normalizeBattleReports([...loadedHistory, latestReport]);
+  assert.equal(retainedHistory.length, 120, "Report history exceeded its existing capacity.");
+  assert.ok(retainedHistory.some(report => report.id === "latest"), "A new arrival was dropped.");
+  assert.ok(retainedHistory.some(report => report.id === "history-120"), "A new arrival evicted the newest previous report.");
+  assert.ok(!retainedHistory.some(report => report.id === "history-1"), "History retained the oldest report at capacity.");
+}
+const refreshedScout = {
+  id: "current-scout", type: "scout", cityId: "scout-city", occurredAtMs: historyNowMs,
+  scoutReport: { expiresAtMs: historyNowMs + 600_000 },
+};
+const replacedScoutHistory = historySandbox.normalizeBattleReports([
+  { ...refreshedScout, occurredAtMs: historyNowMs - 60_000 },
+  ...descendingHistory,
+  refreshedScout,
+]);
+assert.equal(replacedScoutHistory.filter(report => report.id === "current-scout").length, 1, "Scout replacement duplicated or dropped current intelligence at capacity.");
+assert.equal(replacedScoutHistory.find(report => report.id === "current-scout").occurredAtMs, historyNowMs, "Scout replacement retained stale intelligence.");
+
 console.log("Validated server-timed unread Reports, heraldic side comparisons, bonus separation, wall outcomes, and bounded report history.");
