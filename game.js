@@ -1195,7 +1195,7 @@ const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const KING_POWER_AUTHORITY_VERSION = 11;
-const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
+const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
@@ -25765,6 +25765,14 @@ function renderProfileScreen() {
   updatePushAlertsUi();
 }
 
+function getSkillPresetApplyCost() {
+  return Math.max(0, Math.ceil(getShopPricingContext().rawBaseGoldPerHour * SKILL_PRESET_APPLY_HOURS));
+}
+
+function canAffordSkillPreset(cost = getSkillPresetApplyCost()) {
+  return Math.floor(Number(state?.gold) || 0) >= cost;
+}
+
 function getSkillPresetSlot(slot = selectedSkillPresetSlot) {
   const presets = normalizeSkillPresets(state?.skillPresets);
   const requestedSlot = Math.floor(Number(slot) || 0);
@@ -25806,6 +25814,7 @@ function getSkillPresetEditorStatus(slot = null, presets = normalizeSkillPresets
 }
 
 function renderSkillPresetPanel() {
+  const applyCost = getSkillPresetApplyCost();
   const level = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
   const presets = normalizeSkillPresets(state?.skillPresets);
   state.skillPresets = presets;
@@ -25864,11 +25873,11 @@ function renderSkillPresetPanel() {
         ${!unlocked
           ? `<p class="skill-preset-locked-copy">Reach Hero Level ${selected.unlockLevel} to name, edit, save, and apply this preset.</p>`
           : `${valid
-              ? `<p class="skill-preset-points">This draft assigns ${formatNumber(getSpentSkillPoints(draft.upgrades))} points and leaves ${formatNumber(remainingAfterApply)} unspent.${dirty ? " Save these changes before applying." : selected.saved ? ` Applying costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold.` : " Assign points below, then save the preset."}</p>`
+              ? `<p class="skill-preset-points">This draft assigns ${formatNumber(getSpentSkillPoints(draft.upgrades))} points and leaves ${formatNumber(remainingAfterApply)} unspent.${dirty ? " Save these changes before applying." : selected.saved ? ` Applying costs ${formatNumber(applyCost)} gold (1h of base gold production).` : " Assign points below, then save the preset."}</p>`
               : `<p class="skill-preset-error">This draft exceeds the current skill limits or earned-point budget. Remove points before saving.</p>`}
             <footer>
               <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked || !valid || (selected.saved && !dirty) ? "disabled" : ""}>Save Preset</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || dirty || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply · ${formatNumber(applyCost)}</button>
             </footer>`}
       </article>`}
     </section>`;
@@ -25915,6 +25924,8 @@ function getSkillPresetMarkupSignature() {
   return JSON.stringify({
     level: Math.max(1, Math.floor(Number(state?.character?.level) || 1)),
     selectedSkillPresetSlot,
+    applyCost: getSkillPresetApplyCost(),
+    canAfford: canAffordSkillPreset(),
     controlsBlocked: skillActionInFlight || isSkillSpendSyncing(),
     presets,
     liveAllocation: normalizeSkillPresetAllocation(state?.upgrades),
@@ -25935,7 +25946,7 @@ function updateSkillPresetDraftActionState() {
   const applyButton = skillsView.querySelector("[data-apply-skill-preset]");
   const status = getSkillPresetEditorStatus(slot, presets, draft);
   if (saveButton) saveButton.disabled = blocked || !valid || (slot.saved && !dirty);
-  if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid;
+  if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid || !canAffordSkillPreset();
   setTextIfChanged(skillsView.querySelector("[data-skill-preset-status]"), status);
   setTextIfChanged(skillsView.querySelector(`[data-skill-preset-tab-status="${slot.slot}"]`), dirty
     ? presets.activeSlot === slot.slot ? "Active · Unsaved" : "Unsaved"
@@ -34982,6 +34993,7 @@ function skillRow(key) {
 }
 
 function confirmSkillPresetAction(slotNumber = 0) {
+  const applyCost = getSkillPresetApplyCost();
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot) return Promise.resolve(false);
   modal.classList.add("skill-preset-confirmation-modal");
@@ -34992,11 +35004,11 @@ function confirmSkillPresetAction(slotNumber = 0) {
         <small>Preset ${slot.slot}</small>
         <h3>${escapeHtml(slot.name)}</h3>
       </div>
-      <p>Every preset application costs <strong>${formatNumber(SKILL_PRESET_APPLY_COST)} gold</strong>, including an active or identical build. Additional earned points remain unspent.</p>
+      <p>Every preset application costs <strong>${formatNumber(applyCost)} gold</strong> (1h of base gold production), including an active or identical build. Additional earned points remain unspent.</p>
       ${renderSkillPresetAllocation(slot.upgrades)}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
-        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">Apply for ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
+        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">Apply for ${formatNumber(applyCost)}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -35155,16 +35167,21 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast("This preset is no longer valid. Save the current build again.");
     return false;
   }
-  if (!usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_PRESET_APPLY_COST) {
-    showToast(`Applying a skill preset costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold.`);
+  const applyCost = getSkillPresetApplyCost();
+  if (!canAffordSkillPreset(applyCost)) {
+    showToast(`Applying a skill preset costs ${formatNumber(applyCost)} gold.`);
     return false;
   }
   if (!await confirmSkillPresetAction(slot.slot)) return false;
+  if (!canAffordSkillPreset()) {
+    showToast(`Applying a skill preset costs ${formatNumber(getSkillPresetApplyCost())} gold.`);
+    return false;
+  }
   const api = getOnlineApi();
   skillActionInFlight = true;
   renderProfileSkills();
   try {
-    let goldCharged = SKILL_PRESET_APPLY_COST;
+    let goldCharged = getSkillPresetApplyCost();
     if (usesServerEconomyAuthority()) {
       if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
       const result = await api.applySkillPreset({ slot: slot.slot });

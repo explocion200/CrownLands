@@ -737,7 +737,7 @@ const SKILL_ORDER = [
 const SKILL_FINAL_DOUBLE_COST_LEVELS = 5;
 const SKILL_STANDARD_POINT_COST = 1;
 const SKILL_FINAL_POINT_COST = 2;
-const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
+const SKILL_PRESET_APPLY_HOURS = economyNumber("playerCosts.skillPresetApplyHours", 1);
 const SKILL_FREE_RESET_GRANT_VERSION = 2;
 const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
@@ -16463,11 +16463,12 @@ exports.applySkillPreset = timedCallable(
       const upgrades = normalizeSkillPresetAllocation(selected.upgrades);
       const changed = !skillPresetAllocationsMatch(currentUpgrades, upgrades);
       const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
-      if (economy.gold < SKILL_PRESET_APPLY_COST) {
-        throw new HttpsError("failed-precondition", `Applying a skill preset costs ${SKILL_PRESET_APPLY_COST.toLocaleString()} gold.`);
+      const applyCost = Math.max(0, Math.ceil(getShopPricingContext(economy).rawBaseGoldPerHour * SKILL_PRESET_APPLY_HOURS));
+      if (economy.gold < applyCost) {
+        throw new HttpsError("failed-precondition", `Applying a skill preset costs ${applyCost.toLocaleString()} gold.`);
       }
       const character = reconcileSkillPoints(currentCharacter, upgrades);
-      const gold = Math.max(0, economy.gold - SKILL_PRESET_APPLY_COST);
+      const gold = Math.max(0, economy.gold - applyCost);
       const skillPresets = setActiveSkillPresetSlot(currentPresets, definition.slot);
       writePreparedEconomy(transaction, economy, {
         character,
@@ -16488,7 +16489,7 @@ exports.applySkillPreset = timedCallable(
           slot: definition.slot,
           name: selected.name,
           changed,
-          goldCharged: SKILL_PRESET_APPLY_COST,
+          goldCharged: applyCost,
           freeResetConsumed: false,
           freeSkillResetCredits,
           allocation: upgrades,

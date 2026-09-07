@@ -1412,7 +1412,7 @@
           ${economyNumberInput("playerCosts.nearbyScoutGold", "Scout nearby cost (gold)", economy.playerCosts.nearbyScoutGold)}
           ${economyNumberInput("playerCosts.regroupGold", "Regroup cost (gold)", economy.playerCosts.regroupGold)}
           ${economyNumberInput("playerCosts.skillResetGold", "Reset skills cost (gold)", economy.playerCosts.skillResetGold)}
-          ${economyNumberInput("playerCosts.skillPresetApplyGold", "Apply skill preset cost (gold)", economy.playerCosts.skillPresetApplyGold)}
+          ${economyNumberInput("playerCosts.skillPresetApplyHours", "Apply skill preset cost (hours of base gold)", economy.playerCosts.skillPresetApplyHours)}
         </div>
       </section>
       <section class="economy-section wide">

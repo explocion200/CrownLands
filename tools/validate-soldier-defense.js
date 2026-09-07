@@ -127,7 +127,7 @@ assert.match(server, /personalObjectiveBonusPower[\s\S]*?sharedClanBonusPower/);
 assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 5;/);
 assert.match(server, /const SKILL_FREE_RESET_GRANT_VERSION = 2;/);
 assert.match(server, /function normalizeFreeSkillResetState[\s\S]*?createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS/);
-assert.match(server, /goldCharged: SKILL_PRESET_APPLY_COST[\s\S]*?freeResetConsumed: false/);
+assert.match(server, /goldCharged: applyCost[\s\S]*?freeResetConsumed: false/);
 assert.match(server, /freeResetConsumed = false[\s\S]*?resetCost = 0[\s\S]*?freeSkillResetCreditsAfter = freeSkillResetCredits/);
 assert.match(client, /Shieldwall Discipline/);
 

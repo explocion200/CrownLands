@@ -255,7 +255,7 @@
     "nearbyScoutGold": 250000,
     "regroupGold": 250000,
     "skillResetGold": 0,
-    "skillPresetApplyGold": 1000000
+    "skillPresetApplyHours": 1
   },
   "skills": {
     "swordmastery": {

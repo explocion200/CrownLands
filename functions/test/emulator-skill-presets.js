@@ -229,23 +229,26 @@ async function main() {
   await callFunction("renameSkillPreset", user.token, { slot: 4, name: "Utility" });
   await callFunction("saveSkillPreset", user.token, { slot: 4, name: "Utility", upgrades: alternateBuild });
 
+  const pricing = await callFunction("collectEconomy", user.token);
+  const applyCost = Number(pricing.shopPricing.rawBaseGoldPerHour) * Number(economyConfig.playerCosts.skillPresetApplyHours);
+  assert(applyCost > 0 && applyCost < 1_000_000, "Fixture must exercise an hourly price below the old fixed price.");
   const duplicateApplies = await Promise.all([
     invokeFunction("applySkillPreset", user.token, { slot: 1 }),
     invokeFunction("applySkillPreset", user.token, { slot: 1 }),
   ]);
   assert(duplicateApplies.every(response => response.ok), `Duplicate apply requests failed: ${JSON.stringify(duplicateApplies)}`);
   const totalCharged = duplicateApplies.reduce((total, response) => total + Number(response.result?.skillPreset?.goldCharged || 0), 0);
-  assert(totalCharged === Number(economyConfig.playerCosts.skillPresetApplyGold) * 2, `Two accepted applications charged ${totalCharged} gold.`);
+  assert(totalCharged === applyCost * 2, `Two accepted applications charged ${totalCharged} gold.`);
   assert(duplicateApplies.filter(response => response.result?.skillPreset?.changed === true).length === 1, "Duplicate application changed the allocation more than once.");
   profile = (await profileRef.get()).data() || {};
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === savedBuild[skill]), "Applying did not restore the exact saved allocation.");
   assert(Number(profile.character?.skillPoints || 0) === 80, "Points earned after an earlier preset save were not left unspent at Level 100.");
-  assert(Number(profile.gold || 0) >= 2_000_000 && Number(profile.gold || 0) < 2_000_020, `Two applications charged the wrong gold amount (${profile.gold}).`);
+  assert(Number(profile.gold || 0) >= 4_000_000 - 2 * applyCost && Number(profile.gold || 0) < 4_000_020 - 2 * applyCost, `Two applications charged the wrong gold amount (${profile.gold}).`);
   assert(Number(profile.skillPresets?.activeSlot || 0) === 1, "Applying preset 1 did not make it the sole active preset.");
   const activeApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
-  assert(activeApply.skillPreset?.changed === false && activeApply.skillPreset?.goldCharged === Number(economyConfig.playerCosts.skillPresetApplyGold), "An already-active preset was not charged exactly once.");
+  assert(activeApply.skillPreset?.changed === false && activeApply.skillPreset?.goldCharged === applyCost, "An already-active preset was not charged exactly once.");
   const duplicateAllocationApply = await callFunction("applySkillPreset", user.token, { slot: 2 });
-  assert(duplicateAllocationApply.skillPreset?.changed === false && duplicateAllocationApply.skillPreset?.goldCharged === Number(economyConfig.playerCosts.skillPresetApplyGold), "An identical saved allocation was not charged exactly once.");
+  assert(duplicateAllocationApply.skillPreset?.changed === false && duplicateAllocationApply.skillPreset?.goldCharged === applyCost, "An identical saved allocation was not charged exactly once.");
   assert(Number(duplicateAllocationApply.currentUser?.skillPresets?.activeSlot || 0) === 2, "Applying an identical saved allocation did not move the sole active marker to the requested tab.");
   const editedActive = await callFunction("saveSkillPreset", user.token, { slot: 2, name: "Economy Revised", upgrades: alternateBuild });
   assert(Number(editedActive.currentUser?.skillPresets?.activeSlot || 0) === 2, "Saving changes to the active preset cleared its active identity.");
@@ -267,7 +270,7 @@ async function main() {
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 2_000_000 });
   const reactivated = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(Number(reactivated.currentUser?.skillPresets?.activeSlot || 0) === 1, "A matching allocation could not reactivate its preset.");
-  assert(Number(reactivated.skillPreset?.goldCharged || 0) === Number(economyConfig.playerCosts.skillPresetApplyGold), "A matching allocation was not charged.");
+  assert(Number(reactivated.skillPreset?.goldCharged || 0) === applyCost, "A matching allocation was not charged.");
   const batched = await callFunction("spendSkillPoints", user.token, {
     allocations: [
       { skillId: "guildCharters", points: 2 },
@@ -434,7 +437,7 @@ async function main() {
   assert(SKILL_ORDER.reduce((total, skill) => total + Number(profile.upgrades?.[skill] || 0), 0) === 5, "Concurrent skill batches partially or doubly spent points.");
   assert(Number(profile.character?.skillPoints || 0) === 0, "Concurrent skill batches left an incorrect available-point balance.");
 
-  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 999_999 });
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 0 });
   const beforeInsufficient = (await profileRef.get()).data() || {};
   assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An unaffordable preset applied");
   const afterInsufficient = (await profileRef.get()).data() || {};
