@@ -50,10 +50,14 @@
     activeSessionActivationBlockedUid: "",
     activeSessionSnapshot: null,
     activeSessionWatcherReady: false,
+    activeSessionWatcherGeneration: 0,
     activeSessionRetryTimer: 0,
     activeSessionRetryAtMs: 0,
     activeSessionRetryIndex: 0,
+    activeSessionError: null,
     sessionReplacementInFlight: false,
+    sessionReplacementPromise: null,
+    sessionReplacedUid: "",
     realmInfoPromise: null,
     installationRegisteredAtMs: 0,
     installationRegistrationPromise: null,
@@ -150,6 +154,7 @@
   }
 
   function stopActiveSessionWatcher() {
+    client.activeSessionWatcherGeneration += 1;
     if (typeof client.activeSessionUnsubscribe === "function") {
       client.activeSessionUnsubscribe();
     }
@@ -170,6 +175,7 @@
     client.activeSessionActivatedUid = "";
     client.activeSessionActivationBlockedUid = "";
     client.activeSessionSnapshot = null;
+    client.activeSessionError = null;
   }
 
   function getFirebaseErrorCode(error = null) {
@@ -186,42 +192,55 @@
     client.activeSessionRetryTimer = window.setTimeout(() => {
       client.activeSessionRetryTimer = 0;
       client.activeSessionRetryAtMs = 0;
-      activateCurrentSession("retry");
+      if (client.user?.uid === uid && !client.sessionReplacementInFlight && client.sessionReplacedUid !== uid) {
+        activateCurrentSession("retry").catch(error => console.warn("Session retry failed", error));
+      }
     }, delayMs);
   }
 
-  async function signOutForSessionReplacement(remoteSession = {}) {
-    if (client.sessionReplacementInFlight) return;
+  function signOutForSessionReplacement(remoteSession = {}) {
+    if (client.sessionReplacementInFlight) return client.sessionReplacementPromise;
     client.sessionReplacementInFlight = true;
     const replacedUser = client.user;
+    client.sessionReplacedUid = replacedUser?.uid || "";
     stopActiveSessionWatcher();
+    resetActiveSessionActivation("");
     dispatch("session-replaced", { user: replacedUser, activeSession: remoteSession });
-    try {
-      await clearActivePresence().catch(error => {
-        console.warn("Could not clear presence after session replacement", error);
-      });
-      await disablePushNotifications().catch(error => {
-        console.warn("Could not disable notifications after session replacement", error);
-      });
-      if (client.auth && client.modules?.auth?.signOut) {
-        await client.modules.auth.signOut(client.auth);
+    // Firebase LOCAL auth is shared by tabs. Signing it out here would also
+    // sign out the winning tab on this installation. Retire only this game
+    // client in that case; the server rejects its old session and retries.
+    const sameInstallation = remoteSession.installationId
+      && remoteSession.installationId === getGameInstallationId();
+    client.user = null;
+    dispatch("auth", { user: null, reason: "session-replaced" });
+    const replacementPromise = (async () => {
+      try {
+        if (!sameInstallation && client.auth && client.modules?.auth?.signOut) {
+          await client.modules.auth.signOut(client.auth);
+        }
+      } catch (error) {
+        console.warn("Could not sign out replaced session", error);
+      } finally {
+        client.sessionReplacementInFlight = false;
+        client.sessionReplacementPromise = null;
       }
-    } catch (error) {
-      console.warn("Could not sign out replaced session", error);
-    } finally {
-      client.user = null;
-      client.sessionReplacementInFlight = false;
-      dispatch("auth", { user: null, reason: "session-replaced" });
-    }
+    })();
+    client.sessionReplacementPromise = replacementPromise;
+    return replacementPromise;
   }
 
   function startActiveSessionWatcher(uid) {
     stopActiveSessionWatcher();
     if (!uid || !client.db || !client.modules?.firestore?.onSnapshot) return;
+    const generation = client.activeSessionActivationGeneration;
+    const watcherGeneration = client.activeSessionWatcherGeneration;
     const { doc, onSnapshot } = client.modules.firestore;
     client.activeSessionUnsubscribe = onSnapshot(
       doc(client.db, "players", uid),
+      { includeMetadataChanges: true },
       snapshot => {
+        if (generation !== client.activeSessionActivationGeneration || watcherGeneration !== client.activeSessionWatcherGeneration || client.user?.uid !== uid
+          || snapshot.metadata?.fromCache || snapshot.metadata?.hasPendingWrites) return;
         if (!snapshot.exists()) return;
         const profile = snapshot.data() || {};
         const isCurrentRealm = String(profile.resetGeneration || "") === RESET_GENERATION
@@ -247,11 +266,8 @@
           client.activeSessionWatcherReady = true;
           return;
         }
-        if (!client.activeSessionWatcherReady) {
-          const remoteLoginAtMs = timestampToMs(activeSession.loginAtMs);
-          const localLoginAtMs = timestampToMs(client.activeSessionSnapshot?.loginAtMs);
-          if (!remoteLoginAtMs || !localLoginAtMs || remoteLoginAtMs <= localLoginAtMs) return;
-        }
+        const localRevision = Number(client.activeSessionSnapshot?.revision) || 0;
+        if (Number(activeSession.revision) < localRevision || activeSession.version !== 2) return;
         signOutForSessionReplacement(activeSession);
       },
       error => {
@@ -263,7 +279,7 @@
   async function activateCurrentSession(reason = "login") {
     await init();
     const uid = requireSignedIn();
-    if (!uid) return null;
+    if (!uid || client.sessionReplacementInFlight || client.sessionReplacedUid === uid) return null;
     resetActiveSessionActivation(uid);
     if (client.activeSessionActivationBlockedUid === uid) return null;
     if (client.activeSessionActivatedUid === uid && client.activeSessionSnapshot) return client.activeSessionSnapshot;
@@ -271,36 +287,37 @@
     if (client.activeSessionActivationPromise) return client.activeSessionActivationPromise;
     const activationGeneration = client.activeSessionActivationGeneration;
     const activationPromise = (async () => {
-      const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-      const now = Date.now();
-      const activeSession = {
-        id: getActiveSessionId(),
-        device: getSessionDeviceLabel(),
-        reason: String(reason || "login").slice(0, 32),
-        userAgent: String(navigator.userAgent || "").slice(0, 180),
-        loginAtMs: now,
-        lastSeenAtMs: now,
-      };
       try {
-        await setDoc(doc(client.db, "players", uid), {
-          uid,
-          displayName: client.user?.displayName || "",
-          email: client.user?.email || "",
-          photoURL: client.user?.photoURL || "",
-          activeSession,
-          lastLoginAt: now,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        if (activationGeneration !== client.activeSessionActivationGeneration) return null;
+        await getRealmInfo();
+        if (activationGeneration !== client.activeSessionActivationGeneration || client.user?.uid !== uid) return null;
+        const result = await callServerFunction("joinGameServer", {
+          ...createGameServerPayload(),
+          activateSession: true,
+          device: getSessionDeviceLabel(),
+          installationId: getGameInstallationId(),
+          reason: String(reason || "login").slice(0, 32),
+        });
+        if (activationGeneration !== client.activeSessionActivationGeneration || client.user?.uid !== uid) return null;
+        if (result?.status === "session-replaced") {
+          await signOutForSessionReplacement(result.activeSession);
+          return null;
+        }
+        const activeSession = result?.activeSession;
+        if (result?.status !== "active" || activeSession?.id !== getActiveSessionId() || activeSession?.version !== 2) {
+          throw Object.assign(new Error("This device could not finish connecting. Try signing in again."), { code: "functions/unavailable" });
+        }
         client.activeSessionActivatedUid = uid;
         client.activeSessionSnapshot = activeSession;
+        client.activeSessionError = null;
         client.activeSessionRetryIndex = 0;
         client.activeSessionRetryAtMs = 0;
         startActiveSessionWatcher(uid);
+        dispatch("auth", { user: client.user, source: "session-ready" });
         return activeSession;
       } catch (error) {
         if (activationGeneration !== client.activeSessionActivationGeneration) return null;
-        if (getFirebaseErrorCode(error) === "permission-denied") {
+        client.activeSessionError = error;
+        if (["permission-denied", "functions/permission-denied"].includes(getFirebaseErrorCode(error))) {
           client.activeSessionActivationBlockedUid = uid;
           console.warn("Current session activation paused after a permission failure", error);
         } else {
@@ -367,7 +384,9 @@
         client.provider = new client.modules.auth.GoogleAuthProvider();
 
         client.modules.auth.onAuthStateChanged(client.auth, user => {
+          if (user?.uid && user.uid === client.sessionReplacedUid) return;
           client.user = serializeUser(user);
+          resetActiveSessionActivation(client.user?.uid || "");
           if (client.user?.uid && !client.sessionReplacementInFlight) {
             activateCurrentSession("auth-state").catch(error => {
               console.warn("Could not activate current session", error);
@@ -482,11 +501,12 @@
 
   async function callServerFunction(name, payload = {}) {
     const requestedUid = client.user?.uid;
+    const requestedSessionGeneration = client.activeSessionActivationGeneration;
     const requestedRealm = [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":");
     await init();
     const uid = requireSignedIn();
     if (!uid) throw new Error("Sign in to use server multiplayer.");
-    if (requestedUid && (requestedUid !== uid || requestedRealm !== [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":"))) {
+    if (requestedUid && (requestedUid !== uid || requestedSessionGeneration !== client.activeSessionActivationGeneration || requestedRealm !== [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":"))) {
       const error = new Error("The game session changed before this request could be sent.");
       error.code = "functions/cancelled";
       throw error;
@@ -494,7 +514,8 @@
     if (!client.functions || !client.modules?.functions?.httpsCallable) {
       throw new Error("Firebase Functions did not load.");
     }
-    const callable = client.modules.functions.httpsCallable(client.functions, name);
+    const callable = client.modules.functions.httpsCallable(client.functions, name,
+      name === "joinGameServer" ? { timeout: 15000 } : undefined);
     const requestRealm = [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":");
     const startedAt = performance.now();
     let succeeded = false;
@@ -506,7 +527,7 @@
         clientWorldId: ONLINE_WORLD_ID,
         clientRealmShardId: REALM_SHARD_ID,
       }) || {});
-      if (client.user?.uid !== uid || requestRealm !== [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":")) {
+      if (client.user?.uid !== uid || requestedSessionGeneration !== client.activeSessionActivationGeneration || requestRealm !== [RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":")) {
         const error = new Error("This response belongs to an earlier game session.");
         error.code = "functions/cancelled";
         throw error;
@@ -587,13 +608,23 @@
   }
 
   async function joinGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
+    const activeSession = await activateCurrentSession("enter-kingdom");
+    if (!activeSession) throw client.activeSessionError || new Error("This device is still connecting. Try again in a moment.");
     const result = await callServerFunction("joinGameServer", createGameServerPayload(serverId));
+    if (result?.status === "session-replaced") {
+      await signOutForSessionReplacement(result.activeSession);
+      throw new Error("This account opened on another device. Sign in again to play here.");
+    }
     if (result?.resetGeneration && result?.worldId) applyRealmIdentity(result);
     return result;
   }
 
   async function heartbeatGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
     const result = await callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
+    if (result?.status === "session-replaced") {
+      await signOutForSessionReplacement(result.activeSession);
+      return result;
+    }
     if (result?.resetGeneration && result?.worldId) applyRealmIdentity(result);
     registerGameInstallation().catch(error => {
       console.warn("Could not refresh this Crownlands installation", error);
@@ -608,13 +639,20 @@
   function subscribeGameServerMembership(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
     const { doc, onSnapshot } = client.modules.firestore;
-    return onSnapshot(
-      doc(client.db, "players", client.user.uid, "serverMembership", "current"),
+    const uid = client.user.uid;
+    const generation = client.activeSessionActivationGeneration;
+    let stopped = false;
+    const unsubscribe = onSnapshot(
+      doc(client.db, "players", uid, "serverMembership", "current"),
+      { includeMetadataChanges: true },
       snapshot => {
+        if (stopped || client.user?.uid !== uid || generation !== client.activeSessionActivationGeneration
+          || snapshot.metadata?.fromCache || snapshot.metadata?.hasPendingWrites) return;
         if (typeof handlers.onMembership === "function") {
           const membership = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
           handlers.onMembership(
-            membership?.resetGeneration === RESET_GENERATION && membership?.worldId === ONLINE_WORLD_ID
+            membership?.sessionId === getActiveSessionId()
+              && membership?.resetGeneration === RESET_GENERATION && membership?.worldId === ONLINE_WORLD_ID
               ? membership
               : null
           );
@@ -624,6 +662,7 @@
         if (typeof handlers.onError === "function") handlers.onError(error);
       }
     );
+    return () => { stopped = true; unsubscribe(); };
   }
 
   async function sendArmyOrder(payload = {}) {
@@ -1754,10 +1793,18 @@
   }
 
   async function rememberLogin(reason = "login") {
-    return activateCurrentSession(reason).catch(error => {
-      console.warn("Could not update login session", error);
-      return null;
-    });
+    const session = await activateCurrentSession(reason);
+    if (!session) throw client.activeSessionError || new Error("This account opened on another device. Sign in again to play here.");
+    return session;
+  }
+
+  async function prepareExplicitSessionLogin() {
+    if (client.sessionReplacementPromise) await client.sessionReplacementPromise;
+    stopActiveSessionWatcher();
+    resetActiveSessionActivation("");
+    client.sessionReplacedUid = "";
+    client.activeSessionId = createSessionId();
+    try { window.sessionStorage?.setItem(ACTIVE_SESSION_STORAGE_KEY, client.activeSessionId); } catch (_) { /* Session-only fallback. */ }
   }
 
   function shouldUseRedirectFallback(error) {
@@ -1773,6 +1820,7 @@
       throw new Error("Firebase config is still using placeholder values.");
     }
     if (client.error) throw client.error;
+    await prepareExplicitSessionLogin();
     try {
       const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
       client.user = serializeUser(result.user);
@@ -1827,6 +1875,7 @@
       throw new Error("Firebase config is still using placeholder values.");
     }
     if (client.error) throw client.error;
+    await prepareExplicitSessionLogin();
     if (!client.modules.auth.signInWithRedirect) {
       throw new Error("Redirect sign-in is not supported in this browser.");
     }

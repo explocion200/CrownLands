@@ -112,11 +112,21 @@ async function main() {
   const join = await callFunction("joinGameServer", firstSession.token, {
     serverId: "crown-marches",
     sessionId: "onboarding-session-1",
+    activateSession: true,
+    installationId: "onboarding-device-one-installation",
     displayName: "Onboarding Ruler",
     ...clientIdentity,
   });
   assert(join.status === "active" && join.realmShardId === identity.realmShardId,
     "The authenticated player could not join the active realm.");
+  assert(join.activeSession?.version === 2 && join.activeSession.revision === 1,
+    "The first login did not establish its server-authoritative session.");
+  const duplicateLogin = await callFunction("joinGameServer", firstSession.token, {
+    serverId: "crown-marches", sessionId: "onboarding-session-1", activateSession: true, ...clientIdentity,
+  });
+  assert(duplicateLogin.activeSession.loginAtMs === join.activeSession.loginAtMs
+    && duplicateLogin.activeSession.revision === join.activeSession.revision,
+  "A login retry changed its accepted timestamp or revision.");
 
   const claim = await callFunction("claimStartingCity", firstSession.token, {
     playerName: "Onboarding Ruler",
@@ -187,16 +197,57 @@ async function main() {
 
   // Dropping the first token models logout. A password sign-in provides a new authenticated session
   // in the emulator while the production UI's popup/redirect behavior is covered by static browser tests.
+  await profileRef.collection("notificationTokens").doc("old-device-token").set({ installationId: "onboarding-device-one-installation", enabled: true });
+  await profileRef.collection("notificationTokens").doc("new-device-token").set({ installationId: "onboarding-device-two-installation", enabled: true });
   const secondSession = await authRequest("signInWithPassword", { email, password });
   assert(secondSession.uid === firstSession.uid && secondSession.token !== firstSession.token,
     "Logout/login did not restore the same account in a fresh session.");
   const rejoin = await callFunction("joinGameServer", secondSession.token, {
     serverId: "crown-marches",
     sessionId: "onboarding-session-2",
+    activateSession: true,
+    installationId: "onboarding-device-two-installation",
     displayName: "Onboarding Ruler",
     ...clientIdentity,
   });
   assert(rejoin.status === "active", "The returning authenticated player could not rejoin.");
+  assert(rejoin.activeSession.revision === 2, "The second device did not replace the first login.");
+  assert(!(await profileRef.collection("notificationTokens").doc("old-device-token").get()).exists,
+    "The replaced device kept its notification registration.");
+  assert((await profileRef.collection("notificationTokens").doc("new-device-token").get()).exists,
+    "Session replacement removed the new device's notifications.");
+  for (const [name, extra] of [
+    ["joinGameServer", { activateSession: true }],
+    ["joinGameServer", {}],
+    ["heartbeatGameServer", {}],
+    ["leaveGameServer", {}],
+  ]) {
+    const stale = await callFunction(name, firstSession.token, {
+      serverId: "crown-marches", sessionId: "onboarding-session-1", ...extra, ...clientIdentity,
+    });
+    assert(stale.status === "session-replaced", `An old-device ${name} disturbed the new login.`);
+  }
+  const activeHeartbeat = await callFunction("heartbeatGameServer", secondSession.token, {
+    serverId: "crown-marches", sessionId: "onboarding-session-2", ...clientIdentity,
+  });
+  assert(activeHeartbeat.status === "active", "The new device lost admission after old-device retries.");
+  const sessionForgery = await clientDocumentRequest(`players/${firstSession.uid}`, firstSession.token, {
+    method: "PATCH", query: "?updateMask.fieldPaths=activeSession",
+    body: { fields: { activeSession: { mapValue: { fields: { id: { stringValue: "onboarding-session-1" } } } } } },
+  });
+  assert(sessionForgery.status === 403, "An old client overwrote the authoritative session directly.");
+  const concurrentSessions = ["onboarding-concurrent-a", "onboarding-concurrent-b"];
+  const concurrent = await Promise.all(concurrentSessions.map(sessionId => callFunction("joinGameServer", secondSession.token, {
+    serverId: "crown-marches", sessionId, activateSession: true, ...clientIdentity,
+  })));
+  assert(concurrent.every(result => result.status === "active"), "Concurrent explicit login failed admission.");
+  const winner = (await profileRef.get()).data().activeSession;
+  assert(winner.revision === 4 && concurrentSessions.includes(winner.id), "Concurrent logins did not serialize.");
+  const loser = concurrentSessions.find(id => id !== winner.id);
+  const staleConcurrent = await callFunction("joinGameServer", secondSession.token, {
+    serverId: "crown-marches", sessionId: loser, activateSession: true, ...clientIdentity,
+  });
+  assert(staleConcurrent.status === "session-replaced", "A concurrent loser took the account back on retry.");
   const replay = await callFunction("claimStartingCity", secondSession.token, {
     playerName: "Onboarding Ruler",
     ...clientIdentity,

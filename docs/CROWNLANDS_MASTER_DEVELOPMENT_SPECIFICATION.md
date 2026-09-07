@@ -1,9 +1,9 @@
 # Crownlands Master Development Specification
 
-**Version:** 1.38
-**Effective date:** September 6, 2026
+**Version:** 1.39
+**Effective date:** September 7, 2026
 **Document status:** Authoritative baseline with implementation and release verification
-**Evidence reviewed through:** September 6, 2026
+**Evidence reviewed through:** September 7, 2026
 
 > [!IMPORTANT]
 > This specification is the authority for intended Crownlands behavior and confirmed design decisions. The current Git repository and backend are the authority for current technical implementation. A verified production build is the authority for what players can actually use in that release channel. These states must never be silently conflated.
@@ -1055,7 +1055,7 @@ The [Crownlands Art Bible](./CROWNLANDS_ART_BIBLE.md) is the detailed visual aut
 - Authentication identity must be bound to every protected operation.
 - A client must not be able to alter Gear inventory, Box outcomes, equipment, upgrades, resource balances, or clan permissions through ordinary profile saves.
 - Economic transactions, batch scouts, regroup actions, donations, purchases, claims, and rewarded-ad grants must resist replay, retry duplication, partial charging, and race conditions.
-- One active browser session per account is part of the audited current behavior. **Status:** `LIVE — ALL PUBLISHED CHANNELS`; exact enforcement should be verified before modification.
+- One game session per account is active at a time. A successful new sign-in takes over and signs the previous device or tab out of gameplay. The server accepts the session and realm membership together; old login retries and background heartbeats must not take the account back. Cached snapshots, unsent writes, device-clock differences, and stopped listeners must not reject the winning login. Tabs sharing Firebase authentication must retire only the old game client, preserving authentication for the winning tab. **Status:** Confirmed September 7, 2026; the takeover correction is implemented with client and emulator coverage, pending release verification. See `docs/LOGIN_SESSION_TAKEOVER.md`.
 - Release/backend parity must be checked for security-sensitive changes such as player flags and server rules.
 - Sensitive anti-exploit details should be documented for developers without exposing actionable abuse instructions in player-facing material.
 

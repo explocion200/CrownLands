@@ -1447,15 +1447,32 @@ function writeGameServerMember(transaction, entry, status, nowMs = Date.now()) {
   }, { merge: true });
 }
 
-async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
+async function joinGameServerForPlayer({ uid, sessionId, displayName, activation = null, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+  const profileRef = db.doc(`players/${uid}`);
+  const receiptRef = profileRef.collection("loginSessions").doc(sessionId);
   const maintenanceRef = inactivityMaintenanceRef(uid);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const [membershipSnap, maintenanceSnap] = await Promise.all([
+    const [membershipSnap, maintenanceSnap, profileSnap, receiptSnap] = await Promise.all([
       transaction.get(membershipRef),
       transaction.get(maintenanceRef),
+      transaction.get(profileRef),
+      activation ? transaction.get(receiptRef) : Promise.resolve(null),
     ]);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const currentSession = profile.activeSession || {};
+    // A replay may resume its own admission, but never replace a later login.
+    // Old clients may rejoin only the session already established for them.
+    if ((receiptSnap?.exists || (!activation && currentSession.version === 2))
+      && currentSession.id !== sessionId) {
+      return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced", activeSession: currentSession };
+    }
+    const oldInstallation = safeString(currentSession.installationId, 160);
+    const retiredTokens = activation && !receiptSnap.exists && oldInstallation
+      && oldInstallation !== safeString(activation.installationId, 160)
+      ? await transaction.get(profileRef.collection("notificationTokens").where("installationId", "==", oldInstallation))
+      : null;
     const storedMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
     const priorMembership = isCurrentGameServerRealmRecord(storedMembership)
       ? storedMembership
@@ -1465,7 +1482,22 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
     const inactivityNotice = getInactivityNotice(priorMembership);
-    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
+    const acceptedAtMs = receiptSnap?.exists
+      ? timestampToMs(receiptSnap.data().loginAtMs) || nowMs
+      : nowMs;
+    const activeSession = activation
+      ? receiptSnap?.exists ? currentSession : {
+          version: 2,
+          id: sessionId,
+          revision: Math.max(0, safeNumber(currentSession.revision, 0)) + 1,
+          loginAtMs: nowMs,
+          lastSeenAtMs: nowMs,
+          device: safeString(activation.device, 24),
+          installationId: safeString(activation.installationId, 160),
+          reason: safeString(activation.reason, 32),
+        }
+      : currentSession;
+    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, acceptedAtMs);
     const realmShardId = getCurrentRealmShardId();
     const activeEntry = cleanGameServerEntry({
       uid,
@@ -1473,12 +1505,24 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       displayName,
       realmShardId,
       joinedAtMs: Math.max(0, safeNumber(priorMembership.joinedAtMs, 0)) || nowMs,
-      admittedAtMs: nowMs,
+      admittedAtMs: priorMembership.sessionId === sessionId
+        ? timestampToMs(priorMembership.admittedAtMs) || acceptedAtMs
+        : acceptedAtMs,
       lastSeenAtMs: nowMs,
     });
     writeGameServerMember(transaction, activeEntry, "active", nowMs);
     writeGameServerMembership(transaction, activeEntry, "active", nowMs);
     transaction.set(membershipRef, { welcomeBack }, { merge: true });
+    if (activation && !receiptSnap.exists) {
+      retiredTokens?.docs.forEach(token => transaction.delete(token.ref));
+      transaction.create(receiptRef, { loginAtMs: nowMs, revision: activeSession.revision });
+      transaction.set(profileRef, {
+        uid,
+        activeSession,
+        lastLoginAt: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     transaction.set(serverRef, {
       id: GAME_SERVER_ID,
       name: GAME_SERVER_NAME,
@@ -1503,6 +1547,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       queuedAtMs: 0,
       inactivityNotice,
       welcomeBack,
+      ...(activation ? { activeSession } : {}),
     };
   });
 }
@@ -1514,11 +1559,16 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
   const profileRef = db.doc(`players/${uid}`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [memberSnap, membershipSnap, maintenanceSnap] = await Promise.all([
+    const [memberSnap, membershipSnap, maintenanceSnap, profileSnap] = await Promise.all([
       transaction.get(memberRef),
       transaction.get(membershipRef),
       transaction.get(maintenanceRef),
+      transaction.get(profileRef),
     ]);
+    const activeSession = profileSnap.data()?.activeSession || {};
+    if (activeSession.version === 2 && activeSession.id !== sessionId) {
+      return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced", activeSession };
+    }
     const maintenance = maintenanceSnap.exists ? maintenanceSnap.data() || {} : {};
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
@@ -1574,7 +1624,13 @@ async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) 
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const memberRef = serverRef.collection("members").doc(uid);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const memberSnap = await transaction.get(memberRef);
+    const [memberSnap, profileSnap] = await Promise.all([
+      transaction.get(memberRef), transaction.get(db.doc(`players/${uid}`)),
+    ]);
+    const activeSession = profileSnap.data()?.activeSession || {};
+    if (activeSession.version === 2 && activeSession.id !== sessionId) {
+      return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
+    }
     const currentEntry = memberSnap.exists ? memberSnap.data() || {} : null;
     if (currentEntry && currentEntry.sessionId !== sessionId) {
       return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
@@ -15130,7 +15186,7 @@ async function cleanupExpiredAntiFarmInstallations(nowMs = Date.now()) {
 
 exports.joinGameServer = timedCallable("joinGameServer", {
   region: "us-central1",
-  maxInstances: 1,
+  maxInstances: 20,
   concurrency: 80,
   invoker: "public",
 }, async request => {
@@ -15141,6 +15197,11 @@ exports.joinGameServer = timedCallable("joinGameServer", {
     uid,
     sessionId: requireGameServerSessionId(data.sessionId),
     displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
+    activation: data.activateSession === true ? {
+      device: data.device,
+      installationId: data.installationId,
+      reason: data.reason,
+    } : null,
     nowMs: Date.now(),
   });
 });
