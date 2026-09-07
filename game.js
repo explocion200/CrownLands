@@ -10015,7 +10015,8 @@ function normalizeBattleReports(reports) {
       active[existingIndex] = report;
     }
   });
-  return active.slice(-120);
+  // Server snapshots arrive newest first; keep history oldest first before capping it.
+  return active.sort((a, b) => compareBattleReportsNewestFirst(b, a)).slice(-120);
 }
 
 function compareBattleReportsNewestFirst(a = {}, b = {}) {
