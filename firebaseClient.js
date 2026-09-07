@@ -3026,7 +3026,8 @@
       collectionGroup(client.db, "camps"),
       where("holderUid", "==", client.user.uid),
       where("resetGeneration", "==", RESET_GENERATION),
-      where("worldId", "==", ONLINE_WORLD_ID)
+      where("worldId", "==", ONLINE_WORLD_ID),
+      ...getRealmShardQueryConstraints(where)
     );
     return onSnapshot(
       heldCampsRef,

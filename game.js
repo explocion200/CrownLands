@@ -16616,7 +16616,8 @@ function applyOnlineHeldCamps(rawCamps = []) {
 
 function getCampTargetById(campId) {
   const id = String(campId || "");
-  const base = WORLD_CAMPS_BY_ID.get(id);
+  // Held-camp snapshots are available before the camp's map assets are loaded.
+  const base = WORLD_CAMPS_BY_ID.get(id) || onlineHeldCampStates.get(id);
   if (!base) return null;
   const online = onlineCampStates.get(id) || onlineHeldCampStates.get(id) || {};
   const config = getRewardCampConfig({ ...online, ...base });

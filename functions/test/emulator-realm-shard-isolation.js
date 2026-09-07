@@ -125,6 +125,13 @@ function playerLeaderboardQuery(shardId = "") {
   };
 }
 
+function heldCampQuery(uid, shardId = "") {
+  const query = ownedCityRosterQuery(uid, shardId);
+  query.from[0].collectionId = "camps";
+  query.where.compositeFilter.filters[0].fieldFilter.field.fieldPath = "holderUid";
+  return query;
+}
+
 async function main() {
   const [playerOne, playerTwo] = await Promise.all([
     createAuthUser("one"),
@@ -272,7 +279,41 @@ async function main() {
     uid: "rogue-player",
     kingPower: 999,
   });
+  const campTypes = ["gold", "troops", "items", "deed"];
+  campTypes.forEach(campType => {
+    const shared = {
+      resetGeneration: RESET_GENERATION, worldId: WORLD_ID, realmShardId: SHARD_ONE,
+      holderUid: playerOne.uid, campType, state: "held", currentGarrison: 1000,
+      heldSinceMs: nowMs, payoutAtMs: nowMs + 600000,
+    };
+    batch.set(db.doc(`islands/${islandId(SHARD_ONE, `core-v2-${campType}-camp`)}/camps/${campType}`), shared);
+    batch.set(db.doc(`islands/${islandId(SHARD_TWO, `core-v2-${campType}-camp`)}/camps/${campType}`), {
+      ...shared, realmShardId: SHARD_TWO,
+    });
+    batch.set(db.doc(`islands/archived-world--${SHARD_ONE}--core-v2-${campType}-camp/camps/${campType}`), {
+      ...shared, resetGeneration: "archived-generation", worldId: "archived-world",
+    });
+  });
+  batch.set(db.doc(`islands/${islandId(SHARD_ONE)}/camps/other-holder`), {
+    resetGeneration: RESET_GENERATION, worldId: WORLD_ID, realmShardId: SHARD_ONE,
+    holderUid: playerTwo.uid, campType: "gold",
+  });
   await batch.commit();
+
+  const heldCampResponse = await clientRunQuery(playerOne.token, "", heldCampQuery(playerOne.uid, SHARD_ONE));
+  assert(heldCampResponse.status === 200, `Held-camp query was denied: ${heldCampResponse.status}`);
+  const heldCampRows = (await heldCampResponse.json()).filter(row => row.document);
+  assert(heldCampRows.length === 4, "The held-camp query must return all four types across maps and exclude other holders and realms.");
+  assert(heldCampRows.every(row => row.document.name.includes(`${WORLD_ID}--${SHARD_ONE}--`)), "Held camps escaped the current realm.");
+  const unscopedCampResponse = await clientRunQuery(playerOne.token, "", heldCampQuery(playerOne.uid));
+  assert(unscopedCampResponse.status === 403, "A held-camp query without its shard must reproduce the permission failure.");
+  const otherShardCampResponse = await clientRunQuery(playerOne.token, "", heldCampQuery(playerOne.uid, SHARD_TWO));
+  assert(otherShardCampResponse.status === 403, "A player queried camps from another shard.");
+
+  await db.doc(`islands/${islandId(SHARD_ONE, "core-v2-gold-camp")}/camps/gold`).update({ holderUid: playerTwo.uid });
+  const afterCampLoss = await clientRunQuery(playerOne.token, "", heldCampQuery(playerOne.uid, SHARD_ONE));
+  assert(afterCampLoss.status === 200, "The held-camp query failed after a remote loss.");
+  assert((await afterCampLoss.json()).filter(row => row.document).length === 3, "The held-camp query retained a camp after ownership changed.");
 
   const ownedCityRosterResponse = await clientRunQuery(
     playerOne.token,
