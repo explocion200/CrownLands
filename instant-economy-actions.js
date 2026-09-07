@@ -52,9 +52,10 @@ function supportsAuthoritativeCityUpgradeModes() {
 
 function getCityUpgradeActionKey(cityOrId = "", regionId = "") {
   const city = typeof cityOrId === "object" ? cityOrId : null;
-  const cityId = getKnownCityId(city?.id || cityOrId);
+  const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getActiveMapRegionId()));
+  const cityId = getKnownCityId(city?.id || cityOrId, resolvedRegionId);
   if (!cityId) return "";
-  return `${normalizeRegionId(regionId || (city ? getCityRegionId(city) : getActiveMapRegionId()))}:${cityId}`;
+  return `${resolvedRegionId}:${cityId}`;
 }
 
 function getPendingCityUpgradeAction(cityOrId = "", regionId = "") {
