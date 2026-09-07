@@ -733,25 +733,25 @@ const REWARD_CAMP_CONFIG = {
 const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
-const GOLD_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp";
+const GOLD_STRONGHOLD_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.gold || "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const TRAINING_STRONGHOLD_NAME = "Greybanner Hold";
-const TRAINING_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-training-384x384-649892a49e02.webp";
+const TRAINING_STRONGHOLD_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.training || "assets/optimized/stronghold-training-384x384-649892a49e02.webp";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const SPEED_STRONGHOLD_NAME = "Swiftgate";
-const SPEED_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp";
+const SPEED_STRONGHOLD_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.speed || "assets/optimized/stronghold-speed-384x384-6d38eb192581.webp";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const DEFENSE_STRONGHOLD_NAME = "Ironwatch";
-const DEFENSE_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp";
+const DEFENSE_STRONGHOLD_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.defense || "assets/optimized/stronghold-defense-384x384-6bee2f3ace80.webp";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
@@ -781,7 +781,7 @@ const CITADEL_ASSAULT_EASTERN_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", 
   minute: "2-digit",
   timeZoneName: "short",
 });
-const CROWN_CITADEL_ART_SRC = "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp";
+const CROWN_CITADEL_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.crown || "assets/optimized/crown-citadel-384x384-a23c30392f3c.webp";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
@@ -1394,6 +1394,8 @@ function getCastleStage(level) {
 }
 
 function getCastleAsset(stage) {
+  const illustrated = REGION_CATALOG.mapPresentation?.cityStageAssets;
+  if (illustrated) return illustrated[stage] || illustrated[1];
   const assets = {
     1: "assets/optimized/castle-shack-256x256-bbd7514a6231.webp",
     2: "assets/optimized/castle-fort-256x256-a6a5d9365b51.webp",
@@ -3732,15 +3734,15 @@ function getEditorCampDefinitions(regionId) {
 function getCampConfigForType(type) {
   const campType = String(type || "gold").trim().toLowerCase();
   if (campType === "troops" || campType === "troop") {
-    return { type: "troops", name: "Warband Camp", artSrc: "assets/optimized/camp-troops-384x384-2f712333e891.webp" };
+    return { type: "troops", name: "Warband Camp", artSrc: REGION_CATALOG.mapPresentation?.campAssets?.troops || "assets/optimized/camp-troops-384x384-2f712333e891.webp" };
   }
   if (campType === "items" || campType === "item" || campType === "relic") {
-    return { type: "items", name: "Relic Camp", artSrc: "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp" };
+    return { type: "items", name: "Relic Camp", artSrc: REGION_CATALOG.mapPresentation?.campAssets?.items || "assets/optimized/camp-items-384x384-1d7cc179b5fe.webp" };
   }
   if (campType === "deed" || campType === "city_deed") {
-    return { type: "deed", name: "Deed Camp", artSrc: "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp" };
+    return { type: "deed", name: "Deed Camp", artSrc: REGION_CATALOG.mapPresentation?.campAssets?.deed || "assets/optimized/camp-deed-384x384-a10b2afd6ec4.webp" };
   }
-  return { type: "gold", name: "Gold Camp", artSrc: "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp" };
+  return { type: "gold", name: "Gold Camp", artSrc: REGION_CATALOG.mapPresentation?.campAssets?.gold || "assets/optimized/camp-gold-384x384-1d2f43c018ae.webp" };
 }
 
 function getRewardCampConfig(campOrType = {}) {
@@ -3955,7 +3957,7 @@ function generateCurrentCoreHoldingTowerSlots() {
       y: Math.round(point.y),
       visualX: Math.round(visualPoint.x),
       visualY: Math.round(visualPoint.y),
-      artSrc: String(tower?.artSrc || ""),
+      artSrc: getIllustratedLandmarkAsset(regionId, tower?.id) || String(tower?.artSrc || ""),
       width: islandImageVisualSizeToWorld(regionId, width, width),
       anchorX: Number.isFinite(anchorX) ? Math.max(0, Math.min(1, anchorX)) : 0.5,
       anchorY: Number.isFinite(anchorY) ? Math.max(0.5, Math.min(1.25, anchorY)) : 0.969,
@@ -3978,7 +3980,7 @@ function getHoldingTowerVisual(towerId = "") {
     targetType: "tower",
     x: Number(configured.reservedX) || 0,
     y: Number(configured.reservedY) || 0,
-    artSrc: String(configured.artSrc || ""),
+    artSrc: getIllustratedLandmarkAsset(configured.regionId, configured.id) || String(configured.artSrc || ""),
   } : null;
 }
 
@@ -4943,6 +4945,40 @@ function shouldUseCrowdedMapPerformance(currentlyEnabled, cityCount, armyCount) 
     || Math.max(0, Number(armyCount) || 0) >= armyThreshold;
 }
 
+function getIllustratedMapPresentation(regionId) {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return null;
+  const summary = REGION_CATALOG_SUMMARIES_BY_ID.get(normalizeRegionId(regionId));
+  // Generated New Lands inherit the exact terrain, scenery and city layout of
+  // their server-selected template; no extra region definition fetch is needed.
+  return summary?.artPresentation
+    || REGION_CATALOG_SUMMARIES_BY_ID.get(summary?.templateRegionId)?.artPresentation
+    || null;
+}
+
+function getIllustratedLandmarkAsset(regionId, objectId) {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return "";
+  const local = getIllustratedMapPresentation(regionId)?.landmarks?.find(item => item.id === objectId);
+  return local?.asset || REGION_CATALOG.regions?.flatMap(region => region.artPresentation?.landmarks || []).find(item => item.id === objectId)?.asset || "";
+}
+
+function createIllustratedSceneryLayer(regionId) {
+  const art = getIllustratedMapPresentation(regionId);
+  if (!art) return null;
+  const layer = document.createElement("div");
+  layer.className = "illustrated-map-scenery";
+  layer.setAttribute("aria-hidden", "true");
+  layer.innerHTML = art.scenery.map(item => `<img src="${escapeHtml(item.asset)}" data-scenery-id="${escapeHtml(item.id)}" alt="" draggable="false" decoding="async" style="left:${(item.x-item.w/2)/1448*100}%;top:${(item.y-item.h/2)/1086*100}%;width:${item.w/1448*100}%;height:${item.h/1086*100}%" />`).join("");
+  return layer;
+}
+
+function renderIllustratedMapThumbnail(regionId, previewSrc) {
+  const art = getIllustratedMapPresentation(regionId);
+  if (!art) return `<img src="${escapeHtml(previewSrc)}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />`;
+  // SVG uses one image coordinate system even when the tile is letterboxed.
+  // Landmark artwork stays separate and uses the full-map sprite registration.
+  return `<svg class="illustrated-map-thumbnail" viewBox="0 0 1448 1086" aria-hidden="true" focusable="false"><image href="${escapeHtml(previewSrc)}" width="1448" height="1086" />${art.landmarks.map(item => `<image class="map-thumbnail-landmark" data-landmark-id="${escapeHtml(item.id)}" href="${escapeHtml(item.asset)}" x="${item.x}" y="${item.y}" width="${item.width}" height="${item.height}" />`).join("")}</svg>`;
+}
+
 function setImageMapBackground(regionId, imageSrc) {
   if (!mapBg || !imageSrc) return;
   const targetRegionId = normalizeRegionId(regionId);
@@ -5000,6 +5036,8 @@ function setImageMapBackground(regionId, imageSrc) {
     requestAnimationFrame(() => {
       if (!mapBg || swapToken !== mapImageSwapToken) return;
       mapBg.replaceChildren(image);
+      const scenery = createIllustratedSceneryLayer(targetRegionId);
+      if (scenery) mapBg.append(scenery);
       mapBg.classList.add("image-map-ready");
     });
   });
@@ -13833,6 +13871,9 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const previewSrc = getIslandPreviewArtSrc(regionId) || getIslandMapArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   ariaParts.push(...feature.ariaPhrases);
+  for (const landmark of getIllustratedMapPresentation(regionId)?.landmarks || []) {
+    if (landmark.kind === "stronghold" || landmark.kind === "citadel") ariaParts.push(`contains ${landmark.name}`);
+  }
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
   return `
@@ -13844,7 +13885,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
       <span class="island-map-thumb" aria-hidden="true">
-        <img src="${escapeHtml(previewSrc)}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
+        ${renderIllustratedMapThumbnail(regionId, previewSrc)}
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>

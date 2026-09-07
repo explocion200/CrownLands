@@ -1,8 +1,18 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260906-onboarding-controls-v2",
-    generatedAt: "2026-09-06T15:00:00.000Z",
+    buildId: "20260906-illustrated-map-release-v1",
+    generatedAt: "2026-09-06T22:00:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260906-illustrated-map-release-v1",
+        dateKey: "2026-09-06",
+        publishedAt: "2026-09-06T22:00:00.000Z",
+        notes: Object.freeze([
+          "The Core and New Lands now use illustrated medieval terrain, distinct worn roads, trees, bushes and small scenery details.",
+          "Cities, Strongholds, Camps, Clan Towers and the Citadel share the new art style. Landmarks also appear in their positions on the Maps overview.",
+          "City positions leave room for roads, scenery and tall towers. Ownership, Main Cities, levels, troops and marches keep their existing state.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260906-onboarding-controls-v2",
         dateKey: "2026-09-06",

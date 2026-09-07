@@ -54,7 +54,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // ownership crests add under one bounded 128 KiB offline-shell step.
 // Identity guidance and control-position arrows add under 8 KiB, without new
 // assets, dependencies, network requests, or a continuously running animation.
-const MAX_INSTALL_PRECACHE_BYTES = 3656 * 1024;
+// Illustrated terrain/scenery presentation and registered map-picker landmarks
+// add under 8 KiB of shell code. The map rasters and sprites remain lazy loaded.
+const MAX_INSTALL_PRECACHE_BYTES = 3664 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -94,7 +96,7 @@ const entrypointBudgets = {
   // Contextual first steps replace the old Help copy: net runtime growth is
   // under 2 KiB. The aggregate 3648 KiB offline-shell ceiling is unchanged.
   // The follow-up identity steps and arrows add under one 8 KiB runtime step.
-  "game.js": 1732 * 1024,
+  "game.js": 1740 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,

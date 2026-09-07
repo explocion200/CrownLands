@@ -1,0 +1,949 @@
+{
+  "style": "illustrated-atlas-v1",
+  "dimensions": [
+    1448,
+    1086
+  ],
+  "cityStageAssets": {
+    "1": "assets/worlds/core-expansion-v1/art/city-shack-7acf6bfddaa7.webp",
+    "2": "assets/worlds/core-expansion-v1/art/city-fort-804504bf13a8.webp",
+    "3": "assets/worlds/core-expansion-v1/art/city-keep-eff443c6c279.webp",
+    "4": "assets/worlds/core-expansion-v1/art/city-castle-0f453b4a11b2.webp",
+    "5": "assets/worlds/core-expansion-v1/art/city-city-47cad1d12242.webp"
+  },
+  "maps": [
+    {
+      "id": "core-v2-aurum-keep-m1-p0",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "5a5462aecaaf379864eb0d6deb987e55478ea99d3ac4c36e1a95e335db8740d8",
+      "roadGeometrySha256": "51bcc2c0c90a24d410155b027123cd8fd53ad617a105650085906a8fbad4a87a",
+      "seed": 1163154492,
+      "cityCount": 60,
+      "sceneryCount": 39,
+      "landmarks": [
+        "core-v2-aurum-keep-m1-p0_gold_stronghold"
+      ]
+    },
+    {
+      "id": "core-v2-greybanner-hold-p0-m1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "7c5dca1e79221317b92171b3afa44bdd31c92121f6eb60e6f1438eae9c1eca1e",
+      "roadGeometrySha256": "b89c9206271686dc32bac47401e2626442548f825bda2ed13b852fbbb36955e8",
+      "seed": 599206925,
+      "cityCount": 60,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-greybanner-hold-p0-m1_training_stronghold"
+      ]
+    },
+    {
+      "id": "core-v2-swiftgate-p1-p0",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "ecd0a0db5161bfcd2054b23d750deca433feeaf1469e8752f72d5ba65d5f776e",
+      "roadGeometrySha256": "82d4b8235fe4f8c071442c611278160d24cd705aaa9fea27a1b5089ce1849ac4",
+      "seed": 1548910135,
+      "cityCount": 60,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-swiftgate-p1-p0_speed_stronghold"
+      ]
+    },
+    {
+      "id": "core-v2-ironwatch-p0-p1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "72755eadd77cd671f4ca2b01e7f46e92dcc149aa36dc5701e6674423eb884d7e",
+      "roadGeometrySha256": "3d02771f271ef697455776f04550ca464a010d9c70b05942df5987d36d08f1e6",
+      "seed": 4239128068,
+      "cityCount": 60,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-ironwatch-p0-p1_defense_stronghold"
+      ]
+    },
+    {
+      "id": "core-v2-north-west-holding-tower-m1-m1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "d9db21ed143e3e8bc85c8cab27e1b899857160bfed20ca146d68553028a27914",
+      "roadGeometrySha256": "a2b5c12fc6f56eaa532e1ba6df2cbb9b1e364e81e45c265311d7dd42c3152d5d",
+      "seed": 737099145,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-holding-tower-1"
+      ]
+    },
+    {
+      "id": "core-v2-north-east-holding-tower-p1-m1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "7db3cc31fde0b724ee533560a8d9b7a9118d151de889d8d3861f8ac3b2444bf2",
+      "roadGeometrySha256": "9dd47b6bec67b9b0f2f1986fb79190fd528353dc44eef2209cb264c7a2666d41",
+      "seed": 1755135316,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-holding-tower-2"
+      ]
+    },
+    {
+      "id": "core-v2-south-west-holding-tower-m1-p1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "7be2bd42dc0c8656cc38491b28d90ec0e55213eacb86dbeeb325a6656ee3c7ca",
+      "roadGeometrySha256": "9f57c2c06d525f45f8e513abc9226dd9b93bc14dec9f2a1f3f8afe332b576dff",
+      "seed": 1319742186,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-holding-tower-3"
+      ]
+    },
+    {
+      "id": "core-v2-south-east-holding-tower-p1-p1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "7eb5eebaf8c3c6cb94e257aaeea0ab4e66338446f37c9fffb69382952fc70da7",
+      "roadGeometrySha256": "c08779270a4d0b5375bda1c39b71a3f8f961ff5f83d92ada923e0610c56c6119",
+      "seed": 1386120187,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-holding-tower-4"
+      ]
+    },
+    {
+      "id": "core-v2-crown-citadel-p0-p0",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "91da7147ec5e4285992ab0888f335c8e6d211080b60d141edfe87d704bf3b36e",
+      "roadGeometrySha256": "dc31351eb85276eb59ec710d097303882997cc0ea3f9363528d21e1c54cb78d9",
+      "seed": 2843850008,
+      "cityCount": 60,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-crown-citadel-p0-p0_crown_stronghold"
+      ]
+    },
+    {
+      "id": "core-v2-gold-camp-north-east-p2-m2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "44bfcc5c2a4c516ff94194e662462f1e3081a34bd2702e9ab4eb876fbec23023",
+      "roadGeometrySha256": "97430b0b630c3ea6f0beb54586cbf836c88ffc05848bdf2723e8114020a975b7",
+      "seed": 1472124023,
+      "cityCount": 55,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-gold-camp-north-east-p2-m2_gold_camp"
+      ]
+    },
+    {
+      "id": "core-v2-gold-camp-south-west-m2-p2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "2c38a7a3e67d171e991d1ef2abff7b699e493c07415206e32bf564f826006475",
+      "roadGeometrySha256": "823da19d5a5db7fcf94aad594c250b5e61dc759d1ba4e420d7ff08798a07ad22",
+      "seed": 2396084089,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-gold-camp-south-west-m2-p2_gold_camp"
+      ]
+    },
+    {
+      "id": "core-v2-warband-camp-m2-m2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "e48ae44556567e4f6f34d19b25823dd707893233880734f4a7e120d113a2e0a7",
+      "roadGeometrySha256": "da6494fc4f22e8cc1063d4e9583c960eafab33e1ea467c9efedff6e7896d4fa7",
+      "seed": 1994563365,
+      "cityCount": 55,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-warband-camp-m2-m2_troops_camp"
+      ]
+    },
+    {
+      "id": "core-v2-warband-camp-south-east-p2-p2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "e151a5a31410c8236ddb8f020170744cc944ef64a2074668c49420d8a99d97b0",
+      "roadGeometrySha256": "fa6e836c795d4ae5af32473c5fc1b596c90305efe5344a809db2d44a3d7ef542",
+      "seed": 2108683107,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-warband-camp-south-east-p2-p2_troops_camp"
+      ]
+    },
+    {
+      "id": "core-v2-relic-camp-south-east-p1-p2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "e039ace46758931ce7be9d8a7984e227af694be23513bcfcef1585462182ce31",
+      "roadGeometrySha256": "029b8a0840b9928002ed6f419468bdd203cbc23a1a713e8cd4b12ffec5682163",
+      "seed": 3595746650,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-relic-camp-south-east-p1-p2_items_camp"
+      ]
+    },
+    {
+      "id": "core-v2-relic-camp-west-north-m2-m1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "4ef05eaf560b776040b2e83e8aef316e4b48007c909f93ea3b347bed8713d779",
+      "roadGeometrySha256": "d7a3fbc6d2fa60266633e4d60f886c53cc415c6cb5b64ebd27af28aca940cdb0",
+      "seed": 3289332438,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-relic-camp-west-north-m2-m1_items_camp"
+      ]
+    },
+    {
+      "id": "core-v2-relic-camp-east-south-p2-p1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "0901428d79aa82232b2d14e72db4a420768fc6eaa9e480f4b152b8c1b1379137",
+      "roadGeometrySha256": "fde483d4c64bc1f8343cb98956938c0df91cca34b3ce44775bb1962b26a14dd5",
+      "seed": 184302132,
+      "cityCount": 55,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-relic-camp-east-south-p2-p1_items_camp"
+      ]
+    },
+    {
+      "id": "core-v2-relic-camp-north-west-m1-m2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "ad9ccfca5582571932256e76add1c9157f5d57d1f3464c1c83f9313bc25f304c",
+      "roadGeometrySha256": "a5bfd32826625c9d5c0e24c75c3e1af72954c6711b311e6375be7cc07a2466da",
+      "seed": 1583291436,
+      "cityCount": 55,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-relic-camp-north-west-m1-m2_items_camp"
+      ]
+    },
+    {
+      "id": "core-v2-deed-camp-south-west-m1-p2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "c914838f35101636e394d38c70785cda534ae8aa3e01b20318ecfcb35674e78e",
+      "roadGeometrySha256": "3b914196ba8825d39616ca5f1a4c89326f706414a44c1889ec849e98fc85371b",
+      "seed": 963653826,
+      "cityCount": 60,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-deed-camp-south-west-m1-p2_deed_camp"
+      ]
+    },
+    {
+      "id": "core-v2-deed-camp-north-east-p1-m2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "f300e1131b3250d04db07b2c2a52a5067640948798c97927dcf45b65dce92d56",
+      "roadGeometrySha256": "ece985a8230e9ddf7c9fb35e88c6854ddf964b2d6825586f7bc6583c27c15809",
+      "seed": 1153475852,
+      "cityCount": 60,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-deed-camp-north-east-p1-m2_deed_camp"
+      ]
+    },
+    {
+      "id": "core-v2-deed-camp-east-north-p2-m1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "930b5dcff1a349226201e5c1f36ab166efbe8b47f16af9b98fa27222afb46a22",
+      "roadGeometrySha256": "608c4a9b635c207dbb380eab1094d7cbcb89c08880cc32c73e46133e765b5193",
+      "seed": 31465786,
+      "cityCount": 60,
+      "sceneryCount": 38,
+      "landmarks": [
+        "core-v2-deed-camp-east-north-p2-m1_deed_camp"
+      ]
+    },
+    {
+      "id": "core-v2-deed-camp-west-south-m2-p1",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "47b0e99744bb503ce8f7043ad5181f5cbb5d854da3428b2d2defc43072afeb39",
+      "roadGeometrySha256": "6deda8f37bcf259b84f806cbb35b8fb1a669110a0173c2021e2ce520f79f38a8",
+      "seed": 1749493708,
+      "cityCount": 60,
+      "sceneryCount": 34,
+      "landmarks": [
+        "core-v2-deed-camp-west-south-m2-p1_deed_camp"
+      ]
+    },
+    {
+      "id": "core-v2-west-support-m2-p0",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "da47ae96e1dd7bccbc5ac180c0e128bb209fad8e0a6df4ef053e0569b75850b7",
+      "roadGeometrySha256": "0dcd554ac39fe7a603da7e82369fd47ea20ad4b2ebd3bb3fb24b40281fca3160",
+      "seed": 1443266998,
+      "cityCount": 70,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "core-v2-east-support-p2-p0",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "56018f51b600edb8c3c0c290a6a114ce4ccfdeab64f79b93c26b8a70e5b3b478",
+      "roadGeometrySha256": "16e74439353ea0e7e43ea94103eb86f7bae899fb88c8d98a1f36d52b8445ff66",
+      "seed": 1333170423,
+      "cityCount": 70,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "core-v2-south-support-p0-p2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "29404ac2f14be29a98eaacc07b82aead444d2910cfeb12fb34a437319fb074bf",
+      "roadGeometrySha256": "8ed0fb3326cff7a12af42d2bf08e7df0772e998f695dd3c0277957be2c07c304",
+      "seed": 3220449295,
+      "cityCount": 70,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "core-v2-north-support-p0-m2",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "8168afb24a9b9320bce097d458d9480278cd1e74d161c92803075c2dd0b62fb5",
+      "roadGeometrySha256": "2b0d37417d4a547f66ba4ce54ab170119858ed0ee97fc51320515b4f69870ab1",
+      "seed": 1181880216,
+      "cityCount": 70,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p001",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "baf4bd9401896627b56415e4d65e87421f6af0f258ca9482dae558f2b111bc7a",
+      "roadGeometrySha256": "b7c960f931fe89bf42b9c142003f0fa00fb09ae44fab47fcbd2ab328a21621b2",
+      "seed": 190794656,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p013",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "2a7a984796d20a463c0f325313442d396a7a86c42efa217c59122516e21a9e86",
+      "roadGeometrySha256": "2a089c5f1b367ed162ab9f7d077acd1c9f9234eb3fa267b66704e48e3204d794",
+      "seed": 2774297719,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p002",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "1d09ac11b54a75fa5493f2100b1274f6e4388f702f049f750b743b36146fbf2c",
+      "roadGeometrySha256": "ca20b6943746680c20f7ad81e08a7f64a067ad92da1196544f0ab20c9d3f55da",
+      "seed": 241127513,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p003",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "e47fb4c00f9440897d45141da8b45334fea82fd1c8a800c2f964d5882c123f87",
+      "roadGeometrySha256": "22cf9c24ab99c51b92dcb39c834aa6e93b8c01b8d1024f1e95dc412228cfa58c",
+      "seed": 224349894,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p004",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "3c479c6e2265177f6a39c0e070134e33561c7f8aa1e27e696850eae54577fc1c",
+      "roadGeometrySha256": "cc7d1478ba5c7e88df432ad51ca2ce91ad201a3e854ef729190b6f6b1480c023",
+      "seed": 274682751,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p005",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "a0260fc3340ddc65c591b60526837677d0b804b331a979a10b7a97e9505336a0",
+      "roadGeometrySha256": "ce424ee73c8abff29ba5cf9566f489f6789907290f259e2af95fe42ded5441c8",
+      "seed": 257905132,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p006",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "e7f1533d25d731ecc6d71627c067286d09d16a139ba5c029e94720a2d879cdae",
+      "roadGeometrySha256": "2413a421f8a56b30cbca5018860e38c04dcd7e19b24635e717944709408e1992",
+      "seed": 308237989,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p007",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "2bd25f0e3b03f3b54161153d2edf868a5149f2353c17fea67d3a83f97bcde378",
+      "roadGeometrySha256": "7c80acf4f0bff6cadf99291ca683f25c334cbc7b30094ed6794e62693862b26b",
+      "seed": 291460370,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p008",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "9aa930d940fd1ba995ecb32f76c4f114f183911a32e03f0c0b16e08c4c79b9fe",
+      "roadGeometrySha256": "a39dcc507c1780dcb7d6ba6e24c3b593f8bcaf42924f0a64c966c0371fb6d21d",
+      "seed": 341793227,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p009",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "81787b18b46169b806465eb4093f5905585d21f0b9442330bb60f3194326e169",
+      "roadGeometrySha256": "58af752dcbf2e97678ac744978fb43a93b408f1b03a67f28777a39e7ee6996af",
+      "seed": 325015608,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p010",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "77eff9ffab1591392999d998a29200b722b4d2f77afdfe0f2362d451ad2d3d97",
+      "roadGeometrySha256": "2fc41ea6900f8dfd6f73d24b76e9dd6132107ac6f6b1ae909a39c4ad05813225",
+      "seed": 2791075338,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p011",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "d66435d0f147ef729212c3050c293f5b1987d350646edadecdc5fee4c39beb5b",
+      "roadGeometrySha256": "68d8d27852b2b89abd4c3fc08ca83ed930af0e245a6a0005a87e82355133f2e1",
+      "seed": 2807852957,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p012",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "2149819f9ac2cfcf2528983e001b51a1c9a01addec04ff3cd7bcb61d91f1893f",
+      "roadGeometrySha256": "74b6dfa484c5401341ba01c06984dd2b064998f5e2244f69ba81cc06282792e6",
+      "seed": 2757520100,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p014",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "61dfbe312f29a72c19177eb89002b05a72263c867cb7c5bb233c25618e907647",
+      "roadGeometrySha256": "69d9c65c8a1fac576a5acaa023da90be04a2716680a1bbc9a828b4b9753647fe",
+      "seed": 2723964862,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p015",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "dacf13ae0a0bfcd726771dd1614a8ea89277988f35f19c68da922d8d32b484a9",
+      "roadGeometrySha256": "62ed7a8a7029ddca058752c255a2f80fa6f129aed8097b97248c3dc8558729db",
+      "seed": 2740742481,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p016",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "601a55bd281c15c38e79ff1dd94be6900df90e4cbab24f17cf8786480bd45d1c",
+      "roadGeometrySha256": "18c9990a2d05d4846e8a15f1e79b3af67085b6f3d2ef8303053963cf611bb6bd",
+      "seed": 2690409624,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p017",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "19dc93ef792eb91cd54ed2908283dfff61b1ab3ce35fc861f3a051f4ccdb65ec",
+      "roadGeometrySha256": "fba9105578383e13750d3d3b43f7ef0b2a6ac00f4eaa631293a25bc9329637e0",
+      "seed": 2707187243,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p018",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "f9f1494aec4c459c64ba88240f12def9723bb82e006cb34f90f939dcc7a87937",
+      "roadGeometrySha256": "c031bfd79c125ffdd41b679934c98a7ccc7dd72d503d941196191f35c2bb7ff7",
+      "seed": 2656854386,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p019",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "4dc6457f76b9720ffcfee081844d70838161acb1bb1c9008f6fc58ca31f9ffd6",
+      "roadGeometrySha256": "5782d5dc306980407c13d76f0fa547e5e68e51a31917bbe91a44a597bbc9cca9",
+      "seed": 2673632005,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p020",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "05cb1283118a65c1f4898479456894c9b88b27892815a71209d17738893adec0",
+      "roadGeometrySha256": "82b861ce535dab62b6ae5c67556834bf642aab69864bfb2abd44316b291c9d7f",
+      "seed": 2690262529,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p021",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "ad72611d9feb676d1daac64751f18f98625b491ee27ec1c0a33fad0da32be435",
+      "roadGeometrySha256": "289f83c329097c042ba1de2572e2e4b7f269fe51fe170ffbac5c46135785dd34",
+      "seed": 2673484910,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p022",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "9d5ae8af9c53d6b5467f708fe25d64b10ad2904373fad7ed41268506f8e43d81",
+      "roadGeometrySha256": "405be059748ec6770f6c0d6dba160cb3d11baee278bd7030439edc4e6549864b",
+      "seed": 2656707291,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p023",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "6f70b5b4fe93f087743a543c424efbc1301705b782f286cf4744566323f9c995",
+      "roadGeometrySha256": "2355602e64a3303c2ff29f831277d286ddf196e7aaa4a08ca089210a1b13f28b",
+      "seed": 2639929672,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l01-p024",
+      "source": "approved-personalized-roads-v1",
+      "template": null,
+      "backgroundSha256": "cefeca1166b6233e2cc4c90751afe1cf3daa854af3505ab15550c8a9487a1161",
+      "roadGeometrySha256": "f6a29f237f2fe219ccf0d2e8afa37a2bd6ce8c6d3d6f2abebcc0c0adb444784e",
+      "seed": 2757373005,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p001",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p001",
+      "backgroundSha256": "77893b189ee73dfb889820e4d205a0beca31151491aaa2913894a430000eb579",
+      "roadGeometrySha256": "850bb4b9adb09a64e064adebb4756778ecde126548136f047f3ff009f8047563",
+      "seed": 816348443,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p002",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p013",
+      "backgroundSha256": "cf686a265a26aeb8eeeae653fef00c7fa89e1e6ae3bac17892910677288e8677",
+      "roadGeometrySha256": "0c4abdfa8bf9bfbbe2517da695d8ca2a03a7b875d41f708f43e87e53a6cf56d2",
+      "seed": 833126062,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p003",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p002",
+      "backgroundSha256": "30bd5adc1c827459b2852a04d2e0493b3305d4a0d7764dadc8a6f780e43ee509",
+      "roadGeometrySha256": "d44a2797755b580392103fb0c5f60ce02bd4aa7658e3b9ff7b32b41a5db4abf6",
+      "seed": 849903681,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p004",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p003",
+      "backgroundSha256": "cb03486ff23623decb4c51c3a33674625b1a9cf2dcd8a7457f5ba1532ec1de23",
+      "roadGeometrySha256": "3d8443b7c87de2bf3424930a22738c0562cd162a12346e8b1c031c5174800fc2",
+      "seed": 866681300,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p005",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p004",
+      "backgroundSha256": "356fcae07fe759ed8e92165fa611be29e4506570fe196ae7d80cca294b49a865",
+      "roadGeometrySha256": "4483882c321ec00834ab00d43760f13c178e21edfa3360a78864992bdc24b117",
+      "seed": 883458919,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p006",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p005",
+      "backgroundSha256": "15faeaba57cf0dda974b6e356794c482ce150ec854131aa887d4c24bf95d8f86",
+      "roadGeometrySha256": "80724d965e05a0ac546fa5c2a665aa0b4cfd2776f92cc918b51f1af2235790b1",
+      "seed": 900236538,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p007",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p006",
+      "backgroundSha256": "b66919287baf96238f997eeca8a99047a5a94b610d133187a3d9488fd14708d2",
+      "roadGeometrySha256": "1d15a9af01796b2fa045c03693de2cfa4a91932bf12ce6755cbb060b99982004",
+      "seed": 917014157,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p008",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p007",
+      "backgroundSha256": "b8e1bb63d801631fa1dae6b4e9166e349e7c273c8ea153785de8d9a686dd51e5",
+      "roadGeometrySha256": "2ed715f2b93f7c542498f65fd9d2d2900a7ef1acf787e98af9a1ee63e9981f37",
+      "seed": 665349872,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p009",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p008",
+      "backgroundSha256": "536ef1221ee2f501a10db39332d7526560538d5c20083c5b21c26c987d7c72e4",
+      "roadGeometrySha256": "2592578dc45eea7a561c261de40685a3b17ab676019bc86ddd2868fe3fe77d96",
+      "seed": 682127491,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p010",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p009",
+      "backgroundSha256": "988005074e1b9975f06a5f8702913a652fbfff14ee1ae6045629fcf7c702564e",
+      "roadGeometrySha256": "b5c25df35c7978447414a503dff160dcc5a07d5123cfd2c8c7c782f03c5ffa1e",
+      "seed": 900383633,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p011",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p010",
+      "backgroundSha256": "2e8ca40989654bb88014e06aa3660bb512a7d835e0d20535d546552883b13da1",
+      "roadGeometrySha256": "2a79f6f82652a9d2dff5dce7ca5f0f9d009dd1c051616e160e7dae66a53c41b1",
+      "seed": 883606014,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p012",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p011",
+      "backgroundSha256": "d1da1de138667c18521364a4521d74796dda3214a71f3b99d78fc1bf2b2a3de2",
+      "roadGeometrySha256": "f458116616845f55ffba036f238cb293098a1e498eb264175c4353b722aeb5c9",
+      "seed": 866828395,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p013",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p012",
+      "backgroundSha256": "c5b779accf01ef2435bc1c6aa6205b8f25db03de4196514a4b6922a17dd001f5",
+      "roadGeometrySha256": "b2747c362be0881ef21b75c351b6e2d6698c323b86f764276935e9dc2e345b33",
+      "seed": 850050776,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p014",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p014",
+      "backgroundSha256": "a2c4d42f68b00d7c4c123d3332027e7a10d06dfe81fdc32ca42855d4dffd476c",
+      "roadGeometrySha256": "05a1d9ae7fba52d556e10cd4ff2b6538c2d3bc9f77b5f1ac25ebe416c18158be",
+      "seed": 967494109,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p015",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p015",
+      "backgroundSha256": "52b3fe4056fc724c617d4f4ec724e2d4446ca4cb07ccb2fef9632d2a4eb9e25b",
+      "roadGeometrySha256": "44b71b5efadeb45bc3acf7b4ef1bf4fb5f91d9ad5bdcf29f15e29dc6b4159f98",
+      "seed": 950716490,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p016",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p016",
+      "backgroundSha256": "0032b9b42c5dd1daf51892959ca274fae00a7c80ce02ec0f50d227d7459f862b",
+      "roadGeometrySha256": "f76759076af79139e3f0b45f1a270ff0737e33856935716aa78f758409e8474f",
+      "seed": 933938871,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p017",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p017",
+      "backgroundSha256": "e09985c3cb67a2f7b158e7bd34f86e6f75513f99b7406d65f264409d67a4f64e",
+      "roadGeometrySha256": "ddd2dfed2c20b3d6f10b27e6c86f9a31b81413b7261c9cccfaedad0335884274",
+      "seed": 917161252,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p018",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p018",
+      "backgroundSha256": "63cb696866cfc074645f077fdaf5ebe2fa1e6f44838be0a628be4a7f2b11efd7",
+      "roadGeometrySha256": "c407e5ca6e141c59f542bba0d7ed425fc01a4eecfa99ae6f5fa38ffceaf4001a",
+      "seed": 766162681,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p019",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p019",
+      "backgroundSha256": "8f8e09f6b3dfcd31c721b0b86d5adca93b54a962f9d99d02eacb6eefb36d2996",
+      "roadGeometrySha256": "d3576f92f834c2461a65af11e41dba2dac06491d3477536ed63651cc2e8c8026",
+      "seed": 749385062,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p020",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p020",
+      "backgroundSha256": "48e451db2d7f207510a5287eb71938c655967e7de85e99cfe3c1c7d3ecdc6a3c",
+      "roadGeometrySha256": "d1af4e33359a1409d2d443f06860d8e12b1dc4100c3a7721173d8335f5324234",
+      "seed": 3148731674,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p021",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p021",
+      "backgroundSha256": "8d1b1519ce1c819701b157e38fc90a964757bfb42cf12dd33bf3ace276bb57b8",
+      "roadGeometrySha256": "e1296d477ca4ad6069c3e3139aa7b0a8d97ff2119451fc2f742279aed835aae8",
+      "seed": 3165509293,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p022",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p022",
+      "backgroundSha256": "ac072e8170134c6ad7ce5e04d595019f07255e92814e74c533b86d34ff6e1748",
+      "roadGeometrySha256": "aedd6d863bacf9e50b21ee1a71ce230e903f2374d1712342590e882c8fbe0a4c",
+      "seed": 3115176436,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p023",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p023",
+      "backgroundSha256": "96ae1ba11510a29d2ab0f94c715b8359a6b5f6d5b05bacbe625dd5b388b272c1",
+      "roadGeometrySha256": "3eabd3d2570d5669201fc1504073feff79eb3258f0582c622dac562776b88b2d",
+      "seed": 3131954055,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p024",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p024",
+      "backgroundSha256": "07357d9d22bdb9a610a40c70e6e8f498dd59616dc18aba9ddd24237da595e39d",
+      "roadGeometrySha256": "9550f88c074ab18d62669fe6dc204a37801246eb7a2d123b2472f301ba87dc7a",
+      "seed": 3081621198,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p025",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p001",
+      "backgroundSha256": "d8853193548e1a7e683cc88fdb1f77161b72cfe30809f44eb63b299e0c97c7ef",
+      "roadGeometrySha256": "887f0ef4870a76b8321f69b1391d5b0f2bea9b4710892dbb69a303dc210bfb3d",
+      "seed": 3098398817,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p026",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p013",
+      "backgroundSha256": "0dae5e7655792190324e533ba36b5d998a1534384e65de0e33d3fd072f34ddf6",
+      "roadGeometrySha256": "c0767266d3f83b9d38e11fafb644d08a4ee8eb05a635aa88416ded95bd2f4e01",
+      "seed": 3048065960,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p027",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p002",
+      "backgroundSha256": "8b1ff214a176dd8d9ec05065fddf2ad5f9585ba4e5fe71cfa11c12bb5faf7a87",
+      "roadGeometrySha256": "174c4884fded1c61bf92b2b5cb4cd5023e0e9291dcaa66cc3d0460f64207a58f",
+      "seed": 3064843579,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p028",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p003",
+      "backgroundSha256": "2dcd8b11b3e29dae03c916ef268f4ec13360a9722bc495a666822d41cd622dd6",
+      "roadGeometrySha256": "f1e9c6a5cace0a76d9cf27e9a910ebdd244d783e54f879152e89e5a0b77c8321",
+      "seed": 3014510722,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p029",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p004",
+      "backgroundSha256": "d351b77fa7a1cc21ddf82d1826fb15ba16a200a44b9fb1c5c97a5c070046c83a",
+      "roadGeometrySha256": "de197cf6cc1128a34ae7cbdec59763ce1feae4edd608fd08f6136d7f259c0ac3",
+      "seed": 3031288341,
+      "cityCount": 40,
+      "sceneryCount": 42,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p030",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p005",
+      "backgroundSha256": "e3f4e1d89ba455f173a6a0bfe43952ee4a347b602c8e9027cece50942436b7da",
+      "roadGeometrySha256": "e264d308016cbef9487e2a9a03f6e58caa036ef3d6db1baa69b8798313fba459",
+      "seed": 2712660675,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p031",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p006",
+      "backgroundSha256": "f2427195b3e47b21049189384324b4a0b2e5540eb73e4fa2d4245646b7448ac2",
+      "roadGeometrySha256": "025d71ca45423fe6fb99ee49777b41cc2242af723f4a2a8367f802a1d75a48b8",
+      "seed": 2695883056,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    },
+    {
+      "id": "new-lands-l02-p032",
+      "source": "extended-reviewed-countryside",
+      "template": "new-lands-l01-p007",
+      "backgroundSha256": "99d667e452aa6a088e007eec139b029baf2f44faf72010460f5c83044cd5b2df",
+      "roadGeometrySha256": "59b1e2adbb16ec162b973c7b93eeddc80a6f5449fa049c6c7398438d92858ae8",
+      "seed": 2746215913,
+      "cityCount": 40,
+      "sceneryCount": 30,
+      "landmarks": []
+    }
+  ]
+}

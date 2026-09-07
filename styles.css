@@ -1275,6 +1275,24 @@ input {
 .island-art-map.retiring {
   display: none;
 }
+.illustrated-map-scenery {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+}
+.illustrated-map-scenery img {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+.illustrated-map-thumbnail {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  filter: none;
+}
 .world-map-svg {
   display: block;
   width: 100%;

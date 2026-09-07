@@ -1,0 +1,1065 @@
+{
+  "basis": "Actual local game renderer and packaged atlas assets, synthetic ownership/armies, no art or city-coordinate DOM overrides. Desktop 1440x900, mobile landscape 844x390, maximum-stage 1740x1320. Not production account or physical-device captures.",
+  "assetVersion": "2d0983ce5812",
+  "maps": 81,
+  "cities": 3720,
+  "mapPicker": {
+    "tiles": 81,
+    "separateLandmarks": 21
+  },
+  "results": [
+    {
+      "id": "core-v2-aurum-keep-m1-p0",
+      "cities": 60,
+      "scenery": 39,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-greybanner-hold-p0-m1",
+      "cities": 60,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-swiftgate-p1-p0",
+      "cities": 60,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-ironwatch-p0-p1",
+      "cities": 60,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-north-west-holding-tower-m1-m1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-north-east-holding-tower-p1-m1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-south-west-holding-tower-m1-p1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-south-east-holding-tower-p1-p1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-crown-citadel-p0-p0",
+      "cities": 60,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-gold-camp-north-east-p2-m2",
+      "cities": 55,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-gold-camp-south-west-m2-p2",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-warband-camp-m2-m2",
+      "cities": 55,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-warband-camp-south-east-p2-p2",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-relic-camp-south-east-p1-p2",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-relic-camp-west-north-m2-m1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-relic-camp-east-south-p2-p1",
+      "cities": 55,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-relic-camp-north-west-m1-m2",
+      "cities": 55,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-deed-camp-south-west-m1-p2",
+      "cities": 60,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-deed-camp-north-east-p1-m2",
+      "cities": 60,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-deed-camp-east-north-p2-m1",
+      "cities": 60,
+      "scenery": 38,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-deed-camp-west-south-m2-p1",
+      "cities": 60,
+      "scenery": 34,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-west-support-m2-p0",
+      "cities": 70,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-east-support-p2-p0",
+      "cities": 70,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-south-support-p0-p2",
+      "cities": 70,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "core-v2-north-support-p0-m2",
+      "cities": 70,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p001",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p013",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p002",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p003",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p004",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p005",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p006",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p007",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p008",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p009",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p010",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p011",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p012",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p014",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p015",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p016",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p017",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p018",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p019",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p020",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p021",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p022",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p023",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l01-p024",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p001",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p002",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p003",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p004",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p005",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p006",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p007",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p008",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p009",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p010",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p011",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p012",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p013",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p014",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p015",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p016",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p017",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p018",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p019",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p020",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p021",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p022",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p023",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p024",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p025",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p026",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p027",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p028",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p029",
+      "cities": 40,
+      "scenery": 42,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p030",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p031",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    },
+    {
+      "id": "new-lands-l02-p032",
+      "cities": 40,
+      "scenery": 30,
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "maximumStageChecked": true,
+      "overlaps": 0,
+      "missingAssets": 0,
+      "browserErrors": 0
+    }
+  ]
+}
