@@ -104,7 +104,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // and production helpers advance the shared allowance by one 16 KiB step.
 // Identity guidance and arrows add under one bounded 8 KiB step.
 // Keep the shared shell limit aligned with the bounded illustrated-map increase.
-assert.ok(staticCacheBytes <= 3664 * 1024, "The service-worker installation cache exceeds 3664 KiB.");
+// Shared private Camp rewards use the same bounded 8 KiB allowance.
+assert.ok(staticCacheBytes <= 3672 * 1024, "The service-worker installation cache exceeds 3672 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

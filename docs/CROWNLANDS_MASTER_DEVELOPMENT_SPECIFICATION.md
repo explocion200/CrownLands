@@ -488,6 +488,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Four Camp categories are live: Gold, Warband/Troop, Relic, and Deed. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - A neutral Camp starts with 20,000 defenders, has no wall, and gives each defender `1.00` defense with no personal skill or objective bonus. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
 - Camps are timed contestable objectives. A ruler must defeat defenders and hold the Camp through its public resolution timer to receive the applicable reward. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- All locations of the same Camp category share the player's daily reward allowance and personal reward information within the current realm. Rewards earned at one location must appear when that player checks another location of the same category, including unvisited maps; for example, all four Deed Camps show the same private latest-10 city award history and one shared daily allowance. Other players see their own reward progress and history. Each physical Camp retains its own holder and public hold timer. **Status:** confirmed behavior for the shared Camp reward update; deployment remains to be verified.
 - Gold and troop production-based Camp rewards use raw production. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Relic Camp payouts can include the configured Common Gear Box chance. Current audited value is 1%. **Status:** `LIVE — ALL PUBLISHED CHANNELS`; backend value should be verified before balance changes.
 

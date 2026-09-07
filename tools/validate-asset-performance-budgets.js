@@ -56,7 +56,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // assets, dependencies, network requests, or a continuously running animation.
 // Illustrated terrain/scenery presentation and registered map-picker landmarks
 // add under 8 KiB of shell code. The map rasters and sprites remain lazy loaded.
-const MAX_INSTALL_PRECACHE_BYTES = 3664 * 1024;
+// Private progress and cross-map Deed history add under 5 KiB of client code.
+// Allow one bounded 8 KiB step; camp definitions and map art remain lazy loaded.
+const MAX_INSTALL_PRECACHE_BYTES = 3672 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
