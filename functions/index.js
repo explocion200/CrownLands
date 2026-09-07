@@ -1497,7 +1497,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, activation
           reason: safeString(activation.reason, 32),
         }
       : currentSession;
-    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, acceptedAtMs);
+    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
     const realmShardId = getCurrentRealmShardId();
     const activeEntry = cleanGameServerEntry({
       uid,
