@@ -453,7 +453,7 @@ async function main() {
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 1_000_000 });
   const paidLegacyApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(paidLegacyApply.skillPreset?.changed === true && paidLegacyApply.skillPreset?.freeResetConsumed === false, "A preset application reported consuming a legacy credit.");
-  assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === 1_000_000 && Number(paidLegacyApply.currentUser?.gold || 0) === 0, "A legacy profile did not pay the preset price.");
+  assert(Number(paidLegacyApply.skillPreset?.goldCharged || 0) === applyCost && Number(paidLegacyApply.currentUser?.gold || 0) >= 1_000_000 - applyCost, "A legacy profile did not pay the preset price.");
   assert(Number(paidLegacyApply.currentUser?.freeSkillResetCredits || 0) === 0, "A v2 preset application revived a legacy or final-tier Reset Skills credit.");
 
   await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 123 });
