@@ -219,10 +219,10 @@ assert.match(saveCallable, /requireUnlockedSkillPresetSlot[\s\S]*?hasRequestedAl
 assert.match(saveCallable, /hasRequestedName[\s\S]*?requireSkillPresetSaveName[\s\S]*?replaceSkillPresetSlot\(currentPresets[\s\S]*?goldCharged: 0/, "Saving does not atomically persist the draft name and allocation for free.");
 assert.doesNotMatch(saveCallable, /setActiveSkillPresetSlot/, "Saving a preset can change the active preset identity.");
 assert.match(renameCallable, /requireSkillPresetName[\s\S]*?goldCharged: 0/, "Renaming is not validated and free.");
-assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?if \(economy\.gold < SKILL_PRESET_APPLY_COST\)[\s\S]*?gold = Math\.max\(0, economy\.gold - SKILL_PRESET_APPLY_COST\)/, "Applying does not always enforce the dedicated preset price.");
+assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?if \(economy\.gold < applyCost\)[\s\S]*?gold = Math\.max\(0, economy\.gold - applyCost\)/, "Applying does not always enforce the dedicated preset price.");
 assert.match(applyCallable, /writePreparedEconomy\([\s\S]*?upgrades,[\s\S]*?skillPresets,[\s\S]*?gold/, "Applying is not an atomic gold/allocation write.");
 assert.doesNotMatch(applyCallable, /freeResetConsumed = changed|freeSkillResetCreditsAfter/, "Preset application can consume a legacy Reset Skills credit.");
-assert.match(applyCallable, /goldCharged: SKILL_PRESET_APPLY_COST[\s\S]*?freeResetConsumed: false/, "Apply metadata does not report the unconditional gold charge.");
+assert.match(applyCallable, /goldCharged: applyCost[\s\S]*?freeResetConsumed: false/, "Apply metadata does not report the unconditional gold charge.");
 assert.match(applyCallable, /setActiveSkillPresetSlot\(currentPresets, definition\.slot\)/, "Applying does not record one authoritative active preset.");
 assert.match(applyCallable, /remainingSkillPoints: character\.skillPoints/, "Apply metadata omits remaining points.");
 
@@ -273,7 +273,7 @@ assert.doesNotMatch(playerProfileUpdateRule, /skillPresets|freeSkillResetGrantVe
 assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Current Build[\s\S]*?Save Preset[\s\S]*?data-apply-skill-preset/, "Skills UI does not include the Current Build and preset draft controls.");
 assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /data-skill-preset-slot="0"[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not separate Current Build selection from the active preset identity.");
 assert.doesNotMatch(extractFunction(gameSource, "renderSkillPresetPanel"), /!valid \|\| active/, "The active preset cannot be deliberately applied for the configured price.");
-assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /Save these changes before applying[\s\S]*?Applying costs[\s\S]*?SKILL_PRESET_APPLY_COST[\s\S]*?Apply · \$\{formatNumber\(SKILL_PRESET_APPLY_COST\)\}/, "The preset panel does not distinguish dirty drafts from paid application.");
+assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /Save these changes before applying[\s\S]*?Applying costs[\s\S]*?applyCost[\s\S]*?Apply · \$\{formatNumber\(applyCost\)\}/, "The preset panel does not distinguish dirty drafts from paid application.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /nextPresetSignature !== skillPresetMarkupSignature && !isSkillPresetNameEditorActive\(\)/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
 assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /data-skill-preset-slot[\s\S]*?requestSkillPresetDraftExit[\s\S]*?event\.target\.blur\(\)[\s\S]*?saveCurrentSkillPreset/, "Preset selection and keyboard submission do not protect or save dirty drafts.");
 assert.match(extractFunction(gameSource, "confirmSkillPresetAction"), /Every preset application costs[\s\S]*?including an active or identical build[\s\S]*?Apply for/, "Preset confirmation does not explain unconditional charging.");
@@ -303,13 +303,58 @@ assert.match(extractFunction(gameSource, "buySkill"), /getSkillPointCost[\s\S]*?
 assert.doesNotMatch(gameSource, /Final \$\{SKILL_FINAL_DOUBLE_COST_LEVELS\} levels cost|profile-skill-cost-note/, "The removed final-tier explanatory UI text is still rendered.");
 assert.match(stylesSource, /skill-preset-tabs button\.active:not\(\.locked\)[\s\S]*?var\(--cl-header-bg\)[\s\S]*?selected:not\(\.active\)[\s\S]*?var\(--cl-gold\)[\s\S]*?active\.selected[\s\S]*?0 0 0 2px/, "Applied, viewed, and combined preset states are not distinct in the final palette.");
 
-assert.match(howToSource, /Current Build[\s\S]*?minus, cost, and plus[\s\S]*?freely refunds[\s\S]*?Reset Skills[\s\S]*?free clear-all[\s\S]*?1,000,000 gold/i);
-assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?minus, cost, and plus[\s\S]*?minus is free[\s\S]*?Reset Skills is also free[\s\S]*?1,000,000 gold/i);
+assert.match(howToSource, /Current Build[\s\S]*?minus, cost, and plus[\s\S]*?freely refunds[\s\S]*?Reset Skills[\s\S]*?free clear-all[\s\S]*?one hour of base gold production/i);
+assert.match(gameRulesSource, /Current Build changes live skills immediately[\s\S]*?minus, cost, and plus[\s\S]*?minus is free[\s\S]*?Reset Skills is also free[\s\S]*?one hour of base gold production/i);
 const expectedBuild = "20260827-instant-cross-map-city-upgrades-r1";
 const expectedRelease = "crownlands-2026-09-monthly-sharded-realms-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 0, "Reset Skills is not configured as free.");
-assert.equal(Number(economyConfig.playerCosts.skillPresetApplyGold), 1_000_000, "Preset Apply is not using its dedicated 1,000,000-gold cost.");
+assert.equal(Number(economyConfig.playerCosts.skillPresetApplyHours), 1, "Preset Apply is not using its one-hour base-gold cost.");
 
 console.log("Validated signed live skill refunds, free resets, weighted costs, shared controls, preset drafts, readable tab states, compatibility, and rules.");
+
+// Exercise the same affordability update used during periodic renders and name editing.
+const applyButton = { disabled: false };
+const saveButton = { disabled: false };
+const priceContext = {
+  SKILL_PRESET_APPLY_HOURS: 1,
+  rate: 1200,
+  state: { gold: 1199 },
+  selectedSkillPresetSlot: 1,
+  skillActionInFlight: false,
+  dirty: false,
+  skillsView: { querySelector: selector => selector === "[data-apply-skill-preset]" ? applyButton : selector === "[data-save-skill-preset]" ? saveButton : null },
+  getShopPricingContext: () => ({ rawBaseGoldPerHour: priceContext.rate, cityPremium: 9 }),
+  getSkillPresetSlot: () => ({ slot: 1, saved: true }),
+  getSkillPresetDraft: () => ({}),
+  normalizeSkillPresets: () => ({ activeSlot: 0 }),
+  isSkillPresetDraftDirty: () => priceContext.dirty,
+  isValidLocalSkillPresetAllocation: () => true,
+  isSkillSpendSyncing: () => false,
+  getSkillPresetEditorStatus: () => "Saved",
+  setTextIfChanged: () => {},
+};
+vm.createContext(priceContext);
+vm.runInContext([
+  extractFunction(gameSource, "getSkillPresetApplyCost"),
+  extractFunction(gameSource, "canAffordSkillPreset"),
+  extractFunction(gameSource, "updateSkillPresetDraftActionState"),
+].join("\n"), priceContext);
+assert.equal(priceContext.getSkillPresetApplyCost(), 1200, "Hourly pricing must not add the shop city premium.");
+priceContext.updateSkillPresetDraftActionState();
+assert.equal(applyButton.disabled, true, "One gold short must disable Apply.");
+priceContext.state.gold = 1200;
+priceContext.updateSkillPresetDraftActionState();
+assert.equal(applyButton.disabled, false, "Exactly enough gold must enable Apply.");
+priceContext.rate = 2400;
+priceContext.updateSkillPresetDraftActionState();
+assert.equal(applyButton.disabled, true, "An increased hourly price must disable unaffordable Apply.");
+priceContext.state.gold = 2401;
+priceContext.updateSkillPresetDraftActionState();
+assert.equal(applyButton.disabled, false, "Additional gold must enable Apply.");
+priceContext.dirty = true;
+priceContext.updateSkillPresetDraftActionState();
+assert.equal(applyButton.disabled, true, "Affordability must not bypass unsaved draft protection.");
+assert.match(extractFunction(gameSource, "getSkillPresetMarkupSignature"), /applyCost: getSkillPresetApplyCost\(\)[\s\S]*canAfford: canAffordSkillPreset\(\)/, "Pricing and affordability must invalidate cached markup.");
+console.log("Validated hourly preset pricing and changing affordability boundaries.");
