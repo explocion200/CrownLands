@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+require("./validate-owned-city-cross-map-sync");
 
 const clientSource = fs.readFileSync(path.resolve(__dirname, "..", "firebaseClient.js"), "utf8");
 const gameSource = fs.readFileSync(path.resolve(__dirname, "..", "game.js"), "utf8");

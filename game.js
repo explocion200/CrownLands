@@ -11735,7 +11735,7 @@ function applyServerProfilePatch(patch = null, options = {}) {
 
 function applyServerCityUpdateToOwnedCache(update = {}) {
   if (!state || !update || typeof update !== "object") return false;
-  const cityId = getKnownCityId(update.id);
+  const cityId = getKnownCityId(update.id, update.regionId);
   if (!cityId) return false;
   const currentUid = getCurrentOnlineUid();
   const updateRegionId = normalizeRegionId(update.regionId || getCityRegionId(cityId));
@@ -19177,15 +19177,15 @@ function getOutgoingAttacks() {
 function getIncomingUpgradeBlockers(cityOrId, regionId = "") {
   if (!state) return [];
   const city = typeof cityOrId === "object" ? cityOrId : null;
-  const cityId = getKnownCityId(city?.id || cityOrId);
+  const targetRegionId = normalizeRegionId(regionId || getCityRegionId(city || cityOrId));
+  const cityId = getKnownCityId(city?.id || cityOrId, targetRegionId);
   if (!cityId) return [];
-  const targetRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
       if (!attack || attack.returning || attack.kind !== "attack") return null;
-      if (getKnownCityId(attack.toId) !== cityId) return null;
       const attackTargetRegionId = normalizeRegionId(attack.targetRegionId || getCityRegionId(attack.toId));
+      if (getKnownCityId(attack.toId, attackTargetRegionId) !== cityId) return null;
       if (attackTargetRegionId !== targetRegionId) return null;
       if (attack.owner === "player") return null;
       const remaining = Math.max(0, Number(attack.remaining) || 0);
@@ -19415,9 +19415,9 @@ function normalizeOwnedCitySnapshot(raw = {}) {
 
 function getOwnedCityCacheKey(cityOrId = "", regionId = "") {
   const city = typeof cityOrId === "object" ? cityOrId : null;
-  const cityId = getKnownCityId(city?.id || cityOrId);
+  const resolvedRegionId = normalizeRegionId(regionId || getCityRegionId(city || cityOrId));
+  const cityId = getKnownCityId(city?.id || cityOrId, resolvedRegionId);
   if (!cityId) return "";
-  const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   return `${resolvedRegionId}:${cityId}`;
 }
 
@@ -19533,7 +19533,7 @@ function getAllOwnedRegularCitiesForDisplay() {
 }
 
 function getOwnedCitySnapshotById(cityId, regionId = "") {
-  const id = getKnownCityId(cityId);
+  const id = getKnownCityId(cityId, regionId);
   if (!id) return null;
   const expectedKey = regionId ? getOwnedCityCacheKey(id, regionId) : "";
   return getAllOwnedCitiesForDisplay().find(city => (
@@ -19542,7 +19542,7 @@ function getOwnedCitySnapshotById(cityId, regionId = "") {
 }
 
 function getOwnedCitySnapshotForUpgrade(cityId, regionId = "") {
-  const id = getKnownCityId(cityId);
+  const id = getKnownCityId(cityId, regionId);
   if (!id) return null;
   const normalizedRegionId = regionId ? normalizeRegionId(regionId) : "";
   const activeCity = cityById(id);
@@ -31262,9 +31262,9 @@ function showCityListModal() {
 
 function getCityListRowKey(cityOrId = "", regionId = "") {
   const city = typeof cityOrId === "object" ? cityOrId : null;
-  const cityId = getKnownCityId(city?.id || cityOrId);
+  const resolvedRegionId = normalizeRegionId(regionId || getCityRegionId(city || cityOrId));
+  const cityId = getKnownCityId(city?.id || cityOrId, resolvedRegionId);
   if (!cityId) return "";
-  const resolvedRegionId = normalizeRegionId(regionId || (city ? getCityRegionId(city) : getCityRegionId(cityId)));
   return `${resolvedRegionId}:${cityId}`;
 }
 
@@ -31292,7 +31292,7 @@ function reconcileCityListSessionOrder(sortedCities = []) {
     retainedKeys.add(key);
     ordered.push(city);
   });
-  cityListSessionOrderKeys = ordered.map(getCityListRowKey);
+  cityListSessionOrderKeys = ordered.map(city => getCityListRowKey(city));
   return ordered;
 }
 
@@ -31307,7 +31307,7 @@ function clearCityListUpgradeFeedback(options = {}) {
 }
 
 function setCityListUpgradeFeedback(raw = {}) {
-  const cityId = getKnownCityId(raw.cityId);
+  const cityId = getKnownCityId(raw.cityId, raw.regionId);
   const regionId = normalizeRegionId(raw.regionId || (cityId ? getCityRegionId(cityId) : ""));
   const finalLevel = clampCityLevel(raw.finalLevel);
   const upgraded = Math.max(0, Math.floor(Number(raw.upgraded) || 0));
