@@ -46,8 +46,8 @@ for (const code of [
 assert.match(firebaseClient, /try \{[\s\S]*sessionStorage\?\.getItem\(ACTIVE_SESSION_STORAGE_KEY\)[\s\S]*catch \(_(?:error)?\)/, "Unavailable session storage is not contained.");
 assert.match(activateSession, /activeSessionActivationPromise\) return client\.activeSessionActivationPromise/, "Concurrent session activation is not coalesced.");
 assert.match(activateSession, /permission-denied[\s\S]*activeSessionActivationBlockedUid[\s\S]*scheduleActiveSessionRetry/, "Permanent and transient session activation failures are not separated.");
-assert.match(watchSession, /remoteSessionId === localSessionId[\s\S]*activeSessionWatcherReady = true[\s\S]*remoteLoginAtMs <= localLoginAtMs[\s\S]*signOutForSessionReplacement/, "Stale initial snapshots and newer-session replacement are not distinguished.");
-assert.match(replaceSession, /sessionReplacementInFlight[\s\S]*stopActiveSessionWatcher[\s\S]*clearActivePresence[\s\S]*signOut[\s\S]*sessionReplacementInFlight = false/, "Session replacement is not serialized and cleaned up.");
+assert.match(watchSession, /snapshot\.metadata\?\.fromCache[\s\S]*activeSession\.revision[\s\S]*signOutForSessionReplacement/, "Cached snapshots and authoritative replacement are not distinguished.");
+assert.match(replaceSession, /sessionReplacementInFlight[\s\S]*stopActiveSessionWatcher[\s\S]*sameInstallation[\s\S]*signOut[\s\S]*sessionReplacementInFlight = false/, "Replacement must retire the old client without clearing a winning tab shared login.");
 
 assert.match(signOut, /waitForPendingOnlineWrites\(5000\)[\s\S]*flushOnlineSave\(true\)[\s\S]*disconnectOnlineWorld\(\)[\s\S]*leaveSelectedGameServer\(\)[\s\S]*api\.signOut\(\)/, "Sign-out does not bound pending work and clean up in order.");
 assert.match(firebaseClient, /onAuthStateChanged[\s\S]*dispatch\("auth", \{ user: client\.user/, "Expired authentication is not propagated to the game lifecycle.");

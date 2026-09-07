@@ -15082,6 +15082,9 @@ function clearGoogleSignInFallbackTimer() {
 
 function getGoogleSignInErrorDetail(error) {
   const code = String(error?.code || "");
+  if (["functions/unavailable", "functions/internal", "functions/deadline-exceeded"].includes(code)) {
+    return "Google connected. Crownlands is temporarily busy. Try again in a moment.";
+  }
   if (code === "auth/popup-closed-by-user") {
     return "The Google window was closed before sign-in finished. Try again or continue in this tab.";
   }
@@ -15154,6 +15157,7 @@ async function handleGoogleSignIn() {
     onlineLastError = getGoogleSignInErrorDetail(error);
     const errorCode = String(error?.code || "");
     googleSignInRedirectReady = Boolean(api.signInWithGoogleRedirect)
+      && !errorCode.startsWith("functions/")
       && errorCode !== "auth/unauthorized-domain"
       && errorCode !== "auth/network-request-failed";
     updateOnlineUi();

@@ -105,6 +105,7 @@ service cloud.firestore {
 
     function validPlayerProfileCreate() {
       return shieldCount(request.resource.data) == 0
+        && request.resource.data.get('activeSession', {}).get('version', 0) != 2
         && validPlayerProfileNameCreate()
         && (!request.resource.data.keys().hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag))
         && !request.resource.data.keys().hasAny([
@@ -202,6 +203,10 @@ service cloud.firestore {
           'lastSeenAtMs'
         ])
         && (!affected.hasAny(['uid']) || request.resource.data.uid == request.auth.uid)
+        && (!affected.hasAny(['activeSession']) || (
+          resource.data.get('activeSession', {}).get('version', 0) != 2
+          && request.resource.data.get('activeSession', {}).get('version', 0) != 2
+        ))
         && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName))
         && (!affected.hasAny(['flag']) || validPlayerFlagValue(request.resource.data.flag));
     }

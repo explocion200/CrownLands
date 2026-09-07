@@ -1,8 +1,17 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
     buildId: "20260906-illustrated-map-release-v1",
-    generatedAt: "2026-09-06T22:00:00.000Z",
+    generatedAt: "2026-09-07T14:30:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260907-login-session-takeover-v1",
+        dateKey: "2026-09-07",
+        publishedAt: "2026-09-07T14:30:00.000Z",
+        notes: Object.freeze([
+          "Signing in on a new device takes over your account and signs the previous device out. Old cached login notices and retries no longer push out the new login.",
+          "First-time entry has more server capacity and retries interrupted connections. A busy game server now shows a retry message without sending you back through Google sign-in.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260906-illustrated-map-release-v1",
         dateKey: "2026-09-06",
