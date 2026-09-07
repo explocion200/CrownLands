@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+require("./validate-held-camp-operations");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "game.js"), "utf8");

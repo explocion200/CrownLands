@@ -55,6 +55,7 @@ assert.match(subscribePlayerReinforcements, /where\("status", "==", "stationed"\
 
 const subscribePlayerCamps = extractFunction(clientSource, "subscribePlayerCamps");
 assert.match(subscribePlayerCamps, /where\("holderUid", "==", client\.user\.uid\)/, "Held-camp updates must be limited to the current player.");
+assert.match(subscribePlayerCamps, /\.\.\.getRealmShardQueryConstraints\(where\)/, "Held-camp updates must include the current realm shard required by access rules.");
 
 const subscribeServerReports = extractFunction(clientSource, "subscribeServerReports");
 assert.match(subscribeServerReports, /limit\(120\)/, "The live report feed must remain bounded.");
