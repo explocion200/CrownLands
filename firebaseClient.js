@@ -2070,12 +2070,17 @@
         ? "warbandCamp"
         : normalizedType === "items" || normalizedType === "item" || normalizedType === "relic"
           ? "relicCamp"
-        : "";
+          : normalizedType === "deed" ? "deedCamp" : "";
     if (!objectiveId) throw new Error("Unknown reward camp type.");
+    const scope = getOnlineRequestScope();
     const { doc, getDoc } = client.modules.firestore;
-    const snap = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId));
-    const rawData = snap.exists() ? snap.data() || {} : {};
-    const data = rawData.resetGeneration === RESET_GENERATION ? rawData : {};
+    const snapshot = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId));
+    if (scope !== getOnlineRequestScope()) throw new Error("Reward account or realm changed.");
+    const rawData = snapshot.exists() ? snapshot.data() || {} : {};
+    // Existing private Camp records predate shard metadata. New records carry
+    // it; neither an older world nor an explicitly different shard is reused.
+    const data = rawData.resetGeneration === RESET_GENERATION && rawData.worldId === ONLINE_WORLD_ID
+      && (!rawData.realmShardId || rawData.realmShardId === REALM_SHARD_ID) ? rawData : {};
     return {
       objectiveId,
       campType: normalizedType,
@@ -2096,35 +2101,43 @@
     };
   }
 
-  async function loadRewardCampHistory({ islandId = "", campId = "", limitCount = 10 } = {}) {
+  async function loadRewardCampHistory({ islandId = "", campId = "", locations = null, limitCount = 10 } = {}) {
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
-    const safeIslandId = String(islandId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
-    const safeCampId = String(campId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
-    if (!safeIslandId || !safeCampId) throw new Error("Missing Deed Camp location.");
+    const scope = getOnlineRequestScope();
+    const uniqueLocations = new Map();
+    for (const location of Array.isArray(locations) ? locations : [{ islandId, campId }]) {
+      const safeIslandId = String(location?.islandId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      const safeCampId = String(location?.campId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
+      if (!safeIslandId || !safeCampId) throw new Error("Missing Deed Camp location.");
+      uniqueLocations.set(`${safeIslandId}/${safeCampId}`, { safeIslandId, safeCampId });
+    }
+    if (!uniqueLocations.size) throw new Error("Missing Deed Camp locations.");
     const safeLimit = Math.max(1, Math.min(10, Math.floor(Number(limitCount) || 10)));
     const { collection, getDocs, query: firestoreQuery, where } = client.modules.firestore;
-    const historyRef = collection(client.db, "islands", safeIslandId, "camps", safeCampId, "rewardHistory");
-    const historyQuery = firestoreQuery && where
-      ? firestoreQuery(historyRef, where("awardedToPlayerId", "==", uid))
-      : historyRef;
-    const snapshot = await getDocs(historyQuery);
-    return snapshot.docs.map(historyDoc => {
-      const history = historyDoc.data() || {};
-      return {
-        id: historyDoc.id,
-        campId: String(history.campId || safeCampId).slice(0, 96),
-        cityId: String(history.cityId || "").slice(0, 96),
-        cityName: String(history.cityName || "Unknown city").slice(0, 80),
-        regionId: String(history.regionId || "").slice(0, 80),
-        regionName: String(history.regionName || history.regionId || "Unknown map").slice(0, 80),
-        awardedToPlayerId: String(history.awardedToPlayerId || "").slice(0, 128),
-        awardedToDisplayName: cleanPlayerName(history.awardedToDisplayName || "Ruler"),
-        awardedAtMs: Math.max(0, Math.floor(Number(history.awardedAtMs) || timestampToMs(history.awardedAt))),
-        source: String(history.source || "").slice(0, 32),
-      };
-    }).filter(history => (
+    const histories = await Promise.all([...uniqueLocations.values()].map(async ({ safeIslandId, safeCampId }) => {
+      const historyRef = collection(client.db, "islands", safeIslandId, "camps", safeCampId, "rewardHistory");
+      const historyQuery = firestoreQuery(historyRef, where("awardedToPlayerId", "==", uid));
+      const snapshot = await getDocs(historyQuery);
+      return snapshot.docs.map(historyDoc => {
+        const history = historyDoc.data() || {};
+        return {
+          id: historyDoc.id,
+          campId: String(history.campId || safeCampId).slice(0, 96),
+          cityId: String(history.cityId || "").slice(0, 96),
+          cityName: String(history.cityName || "Unknown city").slice(0, 80),
+          regionId: String(history.regionId || "").slice(0, 80),
+          regionName: String(history.regionName || history.regionId || "Unknown map").slice(0, 80),
+          awardedToPlayerId: String(history.awardedToPlayerId || "").slice(0, 128),
+          awardedToDisplayName: cleanPlayerName(history.awardedToDisplayName || "Ruler"),
+          awardedAtMs: Math.max(0, Math.floor(Number(history.awardedAtMs) || timestampToMs(history.awardedAt))),
+          source: String(history.source || "").slice(0, 32),
+        };
+      });
+    }));
+    if (scope !== getOnlineRequestScope()) throw new Error("Reward account or realm changed.");
+    return histories.flat().filter(history => (
       history.awardedToPlayerId === uid
       && history.cityId
       && history.regionId

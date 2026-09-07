@@ -285,6 +285,12 @@ service cloud.firestore {
       }
 
       match /objectiveStats/{objectiveId} {
+        // These fixed per-player records may be absent before the first hold,
+        // or lack shard metadata from earlier payouts. Only their owner can get
+        // them; the client discards prior-world progress. Collection reads and
+        // all other objectives retain the current-generation restriction.
+        allow get: if ownsPlayerDoc(uid)
+          && objectiveId in ['goldCamp', 'warbandCamp', 'relicCamp', 'deedCamp'];
         allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }

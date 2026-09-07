@@ -730,7 +730,6 @@ const REWARD_CAMP_CONFIG = {
     itemDrops: RELIC_CAMP_DROP_TABLE,
   },
 };
-const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = REGION_CATALOG.mapPresentation?.strongholdAssets?.gold || "assets/optimized/stronghold-gold-384x384-27daf74041f8.webp";
@@ -1998,6 +1997,7 @@ const rewardCampProgressCache = new Map();
 const rewardCampProgressRequests = new Map();
 const deedCampHistoryCache = new Map();
 const deedCampHistoryRequests = new Map();
+let deedCampLocationsRequest = null;
 let crownCitadelReignCache = [];
 let crownCitadelReignRequest = null;
 const strongholdLegacyCache = new Map();
@@ -15322,8 +15322,11 @@ function disconnectOnlineWorld() {
   resolvingRewardCampPayoutIds = new Set();
   pendingDeedCityHighlights.clear();
   crownlandsAnimations?.clearAll?.();
+  rewardCampProgressCache.clear();
+  rewardCampProgressRequests.clear();
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
+  deedCampLocationsRequest = null;
   crownCitadelReignCache = [];
   crownCitadelReignRequest = null;
   strongholdLegacyCache.clear();
@@ -16793,8 +16796,10 @@ async function requestDueRewardCampPayout(camp) {
   const campNode = cityLayer?.querySelector(`[data-camp-id="${CSS.escape(String(camp.id))}"]`);
   const rewardSourceAnchor = captureAnimationAnchor(campNode);
   const campBefore = { ...camp };
+  const requestScope = getOnlineRequestScope();
   try {
     const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
+    if (requestScope !== getOnlineRequestScope()) return false;
     applyServerArmyResult(result);
     if (result?.movement) adoptServerArmyMovement(result.movement);
     const config = getRewardCampConfig(result?.campType || camp);
@@ -16828,20 +16833,7 @@ async function requestDueRewardCampPayout(camp) {
           playCompletedDeedRewardAnimation(result, campBefore, rewardSourceAnchor);
         }
       }
-      if (config?.type === "deed") {
-        deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
-      } else if (config && result.holderUid === getCurrentOnlineUid()) {
-         const progress = cacheRewardCampProgress(config, {
-           date: currentUtcDateKey(),
-           count: result.dailyClaim,
-           lastReward: result.reward,
-           lastCampId: camp.id,
-           lastClaimedAtMs: Date.now(),
-           rewards: result.rewardsToday,
-           maxDailyRewards: result.maxDailyRewards,
-         });
-        renderRewardCampProgressPanel(camp.id, config, progress);
-      }
+      refreshCampRewardsAfterPayout(camp, config, result);
       const rewardMessage = config?.type === "deed"
         ? result.status === "daily-limit"
           ? "You already received a Deed Camp city today. The camp reset to neutral."
@@ -27565,7 +27557,7 @@ function selectRewardCamp(campId) {
 
 function getRewardCampProgressCacheKey(config) {
   const uid = getCurrentOnlineUid();
-  return uid && config?.type ? `${uid}:${config.type}` : "";
+  return uid && config?.type ? `${getOnlineRequestScope()}:${config.type}` : "";
 }
 
 function normalizeRewardCampProgress(config, raw = {}) {
@@ -27623,14 +27615,17 @@ async function loadRewardCampProgress(config) {
   if (!cacheKey || !api?.isSignedIn?.() || !api?.loadRewardCampProgress) {
     throw new Error("Reward progress requires an online account.");
   }
-  const cached = rewardCampProgressCache.get(cacheKey);
-  if (cached?.progress?.date === currentUtcDateKey() && Date.now() - cached.fetchedAtMs < REWARD_CAMP_PROGRESS_CACHE_MS) {
-    return cached.progress;
-  }
   if (rewardCampProgressRequests.has(cacheKey)) return rewardCampProgressRequests.get(cacheKey);
   const request = api.loadRewardCampProgress(config.type)
-    .then(raw => cacheRewardCampProgress(config, raw || {}))
-    .finally(() => rewardCampProgressRequests.delete(cacheKey));
+    .then(raw => {
+      if (cacheKey !== getRewardCampProgressCacheKey(config) || rewardCampProgressRequests.get(cacheKey) !== request) {
+        throw new Error("Reward account or realm changed.");
+      }
+      return cacheRewardCampProgress(config, raw || {});
+    })
+    .finally(() => {
+      if (rewardCampProgressRequests.get(cacheKey) === request) rewardCampProgressRequests.delete(cacheKey);
+    });
   rewardCampProgressRequests.set(cacheKey, request);
   return request;
 }
@@ -27712,6 +27707,14 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
   if (status === "error") {
     return `<div class="camp-reward-loading error"><strong>Reward progress unavailable</strong><p>Your rewards are still tracked by the server. Reopen this panel once the connection is ready.</p></div>`;
   }
+  if (config?.type === "deed") {
+    const claimed = clamp(Math.floor(Number(progress?.count) || 0), 0, 1);
+    return `<div class="camp-reward-overview">
+      <div><span>Today's reward</span><strong>${claimed} / 1 earned</strong></div>
+      <div><span>Eligibility</span><strong>${claimed ? "Limit reached" : "Reward available"}</strong></div>
+    </div>
+    <p class="camp-reward-reset">${claimed ? "Your daily reward has been awarded or reserved until a city becomes available. " : ""}Deed Camp rewards reset at 00:00 UTC.</p>`;
+  }
   const rewards = getRewardCampEstimatedRewards(config);
   const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
   const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
@@ -27757,19 +27760,70 @@ function renderRewardCampProgressPanel(campId, config, progress, status = "ready
 }
 
 function refreshRewardCampProgressPanel(campId, config) {
+  const scope = getOnlineRequestScope();
   const cached = getCachedRewardCampProgress(config);
   renderRewardCampProgressPanel(campId, config, cached?.progress, cached ? "ready" : "loading");
   void loadRewardCampProgress(config)
-    .then(progress => renderRewardCampProgressPanel(campId, config, progress))
+    .then(progress => {
+      if (scope === getOnlineRequestScope()) renderRewardCampProgressPanel(campId, config, progress);
+    })
     .catch(error => {
+      if (scope !== getOnlineRequestScope()) return;
       console.warn("Could not load reward camp progress", error);
-      if (!cached) renderRewardCampProgressPanel(campId, config, null, "error");
+      renderRewardCampProgressPanel(campId, config, null, "error");
     });
 }
 
-function getDeedCampHistoryCacheKey(camp = {}) {
-  const uid = getCurrentOnlineUid();
-  return uid && camp?.id ? `${uid}:${normalizeRegionId(camp.regionId)}:${camp.id}` : "";
+function getDeedCampHistoryCacheKey() {
+  return getRewardCampProgressCacheKey({ type: "deed" });
+}
+
+function refreshCampRewardsAfterPayout(camp, config, result) {
+  if (!config || result.holderUid !== getCurrentOnlineUid()) return;
+  const progress = cacheRewardCampProgress(config, {
+    date: currentUtcDateKey(), count: result.dailyClaim, lastReward: result.reward,
+    lastCampId: camp.id, lastClaimedAtMs: Date.now(),
+    rewards: result.rewardsToday, maxDailyRewards: result.maxDailyRewards,
+  });
+  if (config.type === "deed") {
+    const key = getDeedCampHistoryCacheKey();
+    deedCampHistoryCache.delete(key);
+    deedCampHistoryRequests.delete(key);
+  }
+  const viewedCamp = getCampTargetById(modal.dataset.campInfoId);
+  if (!modal.open || getRewardCampConfig(viewedCamp)?.type !== config.type) return;
+  renderRewardCampProgressPanel(viewedCamp.id, config, progress);
+  if (config.type === "deed") refreshDeedCampHistoryPanel(viewedCamp);
+}
+
+async function loadDeedCampLocations(camp) {
+  if (!CORE_EXPANSION_TOPOLOGY_ACTIVE) return [{ regionId: camp.regionId, campId: camp.id }];
+  if (!deedCampLocationsRequest) {
+    // Read only public definitions, without visiting maps or populating/evicting
+    // the renderer's city cache. The catalog, not visited maps, defines the pool.
+    const regions = REGION_CATALOG.regions.filter(region => (
+      ACTIVE_WORLD_REGION_IDS.has(region.id) && Number(region.campCount) > 0
+    ));
+    const request = Promise.all(regions.map(async region => {
+      const response = await fetch(region.regionDefinitionPath, { cache: "no-cache", credentials: "same-origin" });
+      if (!response.ok) throw new Error(`${region.name || region.id} camp definition is unavailable.`);
+      const definition = await response.json();
+      if (definition.id !== region.id || !Array.isArray(definition.camps)) {
+        throw new Error("Camp definition did not match its active map.");
+      }
+      return definition.camps.filter(entry => getRewardCampConfig(entry)?.type === "deed")
+        .map(entry => ({ regionId: region.id, campId: entry.id }));
+    })).then(locations => {
+      const result = locations.flat();
+      if (!result.length) throw new Error("No active Deed Camp locations are available.");
+      return result;
+    }).catch(error => {
+      if (deedCampLocationsRequest === request) deedCampLocationsRequest = null;
+      throw error;
+    });
+    deedCampLocationsRequest = request;
+  }
+  return deedCampLocationsRequest;
 }
 
 function getDeedCampHistoryCityName(entry = {}) {
@@ -27837,37 +27891,44 @@ function renderDeedCampHistoryPanel(campId, history = [], status = "ready") {
   if (status === "ready") bindDeedCampHistoryLocationButtons(panel);
 }
 
-function refreshDeedCampHistoryPanel(camp, { force = false } = {}) {
+function refreshDeedCampHistoryPanel(camp) {
   const api = getOnlineApi();
-  const cacheKey = getDeedCampHistoryCacheKey(camp);
+  const cacheKey = getDeedCampHistoryCacheKey();
   if (!cacheKey || !api?.isSignedIn?.() || !api?.loadRewardCampHistory) {
     renderDeedCampHistoryPanel(camp.id, [], "error");
     return;
   }
   const cached = deedCampHistoryCache.get(cacheKey);
-  if (!force && cached && Date.now() - cached.fetchedAtMs < REWARD_CAMP_PROGRESS_CACHE_MS) {
-    renderDeedCampHistoryPanel(camp.id, cached.history);
-    return;
-  }
   renderDeedCampHistoryPanel(camp.id, cached?.history || [], cached ? "ready" : "loading");
-  if (deedCampHistoryRequests.has(cacheKey)) return;
-  const request = api.loadRewardCampHistory({
-    islandId: getOnlineIslandId(camp.regionId),
-    campId: camp.id,
-    limitCount: DEED_CAMP_HISTORY_DISPLAY_LIMIT,
-  }).then(history => {
-    const cleanHistory = (Array.isArray(history) ? history : [])
-      .slice()
-      .sort((left, right) => normalizeTimestampMs(right?.awardedAtMs) - normalizeTimestampMs(left?.awardedAtMs))
-      .slice(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT);
-    deedCampHistoryCache.set(cacheKey, { history: cleanHistory, fetchedAtMs: Date.now() });
-    renderDeedCampHistoryPanel(camp.id, cleanHistory);
-    return cleanHistory;
+  let request = deedCampHistoryRequests.get(cacheKey);
+  if (!request) {
+    request = loadDeedCampLocations(camp).then(locations => {
+      if (cacheKey !== getDeedCampHistoryCacheKey()) throw new Error("Reward account or realm changed.");
+      return api.loadRewardCampHistory({
+        locations: locations.map(location => ({ islandId: getOnlineIslandId(location.regionId), campId: location.campId })),
+        limitCount: DEED_CAMP_HISTORY_DISPLAY_LIMIT,
+      });
+    }).then(history => {
+      if (cacheKey !== getDeedCampHistoryCacheKey() || deedCampHistoryRequests.get(cacheKey) !== request) {
+        throw new Error("Reward history refresh was superseded.");
+      }
+      const cleanHistory = (Array.isArray(history) ? history : []).slice()
+        .sort((left, right) => normalizeTimestampMs(right?.awardedAtMs) - normalizeTimestampMs(left?.awardedAtMs))
+        .slice(0, DEED_CAMP_HISTORY_DISPLAY_LIMIT);
+      deedCampHistoryCache.set(cacheKey, { history: cleanHistory, fetchedAtMs: Date.now() });
+      return cleanHistory;
+    });
+    deedCampHistoryRequests.set(cacheKey, request);
+  }
+  void request.then(history => {
+    if (cacheKey === getDeedCampHistoryCacheKey()) renderDeedCampHistoryPanel(camp.id, history);
   }).catch(error => {
+    if (cacheKey !== getDeedCampHistoryCacheKey() || deedCampHistoryRequests.get(cacheKey) !== request) return;
     console.warn("Could not load Deed Camp reward history", error);
-    if (!cached) renderDeedCampHistoryPanel(camp.id, [], "error");
-  }).finally(() => deedCampHistoryRequests.delete(cacheKey));
-  deedCampHistoryRequests.set(cacheKey, request);
+    renderDeedCampHistoryPanel(camp.id, [], "error");
+  }).finally(() => {
+    if (deedCampHistoryRequests.get(cacheKey) === request) deedCampHistoryRequests.delete(cacheKey);
+  });
 }
 
 function showRewardCampInfoModal(campId) {
@@ -27931,9 +27992,8 @@ function showRewardCampInfoModal(campId) {
         <strong>Camp defenses hidden</strong>
         <p>Scout this camp to reveal its stationed troops. Camps have no level or walls, and every stationed troop supplies exactly 1.00 defense power.</p>
       </div>`;
-  const rewardPanelMarkup = isDeedCamp
-    ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
-    : rewardCampProgressMarkup(config, null, "loading");
+  const rewardPanelMarkup = `<div data-camp-reward-panel="${escapeHtml(camp.id)}">${rewardCampProgressMarkup(config, null, "loading")}</div>`
+    + (isDeedCamp ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>` : "");
   const rewardConditionMarkup = isDeedCamp
     ? `<p class="deed-camp-condition">Hold for ${formatNumber(holdMinutes)} minutes to receive one random neutral city from any active map in your realm (the former Crownlands Heart is excluded). One award per player per UTC day; normal neutral-city limits are separate.</p>`
     : isRelicCamp
@@ -27975,7 +28035,7 @@ function showRewardCampInfoModal(campId) {
     <div class="gold-camp-info-panel">
       <div class="camp-info-tabs" role="tablist" aria-label="${escapeHtml(camp.name)} information">
         <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">${isDeedCamp || isRelicCamp ? "Status" : "Stats"}</button>
-        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">${isDeedCamp ? "Your Rewards" : "Reward"}</button>
+        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">Your Rewards</button>
         <button id="campRulesTab" class="camp-info-tab camp-rules-tab" type="button" role="tab" aria-label="How this camp works" aria-selected="false" aria-controls="campRulesPanel" data-camp-info-tab="rules">?</button>
       </div>
 
@@ -27990,7 +28050,8 @@ function showRewardCampInfoModal(campId) {
         ${renderHoldingReinforcementPanel(camp)}
       </section>
 
-      <section id="campRewardPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRewardTab" data-camp-info-panel="reward" data-camp-reward-panel="${escapeHtml(camp.id)}" hidden>
+      <section id="campRewardPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRewardTab" data-camp-info-panel="reward" hidden>
+        <p class="camp-reward-reset">Only your rewards are shown here. Your daily progress and reward history are shared across all ${escapeHtml(config.name)} locations in your realm.</p>
         ${rewardPanelMarkup}
       </section>
 
@@ -28015,7 +28076,10 @@ function showRewardCampInfoModal(campId) {
       panel.hidden = panel.dataset.campInfoPanel !== selectedTab;
     });
     animateUiTabPanel(panels.find(panel => panel.dataset.campInfoPanel === selectedTab));
-    if (isDeedCamp && selectedTab === "reward") refreshDeedCampHistoryPanel(camp, { force: true });
+    if (selectedTab === "reward") {
+      refreshRewardCampProgressPanel(camp.id, config);
+      if (isDeedCamp) refreshDeedCampHistoryPanel(camp);
+    }
   }));
   bindHoldingReinforcementButtons();
   if (!modal.open) modal.showModal();

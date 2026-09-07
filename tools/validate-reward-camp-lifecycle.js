@@ -119,7 +119,7 @@ requireMatch(
 );
 requireMatch(
   client,
-  /function getDeedCampHistoryCacheKey[\s\S]*?getCurrentOnlineUid\(\)[\s\S]*?Your Rewards/,
+  /function getDeedCampHistoryCacheKey[\s\S]*?getRewardCampProgressCacheKey\(\{ type: "deed" \}\)/,
   "Private Deed Camp history is not isolated by player in the client cache and UI."
 );
 requireMatch(
@@ -133,8 +133,8 @@ assert(
 );
 requireMatch(
   campInfoModal,
-  /const rewardPanelMarkup = isDeedCamp[\s\S]*?data-deed-history-panel[\s\S]*?: rewardCampProgressMarkup\(config, null, "loading"\)/,
-  "Deed Camp history and Gold/Warband reward previews are no longer rendered as separate views."
+  /const rewardPanelMarkup = [\s\S]*?data-camp-reward-panel[\s\S]*?rewardCampProgressMarkup\(config, null, "loading"\)[\s\S]*?isDeedCamp \?[\s\S]*?data-deed-history-panel/,
+  "Camp progress and Deed history must have separate panels so refreshing progress preserves history."
 );
 requireMatch(
   campInfoModal,
@@ -143,8 +143,10 @@ requireMatch(
 );
 requireMatch(
   campInfoModal,
-  /isDeedCamp \? "Your Rewards" : "Reward"/,
-  "The recipient-private Deed Camp history tab is not clearly distinguished from public reward previews."
+  /data-camp-info-tab="reward">Your Rewards<\/button>/,
+  "Every Camp reward tab must identify its personal reward information."
 );
+
+require("./validate-shared-camp-rewards.js");
 
 console.log("Validated Camp completion gating, four-step Gold/Warband previews, private Deed rewards, idempotency, abandonment, reinforcement reset, and troop-production preservation.");

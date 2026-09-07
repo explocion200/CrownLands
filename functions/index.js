@@ -32770,7 +32770,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const productionCitiesSnap = productionCitiesQuery ? await transaction.get(productionCitiesQuery) : null;
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
     const rawClaimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
-    const claimData = safeString(rawClaimData.resetGeneration, 120) === RESET_GENERATION ? rawClaimData : {};
+    const claimData = safeString(rawClaimData.resetGeneration, 120) === RESET_GENERATION
+      && rawClaimData.worldId === ONLINE_WORLD_ID
+      && (!rawClaimData.realmShardId || rawClaimData.realmShardId === getCurrentRealmShardId())
+      ? rawClaimData : {};
     const baseProductionRates = productionCitiesSnap
       ? getRewardedAdBaseRates({
         uid: holderUid,
@@ -32990,6 +32993,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       transaction.set(claimsRef, {
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
+        realmShardId: getCurrentRealmShardId(),
         date: today,
         count: nextClaims,
         lastReward: reward,
