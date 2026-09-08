@@ -456,6 +456,51 @@ async function main() {
   const goldRef = objectiveRef(targetRegionId, gold.id);
   await goldRef.set({
     ...current,
+    id: gold.id,
+    kind: "city",
+    owner: "neutral",
+    ownerKind: "neutral",
+    ownerUid: "",
+    regionId: targetRegionId,
+    troops: 1,
+  });
+  const deniedTargets = [
+    { label: "neutral-city", targetId: gold.id, regionId: targetRegionId, targetType: "city" },
+    { label: "player-city", targetId: defenderClaim.cityId, regionId: defenderClaim.regionId, targetType: "city" },
+    { label: "reward-camp", targetId: gold.id, regionId: targetRegionId, targetType: "camp" },
+  ];
+  for (const target of deniedTargets) {
+    const deniedRallyId = `rally_denied_${target.label}_${crypto.randomBytes(5).toString("hex")}`;
+    const payload = rallyOrder({
+      rallyId: deniedRallyId,
+      sourceClaim: creatorClaim,
+      targetRegionId: target.regionId,
+      targetId: target.targetId,
+      troops: 10_000,
+    });
+    // A caller's forged objective metadata must never override the stored target.
+    payload.target = { id: target.targetId, kind: "stronghold", strongholdType: "gold" };
+    payload.army.strongholdType = "gold";
+    payload.army.targetType = target.targetType;
+    const [sourceBefore, profileBefore] = await Promise.all([
+      creatorCityRef.get(),
+      db.doc(`players/${rallyCreator.uid}`).get(),
+    ]);
+    const denied = await callFunctionRaw("createClanRally", rallyCreator.token, payload);
+    assert(denied.body.error?.status === "FAILED_PRECONDITION", `${target.label} was not rejected as a Rally target.`);
+    assert(/Rallies may target only/.test(denied.body.error?.message || ""), `${target.label} failed for an unrelated reason.`);
+    const [sourceAfter, profileAfter, rallyAfter, armyAfter] = await Promise.all([
+      creatorCityRef.get(),
+      db.doc(`players/${rallyCreator.uid}`).get(),
+      db.doc(`clans/${clanId}/rallies/${deniedRallyId}`).get(),
+      db.doc(`armies/${deniedRallyId}`).get(),
+    ]);
+    assert(sourceAfter.data()?.troops === sourceBefore.data()?.troops, `Rejected ${target.label} deducted source troops.`);
+    assert(Number(profileAfter.data()?.committedRallyTroops || 0) === Number(profileBefore.data()?.committedRallyTroops || 0), `Rejected ${target.label} committed Rally troops.`);
+    assert(!rallyAfter.exists && !armyAfter.exists, `Rejected ${target.label} created a Rally or army.`);
+  }
+  await goldRef.set({
+    ...current,
     ...gold,
     kind: "stronghold",
     owner: "player",

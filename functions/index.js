@@ -22429,7 +22429,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     order.targetRegionId,
   ]);
   if (!["city", "tower"].includes(order.targetType)) {
-    throw new HttpsError("failed-precondition", "Rallies may target only Strongholds or the Crown Citadel.");
+    throw new HttpsError("failed-precondition", "Rallies may target only Holding Towers, Strongholds, or the Crown Citadel.");
   }
   if (order.targetType === "tower" || assemblyType === "tower") assertHoldingTowerWorldActive();
   const sourceTowerDefinition = assemblyType === "tower"
