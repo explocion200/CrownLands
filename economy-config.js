@@ -248,8 +248,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "modelVersion": 1,
     "repairBaseMinutes": 15,
     "repairMinutesPerLevel": 0.3,
-    "meaningfulWallDamagePercent": 5,
-    "intactWallDefenderLossCapPercent": 10
+    "meaningfulWallDamagePercent": 5
   },
   "playerCosts": {
     "nearbyScoutGold": 250000,

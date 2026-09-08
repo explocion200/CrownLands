@@ -44,7 +44,6 @@ assert.deepEqual(economy.siegeCombat, {
   repairBaseMinutes: 15,
   repairMinutesPerLevel: 0.3,
   meaningfulWallDamagePercent: 5,
-  intactWallDefenderLossCapPercent: 10,
 });
 
 const context = {
@@ -54,7 +53,6 @@ const context = {
   SIEGE_REPAIR_BASE_MINUTES: 15,
   SIEGE_REPAIR_MINUTES_PER_LEVEL: 0.3,
   SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT: 5,
-  SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT: 10,
   Date,
   Math,
   Number,
@@ -298,18 +296,18 @@ const level50 = siegeResult({ level: 50, attackPower: 2_000_000, wall: 2_474_923
 assert.equal(level50.success, false, "One million max-Sword troops should not capture the Level 50 benchmark.");
 assert.equal(level50.fortificationBreached, false);
 assert.equal(level50.fortification.penetratingAttackPower, 0);
-assert.equal(level50.defenderLosses, 80_810);
+assert.equal(level50.defenderLosses, 0, "An attack stopped by the wall must not harm defenders.");
 
 const level75 = siegeResult({ level: 75, attackPower: 2_000_000, wall: 3_737_461, garrison: 2_500_000 });
 assert.equal(level75.success, false, "The Level 75 benchmark wall should hold.");
 assert.equal(level75.fortificationBreached, false);
-assert.equal(level75.defenderLosses, 53_512);
+assert.equal(level75.defenderLosses, 0);
 
 const level100 = siegeResult({ level: 100, attackPower: 2_000_000, wall: 4_999_998, garrison: 3_000_000 });
 assert.equal(level100.success, false, "Max Stoneworks on a Level 100 city should stop the benchmark army at the wall.");
 assert.equal(level100.fortificationBreached, false);
-assert.equal(level100.defenderLosses, 40_000);
-assert.ok(level100.defenderLosses <= 100_000, "An intact wall allowed more than 10% defender losses.");
+assert.equal(level100.defenderLosses, 0);
+assert.equal(level100.defendersLeft, 1_000_000, "Every defender must survive a wall-only hit.");
 assert.equal(level100.fortification.endingIntegrityBps, 5_999);
 assert.equal(level100.fortification.repairWindowMinutes, 45);
 assert.equal(level100.fortification.repairAddedMs, 1_080_000);
@@ -397,6 +395,48 @@ assert.equal(protectedRaid.fortification.persistentDamageApplied, false, "Protec
 assert.equal(protectedRaid.fortification.endingIntegrityBps, 10_000);
 assert.ok(protectedRaid.defenderLosses <= 10);
 
+const clientContext = {
+  ...context,
+  isRewardCampTarget: target => target?.kind === "camp",
+  normalizeTimestampMs: context.timestampToMs,
+  getBattleDefensePower: target => target.legacyDefense,
+};
+vm.createContext(clientContext);
+vm.runInContext(extractFunction(client, "calculateCombatResult"), clientContext);
+for (const mode of ["normal", "raid", "assault"]) {
+  for (const wall of [1_000, 400, 0]) {
+    for (const power of [0, Math.max(0, wall - 1), wall, wall + 100, wall + 1_001]) {
+      const attackProtection = { mode, captureAllowed: mode === "normal" };
+      const options = {
+        attackPower: power,
+        defensePower: wall + 1_000,
+        siegeCombatVersion: 1,
+        targetType: "city",
+        fortification: { fullWallPower: 1_000, currentWallPower: wall, integrityBps: wall * 10 },
+        garrisonDefensePower: 1_000,
+        attackProtection,
+        nowMs: 1_800_000,
+      };
+      const target = { level: 50, troops: 1_000 };
+      const authoritative = context.calculateCombatResult(2_000, target, {}, {}, options);
+      const preview = clientContext.calculateCombatResult(2_000, "player", target, options);
+      const label = `${mode}, wall=${wall}, attack=${power}`;
+      for (const field of ["defenderLosses", "defendersLeft", "attackerLosses", "success", "raidCompleted", "fortificationBreached"]) {
+        assert.equal(preview[field], authoritative[field], `Forecast/server mismatch for ${field}: ${label}.`);
+      }
+      if (power <= wall) {
+        assert.equal(authoritative.defenderLosses, 0, `Wall-only attack harmed defenders: ${label}.`);
+        assert.equal(authoritative.defendersLeft, target.troops, `Wall-only attack changed the garrison: ${label}.`);
+        assert.equal(authoritative.fortification.penetratingAttackPower, 0);
+        assert.equal(authoritative.success, false);
+      } else if (power === wall + 100) {
+        assert.equal(authoritative.defenderLosses, mode === "raid" ? 20 : 82, `Only the 100 power left after the wall may damage troops: ${label}.`);
+      }
+    }
+  }
+}
+assert.doesNotMatch(server + client + editor, /SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT|intactWallDefenderLossCapPercent/, "The retired wall-only casualty setting must not be available to gameplay or the editor.");
+
 const camp = siegeResult({ attackPower: 300, troops: 300, defenders: 100, wall: 1_000, garrison: 200, targetType: "camp" });
 assert.equal(camp.fortification, null, "Reward camps must remain wall-free.");
 const legacy = siegeResult({ attackPower: 1_000, troops: 1_000, defenders: 100, wall: 1_000, garrison: 200, version: 0 });
@@ -426,8 +466,8 @@ assert.match(client, /function applyOnlineCities[\s\S]*?hasOwnProperty\.call\(on
 assert.match(client, /function applyServerCityUpdates[\s\S]*?hasOwnProperty\.call\(update, "fortificationState"\)/);
 assert.ok(client.includes("Walls likely hold"));
 assert.ok(client.includes("Walls breached — garrison likely holds"));
-assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?recover continuously[\s\S]*?neutral claims[\s\S]*?Protected raids do not persist wall damage/);
-assert.match(guide, /Defense happens in two layers[\s\S]*?defender troop losses are capped at 10%/);
+assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?recover continuously[\s\S]*?neutral claims[\s\S]*?Protected raids[\s\S]*?do not persist wall damage/);
+assert.match(guide, /Defense happens in two layers[\s\S]*?all defending soldiers and reinforcements survive unharmed/);
 assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?rise continuously[\s\S]*?neutral handoff/);
 assert.match(readme, /two-phase siege model[\s\S]*?smooth staged curve[\s\S]*?full-breach repair window[\s\S]*?recover continuously[\s\S]*?later meaningful hits use that recovered strength/);
 assert.match(editor, /Soldiers and walls[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);

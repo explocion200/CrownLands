@@ -87,7 +87,6 @@ const sandbox = {
   BASE_TROOP_ATTACK_POWER: 1.25,
   SIEGE_COMBAT_VERSION: 1,
   SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT: 5,
-  SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT: 10,
   Number,
   Math,
   normalizeAttackProtectionSnapshot(value) {

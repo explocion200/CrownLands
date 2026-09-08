@@ -245,7 +245,7 @@
       : latestBattle.captured
         ? `The current wall and garrison are short of the attack by ${format(Math.max(0, latestBattle.attackPower - latestBattle.defensePower))} power. Reinforcements, repaired integrity, or applicable defense bonuses must close that gap before arrival.`
         : latestBattle.outcome === "wall_hold"
-          ? `The wall stops all penetrating power. Defenders lose no more than ${format(config.siegeCombat.intactWallDefenderLossCapPercent)}%, and ${format(latestBattle.defenderSurvivors)} troops remain behind the holding.`
+          ? `The wall absorbs all attack power. All ${format(latestBattle.defenderSurvivors)} defending troops survive unharmed.`
           : `The wall falls, but the garrison’s ${format(latestBattle.garrisonDefensePower)} defense exceeds the ${format(latestBattle.penetratingAttackPower)} power that reaches it. ${format(latestBattle.defenderSurvivors)} defenders remain.`;
     $("battlePerspectiveText").textContent = text;
     $("attackerPerspectiveBtn").setAttribute("aria-selected", String(battlePerspective === "attacker"));

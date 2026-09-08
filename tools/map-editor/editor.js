@@ -1705,12 +1705,6 @@
                 economy.siegeCombat.meaningfulWallDamagePercent,
                 { step: 0.1, description: "Hits below this share of the full wall do not change integrity or reset the timer unless they finish the breach." }
               )}
-              ${economyNumberInput(
-                "siegeCombat.intactWallDefenderLossCapPercent",
-                "Defender loss cap while wall holds (%)",
-                economy.siegeCombat.intactWallDefenderLossCapPercent,
-                { step: 0.1, description: "Maximum garrison losses from an attack that fails to breach the wall." }
-              )}
             </div>
             <div class="economy-preview-panel">
               <div class="economy-preview-heading">

@@ -257,7 +257,70 @@ async function main() {
   assert(defenderReport.casualtyRecovery?.fieldMedicsPercent === 20, "Defender Field Medics was not snapshotted separately.");
   assert(defenderReport.casualtyRecovery?.gearPercent === 1.5, "Defender casualty gear was not snapshotted separately.");
 
-  console.log("Emulator battle report gear effects passed: attack, defender, wall, and casualty sources match authoritative settlement.");
+  // Exercise persisted wall-only combat against both the owner and an allied garrison.
+  const ally = await createAuthUser("wall-ally");
+  const allyClaim = await callFunction("claimStartingCity", ally.token, { playerName: "Wall Ally" });
+  const wallTargetDoc = (await cities.get()).docs.find(doc => (
+    doc.id !== sourceRef.id && doc.id !== targetRef.id && !doc.data()?.ownerUid
+  ));
+  assert(wallTargetDoc, "The wall-only test requires a spare regular city.");
+  const clanId = `wall_defenders_${crypto.randomBytes(5).toString("hex")}`;
+  const current = { worldId: realm.worldId, resetGeneration: realm.resetGeneration, realmShardId: "legacy" };
+  const targetKey = `city:${regionId}:${wallTargetDoc.id}`;
+  const reinforcementId = `reinforce_${crypto.createHash("sha256").update(`${realm.resetGeneration}|${ally.uid}|${targetKey}`).digest("hex").slice(0, 40)}`;
+  const contributionRef = db.doc(`reinforcements/${reinforcementId}`);
+  const wallNowMs = Date.now();
+  const batch = db.batch();
+  batch.set(db.doc(`clans/${clanId}`), { ...current, status: "active", leaderUid: defender.uid, memberCount: 2, name: "Wall Defenders", tag: "WALL" });
+  for (const [user, role] of [[defender, "leader"], [ally, "member"]]) {
+    batch.set(db.doc(`clans/${clanId}/members/${user.uid}`), { ...current, uid: user.uid, clanId, role, status: "active" });
+    batch.set(db.doc(`players/${user.uid}`), { clanId, clanRole: role, clanName: "Wall Defenders", clanTag: "WALL" }, { merge: true });
+  }
+  batch.set(sourceRef, { troops: 50_000, troopFloat: 50_000, productionUpdatedAtMs: wallNowMs }, { merge: true });
+  batch.set(wallTargetDoc.ref, {
+    ...wallTargetDoc.data(), ...current,
+    owner: "player", ownerKind: "player", ownerUid: defender.uid, ownerClanId: clanId,
+    ownerName: "Gear Defender", ownerShieldExpiresAtMs: 0, isMainCity: false,
+    kind: "city", level: 25, regionId, troops: 100_000, troopFloat: 100_000,
+    alliedReinforcementTroops: 10_000, productionUpdatedAtMs: wallNowMs,
+    fortificationState: { version: 1, integrityBps: 10_000, repairAtMs: 0 },
+  });
+  batch.set(contributionRef, {
+    ...current, ownerUid: ally.uid, ownerName: "Wall Ally", targetOwnerUid: defender.uid,
+    clanId, targetKey, targetType: "city", targetId: wallTargetDoc.id, targetRegionId: regionId,
+    sourceCityId: allyClaim.cityId, sourceRegionId: allyClaim.regionId || allyClaim.mainRegionId,
+    troops: 10_000, status: "stationed",
+  });
+  batch.set(db.doc(`players/${ally.uid}`), { stationedReinforcementTroops: 10_000 }, { merge: true });
+  await batch.commit();
+  await callFunction("collectEconomy", defender.token);
+  await callFunction("collectEconomy", attacker.token);
+  const wallArmyId = `wall_only_${crypto.randomBytes(6).toString("hex")}`;
+  await callFunction("sendArmyOrder", attacker.token, {
+    sourceRegionId: regionId, targetRegionId: regionId,
+    army: { id: wallArmyId, kind: "attack", targetType: "city", fromId: sourceRef.id,
+      toId: wallTargetDoc.id, troops: 10_000, requestedTroops: 10_000,
+      sourceRegionId: regionId, targetRegionId: regionId },
+  });
+  await db.doc(`armies/${wallArmyId}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
+  const wallResolution = await callFunction("resolveArmyOrder", attacker.token, { armyId: wallArmyId, regionIds: [regionId] });
+  assert(wallResolution.status === "resolved", "The wall-only attack did not resolve.");
+  const wallSnapshot = (await db.doc(`battleSnapshots/${realm.resetGeneration}/entries/${wallArmyId}`).get()).data() || {};
+  assert(wallSnapshot.totals?.defenderLosses === 0, "The wall-only battle snapshot reported defender deaths.");
+  assert(wallSnapshot.totals?.defenderSurvivors === wallSnapshot.totals?.defenders, "The wall-only battle snapshot lost defending troops.");
+  const [wallCityAfter, contributionAfter, wallDefenderAfter] = await Promise.all([
+    wallTargetDoc.ref.get(), contributionRef.get(), db.doc(`players/${defender.uid}`).get(),
+  ]);
+  assert(wallCityAfter.data()?.ownerUid === defender.uid, "A wall-only attack captured the city.");
+  assert(wallCityAfter.data()?.fortificationState?.integrityBps < 10_000, `The test attack must cause meaningful wall damage: ${JSON.stringify({ siege: wallSnapshot.siege, protection: wallSnapshot.attackProtection })}`);
+  assert(wallCityAfter.data()?.fortificationState?.integrityBps > 0, "The test attack must leave the wall standing.");
+  assert(wallCityAfter.data()?.troops >= 100_000, "The wall-only attack harmed the owner's soldiers.");
+  assert(wallCityAfter.data()?.alliedReinforcementTroops === 10_000, "The wall-only attack reduced the allied garrison.");
+  assert(contributionAfter.data()?.troops === 10_000 && contributionAfter.data()?.status === "stationed", "The wall-only attack harmed or removed the reinforcement contribution.");
+  const wallReport = (wallDefenderAfter.data()?.battleReports || []).find(report => report.battleId === wallArmyId);
+  assert(wallReport?.defenderLosses === 0, "The defender's wall-only report showed troop casualties.");
+
+  console.log("Emulator battle report gear effects passed: attack, defender, wall, and casualty sources match authoritative settlement; wall-only hits preserve owner and allied garrisons.");
 }
 
 main()

@@ -115,7 +115,8 @@ const wallHold = calculator.simulateSiege({
   wallIntegrityPercent: 100,
 });
 assert.equal(wallHold.outcome, "wall_hold");
-assert.ok(wallHold.defenderLosses <= wallHold.totalDefenderTroops * 0.1, "An intact wall exceeded the defender-loss cap.");
+assert.equal(wallHold.defenderLosses, 0, "An intact wall must prevent all defender losses.");
+assert.equal(wallHold.defenderSurvivors, wallHold.totalDefenderTroops);
 
 const garrisonHold = calculator.simulateSiege({
   attackerTroops: 1_200_000,
