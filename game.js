@@ -37478,6 +37478,7 @@ function renderBattleForecastChanges(report = null, snapshot = null) {
   const forecast = normalizeCombatForecast(report?.launchCombatForecast);
   if (report?.type !== "attack" || forecast?.status !== "scouted" || !snapshot?.defender) return "";
   const changes = [];
+  const amount = value => Math.floor(Number(value)).toLocaleString("en-US");
   if (forecast.targetOwnerUid !== String(snapshot.defender.ownerUid || "")) {
     changes.push("The holding changed owners.");
   }
@@ -37493,13 +37494,11 @@ function renderBattleForecastChanges(report = null, snapshot = null) {
   comparisons.forEach(([label, before, after]) => {
     if (before == null || after == null || !Number.isFinite(Number(after))) return;
     if (Math.floor(Number(before)) !== Math.floor(Number(after))) {
-      const beforeText = Math.floor(Number(before)).toLocaleString("en-US");
-      const afterText = Math.floor(Number(after)).toLocaleString("en-US");
-      changes.push(`${label}: ${beforeText} → ${afterText}.`);
+      changes.push(`${label}: ${amount(before)} → ${amount(after)}.`);
     }
   });
   if (!changes.length) return "";
-  return `<details class="battle-report-detail-notice battle-forecast-changes"><summary>Defense changed after scouting</summary><p>Your launch forecast used the earlier scout report. Combat used the defenses present at arrival.</p><ul>${changes.map(change => `<li>${escapeHtml(change)}</li>`).join("")}</ul><p>Wall power can change through damage, repairs, upgrades, or bonuses. Garrison counts can change while armies travel.</p></details>`;
+  return `<details class="battle-report-detail-notice battle-forecast-changes"><summary>Defense changed after scouting</summary><p>Your forecast used scout information. Combat used the defenses present at arrival.</p><ul>${changes.map(change => `<li>${escapeHtml(change)}</li>`).join("")}</ul><p>Walls can change through damage, repairs, upgrades, or bonuses. Troops can arrive or leave during travel.</p></details>`;
 }
 
 function renderDetailedBattleReport(report, snapshot, badge) {
