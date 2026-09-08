@@ -37474,6 +37474,34 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
     </div>`;
 }
 
+function renderBattleForecastChanges(report = null, snapshot = null) {
+  const forecast = normalizeCombatForecast(report?.launchCombatForecast);
+  if (report?.type !== "attack" || forecast?.status !== "scouted" || !snapshot?.defender) return "";
+  const changes = [];
+  if (forecast.targetOwnerUid !== String(snapshot.defender.ownerUid || "")) {
+    changes.push("The holding changed owners.");
+  }
+  const actualReinforcements = Array.isArray(snapshot.reinforcements)
+    ? snapshot.reinforcements.reduce((total, row) => total + Math.max(0, Number(row.startingTroops) || 0), 0)
+    : null;
+  const comparisons = [
+    ["Wall power", forecast.fortification?.startingWallPower, snapshot.siege?.startingWallPower],
+    ["Owner garrison", forecast.ownerTroops, snapshot.defender.startingTroops],
+    ["Reinforcement troops", forecast.reinforcementTroops, actualReinforcements],
+    ["Total defense", forecast.defensePower, snapshot.totals?.defensePower],
+  ];
+  comparisons.forEach(([label, before, after]) => {
+    if (before == null || after == null || !Number.isFinite(Number(after))) return;
+    if (Math.floor(Number(before)) !== Math.floor(Number(after))) {
+      const beforeText = Math.floor(Number(before)).toLocaleString("en-US");
+      const afterText = Math.floor(Number(after)).toLocaleString("en-US");
+      changes.push(`${label}: ${beforeText} → ${afterText}.`);
+    }
+  });
+  if (!changes.length) return "";
+  return `<details class="battle-report-detail-notice battle-forecast-changes"><summary>Defense changed after scouting</summary><p>Your launch forecast used the earlier scout report. Combat used the defenses present at arrival.</p><ul>${changes.map(change => `<li>${escapeHtml(change)}</li>`).join("")}</ul><p>Wall power can change through damage, repairs, upgrades, or bonuses. Garrison counts can change while armies travel.</p></details>`;
+}
+
 function renderDetailedBattleReport(report, snapshot, badge) {
   const viewerRole = getDetailedBattleViewerRole(snapshot, report);
   const ruleLabel = getBattleRuleLabel(snapshot);
@@ -37486,6 +37514,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       ${renderBattleReportNavigation(report, snapshot.target)}
       ${ruleLabel ? `<div class="battle-visual-rule">${escapeHtml(ruleLabel)}</div>` : ""}
       ${renderBattleReportHero(left, right, badge, getViewerBattleResultLabel(snapshot, viewerRole, report))}
+      ${viewerRole === "attacker" ? renderBattleForecastChanges(report, snapshot) : ""}
       ${renderRallyParticipantResults(snapshot)}
       ${renderBattleComparisonSections(
         left,

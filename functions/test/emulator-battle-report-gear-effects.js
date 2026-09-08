@@ -289,6 +289,9 @@ async function main() {
     ...current, ownerUid: ally.uid, ownerName: "Wall Ally", targetOwnerUid: defender.uid,
     clanId, targetKey, targetType: "city", targetId: wallTargetDoc.id, targetRegionId: regionId,
     sourceCityId: allyClaim.cityId, sourceRegionId: allyClaim.regionId || allyClaim.mainRegionId,
+    reinforcementSourceId: allyClaim.cityId,
+    reinforcementSourceRegionId: allyClaim.regionId || allyClaim.mainRegionId,
+    reinforcementRecipientUid: defender.uid,
     troops: 10_000, status: "stationed",
   });
   batch.set(db.doc(`players/${ally.uid}`), { stationedReinforcementTroops: 10_000 }, { merge: true });
@@ -320,7 +323,140 @@ async function main() {
   const wallReport = (wallDefenderAfter.data()?.battleReports || []).find(report => report.battleId === wallArmyId);
   assert(wallReport?.defenderLosses === 0, "The defender's wall-only report showed troop casualties.");
 
-  console.log("Emulator battle report gear effects passed: attack, defender, wall, and casualty sources match authoritative settlement; wall-only hits preserve owner and allied garrisons.");
+  async function launchAuditAttack(label, targetId, troops, actor = attacker, originRef = sourceRef) {
+    const id = `${label}_${crypto.randomBytes(6).toString("hex")}`;
+    await callFunction("sendArmyOrder", actor.token, {
+      sourceRegionId: regionId, targetRegionId: regionId,
+      army: { id, kind: "attack", targetType: "city", fromId: originRef.id, toId: targetId,
+        troops, requestedTroops: troops, sourceRegionId: regionId, targetRegionId: regionId },
+    });
+    await db.doc(`armies/${id}`).set({ arrivesAtMs: Date.now() - 1_000 }, { merge: true });
+    return id;
+  }
+  const resolveAuditAttack = (id, actor = attacker) => callFunction("resolveArmyOrder", actor.token, { armyId: id, regionIds: [regionId] });
+  const readBattle = async id => (await db.doc(`battleSnapshots/${realm.resetGeneration}/entries/${id}`).get()).data();
+  async function verifyAlliedRecovery(battleId, losses) {
+    const receiptQuery = db.collection(`reinforcementBattleReceipts/${realm.resetGeneration}/entries`)
+      .where("armyId", "==", battleId).where("contributorUid", "==", ally.uid);
+    let receipts;
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      receipts = await receiptQuery.get();
+      if (receipts.docs.some(doc => doc.data()?.status === "settled")) break;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    assert(receipts.size === 1 && receipts.docs[0].data()?.status === "settled", "The allied casualty receipt did not settle exactly once.");
+    const allyAfter = (await db.doc(`players/${ally.uid}`).get()).data();
+    const reports = allyAfter.battleReports?.filter(report => report.battleId === battleId) || [];
+    assert(reports.length === 1 && reports[0].fieldMedicsRecovered === Math.floor(losses * 0.2),
+      "Allied Field Medics recovery disagrees with actual losses or duplicated its report.");
+  }
+
+  // Distinct arrivals and a duplicate resolver contend on the same damaged wall.
+  const wallHitA = await launchAuditAttack("concurrent_wall_a", wallTargetDoc.id, 10_000);
+  const wallHitB = await launchAuditAttack("concurrent_wall_b", wallTargetDoc.id, 10_000);
+  await Promise.all([resolveAuditAttack(wallHitA), resolveAuditAttack(wallHitB), resolveAuditAttack(wallHitA)]);
+  const wallHits = await Promise.all([readBattle(wallHitA), readBattle(wallHitB)]);
+  assert(wallHits.every(entry => entry?.totals?.defenderLosses === 0), "Concurrent wall-only hits killed defenders.");
+  wallHits.sort((a, b) => b.siege.startingWallPower - a.siege.startingWallPower);
+  assert(wallHits[1].siege.startingWallPower < wallHits[0].siege.startingWallPower - wallHits[0].siege.wallDamagePower / 2,
+    "The second concurrent hit did not see the first hit's wall damage.");
+  const wallAfterConcurrent = (await wallTargetDoc.ref.get()).data();
+  assert(wallAfterConcurrent.alliedReinforcementTroops === 10_000, "Concurrent wall hits changed the allied troop total.");
+  assert((await contributionRef.get()).data()?.troops === 10_000, "Concurrent wall hits changed attributed troops.");
+
+  // A definite garrison hit verifies recovery even when recall wins the later race.
+  await wallTargetDoc.ref.set({ level: 1, fortificationState: { version: 1, integrityBps: 10_000, repairAtMs: 0 } }, { merge: true });
+  await db.doc(`players/${ally.uid}`).set({ upgrades: { fieldMedics: 10 } }, { merge: true });
+  const garrisonHitId = await launchAuditAttack("allied_casualties", wallTargetDoc.id, 2_500);
+  await Promise.all([resolveAuditAttack(garrisonHitId), resolveAuditAttack(garrisonHitId)]);
+  const garrisonHit = await readBattle(garrisonHitId);
+  const damagedAlly = garrisonHit.reinforcements?.find(entry => entry.ownerUid === ally.uid);
+  assert(damagedAlly?.losses > 0 && damagedAlly.survivors + damagedAlly.losses === 10_000,
+    "The post-breach attack did not conserve allied survivors and casualties.");
+  await verifyAlliedRecovery(garrisonHitId, damagedAlly.losses);
+  const allyMainRef = db.doc(`islands/${allyClaim.islandId}/cities/${allyClaim.cityId}`);
+  await allyMainRef.set({ productionUpdatedAtMs: Date.now() + 60_000 }, { merge: true });
+  const recoveryBeforeReplay = (await allyMainRef.get()).data()?.troops;
+  await Promise.all([resolveAuditAttack(garrisonHitId), resolveAuditAttack(garrisonHitId)]);
+  assert((await allyMainRef.get()).data()?.troops === recoveryBeforeReplay, "Replaying the battle credited Field Medics twice.");
+
+  // Either recall or combat may win the transaction; both orders must conserve the contribution.
+  const troopsBeforeRecall = (await contributionRef.get()).data()?.troops;
+  assert(troopsBeforeRecall === damagedAlly.survivors, "The stationed contribution disagrees with post-breach survivors.");
+  const recallRaceId = await launchAuditAttack("recall_combat", wallTargetDoc.id, 5_000);
+  await Promise.all([
+    resolveAuditAttack(recallRaceId),
+    callFunction("returnClanReinforcement", ally.token, { reinforcementId }),
+  ]);
+  const recallBattle = await readBattle(recallRaceId);
+  const recalledContribution = (await contributionRef.get()).data();
+  const returningArmy = (await db.doc(`armies/${recalledContribution.returnArmyId}`).get()).data();
+  const allyDefense = recallBattle.reinforcements?.find(entry => entry.ownerUid === ally.uid);
+  const allyLosses = Number(allyDefense?.losses || 0);
+  assert(Number(returningArmy?.troops || 0) + allyLosses === troopsBeforeRecall, "Recall racing with combat lost or duplicated allied troops.");
+  assert(recalledContribution.status === "returning" && recalledContribution.troops === 0, "Recalled troops remained stationed.");
+  assert((await wallTargetDoc.ref.get()).data()?.alliedReinforcementTroops === 0, "Recall left phantom troops in the garrison.");
+  const repeatedRecall = await callFunction("returnClanReinforcement", ally.token, { reinforcementId });
+  assert(repeatedRecall.duplicate === true, "A repeated recall created another return.");
+  await resolveAuditAttack(recallRaceId);
+  assert(JSON.stringify(await readBattle(recallRaceId)) === JSON.stringify(recallBattle), "Replaying combat rewrote its snapshot.");
+  if (allyDefense) await verifyAlliedRecovery(recallRaceId, allyLosses);
+
+  // The first capture changes ownership; the other already-launched attack must transfer safely.
+  const captureDoc = (await cities.get()).docs.find(doc => !doc.data()?.ownerUid && doc.id !== wallTargetDoc.id);
+  assert(captureDoc, "The concurrent capture test requires a spare city.");
+  await captureDoc.ref.set({ ...captureDoc.data(), ...current, regionId,
+    owner: "player", ownerKind: "player", ownerUid: defender.uid, ownerName: "Gear Defender",
+    ownerShieldExpiresAtMs: 0, isMainCity: false, kind: "city", level: 1,
+    troops: 500, troopFloat: 500, alliedReinforcementTroops: 0, productionUpdatedAtMs: Date.now(),
+  });
+  await callFunction("collectEconomy", defender.token);
+  await callFunction("collectEconomy", attacker.token);
+  const captureA = await launchAuditAttack("concurrent_capture_a", captureDoc.id, 4_000);
+  const captureB = await launchAuditAttack("concurrent_capture_b", captureDoc.id, 4_000);
+  await Promise.all([resolveAuditAttack(captureA), resolveAuditAttack(captureB)]);
+  const captureSnapshots = (await Promise.all([readBattle(captureA), readBattle(captureB)])).filter(Boolean);
+  assert(captureSnapshots.length === 1 && captureSnapshots[0].outcome === "victory", "Concurrent arrivals fought or captured the same defender twice.");
+  const capturedCity = (await captureDoc.ref.get()).data();
+  assert(capturedCity.ownerUid === attacker.uid, "Concurrent capture assigned the wrong owner.");
+  assert(capturedCity.troops >= captureSnapshots[0].attacker.survivors + 4_000, "The second arrival lost troops after ownership changed.");
+  await captureDoc.ref.set({ productionUpdatedAtMs: Date.now() + 60_000 }, { merge: true });
+  const beforeReplay = (await captureDoc.ref.get()).data()?.troops;
+  await Promise.all([resolveAuditAttack(captureA), resolveAuditAttack(captureB)]);
+  assert((await captureDoc.ref.get()).data()?.troops === beforeReplay, "Replaying concurrent arrivals duplicated captured garrison troops.");
+
+  // Different rulers must fight the owner and survivors committed by the preceding battle.
+  const rival = await createAuthUser("competing-attacker");
+  await callFunction("claimStartingCity", rival.token, { playerName: "Competing Attacker" });
+  const rivalSource = (await cities.get()).docs.find(doc => !doc.data()?.ownerUid);
+  assert(rivalSource, "The competing attacker requires a source city.");
+  await rivalSource.ref.set({ ...rivalSource.data(), ...current, regionId,
+    owner: "player", ownerKind: "player", ownerUid: rival.uid, ownerName: "Competing Attacker",
+    ownerShieldExpiresAtMs: 0, isMainCity: false, kind: "city", level: 1,
+    troops: 10_000, troopFloat: 10_000, productionUpdatedAtMs: Date.now(),
+  });
+  await db.doc(`players/${rival.uid}`).set({ itemEffects: { shieldExpiresAtMs: 0 } }, { merge: true });
+  await captureDoc.ref.set({ ownerUid: defender.uid, ownerName: "Gear Defender", troops: 500, troopFloat: 500,
+    productionUpdatedAtMs: Date.now(), ownerShieldExpiresAtMs: 0, isMainCity: false }, { merge: true });
+  await callFunction("collectEconomy", defender.token);
+  await callFunction("collectEconomy", attacker.token);
+  await callFunction("collectEconomy", rival.token);
+  const competingA = await launchAuditAttack("competing_a", captureDoc.id, 4_000);
+  const competingB = await launchAuditAttack("competing_b", captureDoc.id, 4_000, rival, rivalSource.ref);
+  await Promise.all([resolveAuditAttack(competingA), resolveAuditAttack(competingB, rival)]);
+  const competingBattles = await Promise.all([readBattle(competingA), readBattle(competingB)]);
+  assert(competingBattles.every(Boolean), "An independently hostile arrival failed to produce a battle.");
+  const firstCapture = competingBattles.find(entry => entry.defender.ownerUid === defender.uid);
+  const nextBattle = competingBattles.find(entry => entry !== firstCapture);
+  assert(firstCapture?.outcome === "victory", "The first competing army did not capture the weak target.");
+  assert(nextBattle.defender.ownerUid === firstCapture.attacker.ownerUid, "The next battle used stale ownership.");
+  assert(nextBattle.defender.startingTroops >= firstCapture.attacker.survivors
+    && nextBattle.defender.startingTroops <= firstCapture.attacker.survivors + 10,
+  "The next battle used stale garrison troops instead of the preceding survivors.");
+  const finalOwner = nextBattle.outcome === "victory" ? nextBattle.attacker.ownerUid : nextBattle.defender.ownerUid;
+  assert((await captureDoc.ref.get()).data()?.ownerUid === finalOwner, "The final owner disagrees with the last serialized battle.");
+
+  console.log("Emulator battle report gear effects passed: authoritative gear and wall-only settlement, concurrent wall hits, recall/combat conservation, Field Medics, and idempotent concurrent captures.");
 }
 
 main()

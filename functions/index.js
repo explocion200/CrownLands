@@ -6597,25 +6597,19 @@ function getRallyParticipantAttackPower(participant = {}) {
 }
 
 function getRallyAttackPackages(rally = {}, participantProfiles = null) {
-  const useLiveCombatProfiles = participantProfiles instanceof Map;
   const packages = assembledRallyParticipants(rally).map(participant => {
-    const profileEntry = useLiveCombatProfiles ? participantProfiles.get(participant.uid) : null;
+    const profileEntry = participantProfiles instanceof Map ? participantProfiles.get(participant.uid) : null;
     const hasLiveProfile = Boolean(profileEntry?.snap?.exists || (
       profileEntry
       && !Object.prototype.hasOwnProperty.call(profileEntry, "snap")
     ));
     const profile = hasLiveProfile ? profileEntry.data || profileEntry : null;
     const gearBonuses = profile ? getCommonGearBonuses(profile) : null;
+    // Attack strength stays at launch values; identity and casualty recovery use live state.
     const combatParticipant = profile ? {
       ...participant,
       ownerName: normalizePlayerName(profile.playerName || profile.displayName || participant.ownerName, "Ruler"),
       ownerFlag: profile.flag || participant.ownerFlag || null,
-      attackSkillLevel: getSkillLevel(profile, "swordmastery"),
-      attackBonusPercent: getSkillPercent(profile, "swordmastery"),
-      attackGearPercent: gearBonuses.attackStrength,
-      attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * (
-        skillMultiplier(profile, "swordmastery") + gearBonuses.attackStrength / 100
-      ),
       fieldMedicsPercent: getCasualtyRecoveryPercent(profile),
       fieldMedicsSkillPercent: getSkillPercent(profile, "fieldMedics"),
       casualtyGearPercent: gearBonuses.casualtyEfficiency,
@@ -6628,8 +6622,7 @@ function getRallyAttackPackages(rally = {}, participantProfiles = null) {
   const storedAttackPower = Math.max(0, Math.floor(safeNumber(rally.attackPower, 0)));
   const calculatedAttackPower = packages.reduce((total, participant) => total + participant.effectivePower, 0);
   if (
-    useLiveCombatProfiles
-    || !storedAttackPower
+    !storedAttackPower
     || !calculatedAttackPower
     || storedAttackPower === calculatedAttackPower
   ) return packages;
