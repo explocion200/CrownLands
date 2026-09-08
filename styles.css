@@ -3208,7 +3208,7 @@ input {
   background: linear-gradient(#b3f2c2, #8fe2a5);
   box-shadow: 0 0 0 2px rgba(18, 61, 39, .82), 0 0 15px rgba(89, 229, 128, .72), 0 10px 22px rgba(0,0,0,.36);
 }
-.army-token.clan-ally.clan-attack {
+.army-token.clan-attack {
   border-color: #8fe2a5;
   background: linear-gradient(#68c982, #43ad62);
 }
