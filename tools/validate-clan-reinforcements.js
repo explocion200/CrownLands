@@ -200,6 +200,10 @@ const reinforcementIndexes = indexes.indexes.filter(index => index.collectionGro
 const firstFields = new Set(reinforcementIndexes.map(index => index.fields?.[0]?.fieldPath));
 ["ownerUid", "targetOwnerUid", "targetKey"].forEach(field => {
   assert(firstFields.has(field), `Missing reinforcement index beginning with ${field}.`);
+  assert(reinforcementIndexes.some(index => index.queryScope === "COLLECTION"
+    && [field, "resetGeneration", "worldId", "realmShardId", "status"].every((name, position) => (
+      index.fields?.[position]?.fieldPath === name && index.fields[position].order === "ASCENDING"
+    ))), `Missing current-shard reinforcement index beginning with ${field}.`);
 });
 const armyIndexes = indexes.indexes.filter(index => index.collectionGroup === "armies");
 assert(

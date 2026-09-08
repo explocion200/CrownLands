@@ -3010,6 +3010,7 @@
         where(ownerField, "==", uid),
         where("resetGeneration", "==", RESET_GENERATION),
         where("worldId", "==", ONLINE_WORLD_ID),
+        ...getRealmShardQueryConstraints(where),
         where("status", "==", "stationed")
       ),
       snapshot => {

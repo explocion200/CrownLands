@@ -52,6 +52,7 @@ const subscribePlayerReinforcements = extractFunction(clientSource, "subscribePl
 assert.match(subscribePlayerReinforcements, /subscribe\("contributor", "ownerUid"\)/, "Players must receive reinforcements they contributed.");
 assert.match(subscribePlayerReinforcements, /subscribe\("holder", "targetOwnerUid"\)/, "Players must receive reinforcements stationed at their holdings.");
 assert.match(subscribePlayerReinforcements, /where\("status", "==", "stationed"\)/, "Completed reinforcement history must not stay live.");
+assert.match(subscribePlayerReinforcements, /\.\.\.getRealmShardQueryConstraints\(where\)/, "Rally survivors must be readable under current-shard reinforcement access rules.");
 
 const subscribePlayerCamps = extractFunction(clientSource, "subscribePlayerCamps");
 assert.match(subscribePlayerCamps, /where\("holderUid", "==", client\.user\.uid\)/, "Held-camp updates must be limited to the current player.");
