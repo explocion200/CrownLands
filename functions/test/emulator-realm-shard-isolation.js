@@ -3,6 +3,9 @@
 const { getApps, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -130,6 +133,39 @@ function heldCampQuery(uid, shardId = "") {
   query.from[0].collectionId = "camps";
   query.where.compositeFilter.filters[0].fieldFilter.field.fieldPath = "holderUid";
   return query;
+}
+
+// Run the actual browser subscription builder against the emulator's rules.
+function reinforcementListenerQueries(uid, shardId = SHARD_ONE) {
+  const source = fs.readFileSync(path.join(__dirname, "../../firebaseClient.js"), "utf8");
+  const queries = [];
+  const context = {
+    RESET_GENERATION, ONLINE_WORLD_ID: WORLD_ID, REALM_SHARD_ID: shardId,
+    client: {
+      configured: true, db: {}, user: { uid },
+      modules: { firestore: {
+        collection: (_db, collectionId) => ({ collectionId }),
+        where: (fieldPath, _operator, value) => ({
+          fieldFilter: { field: { fieldPath }, op: "EQUAL", value: { stringValue: value } },
+        }),
+        query: (collection, ...filters) => ({
+          from: [collection],
+          where: { compositeFilter: { op: "AND", filters } },
+        }),
+        onSnapshot: query => { queries.push(query); return () => {}; },
+      } },
+    },
+  };
+  vm.createContext(context);
+  for (const name of ["getRealmShardQueryConstraints", "subscribePlayerReinforcements"]) {
+    const start = source.indexOf(`  function ${name}(`);
+    const end = source.indexOf("\n  }", start);
+    assert(start >= 0 && end > start, `Missing client function ${name}.`);
+    vm.runInContext(source.slice(start, end + 4), context);
+  }
+  context.subscribePlayerReinforcements()();
+  assert(queries.length === 2, "Both contributor and holder reinforcement listeners are required.");
+  return queries;
 }
 
 async function main() {
@@ -298,7 +334,49 @@ async function main() {
     resetGeneration: RESET_GENERATION, worldId: WORLD_ID, realmShardId: SHARD_ONE,
     holderUid: playerTwo.uid, campType: "gold",
   });
+  for (const targetId of ["stronghold", "citadel"]) {
+    const contribution = {
+      resetGeneration: RESET_GENERATION, worldId: WORLD_ID, realmShardId: SHARD_ONE,
+      ownerUid: playerOne.uid, targetOwnerUid: playerTwo.uid,
+      targetType: "city", targetId, troops: 1234, status: "stationed", rallyArmyId: "winning-rally",
+    };
+    batch.set(db.doc(`reinforcements/rally_${targetId}`), contribution);
+    batch.set(db.doc(`reinforcements/other_shard_${targetId}`), { ...contribution, realmShardId: SHARD_TWO });
+    batch.set(db.doc(`reinforcements/archived_${targetId}`), {
+      ...contribution, resetGeneration: "archived-generation", worldId: "archived-world",
+    });
+    batch.set(db.doc(`reinforcements/returning_${targetId}`), { ...contribution, status: "returning" });
+    batch.set(db.doc(`reinforcements/unrelated_${targetId}`), {
+      ...contribution, ownerUid: "unrelated-contributor", targetOwnerUid: "unrelated-holder",
+    });
+  }
   await batch.commit();
+
+  for (const [player, expectedCounts] of [[playerOne, [2, 0]], [playerTwo, [0, 2]]]) {
+    const queries = reinforcementListenerQueries(player.uid);
+    for (let index = 0; index < queries.length; index += 1) {
+      const response = await clientRunQuery(player.token, "", queries[index]);
+      assert(response.status === 200,
+        `Rally survivor listener ${index} was denied for ${player === playerOne ? "contributor" : "holder"}: ${response.status}`);
+      const rows = (await response.json()).filter(row => row.document);
+      assert(rows.length === expectedCounts[index], "Rally survivors disappeared or unrelated reinforcements leaked into the listener.");
+      assert(rows.every(row => row.document.name.includes("/reinforcements/rally_")),
+        "Reinforcement listeners included another realm, departed troops, or another player's support.");
+    }
+  }
+  for (const shardId of ["legacy", SHARD_TWO]) {
+    const queries = reinforcementListenerQueries(playerOne.uid, shardId);
+    const response = await clientRunQuery(playerOne.token, "", queries[0]);
+    assert(response.status === 403, "An unscoped or wrong-shard reinforcement query must remain denied.");
+  }
+  await db.doc("reinforcements/rally_stronghold").update({ status: "returning" });
+  for (const [player, index] of [[playerOne, 0], [playerTwo, 1]]) {
+    const response = await clientRunQuery(player.token, "", reinforcementListenerQueries(player.uid)[index]);
+    assert(response.status === 200, "The reinforcement listener failed after a recall.");
+    const rows = (await response.json()).filter(row => row.document);
+    assert(rows.length === 1 && rows[0].document.name.endsWith("/rally_citadel"),
+      "Recalling one contribution removed another objective's survivors or retained departed troops.");
+  }
 
   const heldCampResponse = await clientRunQuery(playerOne.token, "", heldCampQuery(playerOne.uid, SHARD_ONE));
   assert(heldCampResponse.status === 200, `Held-camp query was denied: ${heldCampResponse.status}`);
