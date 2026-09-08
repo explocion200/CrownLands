@@ -86,6 +86,10 @@ function createStaticServer() {
     let relativePath;
     try {
       relativePath = decodeURIComponent(requestedUrl.pathname).replace(/^\/+/, "") || "index.html";
+      const uploadPrefix = "html/18910922/";
+      if (relativePath.startsWith(uploadPrefix)) relativePath = relativePath.slice(uploadPrefix.length) || "index.html";
+      // Netlify matches the /play/ rewrite with or without a trailing slash.
+      if (relativePath === "play" || relativePath === "play/") relativePath = "play/index.html";
     } catch {
       response.writeHead(400).end("Bad request");
       return;
@@ -100,7 +104,7 @@ function createStaticServer() {
       return;
     }
     response.writeHead(200, {
-      "Cache-Control": "no-store",
+      "Cache-Control": relativePath.startsWith("assets/") ? "public, max-age=3600" : "no-cache",
       "Content-Type": MIME_TYPES.get(path.extname(absolutePath).toLowerCase()) || "application/octet-stream",
     });
     fs.createReadStream(absolutePath).pipe(response);
@@ -263,8 +267,15 @@ async function evaluate(client, expression) {
   return result.result?.value;
 }
 
-async function loadScenario(client, baseUrl, page, viewport) {
+async function loadScenario(client, baseUrl, page, viewport, reload = false) {
+  const isGameEntry = /^(?:(?:html\/18910922\/)?(?:index\.html|play\/?|play\/index\.html))$/.test(page);
   const runtimeErrors = [];
+  const failedAssets = [];
+  const removeResponseListener = client.on("Network.responseReceived", event => {
+    if (event.response.url.startsWith(`${baseUrl}/`) && event.response.status >= 400) {
+      failedAssets.push(`${event.response.status} ${event.response.url}`);
+    }
+  });
   const removeExceptionListener = client.on("Runtime.exceptionThrown", event => {
     runtimeErrors.push(event.exceptionDetails?.exception?.description || event.exceptionDetails?.text || "Unknown runtime exception");
   });
@@ -276,7 +287,10 @@ async function loadScenario(client, baseUrl, page, viewport) {
   });
   const loaded = waitForEvent(client, "Page.loadEventFired");
   const targetUrl = `${baseUrl}/${page}?validation-smoke=${viewport.name}`;
-  const navigation = await client.send("Page.navigate", { url: targetUrl });
+  if (!reload) await client.send("Network.clearBrowserCache");
+  const navigation = reload
+    ? await client.send("Page.reload")
+    : await client.send("Page.navigate", { url: targetUrl });
   assert.ok(!navigation.errorText, `${page} failed navigation: ${navigation.errorText}`);
   await loaded;
   await new Promise(resolve => setTimeout(resolve, 250));
@@ -284,16 +298,21 @@ async function loadScenario(client, baseUrl, page, viewport) {
     bodyTextLength: (document.body?.innerText || "").trim().length,
     documentHeight: document.documentElement?.scrollHeight || 0,
     documentWidth: document.documentElement?.scrollWidth || 0,
-    hasExpectedRoot: ${JSON.stringify(page)} === "index.html"
+    hasExpectedRoot: ${isGameEntry}
       ? Boolean(document.querySelector("#setupScreen"))
       : Boolean(document.querySelector("main, article, .public-page, .site-shell")),
     readyState: document.readyState,
     styleSheetCount: document.styleSheets.length,
     title: document.title.trim(),
     viewportHeight: innerHeight,
-    viewportWidth: innerWidth
+    viewportWidth: innerWidth,
+    baseURI: document.baseURI,
+    allStylesLoaded: [...document.querySelectorAll('link[rel="stylesheet"]')].every(link => Boolean(link.sheet)),
+    allVisibleImagesLoaded: [...document.images].filter(img => img.getClientRects().length).every(img => img.complete && img.naturalWidth > 0),
+    gameLoaded: typeof updateArmyTokenElement === "function"
   }))()`);
   removeExceptionListener();
+  removeResponseListener();
 
   assert.equal(metrics.readyState, "complete", `${page} did not reach a complete browser document.`);
   assert.ok(metrics.title, `${page} rendered without a title.`);
@@ -302,10 +321,16 @@ async function loadScenario(client, baseUrl, page, viewport) {
   assert.ok(metrics.styleSheetCount >= 1, `${page} loaded no stylesheets.`);
   assert.equal(metrics.viewportWidth, viewport.width, `${page} missed the ${viewport.name} viewport width.`);
   assert.equal(metrics.viewportHeight, viewport.height, `${page} missed the ${viewport.name} viewport height.`);
+  if (isGameEntry) {
+    const assetDirectory = page.startsWith("html/") ? "/html/18910922/" : "/";
+    assert.equal(metrics.baseURI, `${baseUrl}${assetDirectory}`, `${page} resolved the wrong asset base.`);
+    assert.deepEqual(failedAssets, [], `${page} issued failed first-party requests, including speculative preloads.`);
+    assert.ok(metrics.allStylesLoaded && metrics.allVisibleImagesLoaded && metrics.gameLoaded, `${page} did not load its game resources.`);
+  }
   if (runtimeErrors.length) {
     throw new Error(`${page} raised browser runtime exceptions:\n- ${runtimeErrors.join("\n- ")}`);
   }
-  console.log(`[Crownlands] Browser smoke passed: ${page} at ${viewport.width}x${viewport.height}.`);
+  console.log(`[Crownlands] Browser smoke passed: ${page} at ${viewport.width}x${viewport.height} (${reload ? "reload" : "cold"}).`);
 }
 
 async function closeBrowser(client, browserProcess, profilePath) {
@@ -363,6 +388,10 @@ async function main() {
   const options = parseArguments(process.argv.slice(2));
   const classification = classifyGitDiff(root, options);
   const pages = focusedPages(classification.files.map(item => item.path));
+  if (pages.includes("index.html")) {
+    await require("./validate-pwa-entry-routing").run();
+    pages.push("play", "play/", "play/index.html", "html/18910922/index.html", "html/18910922/play/index.html");
+  }
   const executable = findBrowser();
   const server = createStaticServer();
   await new Promise((resolve, reject) => {
@@ -385,12 +414,15 @@ async function main() {
       client.send("Runtime.enable"),
       client.send("Network.enable"),
     ]);
+    // Exercise the network entry directly so a service worker cannot hide bad asset paths.
+    await client.send("Network.setBypassServiceWorker", { bypass: true });
     for (const page of pages) {
       for (const viewport of [
         { name: "desktop", width: 1440, height: 900 },
         { name: "landscape-mobile", width: 844, height: 390 },
       ]) {
         await loadScenario(client, baseUrl, page, viewport);
+        await loadScenario(client, baseUrl, page, viewport, true);
       }
     }
     console.log(`[Crownlands] Focused production-browser smoke passed for ${pages.join(", ")} in desktop and landscape-mobile viewports.`);

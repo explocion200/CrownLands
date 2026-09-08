@@ -6,6 +6,7 @@ const dist = path.join(root, "dist");
 const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/index.html");
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
+  "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
   "roadmap.html", "roadmap.css", "roadmap-data.js", "roadmap.js",
@@ -109,13 +110,13 @@ const baseHrefMatch = productionIndex.match(/<base\b[^>]*\bhref\s*=\s*(["'])([^"
 if (!baseHrefMatch || baseHrefMatch[2] !== "./") {
   throw new Error("Production index must use a directory-relative <base href=\"./\"> for itch uploads.");
 }
-if (!/document\.getElementById\(["']crownlandsBase["']\)\.href\s*=\s*["']\/["']/.test(productionIndex)) {
-  throw new Error("Production index must preserve the Netlify /play/ rewrite by switching its base to the site root.");
+const productionPlayIndex = fs.readFileSync(path.join(dist, "play", "index.html"), "utf8");
+if (productionPlayIndex.replace('<base id="crownlandsBase" href="../" />', '<base id="crownlandsBase" href="./" />') !== productionIndex) {
+  throw new Error("The /play/ entry must match the stamped root entry with only its static asset base changed.");
 }
-const effectiveDocumentUrl = baseHrefMatch
-  ? new URL(baseHrefMatch[2], ITCH_DOCUMENT_URL)
-  : ITCH_DOCUMENT_URL;
-const indexedRuntimeFiles = new Set();
+if (/document\.getElementById\(["']crownlandsBase["']\)\.href\s*=/.test(productionIndex)) {
+  throw new Error("The asset base must be correct before parsing, without a runtime base rewrite.");
+}
 const resourceAttributes = [
   ["link", "href"],
   ["script", "src"],
@@ -123,48 +124,61 @@ const resourceAttributes = [
   ["source", "src"],
 ];
 
-for (const [tagName, attributeName] of resourceAttributes) {
-  const attributePattern = new RegExp(
-    `<${tagName}\\b[^>]*\\b${attributeName}\\s*=\\s*(["'])([^"']+)\\1`,
-    "gi",
-  );
-  for (const match of productionIndex.matchAll(attributePattern)) {
-    const requestedUrl = match[2].trim();
-    if (
-      !requestedUrl
-      || requestedUrl.startsWith("#")
-      || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(requestedUrl)
-    ) {
-      continue;
-    }
+function validateEntryResources(html, documentUrl, directoryUrl, baseHref) {
+  const effectiveDocumentUrl = new URL(baseHref, documentUrl);
+  const indexedRuntimeFiles = new Set();
+  for (const [tagName, attributeName] of resourceAttributes) {
+    const attributePattern = new RegExp(
+      `<${tagName}\\b[^>]*\\b${attributeName}\\s*=\\s*(["'])([^"']+)\\1`,
+      "gi",
+    );
+    for (const match of html.matchAll(attributePattern)) {
+      const requestedUrl = match[2].trim();
+      if (
+        !requestedUrl
+        || requestedUrl.startsWith("#")
+        || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(requestedUrl)
+      ) {
+        continue;
+      }
 
-    const resolvedUrl = new URL(requestedUrl, effectiveDocumentUrl);
-    if (
-      resolvedUrl.origin !== ITCH_DOCUMENT_URL.origin
-      || !resolvedUrl.pathname.startsWith(ITCH_DIRECTORY_PATH)
-    ) {
-      throw new Error(
-        `Production index ${tagName}[${attributeName}] ${requestedUrl} escapes the itch upload directory (${resolvedUrl.href}).`,
-      );
-    }
+      const resolvedUrl = new URL(requestedUrl, effectiveDocumentUrl);
+      if (
+        resolvedUrl.origin !== directoryUrl.origin
+        || !resolvedUrl.pathname.startsWith(directoryUrl.pathname)
+      ) {
+        throw new Error(
+          `${documentUrl.href} ${tagName}[${attributeName}] ${requestedUrl} escapes its asset directory (${resolvedUrl.href}).`,
+        );
+      }
 
-    const relativePath = decodeURIComponent(resolvedUrl.pathname.slice(ITCH_DIRECTORY_PATH.length));
-    const localPath = path.resolve(dist, relativePath.replace(/\//g, path.sep));
-    if (!localPath.startsWith(`${dist}${path.sep}`) || !fs.existsSync(localPath) || !fs.statSync(localPath).isFile()) {
-      throw new Error(
-        `Production index ${tagName}[${attributeName}] ${requestedUrl} does not resolve to a packaged file from an itch upload subdirectory.`,
-      );
+      const relativePath = decodeURIComponent(resolvedUrl.pathname.slice(directoryUrl.pathname.length));
+      const localPath = path.resolve(dist, relativePath.replace(/\//g, path.sep));
+      if (!localPath.startsWith(`${dist}${path.sep}`) || !fs.existsSync(localPath) || !fs.statSync(localPath).isFile()) {
+        throw new Error(
+          `${documentUrl.href} ${tagName}[${attributeName}] ${requestedUrl} does not resolve to a packaged file.`,
+        );
+      }
+      indexedRuntimeFiles.add(relativePath);
     }
-    indexedRuntimeFiles.add(relativePath);
   }
+
+  for (const coreFile of ["styles.css", "firebaseClient.js", "game.js", "assets/map-editor-data.js"]) {
+    if (!indexedRuntimeFiles.has(coreFile)) {
+      throw new Error(`${documentUrl.href} did not expose required runtime file ${coreFile}.`);
+    }
+  }
+  return indexedRuntimeFiles.size;
 }
 
-for (const coreFile of ["styles.css", "firebaseClient.js", "game.js", "assets/map-editor-data.js"]) {
-  if (!indexedRuntimeFiles.has(coreFile)) {
-    throw new Error(`Production index did not expose required itch-relative runtime file ${coreFile}.`);
-  }
+const itchDirectory = new URL(ITCH_DIRECTORY_PATH, ITCH_DOCUMENT_URL);
+const indexedResourceCount = validateEntryResources(productionIndex, ITCH_DOCUMENT_URL, itchDirectory, "./");
+validateEntryResources(productionPlayIndex, new URL("play/index.html", itchDirectory), itchDirectory, "../");
+const webDirectory = new URL("https://game.playcrownlands.com/");
+for (const entry of ["play", "play/", "play/index.html"]) {
+  validateEntryResources(productionPlayIndex, new URL(entry, webDirectory), webDirectory, "../");
 }
 
 console.log(
-  `Production artifact validation passed (${files.length} files, ${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB base + ${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB lazy world; ${indexedRuntimeFiles.size} itch-relative index resources).`,
+  `Production artifact validation passed (${files.length} files, ${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB base + ${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB lazy world; ${indexedResourceCount} resources per web/itch entry).`,
 );

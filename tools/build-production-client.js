@@ -103,6 +103,14 @@ const stamp = spawnSync(process.execPath, [path.join(__dirname, "stamp-deploy-bu
 if (stamp.error) throw stamp.error;
 if (stamp.status !== 0) process.exit(stamp.status || 1);
 
+// Set the /play/ base before parsing starts; changing it in the browser races
+// speculative asset requests. The root entry stays relative for itch uploads.
+const indexHtml = fs.readFileSync(path.join(output, "index.html"), "utf8");
+const playHtml = indexHtml.replace('<base id="crownlandsBase" href="./" />', '<base id="crownlandsBase" href="../" />');
+if (playHtml === indexHtml) throw new Error("The game entry is missing its expected relative asset base.");
+fs.mkdirSync(path.join(output, "play"), { recursive: true });
+fs.writeFileSync(path.join(output, "play", "index.html"), playHtml, "utf8");
+
 const files = [];
 function collect(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {

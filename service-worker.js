@@ -33,6 +33,7 @@ function getNotificationOpenUrl(notificationData = {}) {
 
 const STATIC_CACHE_URLS = [
   "/index.html",
+  "/play/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
   "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
@@ -180,8 +181,11 @@ function isNetworkFirstAsset(url) {
 }
 
 function getNavigationFallbackUrl(url) {
-  const pathname = String(url?.pathname || "").replace(/\/+$/, "") || "/";
-  return pathname === "/play" || pathname === "/index.html" ? resolveAppUrl("index.html") : null;
+  const pathname = String(url?.pathname || "");
+  if (!pathname.startsWith(APP_BASE_URL.pathname)) return null;
+  const relativePath = pathname.slice(APP_BASE_URL.pathname.length).replace(/\/+$/, "");
+  if (relativePath === "play" || relativePath === "play/index.html") return resolveAppUrl("play/index.html");
+  return relativePath === "index.html" ? resolveAppUrl("index.html") : null;
 }
 
 async function putInCache(request, response) {

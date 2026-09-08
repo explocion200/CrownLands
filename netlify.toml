@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/play/"
-  to = "/index.html"
+  to = "/play/index.html"
   status = 200
   force = true
 
@@ -52,6 +52,11 @@
 
 [[headers]]
   for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/play/*"
   [headers.values]
     Cache-Control = "no-cache"
 
