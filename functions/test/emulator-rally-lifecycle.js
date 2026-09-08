@@ -603,6 +603,9 @@ async function main() {
   );
   const allyProfileAfterLaunch = (await db.doc(`players/${ally.uid}`).get()).data() || {};
   assert(allyProfileAfterLaunch.committedRallyTroops === 50_000_000, "The ally's Ready troops were returned at launch.");
+  const rallyAtLaunch = (await db.doc(`clans/${clanId}/rallies/${rallyId}`).get()).data() || {};
+  const allyAtLaunch = rallyAtLaunch.participants?.find(entry => entry.uid === ally.uid);
+  assert(allyAtLaunch, "The launch did not persist the ally's attack package.");
 
   await db.doc(`players/${ally.uid}`).set({
     upgrades: { swordmastery: 30, fieldMedics: 10 },
@@ -694,8 +697,9 @@ async function main() {
   const battleSnapshot = (await db.doc(`battleSnapshots/${realm.resetGeneration}/entries/${attackArmyId}`).get()).data() || {};
   const allyBattlePackage = battleSnapshot.attackers?.find(entry => entry.ownerUid === ally.uid);
   assert(allyBattlePackage, "The shared Rally battle snapshot omitted the ally.");
-  assert(allyBattlePackage.swordmasteryPercent === 60, "Rally combat used the ally's launch-time Swordmastery instead of battle-time state.");
-  assert(allyBattlePackage.gearAttackStrengthPercent > 0, "Rally combat ignored the ally's battle-time attack gear.");
+  assert(allyBattlePackage.swordmasteryPercent === allyAtLaunch.attackBonusPercent, "Changing skills during travel changed Rally attack strength.");
+  assert(allyBattlePackage.gearAttackStrengthPercent === allyAtLaunch.attackGearPercent, "Changing gear during travel changed the Rally attack package.");
+  assert(battleSnapshot.totals?.attackPower === rallyAtLaunch.attackPower, "Rally combat discarded the combined launch-time attack power.");
 
   await waitFor(
     async () => (await db.doc(

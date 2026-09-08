@@ -220,4 +220,45 @@ if (protectedBreach.success || !protectedBreach.breachCompleted) {
   throw new Error("A first protected assault is not represented as a breach-only outcome.");
 }
 
+Object.assign(sandbox, {
+  COMBAT_FORECAST_VERSION: 4,
+  clampCityLevel: value => Math.max(1, Math.floor(Number(value) || 1)),
+  formatNumber: value => String(value),
+  escapeHtml: value => String(value).replace(/[<>&"]/g, ""),
+});
+for (const name of ["normalizeCombatFortificationSnapshot", "normalizeCombatForecast", "renderBattleForecastChanges"]) {
+  vm.runInContext(readFunction(clientSource, name), sandbox);
+}
+const forecastReport = { type: "attack", launchCombatForecast: {
+  version: 4, status: "scouted", targetOwnerUid: "original-owner", ownerTroops: 100,
+  reinforcementTroops: 20, defensePower: 1156,
+  fortification: { startingWallPower: 1000 },
+} };
+const unchangedBattle = { defender: { ownerUid: "original-owner", startingTroops: 100 },
+  reinforcements: [{ startingTroops: 20 }], siege: { startingWallPower: 1000 }, totals: { defensePower: 1156 } };
+if (sandbox.renderBattleForecastChanges(forecastReport, unchangedBattle)) {
+  throw new Error("An unchanged defense was presented as a changed forecast.");
+}
+const changedBattle = { defender: { ownerUid: "new-owner", startingTroops: 150 },
+  reinforcements: [{ startingTroops: 40 }, { startingTroops: 10 }], siege: { startingWallPower: 1200 }, totals: { defensePower: 1460 } };
+const comparison = sandbox.renderBattleForecastChanges(forecastReport, changedBattle);
+for (const detail of ["changed owners", "Wall power: 1,000 → 1,200", "Owner garrison: 100 → 150", "Reinforcement troops: 20 → 50", "Total defense: 1,156 → 1,460", "defenses present at arrival"]) {
+  if (!comparison.includes(detail)) throw new Error(`The battle report does not explain ${detail}.`);
+}
+const depletedBattle = { ...unchangedBattle, siege: { startingWallPower: 0 }, reinforcements: [] };
+const depletedComparison = sandbox.renderBattleForecastChanges(forecastReport, depletedBattle);
+if (!depletedComparison.includes("Wall power: 1,000 → 0") || !depletedComparison.includes("Reinforcement troops: 20 → 0")) {
+  throw new Error("Zero wall power or recalled reinforcements were hidden from the comparison.");
+}
+for (const report of [null, { ...forecastReport, type: "defense" },
+  { type: "attack", launchCombatForecast: { ...forecastReport.launchCombatForecast, status: "expired" } },
+  { type: "attack", launchCombatForecast: { ...forecastReport.launchCombatForecast, version: 0 } }]) {
+  if (sandbox.renderBattleForecastChanges(report, changedBattle)) {
+    throw new Error("A defender, missing forecast, or invalid scout exposed an attack forecast comparison.");
+  }
+}
+if (!readFunction(clientSource, "renderDetailedBattleReport").includes('viewerRole === "attacker" ? renderBattleForecastChanges(report, snapshot)')) {
+  throw new Error("Detailed reports do not restrict scout comparisons to the attacking viewer.");
+}
+
 console.log("Validated authoritative scout defense forecasts, launch-locked attack power, live arrival defense, protected outcomes, privacy, and report diagnostics.");

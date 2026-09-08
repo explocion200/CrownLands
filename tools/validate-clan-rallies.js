@@ -58,8 +58,7 @@ assert.doesNotMatch(launchSource, /assembledParticipants\.map\(async participant
 requires(server, /Only the rally creator or Clan Leader may launch it[\s\S]*?Only the rally creator or Clan Leader may cancel it|Only the rally creator or Clan Leader may cancel it[\s\S]*?Only the rally creator or Clan Leader may launch it/, "Creator-or-Clan-Leader launch and cancel permissions are missing.");
 requires(server, /army\.rallyAttack[\s\S]*?rally\.leaderUid !== uid[\s\S]*?rally\.armyId !== armyId/, "Recall Horn use is not restricted to the rally leader.");
 requires(server, /isRallyTargetFriendly[\s\S]*?rally_friendly_return_started/, "Launched rallies do not return when the target becomes friendly.");
-requires(server, /getRallyAttackPackages\(rallyAttack,\s*participantProfiles\)[\s\S]*?attackPower:\s*totalAttackPower/, "Rally combat does not combine participant power recalculated from battle-time profiles.");
-requires(server, /function getRallyAttackPackages\(rally = \{\},\s*participantProfiles = null\)[\s\S]*?useLiveCombatProfiles[\s\S]*?getCommonGearBonuses[\s\S]*?getCasualtyRecoveryPercent/, "Rally combat no longer rebuilds each participant's live skill, gear, and casualty package.");
+requires(server, /getRallyAttackPackages\(rallyAttack,\s*participantProfiles\)[\s\S]*?attackPower:\s*totalAttackPower/, "Rally combat does not combine participant attack packages.");
 requires(server, /clanBenefitsSnap[\s\S]*?combinePlayerObjectiveBonuses[\s\S]*?objectiveMarchSpeedBonusPercent[\s\S]*?slowestMarchSpeedMultiplier/, "Rally launch does not recalculate every Ready participant's live objective speed before locking the slowest speed.");
 requires(server, /slowestMarchSpeedMultiplier[\s\S]*?Math\.min[\s\S]*?rallyMarchSpeedMultiplier/, "Rally movement is not locked to the slowest participant.");
 requires(server, /stationOnVictory[\s\S]*?REINFORCEMENT_STATUS_STATIONED[\s\S]*?stationedReinforcementTroops/, "Allied Rally survivors are not stationed as attributed reinforcements after victory.");
@@ -138,10 +137,12 @@ assert.equal(
   200,
   "A stored Rally participant snapshot is no longer backward compatible."
 );
-const liveRallyPackage = getRallyAttackPackages({
-  attackPower: 999,
-  participants: [{ uid: "leader", troops: 100, status: "assembled", attackPowerPerTroop: 1.25 }],
-}, new Map([["leader", {
+const launchedRally = {
+  attackPower: 125,
+  participants: [{ uid: "leader", troops: 100, status: "assembled", attackSkillLevel: 0,
+    attackBonusPercent: 0, attackGearPercent: 0, attackPowerPerTroop: 1.25 }],
+};
+const changedProfile = {
   playerName: "Live Rally Leader",
   swordmasteryLevel: 30,
   swordmasteryPercent: 60,
@@ -149,11 +150,19 @@ const liveRallyPackage = getRallyAttackPackages({
   fieldMedicsPercent: 20,
   casualtyRecoveryPercent: 24,
   gearBonuses: { attackStrength: 10, casualtyEfficiency: 4 },
-}]]))[0];
-assert.equal(liveRallyPackage.effectivePower, 212, "Battle-time Rally power still uses the stored launch total.");
-assert.equal(liveRallyPackage.attackBonusPercent, 60, "Battle-time Rally Swordmastery was not recalculated.");
-assert.equal(liveRallyPackage.attackGearPercent, 10, "Battle-time Rally attack gear was not recalculated.");
+};
+const liveRallyPackage = getRallyAttackPackages(launchedRally, new Map([["leader", changedProfile]]))[0];
+assert.equal(liveRallyPackage.effectivePower, 125, "Changing skills or gear in transit changed launched Rally attack power.");
+assert.equal(liveRallyPackage.attackBonusPercent, 0, "The Rally report replaced launch-time Swordmastery.");
+assert.equal(liveRallyPackage.attackGearPercent, 0, "The Rally report replaced launch-time attack gear.");
 assert.equal(liveRallyPackage.fieldMedicsPercent, 24, "Battle-time Rally casualty recovery was not recalculated.");
+assert.equal(liveRallyPackage.ownerName, changedProfile.playerName, "Rally identity did not refresh at battle time.");
+assert.equal(getRallyAttackPackages({ ...launchedRally, attackPower: 320 }, new Map([["leader", changedProfile]]))[0].effectivePower,
+  320, "Live profile loading discarded a previously stored Rally attack total.");
+const equippedLaunch = { participants: [{ ...launchedRally.participants[0], attackSkillLevel: 30,
+  attackBonusPercent: 60, attackGearPercent: 10, attackPowerPerTroop: 2.125 }] };
+assert.equal(getRallyAttackPackages(equippedLaunch, new Map([["leader", {}]]))[0].effectivePower, 212,
+  "Removing skills or gear in transit weakened a launched Rally.");
 const allocateLosses = new Function("safeNumber", `${casualtySource}; return allocateRallyAttackerLosses;`)(safeNumber);
 const allocateXp = new Function("safeNumber", `${xpSource}; return allocateRallyAttackXp;`)(safeNumber);
 const packages = [
@@ -166,6 +175,21 @@ const secondLosses = allocateLosses(packages, 75);
 assert.deepEqual(firstLosses, secondLosses, "Rally casualty distribution is not deterministic.");
 assert.equal(firstLosses.reduce((total, row) => total + row.losses, 0), 75, "Rally casualties do not preserve total losses.");
 assert.equal(firstLosses.reduce((total, row) => total + row.survivors, 0), 125, "Rally casualties do not preserve survivors.");
+for (const size of [2, 3, 5, 20]) {
+  const contributions = Array.from({ length: size }, (_, index) => ({
+    uid: `participant-${index}`, role: index ? "ally" : "leader", troops: index ? 1 + index * 13 : 100_003,
+  }));
+  const total = contributions.reduce((sum, row) => sum + row.troops, 0);
+  for (const losses of [0, 1, Math.floor(total / 2), total - 1, total]) {
+    const allocation = allocateLosses(contributions, losses);
+    assert.equal(allocation.reduce((sum, row) => sum + row.losses, 0), losses);
+    assert.equal(allocation.reduce((sum, row) => sum + row.survivors, 0), total - losses);
+    assert(allocation.every(row => Number.isInteger(row.survivors) && row.survivors >= 0
+      && row.losses >= 0 && row.survivors + row.losses === row.troops), "Rounding created or destroyed a participant's troops.");
+    assert.deepEqual(allocateLosses([...contributions].reverse(), losses), allocation,
+      "Participant ordering changed whole-troop casualty attribution.");
+  }
+}
 const proportionalLosses = allocateLosses([
   { uid: "player-a", role: "leader", troops: 100 },
   { uid: "player-b", role: "ally", troops: 50 },
