@@ -111,7 +111,8 @@ if (!baseHrefMatch || baseHrefMatch[2] !== "./") {
   throw new Error("Production index must use a directory-relative <base href=\"./\"> for itch uploads.");
 }
 const productionPlayIndex = fs.readFileSync(path.join(dist, "play", "index.html"), "utf8");
-if (productionPlayIndex.replace('<base id="crownlandsBase" href="../" />', '<base id="crownlandsBase" href="./" />') !== productionIndex) {
+if (!productionPlayIndex.includes('<base id="crownlandsBase" href="../" />')
+    || productionPlayIndex.replace('<base id="crownlandsBase" href="../" />', '<base id="crownlandsBase" href="./" />') !== productionIndex) {
   throw new Error("The /play/ entry must match the stamped root entry with only its static asset base changed.");
 }
 if (/document\.getElementById\(["']crownlandsBase["']\)\.href\s*=/.test(productionIndex)) {
