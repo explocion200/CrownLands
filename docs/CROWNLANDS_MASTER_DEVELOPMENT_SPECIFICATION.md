@@ -462,6 +462,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 ### Combat
 
 - Combat uses a two-stage siege: attack power damages one physical wall, then remaining attack power fights the garrison. Capture requires remaining attack power to exceed garrison defense. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
+- Wall-only hits cause zero casualties to defending soldiers, including allied reinforcements. An exact breach with no attack power left also causes zero defender casualties. This applies to normal attacks, protected assaults, protected raids, and Rallies; only attack power remaining after the wall is depleted can damage the garrison. Protected raids retain their casualty cap and do not persist wall damage. The Citadel Legion's explicit wall-bypass rule remains separate. **Status:** `IN DEVELOPMENT` pending merge and deployment of the wall-first casualty correction confirmed September 8, 2026.
 - Each attacking troop has `1.25` base attack power. Maximum Swordmastery raises it by 60% to `2.0`. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.
 - Each defending troop has `1.30` base defense power before Shieldwall and other valid support. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Shieldwall Discipline adds 2% per level up to 60%. City level does not increase per-soldier defense. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.

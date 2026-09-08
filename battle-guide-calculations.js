@@ -328,15 +328,7 @@
         );
         defenderLosses = totalDefenderTroops;
         defenderSurvivors = 0;
-      } else if (!wallBreached) {
-        const pressure = clamp(attackPower / Math.max(1, startingWallPower), 0, 1);
-        const capPercent = read(economy, "siegeCombat.intactWallDefenderLossCapPercent", 10) / 100;
-        defenderLosses = Math.min(
-          totalDefenderTroops,
-          Math.floor(totalDefenderTroops * Math.min(capPercent, pressure * capPercent))
-        );
-        defenderSurvivors = Math.max(totalDefenderTroops > 0 ? 1 : 0, totalDefenderTroops - defenderLosses);
-      } else {
+      } else if (penetratingAttackPower > 0) {
         const pressure = clamp(penetratingAttackPower / Math.max(1, garrisonDefensePower), 0, 1);
         defenderLosses = Math.min(totalDefenderTroops, Math.floor(totalDefenderTroops * Math.min(0.82, pressure * 0.82)));
         defenderSurvivors = Math.max(totalDefenderTroops > 0 ? 1 : 0, totalDefenderTroops - defenderLosses);

@@ -1155,7 +1155,6 @@ const FORTIFICATION_STATE_VERSION = 1;
 const SIEGE_REPAIR_BASE_MINUTES = Math.max(1, economyNumber("siegeCombat.repairBaseMinutes", 15));
 const SIEGE_REPAIR_MINUTES_PER_LEVEL = Math.max(0, economyNumber("siegeCombat.repairMinutesPerLevel", 0.3));
 const SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT = Math.min(100, Math.max(0, economyNumber("siegeCombat.meaningfulWallDamagePercent", 5)));
-const SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT = Math.min(100, Math.max(0, economyNumber("siegeCombat.intactWallDefenderLossCapPercent", 10)));
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
 const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
 const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
@@ -9325,8 +9324,14 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   let attackerLosses = troops;
   let defenderLosses = 0;
 
-  if (raid) {
-    const pressure = clamp(ratio, 0, 1);
+  if (siegeEnabled && penetratingAttackPower <= 0) {
+    // A wall-only hit, including an exact breach, leaves the entire garrison unharmed.
+    defenderLosses = 0;
+    defendersLeft = defendersAtStart;
+  } else if (raid) {
+    const pressure = clamp(siegeEnabled
+      ? penetratingAttackPower / Math.max(1, garrisonDefensePower)
+      : ratio, 0, 1);
     const damageRate = Math.min(0.1, pressure * 0.2);
     const damageCeiling = Math.floor(defendersAtStart * 0.1);
     defenderLosses = Math.min(damageCeiling, Math.floor(defendersAtStart * damageRate));
@@ -9342,14 +9347,6 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     attackerLosses = troops - survivors;
     defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
     defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
-  } else if (siegeEnabled && !wallBreached) {
-    const pressure = clamp(attackPower / Math.max(1, startingWallPower), 0, 1);
-    const maximumRate = SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT / 100;
-    defenderLosses = Math.min(
-      defendersAtStart,
-      Math.floor(defendersAtStart * Math.min(maximumRate, pressure * maximumRate))
-    );
-    defendersLeft = Math.max(defendersAtStart > 0 ? 1 : 0, defendersAtStart - defenderLosses);
   } else if (siegeEnabled) {
     const pressure = clamp(penetratingAttackPower / Math.max(1, garrisonDefensePower), 0, 1);
     defenderLosses = Math.min(
