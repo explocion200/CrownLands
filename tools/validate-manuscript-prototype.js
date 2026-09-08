@@ -90,6 +90,9 @@ assert.ok(staticCacheSource, "Could not read the service-worker installation cac
 const staticCacheUrls = JSON.parse(staticCacheSource[1]);
 const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
   const relativePath = url.replace(/^\//, "").split("?")[0];
+  // Artifact validation checks this generated entry against index.html; the
+  // static ../ base adds one byte to the directory-relative root shell.
+  if (relativePath === "play/index.html") return total + normalizedTextBytes("index.html") + 1;
   return total + (/\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
     ? normalizedTextBytes(relativePath)
     : fs.statSync(resolve(relativePath)).size);
@@ -105,7 +108,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Identity guidance and arrows add under one bounded 8 KiB step.
 // Keep the shared shell limit aligned with the bounded illustrated-map increase.
 // Shared private Camp rewards use the same bounded 8 KiB allowance.
-assert.ok(staticCacheBytes <= 3672 * 1024, "The service-worker installation cache exceeds 3672 KiB.");
+// The generated /play/ offline shell uses the same bounded 64 KiB allowance.
+assert.ok(staticCacheBytes <= 3736 * 1024, "The service-worker installation cache exceeds 3736 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

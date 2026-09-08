@@ -28,11 +28,11 @@ assert.deepEqual(
   "The manifest must keep the approved Crownlands icon family.",
 );
 
-assert.match(netlify, /from = "\/play\/"\s+to = "\/index\.html"\s+status = 200\s+force = true/);
+assert.match(netlify, /from = "\/play\/"\s+to = "\/play\/index\.html"\s+status = 200\s+force = true/);
 assert.match(netlify, /from = "\/"\s+to = "\/home\.html"\s+status = 200\s+force = true/);
 assert.ok(netlify.indexOf('from = "/play/"') < netlify.indexOf('from = "/"'), "The game rewrite must precede the public-root rewrite.");
 assert.match(index, /rel="canonical" href="https:\/\/playcrownlands\.com\/play\/"/);
-assert.match(index, /rel="manifest" href="\/manifest\.webmanifest"/);
+assert.match(index, /rel="manifest" href="manifest\.webmanifest"/);
 assert.match(index, /apple-mobile-web-app-capable" content="yes"/);
 assert.match(index, /apple-mobile-web-app-title" content="Crownlands"/);
 assert.equal((index.match(/name="apple-mobile-web-app-capable"/g) || []).length, 1, "iOS install metadata must not be duplicated.");
@@ -43,9 +43,14 @@ assert.match(game, /new URL\("\/play\/", window\.location\.origin\)/, "Game upda
 const listeners = new Map();
 const cacheEntries = new Map([
   ["https://playcrownlands.com/index.html", new Response("GAME ENTRY", { status: 200 })],
+  ["https://playcrownlands.com/play/index.html", new Response("PLAY ENTRY", { status: 200 })],
   ["https://playcrownlands.com/", new Response("PUBLIC WEBSITE", { status: 200 })],
 ]);
 const caches = {
+  async match(request) {
+    const url = typeof request === "string" ? request : request.url;
+    return cacheEntries.get(url)?.clone();
+  },
   async delete() { return true; },
   async keys() { return []; },
   async open() {
@@ -70,7 +75,7 @@ const self = {
 };
 self.self = self;
 
-vm.runInNewContext(serviceWorker, {
+const workerContext = {
   URL,
   Request,
   Response,
@@ -80,7 +85,8 @@ vm.runInNewContext(serviceWorker, {
   fetch: async () => { throw new Error("Synthetic offline navigation"); },
   importScripts() {},
   self,
-});
+};
+vm.runInNewContext(serviceWorker, workerContext);
 
 async function dispatchNavigation(url) {
   let responsePromise = null;
@@ -109,7 +115,12 @@ async function run() {
   );
 
   const gameResponse = await dispatchNavigation("https://playcrownlands.com/play/");
-  assert.equal(await gameResponse.text(), "GAME ENTRY", "The installed game route must fall back to the cached game shell.");
+  assert.equal(await gameResponse.text(), "PLAY ENTRY", "The installed game route must fall back to the shell with the correct /play/ asset base.");
+  for (const entry of ["play", "play/index.html", "play/?notification=incoming_army", "index.html"]) {
+    const response = await dispatchNavigation(`https://playcrownlands.com/${entry}`);
+    assert.equal(await response.text(), entry === "index.html" ? "GAME ENTRY" : "PLAY ENTRY");
+  }
+  assert.match(serviceWorker, /const STATIC_CACHE_URLS = \[[\s\S]*?"\/play\/index\.html"/, "The /play/ fallback must be precached.");
 
   const publicPageResponse = dispatchNavigation("https://playcrownlands.com/about.html");
   await assert.rejects(
@@ -118,11 +129,25 @@ async function run() {
     "Public pages must not fall back to the game shell.",
   );
 
-  assert.match(serviceWorker, /notificationData\.url \|\| "play\/"/, "Push launches must default to the game entry.");
+  assert.match(serviceWorker, /resolveAppUrl\(!value \|\| value === "\/" \? "play\/" : value\)/, "Push launches must default to the game entry.");
+  const itchBase = "https://html-classic.itch.zone/html/18910922/";
+  const itchContext = {
+    ...workerContext,
+    self: { ...self, location: new URL(`${itchBase}service-worker.js`), addEventListener() {} },
+  };
+  vm.runInNewContext(serviceWorker, itchContext);
+  for (const [entry, expected] of [["index.html", "index.html"], ["play/", "play/index.html"], ["play/index.html", "play/index.html"], ["about.html", null]]) {
+    const actual = vm.runInNewContext(`getNavigationFallbackUrl(new URL(${JSON.stringify(`${itchBase}${entry}`)}))`, itchContext);
+    assert.equal(actual, expected ? `${itchBase}${expected}` : null, "Offline fallback must stay inside the itch upload directory.");
+  }
   console.log("Validated separate public-root and installed-PWA entry routing, including route-aware offline fallback.");
 }
 
-run().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  run().catch(error => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { run };

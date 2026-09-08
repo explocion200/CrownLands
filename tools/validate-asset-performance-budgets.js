@@ -58,7 +58,9 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // add under 8 KiB of shell code. The map rasters and sprites remain lazy loaded.
 // Private progress and cross-map Deed history add under 5 KiB of client code.
 // Allow one bounded 8 KiB step; camp definitions and map art remain lazy loaded.
-const MAX_INSTALL_PRECACHE_BYTES = 3672 * 1024;
+// The generated /play/ entry keeps a static asset base in offline fallback.
+// Its second HTML shell adds under one bounded 64 KiB step.
+const MAX_INSTALL_PRECACHE_BYTES = 3736 * 1024;
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
@@ -219,6 +221,12 @@ assert.equal(new Set(staticCacheUrls).size, staticCacheUrls.length, "STATIC_CACH
 let installPrecacheBytes = 0;
 for (const url of staticCacheUrls) {
   const relativePath = localPathFromUrl(url);
+  if (relativePath === "play/index.html") {
+    // Built from index.html with ./ changed to ../; artifact validation checks
+    // exact parity after stamping. Count it even before dist has been built.
+    installPrecacheBytes += normalizedTextBytes("index.html") + 1;
+    continue;
+  }
   assert(fs.existsSync(path.join(root, relativePath)), `Precached file ${url} is missing.`);
   installPrecacheBytes += /\.(?:css|html|js|json|webmanifest)$/i.test(relativePath)
     ? normalizedTextBytes(relativePath)
