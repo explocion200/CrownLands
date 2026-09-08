@@ -196,7 +196,7 @@ requires(client, /renderClanRallyCard[\s\S]*?recalling \? "returning" : launched
 requires(client, /function renderSelectedStrongholdWheel[\s\S]*?camp-rally-action[\s\S]*?beginCreateClanRally/, "Stronghold action wheels do not expose Rally.");
 assert.doesNotMatch(client.slice(client.indexOf("function renderSelectedRewardCampWheel"), client.indexOf("function showRecallRewardCampConfirm")), /camp-rally-action|beginCreateClanRally/, "Reward Camps still expose Rally.");
 requires(client, /function renderRallyParticipantResults[\s\S]*?Committed[\s\S]*?Losses[\s\S]*?Survivors[\s\S]*?Attack power/, "Shared Rally reports do not show clearly labeled participant results.");
-requires(client, /function isHostileClanMarch[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.kind === "scout"[\s\S]*?mission\.rallyAttack[\s\S]*?function getArmyRouteRelationshipClass[\s\S]*?clan-hostile-route[\s\S]*?clan-support-route/, "Clan rally attacks do not use mixed hostile styling while rally assembly and return paths stay green.");
+requires(client, /function isHostileClanMarch[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.rallyAttack[\s\S]*?function getArmyRouteRelationshipClass[\s\S]*?clan-hostile-route[\s\S]*?clan-support-route/, "Clan rally attacks do not use the attack shade while rally assembly and return paths use the movement shade.");
 requires(styles, /\.clan-rally-card[\s\S]*?\.clan-rally-confirmation/, "Rally card or confirmation styling is missing.");
 requires(styles, /\.camp-rally-action/, "Rally map action styling is missing.");
 requires(beginnerGuide, /Rally supports 2&ndash;20 unique clan members/, "The beginner guide does not publish the 2–20-player Rally limit.");

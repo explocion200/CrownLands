@@ -26513,8 +26513,6 @@ function isHostileClanMarch(mission) {
   );
   if (isSafeReturn) return false;
   return mission.kind === "attack"
-    || mission.kind === "scout"
-    || mission.launchKind === "scout"
     || Boolean(mission.rallyAttack);
 }
 
@@ -28868,7 +28866,8 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
       : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
   const selected = !endpointInteractionDisabled && getArmyTokenId(attack) === selectedArmyTokenId;
-  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
+  const marchClass = clanAlly && isHostileClanMarch(attack) ? " clan-attack" : "";
+  const className = `army-token ${ownerClass}${marchClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
   if (token.className !== className) token.className = className;
   token.dataset.endpointInteractionDisabled = String(endpointInteractionDisabled);
   token.tabIndex = endpointInteractionDisabled ? -1 : 0;
