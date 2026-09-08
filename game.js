@@ -4154,9 +4154,10 @@ function getHoldingTowerComposerTargets(mode, tower) {
   }
   if (mode === "rally-from") {
     return [
-      ...state.cities.filter(city => isStronghold(city)),
-      ...WORLD_HOLDING_TOWERS.filter(candidate => candidate.id !== tower.id),
-    ];
+      ...state.cities,
+      ...WORLD_HOLDING_TOWERS,
+    ].filter(candidate => candidate.id !== tower.id
+      && isRallyObjectiveTarget(candidate, getHoldingTowerTargetType(candidate)));
   }
   return [];
 }
@@ -4222,6 +4223,10 @@ async function submitHoldingTowerOrder(tower, mode, candidates) {
   const sourceType = isHoldingTowerTarget(from) ? "tower" : "city";
   const targetType = getHoldingTowerTargetType(to);
   const rally = mode === "rally-attack" || mode === "rally-from";
+  if (rally && !isRallyObjectiveTarget(to, targetType)) {
+    rejectGameAction("Rallies may target only Holding Towers, Strongholds, or the Crown Citadel.");
+    return;
+  }
   const kind = mode === "reinforce" ? "reinforce" : mode === "withdraw" ? "transfer" : "attack";
   const armyId = createOnlineArmyId(rally ? "rally" : `tower_${kind}`);
   const payload = {
@@ -28375,6 +28380,11 @@ function beginClanReinforcement(targetOrId) {
   void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "reinforce" });
 }
 
+function isRallyObjectiveTarget(target = {}, targetType = "city") {
+  if (targetType === "tower") return WORLD_HOLDING_TOWERS.some(tower => tower.id === target?.id);
+  return targetType === "city" && isStronghold(target);
+}
+
 function canCurrentPlayerCreateClanRally() {
   return Boolean(
     state?.clanId
@@ -28384,7 +28394,7 @@ function canCurrentPlayerCreateClanRally() {
 
 function beginCreateClanRally(targetOrId) {
   const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
-  const eligibleObjective = target && isStronghold(target);
+  const eligibleObjective = isRallyObjectiveTarget(target, getHoldingTowerTargetType(target));
   if (!state?.clanId) {
     rejectGameAction("Join a clan before forming a rally.");
     return;
@@ -30012,6 +30022,11 @@ function submitClanRallyTroopOrder(source, target, route) {
   const context = activeRallyOrderContext;
   if (!api || !context || !isRallyTroopOrderKind() || !state?.clanId) return false;
   const submittedOrderKind = activeTroopOrderKind;
+  if (submittedOrderKind === "rally_create"
+    && !isRallyObjectiveTarget(target, getHoldingTowerTargetType(target))) {
+    rejectGameAction("Rallies may target only Holding Towers, Strongholds, or the Crown Citadel.");
+    return false;
+  }
   const submittedTroops = selectedTroopAmount;
   const method = submittedOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
   if (!api[method] || !api.isSignedIn?.()) {
@@ -30043,7 +30058,7 @@ function submitClanRallyTroopOrder(source, target, route) {
       toId: target.id,
       fromName: source.name,
       toName: target.name,
-      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      targetType: getHoldingTowerTargetType(target),
       troops: submittedTroops,
       requestedTroops: submittedTroops,
       path: [],

@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -246,4 +247,106 @@ assert(
   "The participant reconciliation rally index is missing."
 );
 
-console.log("Validated clan rally limits, privacy, lifecycle, deterministic settlement, King Power, and client controls.");
+async function validateRallyTargets() {
+  const towers = require("../functions/holding-towers.js");
+  const layout = JSON.parse(read("functions/core-expansion-world-layout.json"));
+  const objectives = layout.maps.flatMap(map => map.objectives || [])
+    .filter(target => target.strongholdType)
+    .map(target => ({ ...target, kind: "stronghold" }));
+  assert.equal(objectives.length, 5, "Expected all four current Core Strongholds and the Crown Citadel.");
+  const towerTargets = towers.TOWERS.map(tower => ({ ...tower, kind: "holdingTower" }));
+  const assemblyCity = { id: "assembly-city", kind: "city", owner: "player", troops: 10 };
+  const invalidTargets = [
+    { id: "ordinary-city", kind: "city", owner: "neutral" },
+    { id: "player-city", kind: "city", owner: "enemy" },
+    { id: "main-city", kind: "city", isMainCity: true },
+    { id: "reward-camp", kind: "camp", campType: "gold" },
+    { id: "unknown-tower", kind: "holdingTower" },
+    { id: "portal", kind: "portal" },
+  ];
+  const predicateContext = {
+    STRONGHOLD_IDS: new Set(objectives.map(target => target.id)),
+    HOLDING_TOWERS: towers,
+    WORLD_HOLDING_TOWERS: towerTargets,
+  };
+  const serverAllows = vm.runInNewContext(`
+    ${extractFunction(server, "isStronghold", "isGoldStronghold")}
+    ${extractFunction(server, "isRallyObjectiveTarget", "rallyTargetRef")}
+    isRallyObjectiveTarget;
+  `, predicateContext);
+  const clientContext = {
+    ...predicateContext,
+    isRewardCampTarget: target => target?.kind === "camp",
+    state: { clanId: "test-clan", cities: [...objectives, ...invalidTargets] },
+    playerCities: () => [assemblyCity],
+  };
+  const clientAllows = vm.runInNewContext(`
+    ${extractFunction(client, "isStronghold", "readVisualSize")}
+    ${extractFunction(client, "isHoldingTowerTarget", "getHoldingTowerQaScenario")}
+    ${extractFunction(client, "getHoldingTowerTargetType", "showHoldingTowerOrderComposer")}
+    ${extractFunction(client, "isRallyObjectiveTarget", "canCurrentPlayerCreateClanRally")}
+    isRallyObjectiveTarget;
+  `, clientContext);
+  for (const target of [...objectives, ...towerTargets, ...invalidTargets, null, {}]) {
+    for (const type of ["city", "tower", "camp", "portal", "unknown"]) {
+      const expected = (type === "city" && objectives.includes(target))
+        || (type === "tower" && towerTargets.includes(target));
+      assert.equal(serverAllows(target, type), expected, `Server rally eligibility: ${target?.id}/${type}.`);
+      assert.equal(clientAllows(target, type), expected, `Client rally eligibility: ${target?.id}/${type}.`);
+    }
+  }
+  const composerTargets = vm.runInNewContext(`
+    ${extractFunction(client, "getHoldingTowerComposerTargets", "getHoldingTowerTargetType")}
+    getHoldingTowerComposerTargets;
+  `, clientContext);
+  assert.deepEqual(
+    Array.from(composerTargets("rally-from", towerTargets[0]), target => target.id).sort(),
+    [...objectives, ...towerTargets.slice(1)].map(target => target.id).sort(),
+    "A Tower-origin Rally must offer only Strongholds, the Citadel, and other canonical Towers."
+  );
+  assert.equal(composerTargets("rally-attack", towerTargets[0])[0], assemblyCity, "A normal city may still supply a Tower Rally.");
+
+  const rejected = [];
+  const unexpectedSubmission = () => assert.fail("An invalid Rally target reached order submission.");
+  const submissionContext = {
+    ...clientContext,
+    getOnlineApi: () => ({ createClanRally: unexpectedSubmission, isSignedIn: () => true }),
+    activeRallyOrderContext: { mode: "create" },
+    activeTroopOrderKind: "rally_create",
+    selectedTroopAmount: 1,
+    isRallyTroopOrderKind: () => true,
+    rejectGameAction: message => rejected.push(message),
+    createOnlineArmyId: unexpectedSubmission,
+    rallyActionRequests: new Set(),
+    getRouteSegments: unexpectedSubmission,
+  };
+  const submitCity = vm.runInNewContext(
+    `${client.slice(client.indexOf("function submitClanRallyTroopOrder("), client.indexOf("async function confirmTroopSliderOrder("))}; submitClanRallyTroopOrder;`,
+    submissionContext
+  );
+  for (const target of invalidTargets) {
+    assert.equal(submitCity({ id: "source" }, target, {}), false);
+  }
+  let selectedTarget = null;
+  submissionContext.modalBody = {
+    querySelector: selector => ({ value: selector === "[data-tower-order-target]" ? selectedTarget.id : "1" }),
+  };
+  const submitTower = vm.runInNewContext(
+    `async ${extractFunction(client, "submitHoldingTowerOrder", "bindHoldingTowerControls")}; submitHoldingTowerOrder;`,
+    submissionContext
+  );
+  for (const target of invalidTargets) {
+    selectedTarget = target;
+    await submitTower(towerTargets[0], "rally-from", [target]);
+  }
+  selectedTarget = invalidTargets[1];
+  await submitTower(invalidTargets[4], "rally-attack", [selectedTarget]);
+  assert.equal(rejected.length, invalidTargets.length * 2 + 1, "Every invalid target must be rejected by the form before creating an order.");
+}
+
+validateRallyTargets().then(() => {
+  console.log("Validated clan rally limits, target restrictions, privacy, lifecycle, deterministic settlement, King Power, and client controls.");
+}).catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
