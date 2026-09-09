@@ -2,18 +2,49 @@
 (() => {
   const $ = selector => document.querySelector(selector);
   const all = selector => [...document.querySelectorAll(selector)];
+  // City-only woodcut pictograms: solid silhouettes, shallow ink washes and
+  // restrained hatching. All marks inherit the existing semantic text colour.
   const icons = {
-    coin: '<ellipse cx="10" cy="8" rx="6" ry="3"/><path d="M4 8v7c0 4 12 4 12 0V8M4 12c0 4 12 4 12 0M17 8c5 0 6 6 3 9-1 1-2 2-4 2"/>',
-    city: '<path d="M3 21V9h5v12m8 0V9h5v12M8 21V7l4-5 4 5v14M2 9l3-5 4 5m6 0 3-5 4 5M1 21h22M10 21v-5a2 2 0 0 1 4 0v5M11 9h2m-2 3h2M5 12v3m14-3v3"/>',
-    troops: '<path d="M8 9V6a4 4 0 0 1 8 0v3M7 9h10v3H7zM9 12v3l3 2 3-2v-3M8 16l-4 2v4m12-6 4 2v4M9 19l3 2 3-2M12 2v6"/>',
-    wall: '<path d="M3 21V6h4v4h3V6h4v4h3V6h4v15ZM3 15h18M8 10v5m8 0v6M8 18v3"/>',
-    ledger: '<path d="M5 3h13l2 2v16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm1 0v18m3-13h7m-7 4h7m-7 4h4"/>',
-    upgrade: '<path d="m4 16 9-9m-2-4 3-2 7 7-2 3-4-4M3 16l4 4-3 3-3-3ZM14 15v7m-4-3 4-4 4 4"/>',
-    close: '<path d="m5 5 14 14M19 5 5 19"/>'
+    coin: `<path class="engraving-surface" d="M16 3 23 5 28 10 29 17 26 24 20 28 12 29 6 25 3 19 3 12 8 6Z"/>
+      <path class="engraving-shadow" d="M27 11 27 18 24 24 18 27 11 27 6 23 9 27 16 30 24 27 29 20 30 14Z"/>
+      <path class="engraving-detail" d="M10 8 16 6 23 9M7 12l-1 5 3 6M22 24l3-4"/>
+      <path class="engraving-ink" d="m9 11 4 3 3-6 3 6 4-3-2 10H11Z"/>
+      <path d="M12 24h8"/>`,
+    city: `<path class="engraving-surface" d="M3 28V9h3V5h4v4h3V5h6v4h3V5h4v4h3v19Z"/>
+      <path class="engraving-shadow" d="M24 10h5v18h-5ZM3 25h26v3H3Z"/>
+      <path d="M11 10v17M21 10v17M3 16h8m10 0h8"/>
+      <path class="engraving-ink" d="M13 27v-8c0-5 6-5 6 0v8ZM6 11h2v3H6Zm18 0h2v3h-2Z"/>
+      <path class="engraving-detail engraving-fine" d="M5 21h4m14 0h4M15 11h2M6 17v3m20-3v3"/>`,
+    troops: `<path class="engraving-surface" d="M8 18v7l8 5 8-5v-7ZM6 16 8 9q3-6 8-6t8 6l2 7Z"/>
+      <path class="engraving-shadow" d="M18 4q6 3 7 12h-6ZM19 20h5v5l-8 5v-5Z"/>
+      <path class="engraving-ink" d="m5 14 22 1 3 3-1 2H3l-1-2ZM11 21h4v2h-4Zm6 0h4v2h-4Z"/>
+      <path d="m16 5-1 8m1 8v5"/>
+      <path class="engraving-detail engraving-fine" d="m10 25 2 2m0-3 2 2m5 1 2-2m-9-15 1-2"/>`,
+    wall: `<path class="engraving-surface" d="M3 28 4 6h6v6h3V5h6v7h3V6h6l1 22Z"/>
+      <path class="engraving-shadow" d="m25 7 3-1 1 22H3v-4h22Z"/>
+      <path d="M4 18h24M5 24h23M9 12v6m9-6v6m-5 0v6m9-6v6M8 24v3m10-3v3"/>
+      <path class="engraving-detail engraving-fine" d="m6 8 2-1m7 0h2M6 21h3m8-1h2"/>`,
+    ledger: `<path class="engraving-surface" d="m5 7 18-4 5 3v21l-19 3-4-3Z"/>
+      <path class="engraving-shadow" d="m5 7 4 2v21l-4-3Zm4 18 19-3v5L9 30Z"/>
+      <path d="m5 7 4 2 19-3M9 9v20"/>
+      <path class="engraving-ink" d="m10 16 17-3v4l-17 3Z"/>
+      <path class="engraving-surface" d="m19 14 5-1v5l-5 1Z"/>
+      <path class="engraving-detail engraving-fine" d="m12 12 5-1m-5 12 3-.5M6 12l2 1m-2 9 2 1"/>`,
+    upgrade: `<path class="engraving-surface" d="m4 6 3-2 19 20 1 5-5-2Z"/>
+      <path class="engraving-shadow" d="m6 7 18 19 3 3-5-2L4 8Z"/>
+      <path class="engraving-surface" d="m16 11 4 4L7 30l-4-3Z"/>
+      <path class="engraving-shadow" d="m18 14 2 1L7 30l-2-2Z"/>
+      <path class="engraving-surface" d="m10 7 6-5 14 12-6 6Z"/>
+      <path class="engraving-ink" d="m25 10 5 4-6 6-5-4Z"/>
+      <path class="engraving-detail" d="m13 8 9 8M15 6l5 4"/>`,
+    close: `<path class="engraving-ink" d="m7 5 9 9 9-9 2 2-9 9 9 9-2 2-9-9-9 9-2-2 9-9-9-9Z"/>
+      <path class="engraving-detail" d="m6 5-1 2m20-2 2 2M5 25l2 2m18 0 2-2"/>`,
+    allegiance: `<path class="engraving-surface" d="m5 4 11-1 11 1-1 14q-2 7-10 12Q8 26 6 18Z"/>
+      <path class="engraving-ink" d="M14 4h4v9h8v4h-8v10l-2 2-2-2V17H6v-4h8Z"/>`
   };
   all("[data-icon]").forEach(element => {
     element.setAttribute("aria-hidden", "true");
-    element.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${icons[element.dataset.icon]}</svg>`;
+    element.innerHTML = `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${icons[element.dataset.icon]}</svg>`;
   });
   const cityPanel = $("#cityPanel");
   const landscape = matchMedia("(orientation: landscape)");

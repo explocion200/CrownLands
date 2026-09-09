@@ -81,6 +81,25 @@ fs.mkdirSync(output, {recursive:true});
   assert.equal(await evaluate('document.querySelector("#cityLevel").textContent'),'50');
   assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
   checks.push({interaction:'+1 succeeds; Max reaches sample cap and disables further upgrade',result:'passed'});
+  // Review evidence only: show the same city glyphs enlarged and at small size.
+  const iconRows = await evaluate(`['coin','troops','wall','ledger','city','upgrade'].map(key => ({key, marks:document.querySelector('[data-icon="'+key+'"] svg').innerHTML}))`);
+  const iconNames = ['Gold', 'Garrison', 'Walls', 'Invested gold', 'Inner Castle', 'Develop city'];
+  const iconStyles = fs.readFileSync(path.join(__dirname, 'prototype.css'), 'utf8');
+  const sharedIconStyles = iconStyles.slice(iconStyles.indexOf('.icon svg {'), iconStyles.indexOf('.small-caps {'));
+  const iconSheet = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="230" viewBox="0 0 900 230">
+    <style>${sharedIconStyles}text{font-family:Segoe UI,Arial,sans-serif;fill:#302c22}.caption{font-size:13px}.small-size .engraving-fine{display:none}</style>
+    <rect width="900" height="230" fill="#f2e8cd"/>
+    <text x="28" y="31" font-size="18" font-family="Georgia,serif">City Details · Woodcut icon study</text>
+    <text x="28" y="52" font-size="11">Enlarged above · Compact 18px rendering below</text>
+    ${iconRows.map((icon, index) => `<g class="icon" color="#746446" transform="translate(${28 + index * 145},70)">
+      <svg x="28" width="64" height="64" viewBox="0 0 32 32">${icon.marks}</svg>
+      <text class="caption" x="60" y="88" text-anchor="middle">${iconNames[index]}</text>
+      <svg class="small-size" x="51" y="110" width="18" height="18" viewBox="0 0 32 32">${icon.marks}</svg>
+    </g>`).join('')}
+  </svg>`;
+  fs.writeFileSync(path.join(output, 'icons-detail.svg'), iconSheet);
+  await load(900,230,'','evidence/icons-detail.svg');
+  await shot('icons-detail');
   await load(390,844);
   assert.equal(await evaluate('document.querySelector("#cityPanel").open'),false);
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".orientation")).display'),'flex');

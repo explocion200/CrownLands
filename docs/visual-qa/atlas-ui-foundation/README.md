@@ -17,6 +17,7 @@ The toolbar switches between desktop (1440 × 900), landscape (844 × 390), shor
 ## Retained direction and current refinements
 
 - Preserve the parchment surfaces, dark ink, ochre ownership mark, moss-green upgrade action and existing city illustration.
+- City icons use the Art Bible's woodcut/stamped-pictogram direction: a hammered crown coin, iron helmet, stone battlements, strapped ledger, gatehouse, mason's mallet and chisel, and a small heraldic ownership shield. Shallow ink washes and restrained hatching inherit the existing text colours. Fine marks are omitted in compact contexts. The icon treatment does not change panel geometry, text, controls or gameplay.
 - Preserve city identity and level, the Overview/Defences tabs, garrison and production information, wall status, invested gold, and the Inner Castle entry.
 - Keep upgrade controls fixed while longer information scrolls. Short landscape keeps information and actions in separate columns.
 - Show available gold within the city action feedback. Pending disables duplicate actions; retry preserves gold; success reports the new level and remaining balance.
@@ -48,4 +49,4 @@ node docs/visual-qa/atlas-ui-foundation/verify-prototype.cjs
 
 The check uses the repository's isolated headless browser and loopback server, then closes its temporary browser profile. It verifies the three city layouts, scrolling access, tabs and arrow keys, +1/+5/Max, upgrade feedback/locks, close/reopen and focus restoration, portrait orientation, and the responsive review wrapper. It also checks that no other experimental game UI remains, and checks images, runtime errors and external requests. It does not validate gameplay or backend behavior.
 
-Current evidence: [desktop](evidence/desktop-city.png), [landscape](evidence/landscape-city.png), [short landscape](evidence/short-city.png), [review page](evidence/review-desktop.png), and [machine-readable results](evidence/qa-results.json).
+Current evidence: [icon close-up and compact sizes](evidence/icons-detail.png), [desktop](evidence/desktop-city.png), [landscape](evidence/landscape-city.png), [short landscape](evidence/short-city.png), [review page](evidence/review-desktop.png), and [machine-readable results](evidence/qa-results.json).
