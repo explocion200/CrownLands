@@ -107,7 +107,7 @@ function renderCityDetailsUpgrade(city) {
     <div class="cd-upgrade-heading">${cityDetailsIcon("upgrade")}<span><strong>Develop this city</strong><small id="cdUpgradeHint"></small></span></div>
     <div class="cd-amounts" role="group" aria-label="City upgrade amount"><button type="button" data-cd-amount="0" aria-pressed="true">+1</button><button type="button" data-cd-amount="1" aria-pressed="false">+5</button><button type="button" data-cd-amount="2" aria-pressed="false">MAX</button></div>
     <button class="cd-upgrade" type="button" data-city-upgrade-mode="exact" data-city-upgrade-levels="1" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-audio-effect="none" aria-describedby="cdUpgradeHint cdFeedback"><span data-cd-upgrade-label></span><span class="cd-price">${cityDetailsIcon("coin")}<b data-cd-cost></b></span></button>
-    <div id="cdFeedback" class="cd-feedback" role="status" aria-atomic="true"><span data-cd-feedback-icon>${cityDetailsIcon("coin")}</span><div><strong data-cd-feedback-title></strong><span data-cd-feedback-balance></span></div></div>
+    <div id="cdFeedback" class="cd-feedback"><span data-cd-feedback-icon>${cityDetailsIcon("coin")}</span><div><strong data-cd-feedback-title role="status" aria-atomic="true"></strong><span data-cd-feedback-balance></span></div></div>
   </footer>`;
 }
 
