@@ -1,5 +1,6 @@
 {
-  "date": "2026-09-09T15:25:48.202Z",
+  "date": "2026-09-09T16:26:28.424Z",
+  "scope": "City Details only",
   "browser": "Headless Chrome",
   "checks": [
     {
@@ -8,15 +9,15 @@
         "open": true,
         "overflow": false,
         "button": {
-          "x": 1085,
-          "y": 679.609375,
-          "right": 1399,
-          "bottom": 724.609375
+          "x": 563,
+          "y": 724.609375,
+          "right": 877,
+          "bottom": 769.609375
         },
         "broken": [],
         "scroll": true
       },
-      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "viewport": "844x390",
@@ -24,15 +25,15 @@
         "open": true,
         "overflow": false,
         "button": {
-          "x": 649,
+          "x": 410,
           "y": 297,
-          "right": 817,
+          "right": 578,
           "bottom": 347
         },
         "broken": [],
         "scroll": true
       },
-      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "viewport": "568x320",
@@ -48,7 +49,7 @@
         "broken": [],
         "scroll": true
       },
-      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "state": "pending",
@@ -72,7 +73,7 @@
     },
     {
       "viewport": "390x844",
-      "result": "orientation prompt visible; modal closed"
+      "result": "orientation prompt visible; modal closed; underlying preview inert"
     }
   ],
   "externalRequests": [],
@@ -80,6 +81,6 @@
   "limitations": [
     "Synthetic data and outcomes; no backend validation",
     "No physical touch-device, screen-reader or iOS Safari verification",
-    "Not a complete-game redesign; visual direction remains proposed"
+    "City layout, colours and information retained by user request; design refinement continues"
   ]
 }

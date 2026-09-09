@@ -3,28 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crownlands — Atlas UI foundation</title>
+  <title>Crownlands — City Details design</title>
   <link rel="stylesheet" href="review.css">
 </head>
 <body>
   <main class="review">
     <header class="review-heading">
-      <div><p class="eyebrow">Crownlands · Design study 01</p><h1>The ruler's field atlas</h1></div>
-      <p class="review-summary">A first look at the command bar, city markers and City Details.<br>Interactive visual prototype · Sample data · No game connection.</p>
+      <div><p class="eyebrow">Crownlands · City UI study</p><h1>City Details</h1></div>
+      <p class="review-summary">Refining the city layout, colours and information.<br>Interactive prototype · Sample data · No game connection.</p>
     </header>
     <div class="review-controls" aria-label="Prototype review controls">
       <label>Viewport<select id="viewport"><option value="1440x900">Desktop · 1440 × 900</option><option value="844x390" selected>Landscape · 844 × 390</option><option value="568x320">Short landscape · 568 × 320</option></select></label>
-      <label>View<select id="view"><option value="city" selected>City Details</option><option value="map">Map and command bar</option></select></label>
       <label>Upgrade state<select id="state"><option value="ready">Ready</option><option value="pending">Pending</option><option value="success">Success</option><option value="error">Retry</option><option value="disabled">Insufficient gold</option></select></label>
       <button id="reset" type="button">Reset preview</button>
-      <a id="openFrame" href="frame.html?view=city" target="_blank" rel="noopener">Open at browser size ↗</a>
+      <a id="openFrame" href="frame.html" target="_blank" rel="noopener">Open at browser size ↗</a>
     </div>
-    <p class="review-hint" id="scaleNote">Choose a city marker to inspect it. Try an upgrade to see the sample feedback.</p>
-    <div id="stage" class="review-stage"><iframe id="preview" title="Crownlands interactive atlas UI prototype" src="frame.html?view=city&amp;state=ready" allow="fullscreen"></iframe></div>
+    <p class="review-hint" id="scaleNote">Try the city tabs and upgrade controls. All values are samples.</p>
+    <div id="stage" class="review-stage"><iframe id="preview" title="Crownlands City Details prototype" src="frame.html?state=ready"></iframe></div>
     <section class="review-notes" aria-label="Design direction">
-      <div><h2>Ink, paper, painted colour</h2><p>Quiet parchment, fine rules, small cloth accents and clear illustrated silhouettes. The existing atlas remains the visual anchor.</p></div>
-      <div><h2>Readable at a glance</h2><p>Sentence-case text and clear numerals. A distinct marker and explicit labels carry ownership alongside colour. Primary commands keep one consistent shape.</p></div>
-      <div><h2>Information within reach</h2><p>City Details has a fixed command area and a scrolling ledger. Short landscape uses the available width without hiding the upgrade controls.</p></div>
+      <div><h2>The layout you liked</h2><p>City identity, overview and defences, followed by fixed upgrade controls. Desktop and landscape retain the same information hierarchy.</p></div>
+      <div><h2>The colours you liked</h2><p>Parchment, dark ink, ochre ownership and a moss-green upgrade button. The existing map is a static background for checking contrast.</p></div>
+      <div><h2>Fine-tuning this panel</h2><p>Spacing, readability and action feedback are the current focus. Available gold now appears inside City Details, beside the upgrade action.</p></div>
     </section>
     <p class="review-links"><a href="README.md">Scope, source and review checklist</a> · <a href="../../../docs/CROWNLANDS_ART_BIBLE.md">Current Art Bible</a></p>
   </main>

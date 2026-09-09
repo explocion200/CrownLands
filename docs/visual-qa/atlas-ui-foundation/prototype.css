@@ -1,5 +1,5 @@
-/* Proposed visual tokens, scoped to this disconnected design study. */
- :root {
+/* City Details study only. Colours and panel layout retained from the first review. */
+:root {
   color-scheme:light;
   --paper:#e7d9b4;
   --paper-light:#f2e8cd;
@@ -73,399 +73,6 @@ button:active:not(:disabled) {
   font-weight:650;
   color:var(--muted);
 }
-.game,.map-viewport {
-  position:absolute;
-  inset:0;
-}
-.map-viewport {
-  overflow:hidden;
-  cursor:grab;
-  touch-action:none;
-}
-.map-viewport:active {
-  cursor:grabbing;
-}
-.world {
-  position:absolute;
-  width:1448px;
-  height:1086px;
-  transform-origin:0 0;
-  background-size:100% 100%;
-}
-.scenery {
-  position:absolute;
-  pointer-events:none;
-  transform:translate(-50%,-50%);
-}
-.map-city {
-  position:absolute;
-  width:116px;
-  height:124px;
-  transform:translate(-50%,-86%);
-  padding:0;
-  border:0;
-  background:none;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-end;
-  isolation:isolate;
-}
-.map-city>img {
-  width:93px;
-  height:96px;
-  object-fit:contain;
-  filter:drop-shadow(0 2px 1px #3e372733);
-}
-.city-ring {
-  position:absolute;
-  z-index:-1;
-  width:77px;
-  height:24px;
-  border-radius:50%;
-  bottom:28px;
-  border:2px solid #4c5039;
-  background:#b6b07020;
-  transform:rotate(-7deg);
-}
-.map-city.selected .city-ring {
-  outline:2px solid #ebd895;
-  outline-offset:3px;
-  background:#dcc77780;
-}
-.map-city-name {
-  display:block;
-  white-space:nowrap;
-  background:#efe3c2ed;
-  box-shadow:0 1px 2px #433b2b40;
-  border:1px solid #756749;
-  border-radius:2px;
-  padding:2px 7px;
-  font-size:12px;
-  font-family:var(--serif);
-  font-weight:bold;
-}
-.map-city-level {
-  position:absolute;
-  left:15px;
-  bottom:26px;
-  border:1px solid #5f593f;
-  background:var(--paper-light);
-  font-size:10px;
-  min-width:20px;
-  padding:1px 4px;
-  border-radius:50%;
-}
-.map-city.owned .map-city-name {
-  border-bottom:3px solid var(--ochre);
-}
-.map-city.neutral .map-city-name {
-  border-bottom:3px solid #5b6550;
-}
-.edge-shade {
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  box-shadow:inset 0 0 85px #28291755;
-}
-.top-command {
-  position:absolute;
-  left:24px;
-  top:22px;
-  display:flex;
-  align-items:center;
-  filter:drop-shadow(0 3px 5px #262c2420);
-}
-.ruler-plaque {
-  display:flex;
-  gap:13px;
-  align-items:center;
-  border:1px solid #776647;
-  background:var(--paper-light);
-  padding:10px 22px 10px 12px;
-  min-height:85px;
-  box-shadow:inset 0 0 0 3px #d5c69f,inset 0 0 0 4px #afa083;
-}
-.kingdom-flag {
-  align-self:stretch;
-  width:35px;
-  background:#735133;
-  color:#e7d59e;
-  display:grid;
-  place-items:center;
-  clip-path:polygon(0 0,100% 0,100% 100%,50% 86%,0 100%);
-  font-size:27px;
-}
-.ruler-copy {
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-}
-.ruler-copy strong {
-  font:600 19px var(--serif);
-  margin:2px 0 3px;
-}
-.ruler-level {
-  font-size:11px;
-  color:var(--muted);
-}
-.treasury {
-  height:60px;
-  border:1px solid #776647;
-  border-left:0;
-  background:var(--paper);
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:9px 20px 9px 14px;
-}
-.treasury .icon {
-  color:var(--ochre);
-  width:28px;
-  height:28px;
-}
-.treasury small {
-  display:block;
-  font-size:10px;
-  color:var(--muted);
-}
-.treasury strong {
-  font-size:18px;
-  font-weight:650;
-  font-variant-numeric:tabular-nums;
-}
-.region-label {
-  position:absolute;
-  left:52%;
-  top:29px;
-  transform:translateX(-50%);
-  display:grid;
-  text-align:center;
-  gap:3px;
-  pointer-events:none;
-  text-shadow:0 1px 2px #f0e9b0;
-}
-.region-label .small-caps {
-  color:#393d27;
-  font-size:9px;
-}
-.region-label strong {
-  font:24px var(--serif);
-}
-.region-rule {
-  height:1px;
-  width:140px;
-  background:linear-gradient(90deg,transparent,#4d4931,transparent);
-  margin:7px auto;
-}
-.corner-controls {
-  position:absolute;
-  right:24px;
-  top:22px;
-  display:flex;
-  gap:7px;
-}
-.icon-button {
-  width:44px;
-  height:44px;
-  border:1px solid #827151;
-  background:#efe3c1;
-  display:grid;
-  place-items:center;
-  border-radius:2px;
-  box-shadow:inset 0 0 0 2px #d9cba7;
-}
-.compass {
-  position:absolute;
-  left:33px;
-  top:139px;
-  width:52px;
-  display:grid;
-  justify-items:center;
-  pointer-events:none;
-  color:#3e4531;
-  opacity:.85;
-}
-.compass>span {
-  font:12px var(--serif);
-}
-.compass svg {
-  width:50px;
-  fill:#4c5038;
-  stroke:#4c5038;
-  stroke-width:1;
-}
-.compass .compass-light {
-  fill:#d5cd99;
-}
-.map-tools {
-  position:absolute;
-  left:26px;
-  top:235px;
-  display:grid;
-  gap:9px;
-}
-.zoom-controls {
-  border:1px solid #827151;
-  display:grid;
-  background:var(--paper);
-  border-radius:2px;
-}
-.zoom-controls button {
-  background:none;
-  border:0;
-  width:42px;
-  height:44px;
-  font-size:24px;
-}
-.zoom-controls button+button {
-  border-top:1px solid #a89976;
-}
-.activity-stack {
-  position:absolute;
-  left:24px;
-  bottom:152px;
-  display:grid;
-  gap:7px;
-}
-.activity-note {
-  display:flex;
-  align-items:center;
-  gap:11px;
-  width:273px;
-  min-height:57px;
-  text-align:left;
-  background:#eee3c6ed;
-  border:1px solid #8e7c5e;
-  padding:9px 12px;
-}
-.activity-note>span:nth-child(2) {
-  display:grid;
-  gap:2px;
-}
-.activity-note strong {
-  font-size:13px;
-  font-weight:600;
-}
-.activity-note small {
-  font-size:10px;
-  color:var(--muted);
-}
-.activity-note.incoming {
-  border-left:3px solid var(--red);
-}
-.incoming>.icon {
-  color:var(--red);
-}
-.wax-count {
-  margin-left:auto;
-  display:grid;
-  place-items:center;
-  width:23px;
-  height:23px;
-  background:var(--red);
-  color:var(--paper-light);
-  border-radius:50%;
-  font:12px var(--serif);
-}
-.command-bar {
-  position:absolute;
-  bottom:51px;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  align-items:stretch;
-  padding:4px 10px;
-  background:var(--paper-light);
-  border:1px solid #7b674a;
-  box-shadow:inset 0 0 0 3px #d1c09a,0 3px 12px #28271c30;
-}
-.nav-command {
-  position:relative;
-  width:78px;
-  min-height:64px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  gap:4px;
-  background:transparent;
-  border:0;
-  font-size:11px;
-}
-.nav-command.active {
-  background:#b9ae8150;
-  color:#3c4c2f;
-}
-.nav-command.active:after {
-  position:absolute;
-  content:"";
-  height:2px;
-  left:20px;
-  right:20px;
-  bottom:4px;
-  background:var(--moss);
-}
-.nav-command .icon {
-  width:27px;
-  height:27px;
-}
-.nav-divider {
-  width:1px;
-  background:#b0a17d;
-  margin:10px 8px;
-}
-.nav-count {
-  position:absolute;
-  top:3px;
-  right:11px;
-  background:var(--red);
-  color:var(--paper-light);
-  font-size:9px;
-  border-radius:9px;
-  min-width:16px;
-  text-align:center;
-  padding:1px 4px;
-}
-.chat-strip {
-  position:absolute;
-  left:24px;
-  bottom:12px;
-  background:#e9debfed;
-  border:1px solid #8b7a59;
-  min-height:32px;
-  display:flex;
-  align-items:center;
-  gap:9px;
-  padding:4px 11px;
-  font-size:11px;
-  max-width:calc(100% - 48px);
-}
-.chat-strip>.icon {
-  width:18px;
-  height:18px;
-}
-.chat-strip>span:nth-child(2) {
-  display:flex;
-  gap:13px;
-}
-.chat-strip b {
-  font-weight:600;
-}
-.chat-strip>span:last-child {
-  margin-left:12px;
-}
-.game-toast {
-  position:absolute;
-  top:120px;
-  left:50%;
-  transform:translateX(-50%);
-  padding:12px 20px;
-  background:var(--paper-light);
-  border:1px solid var(--rule);
-  max-width:80%;
-  box-shadow:0 3px 15px #2223;
-}
 .orientation {
   display:none;
 }
@@ -483,10 +90,10 @@ dialog::backdrop {
 }
 .city-panel {
   position:fixed;
-  inset:94px 24px 135px auto;
-  margin:0;
+  inset:0;
+  margin:auto;
   width:364px;
-  height:auto;
+  height:min(720px, calc(100% - 32px));
   overflow:hidden;
   background:radial-gradient(ellipse at 80% 20%,#fff6df44,transparent 70%),var(--paper-light);
   box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 8px 28px #27291a44;
@@ -543,19 +150,19 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   gap:20px;
-  min-height:128px;
+  min-height:112px;
 }
 .portrait-illustration {
   position:relative;
   width:110px;
-  height:120px;
+  height:104px;
   display:grid;
   place-items:center;
   flex:none;
 }
 .portrait-illustration img {
   width:100%;
-  height:112px;
+  height:100px;
   object-fit:contain;
   position:relative;
   z-index:1;
@@ -816,348 +423,129 @@ dialog::backdrop {
   background:#657353;
   color:#f5efd8;
 }
-.note-panel {
-  width:380px;
-  padding:20px 24px;
-}
-.note-panel header {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  border-bottom:1px solid #beaf8e;
-  padding-bottom:12px;
-}
-.note-panel h2 {
-  font:24px var(--serif);
-  margin:0;
-}
-.note-panel p {
-  font-size:13px;
-  line-height:1.7;
-}
-.note-panel ul {
-  padding-left:18px;
-  font-size:13px;
-  line-height:1.8;
-}
 @media(max-width:1099px),(max-height:649px) {
-  .top-command {
-    left:12px;
-    top:10px;
-  }
-  .ruler-plaque {
-    min-height:58px;
-    padding:5px 13px 5px 8px;
-    gap:9px;
-  }
-  .kingdom-flag {
-    width:25px;
-    font-size:20px;
-  }
-  .ruler-copy strong {
-    font-size:14px;
-    margin:1px 0;
-  }
-  .ruler-copy .small-caps {
-    font-size:8px;
-  }
-  .ruler-level {
-    font-size:9px;
-  }
-  .treasury {
-    height:47px;
-    padding:6px 11px;
-    gap:7px;
-  }
-  .treasury .icon {
-    width:22px;
-    height:22px;
-  }
-  .treasury small {
-    font-size:9px;
-  }
-  .treasury strong {
-    font-size:15px;
-  }
-  .region-label {
-    left:55%;
-    top:13px;
-  }
-  .region-label strong {
-    font-size:18px;
-  }
-  .region-label .small-caps {
-    font-size:8px;
-  }
-  .region-rule {
-    margin-top:4px;
-    width:100px;
-  }
-  .corner-controls {
-    top:10px;
-    right:12px;
-    gap:5px;
-  }
-  .corner-controls .icon-button {
-    width:44px;
-    height:44px;
-  }
-  .compass {
-    left:18px;
-    top:87px;
-    width:42px;
-  }
-  .compass svg {
-    width:38px;
-  }
-  .compass>span {
-    font-size:10px;
-  }
-  .map-tools {
-    left:15px;
-    top:164px;
-    gap:5px;
-  }
-  .map-tools .icon-button {
-    width:44px;
-    height:44px;
-  }
-  .zoom-controls {
-    display:flex;
-  }
-  .zoom-controls button {
-    width:44px;
-    height:44px;
-  }
-  .zoom-controls button+button {
-    border:0;
-    border-left:1px solid #a89976;
-  }
-  .activity-stack {
-    left:116px;
-    bottom:86px;
-    gap:5px;
-  }
-  .activity-note {
-    width:242px;
-    min-height:45px;
-    padding:6px 9px;
-    gap:9px;
-  }
-  .activity-note strong {
-    font-size:11px;
-  }
-  .activity-note small {
-    font-size:9px;
-  }
-  .activity-note .icon {
-    width:20px;
-    height:20px;
-  }
-  .wax-count {
-    width:20px;
-    height:20px;
-    font-size:10px;
-  }
-  .command-bar {
-    bottom:29px;
-    padding:3px 6px;
-    left:50%;
-  }
-  .nav-command {
-    width:63px;
-    min-height:48px;
-    gap:1px;
-    font-size:9px;
-  }
-  .nav-command .icon {
-    width:23px;
-    height:23px;
-  }
-  .nav-command.active:after {
-    bottom:1px;
-    left:17px;
-    right:17px;
-  }
-  .nav-divider {
-    margin:7px 3px;
-  }
-  .nav-count {
-    right:7px;
-    top:1px;
-  }
-  .chat-strip {
-    left:12px;
-    bottom:3px;
-    min-height:23px;
-    padding:2px 8px;
-    max-width:calc(100% - 24px);
-    font-size:9px;
-    gap:7px;
-  }
-  .chat-strip .icon {
-    height:15px;
-    width:15px;
-  }
-  .chat-strip>span:nth-child(2) {
-    gap:8px;
-  }
-  .city-panel {
-    inset:8px 8px 8px auto;
+.city-panel {
+    inset:8px;
+    margin:0 auto;
+    height:auto;
     width:326px;
   }
-  .city-heading {
+.city-heading {
     padding:10px 9px 10px 17px;
     min-height:63px;
   }
-  .city-heading h1 {
+.city-heading h1 {
     font-size:20px;
     max-width:230px;
   }
-  .city-heading p {
+.city-heading p {
     font-size:8px;
     margin-bottom:3px;
   }
-  .city-ledger {
+.city-ledger {
     padding:0 18px 10px;
   }
-  .city-portrait {
+.city-portrait {
     min-height:91px;
     gap:16px;
   }
-  .portrait-illustration {
+.portrait-illustration {
     width:88px;
     height:86px;
   }
-  .portrait-illustration img {
+.portrait-illustration img {
     height:88px;
   }
-  .sketched-ground {
+.sketched-ground {
     bottom:1px;
   }
-  .city-portrait p {
+.city-portrait p {
     font-size:11px;
     margin-bottom:4px;
   }
-  .level-mark {
+.level-mark {
     font-size:14px;
   }
-  .level-mark b {
+.level-mark b {
     font-size:24px;
   }
-  .ledger-tabs {
+.ledger-tabs {
     gap:24px;
   }
-  .ledger-tabs button {
+.ledger-tabs button {
     min-height:44px;
     padding:8px 2px;
   }
-  .garrison-line {
+.garrison-line {
     padding:11px 0 8px;
   }
-  .garrison-line strong {
+.garrison-line strong {
     font-size:20px;
   }
-  .ledger-stats>div {
+.ledger-stats>div {
     min-height:33px;
   }
-  .ledger-stats dt,.ledger-stats dd {
+.ledger-stats dt,.ledger-stats dd {
     font-size:11px;
   }
-  .city-actions {
+.city-actions {
     padding:10px 14px 8px;
   }
-  .upgrade-title {
+.upgrade-title {
     margin-bottom:7px;
   }
-  .upgrade-title strong {
+.upgrade-title strong {
     font-size:14px;
   }
-  .upgrade-title small {
+.upgrade-title small {
     font-size:9px;
   }
-  .upgrade-options {
+.upgrade-options {
     margin-bottom:6px;
   }
-  .upgrade-options button {
+.upgrade-options button {
     height:44px;
   }
-  .primary-command {
+.primary-command {
     min-height:44px;
     font-size:12px;
   }
-  .action-feedback {
+.action-feedback {
     margin-top:5px;
     font-size:9px;
   }
-  .game:has(+ .city-panel[open]) .region-label {
-    display:none;
-  }
-  .game:has(+ .city-panel[open]) .command-bar {
-    left:calc((100% - 334px)/2);
-  }
-  .game:has(+ .city-panel[open]) .activity-stack {
-    left:112px;
-    bottom:90px;
-  }
-  .game:has(+ .city-panel[open]) .chat-strip {
-    max-width:calc(100% - 354px);
-  }
-  .game:has(+ .city-panel[open]) .chat-strip>span:nth-child(2)>span {
-    overflow:hidden;
-    white-space:nowrap;
-    text-overflow:ellipsis;
-    max-width:165px;
-  }
-  .game:has(+ .city-panel[open]) .corner-controls {
-    display:none;
-  }
 }
 @media(max-width:680px) and (orientation:landscape) {
-  .region-label {
-    display:none;
-  }
-  .treasury {
-    padding:6px 9px;
-  }
-  .activity-stack {
-    left:auto;
-    right:12px;
-    bottom:86px;
-  }
-  .activity-note {
-    width:242px;
-  }
-  .city-panel {
+.city-panel {
     inset:6px;
     width:calc(100% - 12px);
   }
-  .city-panel[open] {
+.city-panel[open] {
     display:grid;
     grid-template-columns:minmax(0,1fr) 213px;
     grid-template-rows:auto minmax(0,1fr);
   }
-  .city-heading {
+.city-heading {
     grid-column:1/-1;
     padding:8px 11px 9px 16px;
     min-height:57px;
   }
-  .city-heading h1 {
+.city-heading h1 {
     max-width:none;
     font-size:20px;
   }
-  .city-heading>div {
+.city-heading>div {
     display:flex;
     align-items:baseline;
     gap:16px;
     flex-direction:row-reverse;
   }
-  .city-ledger {
+.city-ledger {
     grid-column:1;
     grid-row:2;
     padding:0 17px 12px;
   }
-  .city-actions {
+.city-actions {
     grid-column:2;
     grid-row:2;
     margin:0 4px 4px 0;
@@ -1168,58 +556,52 @@ dialog::backdrop {
     justify-content:center;
     padding:14px 12px;
   }
-  .upgrade-title {
+.upgrade-title {
     margin-bottom:14px;
     gap:6px;
   }
-  .upgrade-title>.icon {
+.upgrade-title>.icon {
     width:20px;
     height:20px;
   }
-  .upgrade-title small {
+.upgrade-title small {
     font-size:9px;
   }
-  .upgrade-options {
+.upgrade-options {
     margin-bottom:12px;
     flex:none;
   }
-  .action-feedback {
+.action-feedback {
     min-height:26px;
     margin-top:9px;
   }
-  .primary-command {
+.primary-command {
     padding:9px 8px;
     gap:5px;
   }
-  .primary-command .price {
+.primary-command .price {
     font-size:11px;
     gap:3px;
   }
-  .primary-command .price .icon {
+.primary-command .price .icon {
     width:15px;
     height:15px;
   }
-  .city-portrait {
+.city-portrait {
     min-height:79px;
   }
-  .portrait-illustration {
+.portrait-illustration {
     width:82px;
     height:77px;
   }
-  .portrait-illustration img {
+.portrait-illustration img {
     height:80px;
   }
-  .ledger-tabs button {
+.ledger-tabs button {
     min-height:44px;
   }
-  .city-heading .small-caps {
+.city-heading .small-caps {
     font-size:8px;
-  }
-  .game:has(+ .city-panel[open]) .command-bar {
-    left:50%;
-  }
-  .game:has(+ .city-panel[open]) .chat-strip {
-    max-width:calc(100% - 24px);
   }
 }
 .upgrade-options button {
@@ -1237,200 +619,105 @@ dialog::backdrop {
 .text-command {
   font-size:13px;
 }
-.nav-command {
-  font-size:12px;
-}
-.chat-strip {
-  min-height:44px;
-}
-.command-bar {
-  bottom:62px;
-}
-.activity-stack {
-  bottom:163px;
-}
-.map-city.selected:after {
-  content:"";
-  position:absolute;
-  bottom:22px;
-  left:14px;
-  right:14px;
-  height:6px;
-  border-bottom:2px solid #efe3c2;
-  border-radius:50%;
-  pointer-events:none;
-}
 @media(min-width:681px) and (max-width:1099px), (min-width:681px) and (max-height:649px) {
-    .city-panel {
+.city-panel {
     width:350px;
   }
-  .city-heading h1 {
+.city-heading h1 {
     max-width:260px;
   }
-  .city-portrait {
+.city-portrait {
     min-height:76px;
     gap:16px;
   }
-  .portrait-illustration {
+.portrait-illustration {
     height:73px;
     width:82px;
   }
-  .portrait-illustration img {
+.portrait-illustration img {
     height:78px;
   }
-  .city-actions {
+.city-actions {
     display:grid;
     grid-template-columns:136px minmax(0,1fr);
     column-gap:8px;
     padding:9px 14px 8px;
   }
-  .upgrade-title {
+.upgrade-title {
     grid-column:1/-1;
     margin-bottom:8px;
   }
-  .upgrade-title strong {
+.upgrade-title strong {
     font-size:14px;
   }
-  .upgrade-title small {
+.upgrade-title small {
     display:none;
   }
-  .upgrade-options {
+.upgrade-options {
     margin:0;
   }
-  .upgrade-options button {
+.upgrade-options button {
     height:48px;
     font-size:12px;
   }
-  .primary-command {
+.primary-command {
     min-height:50px;
     padding:7px 8px;
     font-size:12px;
   }
-  .price {
+.price {
     font-size:11px;
     gap:3px;
   }
-  .price>.icon {
+.price>.icon {
     width:15px;
     height:15px;
   }
-  .action-feedback {
+.action-feedback {
     grid-column:1/-1;
     min-height:16px;
     margin-top:6px;
     font-size:11px;
     line-height:1.3;
   }
-  .game:has(+ .city-panel[open]) .command-bar {
-    left:calc((100% - 358px)/2);
-  }
-  .game:has(+ .city-panel[open]) .chat-strip {
-    max-width:calc(100% - 374px);
-  }
 }
 @media(max-width:1099px),(max-height:649px) {
-  .nav-command {
-    font-size:11px;
-  }
-  .chat-strip {
-    min-height:44px;
-    font-size:11px;
-  }
-  .command-bar {
-    bottom:50px;
-  }
-  .activity-stack,.game:has(+ .city-panel[open]) .activity-stack {
-    bottom:108px;
-  }
-  .activity-note {
-    background:var(--paper-light);
-  }
-  .activity-note small {
-    font-size:10px;
-  }
-  .city-heading .small-caps {
+.city-heading .small-caps {
     font-size:9px;
   }
-  .ledger-stats dt,.ledger-stats dd {
+.ledger-stats dt,.ledger-stats dd {
     font-size:12px;
   }
-  .garrison-note {
+.garrison-note {
     font-size:10px;
   }
-  .ownership-mark {
+.ownership-mark {
     font-size:11px;
   }
-  .city-portrait p {
+.city-portrait p {
     font-size:12px;
   }
-  .upgrade-title small {
+.upgrade-title small {
     font-size:10px;
   }
-  .action-feedback {
+.action-feedback {
     font-size:11px;
-  }
-  .chat-strip>span:nth-child(2)>span {
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .game:has(+ .city-panel[open]) .chat-strip>span:nth-child(2)>span {
-    max-width:170px;
-  }
-  .activity-stack {
-    z-index:1;
-  }
-  .command-bar {
-    z-index:2;
   }
 }
 @media(max-width:680px) and (orientation:landscape) {
-  .action-feedback {
+.action-feedback {
     min-height:32px;
   }
-  .city-heading .small-caps {
+.city-heading .small-caps {
     font-size:9px;
   }
-  .city-actions {
+.city-actions {
     padding-left:12px;
     padding-right:12px;
   }
-  .chat-strip {
-    max-width:calc(100% - 24px);
-  }
-  .activity-stack {
-    right:12px;
-    bottom:110px;
-  }
-  .activity-note {
-    min-height:45px;
-  }
-  .activity-note small {
-    font-size:10px;
-  }
-}
-.map-city.owned .map-city-name:before {
-  content:"◆ ";
-  font-size:9px;
-  color:var(--ochre);
-}
-@media(max-width:680px) and (orientation:landscape) {
-  .map-tools {
-    top:118px;
-  }
-  .map-tools .zoom-controls {
-    display:grid;
-  }
-  .zoom-controls button+button {
-    border-left:0;
-    border-top:1px solid #a89976;
-  }
-  .compass {
-    display:none;
-  }
 }
 @media(orientation:portrait) {
-  .orientation {
+.orientation {
     display:flex;
     position:fixed;
     inset:0;
@@ -1442,28 +729,28 @@ dialog::backdrop {
     background:var(--paper-light);
     padding:30px;
   }
-  .orientation>.icon {
+.orientation>.icon {
     width:60px;
     height:60px;
   }
-  .orientation h1 {
+.orientation h1 {
     font:32px var(--serif);
     margin:24px 0 8px;
   }
-  .orientation p {
+.orientation p {
     max-width:240px;
     font-size:15px;
     color:var(--muted);
   }
 }
 @media(prefers-reduced-motion:no-preference) {
-  button {
+button {
     transition:filter 120ms ease;
   }
-  .city-panel[open] {
+.city-panel[open] {
     animation:ledger-in 160ms ease-out;
   }
-  @keyframes ledger-in {
+@keyframes ledger-in {
     from {
       opacity:0;
       translate:8px 0;
@@ -1474,3 +761,13 @@ dialog::backdrop {
     }
   }
 }
+
+/* Preview scaffolding only; the map is an unchanged, non-interactive asset. */
+.preview-surface { position:fixed; inset:0; display:grid; place-items:center; background:#d6cbae; }
+.map-context { position:absolute; inset:0; background:url("../../../assets/worlds/core-expansion-v1/maps/core-v2-north-support-p0-m2.webp") center / cover; }
+.preview-placeholder { position:relative; padding:24px; text-align:center; background:var(--paper-light); border:1px solid var(--rule); }
+.preview-placeholder h1 { font:26px var(--serif); margin:0 0 14px; }
+.preview-placeholder button { min-height:44px; padding:10px 18px; background:var(--paper); border:1px solid var(--rule); }
+body:has(.city-panel[open]) .preview-placeholder { visibility:hidden; }
+.orientation { display:none; }
+@media(orientation:portrait) { .orientation { display:flex; } }
