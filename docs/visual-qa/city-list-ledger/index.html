@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crown Lands · City List draft</title>
+  <link rel="stylesheet" href="draft.css">
+  <script src="../../../city-details-ui.js" defer></script>
+  <script src="draft.js" defer></script>
+</head>
+<body>
+  <header class="review-bar">
+    <span><b>CROWN LANDS</b><span class="review-label">City List · Design draft</span></span>
+    <nav aria-label="Draft controls">
+      <button type="button" data-size="desktop" aria-pressed="true">Desktop</button>
+      <button type="button" data-size="phone" aria-pressed="false">Phone</button>
+      <label><span class="sr-only">Preview roster state</span><select id="rosterState"><option value="ready">Full roster</option><option value="syncing">Syncing</option><option value="partial">Incomplete roster</option><option value="empty">Empty roster</option></select></label>
+      <button type="button" id="resetDraft">Reset</button>
+    </nav>
+  </header>
+  <main class="stage" data-size="desktop">
+    <section class="ledger" aria-labelledby="listTitle">
+      <header class="ledger-header">
+        <div><p class="eyebrow">Your kingdom</p><h1 id="listTitle">City List</h1></div>
+        <div class="treasury"><span data-icon="coin"></span><div><span>Available gold</span><strong id="availableGold">500,000</strong></div></div>
+        <p id="rosterSummary" class="roster-summary"></p>
+      </header>
+      <div class="ledger-toolbar">
+        <span class="sort-caption">Order by</span>
+        <button type="button" data-sort="level" aria-pressed="true">Level <span class="sort-direction">High to low ↓</span></button>
+        <button type="button" data-sort="troops" aria-pressed="false">Troops <span class="sort-direction">Sort</span></button>
+        <span class="page-caption">Across all maps</span>
+      </div>
+      <div id="rosterNotice" class="roster-notice" hidden></div>
+      <div class="column-headings" aria-hidden="true"><span>City &amp; location</span><span>Level</span><span>Garrison</span><span>Production / hour</span><span>Develop city</span></div>
+      <div id="cityRows" class="city-rows" aria-label="Owned cities"></div>
+      <footer class="ledger-footer">
+        <p id="shownCount"></p>
+        <nav class="pagination" aria-label="City pages"><button type="button" id="prevPage" aria-label="Previous city page">←</button><span id="pageNumber"></span><button type="button" id="nextPage" aria-label="Next city page">→</button></nav>
+      </footer>
+    </section>
+    <p class="draft-note">Sample kingdom · Upgrade amounts and costs are illustrative. All interactions are simulated.</p>
+  </main>
+  <div id="announcement" class="announcement" role="status" aria-live="polite"></div>
+  <dialog id="cityPreview" aria-labelledby="previewTitle">
+    <button class="close-preview" type="button" aria-label="Close city preview">×</button>
+    <div id="previewBody"></div>
+  </dialog>
+</body>
+</html>
