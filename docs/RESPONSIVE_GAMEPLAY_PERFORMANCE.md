@@ -47,6 +47,34 @@ A read-only production log query at 18:28 UTC succeeded after an earlier HTTP 42
 
 Internal review checked the complete branch diff for authority/balance changes, unrelated removals, stale callbacks, locks, UI focus, expiry/access behavior, cancellation, adaptive-mode oscillation, and startup dependency ordering. Review found and corrected the scouting presentation-exception lock risk and the queued chat-close race. Removed command-panel functions have no remaining runtime, HTML, or validator references. No asset or dependency versions were upgraded and no existing performance budget was raised.
 
+## Mobile interruption audit (2026-09-08)
+
+An interrupted map gesture could survive backgrounding with its tracked pointers,
+pinch, and dragging state intact. Pointer capture also sends cancellation to the
+map frame rather than the city layer, bypassing that layer's city/camp tap cleanup.
+Island switching previously cleared pointers but retained pending taps and pinch
+animation work. All three interruptions now cancel the complete gesture, release
+captures safely, suppress the trailing click, and clear deferred gesture callbacks
+and camera locks. A new touch starts normally; lifting one finger during an
+uninterrupted pinch still continues as a drag.
+
+Controlled regression coverage now includes native Chromium touch input interrupted
+by a verified browser freeze and a fresh drag after resume. The browser harness
+disables focus emulation while freezing and asserts that the actual freeze event
+was delivered; focus emulation otherwise prevents this lifecycle transition.
+Cancellation and island-switch tests also cover pending city, camp, and army taps,
+including capture that the browser has already released.
+
+The browser matrix covers 1440×900, 844×390, and 568×320, plus a 4× CPU diagnostic
+at 844×390. Attack, transfer, rally creation, and rally contribution dialogs are
+checked for travel details and reachable action buttons. Existing checks exercise
+scout pending feedback, map-stable reports, failed-report reconnect retries, route
+previews, Shop focus, and Chat history/reopening. Rally form checks use local
+fixtures; server rally lifecycle and settlement remain covered by the required
+multiplayer emulator gates. These checks do not establish physical iOS/Android
+behavior or authenticated production latency. This audit changes client gesture
+handling and validation only; release status is recorded in the final handoff.
+
 ## Release procedure and limits
 
 The branch must pass the repository's complete `prepare-pr` flow, production build, and required GitHub checks (`Static validation`, `Multiplayer emulator validation`, `Validate`) against current main. Normal merge is followed by the established Netlify Git deployment and safe public desktop/landscape smoke checks at `https://playcrownlands.com/play/`, including the merged commit in release metadata and loaded scripts. This release requires no Functions, rules, indexes, cleanup migration, or production data changes. The backend contract remains compatible with the deployed PR #254 backend.

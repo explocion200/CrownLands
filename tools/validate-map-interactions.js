@@ -574,4 +574,41 @@ assert.match(focusOutgoingMarchSource, /centerOnWorldPoint\(point, regionId\)/, 
 assert.match(source, /querySelectorAll\("\[data-outgoing-march\]"\)[\s\S]*?focusOutgoingMarchLocation/, "Kingdom Activity should bind the current march location control.");
 assert.doesNotMatch(source, /function focusOutgoingAttackCity/, "The destination-only march focus handler should be removed.");
 
-console.log("Validated stable map performance modes, live march focusing, low-zoom destination taps, march endpoint clearance, and stronghold action plaques.");
+// Capture routes pointercancel to mapFrame, bypassing cityLayer's tap cleanup.
+// Backgrounding may omit pointercancel altogether; neither path may keep a tap
+// or a scheduled pinch that can act on a resumed/new map.
+for (const interruption of ["background", "pointercancel", "map-switch"]) {
+  const classes = new Set(["dragging", "camera-moving", "zooming"]);
+  const released = [], cancelledFrames = [], cancelledTimers = [];
+  const gesture = {
+    activePointers: new Map([[1,{x:10,y:10}],[2,{x:30,y:10}]]),
+    panState: {pointerId:1}, pinchState: {startZoom:1},
+    cityTapState: {pointerId:1,cityId:"old-city"},
+    campTapState: {pointerId:1,campId:"old-camp"},
+    armyTapState: {pointerId:1,tokenId:"old-army"},
+    mainMapPinchAnimationFrame: 10, cameraInteractionSettleTimer: 20,
+    interactionRenderLockUntil: 999, suppressMapClick:false,
+    mapFrame: {dataset:{}, classList:{remove:(...names)=>names.forEach(name=>classes.delete(name)),add:name=>classes.add(name)},
+      releasePointerCapture:id=>{released.push(id); if(id===1) throw new Error("Capture already released");}},
+    mapLoadingLabel:null, mapSwitchLoading:false, state:null,
+    gameBackgroundedAtMs:0, getOnlineApi:()=>null, isOnlineWorldActive:()=>false,
+    window:{clearTimeout:id=>cancelledTimers.push(id)},
+    cancelAnimationFrame:id=>cancelledFrames.push(id), renderPanel:()=>{},
+  };
+  vm.createContext(gesture);
+  vm.runInContext(["releaseMapPointer","cancelMapGesture","markGameBackgrounded","endPan","setMapSwitchLoading"].map(extractFunction).join("\n"),gesture);
+  if(interruption==="background") gesture.markGameBackgrounded();
+  if(interruption==="pointercancel") gesture.endPan({type:"pointercancel",pointerId:1});
+  if(interruption==="map-switch") gesture.setMapSwitchLoading("Next island");
+  assert.equal(gesture.activePointers.size,0,`${interruption} retained touches.`);
+  for(const name of ["panState","pinchState","cityTapState","campTapState","armyTapState"]) {
+    assert.equal(gesture[name],null,`${interruption} retained ${name}.`);
+  }
+  assert.deepEqual(released,[1,2],"A lost capture must not prevent releasing the other pointer.");
+  assert.deepEqual(cancelledFrames,[10]); assert.deepEqual(cancelledTimers,[20]);
+  assert.equal(gesture.interactionRenderLockUntil,0);
+  assert.equal(gesture.suppressMapClick,true,"Cancellation must suppress the trailing compatibility click.");
+  assert(!["dragging","camera-moving","zooming"].some(name=>classes.has(name)));
+}
+
+console.log("Validated stable map performance modes, live march focusing, low-zoom destination taps, interrupted gesture cleanup, march endpoint clearance, and stronghold action plaques.");

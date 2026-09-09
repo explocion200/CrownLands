@@ -10,6 +10,42 @@ const { createMapBenchmarkServer } = require(path.join(root, "tools/map-benchmar
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const artifacts = path.resolve(__dirname, "../release-artifacts/performance");
 
+async function verifyInterruptedTouch(client, evaluate) {
+  await client.send("Emulation.setFocusEmulationEnabled", {enabled:true});
+  await client.send("Emulation.setTouchEmulationEnabled", {enabled:true, maxTouchPoints:2});
+  const points = await evaluate(`(() => {
+    const rect = mapFrame.getBoundingClientRect();
+    return [0.35,0.65].map((fraction,index)=>({id:index+1,x:Math.round(rect.left+rect.width*fraction),y:Math.round(rect.top+rect.height*.55)}));
+  })()`);
+  try {
+    await client.send("Input.dispatchTouchEvent", {type:"touchStart", touchPoints:points});
+    assert.equal(await evaluate("activePointers.size"),2,"Real touches did not reach the map.");
+    await evaluate("window.interruptedTouchFreezes=0;document.addEventListener('freeze',()=>window.interruptedTouchFreezes++);");
+    await client.send("Emulation.setFocusEmulationEnabled", {enabled:false});
+    await client.send("Page.setWebLifecycleState", {state:"frozen"});
+    await wait(100);
+    await client.send("Page.setWebLifecycleState", {state:"active"});
+    await client.send("Emulation.setFocusEmulationEnabled", {enabled:true});
+    await client.send("Page.bringToFront");
+    await wait(100);
+    assert.equal(await evaluate("window.interruptedTouchFreezes"),1,"The browser did not deliver a freeze event.");
+    const resumed = await evaluate("({pointers:activePointers.size,pan:Boolean(panState),pinch:Boolean(pinchState),cityTap:Boolean(cityTapState),campTap:Boolean(campTapState),armyTap:Boolean(armyTapState),dragging:mapFrame.classList.contains('dragging')})");
+    assert.deepEqual(resumed,{pointers:0,pan:false,pinch:false,cityTap:false,campTap:false,armyTap:false,dragging:false},"Backgrounding retained an interrupted map gesture.");
+    await client.send("Input.dispatchTouchEvent", {type:"touchCancel",touchPoints:[]});
+    await client.send("Input.dispatchTouchEvent", {type:"touchStart",touchPoints:[points[0]]});
+    const before = await evaluate("({x:camera.x,y:camera.y,zoom})");
+    await client.send("Input.dispatchTouchEvent", {type:"touchMove",touchPoints:[{...points[0],x:points[0].x-60,y:points[0].y-30}]});
+    const drag = await evaluate("({moved:panState?.moved,pinch:Boolean(pinchState),x:camera.x,y:camera.y,zoom,blocked:isMapInteractionBlocked()})");
+    const freshDrag = drag.moved === true && !drag.pinch && (drag.x !== before.x || drag.y !== before.y) && drag.zoom === before.zoom;
+    assert(freshDrag,`A fresh touch after resume did not drag normally: ${JSON.stringify({before,drag})}`);
+    await client.send("Input.dispatchTouchEvent", {type:"touchCancel",touchPoints:[]});
+    return {resumed,freshDrag};
+  } finally {
+    await client.send("Input.dispatchTouchEvent", {type:"touchCancel",touchPoints:[]}).catch(()=>{});
+    await client.send("Emulation.setTouchEmulationEnabled", {enabled:false});
+  }
+}
+
 async function verifyConnectionRecovery(client, evaluate) {
   const preview = await evaluate(`(async () => {
     const original = {requestAuthoritativeOrderRoute, supportsAuthoritativeArmyRoutes};
@@ -48,13 +84,17 @@ async function verifyConnectionRecovery(client, evaluate) {
     await wait(100);
     const offline = await evaluate("navigator.onLine===false && onlineRealtimeRecoveryNeeded");
     assert(offline,"A real offline event did not mark realtime state for recovery.");
+    await evaluate("window.connectionRecoveryFreezes=0;document.addEventListener('freeze',()=>window.connectionRecoveryFreezes++);");
+    await client.send("Emulation.setFocusEmulationEnabled",{enabled:false});
     await client.send("Page.setWebLifecycleState",{state:"frozen"});
     await wait(100);
     await client.send("Page.setWebLifecycleState",{state:"active"});
+    await client.send("Emulation.setFocusEmulationEnabled",{enabled:true});
     await client.send("Page.bringToFront");
     await client.send("Network.emulateNetworkConditions", {offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
     for(let i=0;i<80 && !await evaluate("connectionRecoveryQa.reports>=2 && !foregroundResumeInFlight");i++) await wait(100);
     const resumed=await evaluate("({reports:connectionRecoveryQa.reports,restarts:connectionRecoveryQa.restarts,pending:Boolean(foregroundResumeInFlight),online:navigator.onLine,visibility:document.visibilityState,error:onlineLastError})");
+    assert.equal(await evaluate("window.connectionRecoveryFreezes"),1,"Connection recovery did not exercise a real freeze event.");
     assert(resumed.online && !resumed.pending && resumed.reports>=2 && resumed.reports<=4 && resumed.restarts>=1,
       `Reconnect/freeze recovery did not retry failed reports cleanly: ${JSON.stringify(resumed)}`);
     return {preview,offline,freezeResume:resumed};
@@ -100,7 +140,7 @@ async function main() {
       if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || JSON.stringify(result.exceptionDetails));
       return result.result.value;
     };
-    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }, { name: "landscape-4x", width: 844, height: 390, cpuRate: 4 }]) {
+    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }, { name: "short-landscape", width: 568, height: 320 }, { name: "landscape-4x", width: 844, height: 390, cpuRate: 4 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: false });
       await client.send("Emulation.setCPUThrottlingRate", {rate:viewport.cpuRate || 1});
       await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
@@ -111,6 +151,7 @@ async function main() {
       if (!baselineRoot) assert(startup.snapshotStart < startup.skillEnd, "Independent saved-state loading waited for skill migration.");
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
       await wait(400);
+      const interruptedTouch = baselineRoot ? null : await verifyInterruptedTouch(client,evaluate);
       const pinch = await evaluate(`new Promise(resolve => {
         const bounds = mapFrame.getBoundingClientRect();
         zoom = .6; updateCameraTransform();
@@ -246,7 +287,7 @@ async function main() {
       assert.equal(await evaluate("document.getElementById('chatDialog').open"), true);
       const shot = await client.send("Page.captureScreenshot", {format:"png"});
       fs.writeFileSync(path.join(artifacts, `chat-${baselineRoot?'before':'after'}-${viewport.name}.png`), Buffer.from(shot.data,"base64"));
-      results.push({viewport:viewport.name,startup,pinch,scout,shop,chat,connection,mapSwitch:{outMs:switching.neighborLatencyMs,backMs:switching.returnLatencyMs}});
+      results.push({viewport:viewport.name,startup,pinch,interruptedTouch,scout,shop,chat,connection,mapSwitch:{outMs:switching.neighborLatencyMs,backMs:switching.returnLatencyMs}});
       console.log(JSON.stringify(results[results.length-1]));
     }
     fs.writeFileSync(path.join(artifacts, `${baselineRoot?'before':'after'}-interactions.json`), JSON.stringify(results,null,2)+'\n');
