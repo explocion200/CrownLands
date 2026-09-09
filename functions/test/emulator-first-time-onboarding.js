@@ -160,10 +160,12 @@ async function main() {
     && profile.realmShardId === identity.realmShardId, "The new profile has a stale realm identity.");
   assert(city.ownerUid === firstSession.uid && city.ownerKind === "player" && city.isMainCity === true,
     "The starting city ownership record is invalid.");
-  assert(Number(city.level) === 1 && Number(city.troops) === 200 && Number(city.troopFloat) === 200,
-    "The starting city does not have Level 1 and exactly 200 starting troops.");
+  assert(Number(city.level) === 1 && Number(city.troops) === 1_000 && Number(city.troopFloat) === 1_000,
+    "The starting city does not have Level 1 and exactly 1,000 starting troops.");
   assert(Number.isFinite(Number(city.x)) && Number.isFinite(Number(city.y)), "The starting map position is invalid.");
   assert(Number(statsSnap.data()?.totalCities) === 1, "The new player's global stats do not show one owned city.");
+  assert(Number(statsSnap.data()?.totalTroops) === 1_000 && Number(leaderboardSnap.data()?.totalTroops) === 1_000,
+    "Starting troops disagree between the city, global stats, and leaderboard.");
 
   const mapSummary = catalog.regions.find(region => region.id === claim.mainRegionId);
   assert(mapSummary, "The assigned starting map is absent from the loading manifest.");
@@ -259,7 +261,13 @@ async function main() {
   assert(ownedCities.length === 1 && ownedCities[0].id === claim.cityId,
     "Refresh/logout/login duplicated or lost the player's city ownership.");
   const persistedCity = (await cityRef.get()).data() || {};
-  assert(Number(persistedCity.troops) === 200, "The rejected client write altered saved troop progress.");
+  assert(Number(persistedCity.troops) === 1_000, "The rejected client write altered saved troop progress.");
+
+  await cityRef.update({ troops: 777, troopFloat: 777 });
+  const progressReplay = await callFunction("claimStartingCity", secondSession.token, clientIdentity);
+  const progressCity = (await cityRef.get()).data() || {};
+  assert(progressReplay.alreadyClaimed === true && Number(progressCity.troops) === 777 && Number(progressCity.troopFloat) === 777,
+    "Replaying an existing starting-city claim reapplied the troop grant over saved progress.");
 
   // Exercise a genuine cross-map march after making the complete first ring active in the
   // isolated emulator. The client-supplied geometry and duration are deliberately false;
@@ -373,7 +381,7 @@ async function main() {
 
   console.log(
     `First-time onboarding passed: auth create/login, required records, Layer 1 ${claim.mainRegionId}, `
-    + "100 Gold, Level-1 city with 200 troops, rules, refresh, logout/login, idempotent recovery, "
+    + "100 Gold, Level-1 city with 1,000 troops, matching stats, rules, refresh, logout/login, progress-preserving recovery, "
     + `and an uncapped ${Math.round(preview.durationMs / 1000)}s cross-map march.`,
   );
 }

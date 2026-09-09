@@ -227,7 +227,7 @@ function runWithRealmShard(realmShardId, operation) {
   }, operation);
 }
 const TEST_STARTING_GOLD = 100;
-const PLAYER_STARTING_TROOPS = 200;
+const PLAYER_STARTING_TROOPS = 1_000;
 const PLAYER_NAME_MAX_LENGTH = 18;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 19);
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.1155);
