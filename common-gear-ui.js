@@ -858,6 +858,7 @@ function bindInnerCastlePreviewActions() {
 function clearInnerCastleModalState() {
   innerCastleSelectedBuildingKey = "";
   delete modal.dataset.innerCastleCityId;
+  delete modal.dataset.innerCastleReturnCityId;
   delete modal.dataset.commonGearBuildingId;
   modal.classList.remove("inner-castle-modal", "common-gear-building-modal");
   commonGearMergeConfirmOpen = false;
@@ -933,7 +934,7 @@ function renderInnerCastle(cityId) {
     button.addEventListener("click", () => selectInnerCastleBuilding(button.dataset.innerCastleBuilding));
   });
   modalBody.querySelector("[data-inner-castle-back]")?.addEventListener("click", () => {
-    const originCityId = modal.dataset.innerCastleCityId;
+    const originCityId = modal.dataset.innerCastleReturnCityId || modal.dataset.innerCastleCityId;
     clearInnerCastleModalState();
     if (originCityId && cityById(originCityId)) {
       showCityInfoModal(originCityId);
@@ -944,7 +945,7 @@ function renderInnerCastle(cityId) {
   return true;
 }
 
-function openInnerCastle(cityId) {
+function openInnerCastle(cityId, returnCityId = cityId) {
   const city = getInnerCastleCity(cityId);
   if (!canEnterInnerCastle(city)) {
     showToast("The Inner Castle is available only in your main city.");
@@ -953,6 +954,7 @@ function openInnerCastle(cityId) {
   clearInnerCastleModalState();
   delete modal.dataset.cityInfoId;
   modal.dataset.innerCastleCityId = city.id;
+  modal.dataset.innerCastleReturnCityId = returnCityId;
   modal.classList.add("inner-castle-modal");
   innerCastleSelectedBuildingKey = "great-hall";
   if (!renderInnerCastle(city.id)) {

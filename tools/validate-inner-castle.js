@@ -4,7 +4,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
-const gameSource = `${read("game.js")}\n${read("common-gear-ui.js")}`;
+const gameSource = `${read("game.js")}\n${read("common-gear-ui.js")}\n${read("city-details-ui.js")}`;
 const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
@@ -297,15 +297,14 @@ assert.match(cityResolverSource, /cityById\(id\)/, "Inner Castle city resolution
 assert.match(cityResolverSource, /getMainCityReference\(\)/, "Inner Castle city resolution must support an off-map cached main city.");
 assert.match(cityResolverSource, /mainCity\?\.id\s*===\s*id/, "The cached fallback must never resolve a city other than the main city.");
 
-const cityInfoSource = extractFunction(gameSource, "showCityInfoModal");
-assert.match(cityInfoSource, /canEnterInnerCastle\(city\)/, "City details must gate the Inner Castle CTA.");
+const cityInfoSource = extractFunction(gameSource, "renderCityDetailsPanel");
+assert.match(cityInfoSource, /canEnterInnerCastle\(mainCity\)/, "City details must gate the shortcut against the player's Main City.");
 assert.match(cityInfoSource, /id=["']enterInnerCastleBtn["']/, "City details are missing the Inner Castle CTA.");
-assert.match(cityInfoSource, /data-enter-inner-castle=/, "The Inner Castle CTA is missing its city target.");
-assert.match(cityInfoSource, />\s*Enter Inner Castle\s*</, "The Inner Castle CTA label changed.");
+assert.match(cityInfoSource, /Enter Inner Castle<\/button>/, "The Inner Castle CTA label changed.");
 assert.match(
-  cityInfoSource,
-  /openInnerCastle\((?:city\.id|event\.currentTarget\.dataset\.enterInnerCastle)\)/,
-  "The Inner Castle CTA is not wired to the selected city."
+  extractFunction(gameSource, "bindCityDetailsPanel"),
+  /openInnerCastle\(mainCity\.id, city\.id\)/,
+  "The shortcut must open the player's Main City and retain the inspected city for Back."
 );
 
 const openSource = extractFunction(gameSource, "openInnerCastle");

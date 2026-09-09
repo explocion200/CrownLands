@@ -31320,16 +31320,7 @@ function showCityInfoModal(cityId) {
   }
   const mainCityStatus = getMainCityChangeStatus(city);
   const mainCityBlock = mainCityStatus.isMain
-    ? `
-      <div class="stat-wide main-city-status">
-        <div class="main-city-status-copy">
-          <span>Home status</span>
-          <strong>Main city</strong>
-        </div>
-        ${canEnterInnerCastle(city)
-          ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" data-enter-inner-castle="${escapeHtml(city.id)}">Enter Inner Castle</button>`
-          : ""}
-      </div>`
+    ? ""
     : !mainCityStatus.locationEligible
     ? ""
     : `
@@ -31355,9 +31346,6 @@ function showCityInfoModal(cityId) {
   bindCityDetailsPanel(city);
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
     void changeMainCity(city.id);
-  });
-  modalBody.querySelector("#enterInnerCastleBtn")?.addEventListener("click", event => {
-    openInnerCastle(event.currentTarget.dataset.enterInnerCastle);
   });
   bindCityLevelUpButtons(city);
   bindRelinquishCityButton(city);

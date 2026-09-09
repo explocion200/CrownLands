@@ -73,6 +73,7 @@ function getCityDetailsValues(city) {
 
 function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", onboardingMarkup = "", foreignMarkup = "" } = {}) {
   const owned = city.owner === "player";
+  const mainCity = getMainCityReference();
   const projected = owned ? getProjectedCityForInstantActions(city) || city : city;
   const stats = getCityStats(city);
   const values = owned ? getCityDetailsValues(city) : null;
@@ -91,6 +92,7 @@ function renderCityDetailsPanel(city, { mainCityBlock = "", upgradeMarkup = "", 
   return `<section class="cd-panel" data-city-details="${escapeHtml(city.id)}" data-cd-region="${escapeHtml(getCityRegionId(city))}" data-cd-scope="${escapeHtml(getOnlineRequestScope())}" data-cd-owned="${owned}">
     <div class="cd-ledger">
       <section class="cd-portrait"><img data-cd-art src="${escapeHtml(getCastleAsset(getCastleStage(projected.level)))}" alt=""><div><p class="cd-relation">${relation}</p><span class="cd-level">Level <b data-cd-value="level">${formatNumber(projected.level)}</b></span><div class="cd-owner">${owner}</div><span class="cd-allegiance">${cityDetailsIcon("allegiance")}${owned ? "Your kingdom" : relation}</span></div></section>
+      ${canEnterInnerCastle(mainCity) ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" title="Open your main city's Inner Castle">${cityDetailsIcon("city")}Enter Inner Castle</button>` : ""}
       ${onboardingMarkup}
       ${owned ? `<div class="cd-tabs" role="tablist" aria-label="City information"><button id="cdOverviewTab" type="button" role="tab" aria-selected="true" aria-controls="cdOverview">Overview</button><button id="cdDefencesTab" type="button" role="tab" aria-selected="false" aria-controls="cdDefences" tabindex="-1">Defences</button></div>` : ""}
       <section id="cdOverview" ${owned ? 'role="tabpanel" aria-labelledby="cdOverviewTab"' : 'aria-label="City information"'}>${overview}</section>
@@ -114,7 +116,10 @@ function renderCityDetailsUpgrade(city) {
 function bindCityDetailsPanel(city) {
   const root = modalBody.querySelector(".cd-panel");
   if (!root) return;
-  root.querySelector("#enterInnerCastleBtn")?.insertAdjacentHTML("afterbegin", cityDetailsIcon("city"));
+  root.querySelector("#enterInnerCastleBtn")?.addEventListener("click", () => {
+    const mainCity = getMainCityReference();
+    if (mainCity) openInnerCastle(mainCity.id, city.id);
+  });
   const tabs = [...root.querySelectorAll('[role="tab"]')];
   const selectTab = tab => tabs.forEach(candidate => {
     const selected = candidate === tab;
