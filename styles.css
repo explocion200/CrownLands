@@ -5062,6 +5062,15 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   gap: .42rem;
   flex-wrap: wrap;
 }
+.battle-report-toolbar[data-report-sync] {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 3.5rem;
+}
+.battle-report-toolbar[data-report-sync][hidden] { display: none; }
+[data-report-sync] [role="status"] { min-width: 0; font-size: .88rem; line-height: 1.35; }
+.battle-report-toolbar[data-report-sync] button { min-height: 44px; }
 .battle-report-filters button,
 .battle-report-back,
 .battle-report-detail-btn,

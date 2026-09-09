@@ -142,3 +142,4 @@ assert(
 });
 
 console.log("Realtime health validation passed: scoped army/presence listeners, independent recovery, UI degradation state, indexes, and emulator coverage.");
+require("./validate-multiplayer-sync").validate().catch(error => { console.error(error); process.exitCode = 1; });

@@ -157,7 +157,7 @@ function reinforcementListenerQueries(uid, shardId = SHARD_ONE) {
     },
   };
   vm.createContext(context);
-  for (const name of ["getRealmShardQueryConstraints", "subscribePlayerReinforcements"]) {
+  for (const name of ["getRealmShardQueryConstraints", "subscribeScopedSnapshot", "subscribePlayerReinforcements"]) {
     const start = source.indexOf(`  function ${name}(`);
     const end = source.indexOf("\n  }", start);
     assert(start >= 0 && end > start, `Missing client function ${name}.`);

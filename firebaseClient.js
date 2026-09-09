@@ -88,6 +88,16 @@
     window.dispatchEvent(new CustomEvent(`crownlands:${name}`, { detail }));
   }
 
+  function subscribeScopedSnapshot(...args) {
+    const scope = () => [client.user?.uid, client.activeSessionId, client.activeSessionActivationGeneration, RESET_GENERATION, ONLINE_WORLD_ID, REALM_SHARD_ID].join(":");
+    const subscribedScope = scope();
+    let stopped = false;
+    const unsubscribe = client.modules.firestore.onSnapshot(...args.map(arg => typeof arg === "function"
+      ? (...values) => { if (!stopped && scope() === subscribedScope) arg(...values); }
+      : arg));
+    return () => { stopped = true; unsubscribe(); };
+  }
+
   function cleanPlayerName(value, fallback = "Ruler") {
     const cleaned = String(value || "")
       .replace(/[^a-z0-9 _.-]/gi, "")
@@ -1284,10 +1294,10 @@
 
   function subscribeClanSocialState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
-      onSnapshot(
+      subscribeScopedSnapshot(
         doc(client.db, "clans", safeClanId, "memberRewards", client.user.uid),
         snapshot => {
           if (typeof handlers.onMemberRewards === "function") {
@@ -1298,7 +1308,7 @@
           if (typeof handlers.onError === "function") handlers.onError(error, "memberRewards");
         }
       ),
-      onSnapshot(
+      subscribeScopedSnapshot(
         doc(client.db, "clans", safeClanId, "worldBenefits", getRealmStorageId()),
         snapshot => {
           if (typeof handlers.onWorldBenefits === "function") {
@@ -1309,7 +1319,7 @@
           if (typeof handlers.onError === "function") handlers.onError(error, "worldBenefits");
         }
       ),
-      onSnapshot(
+      subscribeScopedSnapshot(
         doc(client.db, "clans", safeClanId, "giftActivity", getRealmStorageId()),
         snapshot => {
           if (typeof handlers.onGiftActivity === "function") {
@@ -1332,10 +1342,10 @@
       || !clanId
       || !questPeriodId
     ) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const safeQuestPeriodId = String(questPeriodId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       doc(client.db, "clans", safeClanId, "questProgress", safeQuestPeriodId),
       snapshot => {
         if (typeof handlers.onQuestProgress === "function") {
@@ -1350,9 +1360,9 @@
 
   function subscribeClanApplications(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, onSnapshot, query, where, orderBy } = client.modules.firestore;
+    const { collection, query, where, orderBy } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       query(
         collection(client.db, "clans", safeClanId, "applications"),
         where("resetGeneration", "==", RESET_GENERATION),
@@ -1375,9 +1385,9 @@
 
   function subscribeClanRallies(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, onSnapshot, query, where } = client.modules.firestore;
+    const { collection, query, where } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       query(
         collection(client.db, "clans", safeClanId, "rallies"),
         where("resetGeneration", "==", RESET_GENERATION),
@@ -1405,10 +1415,10 @@
 
   function subscribeClanState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, doc, onSnapshot, query, where, orderBy } = client.modules.firestore;
+    const { collection, doc, query, where, orderBy } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
-      onSnapshot(
+      subscribeScopedSnapshot(
         doc(client.db, "clans", safeClanId),
         snapshot => {
           if (typeof handlers.onClan === "function") {
@@ -1419,7 +1429,7 @@
           if (typeof handlers.onError === "function") handlers.onError(error, "clan");
         }
       ),
-      onSnapshot(
+      subscribeScopedSnapshot(
         query(
           collection(client.db, "clans", safeClanId, "members"),
           where("resetGeneration", "==", RESET_GENERATION),
@@ -1837,9 +1847,9 @@
 
   function subscribeDailyMissionState(cycleKey = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !cycleKey) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeCycleKey = String(cycleKey).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "dailyMissions", safeCycleKey),
       snapshot => {
         if (typeof handlers.onState === "function") {
@@ -1854,9 +1864,9 @@
 
   function subscribeSeasonalAchievementState(seasonId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !seasonId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeSeasonId = String(seasonId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 180);
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "seasonalAchievements", safeSeasonId),
       snapshot => {
         if (typeof handlers.onState === "function") {
@@ -2241,8 +2251,8 @@
 
   function subscribePlayerGlobalStats(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
-    const { doc, onSnapshot } = client.modules.firestore;
-    return onSnapshot(
+    const { doc } = client.modules.firestore;
+    return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "stats", "global"),
       snapshot => {
         if (typeof handlers.onStats === "function") {
@@ -2775,7 +2785,7 @@
     const reportsQuery = firestoreQuery && orderBy && limit
       ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), ...getRealmShardQueryConstraints(where), orderBy("createdAtMs", "desc"), limit(safeLimit))
       : reportsRef;
-    const snapshot = await getDocs(reportsQuery);
+    const snapshot = await (client.modules.firestore.getDocsFromServer || getDocs)(reportsQuery);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
@@ -2813,7 +2823,7 @@
       limit(250)
     );
     let deliveredInitialSnapshot = false;
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       activityQuery,
       { includeMetadataChanges: true },
       snapshot => {
@@ -3006,7 +3016,7 @@
       rowsBySource.forEach(rows => rows.forEach((entry, id) => merged.set(id, entry)));
       handlers.onReinforcements([...merged.values()]);
     };
-    const subscribe = (source, ownerField) => onSnapshot(
+    const subscribe = (source, ownerField) => subscribeScopedSnapshot(
       firestoreQuery(
         collection(client.db, "reinforcements"),
         where(ownerField, "==", uid),
@@ -3045,7 +3055,7 @@
       where("worldId", "==", ONLINE_WORLD_ID),
       ...getRealmShardQueryConstraints(where)
     );
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       heldCampsRef,
       snapshot => {
         if (typeof handlers.onCamps !== "function") return;
@@ -3067,8 +3077,8 @@
 
   function subscribeCrownCitadel(islandId = "", citadelId = "", handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid || !islandId || !citadelId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
-    return onSnapshot(
+    const { doc } = client.modules.firestore;
+    return subscribeScopedSnapshot(
       doc(client.db, "islands", islandId, "cities", citadelId),
       snapshot => {
         if (typeof handlers.onCitadel === "function") {
@@ -3085,7 +3095,7 @@
     if (!client.configured || !client.db || !client.user?.uid || !towerId) return () => {};
     const { doc, onSnapshot } = client.modules.firestore;
     if (!doc || !onSnapshot) return () => {};
-    return onSnapshot(
+    return subscribeScopedSnapshot(
       doc(client.db, "holdingTowers", String(towerId).slice(0, 96)),
       snapshot => {
         if (typeof handlers.onTower === "function") {

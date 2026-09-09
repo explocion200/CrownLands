@@ -473,6 +473,7 @@ These formulas are verified repository implementation. Exact deployed backend pa
 
 ### Scouting and reports
 
+- Reports distinguish loading or reconnecting from a successfully synchronized empty history. Saved reports remain visible during recovery, and Retry requests a fresh authoritative read and live subscription. Release verification for report delivery includes an authenticated server read and authoritative live snapshot from the exact published build. Confirmed September 9, 2026; implementation and verification scope are recorded in `docs/MULTIPLAYER_SYNC_AUDIT.md`.
 - Completed scout reports are delivered independently through the account's live report subscription, including across map changes and reopening Reports. Client arrival settlement permits two concurrent scout resolutions to reduce contention on shared player economy documents. A slow or failed target does not hold the completed reports of other targets. Intended scout travel, costs, cooldowns, permissions, ten-minute intelligence, and idempotent launch/arrival receipts remain unchanged. The one-minute backend arrival scheduler remains the offline fallback.
 - A normal scout sends one troop and produces a ten-minute intelligence snapshot. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - A newer successful scout replaces the earlier snapshot for that target and restarts the timer. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
