@@ -374,6 +374,16 @@
       "collectionGroup": "serverReports",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "createdAtMs", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "serverReports",
+      "queryScope": "COLLECTION",
+      "fields": [
         {
           "fieldPath": "resetGeneration",
           "order": "ASCENDING"
