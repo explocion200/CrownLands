@@ -9911,6 +9911,7 @@ function normalizeCampReportReward(value = null) {
 function normalizeBattleReports(reports) {
   if (!Array.isArray(reports)) return [];
   const nowMs = Date.now();
+  const count = value => Math.max(0, Math.floor(Number(value) || 0));
   const normalized = reports
     .map(report => {
       if (!report || typeof report !== "object") return null;
@@ -9938,18 +9939,17 @@ function normalizeBattleReports(reports) {
         regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
         cityLevel: targetType === "camp" ? 0 : clampCityLevel(report.cityLevel || 1),
-        troopCount: Math.max(0, Math.floor(Number(report.troopCount) || 0)),
-        sentTroops: Math.max(0, Math.floor(Number(report.sentTroops) || 0)),
-        survivors: Math.max(0, Math.floor(Number(report.survivors) || 0)),
-        defendersLeft: Math.max(0, Math.floor(Number(report.defendersLeft) || 0)),
-        attackerLosses: Math.max(0, Math.floor(Number(report.attackerLosses) || 0)),
-        defenderLosses: Math.max(0, Math.floor(Number(report.defenderLosses) || 0)),
-        totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+        troopCount: count(report.troopCount),
+        sentTroops: count(report.sentTroops),
+        survivors: count(report.survivors),
+        defendersLeft: count(report.defendersLeft),
+        attackerLosses: count(report.attackerLosses),
+        defenderLosses: count(report.defenderLosses),
+        totalDefense: count(report.totalDefense),
         baseTotalDefense: Math.min(
-          Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
-          Math.max(0, Math.floor(Number(report.baseTotalDefense ?? report.totalDefense) || 0))
+          count(report.totalDefense), count(report.baseTotalDefense ?? report.totalDefense)
         ),
-        totalDefenseBonus: Math.max(0, Math.floor(Number(report.totalDefenseBonus) || 0)),
+        totalDefenseBonus: count(report.totalDefenseBonus),
         opponentUid: String(report.opponentUid || "").slice(0, 128),
         opponentName: String(report.opponentName || "").slice(0, 40),
         opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
@@ -9962,21 +9962,21 @@ function normalizeBattleReports(reports) {
         scoutDisclosure: normalizeDefenderScoutDisclosure(report.scoutDisclosure),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
-        xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
-        goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
-        troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
+        xpAwarded: count(report.xpAwarded),
+        goldAwarded: count(report.goldAwarded),
+        troopsAwarded: count(report.troopsAwarded),
         levelUpReward: normalizeLevelUpRewardReceipt(report.levelUpReward),
         campReward: normalizeCampReportReward(report.campReward),
         eventKind: String(report.eventKind || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48),
         rewardEventId: String(report.rewardEventId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160),
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
         rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
-        fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
+        fieldMedicsRecovered: count(report.fieldMedicsRecovered),
         casualtyRecovery: normalizeBattleCasualtyRecovery(report.casualtyRecovery),
         gearEffects: normalizeBattleGearEffects(report.gearEffects),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
-        battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
-        siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
+        battleSnapshotVersion: count(report.battleSnapshotVersion),
+        siegeCombatVersion: count(report.siegeCombatVersion),
         defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0)),
         fortification: normalizeCombatFortificationSnapshot(report.fortification),
         attackProtection: normalizeAttackProtectionSnapshot(report.attackProtection, report.demoAttack),
@@ -9986,14 +9986,20 @@ function normalizeBattleReports(reports) {
         bulkOrderKind: report.bulkOrderKind === "regroup" ? "regroup" : report.bulkRequestId && type === "scout" ? "nearby_scout" : "",
         bulkRequestId: String(report.bulkRequestId || "").slice(0, 96),
         bulkArrivalCue: ["first", "last", "first_last", "mute"].includes(report.bulkArrivalCue) ? report.bulkArrivalCue : "",
-        bulkArrivalIndex: Math.max(0, Math.floor(Number(report.bulkArrivalIndex) || 0)),
-        bulkOrderCount: Math.max(0, Math.floor(Number(report.bulkOrderCount) || 0)),
+        bulkArrivalIndex: count(report.bulkArrivalIndex),
+        bulkOrderCount: count(report.bulkOrderCount),
       };
     })
     .filter(Boolean);
+  const reportsById = new Map();
+  normalized.forEach(report => {
+    if (getBattleReportRevisionMs(report) >= getBattleReportRevisionMs(reportsById.get(report.id))) {
+      reportsById.set(report.id, report);
+    }
+  });
   const active = [];
   const successfulScoutIndexByCity = new Map();
-  normalized.forEach(report => {
+  reportsById.forEach(report => {
     const historyExpiresAtMs = getBattleReportHistoryExpiresAtMs(report);
     if (historyExpiresAtMs && historyExpiresAtMs <= nowMs) return;
     if (!isSuccessfulScoutIntelBattleReport(report)) {
@@ -10014,7 +10020,7 @@ function normalizeBattleReports(reports) {
       active[existingIndex] = report;
     }
   });
-  // Server snapshots arrive newest first; keep history oldest first before capping it.
+  // Keep the newest 120 reports in chronological order.
   return active.sort((a, b) => compareBattleReportsNewestFirst(b, a)).slice(-120);
 }
 
@@ -11463,7 +11469,6 @@ function mergeServerReports(reports = [], options = {}) {
     return false;
   }
   let changed = false;
-  let addedReport = false;
   const newDeedCompletionReports = [];
   const newCityCombatReports = [];
   const notificationCandidates = [];
@@ -11474,7 +11479,6 @@ function mergeServerReports(reports = [], options = {}) {
     const scoutChanged = mergeServerScoutReport(rawReport);
     if (scoutChanged) refreshedScoutCityIds.add(String(rawReport.cityId || ""));
     changed = scoutChanged || changed;
-    addedReport = scoutChanged || addedReport;
     const normalized = normalizeServerBattleReport(rawReport);
     if (!normalized) continue;
     const revisionMs = getBattleReportRevisionMs(normalized);
@@ -11483,16 +11487,22 @@ function mergeServerReports(reports = [], options = {}) {
       ? getBattleReportRevisionMs(state.battleReports[existingIndex])
       : 0;
     const appliedRevisionMs = Math.max(0, Number(appliedServerReportRevisions.get(normalized.id)) || 0);
-    if (revisionMs <= Math.max(existingRevisionMs, appliedRevisionMs)) continue;
-    notificationCandidates.push(normalized);
+    if (revisionMs < appliedRevisionMs) continue;
+    if (existingIndex >= 0 && revisionMs <= existingRevisionMs) {
+      appliedServerReportRevisions.set(normalized.id, revisionMs);
+      continue;
+    }
+    // Restore missing reports without replaying their effects.
+    const newRevision = revisionMs > appliedRevisionMs;
+    if (newRevision) notificationCandidates.push(normalized);
     if (existingIndex >= 0) state.battleReports[existingIndex] = normalized;
     else {
       state.battleReports.push(normalized);
-      if (normalized.eventKind === "deed_camp_completed" && normalized.rewardEventId) {
+      if (newRevision && normalized.eventKind === "deed_camp_completed" && normalized.rewardEventId) {
         newDeedCompletionReports.push(normalized);
       }
       if (
-        normalized.battleId
+        newRevision && normalized.battleId
         && (normalized.type === "attack" || normalized.type === "defense")
         && normalized.eventKind !== CITADEL_ASSAULT_EVENT_KIND
       ) {
@@ -11500,7 +11510,7 @@ function mergeServerReports(reports = [], options = {}) {
       }
     }
     appliedServerReportRevisions.set(normalized.id, revisionMs);
-    if (shouldNotify && normalized.levelUpReward) {
+    if (newRevision && shouldNotify && normalized.levelUpReward) {
       const reward = normalized.levelUpReward;
       queueLevelUpReward(reward.fromLevel, reward.toLevel, {
         skillPoints: reward.skillPoints,
@@ -11512,11 +11522,9 @@ function mergeServerReports(reports = [], options = {}) {
       });
     }
     changed = true;
-    addedReport = true;
   }
   if (changed) {
     state.battleReports = normalizeBattleReports(state.battleReports);
-    if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
     saveGame();
     cityRenderSignature = "";
     renderCities(true);
@@ -11534,7 +11542,7 @@ function mergeServerReports(reports = [], options = {}) {
   }
   if (
     shouldNotify
-    && addedReport
+    && changed
     && !reportsPanelOpen
     && notificationCandidates.some(report => claimBulkArrivalAudio(report))
   ) {
@@ -12209,7 +12217,6 @@ function stripServerEconomyProfileFields(profile = {}) {
     "flag",
     "daily",
     "scoutReports",
-    "battleReports",
     "marchPercent",
     "lastSelectedOwnedCityId",
     "gameSeconds",
@@ -12324,6 +12331,13 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
   return merged;
 }
 
+function mergeOnlineBattleReports(profileReports = []) {
+  return normalizeBattleReports([
+    ...(Array.isArray(profileReports) ? profileReports : []),
+    ...(state?.battleReports || []).filter(report => appliedServerReportRevisions.has(report.id)),
+  ]);
+}
+
 function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
   if (!state || !profile || typeof profile !== "object") return;
   state.playerName = cleanName(profile.playerName || profile.displayName) || fallbackPlayerName;
@@ -12367,7 +12381,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   );
   state.harvestNextBonusType = normalizeHarvestBonusType(profile.harvestNextBonusType);
   state.scoutReports = normalizeScoutReports(profile.scoutReports);
-  state.battleReports = normalizeBattleReports(profile.battleReports);
+  state.battleReports = mergeOnlineBattleReports(profile.battleReports);
   state.reportsViewedAtMs = normalizeTimestampMs(profile.reportsViewedAtMs);
   state.realmAnnouncementSeenThroughMs = normalizeTimestampMs(profile.realmAnnouncementSeenThroughMs);
   state.lastRealmAnnouncementEventId = String(profile.lastRealmAnnouncementEventId || "").slice(0, 180);

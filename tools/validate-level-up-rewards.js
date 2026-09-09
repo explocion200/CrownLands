@@ -336,7 +336,7 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /troopsAwarded:\s*Math\.max\(0,\s*Math\.floor\(Number\(report\.troopsAwarded\)/,
+  /function normalizeBattleReports[\s\S]*?const count = value => Math\.max\(0, Math\.floor\(Number\(value\) \|\| 0\)\);[\s\S]*?troopsAwarded:\s*count\(report\.troopsAwarded\)/,
   "Synced battle reports do not preserve level-up troop rewards."
 );
 requireMatch(
@@ -371,7 +371,7 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /if \(shouldNotify && normalized\.levelUpReward\)[\s\S]*?queueLevelUpReward/,
+  /if \(newRevision && shouldNotify && normalized\.levelUpReward\)[\s\S]*?queueLevelUpReward/,
   "New asynchronous battle level-ups do not queue their verified reward prompt."
 );
 assert.doesNotMatch(

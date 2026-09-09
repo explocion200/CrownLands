@@ -1916,6 +1916,8 @@
     delete cleanProfile.lastCityRelinquishedAtMs;
     delete cleanProfile.dailyLoginReward;
     delete cleanProfile.reportsViewedAtMs;
+    // Reports are written by battle/scout settlement, never by a cached profile save.
+    delete cleanProfile.battleReports;
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
     delete cleanProfile.skillPresets;
@@ -2771,7 +2773,7 @@
     const reportsRef = collection(client.db, "players", uid, "serverReports");
     const safeLimit = Math.max(1, Math.min(200, Math.floor(Number(limitCount) || 120)));
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(safeLimit))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), ...getRealmShardQueryConstraints(where), orderBy("createdAtMs", "desc"), limit(safeLimit))
       : reportsRef;
     const snapshot = await getDocs(reportsQuery);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2843,7 +2845,7 @@
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reportsRef = collection(client.db, "players", client.user.uid, "serverReports");
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(120))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), ...getRealmShardQueryConstraints(where), orderBy("createdAtMs", "desc"), limit(120))
       : reportsRef;
     let stopped = false;
     const unsubscribe = onSnapshot(

@@ -407,4 +407,90 @@ const replacedScoutHistory = historySandbox.normalizeBattleReports([
 assert.equal(replacedScoutHistory.filter(report => report.id === "current-scout").length, 1, "Scout replacement duplicated or dropped current intelligence at capacity.");
 assert.equal(replacedScoutHistory.find(report => report.id === "current-scout").occurredAtMs, historyNowMs, "Scout replacement retained stale intelligence.");
 
-console.log("Validated server-timed unread Reports, heraldic side comparisons, bonus separation, wall outcomes, and bounded report history.");
+// Exercise the actual merge path after a stale profile response and a replayed
+// server snapshot, including rewards which must not run again during recovery.
+let reportSounds = 0;
+let reportRewards = 0;
+let reportAnimations = 0;
+let reportListRenders = 0;
+Object.assign(historySandbox, {
+  state: { battleReports: [], scoutReports: {} },
+  appliedServerReportRevisions: new Map(),
+  modal: { open: false, dataset: {}, classList: { contains: () => true } },
+  modalBody: { scrollTop: 80 },
+  deedRewardReportsVfxHydrated: true,
+  CITADEL_ASSAULT_EVENT_KIND: "citadel_assault",
+  REWARD_FOLLOWUP_AUDIO_DELAY_MS: 0,
+  getCurrentOnlineUid: () => "report-reader",
+  mergeServerScoutReport: () => false,
+  normalizeScoutReports: value => value || {},
+  saveGame() {}, renderCities() {}, renderHud() {},
+  showLogModal() { reportListRenders += 1; },
+  claimBulkArrivalAudio: () => true,
+  playGameSound() { reportSounds += 1; },
+  queueLevelUpReward() { reportRewards += 1; },
+  cityById: () => ({}),
+  playCityAttackAnimation() { reportAnimations += 1; },
+});
+for (const name of ["normalizeServerBattleReport", "mergeServerReports", "mergeOnlineBattleReports"]) {
+  vm.runInContext(functionBody(client, name), historySandbox);
+}
+const arrivalReport = {
+  ...latestReport, uid: "report-reader", battleId: "battle-delivery",
+  troopsAwarded: 100,
+  levelUpReward: { fromLevel: 39, toLevel: 40, troops: 100 },
+};
+assert.equal(historySandbox.mergeServerReports([arrivalReport], { notify: true }), true);
+assert.equal(reportSounds, 1);
+assert.equal(reportRewards, 1);
+assert.equal(reportAnimations, 1);
+historySandbox.state.battleReports = historySandbox.mergeOnlineBattleReports([]);
+assert.equal(historySandbox.state.battleReports.length, 1, "An older profile erased a delivered battle report.");
+assert.equal(historySandbox.mergeOnlineBattleReports([arrivalReport]).length, 1, "Profile and live reports duplicated the same battle.");
+const newerArrival = { ...arrivalReport, occurredAtMs: historyNowMs + 1, summary: "Newer report" };
+assert.equal(historySandbox.mergeOnlineBattleReports([newerArrival])[0].summary, "Newer report", "A cached report replaced a newer profile revision.");
+historySandbox.state.battleReports = [];
+historySandbox.modal.open = true;
+assert.equal(historySandbox.mergeServerReports([arrivalReport], { notify: true }), true, "A previously delivered missing report was not restored.");
+assert.equal(historySandbox.state.battleReports.length, 1);
+assert.equal(historySandbox.state.battleReports[0].troopsAwarded, 100, "Recovery lost the recorded troop reward.");
+assert.equal(reportListRenders, 1, "Recovery did not refresh the open Reports list.");
+assert.equal(reportSounds, 1, "Recovery replayed notification audio.");
+assert.equal(reportRewards, 1, "Recovery replayed a level reward.");
+assert.equal(reportAnimations, 1, "Recovery replayed the battle animation.");
+assert.equal(historySandbox.mergeServerReports([arrivalReport], { notify: true }), false, "Repeated snapshots were not idempotent.");
+assert.equal(historySandbox.mergeServerReports([{ ...arrivalReport, id: "foreign", uid: "another-player" }]), false, "A report from another account was merged.");
+assert.equal(historySandbox.mergeServerReports([{ ...arrivalReport, id: "expired", occurredAtMs: historyNowMs - 86_400_001 }]), false, "Recovery resurrected an expired report.");
+historySandbox.appliedServerReportRevisions.clear();
+assert.equal(historySandbox.mergeOnlineBattleReports([]).length, 0, "Account disconnect retained another session's reports.");
+assert.equal(historySandbox.mergeServerReports([arrivalReport]), false, "Initial profile hydration duplicated its matching server report.");
+assert.equal(historySandbox.mergeOnlineBattleReports([]).length, 1, "A server-confirmed profile report was not preserved during later reloads.");
+historySandbox.state.battleReports = [];
+assert.equal(historySandbox.mergeServerReports([{ ...arrivalReport, occurredAtMs: historyNowMs - 1 }]), false, "An older snapshot restored a superseded revision.");
+assert.match(functionBody(client, "applyOnlineProfileSnapshot"), /state\.battleReports = mergeOnlineBattleReports\(profile\.battleReports\)/);
+assert.match(functionBody(client, "disconnectOnlineWorld"), /appliedServerReportRevisions = new Map\(\)/);
+for (const [raw, expected] of [["100.9", 100], [-10, 0], ["invalid", 0], [undefined, 0]]) {
+  assert.equal(historySandbox.normalizeBattleReports([{ ...latestReport, troopsAwarded: raw }])[0].troopsAwarded, expected, "Report count normalization changed reward coercion.");
+}
+
+async function validateProfileSave() {
+  let savedProfile;
+  const scope = {
+    init: async () => {}, requireSignedIn: () => "report-reader",
+    sanitizeForFirestore: value => JSON.parse(JSON.stringify(value)),
+    client: { db: {}, user: {}, modules: { firestore: {
+      doc: () => ({}), serverTimestamp: () => 123,
+      setDoc: async (_ref, data) => { savedProfile = data; },
+    } } },
+  };
+  const start = api.indexOf("  async function savePlayerProfile(");
+  const end = api.indexOf("  async function loadPlayerProfile(", start);
+  vm.runInNewContext(api.slice(start, end), scope);
+  const staleProfile = { battleReports: [], marchPercent: 50 };
+  await scope.savePlayerProfile(staleProfile);
+  assert.ok(!Object.hasOwn(savedProfile, "battleReports"), "A stale client save can overwrite settled server reports.");
+  assert.equal(savedProfile.marchPercent, 50, "Unrelated profile preferences were dropped.");
+  assert.ok(Object.hasOwn(staleProfile, "battleReports"), "Saving mutated the local snapshot.");
+  console.log("Validated report recovery after stale saves/reloads, idempotent notifications, account isolation, retention, and battle presentation.");
+}
+validateProfileSave().catch(error => { console.error(error); process.exitCode = 1; });
