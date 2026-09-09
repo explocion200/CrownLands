@@ -38714,8 +38714,7 @@ function updatePinch() {
   const offset = getMapViewportOffset(rect);
   camera.x = pinchState.mapPoint.x - (mid.x - rect.left - offset.x) / zoom;
   camera.y = pinchState.mapPoint.y - (mid.y - rect.top - offset.y) / zoom;
-  // updatePinch already runs in the coalesced animation frame. Paint its camera
-  // here instead of adding another frame of finger-to-map latency.
+  // Paint in this frame to avoid another frame of pinch latency.
   updateCameraTransform();
   markZoomInteraction();
 }
@@ -38972,7 +38971,7 @@ function finishTrackedMapPointer(event, { renderPanelAfter = true } = {}) {
   }
 
   if (activePointers.size < 2) pinchState = null;
-  if (wasPinching && event.type !== "pointercancel" && activePointers.size === 1) {
+  if (wasPinching && activePointers.size === 1) {
     const [pointerId, point] = activePointers.entries().next().value;
     panState = {
       pointerId, startX: point.x, startY: point.y,
@@ -38981,11 +38980,7 @@ function finishTrackedMapPointer(event, { renderPanelAfter = true } = {}) {
     };
   }
   if (activePointers.size === 0) mapFrame.classList.remove("dragging");
-  try {
-    mapFrame.releasePointerCapture?.(event.pointerId);
-  } catch {
-    // Some browsers throw if capture was already released by the target element.
-  }
+  releaseMapPointer(event.pointerId);
   if (suppressMapClick) {
     window.setTimeout(() => { suppressMapClick = false; }, 80);
   }
@@ -39043,41 +39038,33 @@ function trySelectTrackedArmyTap(event) {
   return true;
 }
 
-function cancelMapGesture() {
-  const pointerIds = [...activePointers.keys()];
-  activePointers.clear();
-  panState = null;
-  pinchState = null;
-  cityTapState = null;
-  campTapState = null;
-  armyTapState = null;
-  suppressMapClick = true;
-  if (mainMapPinchAnimationFrame) cancelAnimationFrame(mainMapPinchAnimationFrame);
-  mainMapPinchAnimationFrame = 0;
-  if (cameraInteractionSettleTimer) window.clearTimeout(cameraInteractionSettleTimer);
-  cameraInteractionSettleTimer = null;
-  interactionRenderLockUntil = 0;
-  mapFrame?.classList.remove("dragging", "camera-moving", "zooming");
-  for (const pointerId of pointerIds) {
-    try {
-      mapFrame?.releasePointerCapture?.(pointerId);
-    } catch {
-      // Backgrounding or cancellation may already have released capture.
-    }
+function releaseMapPointer(pointerId) {
+  try {
+    mapFrame?.releasePointerCapture?.(pointerId);
+  } catch {
+    // The browser may already have released capture.
   }
 }
 
+function cancelMapGesture() {
+  for (const id of activePointers.keys()) releaseMapPointer(id);
+  activePointers.clear();
+  panState = pinchState = null;
+  cityTapState = campTapState = armyTapState = null;
+  suppressMapClick = true;
+  cancelAnimationFrame(mainMapPinchAnimationFrame);
+  mainMapPinchAnimationFrame = 0;
+  window.clearTimeout(cameraInteractionSettleTimer);
+  cameraInteractionSettleTimer = null;
+  interactionRenderLockUntil = 0;
+  mapFrame?.classList.remove("dragging", "camera-moving", "zooming");
+}
+
 function endPan(event) {
-  if (event.type === "pointercancel") {
-    cancelMapGesture();
-    renderPanel();
-    return;
-  }
-  finishTrackedMapPointer(event, { renderPanelAfter: false });
-  const selectedMapTarget = event.type === "pointerup"
-    && (trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event));
-  if (event.type !== "pointerup" && armyTapState?.pointerId === event.pointerId) armyTapState = null;
-  if (!selectedMapTarget) renderPanel();
+  if (event.type === "pointercancel") cancelMapGesture();
+  else finishTrackedMapPointer(event, { renderPanelAfter: false });
+  if (event.type !== "pointerup"
+    || !(trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event))) renderPanel();
 }
 
 function preventNativeMapTouch(event) {
@@ -39373,11 +39360,6 @@ cityLayer.addEventListener("pointerup", event => {
   } else {
     cityTapState = null;
   }
-});
-cityLayer.addEventListener("pointercancel", event => {
-  if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
-  if (campTapState?.pointerId === event.pointerId) campTapState = null;
-  if (armyTapState?.pointerId === event.pointerId) armyTapState = null;
 });
 if (portalLayer) {
   portalLayer.addEventListener("pointerdown", event => {

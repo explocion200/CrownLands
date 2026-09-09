@@ -596,7 +596,7 @@ for (const interruption of ["background", "pointercancel", "map-switch"]) {
     cancelAnimationFrame:id=>cancelledFrames.push(id), renderPanel:()=>{},
   };
   vm.createContext(gesture);
-  vm.runInContext(["cancelMapGesture","markGameBackgrounded","endPan","setMapSwitchLoading"].map(extractFunction).join("\n"),gesture);
+  vm.runInContext(["releaseMapPointer","cancelMapGesture","markGameBackgrounded","endPan","setMapSwitchLoading"].map(extractFunction).join("\n"),gesture);
   if(interruption==="background") gesture.markGameBackgrounded();
   if(interruption==="pointercancel") gesture.endPan({type:"pointercancel",pointerId:1});
   if(interruption==="map-switch") gesture.setMapSwitchLoading("Next island");
