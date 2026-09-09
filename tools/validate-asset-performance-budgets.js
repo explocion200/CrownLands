@@ -63,7 +63,11 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // City Details adds under 28 KiB of presentation code and native SVG icons.
 // Keep both entry dependencies available offline within one 32 KiB step;
 // city illustration assets still use the existing runtime image cache.
-const MAX_INSTALL_PRECACHE_BYTES = 3768 * 1024;
+// The City List ledger reuses existing art/icons and adds under 20 KiB of
+// presentation source. Existing headroom plus one 16 KiB step bounds its shell.
+const MAX_INSTALL_PRECACHE_BYTES = 3784 * 1024;
+assert(normalizedTextBytes("city-list-ui.css") <= 14 * 1024,
+  "City List styling exceeds its 14 KiB source budget.");
 assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-details-ui.css") <= 28 * 1024,
   "City Details presentation exceeds its 28 KiB source budget.");
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
@@ -106,7 +110,8 @@ const entrypointBudgets = {
   // under 2 KiB. The aggregate 3648 KiB offline-shell ceiling is unchanged.
   // The follow-up identity steps and arrows add under one 8 KiB runtime step.
   // Report sync feedback and session-safe reward recovery add under 4 KiB.
-  "game.js": 1744 * 1024,
+  // The City List ledger adds under one 4 KiB runtime step.
+  "game.js": 1748 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,

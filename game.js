@@ -31461,6 +31461,7 @@ function captureCityListFocus() {
       kind: "upgrade",
       cityKey: getCityListRowKey(active.dataset.cityUpgradeCity, active.dataset.cityUpgradeRegion),
       mode: active.dataset.cityUpgradeMode || "",
+      levels: active.dataset.cityUpgradeLevels || "",
     };
   }
   if (active.matches("[data-city-list-info]")) {
@@ -31481,6 +31482,7 @@ function restoreCityListFocus(snapshot) {
     target = [...modalBody.querySelectorAll("[data-city-upgrade-mode]")].find(button => (
       getCityListRowKey(button.dataset.cityUpgradeCity, button.dataset.cityUpgradeRegion) === snapshot.cityKey
       && button.dataset.cityUpgradeMode === snapshot.mode
+      && (snapshot.mode === "max" || button.dataset.cityUpgradeLevels === snapshot.levels)
     ));
   } else if (snapshot.kind === "info") {
     target = [...modalBody.querySelectorAll("[data-city-list-info]")].find(button => (
@@ -31508,7 +31510,7 @@ function restoreCityListFocus(snapshot) {
 
 function renderCityListModal() {
   const preserveUiState = Boolean(modal?.open && modal.classList.contains("city-list-modal"));
-  const previousScrollTop = preserveUiState ? modalBody.scrollTop : 0;
+  const previousScrollTop = preserveUiState ? modalBody.querySelector(".city-list-rows")?.scrollTop || 0 : 0;
   const focusSnapshot = preserveUiState ? captureCityListFocus() : null;
   const cities = getSortedCityList();
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
@@ -31528,35 +31530,38 @@ function renderCityListModal() {
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
   const pageCities = cities.slice(start, start + CITY_LIST_PAGE_SIZE);
-  modalTitle.textContent = "City list";
+  modalTitle.textContent = "City List";
   modalBody.innerHTML = `
     <div class="city-list-panel">
-      <div class="city-list-summary">
-        <span>Owned across maps</span>
-        <strong>${rosterCountLabel}</strong>
-        ${rosterIsSyncing ? `<small class="city-list-syncing" role="status">Syncing full city roster...</small>` : ""}
-        ${rosterNeedsRetry ? `<small class="city-list-sync-error" role="alert">Full roster unavailable. Showing saved cities.</small><button class="city-list-sync-retry" data-city-list-sync-retry type="button">Retry sync</button>` : ""}
+      <div class="cll-header">
+        <div aria-hidden="true"><p class="cll-eyebrow">Your kingdom</p><h3>City List</h3></div>
+        <div class="cll-treasury">${cityDetailsIcon("coin")}<div><span>Available Gold</span><strong data-city-list-gold>${instantEconomySyncRecovery ? "Syncing…" : cityDetailsNumber(getProjectedGold())}</strong></div></div>
+        <p class="cll-summary"><strong>${rosterCountLabel}</strong> cities <i>·</i> <strong>${cityDetailsNumber(cities.length - regularCityCount)}</strong> Strongholds <i>·</i> <strong>${new Set(cities.map(getCityRegionId)).size}</strong> maps</p>
       </div>
-      <div class="city-list-toolbar" aria-label="City list filters">
+      <div class="cll-toolbar" aria-label="City list sorting">
+        <span class="cll-sort-caption">Order by</span>
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
-          <span>Lv.</span><small>${getCityListSortLabel("level")}</small>
+          <span>Level</span><small>${getCityListSortLabel("level")}</small>
         </button>
         <button class="${cityListSortKey === "troops" ? "active" : ""}" data-city-list-sort="troops" type="button" aria-pressed="${cityListSortKey === "troops"}">
-          <span>${renderCrownlandsIcon("troops")}</span><small>${getCityListSortLabel("troops")}</small>
+          <span>Troops</span><small>${getCityListSortLabel("troops")}</small>
         </button>
+        <span class="cll-page-caption">${cityDetailsNumber(cities.length)} holdings across maps</span>
       </div>
-
-      <div class="city-list-rows">
+      ${rosterIsSyncing ? `<div class="cll-notice" role="status">Syncing full city roster...</div>` : ""}
+      ${rosterNeedsRetry ? `<div class="cll-notice" role="alert"><span>Full roster unavailable. Showing saved cities.</span><button data-city-list-sync-retry type="button">Retry sync</button></div>` : ""}
+      <div class="cll-columns" aria-hidden="true"><span>City &amp; location</span><span>Level</span><span>Garrison</span><span>Production / hour</span><span>Develop city</span></div>
+      <div class="city-list-rows" tabindex="0" role="region" aria-label="Owned city roster">
         ${pageCities.length
           ? pageCities.map(renderCityListRow).join("")
-          : `<div class="city-list-empty">No cities owned yet.</div>`}
+          : `<div class="cll-empty">${cityDetailsIcon("city")}<h3>${rosterIsSyncing || rosterNeedsRetry ? "Waiting for your roster" : "No cities owned yet"}</h3><p>${rosterIsSyncing || rosterNeedsRetry ? "Your holdings will appear after the roster syncs." : "Your cities and Strongholds will be listed here."}</p></div>`}
       </div>
 
-      <div class="city-list-pager">
+      <div class="cll-footer"><p>${cities.length ? `${start + 1}–${Math.min(start + CITY_LIST_PAGE_SIZE, cities.length)} of ${cityDetailsNumber(cities.length)} holdings` : "No holdings loaded"}</p><div class="cll-pagination">
         <button data-city-list-page="prev" type="button" ${cityListPage <= 0 ? "disabled" : ""} aria-label="Previous city page">${renderCrownlandsIcon("back")}</button>
-        <strong>${formatNumber(cityListPage + 1)}/${formatNumber(pageCount)}</strong>
+        <span>${formatNumber(cityListPage + 1)} / ${formatNumber(pageCount)}</span>
         <button data-city-list-page="next" type="button" ${cityListPage >= pageCount - 1 ? "disabled" : ""} aria-label="Next city page">${renderCrownlandsIcon("forward")}</button>
-      </div>
+      </div></div>
     </div>
   `;
 
@@ -31589,7 +31594,7 @@ function renderCityListModal() {
   });
 
   bindCityListRowActions(modalBody);
-  modalBody.scrollTop = previousScrollTop;
+  modalBody.querySelector(".city-list-rows").scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
 }
 
@@ -31612,14 +31617,15 @@ function bindCityListRowActions(root = modalBody) {
 
 function patchCityListUpgradeRows(dirtyCityKeys = null) {
   if (!modal?.open || !modal.classList.contains("city-list-modal")) return false;
+  setTextIfChanged(modalBody.querySelector("[data-city-list-gold]"), instantEconomySyncRecovery ? "Syncing…" : cityDetailsNumber(getProjectedGold()));
   const requestedKeys = dirtyCityKeys ? new Set(dirtyCityKeys) : null;
   const rows = [...modalBody.querySelectorAll("[data-city-list-row-key]")].filter(row => (
     !requestedKeys || requestedKeys.has(row.dataset.cityListRowKey || "")
   ));
-  if (!rows.length) return false;
   const citiesByKey = new Map(getAllOwnedCitiesForDisplay().map(city => [getCityListRowKey(city), city]));
   const focusSnapshot = captureCityListFocus();
-  const previousScrollTop = modalBody.scrollTop;
+  const scroller = modalBody.querySelector(".city-list-rows");
+  const previousScrollTop = scroller?.scrollTop || 0;
   let changed = false;
   rows.forEach(row => {
     const city = citiesByKey.get(row.dataset.cityListRowKey || "");
@@ -31632,7 +31638,25 @@ function patchCityListUpgradeRows(dirtyCityKeys = null) {
     bindCityListRowActions(replacement);
     changed = true;
   });
-  modalBody.scrollTop = previousScrollTop;
+  // Global Gold changes also affect controls on otherwise unchanged rows.
+  modalBody.querySelectorAll("[data-city-list-row-key]").forEach(row => {
+    if (!requestedKeys || requestedKeys.has(row.dataset.cityListRowKey)) return;
+    const city = citiesByKey.get(row.dataset.cityListRowKey);
+    const options = city && !isStronghold(city) ? getCityUpgradeOptionState(city)?.options : null;
+    row.querySelectorAll(".city-list-upgrade").forEach((button, index) => {
+      const option = options?.[index];
+      if (!option) return;
+      const holder = document.createElement("div");
+      holder.innerHTML = renderCityListUpgradeButton(city, option);
+      const updated = holder.firstElementChild;
+      button.disabled = updated.disabled;
+      button.dataset.cityUpgradeLevels = updated.dataset.cityUpgradeLevels;
+      button.setAttribute("aria-label", updated.getAttribute("aria-label"));
+      button.title = updated.title;
+      setTextIfChanged(button.querySelector("small"), updated.querySelector("small").textContent);
+    });
+  });
+  if (scroller) scroller.scrollTop = previousScrollTop;
   restoreCityListFocus(focusSnapshot);
   return changed;
 }
@@ -31710,8 +31734,11 @@ function getCityListSortLabel(key) {
 
 function renderCityListUpgradeButton(city, option) {
   const label = option.label;
-  const details = option.reason || `${formatNumber(option.levels)} level${option.levels === 1 ? "" : "s"} · ${formatNumber(option.cost)} gold`;
-  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" aria-label="${escapeHtml(`${label} ${city.name}. ${details}`)}" ${option.disabled ? "disabled" : ""}>${escapeHtml(label)}</button>`;
+  const cost = Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)} gold` : "Unavailable";
+  const details = `${cityDetailsNumber(option.levels)} levels · ${cost}${option.disabled && option.reason ? `. ${option.reason}` : ""}`;
+  const recovery = Boolean(instantEconomySyncRecovery);
+  const caption = recovery ? "Syncing" : option.reason === "Incoming" || option.reason === "Refresh" ? option.reason : Number.isFinite(option.cost) ? `${cityDetailsNumber(option.cost)}g` : "—";
+  return `<button class="city-list-upgrade" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" title="${escapeHtml(recovery ? "Refreshing confirmed balance…" : details)}" aria-label="${escapeHtml(`${label} ${city.name}. ${recovery ? "Refreshing confirmed balance…" : details}`)}" ${option.disabled || recovery ? "disabled" : ""}><strong>${escapeHtml(label)}</strong><small>${escapeHtml(caption)}</small></button>`;
 }
 
 function renderCityListRow(city) {
@@ -31720,7 +31747,6 @@ function renderCityListRow(city) {
   const troops = Math.floor(Number(city.troops) || 0);
   const regionLabel = getRegionLabel(getCityRegionId(city));
   const statusLabel = stronghold ? getStrongholdShortBonusLabel(city) : isMain ? "Main city" : "";
-  const locationLabel = statusLabel ? `${statusLabel} - ${regionLabel}` : regionLabel;
   const optionState = stronghold ? null : getCityUpgradeOptionState(city);
   const regionId = getCityRegionId(city);
   const rowKey = getCityListRowKey(city, regionId);
@@ -31736,17 +31762,20 @@ function renderCityListRow(city) {
   const upgradeStatus = syncing
     ? `${formatNumber(syncingLevels)} level${syncingLevels === 1 ? "" : "s"} syncing…`
     : upgradeResult;
+  const stats = stronghold ? null : getCityStats(city);
   return `
     <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""} ${syncing ? "upgrade-syncing" : ""} ${animateUpgradeFeedback ? "upgrade-confirmed" : ""}" data-city-list-row-key="${escapeHtml(rowKey)}" tabindex="-1" ${syncing ? `aria-busy="true"` : ""}>
-      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${renderCrownlandsIcon(isMain ? "city" : "locate")}</button>
-      <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : renderCrownlandsIcon("city")}</span>
-      <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(displayedLevel)}</b></span>
-      <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">${renderCrownlandsIcon("troops")}</span></strong>
-      <span class="city-list-name"><span class="city-list-name-text">${escapeHtml(city.name)}</span>${upgradeStatus ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeStatus)}</small>` : ""}</span>
-      <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
+      <div class="cll-identity">
+        <img src="${escapeHtml(stronghold ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(displayedLevel)))}" alt="" draggable="false" width="67" height="64" />
+        <div><button class="cll-name" data-city-list-info="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">${escapeHtml(city.name)}</button><small>${escapeHtml(regionLabel)}</small>${isMain ? `<span class="cll-seal">${cityDetailsIcon("allegiance")} Main City</span>` : ""}</div>
+      </div>
+      <div class="cll-level"><small>Level</small>${stronghold ? "SH" : formatNumber(displayedLevel)}</div>
+      <div class="cll-garrison"><strong>${cityDetailsNumber(troops)}</strong><small>Troops stationed</small></div>
+      <div class="cll-production">${stats ? `<span>${cityDetailsIcon("coin")}<span>${cityDetailsNumber(stats.goldProductionPerHour)} <small>gold / h</small></span></span><span>${cityDetailsIcon("troops")}<span>${cityDetailsNumber(stats.troopProductionPerHour)} <small>troops / h</small></span></span>` : `<span>${escapeHtml(statusLabel)}</span><small>Owner bonus</small>`}</div>
       <div class="city-list-actions">
-        ${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : ""}
-        <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">${renderCrownlandsIcon("information")}</button>
+        <div class="cll-upgrades">${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : `<span class="cll-no-upgrade">Stronghold</span>`}
+        <button class="cll-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="7"/><path d="m12 8 3 4-3 4-3-4Z"/></svg></button></div>
+        ${upgradeStatus ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeStatus)}</small>` : ""}
       </div>
     </article>
   `;

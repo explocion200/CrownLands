@@ -134,11 +134,12 @@ async function main() {
         const other=state.cities.find(c=>c.id!==main.id&&!isStronghold(c)&&!isCrownCitadel(c));
         const saved={owner:other.owner,ownerUid:other.ownerUid};
         const checks=[];
-        for(const owner of ['player','neutral','enemy']) {
+        for(const owner of ['player','neutral','enemy','ally']) {
           other.owner=owner;other.ownerUid=owner==='player'?getCurrentOnlineUid():'fixture-other';
           for(const inspected of owner==='player'?[main,other]:[other]) {
             showCityInfoModal(inspected.id);
             const entry=document.getElementById('enterInnerCastleBtn');
+            if(owner!=='player') {if(entry)throw Error('Foreign city exposed Inner Castle entry');checks.push({owner,entry:false});continue;}
             if(!entry||modalBody.querySelectorAll('#enterInnerCastleBtn').length!==1)throw Error('Missing or duplicate Inner Castle shortcut');
             if(owner==='player')document.getElementById('cdDefencesTab').click();
             if(!entry.getClientRects().length||entry.closest('[role="tabpanel"]'))throw Error('Shortcut must remain available outside the tabs');
