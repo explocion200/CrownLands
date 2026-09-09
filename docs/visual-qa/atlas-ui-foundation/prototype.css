@@ -437,9 +437,30 @@ dialog::backdrop {
   margin:8px 0 0;
   font-size:10px;
   color:#58513e;
-  min-height:14px;
-  line-height:1.4;
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  line-height:1.3;
   font-variant-numeric:tabular-nums;
+}
+.feedback-icon {
+  width:18px;
+  height:18px;
+}
+.feedback-icon .engraving-fine {
+  display:none;
+}
+.feedback-copy {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+#feedbackTitle {
+  font-weight:600;
+}
+.feedback-balance {
+  color:#58513e;
 }
 .action-feedback b {
   font-weight:600;
@@ -454,6 +475,12 @@ dialog::backdrop {
   color:#793434;
 }
 .city-panel[data-state=success] .action-feedback {
+  color:#3c5536;
+}
+.city-panel[data-state=disabled] .feedback-icon {
+  color:var(--ochre);
+}
+.city-panel[data-state=success] #cityLevel {
   color:#3c5536;
 }
 .city-panel[data-state=pending] .primary-command {
@@ -613,6 +640,7 @@ dialog::backdrop {
     margin-top:9px;
   }
 .primary-command {
+    min-height:54px;
     padding:9px 8px;
     gap:5px;
   }
@@ -681,11 +709,11 @@ dialog::backdrop {
     display:grid;
     grid-template-columns:136px minmax(0,1fr);
     column-gap:8px;
-    padding:9px 14px 8px;
+    padding:7px 14px;
   }
 .upgrade-title {
     grid-column:1/-1;
-    margin-bottom:8px;
+    margin-bottom:4px;
   }
 .upgrade-title>span:last-child {
     display:flex;
@@ -707,12 +735,12 @@ dialog::backdrop {
     margin:0;
   }
 .upgrade-options button {
-    height:48px;
+    height:44px;
     font-size:13px;
   }
 .primary-command {
-    min-height:50px;
-    padding:7px 8px;
+    min-height:46px;
+    padding:4px 8px;
     font-size:13px;
   }
 .price {
@@ -725,8 +753,8 @@ dialog::backdrop {
   }
 .action-feedback {
     grid-column:1/-1;
-    min-height:16px;
-    margin-top:6px;
+    min-height:32px;
+    margin-top:4px;
     font-size:12px;
     line-height:1.3;
   }

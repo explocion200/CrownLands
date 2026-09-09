@@ -42,10 +42,13 @@
     allegiance: `<path class="engraving-surface" d="m5 4 11-1 11 1-1 14q-2 7-10 12Q8 26 6 18Z"/>
       <path class="engraving-ink" d="M14 4h4v9h8v4h-8v10l-2 2-2-2V17H6v-4h8Z"/>`
   };
-  all("[data-icon]").forEach(element => {
+  function setIcon(element, name) {
+    if (element.dataset.renderedIcon === name) return;
     element.setAttribute("aria-hidden", "true");
-    element.innerHTML = `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${icons[element.dataset.icon]}</svg>`;
-  });
+    element.innerHTML = `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">${icons[name]}</svg>`;
+    element.dataset.renderedIcon = name;
+  }
+  all("[data-icon]").forEach(element => setIcon(element, element.dataset.icon));
   const cityPanel = $("#cityPanel");
   const landscape = matchMedia("(orientation: landscape)");
   function openCity() {
@@ -102,17 +105,20 @@
     const cost = count * sampleCost;
     const insufficient = cost > gold || count === 0;
     const pending = state === "pending";
+    // An unaffordable Max previews the minimum one-level cost, not a zero-cost action.
+    const shownCost = count === 0 && level < 50 ? sampleCost : cost;
+    const shortfall = Math.max(0, shownCost - gold).toLocaleString("en-US");
     const available = gold.toLocaleString("en-US");
-    cityPanel.dataset.state = state;
+    cityPanel.dataset.state = !pending && insufficient && level < 50 ? "disabled" : state;
     $("#cityLevel").textContent = level;
-    $("#upgradeCost").textContent = cost.toLocaleString("en-US");
+    $("#upgradeCost").textContent = shownCost.toLocaleString("en-US");
     $("#upgradeHint").textContent = level === 50 ? "City at level 50"
       : count === 0 ? `Level ${level} · No change`
       : `Level ${level} → ${level + count} · +${count} ${count === 1 ? "level" : "levels"}`;
     $("#upgradeLabel").textContent = pending ? "Developing…"
       : level === 50 ? "Sample limit reached"
       : insufficient ? "More gold needed"
-      : state === "error" ? "Try upgrade again"
+      : state === "error" ? "Retry upgrade"
       : `Upgrade to level\u00a0${level + count}`;
     $("#upgradeButton").disabled = pending || insufficient;
     $("#upgradeButton").setAttribute("aria-busy", String(pending));
@@ -120,15 +126,18 @@
       button.disabled = pending || level === 50;
       button.setAttribute("aria-pressed", String(button.dataset.amount === amount));
     });
-    // Keep affordability visible within City Details after removing the HUD.
-    $("#feedbackMessage").textContent = pending ? "Developing… Available: "
-      : state === "error" ? "Upgrade failed. Gold unchanged: "
-      : state === "success" ? `City now level ${level}. Available: `
-      : insufficient ? level === 50 ? "Study limit reached. Available: "
-      : "Not enough gold. Available: "
-      : "Available: ";
+    // Status and balance share one stable, polite live region. No timed dismissal.
+    const feedback = pending ? { icon: "upgrade", title: "Developing city…", balance: "Available: " }
+      : insufficient && level < 50 ? { icon: "coin", title: `Need ${shortfall} more gold`, balance: "Available: " }
+      : state === "error" ? { icon: "ledger", title: "Upgrade failed", balance: "Gold unchanged: " }
+      : state === "success" ? { icon: "city", title: `Level ${level} reached`, balance: "Remaining: " }
+      : level === 50 ? { icon: "city", title: "Sample limit reached", balance: "Available: " }
+      : { icon: "coin", title: "Ready to develop", balance: "Available: " };
+    setIcon($("#feedbackIcon"), feedback.icon);
+    $("#feedbackTitle").textContent = feedback.title;
+    $("#feedbackMessage").textContent = feedback.balance;
     $("#availableGold").textContent = available;
-    $("#feedbackSuffix").textContent = state === "error" || (insufficient && level !== 50) ? "." : " gold.";
+    $("#feedbackSuffix").textContent = state === "error" && !pending && !insufficient ? "" : " gold";
   }
   all("[data-amount]").forEach(button => button.addEventListener("click", () => {
     amount = button.dataset.amount;

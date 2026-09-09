@@ -29,6 +29,7 @@ fs.mkdirSync(output, {recursive:true});
   await evaluate('Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>{})))');
  };
  const shot = async name => { const s=await client.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(output,name+'.png'),Buffer.from(s.data,'base64')); };
+ const actionBounds = () => evaluate(`['.city-actions','#upgradeButton','#actionFeedback'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})`);
  const checkReadability = async () => {
   const layout = await evaluate(`(()=>{
    const box = selector => document.querySelector(selector).getBoundingClientRect();
@@ -74,6 +75,15 @@ fs.mkdirSync(output, {recursive:true});
    await click('[data-amount="max"]');
    assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 → 50 · +26 levels');
    await checkReadability();
+   const maxBounds=await actionBounds();
+   await click('#upgradeButton');
+   assert.equal(await evaluate('document.querySelector("#cityPanel").dataset.state'),'pending');
+   await checkReadability();
+   assert.deepEqual(await actionBounds(),maxBounds,`${w}x${h}: Max action moved while developing`);
+   await pause(750);
+   assert.equal(await evaluate('document.querySelector("#cityLevel").textContent'),'50');
+   assert.deepEqual(await actionBounds(),maxBounds,`${w}x${h}: Max action moved on success`);
+   await load(w,h);
    await click('[data-amount="5"]');
    assert.equal(await evaluate('document.querySelector("#upgradeCost").textContent'),'3,200');
    assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 → 29 · +5 levels');
@@ -93,17 +103,43 @@ fs.mkdirSync(output, {recursive:true});
    assert.equal(await evaluate('document.activeElement.id'),'reopenCity');
    checks.push({viewport:`${w}x${h}`,layout,readability,interaction:'City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed'});
   }
-  for(const state of ['pending','success','error','disabled']) {
-   await load(844,390,'state='+state);
-   assert.equal(await evaluate('document.querySelector("#cityPanel").dataset.state'),state);
-   if(['pending','disabled'].includes(state)) assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
-   if(state==='error') {await click('#upgradeButton');await pause(750);assert.match(await evaluate('document.querySelector("#actionFeedback").textContent'),/Gold unchanged: 84,620/);}
-   await checkReadability();
-   await shot('state-'+state);checks.push({state,result:'passed'});
-   if(state==='disabled') {
-    await click('[data-amount="max"]');await checkReadability();
-    assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 · No change');
-    assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
+  for(const [w,h] of [[1440,900],[844,390],[568,320]]) {
+   await load(w,h);
+   const readyBounds=await actionBounds();
+   for(const state of ['pending','success','error','disabled']) {
+    await load(w,h,'state='+state);
+    assert.equal(await evaluate('document.querySelector("#cityPanel").dataset.state'),state);
+    assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),['pending','disabled'].includes(state));
+    assert.equal(await evaluate('document.querySelector("#upgradeButton").getAttribute("aria-busy")'),String(state==='pending'));
+    const feedback=await evaluate(`({title:document.querySelector('#feedbackTitle').textContent,balance:document.querySelector('.feedback-balance').textContent,icon:document.querySelector('#feedbackIcon').dataset.renderedIcon,atomic:document.querySelector('#actionFeedback').getAttribute('aria-atomic')})`);
+    const expected={pending:['Developing city…','Available: 84,620 gold','upgrade'],success:['Level 25 reached','Remaining: 83,980 gold','city'],error:['Upgrade failed','Gold unchanged: 84,620','ledger'],disabled:['Need 320 more gold','Available: 320 gold','coin']}[state];
+    assert.deepEqual([feedback.title,feedback.balance,feedback.icon],expected);assert.equal(feedback.atomic,'true');
+    await checkReadability();
+    assert.deepEqual(await actionBounds(),readyBounds,`${w}x${h} ${state}: footer moved between states`);
+    if(w===844) await shot('state-'+state);
+    if(state==='pending') {
+     assert.equal(await evaluate('[...document.querySelectorAll("[data-amount]")].every(b=>b.disabled)'),true);
+     await click('#upgradeButton');await pause(750);
+     assert.equal(await evaluate('document.querySelector("#cityLevel").textContent'),'24');
+     assert.equal(await evaluate('document.querySelector("#availableGold").textContent'),'84,620');
+    }
+    if(state==='error') {
+     assert.equal(await evaluate('document.querySelector("#upgradeLabel").textContent'),'Retry upgrade');
+     await click('#upgradeButton');await pause(750);
+     assert.match(await evaluate('document.querySelector("#actionFeedback").textContent'),/Gold unchanged: 84,620/);
+     assert.equal(await evaluate('document.querySelector("#cityLevel").textContent'),'24');
+     assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),false);
+    }
+    if(state==='disabled') {
+     await click('[data-amount="5"]');await checkReadability();
+     assert.equal(await evaluate('document.querySelector("#feedbackTitle").textContent'),'Need 2,880 more gold');
+     await click('[data-amount="max"]');await checkReadability();
+     assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 · No change');
+     assert.equal(await evaluate('document.querySelector("#feedbackTitle").textContent'),'Need 320 more gold');
+     assert.equal(await evaluate('document.querySelector("#upgradeCost").textContent'),'640');
+     assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
+    }
+    checks.push({viewport:`${w}x${h}`,state,feedback,stableActionBounds:readyBounds,result:'passed'});
    }
   }
   await load(844,390);
