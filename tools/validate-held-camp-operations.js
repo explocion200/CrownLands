@@ -118,7 +118,7 @@ const clientContext = {
   },
 };
 vm.createContext(clientContext);
-for (const name of ["getRealmShardQueryConstraints", "subscribePlayerCamps"]) {
+for (const name of ["getRealmShardQueryConstraints", "subscribeScopedSnapshot", "subscribePlayerCamps"]) {
   // Firebase functions are indented within their module closure.
   vm.runInContext(functionSource(client.replace(/^  /gm, ""), name), clientContext);
 }
