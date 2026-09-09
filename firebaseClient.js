@@ -1294,7 +1294,7 @@
 
   function subscribeClanSocialState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
       subscribeScopedSnapshot(
@@ -1342,7 +1342,7 @@
       || !clanId
       || !questPeriodId
     ) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const safeQuestPeriodId = String(questPeriodId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
     return subscribeScopedSnapshot(
@@ -1360,7 +1360,7 @@
 
   function subscribeClanApplications(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, onSnapshot, query, where, orderBy } = client.modules.firestore;
+    const { collection, query, where, orderBy } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     return subscribeScopedSnapshot(
       query(
@@ -1385,7 +1385,7 @@
 
   function subscribeClanRallies(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, onSnapshot, query, where } = client.modules.firestore;
+    const { collection, query, where } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     return subscribeScopedSnapshot(
       query(
@@ -1415,7 +1415,7 @@
 
   function subscribeClanState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, doc, onSnapshot, query, where, orderBy } = client.modules.firestore;
+    const { collection, doc, query, where, orderBy } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
       subscribeScopedSnapshot(
@@ -1847,7 +1847,7 @@
 
   function subscribeDailyMissionState(cycleKey = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !cycleKey) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeCycleKey = String(cycleKey).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
     return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "dailyMissions", safeCycleKey),
@@ -1864,7 +1864,7 @@
 
   function subscribeSeasonalAchievementState(seasonId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !seasonId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     const safeSeasonId = String(seasonId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 180);
     return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "seasonalAchievements", safeSeasonId),
@@ -2251,7 +2251,7 @@
 
   function subscribePlayerGlobalStats(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     return subscribeScopedSnapshot(
       doc(client.db, "players", client.user.uid, "stats", "global"),
       snapshot => {
@@ -3077,7 +3077,7 @@
 
   function subscribeCrownCitadel(islandId = "", citadelId = "", handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid || !islandId || !citadelId) return () => {};
-    const { doc, onSnapshot } = client.modules.firestore;
+    const { doc } = client.modules.firestore;
     return subscribeScopedSnapshot(
       doc(client.db, "islands", islandId, "cities", citadelId),
       snapshot => {
