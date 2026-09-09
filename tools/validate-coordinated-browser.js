@@ -34,17 +34,20 @@ async function main() {
       await wait(500);
     }
     assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"), "ready");
-    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }]) {
+    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }, { name: "short-landscape", width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: false });
-      for (const kind of ["attack", "transfer"]) {
+      for (const kind of ["attack", "transfer", "rally_create", "rally_join"]) {
         for (const speed of [1, 1.6 * 1.08 + .0115]) {
           const summary = await evaluate(`(() => {
             const source = playerCities().find(city => !isStronghold(city) && city.troops > 1);
-            const target = ${kind === "transfer" ? "playerCities().find(city => city.id !== source.id && !isStronghold(city))" : "state.cities.find(city => city.owner === 'neutral' && !isStronghold(city) && !city.isMainCity)"};
+            const target = ${kind === "transfer" || kind === "rally_join" ? "playerCities().find(city => city.id !== source.id && !isStronghold(city))" : "state.cities.find(city => city.owner === 'neutral' && !isStronghold(city) && !city.isMainCity)"};
+            // The loopback region has ordinary cities; use a local objective
+            // fixture for the rally form without submitting a server order.
+            const orderTarget = ${kind === "rally_create" ? "{...target,kind:'stronghold',strongholdType:'defense',name:'QA Stronghold'}" : "target"};
             selectedTroopAmount = 4; selectedSourceId = source.id; selectedTargetId = target.id;
             const route = { points: [source, target], length: 2000, previewStatus: 'authoritative',
               authoritativeDurationSeconds: 1673, authoritativeRequestedTroops: 4, authoritativeSpeedMultiplier: ${speed} };
-            showTroopSliderModalWithRoute(source, target, route, {orderKind: '${kind}'});
+            showTroopSliderModalWithRoute(source, orderTarget, route, {orderKind: '${kind}'});
             return document.querySelector('.travel-time-summary').innerText;
           })()`);
           assert.equal(summary.replace(/\s+/g, " "), `Travel bonus ${speed === 1 ? "0" : "73.95"}% Travel time 27m 53s`);
@@ -52,9 +55,10 @@ async function main() {
           await evaluate("modalBody.scrollTop = modalBody.scrollHeight");
           const bounds = await evaluate(`(() => { const travel = document.querySelector('.travel-time-summary').getBoundingClientRect();
             const actions = document.querySelector('.troop-slider-actions').getBoundingClientRect();
-            return {bottom: travel.bottom, actionsTop: actions.top, left: travel.left, right: travel.right}; })()`);
+            return {bottom: travel.bottom, actionsTop: actions.top, actionsBottom:actions.bottom, left: travel.left, right: travel.right}; })()`);
           assert(bounds.bottom <= bounds.actionsTop + 1, `${kind}/${viewport.name}: Travel details are covered by action buttons: ${JSON.stringify(bounds)}`);
           assert(bounds.left >= 0 && bounds.right <= viewport.width, "Travel details overflow the viewport.");
+          assert(bounds.actionsTop >= 0 && bounds.actionsBottom <= viewport.height, `${kind}/${viewport.name}: Order actions are outside the viewport.`);
           if (speed > 1) {
             const shot = await client.send("Page.captureScreenshot", { format: "png" });
             fs.writeFileSync(path.join(artifacts, `${kind}-${viewport.name}.png`), Buffer.from(shot.data, "base64"));
@@ -98,7 +102,7 @@ async function main() {
       qa.old.onMessages([qa.message('stale-listener',qa.base)]);
       qa.handlers.global.onMessages([qa.message('expired-cache',1),qa.message('fresh-reconnect',qa.base)],{initial:true}); })()`);
     assert.equal(await evaluate("releaseChatQa.controller.diagnostics().renderedMessages"), 1);
-    console.log("Coordinated browser checks passed: attack/transfer 0% and stacked bonuses at desktop/landscape; map-stable reports; open-client Global expiry, pagination, reopening, stale listeners, reconnect, and retained Clan history.");
+    console.log("Coordinated browser checks passed: attack/transfer/rally dialogs with 0% and stacked bonuses at desktop/landscape/short-landscape; map-stable reports; open-client Global expiry, pagination, reopening, stale listeners, reconnect, and retained Clan history.");
   } finally {
     if (client) await client.send("Browser.close").catch(() => {});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

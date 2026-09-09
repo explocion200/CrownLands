@@ -4890,10 +4890,7 @@ function waitForSetupLoadingPaint(minMs = SETUP_LOADING_MIN_MS) {
 function setMapSwitchLoading(label = "") {
   if (!mapFrame) return;
   mapSwitchLoading = true;
-  activePointers.clear();
-  panState = null;
-  pinchState = null;
-  mapFrame.classList.remove("dragging");
+  cancelMapGesture();
   const loadingLabel = label ? String(label) : "Loading island...";
   mapFrame.dataset.loadingLabel = loadingLabel;
   if (mapLoadingLabel) mapLoadingLabel.textContent = loadingLabel;
@@ -21650,6 +21647,7 @@ function resetForegroundSimulationTimers() {
 }
 
 function markGameBackgrounded() {
+  cancelMapGesture();
   if (!gameBackgroundedAtMs) {
     gameBackgroundedAtMs = Date.now();
     const api = getOnlineApi();
@@ -39045,7 +39043,36 @@ function trySelectTrackedArmyTap(event) {
   return true;
 }
 
+function cancelMapGesture() {
+  const pointerIds = [...activePointers.keys()];
+  activePointers.clear();
+  panState = null;
+  pinchState = null;
+  cityTapState = null;
+  campTapState = null;
+  armyTapState = null;
+  suppressMapClick = true;
+  if (mainMapPinchAnimationFrame) cancelAnimationFrame(mainMapPinchAnimationFrame);
+  mainMapPinchAnimationFrame = 0;
+  if (cameraInteractionSettleTimer) window.clearTimeout(cameraInteractionSettleTimer);
+  cameraInteractionSettleTimer = null;
+  interactionRenderLockUntil = 0;
+  mapFrame?.classList.remove("dragging", "camera-moving", "zooming");
+  for (const pointerId of pointerIds) {
+    try {
+      mapFrame?.releasePointerCapture?.(pointerId);
+    } catch {
+      // Backgrounding or cancellation may already have released capture.
+    }
+  }
+}
+
 function endPan(event) {
+  if (event.type === "pointercancel") {
+    cancelMapGesture();
+    renderPanel();
+    return;
+  }
   finishTrackedMapPointer(event, { renderPanelAfter: false });
   const selectedMapTarget = event.type === "pointerup"
     && (trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event));
