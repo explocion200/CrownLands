@@ -530,6 +530,7 @@ function bindInventoryCarousel(viewport) {
 
 
 function patchCityUpgradeUi(dirtyCityKeys = null) {
+  if (typeof patchCityDetailsPanel === "function") patchCityDetailsPanel();
   const pendingCityActions = getInstantEconomyPendingActions().filter(action => action.type === "city");
   if (modal?.open && modal.classList.contains("city-list-modal")) {
     patchCityListUpgradeRows(dirtyCityKeys);
@@ -742,6 +743,7 @@ async function flushInstantEconomyActions() {
     }
     if (action.type === "city") discardQueuedCityUpgradeActions(action.key);
     if (!error?.cityUpgradeCancelled) {
+      if (action.type === "city" && typeof recordCityDetailsFailure === "function") recordCityDetailsFailure(action);
       console.warn(`Instant ${action.type} action failed`, error);
       try {
         rejectGameAction(

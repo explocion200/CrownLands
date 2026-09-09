@@ -14,7 +14,7 @@ const rootFiles = [
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "battle-reports-guide.html", "clans-rallies-guide.html",
   "common-gear.js", "common-gear-ui.css", "common-gear-ui.js", "economy-config.js", "firebase-config.js",
-  "daily-rewards.css",
+  "daily-rewards.css", "city-details-ui.css", "city-details-ui.js",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",

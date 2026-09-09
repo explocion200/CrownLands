@@ -547,10 +547,10 @@ assert.equal(
 const cityInfoSource = extractFunction("showCityInfoModal");
 assert.doesNotMatch(
   cityInfoSource,
-  /if \(city\.owner !== "player"\) \{[\s\S]*?renderCityLevelUpAction\(city\)[\s\S]*?return;/,
+  /if \(city\.owner !== "player"\) \{[\s\S]*?renderCityLevelUpAction\(city(?:, \{ cityDetails: true \})?\)[\s\S]*?return;/,
   "Foreign city information must not render leveling controls."
 );
-assert.equal((cityInfoSource.match(/renderCityLevelUpAction\(city\)/g) || []).length, 1, "Only owned regular city information should render leveling controls.");
+assert.equal((cityInfoSource.match(/renderCityLevelUpAction\(city(?:, \{ cityDetails: true \})?\)/g) || []).length, 1, "Only owned regular city information should render leveling controls.");
 const cityLevelUpSource = extractFunction("renderCityLevelUpAction");
 assert.match(
   cityLevelUpSource,

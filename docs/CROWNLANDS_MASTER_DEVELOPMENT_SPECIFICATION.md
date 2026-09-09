@@ -349,6 +349,13 @@ The following city-progression reward model is confirmed design. The original mo
 - City List upgrades are map-independent. Region-and-city is the canonical identity for owned-city caching, pending actions, incoming-attack blockers, authoritative requests, and reconciliation. The city document's island path is authoritative when stored region metadata disagrees, and an off-map upgrade never requires a map switch.
 - Only the selected-city map Level action uses the dedicated simple arrow-up glyph and Crownlands gold treatment. Its accessible `Level up` label and Gold cost remain visible. City Info and City List controls retain the `+1`, `+5`, and `MAX` labels.
 
+#### Confirmed City Details presentation
+
+- Regular City Details uses the approved parchment ledger, muted moss and ochre palette, serif headings, woodcut pictograms, and the active map's city-stage illustration. Owned cities organize their information into Overview and Defences, with a fixed upgrade footer and a scrolling ledger. Very short landscape screens place the footer beside the ledger.
+- The footer retains `+1`, `+5`, and `MAX` as amount choices and shows the resulting level and exact Gold cost on the upgrade action. Choosing an amount does not spend Gold; activating the upgrade action uses the existing authoritative queue and projected affordability. Affordable upgrades remain usable while earlier levels sync.
+- The panel retains owner/profile links, main-city and Inner Castle entry controls, relinquishing, reinforcement actions, production and defense bonus details, and existing foreign-city/scouting visibility rules. Recovery feedback waits for authoritative synchronization before presenting the available balance; it must not claim that Gold was unchanged after an uncertain request.
+- This design update is limited to regular City Details. The map, HUD, City List, Strongholds, Citadel, Inner Castle, and other dialogs retain their existing presentation. This confirmed design does not establish that the integration has been deployed.
+
 #### City-upgrade XP compatibility rollout
 
 - During the temporary cross-channel compatibility window, the server accepts an otherwise valid legacy city-upgrade request that omits the new request ID. The city upgrade, Gold spend, invested-Gold accounting, production collection, and city-upgrade progression event remain authoritative and atomic.
