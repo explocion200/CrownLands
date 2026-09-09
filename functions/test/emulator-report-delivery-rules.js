@@ -38,20 +38,46 @@ async function main() {
   const current = { ...identity, uid: user.localId, type: "attack", createdAtMs: nowMs, occurredAtMs: nowMs };
   const batch = db.batch();
   batch.set(db.doc("realmConfig/current"), identity);
-  batch.set(db.doc(playerPath), { uid: user.localId, ...identity, battleReports: [] });
+  const clanId = `sync-${nonce}`;
+  batch.set(db.doc(playerPath), { uid: user.localId, clanId, ...identity, battleReports: [] });
   batch.set(db.doc(`${playerPath}/serverReports/current-battle`), current);
   batch.set(db.doc(`${playerPath}/serverReports/other-shard`), { ...current, realmShardId: "shard_0002" });
   batch.set(db.doc(`${playerPath}/serverReports/archived`), { ...current, resetGeneration: "archived", worldId: "archived" });
   batch.set(db.doc(`players/other-${nonce}/serverReports/private`), { ...current, uid: `other-${nonce}` });
+  batch.set(db.doc(`clans/${clanId}`), { ...identity, status: "active" });
+  batch.set(db.doc(`clans/${clanId}/members/${user.localId}`), { ...identity, uid: user.localId, status: "active", role: "leader" });
+  const streams = [
+    [`armies/outgoing-${nonce}`, { ownerUid: user.localId, status: "active" }],
+    [`${playerPath}/incomingArmies/incoming`, { status: "active" }],
+    [`reinforcements/contributor-${nonce}`, { ownerUid: user.localId, targetOwnerUid: "ally", status: "stationed" }],
+    [`reinforcements/holder-${nonce}`, { ownerUid: "ally", targetOwnerUid: user.localId, status: "stationed" }],
+    [`clans/${clanId}/rallies/forming`, { status: "forming" }],
+    [`${playerPath}/stats/global`, {}],
+    [`${playerPath}/dailyMissions/current`, { cycleKey: "current" }],
+    [`${playerPath}/seasonalAchievements/current`, { seasonId: "current" }],
+  ];
+  streams.forEach(([p, data]) => {
+    batch.set(db.doc(p), { ...current, ...data });
+    if (!p.includes("/stats/") && !p.includes("/dailyMissions/") && !p.includes("/seasonalAchievements/")) {
+      batch.set(db.doc(p + "-foreign"), { ...current, ...data, realmShardId: "shard_0002" });
+      batch.set(db.doc(p + "-archived"), { ...current, ...data, resetGeneration: "archived", worldId: "archived" });
+    }
+  });
   await batch.commit();
 
   const queries = [];
+  const listeners = [];
+  let serverReads = 0;
   let listener;
+  const decode = value => value.stringValue ?? (value.integerValue !== undefined ? Number(value.integerValue) : undefined)
+    ?? value.booleanValue ?? null;
   const firestore = {
     collection: (_db, ...segments) => segments.join("/"),
+    doc: (_db, ...segments) => ({ documentPath: segments.join("/") }),
     where: (fieldPath, op, value) => {
-      assert.equal(op, "==");
-      return { fieldFilter: { field: { fieldPath }, op: "EQUAL", value: { stringValue: value } } };
+      assert.ok(["==", "in"].includes(op));
+      return { fieldFilter: { field: { fieldPath }, op: op === "in" ? "IN" : "EQUAL", value: Array.isArray(value)
+        ? { arrayValue: { values: value.map(stringValue => ({ stringValue })) } } : { stringValue: value } } };
     },
     orderBy: (fieldPath, order) => ({ orderBy: { field: { fieldPath }, direction: order === "desc" ? "DESCENDING" : "ASCENDING" } }),
     limit: count => ({ limit: count }),
@@ -70,17 +96,28 @@ async function main() {
       const result = await request(query);
       assert.equal(result.status, 200, `Actual client report query failed: ${JSON.stringify(result.body)}`);
       return { docs: result.body.filter(row => row.document).map(row => ({
-        id: row.document.name.split("/").pop(), data: () => ({}),
+        id: row.document.name.split("/").pop(), data: () => Object.fromEntries(Object.entries(row.document.fields || {}).map(([k, v]) => [k, decode(v)])),
       })) };
     },
-    onSnapshot: (query, _options, onNext) => {
-      listener = { query, emit: async () => onNext({ ...(await firestore.getDocs(query)), metadata: { fromCache: false, hasPendingWrites: false } }) };
+    onSnapshot: (query, ...callbacks) => {
+      const onNext = callbacks.find(value => typeof value === "function");
+      listener = { query, emit: async () => {
+        if (query.documentPath) {
+          const response = await fetch(`http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${query.documentPath}`, { headers: { authorization: `Bearer ${user.idToken}` } });
+          assert.equal(response.status, 200, "Authenticated live document read failed");
+          const value = await response.json();
+          return onNext({ id: query.documentPath.split("/").pop(), exists: () => true, data: () => Object.fromEntries(Object.entries(value.fields || {}).map(([k, v]) => [k, decode(v)])) });
+        }
+        const snapshot = await firestore.getDocs(query);
+        onNext({ ...snapshot, docChanges: () => [], metadata: { fromCache: false, hasPendingWrites: false } });
+      } };
+      listeners.push(listener);
       return () => {};
     },
   };
   async function request(query) {
     const parent = query.collectionPath.split("/").slice(0, -1).join("/");
-    const response = await fetch(`http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${parent}:runQuery`, {
+    const response = await fetch(`http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents${parent ? "/" + parent : ""}:runQuery`, {
       method: "POST", headers: { authorization: `Bearer ${user.idToken}`, "content-type": "application/json" },
       body: JSON.stringify({ structuredQuery: query.structuredQuery }),
     });
@@ -90,12 +127,15 @@ async function main() {
     client: { configured: true, db: {}, user: { uid: user.localId }, modules: { firestore } },
     init: async () => {}, requireSignedIn: () => user.localId,
     RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId, REALM_SHARD_ID: identity.realmShardId,
+    dispatch() {}, cleanGlobalStats: value => value, window: { setTimeout, clearTimeout },
   };
+  firestore.getDocsFromServer = query => { serverReads += 1; return firestore.getDocs(query); };
   vm.createContext(scope);
-  for (const name of ["getRealmShardQueryConstraints", "loadServerReports", "subscribeServerReports"]) {
+  for (const name of ["getRealmShardQueryConstraints", "subscribeScopedSnapshot", "loadServerReports", "subscribeServerReports", "subscribePlayerArmies", "subscribePlayerReinforcements", "subscribeClanRallies", "subscribePlayerGlobalStats", "subscribeDailyMissionState", "subscribeSeasonalAchievementState"]) {
     vm.runInContext(extractFunction(name), scope);
   }
   const loaded = await scope.loadServerReports();
+  assert.equal(serverReads, 1, "Report recovery did not request an authoritative server read.");
   assert.deepEqual(Array.from(loaded, r => r.id), ["current-battle"], "The client did not recover a current report missing from the profile.");
   const deliveries = [];
   let stop = scope.subscribeServerReports({ onReports: reports => deliveries.push(Array.from(reports, r => r.id)) });
@@ -117,13 +157,36 @@ async function main() {
   assert.equal((await request(unscoped)).status, 403, "The original missing-shard query unexpectedly passed.");
   const foreign = { ...queries[0], collectionPath: `players/other-${nonce}/serverReports` };
   assert.equal((await request(foreign)).status, 403, "A different player's reports became readable.");
+  for (const [name, args, handler, expectedCount] of [
+    ["subscribePlayerArmies", [], "onArmies", 2],
+    ["subscribePlayerReinforcements", [], "onReinforcements", 2],
+    ["subscribeClanRallies", [clanId], "onRallies", 1],
+    ["subscribePlayerGlobalStats", [], "onStats", 1],
+    ["subscribeDailyMissionState", ["current"], "onState", 1],
+    ["subscribeSeasonalAchievementState", ["current"], "onState", 1],
+  ]) {
+    const first = listeners.length;
+    const delivered = [];
+    const close = scope[name](...args, { [handler]: value => delivered.push(value) });
+    for (const live of listeners.slice(first)) await live.emit();
+    assert.ok(delivered.length, `${name} did not deliver authenticated data`);
+    const result = delivered.at(-1);
+    assert.equal(Array.isArray(result) ? result.length : 1, expectedCount, `${name} included another shard or archived records`);
+    close();
+    const beforeLate = delivered.length;
+    for (const live of listeners.slice(first)) await live.emit();
+    assert.equal(delivered.length, beforeLate, `${name} delivered a stopped session's data`);
+  }
   const indexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8")).indexes;
   for (const query of queries) {
+    const collectionGroup = query.collectionPath.split("/").pop();
     const equalityFields = query.structuredQuery.where.compositeFilter.filters.map(f => f.fieldFilter.field.fieldPath);
-    assert.ok(indexes.some(index => index.collectionGroup === "serverReports" && index.queryScope === "COLLECTION"
+    const orderedFields = query.structuredQuery.orderBy || [];
+    assert.ok(indexes.some(index => index.collectionGroup === collectionGroup && index.queryScope === "COLLECTION"
+      && index.fields.length === new Set([...equalityFields, ...orderedFields.map(f => f.field.fieldPath)]).size
       && equalityFields.every(field => index.fields.some(f => f.fieldPath === field && f.order === "ASCENDING"))
-      && index.fields.some(f => f.fieldPath === "createdAtMs" && f.order === "DESCENDING")), "The actual client query has no deployable index.");
+      && orderedFields.every(field => index.fields.some(f => f.fieldPath === field.field.fieldPath && f.order === field.direction))), `${collectionGroup}: the actual client query has no matching deployable index.`);
   }
-  console.log("Report delivery rules passed: actual load/live queries recover current reports, reconnect safely, and reject other accounts, generations, and shards.");
+  console.log("Authenticated sync queries passed: reports, armies, reinforcements, rallies, stats, missions, achievements, reconnects, and stopped listeners.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

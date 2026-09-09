@@ -1983,6 +1983,9 @@ let onlineSaveRetryAtMs = 0;
 let onlineSaveRetryIndex = 0;
 let onlineSaveAuthUid = "";
 let onlineSaveGeneration = 0;
+let onlineSessionGeneration = 0;
+let onlineReportRequestGeneration = 0;
+let onlineReportSyncState = "loading";
 const onlineSaveTargets = {
   profile: { queued: false, blocked: false },
   snapshot: { queued: false, blocked: false },
@@ -15304,6 +15307,7 @@ function retireActiveOnlineIslandSubscription() {
 }
 
 function disconnectOnlineWorld() {
+  onlineSessionGeneration += 1;
   pendingDirectScoutTargets.clear();
   cancelAuthoritativeRoutePreviewRefresh();
   cancelLoginPresentationSequence();
@@ -15508,7 +15512,7 @@ function handleServiceWorkerUpdateMessage(event) {
 }
 
 function getOnlineRequestScope() {
-  return [getCurrentOnlineUid(), ONLINE_WORLD_ID, RESET_GENERATION, REALM_SHARD_ID].join(":");
+  return [getCurrentOnlineUid(), ONLINE_WORLD_ID, RESET_GENERATION, REALM_SHARD_ID, onlineSessionGeneration].join(":");
 }
 
 async function waitForPendingOnlineWrites(timeoutMs = 4500) {
@@ -17977,6 +17981,8 @@ function clearOnlineIslandArmySnapshots() {
 }
 
 function clearOnlineServerReportWatcher() {
+  onlineReportRequestGeneration += 1;
+  setOnlineReportSyncState("loading");
   if (typeof onlineServerReportsUnsubscribe === "function") onlineServerReportsUnsubscribe();
   onlineServerReportsUnsubscribe = null;
 }
@@ -18394,13 +18400,19 @@ async function loadServerReportsOnce() {
   const api = getOnlineApi();
   if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
   const requestScope = getOnlineRequestScope();
+  const generation = ++onlineReportRequestGeneration;
+  if (onlineReportSyncState !== "ready") setOnlineReportSyncState("loading");
   try {
     const reports = await withTimeout(api.loadServerReports(120), 5000, "Server reports are taking too long.");
     if (requestScope !== getOnlineRequestScope()) return false;
+    if (generation !== onlineReportRequestGeneration) return onlineReportSyncState === "ready";
+    setOnlineReportSyncState("ready");
     mergeServerReports(reports, { notify: audioServerReportsHydrated });
     return true;
   } catch (error) {
     if (requestScope !== getOnlineRequestScope()) return false;
+    if (generation !== onlineReportRequestGeneration) return onlineReportSyncState === "ready";
+    setOnlineReportSyncState("reconnecting");
     onlineLastError = error?.message || String(error);
     console.warn("Could not load server reports", error);
     return false;
@@ -18414,6 +18426,8 @@ function subscribeOnlineServerReports() {
   onlineServerReportsUnsubscribe = api.subscribeServerReports({
     onReports: (reports, metadata = {}) => {
       const authoritative = metadata.fromCache !== true;
+      if (authoritative) onlineReportRequestGeneration += 1;
+      setOnlineReportSyncState(authoritative ? "ready" : "reconnecting");
       const changed = mergeServerReports(reports, { notify: audioServerReportsHydrated, authoritative });
       if (authoritative) audioServerReportsHydrated = true;
       if (!changed || !usesServerEconomyAuthority()) return;
@@ -18436,6 +18450,7 @@ function subscribeOnlineServerReports() {
       onlineLastError = error?.message || String(error);
       markOnlineRealtimeRecoveryNeeded(error);
       clearOnlineServerReportWatcher();
+      setOnlineReportSyncState("reconnecting");
       console.warn("Could not subscribe to server reports", error);
     },
   });
@@ -18742,6 +18757,10 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   subscribeOnlineGlobalStats();
   subscribeOnlineCrownCitadel();
   watchGameServerMembership({ preserve: true });
+  clearDailyMissionSubscription();
+  clearSeasonalAchievementSubscription();
+  subscribeDailyMissionCycle();
+  subscribeSeasonalAchievementCycle();
 
   if (state.clanId) {
     stopClanRealtimeSubscriptions({ clear: false });
@@ -32005,6 +32024,8 @@ function subscribeDailyMissionCycle(cycleKey = dailyMissionState?.cycleKey) {
     },
     onError: error => {
       console.warn("Daily Mission subscription failed", error);
+      clearDailyMissionSubscription();
+      markOnlineRealtimeRecoveryNeeded(error);
       dailyMissionError = "Mission progress is reconnecting…";
       renderDailyMissions();
     },
@@ -32066,12 +32087,15 @@ async function refreshDailyMissionStatus(options = {}) {
   dailyMissionError = "";
   renderDailyMissions();
   const startedAtMs = Date.now();
+  const scope = getOnlineRequestScope();
   const request = Promise.resolve(api.getDailyMissionStatus({}))
     .then(result => {
+      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return null;
       const serverTimeMs = Math.max(0, Number(result?.serverTimeMs) || Number(result?.dailyMissionState?.serverTimeMs) || startedAtMs);
       return applyDailyMissionStatus(result?.dailyMissionState, serverTimeMs);
     })
     .catch(error => {
+      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return null;
       dailyMissionError = error?.message || "Daily Missions could not be loaded.";
       if (!options.silent) showToast(dailyMissionError);
       console.warn("Daily Mission status failed", error);
@@ -32079,8 +32103,9 @@ async function refreshDailyMissionStatus(options = {}) {
       return null;
     })
     .finally(() => {
+      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return;
       dailyMissionStatusLoading = false;
-      if (dailyMissionStatusPromise === request) dailyMissionStatusPromise = null;
+      dailyMissionStatusPromise = null;
       renderDailyMissions();
     });
   dailyMissionStatusPromise = request;
@@ -32955,6 +32980,8 @@ function subscribeSeasonalAchievementCycle(seasonId = seasonalAchievementState?.
     },
     onError: error => {
       console.warn("Seasonal Achievement subscription failed", error);
+      clearSeasonalAchievementSubscription();
+      markOnlineRealtimeRecoveryNeeded(error);
       seasonalAchievementError = "Achievement progress is reconnecting…";
       if (modal?.open && activeDailyRewardModalTab === "achievements") renderDailyLoginRewardModal();
     },
@@ -33009,18 +33036,21 @@ async function refreshSeasonalAchievementStatus(options = {}) {
   seasonalAchievementStatusLoading = true;
   seasonalAchievementError = "";
   const startedAtMs = Date.now();
+  const scope = getOnlineRequestScope();
   const request = Promise.resolve(api.getSeasonalAchievementStatus({}))
-    .then(result => applySeasonalAchievementStatus(
-      result?.seasonalAchievementState,
-      Math.max(0, Number(result?.serverTimeMs) || startedAtMs)
-    ))
+    .then(result => {
+      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return null;
+      return applySeasonalAchievementStatus(result?.seasonalAchievementState, Math.max(0, Number(result?.serverTimeMs) || startedAtMs));
+    })
     .catch(error => {
+      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return null;
       seasonalAchievementError = error?.message || "Seasonal Achievements could not be loaded.";
       if (!options.silent) showToast(seasonalAchievementError);
       return null;
     })
     .finally(() => {
-      if (seasonalAchievementStatusPromise === request) seasonalAchievementStatusPromise = null;
+      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return;
+      seasonalAchievementStatusPromise = null;
       seasonalAchievementStatusLoading = false;
       updateDailyLoginRewardHudState();
       if (modal?.open && activeDailyRewardModalTab === "achievements") renderDailyLoginRewardModal();
@@ -36400,6 +36430,20 @@ function showLeaderboardModal() {
   refreshLeaderboardRows({ forcePublish: true });
 }
 
+function setOnlineReportSyncState(status) {
+  onlineReportSyncState = status;
+  const panel = modalBody?.querySelector("[data-report-sync]");
+  if (!panel) return;
+  const waiting = getOnlineApi()?.isSignedIn?.() && status !== "ready";
+  panel.hidden = !waiting;
+  panel.querySelector("[role=status]").textContent = status === "loading"
+    ? "Loading reports…" : "Reports reconnecting. Saved reports are still available.";
+  panel.querySelector("button").disabled = status === "loading";
+  const empty = modalBody.querySelector("[data-report-empty]");
+  if (empty) empty.textContent = waiting ? "Waiting for reports to sync."
+    : `No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.`;
+}
+
 function showLogModal(options = {}) {
   if (!state) return;
   if (!options.silentAudio) {
@@ -36428,6 +36472,7 @@ function showLogModal(options = {}) {
 
   modalBody.innerHTML = `
     <div class="battle-report-panel">
+      ${!showingRealmActivity ? `<div class="battle-report-toolbar" data-report-sync hidden><span role="status" aria-live="polite"></span><div class="battle-report-filters"><button type="button">Retry</button></div></div>` : ""}
       <div class="battle-report-toolbar">
         <span>Filter</span>
         <div class="battle-report-filters">
@@ -36443,12 +36488,18 @@ function showLogModal(options = {}) {
             : `<div class="battle-report-empty">No Realm Activity yet. Major Stronghold and Crown Citadel captures will be recorded here.</div>`
           : filteredReports.length
             ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
-            : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
+            : `<div class="battle-report-empty" data-report-empty>No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
       </div>
     </div>
   `;
 
   if (!showingRealmActivity) applyBattleReportTargetFlags(filteredReports);
+  setOnlineReportSyncState(onlineReportSyncState);
+  modalBody.querySelector("[data-report-sync] button")?.addEventListener("click", () => {
+    clearOnlineServerReportWatcher();
+    subscribeOnlineServerReports();
+    void loadServerReportsOnce();
+  });
   modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";

@@ -100,7 +100,8 @@ const entrypointBudgets = {
   // Contextual first steps replace the old Help copy: net runtime growth is
   // under 2 KiB. The aggregate 3648 KiB offline-shell ceiling is unchanged.
   // The follow-up identity steps and arrows add under one 8 KiB runtime step.
-  "game.js": 1740 * 1024,
+  // Report sync feedback and session-safe reward recovery add under 4 KiB.
+  "game.js": 1744 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
