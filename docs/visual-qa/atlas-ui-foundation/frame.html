@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>Crownlands — Atlas UI prototype</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body class="atlas-ui">
+  <main class="game" aria-label="Crownlands sample kingdom">
+    <div class="map-viewport" id="mapViewport" aria-label="Illustrated Highwinter Vale"><div id="world" class="world"></div></div>
+    <div class="edge-shade" aria-hidden="true"></div>
+    <header class="top-command">
+      <button id="rulerButton" class="ruler-plaque" type="button" aria-label="Locate your main city">
+        <span class="kingdom-flag" aria-hidden="true"><span>✦</span></span>
+        <span class="ruler-copy"><span class="small-caps">Your kingdom</span><strong>Aldren of the Vale</strong><span class="ruler-level">Ruler level <b>12</b></span></span>
+      </button>
+      <div class="treasury"><span class="icon" data-icon="coin"></span><span><small>Treasury</small><strong id="goldCount">84,620</strong></span></div>
+    </header>
+    <div class="region-label"><span class="small-caps">The northern marches</span><strong>Highwinter Vale</strong><span class="region-rule" aria-hidden="true"></span></div>
+    <div class="corner-controls"><button id="helpButton" class="icon-button" type="button" aria-label="Show prototype controls"><span class="icon" data-icon="help"></span></button><button id="fullscreenButton" class="icon-button" type="button" aria-label="Toggle fullscreen"><span class="icon" data-icon="fullscreen"></span></button></div>
+    <div class="compass" aria-hidden="true"><span>N</span><svg viewBox="0 0 64 64"><path d="M32 5 39 27 59 32 39 37 32 59 25 37 5 32 25 27Z"/><path class="compass-light" d="M32 5V32H5L25 27ZM32 59V32H59L39 37Z"/><circle cx="32" cy="32" r="5"/></svg></div>
+    <div class="map-tools"><button class="icon-button" id="homeButton" type="button" aria-label="Return to main city"><span class="icon" data-icon="home"></span></button><div class="zoom-controls"><button id="zoomOut" type="button" aria-label="Zoom out">−</button><button id="zoomIn" type="button" aria-label="Zoom in">+</button></div></div>
+    <div class="activity-stack"><button class="activity-note incoming" type="button" data-popover="incoming"><span class="icon" data-icon="attack"></span><span><strong>Incoming attack</strong><small>Wyvernmarket Mead · 10m 00s</small></span><span class="wax-count">1</span></button><button class="activity-note" type="button" data-popover="outgoing"><span class="icon" data-icon="route"></span><span><strong>2 armies marching</strong><small>Next arrival · 2m 14s</small></span></button></div>
+    <nav class="command-bar" aria-label="Kingdom navigation">
+      <button class="nav-command active" type="button" data-popover="map" aria-current="page"><span class="icon" data-icon="map"></span><span>Map</span></button>
+      <button class="nav-command" type="button" id="citiesButton"><span class="icon" data-icon="city"></span><span>Cities</span></button>
+      <button class="nav-command" type="button" data-popover="reports"><span class="icon" data-icon="scroll"></span><span>Reports</span><b class="nav-count">3</b></button>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <button class="nav-command" type="button" data-popover="clan"><span class="icon" data-icon="shield"></span><span>Clan</span></button>
+      <button class="nav-command" type="button" data-popover="bag"><span class="icon" data-icon="bag"></span><span>Bag</span></button>
+      <button class="nav-command" type="button" data-popover="shop"><span class="icon" data-icon="scale"></span><span>Shop</span></button>
+    </nav>
+    <button class="chat-strip" type="button" data-popover="chat"><span class="icon" data-icon="quill"></span><span><b>Realm chronicle</b><span>Maeve: The western road is clear.</span></span><span aria-hidden="true">›</span></button>
+    <div class="game-toast" id="gameToast" role="status" hidden></div>
+    <div class="orientation"><span class="icon" data-icon="map"></span><h1>Turn your atlas</h1><p>Rotate to landscape to explore the kingdom.</p></div>
+  </main>
+  <dialog id="cityPanel" class="city-panel" aria-labelledby="cityTitle">
+    <header class="city-heading"><div><p id="cityRelation" class="small-caps">Your main city</p><h1 id="cityTitle">Wyvernmarket Mead</h1></div><button class="close-button" id="closeCity" type="button" aria-label="Close City Details"><span class="icon" data-icon="close"></span></button></header>
+    <div class="city-ledger" id="cityLedger">
+      <section class="city-portrait"><div class="portrait-illustration"><img id="detailArt" alt="Illustrated fortified settlement"><span class="sketched-ground" aria-hidden="true"></span></div><div><span class="level-mark">Level <b id="cityLevel">24</b></span><p id="cityOwner">Aldren of the Vale</p><span class="ownership-mark"><i aria-hidden="true"></i> Your kingdom</span></div></section>
+      <div class="ledger-tabs" role="tablist" aria-label="City information"><button id="overviewTab" type="button" role="tab" aria-selected="true" aria-controls="overview">Overview</button><button id="defencesTab" type="button" role="tab" aria-selected="false" aria-controls="defences" tabindex="-1">Defences</button></div>
+      <section id="overview" role="tabpanel" aria-labelledby="overviewTab">
+        <div class="garrison-line"><span class="icon" data-icon="troops"></span><span>Garrison<strong>18,240 <small>troops</small></strong></span><span class="garrison-note">Standing guard</span></div>
+        <dl class="ledger-stats"><div><dt><span class="icon" data-icon="coin"></span>Gold production</dt><dd>285 <small>/ hour</small></dd></div><div><dt><span class="icon" data-icon="troops"></span>Troop production</dt><dd>123 <small>/ hour</small></dd></div><div><dt><span class="icon" data-icon="wall"></span>City walls</dt><dd>Intact <span class="status-dot" aria-hidden="true"></span></dd></div><div><dt><span class="icon" data-icon="ledger"></span>Invested gold</dt><dd>24,860</dd></div></dl>
+        <button class="text-command" id="innerCastle" type="button"><span class="icon" data-icon="city"></span>Enter Inner Castle <span aria-hidden="true">→</span></button>
+      </section>
+      <section id="defences" role="tabpanel" aria-labelledby="defencesTab" hidden><h2 class="section-title">Walls & garrison</h2><dl class="ledger-stats"><div><dt>Wall integrity</dt><dd>100% · Intact</dd></div><div><dt>Wall power</dt><dd>9,600</dd></div><div><dt>Soldier defence</dt><dd>23,712</dd></div></dl><p class="ledger-note">Walls absorb attack power before the garrison fights. Soldier defence and wall power are shown separately.</p></section>
+    </div>
+    <footer class="city-actions"><div class="upgrade-title"><span class="icon" data-icon="upgrade"></span><span><strong>Develop this city</strong><small id="upgradeHint">Choose how many levels to add.</small></span></div><div class="upgrade-options" role="group" aria-label="City upgrade amount"><button type="button" data-amount="1" aria-pressed="true">+1</button><button type="button" data-amount="5" aria-pressed="false">+5</button><button type="button" data-amount="max" aria-pressed="false">Max</button></div><button class="primary-command" id="upgradeButton" type="button"><span id="upgradeLabel">Upgrade to level 25</span><span class="price"><span class="icon" data-icon="coin"></span><b id="upgradeCost">640</b></span></button><p id="actionFeedback" class="action-feedback" role="status">Gold is available in your treasury.</p></footer>
+  </dialog>
+  <dialog id="notePanel" class="note-panel" aria-labelledby="noteTitle"><header><h2 id="noteTitle">Field notes</h2><button class="close-button" id="closeNote" type="button" aria-label="Close field note"><span class="icon" data-icon="close"></span></button></header><div id="noteBody"></div></dialog>
+  <script src="fixture.js"></script>
+  <script src="prototype.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+{
+  "date": "2026-09-09T15:25:48.202Z",
+  "browser": "Headless Chrome",
+  "checks": [
+    {
+      "viewport": "1440x900",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 1085,
+          "y": 679.609375,
+          "right": 1399,
+          "bottom": 724.609375
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+    },
+    {
+      "viewport": "844x390",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 649,
+          "y": 297,
+          "right": 817,
+          "bottom": 347
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+    },
+    {
+      "viewport": "568x320",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 361,
+          "y": 197.5,
+          "right": 545,
+          "bottom": 241.5
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "interaction": "scrolling to Inner Castle, nested note/focus restoration, tabs, arrow navigation, +5, pending lock, successful local update, close, Escape, non-overlapping map controls, zoom and home passed"
+    },
+    {
+      "state": "pending",
+      "result": "passed"
+    },
+    {
+      "state": "success",
+      "result": "passed"
+    },
+    {
+      "state": "error",
+      "result": "passed"
+    },
+    {
+      "state": "disabled",
+      "result": "passed"
+    },
+    {
+      "interaction": "+1 succeeds; Max reaches sample cap and disables further upgrade",
+      "result": "passed"
+    },
+    {
+      "viewport": "390x844",
+      "result": "orientation prompt visible; modal closed"
+    }
+  ],
+  "externalRequests": [],
+  "runtimeErrors": [],
+  "limitations": [
+    "Synthetic data and outcomes; no backend validation",
+    "No physical touch-device, screen-reader or iOS Safari verification",
+    "Not a complete-game redesign; visual direction remains proposed"
+  ]
+}
