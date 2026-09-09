@@ -141,12 +141,13 @@ function bindCityDetailsPanel(city) {
     // The existing action listener runs next, synchronously reserving Gold.
     queueMicrotask(() => { if (root.isConnected) patchCityDetailsPanel(); });
   });
-  if (city.owner === "player") patchCityDetailsPanel();
+  if (city.owner === "player") patchCityDetailsPanel(true);
 }
 
 // Called before the legacy selected-map-city filter. Gold can change elsewhere.
 // No subtree replacement here: controls, selection and scrolling keep identity.
-function patchCityDetailsPanel() {
+function patchCityDetailsPanel(initialRender = false) {
+  if (!modal?.open && !initialRender) return false;
   const root = modalBody?.querySelector('.cd-panel[data-cd-owned="true"]');
   if (!root) return false;
   const city = getOwnedCitySnapshotForUpgrade(root.dataset.cityDetails, root.dataset.cdRegion);
@@ -195,11 +196,14 @@ function patchCityDetailsPanel() {
   let title = "Ready to develop", icon = "coin", status = "ready";
   if (recovery) { title = "Checking city & gold…"; icon = "ledger"; status = "pending"; }
   else if (pending) { title = `${formatNumber(pending)} level${pending === 1 ? "" : "s"} syncing…`; icon = "upgrade"; status = "pending"; }
+  else if (option.reason === "Incoming" || option.reason === "Refresh") {
+    title = option.reason === "Incoming" ? "Incoming attack · upgrade blocked" : "Refresh to upgrade"; status = "disabled";
+  }
   else if (failed) { title = "Upgrade not confirmed"; icon = "ledger"; status = "error"; }
   else if (confirmed) { title = `Level ${formatNumber(confirmed.finalLevel)} reached`; icon = "city"; status = "success"; }
   else if (option.disabled) {
     status = "disabled";
-    title = option.reason === "Incoming" ? "Incoming attack · upgrade blocked" : option.reason === "Refresh" ? "Refresh to upgrade" : Number.isFinite(cost) && cost > optionState.availableGold ? `Need ${cityDetailsNumber(cost - optionState.availableGold)} more gold` : "Upgrade unavailable";
+    title = Number.isFinite(cost) && cost > optionState.availableGold ? `Need ${cityDetailsNumber(cost - optionState.availableGold)} more gold` : "Upgrade unavailable";
   }
   root.dataset.cdStatus = status;
   put("[data-cd-feedback-title]", title);

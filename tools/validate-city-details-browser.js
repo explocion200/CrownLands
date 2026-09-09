@@ -45,6 +45,9 @@ async function main() {
         toast.classList.remove('visible');
       })()`);
       await wait(250);
+      const selectedPoint = await evaluate(`(() => {const r=modalBody.querySelector('[aria-pressed="true"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+      await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", ...selectedPoint });
+      assert.equal(await evaluate("getComputedStyle(modalBody.querySelector('[aria-pressed=\"true\"]')).backgroundColor"), "rgb(102, 92, 62)", "Hover must retain the selected amount's contrast.");
       await screenshot(`ready-${viewport.name}`);
       const layout = await evaluate(`(() => {
         const r=modal.getBoundingClientRect(), ledger=modalBody.querySelector('.cd-ledger');
@@ -102,7 +105,7 @@ async function main() {
       await evaluate(`(() => {
         const blockers=getIncomingUpgradeBlockers;
         getIncomingUpgradeBlockers=()=>[{remaining:60}];
-        try {patchCityUpgradeUi();if(!cdQaButton.disabled)throw Error('Incoming attack did not block the action');}
+        try {patchCityUpgradeUi();if(!cdQaButton.disabled || !document.getElementById('cdFeedback').textContent.includes('Incoming attack'))throw Error('Incoming attack did not explain the blocked action');}
         finally {getIncomingUpgradeBlockers=blockers;}
         patchCityUpgradeUi();
         modalBody.querySelector('[data-cd-amount="2"]').click();

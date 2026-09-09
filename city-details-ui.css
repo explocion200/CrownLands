@@ -90,7 +90,7 @@
   text-transform: none;
   cursor: pointer;
 }
-#modal .cd-panel button:hover:not(:disabled) { background-color: #d7c79766 !important; }
+#modal .cd-panel button:not(.cd-upgrade):not([aria-pressed=true]):hover:not(:disabled) { background-color: #d7c79766 !important; }
 #modal:has(.cd-panel) :focus-visible { outline: 2px solid #49666e; outline-offset: -3px; }
 #modal .cd-panel button:disabled { opacity: 1; color: #69614f !important; background: #dfd4b9 !important; cursor: not-allowed; }
 #modal .cd-panel a, #modal .cd-panel .player-name-link { color: #485839 !important; }
