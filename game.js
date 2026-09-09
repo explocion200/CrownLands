@@ -26882,6 +26882,7 @@ function updateVisibleCityDynamicText() {
     const visibleTroops = getVisibleCityGarrisonTroops(city, scoutReport);
     value.textContent = visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops);
   });
+  if (typeof patchCityDetailsPanel === "function") patchCityDetailsPanel();
 }
 
 function renderCities(force = false) {
@@ -31261,7 +31262,11 @@ function showCityInfoModal(cityId) {
     `;
     modalBody.innerHTML = stronghold
       ? strongholdInfoPanelMarkup(city, overviewMarkup)
-      : overviewMarkup;
+      : renderCityDetailsPanel(city, { foreignMarkup: overviewMarkup });
+    if (!stronghold) {
+      modalTitle.textContent = city.name;
+      bindCityDetailsPanel(city);
+    }
     if (stronghold) bindStrongholdInfoTabs(city);
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
@@ -31341,25 +31346,13 @@ function showCityInfoModal(cityId) {
           ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>`
           : ""}
       </div>`;
-  modalTitle.textContent = `${city.name} - Level ${city.level}`;
-  modalBody.innerHTML = `
-    ${renderOnboardingTip("upgrade", city, "info")}
-    <div class="city-stat-panel modal-city-stats">
-      ${mainCityBlock}
-      ${renderCityLevelUpAction(city)}
-      <div class="stat-wide"><span>Estimated live defense</span><strong>${formatNumber(supportsSiegeCombat() ? getCityFortificationDisplay(city, stats).totalDefensePower : stats.totalDefense)}</strong><small>${supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense")}</small></div>
-      ${renderCityFortificationStatus(city, stats)}
-      <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
-      <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · ${getCityStatBonusSources(stats, "defense")}</small></div>
-      <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
-      <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
-      ${renderRelinquishCityAction(city)}
-      ${renderHoldingReinforcementPanel(city)}
-    </div>
-  `;
+  modalTitle.textContent = city.name;
+  modalBody.innerHTML = renderCityDetailsPanel(city, {
+    mainCityBlock,
+    upgradeMarkup: renderCityLevelUpAction(city, { cityDetails: true }),
+    onboardingMarkup: renderOnboardingTip("upgrade", city, "info"),
+  });
+  bindCityDetailsPanel(city);
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
     void changeMainCity(city.id);
   });
@@ -34938,8 +34931,9 @@ function renderCityLevelUpButton(city, option) {
   return `<button class="city-level-up-btn" data-city-upgrade-city="${escapeHtml(city.id)}" data-city-upgrade-region="${escapeHtml(getCityRegionId(city))}" data-city-upgrade-mode="${option.mode}" data-city-upgrade-levels="${option.levels}" data-audio-effect="none" type="button" ${option.disabled ? "disabled" : ""}><span>${escapeHtml(option.label)}</span><small>${escapeHtml(option.reason || details)}</small></button>`;
 }
 
-function renderCityLevelUpAction(city) {
+function renderCityLevelUpAction(city, options = null) {
   if (!city || city.owner !== "player" || isStronghold(city)) return "";
+  if (options?.cityDetails) return renderCityDetailsUpgrade(city);
   const optionState = getCityUpgradeOptionState(city);
   if (!optionState) return "";
   const syncing = optionState.pendingAction

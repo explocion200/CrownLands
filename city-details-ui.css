@@ -1,0 +1,183 @@
+/* City Details only. The shared dialog returns to its existing theme as soon
+   as another panel replaces this body. No map, HUD or global icon overrides. */
+#modal:has(.cd-panel) {
+  --cd-paper: #f2e8cd;
+  --cd-ink: #302c22;
+  --cd-muted: #625b49;
+  --cd-rule: #b8a684;
+  --cd-moss: #485839;
+  color-scheme: light;
+  width: min(364px, calc(100vw - 24px));
+  max-width: none;
+  height: min(760px, calc(100dvh - 24px));
+  max-height: none;
+  padding: 4px;
+  inset: 0;
+  margin: auto;
+  border: 1px solid #766346 !important;
+  border-radius: 2px !important;
+  overflow: hidden;
+  color: var(--cd-ink) !important;
+  background: var(--cd-paper) !important;
+  box-shadow: inset 0 0 0 3px #d6c49e, inset 0 0 0 4px #a99876, 0 8px 28px #27291a44 !important;
+}
+#modal:has(.cd-panel)::backdrop { background: #25291922 !important; }
+#modal:has(.cd-panel) .modal-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+#modal:has(.cd-panel) #modalTitle {
+  flex: none;
+  margin: 0 !important;
+  padding: 19px 52px 16px 20px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--cd-rule) !important;
+  color: var(--cd-ink) !important;
+  background: #ddd0ac55 !important;
+  font: 23px/1.15 Georgia, "Times New Roman", serif;
+  text-shadow: none !important;
+  overflow-wrap: anywhere;
+}
+#modal:has(.cd-panel) #closeModalBtn {
+  top: 8px;
+  right: 7px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 11px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--cd-ink) !important;
+}
+#modal:has(.cd-panel) #modalBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  color: var(--cd-ink) !important;
+  font: 14px/1.4 "Segoe UI", Arial, sans-serif;
+}
+#modal .cd-panel { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: hidden; }
+#modal .cd-panel *, #modal .cd-panel *::before, #modal .cd-panel *::after { box-sizing: border-box; }
+#modal .cd-panel [hidden] { display: none !important; }
+#modal .cd-panel button {
+  min-height: 44px;
+  border: 1px solid var(--cd-rule) !important;
+  border-radius: 2px !important;
+  background: transparent !important;
+  color: var(--cd-ink) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font: 600 13px/1.3 "Segoe UI", Arial, sans-serif;
+  letter-spacing: normal;
+  text-transform: none;
+  cursor: pointer;
+}
+#modal .cd-panel button:hover:not(:disabled) { background-color: #d7c79766 !important; }
+#modal:has(.cd-panel) :focus-visible { outline: 2px solid #49666e; outline-offset: -3px; }
+#modal .cd-panel button:disabled { opacity: 1; color: #69614f !important; background: #dfd4b9 !important; cursor: not-allowed; }
+#modal .cd-panel a, #modal .cd-panel .player-name-link { color: #485839 !important; }
+#modal .cd-icon { display: inline-flex; width: 21px; height: 21px; flex: none; color: inherit !important; }
+#modal .cd-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#modal .cd-icon .engraving-surface { fill: currentColor; fill-opacity: .12; }
+#modal .cd-icon .engraving-shadow { fill: currentColor; fill-opacity: .25; stroke: none; }
+#modal .cd-icon .engraving-ink { fill: currentColor; stroke-width: .5; }
+#modal .cd-icon .engraving-detail { stroke-width: 1.1; }
+#modal .cd-row .engraving-fine, #modal .cd-price .engraving-detail { display: none; }
+#modal .cd-ledger { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #a59470 transparent !important; padding: 0 20px 12px; scroll-padding: 8px; }
+#modal .cd-portrait { display: flex; gap: 16px; align-items: center; min-height: 104px; padding: 4px 0; }
+#modal .cd-portrait > img { width: 108px; height: 96px; object-fit: contain; flex: none; }
+#modal .cd-portrait > div { min-width: 0; }
+#modal .cd-relation { margin: 0; color: #66522e !important; text-transform: uppercase; font-size: 10px; letter-spacing: .1em; }
+#modal .cd-level { font: 16px Georgia, serif; }
+#modal .cd-level b { margin-left: 4px; font-size: 30px; font-weight: normal; font-variant-numeric: tabular-nums; }
+#modal .cd-owner { margin: 3px 0 5px; font-size: 12px; overflow-wrap: anywhere; }
+#modal .cd-allegiance { display: flex; align-items: center; gap: 5px; color: #685426 !important; font-size: 11px; }
+#modal .cd-allegiance .cd-icon { width: 15px; height: 15px; }
+#modal .cd-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--cd-rule) !important; }
+#modal .cd-tabs button { border: 0 !important; border-bottom: 2px solid transparent !important; border-radius: 0 !important; padding: 8px 2px; }
+#modal .cd-tabs button[aria-selected=true] { color: var(--cd-moss) !important; border-bottom-color: var(--cd-moss) !important; }
+#modal .cd-garrison { display: flex; align-items: center; gap: 12px; padding: 8px 0; color: var(--cd-muted) !important; }
+#modal .cd-garrison > .cd-icon { width: 30px; height: 30px; color: #5c593f !important; }
+#modal .cd-garrison strong { display: block; color: var(--cd-ink) !important; font-size: 24px; font-variant-numeric: tabular-nums; }
+#modal .cd-garrison small { color: var(--cd-muted) !important; font-size: 12px; font-weight: normal; }
+#modal .cd-stats { margin: 0; }
+#modal .cd-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 8px; padding: 10px 0; border-bottom: 1px solid #c8b99780 !important; }
+#modal .cd-row dt { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+#modal .cd-row dt .cd-icon { width: 18px; height: 18px; color: #746446 !important; }
+#modal .cd-row dd { max-width: 145px; margin: 0; text-align: right; overflow-wrap: anywhere; color: var(--cd-ink) !important; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#modal .cd-row > small { grid-column: 1 / -1; margin-top: 4px; color: var(--cd-muted) !important; font-size: 12px; }
+#modal .cd-panel h3 { margin: 16px 0 4px; font: 18px Georgia, serif; color: var(--cd-ink) !important; }
+#modal .cd-note { margin: 10px 0; color: var(--cd-muted) !important; font-size: 12px; }
+#modal .cd-management { margin-top: 8px; }
+#modal .cd-panel .stat-wide, #modal .cd-panel .stat-chip, #modal .cd-panel .main-city-action-panel, #modal .cd-panel .city-relinquish-panel {
+  min-width: 0; padding: 10px 0; border: 0 !important; border-bottom: 1px solid #c8b99780 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--cd-ink) !important;
+}
+#modal .cd-panel .city-stat-panel { display: grid; grid-template-columns: 1fr; gap: 0; padding: 0; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+#modal .cd-panel .stat-wide > span, #modal .cd-panel .stat-chip > span, #modal .cd-panel .stat-wide small, #modal .cd-panel .stat-chip small, #modal .cd-panel .main-city-action-panel small { color: var(--cd-muted) !important; font-size: 12px; }
+#modal .cd-panel .stat-wide strong, #modal .cd-panel .stat-chip strong { color: var(--cd-ink) !important; font-variant-numeric: tabular-nums; }
+#modal .cd-panel .main-city-status { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+#modal .cd-panel .main-city-status-copy { display: none; }
+#modal .cd-panel .inner-castle-entry-btn { display: flex; align-items: center; gap: 8px; width: 100%; color: var(--cd-moss) !important; text-align: left; padding: 10px; }
+#modal .cd-panel .inner-castle-entry-btn::after { content: " →"; }
+#modal .cd-actions { flex: none; padding: 12px 20px 14px; border-top: 1px solid var(--cd-rule) !important; background: #e7d9b4 !important; }
+#modal .cd-upgrade-heading { display: flex; gap: 10px; align-items: center; margin-bottom: 9px; }
+#modal .cd-upgrade-heading > .cd-icon { width: 28px; height: 28px; color: #766037 !important; }
+#modal .cd-upgrade-heading strong { display: block; font: 18px Georgia, serif; color: var(--cd-ink) !important; }
+#modal .cd-upgrade-heading small { display: block; margin-top: 2px; color: var(--cd-muted) !important; font-size: 12px; }
+#modal .cd-amounts { display: flex; margin-bottom: 9px; }
+#modal .cd-amounts button { flex: 1; border-radius: 0 !important; }
+#modal .cd-amounts button + button { border-left: 0 !important; }
+#modal .cd-amounts button[aria-pressed=true] { background: #665c3e !important; color: #fff6df !important; }
+#modal .cd-panel .cd-upgrade { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; background: var(--cd-moss) !important; border-color: #3c482f !important; color: #fff8e5 !important; text-align: left; }
+#modal .cd-panel .cd-upgrade:hover:not(:disabled) { background: #3b492e !important; }
+#modal .cd-panel .cd-upgrade:disabled { background: #d4c7a5 !important; border-color: #a59470 !important; color: #62583d !important; }
+#modal .cd-price { display: flex; align-items: center; gap: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#modal .cd-price .cd-icon { width: 18px; height: 18px; }
+#modal .cd-feedback { display: flex; gap: 8px; align-items: center; min-height: 43px; margin-top: 8px; color: var(--cd-muted) !important; font-size: 12px; }
+#modal .cd-feedback > span { display: flex; }
+#modal .cd-feedback > div { display: flex; flex-direction: column; min-width: 0; }
+#modal .cd-feedback strong { color: inherit !important; font-size: 12px; font-weight: 600; }
+#modal .cd-feedback [data-cd-feedback-balance] { font-variant-numeric: tabular-nums; }
+#modal .cd-panel[data-cd-status=success] .cd-feedback { color: #3d5135 !important; }
+#modal .cd-panel[data-cd-status=error] .cd-feedback { color: #793b3b !important; }
+#modal .cd-panel[data-cd-status=pending] .cd-feedback { color: #49666e !important; }
+@media (max-height: 600px) {
+  #modal:has(.cd-panel) { width: min(350px, calc(100vw - 20px)); height: calc(100dvh - 16px); }
+  #modal:has(.cd-panel) #modalTitle { padding: 12px 50px 12px 16px !important; font-size: 20px; }
+  #modal:has(.cd-panel) #closeModalBtn { top: 3px; }
+  #modal .cd-ledger { padding: 0 16px 10px; }
+  #modal .cd-portrait { min-height: 94px; gap: 12px; }
+  #modal .cd-portrait > img { width: 88px; height: 82px; }
+  #modal .cd-row dt { font-size: 13px; }
+  #modal .cd-row dd { font-size: 14px; }
+  #modal .cd-actions { padding: 10px 16px; }
+  #modal .cd-upgrade-heading strong { font-size: 16px; }
+}
+@media (max-height: 360px) and (min-width: 500px) {
+  #modal:has(.cd-panel) { width: min(620px, calc(100vw - 20px)); }
+  #modal .cd-panel:has(.cd-actions) { display: grid; grid-template-columns: minmax(0, 1fr) 213px; }
+  #modal .cd-actions { min-height: 0; overflow-y: auto; padding: 10px 12px; border-top: 0 !important; border-left: 1px solid var(--cd-rule) !important; }
+  #modal .cd-price .cd-icon { display: none; }
+  #modal .cd-panel .cd-upgrade { font-size: 12px; padding: 9px; }
+}
+
+/* Legacy palette rules use important declarations on all dialog descendants. */
+#modal .cd-upgrade :is(span, b), #modal .cd-feedback :is(span, strong), #modal .cd-icon :is(svg, path) { color: inherit !important; }

@@ -60,7 +60,12 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // Allow one bounded 8 KiB step; camp definitions and map art remain lazy loaded.
 // The generated /play/ entry keeps a static asset base in offline fallback.
 // Its second HTML shell adds under one bounded 64 KiB step.
-const MAX_INSTALL_PRECACHE_BYTES = 3736 * 1024;
+// City Details adds under 28 KiB of presentation code and native SVG icons.
+// Keep both entry dependencies available offline within one 32 KiB step;
+// city illustration assets still use the existing runtime image cache.
+const MAX_INSTALL_PRECACHE_BYTES = 3768 * 1024;
+assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-details-ui.css") <= 28 * 1024,
+  "City Details presentation exceeds its 28 KiB source budget.");
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
