@@ -110,7 +110,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Shared private Camp rewards use the same bounded 8 KiB allowance.
 // The generated /play/ offline shell uses the same bounded 64 KiB allowance.
 // City Details uses the same bounded 32 KiB presentation allowance.
-assert.ok(staticCacheBytes <= 3768 * 1024, "The service-worker installation cache exceeds 3768 KiB.");
+// City List uses the same bounded 16 KiB presentation allowance.
+assert.ok(staticCacheBytes <= 3784 * 1024, "The service-worker installation cache exceeds 3784 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);
