@@ -135,7 +135,7 @@
 #modal .cd-panel .stat-wide strong, #modal .cd-panel .stat-chip strong { color: var(--cd-ink) !important; font-variant-numeric: tabular-nums; }
 #modal .cd-panel .main-city-status { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 #modal .cd-panel .main-city-status-copy { display: none; }
-#modal .cd-panel .inner-castle-entry-btn { display: flex; align-items: center; gap: 8px; width: 100%; color: var(--cd-moss) !important; text-align: left; padding: 10px; }
+#modal .cd-panel .inner-castle-entry-btn { display: flex; align-items: center; gap: 8px; width: 100%; margin: 0; color: var(--cd-moss) !important; text-align: left; padding: 10px; }
 #modal .cd-panel .inner-castle-entry-btn::after { content: " →"; }
 #modal .cd-actions { flex: none; padding: 12px 20px 14px; border-top: 1px solid var(--cd-rule) !important; background: #e7d9b4 !important; }
 #modal .cd-upgrade-heading { display: flex; gap: 10px; align-items: center; margin-bottom: 9px; }
@@ -170,6 +170,10 @@
   #modal .cd-row dd { font-size: 14px; }
   #modal .cd-actions { padding: 10px 16px; }
   #modal .cd-upgrade-heading strong { font-size: 16px; }
+}
+@media (min-width: 1000px) and (min-height: 361px) {
+  #modal:has(.cd-panel) { width: 560px; }
+  #modal .cd-row dd { max-width: 240px; }
 }
 @media (max-height: 360px) and (min-width: 500px) {
   #modal:has(.cd-panel) { width: min(620px, calc(100vw - 20px)); }

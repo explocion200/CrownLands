@@ -53,11 +53,12 @@ async function main() {
         const r=modal.getBoundingClientRect(), ledger=modalBody.querySelector('.cd-ledger');
         const footer=modalBody.querySelector('.cd-actions').getBoundingClientRect();
         const buttons=[...modalBody.querySelectorAll('.cd-actions button')];
-        return { bounds:{x:r.x,y:r.y,width:r.width,height:r.height}, overflow:modalBody.scrollWidth>modalBody.clientWidth+1, footerVisible:footer.top>=r.top&&footer.bottom<=r.bottom+1, targets:buttons.map(b=>b.getBoundingClientRect().height), paper:getComputedStyle(modal).backgroundColor, art:modalBody.querySelector('[data-cd-art]').naturalWidth>0, ledgerHeight:ledger.clientHeight };
+        return { bounds:{x:r.x,y:r.y,width:r.width,height:r.height}, overflow:modalBody.scrollWidth>modalBody.clientWidth+1||ledger.scrollWidth>ledger.clientWidth+1, footerVisible:footer.top>=r.top&&footer.bottom<=r.bottom+1, targets:buttons.map(b=>b.getBoundingClientRect().height), paper:getComputedStyle(modal).backgroundColor, art:modalBody.querySelector('[data-cd-art]').naturalWidth>0, ledgerHeight:ledger.clientHeight };
       })()`);
       assert(layout.bounds.x >= 0 && layout.bounds.y >= 0 && layout.bounds.height <= viewport.height, JSON.stringify(layout));
       assert(!layout.overflow && layout.footerVisible && layout.targets.every(n => n >= 44) && layout.art && layout.ledgerHeight >= 55, JSON.stringify(layout));
       assert.equal(layout.paper, "rgb(242, 232, 205)");
+      assert.equal(Math.round(layout.bounds.width), viewport.name === "desktop" ? 560 : viewport.name === "landscape" ? 350 : 548, "City Details must widen on desktop while retaining the compact layouts.");
       await evaluate(`(() => {
         document.getElementById('cdDefencesTab').click();
         document.getElementById('cdDefencesTab').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));
@@ -128,6 +129,29 @@ async function main() {
       await screenshot(`success-${viewport.name}`);
       await evaluate("document.getElementById('cdDefencesTab').click()");
       await screenshot(`defences-${viewport.name}`);
+      const castleEntry = await evaluate(`(() => {
+        const main=getMainCityReference();
+        const other=state.cities.find(c=>c.id!==main.id&&!isStronghold(c)&&!isCrownCitadel(c));
+        const saved={owner:other.owner,ownerUid:other.ownerUid};
+        const checks=[];
+        for(const owner of ['player','neutral','enemy']) {
+          other.owner=owner;other.ownerUid=owner==='player'?getCurrentOnlineUid():'fixture-other';
+          for(const inspected of owner==='player'?[main,other]:[other]) {
+            showCityInfoModal(inspected.id);
+            const entry=document.getElementById('enterInnerCastleBtn');
+            if(!entry||modalBody.querySelectorAll('#enterInnerCastleBtn').length!==1)throw Error('Missing or duplicate Inner Castle shortcut');
+            if(owner==='player')document.getElementById('cdDefencesTab').click();
+            if(!entry.getClientRects().length||entry.closest('[role="tabpanel"]'))throw Error('Shortcut must remain available outside the tabs');
+            entry.click();
+            if(!modal.classList.contains('inner-castle-modal')||modal.dataset.innerCastleCityId!==main.id||!modalBody.querySelector('.inner-castle-shell'))throw Error('Shortcut did not open the player Main City Inner Castle');
+            modalBody.querySelector('[data-inner-castle-back]').click();
+            if(modal.dataset.cityInfoId!==inspected.id||document.activeElement.id!=='enterInnerCastleBtn'||modal.dataset.innerCastleReturnCityId)throw Error('Back did not restore the inspected city and focus');
+            checks.push({owner,main:inspected.id===main.id});
+          }
+        }
+        Object.assign(other,saved);
+        return checks;
+      })()`);
       const privacy = await evaluate(`(() => {
         modal.close();
         const foreign=state.cities.find(c=>c.owner!=='player'&&!isStronghold(c)&&!isCrownCitadel(c));
@@ -147,7 +171,7 @@ async function main() {
         sheet.disabled=false;return {hasCityDetails,equal:JSON.stringify(before)===JSON.stringify(after)};
       })()`);
       assert(!isolation.hasCityDetails && isolation.equal, JSON.stringify(isolation));
-      results.push({ viewport: viewport.name, layout, privacy, isolation });
+      results.push({ viewport: viewport.name, layout, castleEntry, privacy, isolation });
       console.log(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, [], "Uncaught errors occurred in City Details.");
