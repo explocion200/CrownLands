@@ -753,6 +753,9 @@ async function main() {
     flag: { background: "#000000" },
   });
   assert(firstClaim.cityId, "The first reset player did not receive a city.");
+  const resetStartingCity = (await db.doc(`islands/${firstClaim.islandId}/cities/${firstClaim.cityId}`).get()).data() || {};
+  assert(Number(resetStartingCity.troops) === 1_000 && Number(resetStartingCity.troopFloat) === 1_000,
+    "The reset player did not receive exactly 1,000 starting troops.");
   const settledClanBenefitsSnap = await waitForDocumentValue(
     db.doc(`clans/${archivedClanId}/worldBenefits/${realm.resetGeneration}`),
     benefits => Number(benefits.revision || 0) >= 2

@@ -75,7 +75,7 @@ Snapshot verified on August 31, 2026.
 | itch.io world | 20 connected regions |
 | Authoritative repository commit inspected | `origin/main` at `fdf326a9462fab2982cbdd2cf9c8326060217159` |
 | Remote `origin/main` verification | Local `main`, remote-tracking `origin/main`, and merged PR #220 build matched with `0 0` divergence during the August 30 release audit |
-| New-player initialization in inspected source | 100 Gold, 200 troops, one Level 1 Main City |
+| Starting-player initialization | 100 Gold, 1,000 troops, one Level 1 Main City; the September 9 troop increase is pending merge and authorized deployment |
 | City XP and instant-upgrade release baseline | PR #199 merged as `a561374b93b5a31849ddddbb4cfbfabf9be1dc94` |
 | Skill controls and free-refund web release baseline | PR #201 merged as `291e5657594bc8d0e3e91b6b25af79f4e88cf5e5` |
 | Session heartbeat recovery release baseline | PR #220 merged as `fdf326a9462fab2982cbdd2cf9c8326060217159`; the client bounds heartbeat responses at 15 seconds and invalidates stopped lifecycle generations before applying late responses or clearing replacement locks |
@@ -360,12 +360,12 @@ The following city-progression reward model is confirmed design. The original mo
 
 **Confirmed season rule:** Hero level, Hero XP, unspent skill points, acquired skill upgrades, and saved skill presets reset each season. Hero progression is normal seasonal world progression and is not part of permanent Gear progression.
 
-### Verified `origin/main` initialization
+### Starting-player initialization
 
-The server implementation inspected during the August 24 audit at commit `27105ae...` initializes a fresh/reset player with:
+On September 9, 2026, the starting troop grant was confirmed to increase from 200 to 1,000. The server initializes a fresh/reset player on their first Main City claim with:
 
 - 100 Gold (`TEST_STARTING_GOLD`)
-- 200 troops in the starting city (`PLAYER_STARTING_TROOPS`)
+- 1,000 troops in the starting city (`PLAYER_STARTING_TROOPS`), with matching global statistics and leaderboard totals
 - one Level 1 Main City with defense `1`, invested Gold `0`, and current production timestamps
 - Hero Level 1, XP `0`, and skill points `0`
 - empty skill upgrades and default presets
@@ -373,12 +373,12 @@ The server implementation inspected during the August 24 audit at commit `27105a
 - no battle or scout reports
 - a default march percentage of 50%
 
-These are **verified implementation facts**, not an independent balance-design confirmation. The exact deployed backend/runtime values remain **NEEDS VERIFICATION**. The prior 500 Gold/50 troops observation is not present in the inspected current initialization path.
+The 1,000-troop starting grant is a **confirmed balance rule**, implemented pending merge and authorized deployment. Replaying a completed claim preserves the player's current troops. The remaining listed values are existing implementation facts, not independent balance-design confirmations. The August 24 audit at commit `27105ae...` recorded the previous 200-troop grant; the older 500 Gold/50 troops observation is not present in this initialization path.
 
 ### Needs verification
 
-- Whether production Cloud Functions execute the inspected 100 Gold/200 troop initialization path: **NEEDS VERIFICATION** through a controlled runtime claim or authenticated deployment record.
-- Whether 100 Gold and 200 troops should be promoted from current implementation values to explicitly confirmed long-term balance rules: **NEEDS VERIFICATION** by design decision.
+- Verify that production Cloud Functions apply the confirmed 1,000-troop starting grant after authorized deployment.
+- Whether 100 Gold should be promoted from the current implementation value to an explicitly confirmed long-term balance rule: **NEEDS VERIFICATION** by design decision.
 - Current Hero XP curve, per-battle XP caps, inactivity release rules, city level maximum, and every city-upgrade cost/time value: **NEEDS VERIFICATION** against current configuration.
 
 ## 4. Economy & Resources
@@ -1181,7 +1181,7 @@ Status verified through August 31, 2026.
 - The descriptive release ID remains dated August 2 despite newer builds.
 - The itch.io Butler `html5` channel and latest-build API remain labeled `2026-08-30-city-list-off-map-ownership-3390c83c`, while the verified public iframe is web upload `#19037216` at build `fdf326a...`. This is release-metadata debt, not a playable-build mismatch.
 - Five web regions use placeholder numeric names.
-- Starting-resource documentation conflicts with the current source. `origin/main` initializes 100 Gold and 200 troops; deployed runtime parity remains unverified.
+- The September 9 starting-troop decision replaces the earlier 200-troop initialization with 1,000 troops. Starting Gold remains 100; deployment verification of the troop increase is pending.
 - Production Player Flag saving needs a current smoke test.
 - Holding Towers/Clan Treasury are implemented on a synchronized feature branch but remain pending merge, authorized deployment, and authenticated production verification. Historical PR #159 remains archived and must not be merged.
 - The latest verified managed Firestore backup is `READY`, and pointer rollback is implemented by retaining the previous realm generation. A full production restore has not been rehearsed during this release window.
@@ -1241,7 +1241,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 
 ### Highest-priority verification decisions
 
-1. Confirm through production runtime/deployment evidence whether the deployed new-player path uses the repository-verified 100 Gold and 200 troops.
+1. Verify through production runtime/deployment evidence that the new-player path applies the confirmed 1,000-troop grant and existing 100 Gold initialization after authorized release.
 2. The maximum intended web/itch.io release lag and channel-parity service level.
 3. Current production Player Flag save behavior.
 4. Exact deployed Functions parity for King Power version 11, production/reward configuration, and reset logic.
@@ -1269,7 +1269,7 @@ These remain `PROPOSED` or roadmap-level `PLANNED` directions. Their detailed me
 |---|---|---|
 | Primary production authority | Web and itch.io could both be described broadly as published | Web is primary LIVE authority; itch.io is separately tracked and may lag |
 | World size | Earlier itch artifact contained 15 regions while web contained 20 | Both published game clients contain the same 20-region world. Build `a561374b...` established the verified cross-channel baseline, and current build `fdf326a...` retains it on web and itch.io. |
-| Starting resources | 100 Gold/200 troops versus 500 Gold/50 troops | Current `origin/main` initializes 100 Gold/200 troops. Deployed backend/runtime parity and long-term design confirmation remain **NEEDS VERIFICATION**. |
+| Starting resources | Historical 100 Gold/200 troops versus 500 Gold/50 troops | Confirmed September 9: 1,000 starting troops. Starting Gold remains 100 in the implementation. The troop increase requires merge and deployment verification; long-term Gold balance remains **NEEDS VERIFICATION**. |
 | World structure | Single island, five islands, portals, disconnected or 100-city-map concepts | Superseded by connected regions and edge-route model |
 | Achievement count | Earlier proposal of 50 | Superseded; current confirmed count is 40 |
 | Season item persistence | Earlier broad statement that items persist | Superseded by explicit player identity, clan, and Common Gear allowlist; normal consumables do not persist |
