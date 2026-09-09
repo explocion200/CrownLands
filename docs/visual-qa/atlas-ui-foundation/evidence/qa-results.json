@@ -1,5 +1,5 @@
 {
-  "date": "2026-09-09T16:54:08.392Z",
+  "date": "2026-09-09T17:19:22.731Z",
   "scope": "City Details only",
   "browser": "Headless Chrome",
   "checks": [
@@ -10,14 +10,58 @@
         "overflow": false,
         "button": {
           "x": 563,
-          "y": 724.609375,
+          "y": 720.203125,
           "right": 877,
-          "bottom": 769.609375
+          "bottom": 768.203125
         },
         "broken": [],
         "scroll": true
       },
-      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 44,
+            "width": 103.328125
+          },
+          {
+            "name": "+5",
+            "height": 44,
+            "width": 104.34375
+          },
+          {
+            "name": "Max",
+            "height": 44,
+            "width": 104.328125
+          },
+          {
+            "name": "upgradeButton",
+            "height": 48,
+            "width": 314
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "viewport": "844x390",
@@ -33,7 +77,51 @@
         "broken": [],
         "scroll": true
       },
-      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 48,
+            "width": 44
+          },
+          {
+            "name": "+5",
+            "height": 48,
+            "width": 45
+          },
+          {
+            "name": "Max",
+            "height": 48,
+            "width": 45
+          },
+          {
+            "name": "upgradeButton",
+            "height": 50,
+            "width": 168
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "viewport": "568x320",
@@ -42,14 +130,58 @@
         "overflow": false,
         "button": {
           "x": 361,
-          "y": 197.5,
+          "y": 201.59375,
           "right": 545,
-          "bottom": 241.5
+          "bottom": 245.59375
         },
         "broken": [],
         "scroll": true
       },
-      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 44,
+            "width": 60
+          },
+          {
+            "name": "+5",
+            "height": 44,
+            "width": 61
+          },
+          {
+            "name": "Max",
+            "height": 44,
+            "width": 61
+          },
+          {
+            "name": "upgradeButton",
+            "height": 44,
+            "width": 184
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
     },
     {
       "state": "pending",

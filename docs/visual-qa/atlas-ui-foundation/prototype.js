@@ -106,11 +106,14 @@
     cityPanel.dataset.state = state;
     $("#cityLevel").textContent = level;
     $("#upgradeCost").textContent = cost.toLocaleString("en-US");
+    $("#upgradeHint").textContent = level === 50 ? "City at level 50"
+      : count === 0 ? `Level ${level} · No change`
+      : `Level ${level} → ${level + count} · +${count} ${count === 1 ? "level" : "levels"}`;
     $("#upgradeLabel").textContent = pending ? "Developing…"
       : level === 50 ? "Sample limit reached"
       : insufficient ? "More gold needed"
       : state === "error" ? "Try upgrade again"
-      : `Upgrade to level ${level + count}`;
+      : `Upgrade to level\u00a0${level + count}`;
     $("#upgradeButton").disabled = pending || insufficient;
     $("#upgradeButton").setAttribute("aria-busy", String(pending));
     all("[data-amount]").forEach(button => {
@@ -118,12 +121,14 @@
       button.setAttribute("aria-pressed", String(button.dataset.amount === amount));
     });
     // Keep affordability visible within City Details after removing the HUD.
-    $("#actionFeedback").textContent = pending ? `Developing… Available: ${available} gold.`
-      : state === "error" ? `Upgrade failed. Gold unchanged: ${available}.`
-      : state === "success" ? `City now level ${level}. Available: ${available} gold.`
-      : insufficient ? level === 50 ? `Study limit reached. Available: ${available} gold.`
-      : `Not enough gold. Available: ${available}.`
-      : `Available: ${available} gold.`;
+    $("#feedbackMessage").textContent = pending ? "Developing… Available: "
+      : state === "error" ? "Upgrade failed. Gold unchanged: "
+      : state === "success" ? `City now level ${level}. Available: `
+      : insufficient ? level === 50 ? "Study limit reached. Available: "
+      : "Not enough gold. Available: "
+      : "Available: ";
+    $("#availableGold").textContent = available;
+    $("#feedbackSuffix").textContent = state === "error" || (insufficient && level !== 50) ? "." : " gold.";
   }
   all("[data-amount]").forEach(button => button.addEventListener("click", () => {
     amount = button.dataset.amount;

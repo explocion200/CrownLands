@@ -29,6 +29,22 @@ fs.mkdirSync(output, {recursive:true});
   await evaluate('Promise.all(document.getAnimations().map(animation=>animation.finished.catch(()=>{})))');
  };
  const shot = async name => { const s=await client.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(output,name+'.png'),Buffer.from(s.data,'base64')); };
+ const checkReadability = async () => {
+  const layout = await evaluate(`(()=>{
+   const box = selector => document.querySelector(selector).getBoundingClientRect();
+   const footer = document.querySelector('.city-actions'), ledger = document.querySelector('#cityLedger');
+   const action = box('#upgradeButton'), label = box('#upgradeLabel'), price = box('.price'), hint = box('#upgradeHint'), feedback = box('#actionFeedback');
+   const touch = [...document.querySelectorAll('.close-button,.ledger-tabs button,.upgrade-options button,#upgradeButton')].map(e=>({name:e.id||e.textContent,height:e.getBoundingClientRect().height,width:e.getBoundingClientRect().width}));
+   return {footerFits:footer.scrollHeight<=footer.clientHeight && footer.scrollWidth<=footer.clientWidth,
+    ledgerFits:ledger.scrollWidth<=ledger.clientWidth, hintVisible:hint.height>0,
+    labelFits:label.right<=price.left && price.right<=action.right && label.bottom<=action.bottom,
+    feedbackVisible:feedback.bottom<=innerHeight && feedback.top>=0, touch};
+  })()`);
+  assert.equal(layout.footerFits,true);assert.equal(layout.ledgerFits,true);assert.equal(layout.hintVisible,true);
+  assert.equal(layout.labelFits,true);assert.equal(layout.feedbackVisible,true);
+  for(const target of layout.touch) assert(target.height>=44 && target.width>=44,`${target.name}: touch target too small`);
+  return layout;
+ };
  try {
   await Promise.all(['Page.enable','Runtime.enable','Network.enable'].map(m=>client.send(m)));
   client.on('Runtime.exceptionThrown',e=>failures.push(e.exceptionDetails.text));
@@ -40,7 +56,13 @@ fs.mkdirSync(output, {recursive:true});
    assert.equal(layout.open,true);assert.equal(layout.overflow,false);assert.deepEqual(layout.broken,[]);assert(layout.button.bottom<=h&&layout.button.y>=0);
    assert.equal(await evaluate('document.querySelectorAll("nav,.top-command,.activity-stack,.chat-strip,.map-city,.map-tools,[data-popover]").length'),0);
    assert.equal(await evaluate('document.querySelectorAll("dialog").length'),1);
+   const readability = await checkReadability();
    await shot(label+'-city');
+   if(label!=='desktop') {
+    await evaluate('document.querySelector("#overview .ledger-stats").scrollIntoView({block:"start"})');
+    await shot(label+'-ledger');
+    await evaluate('document.querySelector("#cityLedger").scrollTop=0');
+   }
    await click('#innerCastle');
    assert.equal(await evaluate('document.querySelector("#cityNotice").hidden'),false);
    assert.equal(await evaluate('document.activeElement.id'),'innerCastle');
@@ -49,8 +71,13 @@ fs.mkdirSync(output, {recursive:true});
    assert.equal(await evaluate('document.querySelector("#defences").hidden'),false);
    await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowLeft',code:'ArrowLeft'});
    assert.equal(await evaluate('document.activeElement.id'),'overviewTab');
+   await click('[data-amount="max"]');
+   assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 → 50 · +26 levels');
+   await checkReadability();
    await click('[data-amount="5"]');
    assert.equal(await evaluate('document.querySelector("#upgradeCost").textContent'),'3,200');
+   assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 → 29 · +5 levels');
+   await checkReadability();
    await click('#upgradeButton');
    assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
    await pause(750);
@@ -64,14 +91,20 @@ fs.mkdirSync(output, {recursive:true});
    await pause(180);
    assert.equal(await evaluate('document.querySelector("#cityPanel").open'),false);
    assert.equal(await evaluate('document.activeElement.id'),'reopenCity');
-   checks.push({viewport:`${w}x${h}`,layout,interaction:'City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed'});
+   checks.push({viewport:`${w}x${h}`,layout,readability,interaction:'City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed'});
   }
   for(const state of ['pending','success','error','disabled']) {
    await load(844,390,'state='+state);
    assert.equal(await evaluate('document.querySelector("#cityPanel").dataset.state'),state);
    if(['pending','disabled'].includes(state)) assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
    if(state==='error') {await click('#upgradeButton');await pause(750);assert.match(await evaluate('document.querySelector("#actionFeedback").textContent'),/Gold unchanged: 84,620/);}
+   await checkReadability();
    await shot('state-'+state);checks.push({state,result:'passed'});
+   if(state==='disabled') {
+    await click('[data-amount="max"]');await checkReadability();
+    assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'Level 24 · No change');
+    assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
+   }
   }
   await load(844,390);
   await click('#upgradeButton');await pause(750);
@@ -79,6 +112,7 @@ fs.mkdirSync(output, {recursive:true});
   assert.match(await evaluate('document.querySelector("#actionFeedback").textContent'),/83,980/);
   await click('[data-amount="max"]');await click('#upgradeButton');await pause(750);
   assert.equal(await evaluate('document.querySelector("#cityLevel").textContent'),'50');
+  assert.equal(await evaluate('document.querySelector("#upgradeHint").textContent'),'City at level 50');
   assert.equal(await evaluate('document.querySelector("#upgradeButton").disabled'),true);
   checks.push({interaction:'+1 succeeds; Max reaches sample cap and disables further upgrade',result:'passed'});
   // Review evidence only: show the same city glyphs enlarged and at small size.

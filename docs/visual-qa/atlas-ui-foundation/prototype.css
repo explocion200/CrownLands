@@ -135,7 +135,7 @@ dialog::backdrop {
 }
 .city-heading p {
   margin:0 0 4px;
-  font-size:9px;
+  font-size:10px;
   color:#66522e;
 }
 .city-heading h1 {
@@ -171,7 +171,7 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   gap:20px;
-  min-height:112px;
+  min-height:104px;
 }
 .portrait-illustration {
   position:relative;
@@ -206,13 +206,14 @@ dialog::backdrop {
   font-size:30px;
   font-weight:normal;
   margin-left:4px;
+  font-variant-numeric:lining-nums tabular-nums;
 }
 .city-portrait p {
   font-size:12px;
   margin:2px 0 7px;
 }
 .ownership-mark {
-  font-size:10px;
+  font-size:11px;
   color:#685426;
   display:flex;
   align-items:center;
@@ -233,7 +234,7 @@ dialog::backdrop {
   border:0;
   border-bottom:2px solid transparent;
   background:transparent;
-  font-size:12px;
+  font-size:13px;
   padding:8px 2px;
 }
 .ledger-tabs button[aria-selected=true] {
@@ -245,7 +246,7 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   gap:12px;
-  padding:17px 0 12px;
+  padding:12px 0;
 }
 .garrison-line>.icon {
   height:29px;
@@ -253,25 +254,27 @@ dialog::backdrop {
   color:#5c593f;
 }
 .garrison-line>span:nth-child(2) {
-  font-size:11px;
+  font-size:12px;
   color:var(--muted);
 }
 .garrison-line strong {
-  font-size:23px;
+  font-size:24px;
+  line-height:1.25;
   display:block;
   font-weight:600;
   color:var(--ink);
   font-variant-numeric:tabular-nums;
 }
 .garrison-line small {
-  font-size:11px;
+  font-size:12px;
   font-weight:400;
   color:var(--muted);
 }
 .garrison-note {
   margin-left:auto;
   max-width:45px;
-  font-size:9px;
+  font-size:11px;
+  line-height:1.4;
   color:var(--muted);
   text-align:right;
 }
@@ -282,7 +285,7 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  min-height:37px;
+  min-height:40px;
   gap:10px;
   border-bottom:1px solid #c8b99780;
 }
@@ -303,6 +306,7 @@ dialog::backdrop {
   font-size:12px;
   font-weight:600;
   font-variant-numeric:tabular-nums;
+  text-align:right;
 }
 .ledger-stats dd small {
   font-weight:400;
@@ -323,7 +327,7 @@ dialog::backdrop {
   gap:8px;
   width:100%;
   min-height:44px;
-  padding:9px 0 0;
+  padding:8px 0;
   background:none;
   border:0;
   color:#3e5138;
@@ -359,20 +363,22 @@ dialog::backdrop {
   display:flex;
   align-items:center;
   gap:9px;
-  margin-bottom:11px;
+  margin-bottom:10px;
 }
 .upgrade-title>.icon {
   color:#776237;
 }
 .upgrade-title strong {
   display:block;
-  font:16px var(--serif);
+  font:18px/1.25 var(--serif);
 }
 .upgrade-title small {
   display:block;
-  font-size:10px;
+  font-size:12px;
   color:var(--muted);
-  margin-top:1px;
+  margin-top:3px;
+  font-variant-numeric:tabular-nums;
+  line-height:1.35;
 }
 .upgrade-options {
   display:flex;
@@ -385,7 +391,7 @@ dialog::backdrop {
   height:36px;
   background:#eee1bf;
   border:0;
-  font-size:12px;
+  font-size:14px;
 }
 .upgrade-options button+button {
   border-left:1px solid #ad9973;
@@ -398,7 +404,7 @@ dialog::backdrop {
 }
 .primary-command {
   width:100%;
-  min-height:45px;
+  min-height:48px;
   background:var(--moss);
   border:1px solid #334528;
   color:#f7efd8;
@@ -408,14 +414,20 @@ dialog::backdrop {
   gap:9px;
   padding:10px 13px;
   box-shadow:inset 0 0 0 2px #5b6b47;
-  font-size:13px;
+  font-size:14px;
+  line-height:1.3;
+  font-weight:600;
 }
 .price {
   display:flex;
   align-items:center;
   gap:6px;
   font-variant-numeric:tabular-nums;
-  font-size:12px;
+  font-size:14px;
+  flex-shrink:0;
+}
+#upgradeLabel {
+  text-align:left;
 }
 .price>.icon {
   width:18px;
@@ -426,6 +438,11 @@ dialog::backdrop {
   font-size:10px;
   color:#58513e;
   min-height:14px;
+  line-height:1.4;
+  font-variant-numeric:tabular-nums;
+}
+.action-feedback b {
+  font-weight:600;
 }
 .primary-command:disabled {
   background:#b6b09d;
@@ -500,10 +517,10 @@ dialog::backdrop {
     padding:11px 0 8px;
   }
 .garrison-line strong {
-    font-size:20px;
+    font-size:23px;
   }
 .ledger-stats>div {
-    min-height:33px;
+    min-height:36px;
   }
 .ledger-stats dt,.ledger-stats dd {
     font-size:11px;
@@ -515,7 +532,7 @@ dialog::backdrop {
     margin-bottom:7px;
   }
 .upgrade-title strong {
-    font-size:14px;
+    font-size:16px;
   }
 .upgrade-title small {
     font-size:9px;
@@ -528,7 +545,7 @@ dialog::backdrop {
   }
 .primary-command {
     min-height:44px;
-    font-size:12px;
+    font-size:13px;
   }
 .action-feedback {
     margin-top:5px;
@@ -600,7 +617,7 @@ dialog::backdrop {
     gap:5px;
   }
 .primary-command .price {
-    font-size:11px;
+    font-size:13px;
     gap:3px;
   }
 .primary-command .price .icon {
@@ -628,16 +645,19 @@ dialog::backdrop {
   min-height:44px;
 }
 .action-feedback {
-  font-size:11px;
+  font-size:12px;
 }
-.ledger-stats dt,.ledger-stats dd {
-  font-size:13px;
+.ledger-stats dt {
+  font-size:14px;
+}
+.ledger-stats dd {
+  font-size:15px;
 }
 .ledger-stats dd small {
   font-size:11px;
 }
 .text-command {
-  font-size:13px;
+  font-size:14px;
 }
 @media(min-width:681px) and (max-width:1099px), (min-width:681px) and (max-height:649px) {
 .city-panel {
@@ -667,26 +687,36 @@ dialog::backdrop {
     grid-column:1/-1;
     margin-bottom:8px;
   }
+.upgrade-title>span:last-child {
+    display:flex;
+    flex:1;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+  }
 .upgrade-title strong {
-    font-size:14px;
+    font-size:16px;
+    white-space:nowrap;
   }
 .upgrade-title small {
-    display:none;
+    display:block;
+    margin:0;
+    white-space:nowrap;
   }
 .upgrade-options {
     margin:0;
   }
 .upgrade-options button {
     height:48px;
-    font-size:12px;
+    font-size:13px;
   }
 .primary-command {
     min-height:50px;
     padding:7px 8px;
-    font-size:12px;
+    font-size:13px;
   }
 .price {
-    font-size:11px;
+    font-size:13px;
     gap:3px;
   }
 .price>.icon {
@@ -697,19 +727,22 @@ dialog::backdrop {
     grid-column:1/-1;
     min-height:16px;
     margin-top:6px;
-    font-size:11px;
+    font-size:12px;
     line-height:1.3;
   }
 }
 @media(max-width:1099px),(max-height:649px) {
 .city-heading .small-caps {
-    font-size:9px;
-  }
-.ledger-stats dt,.ledger-stats dd {
-    font-size:12px;
-  }
-.garrison-note {
     font-size:10px;
+}
+.ledger-stats dt {
+    font-size:13px;
+}
+.ledger-stats dd {
+    font-size:14px;
+}
+.garrison-note {
+    font-size:11px;
   }
 .ownership-mark {
     font-size:11px;
@@ -718,10 +751,10 @@ dialog::backdrop {
     font-size:12px;
   }
 .upgrade-title small {
-    font-size:10px;
-  }
+    font-size:12px;
+}
 .action-feedback {
-    font-size:11px;
+    font-size:12px;
   }
 }
 @media(max-width:680px) and (orientation:landscape) {
@@ -729,7 +762,7 @@ dialog::backdrop {
     min-height:32px;
   }
 .city-heading .small-caps {
-    font-size:9px;
+    font-size:10px;
   }
 .city-actions {
     padding-left:12px;
