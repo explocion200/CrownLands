@@ -15,6 +15,15 @@ function extract(source, name, indent = "") {
 }
 
 async function validate() {
+  const identityScope = { getCurrentOnlineUid: () => "reader", ONLINE_WORLD_ID: "world",
+    RESET_GENERATION: "reset", REALM_SHARD_ID: "shard", onlineSessionGeneration: 0 };
+  vm.createContext(identityScope);
+  for (const name of ["getOnlineRequestScope", "getOnlineSessionRequestScope"]) vm.runInContext(extract(game, name), identityScope);
+  const savedScope = identityScope.getOnlineRequestScope();
+  const oldRequestScope = identityScope.getOnlineSessionRequestScope();
+  identityScope.onlineSessionGeneration++;
+  assert.equal(identityScope.getOnlineRequestScope(), savedScope, "Session recovery invalidated saved preference and operation keys");
+  assert.notEqual(identityScope.getOnlineSessionRequestScope(), oldRequestScope, "Retired-session reads remain current");
   for (const kind of ["daily", "seasonal"]) {
     const daily = kind === "daily";
     const prefix = daily ? "dailyMission" : "seasonalAchievement";
@@ -29,7 +38,7 @@ async function validate() {
     let recovery = 0;
     const scope = {
       console: { warn() {} }, Date, Map, Set, Math,
-      getOnlineRequestScope: () => scopeKey,
+      getOnlineSessionRequestScope: () => scopeKey,
       getOnlineApi: () => ({
         isSignedIn: () => true,
         [apiSubscribe]: (_key, handlers) => { listeners.push(handlers); return () => {}; },
@@ -97,7 +106,7 @@ async function validate() {
     state: {}, onlineReportRequestGeneration: 0, onlineReportSyncState: "loading", onlineServerReportsUnsubscribe: null,
     audioServerReportsHydrated: false, battleReportFilter: "all", console: { warn() {} },
     modalBody: { querySelector: selector => selector === "[data-report-sync]" ? panel : empty },
-    getOnlineRequestScope: () => "reader:session", withTimeout: value => value,
+    getOnlineSessionRequestScope: () => "reader:session", withTimeout: value => value,
     getOnlineApi: () => ({ isSignedIn: () => true,
       loadServerReports: () => new Promise((resolve, reject) => { finishRead = { resolve, reject }; }),
       subscribeServerReports: handlers => { reportListener = handlers; return () => {}; },

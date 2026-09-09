@@ -168,7 +168,8 @@ async function previews() {
 }
 
 async function reports() {
-  const ctx={state:{},scope:"alice",getOnlineRequestScope:()=>ctx.scope,onlineLastError:"",audioServerReportsHydrated:false,
+  const ctx={state:{},scope:"alice",getOnlineSessionRequestScope:()=>ctx.scope,onlineLastError:"",audioServerReportsHydrated:false,
+    onlineReportRequestGeneration:0,onlineReportSyncState:"loading",setOnlineReportSyncState:value=>{ctx.onlineReportSyncState=value;},
     getOnlineApi:()=>ctx.api,api:{isSignedIn:()=>true},withTimeout:p=>p,merged:[],mergeServerReports:rows=>{ctx.merged.push(rows);return false;},console:{warn:()=>{}}};
   load(ctx,["loadServerReportsOnce"]);
   ctx.api.loadServerReports=async()=>[];

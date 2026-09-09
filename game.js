@@ -15512,7 +15512,11 @@ function handleServiceWorkerUpdateMessage(event) {
 }
 
 function getOnlineRequestScope() {
-  return [getCurrentOnlineUid(), ONLINE_WORLD_ID, RESET_GENERATION, REALM_SHARD_ID, onlineSessionGeneration].join(":");
+  return [getCurrentOnlineUid(), ONLINE_WORLD_ID, RESET_GENERATION, REALM_SHARD_ID].join(":");
+}
+
+function getOnlineSessionRequestScope() {
+  return `${getOnlineRequestScope()}:${onlineSessionGeneration}`;
 }
 
 async function waitForPendingOnlineWrites(timeoutMs = 4500) {
@@ -18399,18 +18403,18 @@ function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
 async function loadServerReportsOnce() {
   const api = getOnlineApi();
   if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
-  const requestScope = getOnlineRequestScope();
+  const requestScope = getOnlineSessionRequestScope();
   const generation = ++onlineReportRequestGeneration;
   if (onlineReportSyncState !== "ready") setOnlineReportSyncState("loading");
   try {
     const reports = await withTimeout(api.loadServerReports(120), 5000, "Server reports are taking too long.");
-    if (requestScope !== getOnlineRequestScope()) return false;
+    if (requestScope !== getOnlineSessionRequestScope()) return false;
     if (generation !== onlineReportRequestGeneration) return onlineReportSyncState === "ready";
     setOnlineReportSyncState("ready");
     mergeServerReports(reports, { notify: audioServerReportsHydrated });
     return true;
   } catch (error) {
-    if (requestScope !== getOnlineRequestScope()) return false;
+    if (requestScope !== getOnlineSessionRequestScope()) return false;
     if (generation !== onlineReportRequestGeneration) return onlineReportSyncState === "ready";
     setOnlineReportSyncState("reconnecting");
     onlineLastError = error?.message || String(error);
@@ -32087,15 +32091,15 @@ async function refreshDailyMissionStatus(options = {}) {
   dailyMissionError = "";
   renderDailyMissions();
   const startedAtMs = Date.now();
-  const scope = getOnlineRequestScope();
+  const scope = getOnlineSessionRequestScope();
   const request = Promise.resolve(api.getDailyMissionStatus({}))
     .then(result => {
-      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return null;
+      if (scope !== getOnlineSessionRequestScope() || dailyMissionStatusPromise !== request) return null;
       const serverTimeMs = Math.max(0, Number(result?.serverTimeMs) || Number(result?.dailyMissionState?.serverTimeMs) || startedAtMs);
       return applyDailyMissionStatus(result?.dailyMissionState, serverTimeMs);
     })
     .catch(error => {
-      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return null;
+      if (scope !== getOnlineSessionRequestScope() || dailyMissionStatusPromise !== request) return null;
       dailyMissionError = error?.message || "Daily Missions could not be loaded.";
       if (!options.silent) showToast(dailyMissionError);
       console.warn("Daily Mission status failed", error);
@@ -32103,7 +32107,7 @@ async function refreshDailyMissionStatus(options = {}) {
       return null;
     })
     .finally(() => {
-      if (scope !== getOnlineRequestScope() || dailyMissionStatusPromise !== request) return;
+      if (scope !== getOnlineSessionRequestScope() || dailyMissionStatusPromise !== request) return;
       dailyMissionStatusLoading = false;
       dailyMissionStatusPromise = null;
       renderDailyMissions();
@@ -33036,20 +33040,20 @@ async function refreshSeasonalAchievementStatus(options = {}) {
   seasonalAchievementStatusLoading = true;
   seasonalAchievementError = "";
   const startedAtMs = Date.now();
-  const scope = getOnlineRequestScope();
+  const scope = getOnlineSessionRequestScope();
   const request = Promise.resolve(api.getSeasonalAchievementStatus({}))
     .then(result => {
-      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return null;
+      if (scope !== getOnlineSessionRequestScope() || seasonalAchievementStatusPromise !== request) return null;
       return applySeasonalAchievementStatus(result?.seasonalAchievementState, Math.max(0, Number(result?.serverTimeMs) || startedAtMs));
     })
     .catch(error => {
-      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return null;
+      if (scope !== getOnlineSessionRequestScope() || seasonalAchievementStatusPromise !== request) return null;
       seasonalAchievementError = error?.message || "Seasonal Achievements could not be loaded.";
       if (!options.silent) showToast(seasonalAchievementError);
       return null;
     })
     .finally(() => {
-      if (scope !== getOnlineRequestScope() || seasonalAchievementStatusPromise !== request) return;
+      if (scope !== getOnlineSessionRequestScope() || seasonalAchievementStatusPromise !== request) return;
       seasonalAchievementStatusPromise = null;
       seasonalAchievementStatusLoading = false;
       updateDailyLoginRewardHudState();
