@@ -69,6 +69,7 @@ function arrangeLandscapeControls() {
 function selectBuilding(key) {
   const building = snapshot.buildings.find(item => item.key === key);
   if (!building) return;
+  const changed = selectedKey !== key;
   selectedKey = key;
   document.querySelectorAll("[data-building],[data-inner-castle-building]").forEach(button => {
     const selected = (button.dataset.building || button.dataset.innerCastleBuilding) === key;
@@ -76,6 +77,7 @@ function selectBuilding(key) {
   });
   const target = document.getElementById(settings.layout === "draft" ? "baileyDetails" : "innerCastlePreview");
   target.innerHTML = settings.layout === "draft" ? details(building) : building.preview;
+  if (changed && settings.layout === "draft" && mobileLandscape.matches) target.closest(".bailey-detail-tray").scrollTop = 0;
 }
 function render() {
   if (!snapshot) return;
