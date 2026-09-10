@@ -298,7 +298,7 @@ assert.match(cityResolverSource, /getMainCityReference\(\)/, "Inner Castle city 
 assert.match(cityResolverSource, /mainCity\?\.id\s*===\s*id/, "The cached fallback must never resolve a city other than the main city.");
 
 const cityInfoSource = extractFunction(gameSource, "renderCityDetailsPanel");
-assert.match(cityInfoSource, /canEnterInnerCastle\(mainCity\)/, "City details must gate the shortcut against the player's Main City.");
+assert.match(cityInfoSource, /owned && canEnterInnerCastle\(mainCity\)/, "City details must gate the shortcut against the player's Main City.");
 assert.match(cityInfoSource, /id=["']enterInnerCastleBtn["']/, "City details are missing the Inner Castle CTA.");
 assert.match(cityInfoSource, /Enter Inner Castle<\/button>/, "The Inner Castle CTA label changed.");
 assert.match(

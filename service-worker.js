@@ -67,6 +67,7 @@ const STATIC_CACHE_URLS = [
   "/base-cities.js?v=20260813-base-cities-split-r1",
   "/ui-layout-config.js?v=20260818-global-clan-chat-r1",
   "/city-details-ui.css?v=20260909-city-details-r1",
+  "/city-list-ui.css?v=20260909-city-list-r1",
   "/city-details-ui.js?v=20260909-city-details-r1",
   "/game.js?v=20260909-city-details-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",

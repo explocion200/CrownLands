@@ -53,7 +53,7 @@ assert.match(gameSource, /const sameIdIndexes = onlineOwnedCitiesCache[\s\S]*?if
 assert.match(gameSource, /const currentRegionId = getCityRegionId\(city\)[\s\S]*?const updateRegionId = normalizeRegionId[\s\S]*?if \(currentRegionId !== updateRegionId\) continue;/, "Off-map updates must not mutate a same-ID city on the active map.");
 assert.match(gameSource, /function getCityUpgradeOptionState[\s\S]*?makeExactOption\("\+1"[\s\S]*?makeExactOption\("\+5"[\s\S]*?label: "MAX"/, "City Info and City List must share +1, +5, and MAX option state.");
 assert.match(gameSource, /const optionState = stronghold \? null : getCityUpgradeOptionState\(city\)/, "Stronghold rows must omit city-upgrade controls.");
-assert.match(gameSource, /class="city-list-actions"[\s\S]*?renderCityListUpgradeButton[\s\S]*?class="city-list-info"/, "Regular city rows must place upgrade controls before Info.");
+assert.match(gameSource, /data-city-list-info=[\s\S]*?class="city-list-actions"[\s\S]*?renderCityListUpgradeButton[\s\S]*?data-city-list-jump=/, "City names open info and upgrade controls retain the locate action.");
 assert.match(gameSource, /data-city-upgrade-region=/, "City-list upgrade controls must retain their map binding.");
 assert.doesNotMatch(controllerSource, /already has an upgrade pending/, "A pending city upgrade still blocks rapid follow-up actions.");
 assert.doesNotMatch(controllerSource, /api\.getCityUpgradeXpPreview/, "City upgrades still perform a routine XP-preview request.");
@@ -89,7 +89,7 @@ assert.doesNotMatch(cityListRenderSource, /cityListPage\s*=\s*Math\.floor|ensure
 assert.match(gameSource, /function reconcileCityListSessionOrder[\s\S]*?cityListSessionOrderKeys\.forEach[\s\S]*?sortedCities\.forEach[\s\S]*?cityListSessionOrderKeys = ordered\.map/, "An open City List session must retain surviving rows and append newly discovered rows.");
 assert.match(cityListRenderSource, /cityListPage = 0;\s*resetCityListSessionOrder\(\);\s*renderCityListModal\(\);/, "Clicking either sort control must create a fresh ordering.");
 assert.match(gameSource, /const closedCityListSession = modal\.classList\.contains\("city-list-modal"\)[\s\S]*?if \(closedCityListSession\) resetCityListSessionOrder\(\)/, "Closing the City List must end its ordering session.");
-assert.match(cityListRenderSource, /previousScrollTop[\s\S]*?captureCityListFocus\(\)[\s\S]*?modalBody\.scrollTop = previousScrollTop;[\s\S]*?restoreCityListFocus/, "City-list reconciliation must preserve scroll and keyboard focus without revealing or moving the upgraded row.");
+assert.match(cityListRenderSource, /previousScrollTop[\s\S]*?captureCityListFocus\(\)[\s\S]*?modalBody\.querySelector\("\.city-list-rows"\)\.scrollTop = previousScrollTop;[\s\S]*?restoreCityListFocus/, "City-list reconciliation must preserve scroll and keyboard focus without revealing or moving the upgraded row.");
 assert.match(styles, /\.city-list-row\.upgrade-confirmed[\s\S]*?@keyframes crownlandsCityListUpgradeConfirmed[\s\S]*?prefers-reduced-motion: reduce/, "Confirmed city upgrades need a brief reduced-motion-safe row highlight.");
 assert.match(gameSource, /cl-action-button cl-action-level[\s\S]*?renderCrownlandsIcon\("arrow-up"\)/, "The selected-city map action must use its dedicated arrow-up treatment.");
 assert.match(indexSource, /id="cl-icon-arrow-up"/, "The dedicated map Level arrow glyph is missing.");
