@@ -1,6 +1,6 @@
 # Royal Bailey — ink and wash draft, version 1
 
-Generated with the built-in `image_gen` tool. The original six building anchors are preserved; no clickable positions were changed to accommodate the image. This is draft artwork for review, not an approved production replacement. The six individual building preview illustrations remain unchanged.
+Generated with the built-in `image_gen` tool. The original six building anchors are preserved; no clickable positions were changed to accommodate the image. This is draft artwork for review, not an approved production replacement. This generation pass left all six individual building previews unchanged; the subsequent Great Hall candidate is recorded separately in [great-hall-prompt.md](great-hall-prompt.md).
 
 Saved asset: [royal-bailey-ink-wash-v1.png](royal-bailey-ink-wash-v1.png), opaque 1448 × 1086 PNG, 3,553,937 bytes. SHA-256: `b8b41a24875bb51a799dbab2eb28f4136e4c1d1164e320901903bafcba72475b`. The generated file is copied intact; runtime compression and production asset registration belong to a later approved integration.
 

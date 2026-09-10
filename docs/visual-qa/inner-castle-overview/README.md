@@ -16,7 +16,7 @@ Switch between **Parchment draft / Current layout** and **Desktop / Mobile lands
 - Mobile landscape moves the existing Back to City Details button into the top bar beside Close, freeing the footer's height for the Royal Bailey. The full 4:3 image stays visible even on short landscape screens; all six building signs retain their fixed positions and at least 44-pixel-high touch targets.
 - The mobile detail pane stacks the building name, a centered preview image, the existing information and new-gear indicator, then Manage Gear where available. It reserves space for the text and 44-pixel action first; the image fits the remaining height, up to 160 pixels wide, without cropping. Tighter text spacing and a 225-pixel detail column keep all information and the action visible without scrolling at the reviewed landscape sizes. The artwork therefore scales down on shorter screens instead of pushing Manage Gear below the visible panel.
 - The same Back button moves back to the desktop footer when the viewport changes, preserving selection and avoiding duplicate controls. This draft does not change the game's orientation guard or create a portrait game layout.
-- The draft now uses a new Royal Bailey illustration following the user's map reference: dark ink outlines, muted olive and ochre, pale stone and burgundy pennants. The six building preview illustrations remain unchanged for a later pass. Current layout retains the original hub image for comparison.
+- The draft uses new Royal Bailey and Great Hall illustrations following the user's map reference: dark ink outlines, muted olive and ochre, pale stone and burgundy pennants. Great Hall is the first interior candidate; the other five interiors remain original for individual review later. Current layout retains the original hub and all original interior images for comparison.
 
 ## Preserved behavior and information
 
@@ -31,13 +31,19 @@ The source has **six** buildings, with gear management available at **four**:
 | Gatehouse | City defense / wall strength | Defensive Commander gear and bonuses; Manage Gear |
 | Royal Stables | Movement / march speed | Cavalry Master gear and bonuses; Manage Gear |
 
-All building labels, descriptions, availability, individual building artwork references, new-gear indication, Back to City Details, and Close are retained. At the user's request, the general announcement about exploring the Royal Bailey and future building functions/upgrades has been removed from every draft building on desktop and mobile. The captured Current layout retains its original announcement for comparison. This draft introduces no building levels, costs, upgrades, timers, or progression promises. Gear subpanels are outside this review. Entry/ownership and return-city behavior remain owned by the current runtime.
+All building labels, descriptions, availability, new-gear indication, Back to City Details, and Close are retained. Only Great Hall's individual artwork reference changes in the draft. At the user's request, the general announcement about exploring the Royal Bailey and future building functions/upgrades has been removed from every draft building on desktop and mobile. The captured Current layout retains its original announcement for comparison. This draft introduces no building levels, costs, upgrades, timers, or progression promises. Gear subpanels are outside this review. Entry/ownership and return-city behavior remain owned by the current runtime.
 
 ## Royal Bailey artwork
 
 The built-in image-generation tool produced `art/royal-bailey-ink-wash-v1.png` as an opaque 1448 × 1086 PNG (4:3). It is copied intact from the generated source: no crop, stretching, recoloring, or moved building anchors. The final prompt and reference roles are recorded in [art/royal-bailey-prompt.md](art/royal-bailey-prompt.md). The preview alone consumes this file; existing runtime art and the optimized-asset manifest are unchanged.
 
 The fixed scene anchors remain Treasury **19% / 24%**, Great Hall **50% / 20%**, Barracks **81% / 25%**, Alehouse **19% / 57%**, Gatehouse **50% / 75%**, and Royal Stables **81% / 58%**, measured from the upper-left. Visual overlay review checks that each falls on its intended building, while browser checks verify the rendered marker centers and actual pointer selection. The full enclosure, open courtyard, and bottom entrance retain the original arrangement. Approval of this art candidate is still pending.
+
+## Great Hall artwork
+
+The first interior candidate is `art/great-hall-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. It keeps the original hall's raised throne area, long tables, arched windows, timber roof and right-hand hearth, redrawn with lighter stone and crisp ink outlines matching the Bailey. The exact prompt and reference roles are saved in [art/great-hall-prompt.md](art/great-hall-prompt.md).
+
+The generated file is copied intact. It fits the existing square preview without any layout changes. A draft-only artwork mapping leaves the other five interiors and captured Current layout unchanged. Great Hall still shows its existing role and **Not yet available**, with no Manage Gear action. Visual approval is pending.
 
 ## Source and isolation
 
@@ -53,6 +59,6 @@ The artwork pass additionally verifies an opaque 4:3 image, unchanged normalized
 
 At 844 × 390, the visible artwork width grows from about 241 to 365 CSS pixels (51%) compared with the previous draft, while keeping the same modal dimensions and 4:3 framing. No portrait layouts are part of this review.
 
-The latest detail refinement checks all six buildings at two desktop and four landscape sizes: no general announcement, centered square artwork, title/image/information/action order, all information within the visible pane, no detail scrolling, and 24 immediately visible Manage Gear controls clicked without any scrolling. The enlarged Royal Bailey scene remains intact.
+The latest detail refinement checks all six buildings at two desktop and four landscape sizes: no general announcement, centered square artwork, title/image/information/action order, all information within the visible pane, no detail scrolling, and 24 immediately visible Manage Gear controls clicked without any scrolling. These checks were repeated with the new Great Hall interior, alongside asset loading and original comparison checks. The enlarged Royal Bailey scene remains intact.
 
 Screenshots and measurements are kept locally under ignored `release-artifacts/inner-castle-overview/`. These checks cover a static layout draft, not authenticated gameplay or equipment operations. The normal `prepare-pr` workflow determines the required validation tier from the complete branch difference.

@@ -20,7 +20,7 @@ function update() {
   });
   document.getElementById("reviewNote").textContent = selection.layout === "current"
     ? "Existing overview captured from the local game fixture. Select any of the six buildings to compare its information."
-    : "Desktop and mobile landscape only · Select a hanging building sign. Building interiors remain the originals.";
+    : "Desktop and mobile landscape only · New Royal Bailey and Great Hall artwork. Select a hanging building sign.";
   preview.contentWindow?.postMessage({ type: "castle-overview-preview", layout: selection.layout }, location.origin);
   sizePreview();
 }

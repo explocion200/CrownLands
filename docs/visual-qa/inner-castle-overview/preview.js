@@ -4,6 +4,7 @@ let snapshot, selectedKey = "great-hall", toastTimer;
 const settings = { layout: new URLSearchParams(location.search).get("layout") === "current" ? "current" : "draft" };
 const ordinals = ["I", "II", "III", "IV", "V", "VI"];
 const draftHubArt = "docs/visual-qa/inner-castle-overview/art/royal-bailey-ink-wash-v1.png";
+const draftBuildingArt = { "great-hall": "docs/visual-qa/inner-castle-overview/art/great-hall-ink-wash-v1.png" };
 const mobileLandscape = matchMedia("(orientation: landscape) and (max-height: 550px)");
 const signFrame = `<svg class="bailey-sign-frame" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
   <path class="sign-hangers" d="M32 3v17M128 3v17M29 4h6m90 0h6"/>
@@ -31,7 +32,7 @@ function toast(message) {
 }
 function details(building) {
   return `<div class="bailey-building-heading"><span class="bailey-eyebrow">Selected building</span><h3>${icon(building.key)}${escapeText(building.label)}</h3></div>
-    <div class="bailey-building-image-space"><img class="bailey-building-art" src="${building.artSrc}" alt="${escapeText(building.label)} artwork" draggable="false"></div>
+    <div class="bailey-building-image-space"><img class="bailey-building-art" src="${draftBuildingArt[building.key] || building.artSrc}" alt="${escapeText(building.label)} artwork" draggable="false"></div>
     <div class="bailey-building-copy"><p class="bailey-role">${escapeText(building.role)}</p>
     <p class="bailey-status${building.characterRole ? " available" : ""}">${building.characterRole ? `${escapeText(building.characterRole)} gear and bonuses` : "Not yet available"}</p>
     ${building.newGear ? '<p class="bailey-new-note"><b aria-hidden="true">!</b> New gear</p>' : ""}</div>
