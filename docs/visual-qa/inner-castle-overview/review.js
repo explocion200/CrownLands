@@ -1,5 +1,11 @@
 "use strict";
 const preview = document.getElementById("preview");
+const requestedBuilding = new URLSearchParams(location.search).get("building");
+if (requestedBuilding) {
+  const previewUrl = new URL(preview.getAttribute("src"), location.href);
+  previewUrl.searchParams.set("building", requestedBuilding);
+  preview.src = previewUrl.href;
+}
 const canvas = document.getElementById("canvas");
 const selection = { layout: "draft", viewport: new URLSearchParams(location.search).get("viewport") === "landscape" ? "landscape" : "desktop" };
 const sizes = { landscape: [844, 390], desktop: [1440, 900] };
@@ -20,7 +26,7 @@ function update() {
   });
   document.getElementById("reviewNote").textContent = selection.layout === "current"
     ? "Existing overview captured from the local game fixture. Select any of the six buildings to compare its information."
-    : "Desktop and mobile landscape only · New Royal Bailey and Great Hall artwork. Select a hanging building sign.";
+    : "Desktop and mobile landscape only · New Royal Bailey, Great Hall and Treasury artwork. Select a hanging building sign.";
   preview.contentWindow?.postMessage({ type: "castle-overview-preview", layout: selection.layout }, location.origin);
   sizePreview();
 }

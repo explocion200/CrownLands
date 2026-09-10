@@ -4,7 +4,10 @@ let snapshot, selectedKey = "great-hall", toastTimer;
 const settings = { layout: new URLSearchParams(location.search).get("layout") === "current" ? "current" : "draft" };
 const ordinals = ["I", "II", "III", "IV", "V", "VI"];
 const draftHubArt = "docs/visual-qa/inner-castle-overview/art/royal-bailey-ink-wash-v1.png";
-const draftBuildingArt = { "great-hall": "docs/visual-qa/inner-castle-overview/art/great-hall-ink-wash-v1.png" };
+const draftBuildingArt = {
+  "great-hall": "docs/visual-qa/inner-castle-overview/art/great-hall-ink-wash-v1.png",
+  treasury: "docs/visual-qa/inner-castle-overview/art/treasury-ink-wash-v1.png"
+};
 const mobileLandscape = matchMedia("(orientation: landscape) and (max-height: 550px)");
 const signFrame = `<svg class="bailey-sign-frame" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
   <path class="sign-hangers" d="M32 3v17M128 3v17M29 4h6m90 0h6"/>
@@ -107,6 +110,8 @@ fetch("docs/visual-qa/inner-castle-overview/snapshot.json").then(response => {
   return response.json();
 }).then(async data => {
   snapshot = data;
+  const requestedBuilding = new URLSearchParams(location.search).get("building");
+  if (snapshot.buildings.some(building => building.key === requestedBuilding)) selectedKey = requestedBuilding;
   document.head.insertAdjacentHTML("beforeend", data.styles.join(""));
   const css = document.createElement("link"); css.rel = "stylesheet"; css.href = "docs/visual-qa/inner-castle-overview/draft.css"; document.head.append(css);
   await Promise.all([...document.querySelectorAll('link[rel="stylesheet"]')].map(link => new Promise((resolve, reject) => {
