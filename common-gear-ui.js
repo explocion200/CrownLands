@@ -761,7 +761,7 @@ function renderCommonGearBuilding(buildingId) {
   if (existingBag) commonGearBagScrollTop = existingBag.scrollTop;
   const viewModel = createCommonGearViewModel(buildingId);
   if (!viewModel) return false;
-  modal.classList.remove("inner-castle-modal");
+  modal.classList.remove("inner-castle-modal", "bailey-modal");
   modal.classList.add("common-gear-building-modal");
   modal.dataset.commonGearBuildingId = buildingId;
   modalTitle.textContent = `${building.name} — ${building.characterRole}`;
@@ -836,19 +836,48 @@ function getInnerCastleBuilding(buildingKey) {
   return INNER_CASTLE_BUILDINGS.find(building => building.key === buildingKey) || null;
 }
 
+const INNER_CASTLE_SIGN_FRAME = `<svg class="bailey-sign-frame" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <path class="sign-hangers" d="M32 3v17M128 3v17M29 4h6m90 0h6"/>
+  <path class="sign-board" d="M12 15h136l-2 7 9 6-6 8 4 12-9 8H16l-9-8 4-12-6-8 9-6Z"/>
+  <path class="sign-inlay" d="M20 20h120l-2 5 8 5-5 7 3 9-4 5H20l-4-5 3-9-5-7 8-5Z"/>
+  <path class="sign-grain" d="M22 25h28m-25 4h18m63 17h29m-13-21h14M29 47h13m17-27h37M54 52h54"/>
+  <circle class="sign-rivet" cx="24" cy="35" r="2"/><circle class="sign-rivet" cx="136" cy="35" r="2"/>
+</svg>`;
+const INNER_CASTLE_ICON_DRAWINGS = {
+  treasury: '<path class="surface" d="M4 13h24v15H4ZM4 13V8l4-4h16l4 4v5Z"/><path class="shadow" d="M23 5h4v23h-4Z"/><path d="M4 13h24M9 5v23m14-23v23"/><path class="ink" d="M13 11h6v8h-6Z"/><path class="fine" d="M6 23h2m4 2h8m-7-4h3"/>',
+  "great-hall": '<path class="surface" d="M3 28V9h3V5h4v4h3V5h6v4h3V5h4v4h3v19Z"/><path class="shadow" d="M24 10h5v18h-5ZM3 25h26v3H3Z"/><path d="M11 10v17M21 10v17M3 16h8m10 0h8"/><path class="ink" d="M13 27v-8c0-5 6-5 6 0v8ZM6 11h2v3H6Zm18 0h2v3h-2Z"/><path class="fine" d="M5 21h4m14 0h4M15 11h2"/>',
+  barracks: '<path class="surface" d="M8 18v7l8 5 8-5v-7ZM6 16 8 9q3-6 8-6t8 6l2 7Z"/><path class="shadow" d="M18 4q6 3 7 12h-6ZM19 20h5v5l-8 5v-5Z"/><path class="ink" d="m5 14 22 1 3 3-1 2H3l-1-2ZM11 21h4v2h-4Zm6 0h4v2h-4Z"/><path d="m16 5-1 8m1 8v5"/><path class="fine" d="m10 25 2 2m7 0 2-2"/>',
+  alehouse: '<path class="surface" d="M5 7h17l-1 22H6ZM22 10h5l2 3v9l-3 3h-5v-4h3l1-2v-4l-1-1h-2Z"/><path class="shadow" d="M17 8h5l-1 21h-5Z"/><path d="M5 11h17M6 25h15M10 12v12m7-12v12"/><path class="surface" d="M4 7q0-5 5-4 3-3 6 0 6-1 8 4Z"/><path class="fine" d="m12 15 1 6m-6-3 1 3"/>',
+  gatehouse: '<path class="surface" d="M3 28V8h3V4h4v4h3V5h6v3h3V4h4v4h3v20Z"/><path class="shadow" d="M25 9h4v19h-4Z"/><path d="M11 9v18m10-18v18M3 17h8m10 0h8"/><path class="surface" d="M12 28V18a4 4 0 0 1 8 0v10Z"/><path d="M14 17v11m4-11v11m-6-7h8m-8 4h8"/><path class="fine" d="M5 11h3m16 0h3M5 22h4m14 0h4"/>',
+  "royal-stables": '<path class="surface" d="M9 3C-1 12 3 29 16 30 29 29 33 12 23 3l-5 3c8 7 5 17-2 18C9 23 6 13 14 6Z"/><path class="shadow" d="M25 7c7 17-4 24-13 22 14 1 17-14 10-23Z"/><path d="m9 7 2 1m-5 5 2 1m-2 6 2-1m1 7 1-2m11-17 2-1m1 7 2-1m-2 6 2 1m-4 5 1 2"/>'
+};
+function renderInnerCastleIcon(key) { return `<svg class="bailey-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${INNER_CASTLE_ICON_DRAWINGS[key] || ""}</svg>`; }
+
+// Keep one Back control, moving it into the header on short landscape screens.
+let innerCastleLandscapeQuery = null;
+function arrangeInnerCastleControls() {
+  if (!modal.classList.contains("bailey-modal")) return;
+  const back = modalBody.querySelector("[data-inner-castle-back]");
+  const footer = modalBody.querySelector(".bailey-footer");
+  if (!back || !footer) return;
+  if (innerCastleLandscapeQuery.matches) {
+    modalBody.querySelector(".bailey-header").insertBefore(back, modalBody.querySelector(".bailey-close-space"));
+  } else {
+    footer.append(back);
+  }
+  footer.hidden = innerCastleLandscapeQuery.matches;
+}
+
 function renderInnerCastlePreview(building) {
   if (!building) return "";
   const gearBuilding = COMMON_GEAR?.BUILDINGS?.[building.key];
-  return `
-    <img class="inner-castle-preview-art" src="${building.artSrc}" alt="${escapeHtml(building.label)} placeholder artwork" loading="lazy" decoding="async" draggable="false" />
-    <div class="inner-castle-preview-copy">
-      <strong>${escapeHtml(building.label)}</strong>
-      <span>${escapeHtml(building.role)}</span>
-      <small>${gearBuilding ? `${escapeHtml(gearBuilding.characterRole)} gear and bonuses` : "Not yet available"}</small>
-      ${gearBuilding ? `<button class="inner-castle-manage-gear" type="button" data-manage-common-gear="${escapeHtml(building.key)}">Manage Gear</button>` : ""}
-    </div>`;
+  return `<div class="bailey-building-heading"><span class="bailey-eyebrow">Selected building</span><h3>${renderInnerCastleIcon(building.key)}${escapeHtml(building.label)}</h3></div>
+    <div class="bailey-building-image-space"><img class="bailey-building-art" src="${building.artSrc}" alt="${escapeHtml(building.label)} artwork" decoding="async" draggable="false"></div>
+    <div class="bailey-building-copy"><p class="bailey-role">${escapeHtml(building.role)}</p>
+    <p class="bailey-status${gearBuilding?.characterRole ? " available" : ""}">${gearBuilding?.characterRole ? `${escapeHtml(gearBuilding?.characterRole)} gear and bonuses` : "Not yet available"}</p>
+    ${state?.gear?.newMarkers?.[building.key] ? '<p class="bailey-new-note"><b aria-hidden="true">!</b> New gear</p>' : ""}</div>
+    ${gearBuilding?.characterRole ? `<button type="button" class="bailey-manage" data-manage-common-gear="${building.key}">Manage Gear <span aria-hidden="true">→</span></button>` : ""}`;
 }
-
 function bindInnerCastlePreviewActions() {
   modalBody.querySelector("[data-manage-common-gear]")?.addEventListener("click", event => {
     showCommonGearBuilding(event.currentTarget.dataset.manageCommonGear);
@@ -860,7 +889,7 @@ function clearInnerCastleModalState() {
   delete modal.dataset.innerCastleCityId;
   delete modal.dataset.innerCastleReturnCityId;
   delete modal.dataset.commonGearBuildingId;
-  modal.classList.remove("inner-castle-modal", "common-gear-building-modal");
+  modal.classList.remove("inner-castle-modal", "bailey-modal", "common-gear-building-modal");
   commonGearMergeConfirmOpen = false;
   commonGearBagFilterOpen = false;
   commonGearPendingFocusSelector = "";
@@ -878,7 +907,10 @@ function selectInnerCastleBuilding(buildingKey) {
     button.setAttribute("aria-pressed", selected ? "true" : "false");
   });
   const preview = modalBody.querySelector("#innerCastlePreview");
-  if (preview) preview.innerHTML = renderInnerCastlePreview(building);
+  if (preview) {
+    preview.innerHTML = renderInnerCastlePreview(building);
+    if (innerCastleLandscapeQuery?.matches) preview.closest(".bailey-detail-tray").scrollTop = 0;
+  }
   bindInnerCastlePreviewActions();
 }
 
@@ -892,43 +924,23 @@ function renderInnerCastle(cityId) {
     || INNER_CASTLE_BUILDINGS[0];
   innerCastleSelectedBuildingKey = selectedBuilding.key;
   modalTitle.textContent = `${city.name} — Inner Castle`;
-  modalBody.innerHTML = `
-    <section class="inner-castle-shell" aria-label="${escapeHtml(city.name)} Inner Castle">
-      <p class="inner-castle-intro">Explore the Royal Bailey. Building functions and upgrades will arrive in a future update.</p>
-      <div class="inner-castle-layout">
-        <div class="inner-castle-stage">
-          <div class="inner-castle-scene">
-            <img class="inner-castle-hub-art" src="${INNER_CASTLE_HUB_ART_SRC}" alt="The Royal Bailey inside ${escapeHtml(city.name)}" loading="lazy" decoding="async" draggable="false" />
-            <div class="inner-castle-hotspots" aria-label="Inner Castle buildings">
-              ${INNER_CASTLE_BUILDINGS.map(building => `
-                <button
-                  class="inner-castle-hotspot${building.key === selectedBuilding.key ? " selected" : ""}"
-                  type="button"
-                  data-inner-castle-building="${building.key}"
-                  aria-controls="innerCastlePreview"
-                  aria-pressed="${building.key === selectedBuilding.key ? "true" : "false"}"
-                  aria-label="Preview ${escapeHtml(building.label)}"
-                  style="--hotspot-left:${building.hotspot.left}%;--hotspot-top:${building.hotspot.top}%;"
-                >
-                  <span class="inner-castle-hotspot-plaque">
-                    <span class="inner-castle-hotspot-title">${escapeHtml(building.label)}</span>
-                    ${state?.gear?.newMarkers?.[building.key] ? `<b class="inner-castle-hotspot-alert" aria-label="New gear">!</b>` : ""}
-                  </span>
-                </button>`).join("")}
-            </div>
-          </div>
-        </div>
-        <aside class="inner-castle-preview-tray" aria-label="Selected building preview">
-          <div id="innerCastlePreview" class="inner-castle-preview" role="status" aria-live="polite" aria-atomic="true">
-            ${renderInnerCastlePreview(selectedBuilding)}
-          </div>
-          <button class="inner-castle-back-btn" type="button" data-inner-castle-back>
-            <span aria-hidden="true">${renderCrownlandsIcon("back")}</span>
-            Back to City Details
-          </button>
-        </aside>
-      </div>
-    </section>`;
+  modal.classList.add("bailey-modal");
+  modalBody.innerHTML = `<section class="bailey-shell" aria-labelledby="baileyTitle">
+    <header class="bailey-header"><div class="bailey-seal">${renderInnerCastleIcon("great-hall")}</div><div><p>${escapeHtml(city.name)} <span>· Main City</span></p><h2 id="baileyTitle">Inner Castle</h2></div><span class="bailey-close-space" aria-hidden="true"></span></header>
+    <div class="bailey-content"><section class="bailey-overview" aria-labelledby="baileySceneTitle">
+      <div class="bailey-section-heading"><h3 id="baileySceneTitle">The Royal Bailey</h3><span>Select a building</span></div>
+      <div class="bailey-map-space"><div class="bailey-scene"><img src="${INNER_CASTLE_HUB_ART_SRC}" alt="The Royal Bailey inside ${escapeHtml(city.name)}" draggable="false">
+      ${INNER_CASTLE_BUILDINGS.map(building => `<button class="bailey-pin" type="button" data-inner-castle-building="${building.key}" aria-label="Preview ${escapeHtml(building.label)}${state?.gear?.newMarkers?.[building.key] ? "; new gear" : ""}" aria-controls="innerCastlePreview" aria-pressed="${building.key === selectedBuilding.key}" style="--x:${building.hotspot.left}%;--y:${building.hotspot.top}%">${INNER_CASTLE_SIGN_FRAME}<span class="bailey-pin-name">${escapeHtml(building.label)}</span>${state?.gear?.newMarkers?.[building.key] ? '<b class="bailey-alert" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div></div>
+      <nav class="bailey-directory" aria-label="Inner Castle buildings">${INNER_CASTLE_BUILDINGS.map((building, index) => `<button type="button" data-inner-castle-building="${building.key}" aria-controls="innerCastlePreview" aria-pressed="${building.key === selectedBuilding.key}"><span class="bailey-number" aria-hidden="true">${["I", "II", "III", "IV", "V", "VI"][index]}</span>${renderInnerCastleIcon(building.key)}<span class="bailey-label">${escapeHtml(building.label)}</span>${state?.gear?.newMarkers?.[building.key] ? '<b class="bailey-directory-alert" aria-label="New gear">!</b>' : ""}</button>`).join("")}</nav>
+    </section><aside class="bailey-detail-tray" aria-label="Selected building preview"><div id="innerCastlePreview" aria-live="polite" aria-atomic="true">${renderInnerCastlePreview(selectedBuilding)}</div></aside></div>
+    <footer class="bailey-footer"><button type="button" data-inner-castle-back><span aria-hidden="true">←</span> Back to City Details</button></footer>
+  </section>`;
+  if (!innerCastleLandscapeQuery) {
+    innerCastleLandscapeQuery = window.matchMedia("(orientation: landscape) and (max-height: 550px)");
+    innerCastleLandscapeQuery.addEventListener("change", arrangeInnerCastleControls);
+  }
+  arrangeInnerCastleControls();
+  bindInnerCastlePreviewActions();
 
   modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
     button.addEventListener("click", () => selectInnerCastleBuilding(button.dataset.innerCastleBuilding));

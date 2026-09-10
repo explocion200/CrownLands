@@ -14,7 +14,7 @@ const rootFiles = [
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "battle-reports-guide.html", "clans-rallies-guide.html",
   "common-gear.js", "common-gear-ui.css", "common-gear-ui.js", "economy-config.js", "firebase-config.js",
-  "daily-rewards.css", "city-details-ui.css", "city-details-ui.js", "city-list-ui.css",
+  "daily-rewards.css", "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",
@@ -65,7 +65,18 @@ const productionHeraldryManifest = {
 };
 fs.writeFileSync(productionHeraldryManifestPath, `${JSON.stringify(productionHeraldryManifest, null, 2)}\n`, "utf8");
 copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
-copyDirectoryFiles("assets/optimized", relativePath => !relativePath.endsWith("manifest.json"));
+// Prior Inner Castle derivatives remain in the repository for the historical UI comparison.
+// Ship only the seven current manifest entries, without duplicating that art in the client.
+const innerCastleRuntimeArt = new Set(
+  JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8")).assets
+    .filter(asset => asset.category === "inner-castle")
+    .map(asset => asset.output),
+);
+copyDirectoryFiles("assets/optimized", relativePath => {
+  const normalized = relativePath.replace(/\\/g, "/");
+  return !normalized.endsWith("manifest.json")
+    && (!normalized.startsWith("assets/optimized/inner-castle-") || innerCastleRuntimeArt.has(normalized));
+});
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
 copy("assets/worlds/world_01/map-manifest.json");
 copyDirectoryFiles("assets/worlds/core-expansion-v1", relativePath => (

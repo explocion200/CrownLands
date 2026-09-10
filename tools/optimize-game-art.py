@@ -74,7 +74,7 @@ ASSETS = (
     ("castle-keep", "assets/castles/keep.png", 256, 256, 92, "city-object"),
     ("castle-castle", "assets/castles/castle.png", 256, 256, 92, "city-object"),
     ("castle-city", "assets/castles/city.png", 256, 256, 92, "city-object"),
-    ("inner-castle-hub", "assets/inner-castle/inner-castle-hub.png", 1280, 960, 84, "inner-castle"),
+    ("inner-castle-hub", "assets/inner-castle/inner-castle-hub.png", 1280, 960, 76, "inner-castle"),
     ("inner-castle-treasury", "assets/inner-castle/treasury.png", 512, 512, 84, "inner-castle"),
     ("inner-castle-great-hall", "assets/inner-castle/great-hall.png", 512, 512, 84, "inner-castle"),
     ("inner-castle-barracks", "assets/inner-castle/barracks.png", 512, 512, 84, "inner-castle"),

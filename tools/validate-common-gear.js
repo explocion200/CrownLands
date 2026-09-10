@@ -331,7 +331,7 @@ const economyResultSection = game.slice(
   game.indexOf("function mergeServerEconomyRefreshOptions")
 );
 assert.doesNotMatch(economyResultSection, /patch\.gear/, "Economy settlement must not reference an out-of-scope profile patch.");
-const css = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}\n${read("crownlands-palette.css")}`;
+const css = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}\n${read("crownlands-palette.css")}\n${read("inner-castle-ui.css")}`;
 assert.match(
   css,
   /\.common-gear-box-modal\.modal,[\s\S]{0,120}\.common-gear-building-modal\.modal[\s\S]{0,180}width: min\(96vw, 980px\);[\s\S]{0,120}max-height: none;/,
@@ -422,7 +422,7 @@ for (const [selector, label] of [
   ["\\.shop-item-image", "Shop item"],
   ["\\.inventory-slot-image", "Bag slot"],
   ["\\.inventory-selection-image", "selected Bag item"],
-  ["\\.inner-castle-preview-art", "Inner Castle preview"],
+  ["\\.bailey-building-art", "Inner Castle preview"],
 ]) {
   assert.match(
     css,
