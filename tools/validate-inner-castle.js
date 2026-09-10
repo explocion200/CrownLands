@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
 const gameSource = `${read("game.js")}\n${read("common-gear-ui.js")}\n${read("city-details-ui.js")}`;
 const stylesSource = `${read("styles.css")}\n${read("interface-theme.css")}\n${read("common-gear-ui.css")}`;
+const baileyStyles = read("inner-castle-ui.css");
 const indexSource = read("index.html");
 const workerSource = read("service-worker.js");
 const serverSource = read("functions/index.js");
@@ -333,21 +334,19 @@ assert.match(
   "Returning to city details must restore focus to the Inner Castle entry action."
 );
 
-const renderedPlaqueStart = renderSource.indexOf('<span class="inner-castle-hotspot-plaque">');
-const renderedTitleStart = renderSource.indexOf('<span class="inner-castle-hotspot-title">', renderedPlaqueStart);
-const renderedTitleEnd = renderSource.indexOf("</span>", renderedTitleStart);
-const renderedAlertStart = renderSource.indexOf("inner-castle-hotspot-alert", renderedPlaqueStart);
-const renderedPlaqueEnd = renderSource.indexOf("</button>", renderedTitleEnd + 7);
-assert.ok(renderedPlaqueStart >= 0, "Inner Castle hotspots must render an unclipped plaque wrapper.");
-assert.ok(renderedTitleStart > renderedPlaqueStart, "The clipped title must be inside the plaque wrapper.");
-assert.ok(renderedTitleEnd > renderedTitleStart, "The Inner Castle title span is malformed.");
-assert.ok(renderedAlertStart > renderedTitleEnd, "The alert must be a sibling after the clipped title, not a descendant of it.");
-assert.ok(renderedPlaqueEnd > renderedAlertStart, "The alert must remain inside the unclipped plaque wrapper.");
-assert.doesNotMatch(
-  renderSource.slice(renderedTitleStart, renderedTitleEnd),
-  /inner-castle-hotspot-alert/,
-  "The clipped title must never contain the Inner Castle alert."
-);
+const signStart = renderSource.indexOf('class="bailey-pin"');
+const titleStart = renderSource.indexOf('class="bailey-pin-name"', signStart);
+const titleEnd = renderSource.indexOf("</span>", titleStart);
+const alertStart = renderSource.indexOf('class="bailey-alert"', titleEnd);
+assert.ok(signStart >= 0 && titleStart > signStart && titleEnd > titleStart && alertStart > titleEnd,
+  "New-gear badges must remain siblings of the real-text hanging sign labels.");
+assert.match(renderSource, /INNER_CASTLE_SIGN_FRAME/, "The hub must render the approved decorative hanging signs.");
+assert.match(renderSource, /bailey-directory/, "Desktop must retain its six-building directory.");
+assert.doesNotMatch(renderSource, /Explore the Royal Bailey|Building functions and upgrades will arrive/,
+  "The removed future-update announcement must not return.");
+assert.match(previewSource, /bailey-building-image-space[\s\S]*bailey-building-copy[\s\S]*bailey-manage/,
+  "The preview must stack the illustration, existing information, then Manage Gear.");
+
 assert.match(previewSource, /data-manage-common-gear/, "Supported Inner Castle buildings must open their Common Gear screen.");
 assert.match(previewSource, /Not yet available/, "Great Hall and Alehouse must remain explicitly unavailable.");
 
@@ -379,7 +378,7 @@ const featureSource = [guardSource, openSource, renderSource, previewSource, sel
 assert.doesNotMatch(
   featureSource,
   /\b(?:saveGame|flushOnlineSave|getOnlineApi|callServerFunction|changeMainCity|spendGold|deductGold)\s*\(/,
-  "The placeholder Inner Castle must not persist state or call economy/server actions."
+  "The Inner Castle overview must not persist state or call economy/server actions."
 );
 assert.doesNotMatch(
   featureSource,
@@ -393,94 +392,44 @@ for (const [label, source] of [["browser economy config", browserEconomySource],
   assert.doesNotMatch(source, /inner[\s_-]*castle/i, `${label} must not contain presentation-only Inner Castle data.`);
 }
 
-assert.match(stylesSource, /\.inner-castle-modal\b/, "The expanded Inner Castle modal styles are missing.");
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot\s*\{(?=[^}]*\bmin-width\s*:\s*44px\s*;)(?=[^}]*\bmin-height\s*:\s*44px\s*;)[^}]*\}/s,
-  "Inner Castle hotspots must retain a minimum 44px by 44px interaction target."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot-plaque\s*\{(?=[^}]*\bposition\s*:\s*relative)(?=[^}]*\bwidth\s*:\s*clamp\()(?=[^}]*\boverflow\s*:\s*visible)(?=[^}]*\bclip-path\s*:\s*none)[^}]*\}/s,
-  "Inner Castle hotspots must use an unclipped, width-constrained plaque wrapper."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot-title\s*\{(?=[^}]*\bwidth\s*:\s*100%)(?=[^}]*\bheight\s*:\s*100%)(?=[^}]*\bborder\s*:)(?=[^}]*\bclip-path\s*:\s*polygon\()(?=[^}]*\bbackground\s*:)[^}]*\}/s,
-  "Inner Castle hotspot titles must retain the clipped polygon plaque face."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot\.selected\s*>\s*\.inner-castle-hotspot-plaque\s*>\s*\.inner-castle-hotspot-title\s*\{(?=[^}]*\bcolor\s*:)(?=[^}]*\bbackground\s*:)[^}]*\}/s,
-  "The selected Inner Castle hotspot must continue styling its title face."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot:hover\s*>\s*\.inner-castle-hotspot-plaque\s*\{(?=[^}]*\btransform\s*:)(?=[^}]*\bfilter\s*:)[^}]*\}/s,
-  "Inner Castle hotspot hover depth must remain on the plaque wrapper."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot:focus-visible\s*>\s*\.inner-castle-hotspot-plaque\s*>\s*\.inner-castle-hotspot-title\s*\{(?=[^}]*\boutline\s*:)(?=[^}]*\boutline-offset\s*:)[^}]*\}/s,
-  "Inner Castle hotspot keyboard focus must remain visible on the title face."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot:active\s*>\s*\.inner-castle-hotspot-plaque,[\s\S]*?\.inner-castle-hotspot\.selected:active\s*>\s*\.inner-castle-hotspot-plaque\s*\{(?=[^}]*\btransform\s*:)[^}]*\}/s,
-  "Inner Castle hotspot pressed depth must remain on the plaque wrapper."
-);
-assert.match(
-  stylesSource,
-  /#modal\.inner-castle-modal\s+\.inner-castle-hotspot[^}]*\bbackground\s*:\s*transparent\s*!important\s*;/s,
-  "Inner Castle hotspot buttons must override the global parchment control backplate."
-);
-assert.match(
-  stylesSource,
-  /#modal\.inner-castle-modal\s+\.inner-castle-hotspot-title\s*\{(?=[^}]*\bcolor\s*:\s*#[0-9a-f]{6}\s*!important)(?=[^}]*\bbackground\s*:)[^}]*\}/is,
-  "Default Inner Castle plaques must retain high-contrast light text on dark wood."
-);
-assert.match(
-  stylesSource,
-  /#modal\.inner-castle-modal\s+:is\([^)]*\.inner-castle-hotspot\.selected[^)]*\.inner-castle-hotspot\[aria-pressed=["']true["']\][^)]*\)\s+\.inner-castle-hotspot-title\s*\{(?=[^}]*\bcolor\s*:\s*#[0-9a-f]{6}\s*!important)(?=[^}]*\bbackground\s*:)[^}]*\}/is,
-  "Selected Inner Castle plaques must retain high-contrast light text on burgundy."
-);
-assert.match(
-  stylesSource,
-  /\.inner-castle-hotspot-alert\s*\{(?=[^}]*\bbox-sizing\s*:\s*border-box)(?=[^}]*\btop\s*:\s*-6px)(?=[^}]*\bright\s*:\s*-20px)(?=[^}]*\bwidth\s*:\s*16px)(?=[^}]*\bheight\s*:\s*16px)(?=[^}]*\boverflow\s*:\s*visible)(?=[^}]*\bclip-path\s*:\s*none)(?=[^}]*\bborder-radius\s*:\s*50%)[^}]*\}/s,
-  "Inner Castle new-gear notifications must render as fully visible 16px circular badges outside the title."
-);
-assert.doesNotMatch(stylesSource, /\.inner-castle-hotspot-alert\s*\{[^}]*\binset\s*:\s*-6px\s+-6px/s, "The clipped legacy alert inset must not return.");
-assert.match(
-  gameSource,
-  /state\?\.gear\?\.newMarkers\?\.\[building\.key\][\s\S]*inner-castle-hotspot-alert[\s\S]*New gear/,
-  "Inner Castle notification badges must remain driven by the existing newMarkers state."
-);
-assert.doesNotMatch(
-  gameSource,
-  /class="common-gear-alert"\s+aria-label="New gear"/,
-  "Inner Castle markers must not reuse the globally paneled Common Gear alert class."
-);
-
-const clamp = (minimum, value, maximum) => Math.min(maximum, Math.max(minimum, value));
-const alertSize = 16;
-const alertGap = 4;
-const responsiveGeometry = [
-  { name: "desktop 1200x800", viewportWidth: 1200, sceneWidth: 640, plaqueWidth: clamp(72, 1200 * .08, 96), plaqueHeight: 30 },
-  { name: "mobile landscape 844x390", viewportWidth: 844, sceneWidth: 390 * 4 / 3 - 160, plaqueWidth: clamp(58, 844 * .11, 80), plaqueHeight: 28 },
-  { name: "narrow landscape 540x320", viewportWidth: 540, sceneWidth: 320 * 4 / 3 - 128, plaqueWidth: clamp(58, 540 * .11, 80), plaqueHeight: 28 },
-];
-for (const geometry of responsiveGeometry) {
-  const titleRight = geometry.plaqueWidth;
-  const alertLeft = geometry.plaqueWidth + alertGap;
-  const alertRightFromHotspot = geometry.plaqueWidth / 2 + alertGap + alertSize;
-  const availableRightSpace = geometry.sceneWidth * (1 - HOTSPOTS.get("royal-stables").left / 100);
-  const alertTopFromScene = geometry.sceneWidth * .75 * (HOTSPOTS.get("great-hall").top / 100) - geometry.plaqueHeight / 2 - 6;
-  assert.equal(alertLeft - titleRight, alertGap, `${geometry.name} must keep a 4px gap between title and alert.`);
-  assert.ok(alertLeft >= titleRight, `${geometry.name} alert must not overlap title text.`);
-  assert.ok(alertRightFromHotspot < availableRightSpace, `${geometry.name} must keep the full rightmost alert inside the scene.`);
-  assert.ok(alertTopFromScene >= 0, `${geometry.name} must keep the full topmost alert inside the scene.`);
+assert.match(baileyStyles, /#modal\.bailey-modal button\s*\{[^}]*min-height: 44px;[^}]*min-width: 44px;/,
+  "All hub controls must retain at least 44px touch targets.");
+assert.match(baileyStyles, /\.bailey-pin\s*\{[^}]*left: var\(--x\); top: var\(--y\);/,
+  "Building signs must use the registry's fixed percentage anchors.");
+assert.match(baileyStyles, /\.bailey-scene\s*\{[^}]*aspect-ratio: 4\/3;/,
+  "The approved Bailey must retain its full 4:3 composition.");
+assert.match(baileyStyles, /button:focus-visible\s*\{[^}]*outline:/,
+  "Keyboard focus must remain visible on hub controls.");
+assert.match(baileyStyles, /\.bailey-pin \.bailey-pin-name\s*\{[^}]*color: #fff0ce !important;/,
+  "Hanging sign lettering must retain its light-on-dark contrast.");
+assert.match(baileyStyles, /\.bailey-pin\[aria-pressed=true\]\s*\{[^}]*--sign-board: #752f35;/,
+  "Selected hanging signs must retain their burgundy state.");
+assert.match(baileyStyles, /\.bailey-alert\s*\{[^}]*top: 0; right: 0;/,
+  "New-gear markers must remain inside the sign target and outside its label.");
+assert.match(baileyStyles, /#innerCastlePreview:has\(\.bailey-manage\)\s*\{[^}]*grid-template-rows: auto minmax\(0,1fr\) auto 44px;/,
+  "Mobile landscape must reserve visible space for Manage Gear before sizing the illustration.");
+assert.match(baileyStyles, /@media \(orientation: landscape\) and \(max-height: 550px\)/,
+  "Short landscape must use the approved compact layout.");
+assert.doesNotMatch(baileyStyles, /orientation:\s*portrait/, "This update must not introduce a portrait game layout.");
+const arrangeSource = extractFunction(gameSource, "arrangeInnerCastleControls");
+assert.match(arrangeSource, /insertBefore\(back,/, "Mobile landscape must move Back into the header.");
+assert.match(arrangeSource, /footer\.append\(back\)/, "Desktop must restore the same Back control to the footer.");
+assert.match(arrangeSource, /classList\.contains\("bailey-modal"\)/, "Viewport changes must not alter unrelated modals.");
+assert.match(cleanupSource, /classList\.remove\([^)]*"bailey-modal"/, "Closing the hub must remove its isolated theme.");
+assert.match(extractFunction(gameSource, "renderCommonGearBuilding"), /classList\.remove\([^)]*"bailey-modal"/,
+  "Opening equipment must remove the hub theme from the shared dialog.");
+assert.match(renderSource, /state\?\.gear\?\.newMarkers\?\.\[building\.key\][\s\S]*bailey-alert/,
+  "Hanging sign notifications must use the existing gear state.");
+assert.match(indexSource, /inner-castle-ui\.css\?v=20260910-inner-castle-r1/, "The approved hub stylesheet must be loaded by the game.");
+assert.ok(read("tools/build-production-client.js").includes('"inner-castle-ui.css"'),
+  "The production artifact must include the isolated hub stylesheet.");
+for (const building of [{key: "royal-bailey", source: "inner-castle-hub"}, ...BUILDINGS.map(building => ({key: building.key, source: building.key}))]) {
+  assert.ok(fs.readFileSync(path.join(root, "assets/inner-castle", building.source + ".png"))
+    .equals(fs.readFileSync(path.join(root, "docs/visual-qa/inner-castle-overview/art", building.key + "-ink-wash-v1.png"))),
+    building.key + " must use the approved artwork intact as its source master.");
 }
 
+// Keep the historical alert fixture usable as a comparison of the previous UI.
 for (const building of BUILDINGS) {
   assert.match(
     visualQaSource,
@@ -520,4 +469,4 @@ assert.match(
   "The Inner Castle validator is not registered in the Functions test chain."
 );
 
-console.log("Validated the six-building Inner Castle hub, Profile Overview entry, unclipped alert geometry at desktop and two landscape widths, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");
+console.log("Validated the six-building Inner Castle hub, Profile Overview entry, approved hanging signs, landscape control placement, intact source artwork, four server-authoritative gear screens, access guard, modal lifecycle, artwork delivery, and cache tags.");

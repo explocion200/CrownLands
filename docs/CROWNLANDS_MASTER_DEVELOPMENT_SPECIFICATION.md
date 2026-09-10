@@ -969,6 +969,17 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 - Movement HUD, Reports, Chat, and modal layers must stack predictably.
 - Reduced-motion and performance-sensitive behavior must be respected where animation exists.
 
+### Confirmed Inner Castle overview presentation
+
+- The approved overview uses parchment, muted moss, dark ink, and medieval engraved symbols. Desktop pairs the full Royal Bailey scene and six-building directory with a selected-building pane; the window is capped at 1040 × 790 pixels and fits the viewport.
+- The Royal Bailey and all six interiors follow the approved illustrated map direction: thin umber outlines, restrained hatching, pale stone, ochre timber, olive vegetation, burgundy pennants, and subtle paper texture. Source artwork remains intact; the browser uses optimized WebP derivatives.
+- The six decorative hanging signs retain their established percentage anchors: Treasury 19/24, Great Hall 50/20, Barracks 81/25, Alehouse 19/57, Gatehouse 50/75, and Royal Stables 81/58. Labels remain accessible HTML text over decorative SVG boards; touch targets remain at least 44 pixels high.
+- Mobile landscape places Back to City Details in the top bar beside Close. It shows the full 4:3 Bailey and a right-hand pane with the building name, centered square illustration, existing information, then Manage Gear where available. Image size yields to text and action space so the information and Manage Gear are visible without scrolling at the reviewed landscape sizes. Desktop restores the same Back control to its footer. Portrait is not a design target.
+- The generic future-update announcement is removed. Treasury, Barracks, Gatehouse, and Royal Stables retain their existing officer gear actions and new-gear indicators. Great Hall and Alehouse retain their descriptions and Not yet available status. This presentation introduces no new building functions, upgrades, costs, or progression.
+- Existing entry rules remain: only owned-city details show the shortcut, it opens the player's Main City, and Back returns to the inspected city. The Profile shortcut continues to support an off-map Main City. Equipment subpanels and server authority are unchanged.
+
+Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction and runtime integration were confirmed on 10 September 2026. Merge and deployment require separate authorization and verification. Review and validation details: [Inner Castle overview](./visual-qa/inner-castle-overview/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

@@ -1,30 +1,27 @@
-# Inner Castle overview — design draft
+# Inner Castle overview — approved presentation
 
-Status: **draft for visual review**. No runtime integration, confirmed specification change, merge, or deployment is included. This standalone folder is excluded from the production client build.
+Status: **runtime integration on the feature branch**. The user approved the layout and seven illustrations, then requested integration on 10 September 2026. Merge and deployment remain separate steps; this document does not establish a live release.
 
 ## Review
 
-Use the repository's local preview server (`node tools/map-benchmark/start-server.js 61703`) and open <http://127.0.0.1:61703/docs/visual-qa/inner-castle-overview/index.html>.
+Run `node tools/map-benchmark/start-server.js 61703` and open <http://127.0.0.1:61703/docs/visual-qa/inner-castle-overview/index.html>.
 
-For the latest Royal Stables candidate, open <http://127.0.0.1:61703/docs/visual-qa/inner-castle-overview/index.html?viewport=landscape&building=royal-stables&review=royal-stables-v1>. All six interiors now have illustrated candidates ready for review as a set. The optional `building` parameter selects an existing building in either comparison; unrecognized values fall back to Great Hall.
+The standalone comparison retains **Parchment draft / Current layout** and **Desktop / Mobile landscape**. The optional `building` query selects any of the six registered building keys; unknown values fall back to Great Hall. Its controls remain inert, and the synthetic Treasury new-gear marker is for visual review only. Portrait is not supported.
 
-Switch between **Parchment draft / Current layout** and **Desktop / Mobile landscape**. These are the only supported design targets; portrait previews and portrait-specific layout rules have been removed, following the user's correction and Master Specification Section 17. Select any of the six buildings using the scene signs or desktop directory. Selection is preserved when comparing versions. Manage Gear, Back to City Details, and Close explain their game behavior without leaving the preview or changing an account. The Treasury has a synthetic new-gear marker to review its presentation.
+The integrated game uses `common-gear-ui.js`, the scoped `inner-castle-ui.css`, and the existing `game.js` building registry. The production build includes the new stylesheet; deployment stamping gives scripts and styles the commit's cache version. The stylesheet uses the existing network-first CSS cache, and illustrations use content-hashed runtime-cached WebP assets. This preserves the installation and optimized-art budgets.
 
-## Proposed presentation
+## Approved design
 
-- Parchment, muted moss, dark ink, fine rules, and engraved symbols follow the approved City List and City Details direction. Great Hall and Barracks symbols reuse that drawing style; Treasury, Alehouse, Gatehouse, and Royal Stables have corresponding chest, tankard, portcullis, and horseshoe symbols.
-- The header separates the Main City identity from the Inner Castle title. Desktop uses the familiar 1040 × 790 maximum window, with 12-pixel viewport margins.
-- Desktop pairs the Royal Bailey scene and six-building directory with a selected-building pane. Full building names appear on decorative hanging wooden signs with metal hangers, a shaped board, brass trim/rivets, and small-cap serif lettering. The selected sign uses burgundy; the matching directory control also uses an inset rule and pressed state. Signs are SVG/CSS with real HTML text, so labels remain accessible and independent of the artwork.
-- Mobile landscape moves the existing Back to City Details button into the top bar beside Close, freeing the footer's height for the Royal Bailey. The full 4:3 image stays visible even on short landscape screens; all six building signs retain their fixed positions and at least 44-pixel-high touch targets.
-- The mobile detail pane stacks the building name, a centered preview image, the existing information and new-gear indicator, then Manage Gear where available. It reserves space for the text and 44-pixel action first; the image fits the remaining height, up to 160 pixels wide, without cropping. Tighter text spacing and a 225-pixel detail column keep all information and the action visible without scrolling at the reviewed landscape sizes. The artwork therefore scales down on shorter screens instead of pushing Manage Gear below the visible panel.
-- The same Back button moves back to the desktop footer when the viewport changes, preserving selection and avoiding duplicate controls. This draft does not change the game's orientation guard or create a portrait game layout.
-- The draft uses new Royal Bailey, Great Hall, Treasury, Barracks, Alehouse, Gatehouse and Royal Stables illustrations following the user's map reference: dark ink outlines, muted olive and ochre, pale stone and burgundy pennants. Royal Stables completes the six interior candidates. The full set awaits final visual review before runtime integration. Current layout retains the original hub and all original interior images for comparison.
+- Parchment, muted moss, dark ink, thin rules, and engraved symbols extend the approved City List and City Details direction.
+- Desktop uses a maximum 1040 × 790 window with viewport margins, pairing the full Royal Bailey scene and six-building directory with the selected-building pane.
+- Decorative wooden signs use SVG hangers, shaped boards, brass trim/rivets, and real HTML lettering. Burgundy and pressed states identify the selection. New-gear badges remain visible beside the lettering.
+- Mobile landscape moves the same Back to City Details control into the header beside Close and hides the desktop directory/footer. The full 4:3 Bailey remains visible, and all scene targets are at least 44 pixels high.
+- The right pane stacks the building name, centered square artwork, existing information, and Manage Gear where available. Text and the 44-pixel action receive space before the image, which scales to the remaining height up to 160 pixels wide. Reviewed landscape sizes require no detail scrolling.
+- The generic exploration/future-update announcement is removed. Gear subpanels, costs, progression, and backend actions are unchanged.
 
 ## Preserved behavior and information
 
-The source has **six** buildings, with gear management available at **four**:
-
-| Building | Existing role text | Existing availability |
+| Building | Existing role | Existing availability |
 | --- | --- | --- |
 | Treasury | Gold storage / gold production | Master of Coin gear and bonuses; Manage Gear |
 | Great Hall | Ruler power / kingdom upgrades | Not yet available |
@@ -33,64 +30,32 @@ The source has **six** buildings, with gear management available at **four**:
 | Gatehouse | City defense / wall strength | Defensive Commander gear and bonuses; Manage Gear |
 | Royal Stables | Movement / march speed | Cavalry Master gear and bonuses; Manage Gear |
 
-All building labels, descriptions, availability, new-gear indication, Back to City Details, and Close are retained. All six buildings have new individual artwork references in the draft. At the user's request, the general announcement about exploring the Royal Bailey and future building functions/upgrades has been removed from every draft building on desktop and mobile. The captured Current layout retains its original announcement for comparison. This draft introduces no building levels, costs, upgrades, timers, or progression promises. Gear subpanels are outside this review. Entry/ownership and return-city behavior remain owned by the current runtime.
+The overview preserves the fixed anchors (left/top percentages): Treasury **19/24**, Great Hall **50/20**, Barracks **81/25**, Alehouse **19/57**, Gatehouse **50/75**, Royal Stables **81/58**. Selecting a scene sign or desktop directory control updates the same preview and accessible pressed states. Manage Gear opens the existing equipment screen; returning preserves the selected building and reflects the existing new-marker state.
 
-## Royal Bailey artwork
+Only owned-city details expose the entry shortcut. It opens the player's Main City, and Back restores the inspected city and entry-button focus. Profile continues to support an off-map Main City. Close/Escape clean up the shared dialog's Inner Castle state and theme.
 
-The built-in image-generation tool produced `art/royal-bailey-ink-wash-v1.png` as an opaque 1448 × 1086 PNG (4:3). It is copied intact from the generated source: no crop, stretching, recoloring, or moved building anchors. The final prompt and reference roles are recorded in [art/royal-bailey-prompt.md](art/royal-bailey-prompt.md). The preview alone consumes this file; existing runtime art and the optimized-asset manifest are unchanged.
+## Artwork and provenance
 
-The fixed scene anchors remain Treasury **19% / 24%**, Great Hall **50% / 20%**, Barracks **81% / 25%**, Alehouse **19% / 57%**, Gatehouse **50% / 75%**, and Royal Stables **81% / 58%**, measured from the upper-left. Visual overlay review checks that each falls on its intended building, while browser checks verify the rendered marker centers and actual pointer selection. The full enclosure, open courtyard, and bottom entrance retain the original arrangement. Approval of this art candidate is still pending.
+All seven source PNGs were generated with the built-in image tool using the user's map reference and successively approved interior references. Original room arrangements and the Bailey anchors remain intact. Exact prompts and reference roles are recorded beside the images:
 
-## Great Hall artwork
+- [Royal Bailey](art/royal-bailey-prompt.md): opaque 1448 × 1086 source, 1280 × 960 runtime WebP.
+- [Great Hall](art/great-hall-prompt.md): raised throne, long tables, arched windows, timber roof and hearth.
+- [Treasury](art/treasury-prompt.md): counting desk, scales, ledger, guarded door, shelves and chests.
+- [Barracks](art/barracks-prompt.md): equipment racks, workbenches, soldiers and training courtyard.
+- [Alehouse](art/alehouse-prompt.md): large hearth, serving counter, barrels and patrons at wooden tables.
+- [Gatehouse](art/gatehouse-prompt.md): portcullis, chains, operating gallery, threshold and guards.
+- [Royal Stables](art/royal-stables-prompt.md): stalls, horses, grooms, tack and daylight courtyard.
 
-The first interior candidate is `art/great-hall-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. It keeps the original hall's raised throne area, long tables, arched windows, timber roof and right-hand hearth, redrawn with lighter stone and crisp ink outlines matching the Bailey. The exact prompt and reference roles are saved in [art/great-hall-prompt.md](art/great-hall-prompt.md).
+The six interiors use opaque 1254 × 1254 source PNGs and 512 × 512 WebP derivatives. Approved PNGs are copied intact into `assets/inner-castle/`; `tools/optimize-game-art.py` produces the fingerprinted manifest entries. The hub uses quality 76 and interiors quality 84, preserving dimensions and framing within the existing performance budgets. Runtime art totals **946,436 bytes**, about 96% smaller than these source masters. Previous optimized derivatives remain available for the historical comparison.
 
-The generated file is copied intact. It fits the existing square preview without any layout changes. Great Hall still shows its existing role and **Not yet available**, with no Manage Gear action. The user liked this candidate and requested continuation on 10 September 2026; that confirms the visual direction, without authorizing runtime integration, merge or production deployment.
+## Source isolation
 
-## Treasury artwork
+`snapshot.json` retains the original capture from `92e45124469842e8b19974807aa13f01b4bead02`. Its city name and gear marker are synthetic. `preview.js` loads only captured data and local styles/assets, without game/account APIs. Current layout uses original markup and artwork with shared repository styles; the styles are not frozen. The standalone folder and source PNG masters are excluded from the production client build.
 
-The second interior candidate is `art/treasury-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. The treasurer's counting desk, scales, ledger, guarded iron-bound door, shelves and chests retain their original arrangement, now rendered with pale warm stone, ochre timber, restrained gold and crisp ink outlines. The approved Great Hall is the primary style reference, with Royal Bailey as a supporting reference. The exact prompt is saved in [art/treasury-prompt.md](art/treasury-prompt.md).
+## Validation
 
-The file is copied intact and uses the existing square image slot. Treasury keeps its original gold role, Master of Coin information, synthetic new-gear marker and Manage Gear action. All information and the action remain visible without scrolling at the reviewed sizes. The user requested continuation to the next interior on 10 September 2026; runtime integration and release remain separate steps.
+`node tools/validate-inner-castle-browser.js` exercises the actual game through the isolated benchmark fixture, with no production account access. It checks all six buildings at **1440 × 900**, **1280 × 720**, **844 × 390**, **667 × 375**, **568 × 320**, and **932 × 430**: fixed scene anchors, real pointer selection, centered full illustrations, readable sign colors, preserved descriptions/availability, visible 44-pixel gear actions, and no detail scrolling. It also covers 24 equipment round trips, directory selection, responsive Back placement, focus/Close cleanup, entry guards, off-map Profile entry, the accessible dialog name, and keyboard selection/Escape.
 
-## Barracks artwork
+`node tools/validate-city-details-browser.js` checks owned Main City and other owned-city shortcuts, omission on foreign cities, and return-city focus in the existing City Details flow. Static Inner Castle/Common Gear validators cover registry data, unchanged source artwork, gameplay guards, modal lifecycle, art delivery, and existing gear authority. Asset-budget validation checks the optimized manifest and installation budget. The normal `prepare-pr` workflow selects **Full** validation because the complete branch touches shared game code and the Master Specification.
 
-The third interior candidate is `art/barracks-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. It preserves the guardroom's equipment racks, workbenches, soldiers and large arch opening onto the training courtyard. Pale warm stone, worn timber, subdued iron and burgundy heraldry follow the Treasury and Bailey references, with clearer ink silhouettes. The exact prompt is saved in [art/barracks-prompt.md](art/barracks-prompt.md).
-
-The file is copied intact and fits the existing square image slot. Barracks retains its troop-production role, War Captain information and Manage Gear action, with all information and the action visible without scrolling at the reviewed sizes. The user requested continuation to the next interior on 10 September 2026; runtime integration and release remain separate steps.
-
-## Alehouse artwork
-
-The fourth interior candidate is `art/alehouse-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. Its large left-hand hearth, rear serving counter, barrel shelves and groups of patrons at wooden tables preserve the original room arrangement. Clear ink outlines, pale warm stone, worn timber and restrained cloth colors match the Great Hall and Royal Bailey, with a warmer hearth atmosphere. The exact prompt is saved in [art/alehouse-prompt.md](art/alehouse-prompt.md).
-
-The file is copied intact and fits the existing square image slot. Alehouse retains its morale/recovery description and **Not yet available**, without a Manage Gear action. The user requested continuation to the next interior on 10 September 2026; runtime integration and release remain separate steps.
-
-## Gatehouse artwork
-
-The fifth interior candidate is `art/gatehouse-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. The tall arched gateway, partly raised portcullis, lifting chains, timber operating gallery, threshold deck and existing guards preserve the original scene arrangement. Pale stone, worn timber, dull iron and restrained burgundy heraldry follow the Barracks and Royal Bailey references. The exact prompt is saved in [art/gatehouse-prompt.md](art/gatehouse-prompt.md).
-
-The file is copied intact and fits the existing square image slot. Gatehouse retains its city-defense description, Defensive Commander information and Manage Gear action. All information and the action remain visible without scrolling at the reviewed sizes. The user requested continuation to the final interior on 10 September 2026; runtime integration and release remain separate steps.
-
-## Royal Stables artwork
-
-The sixth interior candidate is `art/royal-stables-ink-wash-v1.png`, an opaque 1254 × 1254 PNG created with the built-in image-generation tool. Timber stalls, saddled horses, grooms, tack, feeding equipment and the daylight courtyard arch retain the original arrangement. Pale stone, worn timber, natural horse colors and restrained ink outlines follow the Barracks and Royal Bailey references. The exact prompt is saved in [art/royal-stables-prompt.md](art/royal-stables-prompt.md).
-
-The file is copied intact and fits the existing square image slot. Royal Stables retains its movement/march-speed description, Cavalry Master information and Manage Gear action, all visible without scrolling at reviewed sizes. The overview scene, six clickable anchors, other five illustrations and layout remain unchanged. Royal Stables and the complete six-interior set await final visual review.
-
-## Source and isolation
-
-`snapshot.json` was captured from the isolated local benchmark at `92e45124469842e8b19974807aa13f01b4bead02`. City name and new-gear indication are synthetic. Existing building definitions come from `game.js`; previews and availability come from `common-gear-ui.js` and `common-gear.js`.
-
-`preview.js` loads only this static snapshot and local styles/assets. It does not load the game runtime, Firebase, production data, or any account API. The Current layout uses captured original markup plus the repository's shared styles; those shared styles are not frozen here. The draft stylesheet is scoped to its own `.bailey-modal`.
-
-## Focused review evidence
-
-Local Chrome checks compare all six buildings in both versions at desktop sizes 1440 × 900 and 1280 × 720, and mobile landscape sizes 844 × 390, 667 × 375, 568 × 320, and 932 × 430. They check original building information, action availability, synchronized selection, 44-pixel visible draft buttons, non-overlapping scene targets, horizontal overflow, inert actions, outer comparison controls, browser errors, and failed assets. The original comparison's pre-existing small-screen layout limitations are not changed.
-
-The artwork pass additionally verifies an opaque 4:3 image, unchanged normalized anchors (rendered centers within 1.5 pixels), and 36 actual pointer selections across the same six desktop/landscape viewports. Screenshots were visually inspected to confirm the signs land on their named building. Focused resize checks verify that one Back control moves to its intended location, while keyboard activation and Back feedback remain functional. New artwork is loaded only in Parchment draft; Current layout keeps the captured original.
-
-At 844 × 390, the visible artwork width grows from about 241 to 365 CSS pixels (51%) compared with the previous draft, while keeping the same modal dimensions and 4:3 framing. No portrait layouts are part of this review.
-
-The latest detail refinement checks all six buildings at two desktop and four landscape sizes: no general announcement, centered square artwork, title/image/information/action order, all information within the visible pane, no detail scrolling, and 24 immediately visible Manage Gear controls clicked without any scrolling. These checks were repeated with all six illustrated interiors, alongside asset loading, original comparison and direct-building review-link checks. The enlarged Royal Bailey scene remains intact.
-
-Screenshots and measurements are kept locally under ignored `release-artifacts/inner-castle-overview/`. These checks cover a static layout draft, not authenticated gameplay or equipment operations. The normal `prepare-pr` workflow determines the required validation tier from the complete branch difference.
+Screenshots and measurements are local under ignored `release-artifacts/inner-castle-overview/`. Browser checks use desktop Chrome emulation; physical-device and production verification are separate from this integration.

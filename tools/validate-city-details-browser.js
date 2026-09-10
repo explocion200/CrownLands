@@ -146,7 +146,7 @@ async function main() {
             if(owner==='player')document.getElementById('cdDefencesTab').click();
             if(!entry.getClientRects().length||entry.closest('[role="tabpanel"]'))throw Error('Shortcut must remain available outside the tabs');
             entry.click();
-            if(!modal.classList.contains('inner-castle-modal')||modal.dataset.innerCastleCityId!==main.id||!modalBody.querySelector('.inner-castle-shell'))throw Error('Shortcut did not open the player Main City Inner Castle');
+            if(!modal.classList.contains('inner-castle-modal')||modal.dataset.innerCastleCityId!==main.id||!modalBody.querySelector('.bailey-shell'))throw Error('Shortcut did not open the player Main City Inner Castle');
             modalBody.querySelector('[data-inner-castle-back]').click();
             if(modal.dataset.cityInfoId!==inspected.id||document.activeElement.id!=='enterInnerCastleBtn'||modal.dataset.innerCastleReturnCityId)throw Error('Back did not restore the inspected city and focus');
             checks.push({owner,main:inspected.id===main.id});

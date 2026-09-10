@@ -187,48 +187,48 @@ const REWARDED_AD_ITEMS = Object.freeze([
     icon: "assets/optimized/pickup-troops-192x192-ed370610c5b6.webp",
   },
 ]);
-const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-82bf384e502b.webp";
+const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-5bb08b2e7f5c.webp";
 const INNER_CASTLE_BUILDINGS = Object.freeze([
   Object.freeze({
     key: "treasury",
     label: "Treasury",
     role: "Gold storage / gold production",
-    artSrc: "assets/optimized/inner-castle-treasury-512x512-d0d9addb0fa0.webp",
+    artSrc: "assets/optimized/inner-castle-treasury-512x512-6c53e7cf4366.webp",
     hotspot: Object.freeze({ left: 19, top: 24 }),
   }),
   Object.freeze({
     key: "great-hall",
     label: "Great Hall",
     role: "Ruler power / kingdom upgrades",
-    artSrc: "assets/optimized/inner-castle-great-hall-512x512-d8cadbae3772.webp",
+    artSrc: "assets/optimized/inner-castle-great-hall-512x512-11afdcfaa594.webp",
     hotspot: Object.freeze({ left: 50, top: 20 }),
   }),
   Object.freeze({
     key: "barracks",
     label: "Barracks",
     role: "Troop production / military strength",
-    artSrc: "assets/optimized/inner-castle-barracks-512x512-2d0a5881e963.webp",
+    artSrc: "assets/optimized/inner-castle-barracks-512x512-8353ca76ded4.webp",
     hotspot: Object.freeze({ left: 81, top: 25 }),
   }),
   Object.freeze({
     key: "alehouse",
     label: "Alehouse",
     role: "Morale / recovery / small boosts",
-    artSrc: "assets/optimized/inner-castle-alehouse-512x512-8374747f6500.webp",
+    artSrc: "assets/optimized/inner-castle-alehouse-512x512-959b09534998.webp",
     hotspot: Object.freeze({ left: 19, top: 57 }),
   }),
   Object.freeze({
     key: "gatehouse",
     label: "Gatehouse",
     role: "City defense / wall strength",
-    artSrc: "assets/optimized/inner-castle-gatehouse-512x512-2a07ac7597ac.webp",
+    artSrc: "assets/optimized/inner-castle-gatehouse-512x512-3c5f1b7dcdc9.webp",
     hotspot: Object.freeze({ left: 50, top: 75 }),
   }),
   Object.freeze({
     key: "royal-stables",
     label: "Royal Stables",
     role: "Movement / march speed",
-    artSrc: "assets/optimized/inner-castle-royal-stables-512x512-7791897ddc01.webp",
+    artSrc: "assets/optimized/inner-castle-royal-stables-512x512-5a9290514dbd.webp",
     hotspot: Object.freeze({ left: 81, top: 58 }),
   }),
 ]);
