@@ -46,7 +46,7 @@ All seven source PNGs were generated with the built-in image tool using the user
 - [Gatehouse](art/gatehouse-prompt.md): portcullis, chains, operating gallery, threshold and guards.
 - [Royal Stables](art/royal-stables-prompt.md): stalls, horses, grooms, tack and daylight courtyard.
 
-The six interiors use opaque 1254 × 1254 source PNGs and 512 × 512 WebP derivatives. Approved PNGs are copied intact into `assets/inner-castle/`; `tools/optimize-game-art.py` produces the fingerprinted manifest entries. The hub uses quality 76 and interiors quality 84, preserving dimensions and framing within the existing performance budgets. Runtime art totals **946,436 bytes**, about 96% smaller than these source masters. Previous optimized derivatives remain available for the historical comparison.
+The six interiors use opaque 1254 × 1254 source PNGs and 512 × 512 WebP derivatives. Approved PNGs are copied intact into `assets/inner-castle/`; `tools/optimize-game-art.py` produces the fingerprinted manifest entries. The hub uses quality 76 and interiors quality 84, preserving dimensions and framing within the existing performance budgets. Runtime art totals **946,436 bytes**, about 96% smaller than these source masters. Previous optimized derivatives remain available for the historical comparison and are excluded from the production build, which ships exactly the seven current manifest entries.
 
 ## Source isolation
 
