@@ -26,7 +26,7 @@ function update() {
   });
   document.getElementById("reviewNote").textContent = selection.layout === "current"
     ? "Existing overview captured from the local game fixture. Select any of the six buildings to compare its information."
-    : "Desktop and mobile landscape only · New Royal Bailey, Great Hall, Treasury, Barracks and Alehouse artwork. Select a hanging building sign.";
+    : "Desktop and mobile landscape only · Latest artwork: Gatehouse. Select a hanging building sign to compare interiors.";
   preview.contentWindow?.postMessage({ type: "castle-overview-preview", layout: selection.layout }, location.origin);
   sizePreview();
 }
