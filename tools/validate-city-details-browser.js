@@ -30,7 +30,7 @@ async function main() {
       const shot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(artifacts, `${name}.png`), Buffer.from(shot.data, "base64"));
     };
-    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }, { name: "short", width: 568, height: 320 }]) {
+    for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "phone", width: 390, height: 844 }, { name: "narrow", width: 320, height: 740 }, { name: "landscape", width: 844, height: 390 }, { name: "short", width: 568, height: 320 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: false });
       await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
       for (let i = 0; i < 480 && !await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready'"); i++) await wait(250);
@@ -58,7 +58,9 @@ async function main() {
       assert(layout.bounds.x >= 0 && layout.bounds.y >= 0 && layout.bounds.height <= viewport.height, JSON.stringify(layout));
       assert(!layout.overflow && layout.footerVisible && layout.targets.every(n => n >= 44) && layout.art && layout.ledgerHeight >= 55, JSON.stringify(layout));
       assert.equal(layout.paper, "rgb(242, 232, 205)");
-      assert.equal(Math.round(layout.bounds.width), viewport.name === "desktop" ? 560 : viewport.name === "landscape" ? 350 : 548, "City Details must widen on desktop while retaining the compact layouts.");
+      assert.equal(Math.round(layout.bounds.width), Math.min(1040, viewport.width - 24), "City Details must match the City List window width.");
+      assert.equal(Math.round(layout.bounds.height), Math.min(790, viewport.height - 24), "City Details must match the City List window height.");
+      assert(await evaluate("modalBody.querySelector('.cd-actions').getBoundingClientRect().left >= modalBody.querySelector('.cd-ledger').getBoundingClientRect().right - 1"), "Development must remain beside city information, including on phones.");
       await evaluate(`(() => {
         document.getElementById('cdDefencesTab').click();
         document.getElementById('cdDefencesTab').dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true}));

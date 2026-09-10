@@ -1,6 +1,6 @@
 # Compact City List and City Info — design draft
 
-Status: visual review only. Matching window dimensions were explicitly requested; the proposed arrangement still awaits design approval. This folder does not change the game, its rules, or the production build.
+Status: design approved, with merge and production deployment authorized. The approved arrangement is integrated through `city-list-ui.css` and `city-details-ui.css`; the Master Specification records the confirmed layout. Deployment must be verified separately. This folder remains an isolated visual reference and is excluded from the production build.
 
 ## Review
 
@@ -31,7 +31,7 @@ City Info retains the city title, ownership, level, art, owner link, kingdom, ow
 
 `panels.json` contains markup captured from the isolated local benchmark at commit `82c3165ae08e02c9370545c3000e360c14c48f09`: two roster pages and five owned city detail samples. Values and player identity are synthetic benchmark data. Amount states use the actual game rendering and cost helpers at that revision. The snapshot includes the original local stylesheet references and icon sprite.
 
-`preview.js` loads this static snapshot and the existing local styles/assets. It does not load the game runtime, Firebase, or any production data. `compact.css` is loaded only by this draft. No existing runtime files or Master Specification decisions are changed. Future integration should use live components and state, not ship this snapshot renderer.
+`preview.js` loads this static snapshot and local styles/assets. The two panel stylesheets in `baseline/` preserve the original comparison at the captured revision; the remaining shared styles/assets come from the repository. It does not load the game runtime, Firebase, or any production data. `compact.css` is loaded only by this reference. The live integration uses the existing game markup and state, with CSS placing the original city name/location/Main City seal in the compact band; it does not ship the snapshot renderer or change game JavaScript.
 
 ## Local visual verification
 
@@ -39,4 +39,4 @@ Chrome checks cover current and draft panels at 390 × 844, 844 × 390, 1440 × 
 
 Additional interaction checks cover all five city detail samples, both tabs, and all three amount states at four viewports, including narrow-phone management and wall text. Screenshots and measurement evidence are kept locally under the ignored `release-artifacts/compact-city-layout/` directory. These checks validate the draft's layout and preview interactions; real multiplayer actions are outside this static preview.
 
-Before runtime integration, obtain approval of the density, left/right proportions, and matching window size. Then verify the same layout with live loading/error states, occupied reinforcement slots, damaged walls, foreign cities, Strongholds, and long real-world names/values in the game's existing validation flows.
+The existing City List and City Details browser validators also verify the integration against isolated game fixtures, including pending and rejected upgrades, affordability, focus/scroll preservation, incomplete rosters, retry, empty and Stronghold states, off-map navigation, ownership-only Inner Castle entry, foreign-city privacy, and unrelated dialog isolation. City Details viewport assertions now require matching dimensions and development beside information, with phone and narrow-phone coverage added. Production verification checks the deployed commit, stylesheet contents, cache stamps, and unauthenticated entry; it does not spend player resources.

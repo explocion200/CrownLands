@@ -76,7 +76,7 @@
     "<link rel=\"stylesheet\" href=\"player-flag-editor.css?v=20260819-player-flags-v2-r1\">",
     "<link rel=\"stylesheet\" href=\"chat.css?v=20260818-global-clan-chat-r1\">",
     "<link rel=\"stylesheet\" href=\"clan-heraldry-v2.css?v=20260825-clan-shield-surfaces-r1\">",
-    "<link rel=\"stylesheet\" href=\"city-details-ui.css?v=20260909-city-details-r1\">",
-    "<link rel=\"stylesheet\" href=\"city-list-ui.css?v=20260909-city-list-r1\">"
+    "<link rel=\"stylesheet\" href=\"docs/visual-qa/compact-city-layout/baseline/city-details-ui.css?v=20260909-city-details-r1\">",
+    "<link rel=\"stylesheet\" href=\"docs/visual-qa/compact-city-layout/baseline/city-list-ui.css?v=20260909-city-list-r1\">"
   ]
 }
