@@ -1,10 +1,10 @@
-# Treasury equipment — layout draft
+# Treasury equipment — approved layout and integration
 
 Open `index.html` through the repository's local static server. The review contains desktop (1440 × 900), mobile landscape (844 × 390), and small mobile landscape (568 × 320) views. Portrait gameplay is not a design target.
 
-This is an isolated design proposal for **Treasury → Master of Coin → Manage Gear**. It has not been integrated into the game. The production UI, other officers, equipment rules, inventory, and account APIs are untouched. The repository's production builder excludes this documentation folder.
+The **Treasury → Master of Coin → Manage Gear** design is approved and integrated into the game on `codex/treasury-gear-draft` (PR #283). It is pending merge and authorized deployment. The interactive review remains a synthetic draft; the repository's production builder excludes this documentation folder. Other officers, equipment rules, inventory authority, and account APIs are unchanged.
 
-## Proposed layout
+## Approved layout
 
 - A parchment header connects the Treasury to the Inner Castle, with the current gold balance, Back, and Close controls.
 - The Master of Coin appears between the existing eight equipment slots. The selected slot and available upgrade-material markers remain distinct.
@@ -21,7 +21,7 @@ Confirmed rarity treatment: **Common, the current lowest rarity, uses a light gr
 
 Select equipment slots or bag items; filter by slot; open and cancel the upgrade confirmation. Example controls cover an available upgrade, missing material, maximum level, an empty slot, and insufficient gold. Equip, confirm-upgrade, Back and Close only report preview feedback in the review toolbar; they never submit gameplay actions.
 
-The comparison uses captured runtime markup, including a separate low-gold capture. The shared stylesheets are enabled for the current layout and disabled for the draft. They remain live repository styles, so the comparison is not a complete archival rendering snapshot.
+The comparison uses captured runtime markup, including a separate low-gold capture. Its Treasury data attribute is removed to retain the older shared gear styling. The shared stylesheets are enabled for the comparison and disabled for the draft. They remain live repository styles, so the comparison is not a complete archival rendering snapshot.
 
 ## Source and evidence
 
@@ -31,4 +31,12 @@ Values follow the current Common Gear implementation and Master Specification Se
 
 Focused browser review covers 15 combinations of five example states at three supported sizes, image decoding, eight reachable equipment slots with 44-pixel targets, visible 44-pixel action controls, disabled states, selection/filter behavior, empty slots, confirmation/Escape/focus and current-layout switching. Interactive browser review also checked the landscape upgrade confirmation and the low-gold comparison. Screenshots and the local checks are retained under ignored `release-artifacts/treasury-gear/`.
 
-Physical-phone checks and actual game integration remain future work after design approval.
+## Runtime integration
+
+`common-gear-ui.js` selects the Treasury renderer only for the Treasury building. The renderer consumes the existing `createCommonGearViewModel`, binds the existing equipment action attributes, and uses the existing server-response flow. The native slot filter preserves keyboard focus and bag scroll. Common rarity backgrounds remain gray when selected; the burgundy border shows selection. Long records scroll separately from the fixed action row.
+
+The upgrade confirmation makes the underlying Treasury controls inert, keeps Tab within Cancel/Confirm, and restores Upgrade focus on Cancel or Escape. Pending actions disable both action buttons. Gold values retain exact whole-number display. Production builds fingerprint the existing CSS and JavaScript assets; no new art or backend files are required.
+
+Run `node tools/validate-treasury-gear-browser.js` for 25 live-renderer states across 1440×900, 1024×768, 844×390, 667×375, and 568×320. It checks control bounds, gray rarity surfaces, disabled and empty states, filter/selection/scroll, keyboard confirmation, mocked action failures and pending guards, an upgraded item response, Back/Close, and other-officer isolation. Screenshots and the report are saved to ignored `release-artifacts/treasury-gear/`.
+
+Physical-phone touch verification remains a manual follow-up. Nothing in this document claims a production deployment.

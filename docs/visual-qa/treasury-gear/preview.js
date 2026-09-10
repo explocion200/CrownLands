@@ -45,7 +45,7 @@ function render(){
   const vm=currentModel();document.body.className=layout==="draft"?"treasury-draft":"treasury-current";
   if(layout==="current"){
     document.body.innerHTML=sample==="gold"&&selected==="draft-1"?snapshot.currentGold:snapshot.current[selected]||snapshot.current.empty;
-    const dialog=document.querySelector("dialog");dialog.removeAttribute("open");dialog.showModal();
+    const dialog=document.querySelector("dialog");dialog.removeAttribute("data-common-gear-building-id");dialog.removeAttribute("open");dialog.showModal();
     document.querySelectorAll("[onerror]").forEach(el=>el.removeAttribute("onerror"));
     if(sample==="gold")document.querySelector("[data-gear-merge]")?.setAttribute("disabled","");
     return;
