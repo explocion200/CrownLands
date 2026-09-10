@@ -225,8 +225,8 @@
  #modal .cd-management button { width:100%; min-width:0; }
  #modal .cd-fortification .city-stat-grid { grid-template-columns:1fr; }
  #modal .cd-fortification .stat-wide { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
- #modal .holding-reinforcement-panel { min-width:0; padding:9px; overflow-wrap:anywhere; }
- #modal .holding-reinforcement-heading { flex-wrap:wrap; gap:5px; }
+ #modal .cd-panel .holding-reinforcement-panel { min-width:0; padding:9px; overflow-wrap:anywhere; }
+ #modal .cd-panel .holding-reinforcement-heading { flex-wrap:wrap; gap:5px; }
  #modal .cd-upgrade-heading { align-items:flex-start; gap:5px; margin-bottom:12px; }
  #modal .cd-upgrade-heading>.cd-icon { width:19px; height:22px; }
  #modal .cd-upgrade-heading strong { font-size:16px; line-height:1.15; }
