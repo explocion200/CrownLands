@@ -66,10 +66,14 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The City List ledger reuses existing art/icons and adds under 20 KiB of
 // presentation source. Existing headroom plus one 16 KiB step bounds its shell.
 const MAX_INSTALL_PRECACHE_BYTES = 3784 * 1024;
-assert(normalizedTextBytes("city-list-ui.css") <= 14 * 1024,
-  "City List styling exceeds its 14 KiB source budget.");
-assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-details-ui.css") <= 28 * 1024,
-  "City Details presentation exceeds its 28 KiB source budget.");
+// Approved compact rows and persistent side-by-side development add scoped CSS
+// to the existing files, with no new requests, art, or runtime JavaScript.
+// Bound the two presentation sources by an additional 8 KiB in total; keep the
+// installed shell budget unchanged and checked independently below.
+assert(normalizedTextBytes("city-list-ui.css") <= 16 * 1024,
+  "City List styling exceeds its 16 KiB source budget.");
+assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-details-ui.css") <= 34 * 1024,
+  "City Details presentation exceeds its 34 KiB source budget.");
 const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
