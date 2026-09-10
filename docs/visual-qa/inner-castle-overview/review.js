@@ -20,7 +20,7 @@ function update() {
   });
   document.getElementById("reviewNote").textContent = selection.layout === "current"
     ? "Existing overview captured from the local game fixture. Select any of the six buildings to compare its information."
-    : "Select a building on the scene or in the directory. Existing castle artwork is retained for this layout draft.";
+    : "New Royal Bailey artwork · Select any of the six buildings. Individual building preview images are still the originals.";
   preview.contentWindow?.postMessage({ type: "castle-overview-preview", layout: selection.layout }, location.origin);
   sizePreview();
 }

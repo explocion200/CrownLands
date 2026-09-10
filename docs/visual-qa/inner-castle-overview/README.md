@@ -15,7 +15,7 @@ Switch between **Parchment draft / Current layout** and **Desktop / Mobile lands
 - Desktop pairs a numbered Royal Bailey scene and six-building directory with a selected-building pane. Selected scene markers use burgundy; the matching directory control also uses an inset rule and pressed state.
 - Landscape uses named scene controls and a compact detail pane. On narrower or shorter landscape screens (width at most 650 or height at most 370), the six-building directory replaces the overview image. Selection and all building information remain available; columns scroll when needed. This is a proposed responsive treatment for review.
 - The supplemental portrait preview stacks the scene, directory, and selected building in one scrolling area. Back to City Details remains in a fixed footer. This draft does not change the game's landscape requirement or orientation guard.
-- Existing hub and building illustrations are retained, unedited, for this UI arrangement review. Recreating their art in the map's illustrated style is a separate later pass after layout approval.
+- The draft now uses a new Royal Bailey illustration following the user's map reference: dark ink outlines, muted olive and ochre, pale stone and burgundy pennants. The six building preview illustrations remain unchanged for a later pass. Current layout retains the original hub image for comparison.
 
 ## Preserved behavior and information
 
@@ -30,7 +30,13 @@ The source has **six** buildings, with gear management available at **four**:
 | Gatehouse | City defense / wall strength | Defensive Commander gear and bonuses; Manage Gear |
 | Royal Stables | Movement / march speed | Cavalry Master gear and bonuses; Manage Gear |
 
-All labels, descriptions, availability, artwork references, new-gear indication, Back to City Details, and Close are retained. The existing notice about future building functions/upgrades is retained in the footer; this draft introduces no building levels, costs, upgrades, timers, or progression promises. Gear subpanels are outside this review. Entry/ownership and return-city behavior remain owned by the current runtime.
+All labels, descriptions, availability, individual building artwork references, new-gear indication, Back to City Details, and Close are retained. The existing notice about future building functions/upgrades is retained in the footer; this draft introduces no building levels, costs, upgrades, timers, or progression promises. Gear subpanels are outside this review. Entry/ownership and return-city behavior remain owned by the current runtime.
+
+## Royal Bailey artwork
+
+The built-in image-generation tool produced `art/royal-bailey-ink-wash-v1.png` as an opaque 1448 × 1086 PNG (4:3). It is copied intact from the generated source: no crop, stretching, recoloring, or moved building anchors. The final prompt and reference roles are recorded in [art/royal-bailey-prompt.md](art/royal-bailey-prompt.md). The preview alone consumes this file; existing runtime art and the optimized-asset manifest are unchanged.
+
+The fixed scene anchors remain Treasury **19% / 24%**, Great Hall **50% / 20%**, Barracks **81% / 25%**, Alehouse **19% / 57%**, Gatehouse **50% / 75%**, and Royal Stables **81% / 58%**, measured from the upper-left. Visual overlay review checks that each falls on its intended building, while browser checks verify the rendered marker centers and actual pointer selection. The full enclosure, open courtyard, and bottom entrance retain the original arrangement. Approval of this art candidate is still pending.
 
 ## Source and isolation
 
@@ -41,5 +47,7 @@ All labels, descriptions, availability, artwork references, new-gear indication,
 ## Focused review evidence
 
 Local Chrome checks compare all six buildings in both versions at 1440 × 900, 844 × 390, 390 × 844, 320 × 740, and 568 × 320. They check original building information, action availability, synchronized selection, 44-pixel visible draft buttons, non-overlapping scene targets, horizontal overflow, inert actions, outer comparison controls, browser errors, and failed assets. The original comparison's pre-existing small-screen layout limitations are not changed.
+
+The artwork pass additionally verifies an opaque 4:3 image, unchanged normalized anchors (rendered centers within 1.5 pixels), and 30 actual pointer selections across the same five viewports. Desktop and landscape screenshots were visually inspected to confirm the markers land on their named building. New artwork is loaded only in Parchment draft; Current layout keeps the captured original.
 
 Screenshots and measurements are kept locally under ignored `release-artifacts/inner-castle-overview/`. These checks cover a static layout draft, not authenticated gameplay or equipment operations. The normal `prepare-pr` workflow determines the required validation tier from the complete branch difference.
