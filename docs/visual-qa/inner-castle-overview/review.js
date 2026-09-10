@@ -1,8 +1,8 @@
 "use strict";
 const preview = document.getElementById("preview");
 const canvas = document.getElementById("canvas");
-const selection = { layout: "draft", viewport: "desktop" };
-const sizes = { phone: [390, 844], landscape: [844, 390], desktop: [1440, 900] };
+const selection = { layout: "draft", viewport: new URLSearchParams(location.search).get("viewport") === "landscape" ? "landscape" : "desktop" };
+const sizes = { landscape: [844, 390], desktop: [1440, 900] };
 function sizePreview() {
   const [width, height] = sizes[selection.viewport];
   const scale = Math.min(1, (document.documentElement.clientWidth - 24) / width);
@@ -20,7 +20,7 @@ function update() {
   });
   document.getElementById("reviewNote").textContent = selection.layout === "current"
     ? "Existing overview captured from the local game fixture. Select any of the six buildings to compare its information."
-    : "New Royal Bailey artwork · Select any of the six buildings. Individual building preview images are still the originals.";
+    : "Desktop and mobile landscape only · Select a hanging building sign. Building interiors remain the originals.";
   preview.contentWindow?.postMessage({ type: "castle-overview-preview", layout: selection.layout }, location.origin);
   sizePreview();
 }

@@ -4,6 +4,14 @@ let snapshot, selectedKey = "great-hall", toastTimer;
 const settings = { layout: new URLSearchParams(location.search).get("layout") === "current" ? "current" : "draft" };
 const ordinals = ["I", "II", "III", "IV", "V", "VI"];
 const draftHubArt = "docs/visual-qa/inner-castle-overview/art/royal-bailey-ink-wash-v1.png";
+const mobileLandscape = matchMedia("(orientation: landscape) and (max-height: 550px)");
+const signFrame = `<svg class="bailey-sign-frame" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <path class="sign-hangers" d="M32 3v17M128 3v17M29 4h6m90 0h6"/>
+  <path class="sign-board" d="M12 15h136l-2 7 9 6-6 8 4 12-9 8H16l-9-8 4-12-6-8 9-6Z"/>
+  <path class="sign-inlay" d="M20 20h120l-2 5 8 5-5 7 3 9-4 5H20l-4-5 3-9-5-7 8-5Z"/>
+  <path class="sign-grain" d="M22 25h28m-25 4h18m63 17h29m-13-21h14M29 47h13m17-27h37M54 52h54"/>
+  <circle class="sign-rivet" cx="24" cy="35" r="2"/><circle class="sign-rivet" cx="136" cy="35" r="2"/>
+</svg>`;
 const drawings = {
   treasury: '<path class="surface" d="M4 13h24v15H4ZM4 13V8l4-4h16l4 4v5Z"/><path class="shadow" d="M23 5h4v23h-4Z"/><path d="M4 13h24M9 5v23m14-23v23"/><path class="ink" d="M13 11h6v8h-6Z"/><path class="fine" d="M6 23h2m4 2h8m-7-4h3"/>',
   "great-hall": '<path class="surface" d="M3 28V9h3V5h4v4h3V5h6v4h3V5h4v4h3v19Z"/><path class="shadow" d="M24 10h5v18h-5ZM3 25h26v3H3Z"/><path d="M11 10v17M21 10v17M3 16h8m10 0h8"/><path class="ink" d="M13 27v-8c0-5 6-5 6 0v8ZM6 11h2v3H6Zm18 0h2v3h-2Z"/><path class="fine" d="M5 21h4m14 0h4M15 11h2"/>',
@@ -36,11 +44,27 @@ function draftMarkup() {
     <div class="bailey-content"><section class="bailey-overview" aria-labelledby="baileySceneTitle">
       <div class="bailey-section-heading"><h3 id="baileySceneTitle">The Royal Bailey</h3><span>Select a building</span></div>
       <div class="bailey-map-space"><div class="bailey-scene"><img src="${draftHubArt}" alt="The Royal Bailey inside ${escapeText(snapshot.cityName)}" draggable="false">
-      ${snapshot.buildings.map((building, index) => `<button class="bailey-pin" type="button" data-building="${building.key}" aria-label="Preview ${escapeText(building.label)}${building.newGear ? "; new gear" : ""}" aria-controls="baileyDetails" aria-pressed="${building.key === selectedKey}" style="--x:${building.hotspot.left}%;--y:${building.hotspot.top}%"><span>${ordinals[index]}</span><span class="bailey-pin-name">${escapeText(building.label)}</span>${building.newGear ? '<b class="bailey-alert" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div></div>
+      ${snapshot.buildings.map(building => `<button class="bailey-pin" type="button" data-building="${building.key}" aria-label="Preview ${escapeText(building.label)}${building.newGear ? "; new gear" : ""}" aria-controls="baileyDetails" aria-pressed="${building.key === selectedKey}" style="--x:${building.hotspot.left}%;--y:${building.hotspot.top}%">${signFrame}<span class="bailey-pin-name">${escapeText(building.label)}</span>${building.newGear ? '<b class="bailey-alert" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div></div>
       <nav class="bailey-directory" aria-label="Inner Castle buildings">${snapshot.buildings.map((building, index) => `<button type="button" data-building="${building.key}" aria-controls="baileyDetails" aria-pressed="${building.key === selectedKey}"><span class="bailey-number" aria-hidden="true">${ordinals[index]}</span>${icon(building.key)}<span class="bailey-label">${escapeText(building.label)}</span>${building.newGear ? '<b class="bailey-directory-alert" aria-label="New gear">!</b>' : ""}</button>`).join("")}</nav>
     </section><aside class="bailey-detail-tray" aria-label="Selected building preview"><div id="baileyDetails" aria-live="polite" aria-atomic="true">${details(current)}</div></aside></div>
     <footer class="bailey-footer"><button type="button" data-inner-castle-back><span aria-hidden="true">←</span> Back to City Details</button><p>Explore the Royal Bailey. Building functions and upgrades will arrive in a future update.</p></footer>
   </div></dialog>`;
+}
+function arrangeLandscapeControls() {
+  if (settings.layout !== "draft") return;
+  const modal = document.getElementById("modal");
+  if (!modal) return;
+  const footer = modal.querySelector(".bailey-footer");
+  const back = modal.querySelector("[data-inner-castle-back]");
+  const notice = modal.querySelector(".bailey-notice") || footer.querySelector("p");
+  notice.classList.add("bailey-notice");
+  if (mobileLandscape.matches) {
+    modal.querySelector(".bailey-header").insertBefore(back, modal.querySelector("#closeModalBtn"));
+    modal.querySelector(".bailey-detail-tray").append(notice);
+  } else {
+    footer.append(back, notice);
+  }
+  footer.hidden = mobileLandscape.matches;
 }
 function selectBuilding(key) {
   const building = snapshot.buildings.find(item => item.key === key);
@@ -57,6 +81,7 @@ function render() {
   if (!snapshot) return;
   document.documentElement.dataset.layout = settings.layout;
   document.body.innerHTML = snapshot.icons + (settings.layout === "draft" ? draftMarkup() : snapshot.html);
+  arrangeLandscapeControls();
   const modal = document.getElementById("modal"); modal.removeAttribute("open"); modal.showModal();
   selectBuilding(selectedKey);
   modal.addEventListener("cancel", event => { event.preventDefault(); toast("Layout preview · use the comparison controls above."); });
@@ -71,6 +96,7 @@ document.addEventListener("click", event => {
   toast("Layout preview · use the comparison controls above.");
 });
 document.addEventListener("submit", event => event.preventDefault());
+mobileLandscape.addEventListener("change", arrangeLandscapeControls);
 window.addEventListener("message", event => {
   if (event.origin !== location.origin || event.source !== parent || event.data?.type !== "castle-overview-preview") return;
   if (!["draft", "current"].includes(event.data.layout) || event.data.layout === settings.layout) return;
