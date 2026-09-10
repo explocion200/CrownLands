@@ -33,9 +33,9 @@ Focused browser review covers 15 combinations of five example states at three su
 
 ## Runtime integration
 
-`common-gear-ui.js` selects the Treasury renderer only for the Treasury building. The renderer consumes the existing `createCommonGearViewModel`, binds the existing equipment action attributes, and uses the existing server-response flow. The native slot filter preserves keyboard focus and bag scroll. Common rarity backgrounds remain gray when selected; the burgundy border shows selection. Long records scroll separately from the fixed action row.
+`common-gear-ui.js` selects the dedicated `treasury-gear-ui.js` renderer only for the Treasury building. Its matching stylesheet is scoped to that building. The renderer consumes the existing `createCommonGearViewModel`, binds the existing equipment action attributes, and uses the existing server-response flow. The native slot filter preserves keyboard focus and bag scroll. Common rarity backgrounds remain gray when selected; the burgundy border shows selection. Long records scroll separately from the fixed action row.
 
-The upgrade confirmation makes the underlying Treasury controls inert, keeps Tab within Cancel/Confirm, and restores Upgrade focus on Cancel or Escape. Pending actions disable both action buttons. Gold values retain exact whole-number display. Production builds fingerprint the existing CSS and JavaScript assets; no new art or backend files are required.
+The upgrade confirmation makes the underlying Treasury controls inert, keeps Tab within Cancel/Confirm, and restores Upgrade focus on Cancel or Escape. Pending actions disable both action buttons. Gold values retain exact whole-number display. Production builds include and fingerprint the dedicated renderer and stylesheet. These have bounded 16 KiB and 40 KiB budgets; existing shared gear limits are unchanged. No new art or backend files are required.
 
 Run `node tools/validate-treasury-gear-browser.js` for 25 live-renderer states across 1440×900, 1024×768, 844×390, 667×375, and 568×320. It checks control bounds, gray rarity surfaces, disabled and empty states, filter/selection/scroll, keyboard confirmation, mocked action failures and pending guards, an upgraded item response, Back/Close, and other-officer isolation. Screenshots and the report are saved to ignored `release-artifacts/treasury-gear/`.
 

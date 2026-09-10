@@ -117,6 +117,8 @@ const entrypointBudgets = {
   // The City List ledger adds under one 4 KiB runtime step.
   "game.js": 1748 * 1024,
   "common-gear-ui.js": 64 * 1024,
+  "treasury-gear-ui.js": 16 * 1024,
+  "treasury-gear-ui.css": 40 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add
