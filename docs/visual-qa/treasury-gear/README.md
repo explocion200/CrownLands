@@ -15,6 +15,8 @@ This is an isolated design proposal for **Treasury → Master of Coin → Manage
 
 The draft uses the approved Inner Castle parchment/moss palette, readable serif headings, plain text for dense numbers, and engraved SVG symbols. Existing Master of Coin and equipment artwork is retained for this layout review. No new officer or item artwork is proposed in this pass.
 
+Confirmed rarity treatment: **Common, the current lowest rarity, uses a light gray item background** (`#d9dad6`) in filled equipment slots, bag tiles, the selected-item illustration, and the upgrade confirmation. Selection uses a burgundy border while retaining the gray rarity surface. Empty slots retain parchment. The treatment reads each item's existing rarity value; future rarity colors and rules are not defined in this draft.
+
 ## Review interactions
 
 Select equipment slots or bag items; filter by slot; open and cancel the upgrade confirmation. Example controls cover an available upgrade, missing material, maximum level, an empty slot, and insufficient gold. Equip, confirm-upgrade, Back and Close only report preview feedback in the review toolbar; they never submit gameplay actions.
