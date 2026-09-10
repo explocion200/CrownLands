@@ -9,7 +9,8 @@ const draftBuildingArt = {
   treasury: "docs/visual-qa/inner-castle-overview/art/treasury-ink-wash-v1.png",
   barracks: "docs/visual-qa/inner-castle-overview/art/barracks-ink-wash-v1.png",
   alehouse: "docs/visual-qa/inner-castle-overview/art/alehouse-ink-wash-v1.png",
-  gatehouse: "docs/visual-qa/inner-castle-overview/art/gatehouse-ink-wash-v1.png"
+  gatehouse: "docs/visual-qa/inner-castle-overview/art/gatehouse-ink-wash-v1.png",
+  "royal-stables": "docs/visual-qa/inner-castle-overview/art/royal-stables-ink-wash-v1.png"
 };
 const mobileLandscape = matchMedia("(orientation: landscape) and (max-height: 550px)");
 const signFrame = `<svg class="bailey-sign-frame" viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
