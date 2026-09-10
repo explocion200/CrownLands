@@ -31,11 +31,11 @@ function toast(message) {
 }
 function details(building) {
   return `<div class="bailey-building-heading"><span class="bailey-eyebrow">Selected building</span><h3>${icon(building.key)}${escapeText(building.label)}</h3></div>
-    <img class="bailey-building-art" src="${building.artSrc}" alt="${escapeText(building.label)} artwork" draggable="false">
+    <div class="bailey-building-image-space"><img class="bailey-building-art" src="${building.artSrc}" alt="${escapeText(building.label)} artwork" draggable="false"></div>
     <div class="bailey-building-copy"><p class="bailey-role">${escapeText(building.role)}</p>
     <p class="bailey-status${building.characterRole ? " available" : ""}">${building.characterRole ? `${escapeText(building.characterRole)} gear and bonuses` : "Not yet available"}</p>
-    ${building.newGear ? '<p class="bailey-new-note"><b aria-hidden="true">!</b> New gear</p>' : ""}
-    ${building.characterRole ? `<button type="button" class="bailey-manage" data-manage-common-gear="${building.key}">Manage Gear <span aria-hidden="true">→</span></button>` : ""}</div>`;
+    ${building.newGear ? '<p class="bailey-new-note"><b aria-hidden="true">!</b> New gear</p>' : ""}</div>
+    ${building.characterRole ? `<button type="button" class="bailey-manage" data-manage-common-gear="${building.key}">Manage Gear <span aria-hidden="true">→</span></button>` : ""}`;
 }
 function draftMarkup() {
   const current = snapshot.buildings.find(building => building.key === selectedKey);
@@ -47,7 +47,7 @@ function draftMarkup() {
       ${snapshot.buildings.map(building => `<button class="bailey-pin" type="button" data-building="${building.key}" aria-label="Preview ${escapeText(building.label)}${building.newGear ? "; new gear" : ""}" aria-controls="baileyDetails" aria-pressed="${building.key === selectedKey}" style="--x:${building.hotspot.left}%;--y:${building.hotspot.top}%">${signFrame}<span class="bailey-pin-name">${escapeText(building.label)}</span>${building.newGear ? '<b class="bailey-alert" aria-hidden="true">!</b>' : ""}</button>`).join("")}</div></div>
       <nav class="bailey-directory" aria-label="Inner Castle buildings">${snapshot.buildings.map((building, index) => `<button type="button" data-building="${building.key}" aria-controls="baileyDetails" aria-pressed="${building.key === selectedKey}"><span class="bailey-number" aria-hidden="true">${ordinals[index]}</span>${icon(building.key)}<span class="bailey-label">${escapeText(building.label)}</span>${building.newGear ? '<b class="bailey-directory-alert" aria-label="New gear">!</b>' : ""}</button>`).join("")}</nav>
     </section><aside class="bailey-detail-tray" aria-label="Selected building preview"><div id="baileyDetails" aria-live="polite" aria-atomic="true">${details(current)}</div></aside></div>
-    <footer class="bailey-footer"><button type="button" data-inner-castle-back><span aria-hidden="true">←</span> Back to City Details</button><p>Explore the Royal Bailey. Building functions and upgrades will arrive in a future update.</p></footer>
+    <footer class="bailey-footer"><button type="button" data-inner-castle-back><span aria-hidden="true">←</span> Back to City Details</button></footer>
   </div></dialog>`;
 }
 function arrangeLandscapeControls() {
@@ -56,13 +56,10 @@ function arrangeLandscapeControls() {
   if (!modal) return;
   const footer = modal.querySelector(".bailey-footer");
   const back = modal.querySelector("[data-inner-castle-back]");
-  const notice = modal.querySelector(".bailey-notice") || footer.querySelector("p");
-  notice.classList.add("bailey-notice");
   if (mobileLandscape.matches) {
     modal.querySelector(".bailey-header").insertBefore(back, modal.querySelector("#closeModalBtn"));
-    modal.querySelector(".bailey-detail-tray").append(notice);
   } else {
-    footer.append(back, notice);
+    footer.append(back);
   }
   footer.hidden = mobileLandscape.matches;
 }
