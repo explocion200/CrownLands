@@ -7,6 +7,7 @@ const ITCH_DOCUMENT_URL = new URL("https://html-classic.itch.zone/html/18910922/
 const ITCH_DIRECTORY_PATH = new URL(".", ITCH_DOCUMENT_URL).pathname;
 const required = [
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
+  "treasury-gear-ui.js", "treasury-gear-ui.css",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
@@ -86,8 +87,12 @@ const preparedWorldBytes = files
   .filter(filePath => filePath.startsWith(preparedWorldRoot))
   .reduce((sum, filePath) => sum + fs.statSync(filePath).size, 0);
 const baseClientBytes = totalBytes - preparedWorldBytes;
-if (baseClientBytes > 25 * 1024 * 1024) {
-  throw new Error(`Base production artifact exceeds 25 MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
+// The approved Treasury idle animation and still add 353,384 bytes on demand.
+// Bound their packaged payload by one 352 KiB step; source sheets stay excluded
+// and the service-worker installation budget is checked separately.
+const baseClientBudget = 25 * 1024 * 1024 + 352 * 1024;
+if (baseClientBytes > baseClientBudget) {
+  throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 if (preparedWorldBytes > 35 * 1024 * 1024) {
   throw new Error(`Prepared Core-expansion world exceeds 35 MiB (${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB).`);

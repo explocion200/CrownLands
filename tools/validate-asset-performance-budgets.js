@@ -74,7 +74,9 @@ assert(normalizedTextBytes("city-list-ui.css") <= 16 * 1024,
   "City List styling exceeds its 16 KiB source budget.");
 assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-details-ui.css") <= 34 * 1024,
   "City Details presentation exceeds its 34 KiB source budget.");
-const MAX_OPTIMIZED_ART_BYTES = 2700 * 1024;
+// The Treasury's lazy idle clip and still add under 352 KiB; existing headroom
+// permits one bounded 320 KiB increase without changing the installed shell.
+const MAX_OPTIMIZED_ART_BYTES = 3020 * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -96,6 +98,7 @@ const categoryFileBudgets = {
   "city-object": 64 * 1024,
   "inner-castle": 400 * 1024,
   gear: 140 * 1024,
+  "gear-animation": 288 * 1024,
   "gear-item": 140 * 1024,
   "gear-box": 140 * 1024,
 };
@@ -117,6 +120,8 @@ const entrypointBudgets = {
   // The City List ledger adds under one 4 KiB runtime step.
   "game.js": 1748 * 1024,
   "common-gear-ui.js": 64 * 1024,
+  "treasury-gear-ui.js": 16 * 1024,
+  "treasury-gear-ui.css": 40 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add
@@ -313,7 +318,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {

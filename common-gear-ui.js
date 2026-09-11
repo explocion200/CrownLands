@@ -643,7 +643,25 @@ function bindCommonGearScreen(viewModel) {
     event.preventDefault();
     detailsScroll.scrollTop = Math.max(0, Math.min(maxScrollTop, nextScrollTop));
   });
+  screen.querySelector("[data-gear-bag-select]")?.addEventListener("change", event => {
+    const value = event.target.value;
+    selectedCommonGearBagFilter = COMMON_GEAR.SLOTS.includes(value) ? value : "all";
+    commonGearPendingFocusSelector = "[data-gear-bag-select]";
+    renderCommonGearBuilding(viewModel.buildingId);
+  });
   screen.addEventListener("keydown", event => {
+    if (viewModel.buildingId === "treasury" && viewModel.mergeConfirmOpen && event.key === "Tab") {
+      const first = screen.querySelector("[data-gear-merge-cancel]");
+      const last = screen.querySelector("[data-gear-merge-confirm]");
+      if (event.shiftKey && event.target === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && event.target === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+      return;
+    }
     const filterButton = event.target.closest?.("[data-gear-bag-filter-button]");
     if (filterButton && event.key === "ArrowDown") {
       event.preventDefault();
@@ -765,7 +783,7 @@ function renderCommonGearBuilding(buildingId) {
   modal.classList.add("common-gear-building-modal");
   modal.dataset.commonGearBuildingId = buildingId;
   modalTitle.textContent = `${building.name} — ${building.characterRole}`;
-  modalBody.innerHTML = `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
+  modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
     <div class="common-gear-main">
       <section class="common-gear-loadout-panel" data-gear-panel="loadout" data-gear-officer="${escapeHtml(buildingId)}">
         <header><span aria-hidden="true">♜</span><strong>Equipment</strong><small>${escapeHtml(building.name)}</small></header>
@@ -792,6 +810,7 @@ function renderCommonGearBuilding(buildingId) {
     ${renderCommonGearMergeConfirmation(viewModel)}
   </section>`;
   bindCommonGearScreen(viewModel);
+  bindTreasuryGearPortrait();
   restoreCommonGearFocus();
   return true;
 }

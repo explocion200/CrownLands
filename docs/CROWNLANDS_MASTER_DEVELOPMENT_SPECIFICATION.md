@@ -980,6 +980,17 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 
 Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction and runtime integration were confirmed on 10 September 2026. Merge and deployment require separate authorization and verification. Review and validation details: [Inner Castle overview](./visual-qa/inner-castle-overview/README.md).
 
+### Confirmed Treasury equipment presentation
+
+- The approved Treasury Manage Gear screen uses parchment, muted moss, dark ink, and engraved medieval symbols. It supports desktop and mobile landscape, with a desktop cap of 1200 × 790 pixels and viewport-fitting dimensions on smaller screens.
+- The Master of Coin portrait sits between the existing eight equipment slots. The equipment bag occupies the middle pane, with the selected item's information on the right. Bag and item information scroll independently; Equip/Unequip and Upgrade remain visible at the bottom of the selected pane.
+- The approved Master of Coin illustration uses the map's medieval ink-and-wash direction, with a transparent background and a subtle breathing/blinking idle loop. It animates in Full mode while the Treasury is visible; Reduced/Off mode, background visibility, and upgrade confirmation use the still illustration. The existing animation preference and automatic performance rules remain authoritative. This artwork affects only the Treasury officer, not the equipment items or other officers.
+- Common is the current lowest rarity and uses a light gray item background (`#d9dad6`) in filled slots, bag tiles, selected-item artwork, and upgrade confirmation. Burgundy borders identify selected items while retaining the gray background. Empty slots retain parchment. Higher-rarity colors and progression rules remain unconfirmed.
+- Existing levels, exact Gold amounts, production scope, matching-copy requirements, next bonuses, descriptions, binding, stack counts, equipped/new indicators, and progression-path information are retained. The Treasury Chain retains its all-owned-cities scope. No equipment rule, cost, bonus, API, or server-authority change is introduced.
+- Upgrade confirmation retains the two-to-one consumption and irreversible-action wording, confines keyboard focus, and returns focus to Upgrade on Cancel or Escape. Pending requests disable equipment actions; Back returns to the Inner Castle. Other officers retain their existing presentation.
+
+Status: `IN DEVELOPMENT` on `codex/treasury-gear-draft`, with user-approved design and runtime integration. Merge and deployment require separate authorization and verification. Review and validation details: [Treasury equipment](./visual-qa/treasury-gear/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.
