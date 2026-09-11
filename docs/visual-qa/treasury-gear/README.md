@@ -13,13 +13,17 @@ The **Treasury → Master of Coin → Manage Gear** design is approved and integ
 - Equip/Unequip and Upgrade remain at the bottom of the selected-item panel. Long item records and large inventories scroll independently; actions stay visible on the reviewed desktop and landscape screens.
 - The upgrade confirmation retains the existing two-to-one requirement, consumption of both inputs, next-level result, gold charge and irreversible-action wording. Cancel and Escape return focus to Upgrade.
 
-The draft uses the approved Inner Castle parchment/moss palette, readable serif headings, plain text for dense numbers, and engraved SVG symbols. Existing Master of Coin and equipment artwork is retained for this layout review. No new officer or item artwork is proposed in this pass.
+The draft uses the approved Inner Castle parchment/moss palette, readable serif headings, plain text for dense numbers, and engraved SVG symbols. Equipment artwork is retained. The original Master of Coin portrait remains in the game runtime; the review now includes a separate candidate character illustration and idle animation, pending visual approval.
 
 Confirmed rarity treatment: **Common, the current lowest rarity, uses a light gray item background** (`#d9dad6`) in filled equipment slots, bag tiles, the selected-item illustration, and the upgrade confirmation. Selection uses a burgundy border while retaining the gray rarity surface. Empty slots retain parchment. The treatment reads each item's existing rarity value; future rarity colors and rules are not defined in this draft.
 
 ## Review interactions
 
 Select equipment slots or bag items; filter by slot; open and cancel the upgrade confirmation. Example controls cover an available upgrade, missing material, maximum level, an empty slot, and insufficient gold. Equip, confirm-upgrade, Back and Close only report preview feedback in the review toolbar; they never submit gameplay actions.
+
+The **Character** selector compares Animated sprite, Still illustration, and Original portrait inside the approved layout. The candidate has a transparent background and a 6.16-second breathing/blinking loop. Reduced-motion preferences select the still illustration; opening the upgrade confirmation or hiding the page also selects the still. The Current layout comparison retains its original portrait. Creation provenance, the exact submitted prompt, and packaging details are recorded in [art/README.md](art/README.md).
+
+Focused checks for the candidate artwork passed at 1440×900, 844×390, and 568×320: image decoding, portrait containment, eight reachable equipment slots, and visible action buttons with at least 44-pixel heights. The three portrait options, reduced-motion fallback, confirmation pause/resume, and restored Upgrade focus also passed. This draft-only change has not repeated the full multiplayer emulator suite or been deployed. Physical-device animation smoothness and the final art direction still need review.
 
 The comparison uses captured runtime markup, including a separate low-gold capture. Its Treasury data attribute is removed to retain the older shared gear styling. The shared stylesheets are enabled for the comparison and disabled for the draft. They remain live repository styles, so the comparison is not a complete archival rendering snapshot.
 

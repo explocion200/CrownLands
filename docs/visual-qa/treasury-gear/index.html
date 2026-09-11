@@ -6,9 +6,10 @@
   <nav class="review-controls" aria-label="Design preview controls">
     <div class="control-group"><button data-layout="draft" aria-pressed="true">Parchment draft</button><button data-layout="current" aria-pressed="false">Current layout</button></div>
     <div class="control-group"><button data-viewport="desktop" aria-pressed="true">Desktop</button><button data-viewport="landscape" aria-pressed="false">Mobile landscape</button><button data-viewport="small" aria-pressed="false">Small landscape</button></div>
+    <div class="control-group"><label for="portrait">Character</label><select id="portrait"><option value="animated">Animated sprite</option><option value="still">Still illustration</option><option value="original">Original portrait</option></select></div>
     <div class="control-group"><label for="sample">Example</label><select id="sample"><option value="ready">Upgrade ready</option><option value="missing">No matching copy</option><option value="max">Maximum level</option><option value="empty">Empty slot</option><option value="gold">Not enough gold</option></select><button id="reset">Reset preview</button></div>
   </nav>
-  <p class="review-note" id="reviewNote">Select a slot or bag item. Filter the bag and preview the upgrade confirmation. Existing character and item artwork is retained for this layout draft.</p>
+  <p class="review-note" id="reviewNote">New Master of Coin artwork with a gentle breathing and blinking loop. Compare Animated sprite, Still illustration, and Original portrait. Select equipment and preview upgrades as before. Reduced motion shows the still illustration.</p>
   <main><div id="canvas"><iframe id="preview" title="Treasury equipment design preview" src="preview.html"></iframe></div></main>
   <footer><span id="dimensions"></span><span id="reviewStatus" role="status">Synthetic inventory · No game or account changes</span></footer>
 </body></html>

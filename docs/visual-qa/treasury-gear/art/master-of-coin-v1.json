@@ -1,0 +1,127 @@
+{
+  "creationRoute": "ChatGPT Images 2.5 web UI, signed-in plan; no direct paid API call",
+  "conversation": "https://chatgpt.com/c/6aa3500d-1604-83ea-ad1f-ba6c9b148c14",
+  "modelVerification": "The originating Images page identifies itself as ChatGPT Images 2.5. The PNG embeds a gpt-image software version of 2.0. The serving model cannot be independently established from that inconsistent metadata.",
+  "sourceDimensions": [
+    1254,
+    1254
+  ],
+  "sourceGrid": [
+    3,
+    2
+  ],
+  "frameDimensions": [
+    320,
+    640
+  ],
+  "sheetGrid": [
+    3,
+    2
+  ],
+  "baseline": 624,
+  "alignment": [
+    {
+      "frame": 0,
+      "sourceBounds": [
+        107,
+        18,
+        383,
+        626
+      ],
+      "offset": [
+        -85,
+        -2
+      ]
+    },
+    {
+      "frame": 1,
+      "sourceBounds": [
+        71,
+        18,
+        353,
+        626
+      ],
+      "offset": [
+        -52,
+        -2
+      ]
+    },
+    {
+      "frame": 2,
+      "sourceBounds": [
+        41,
+        18,
+        323,
+        626
+      ],
+      "offset": [
+        -22,
+        -2
+      ]
+    },
+    {
+      "frame": 3,
+      "sourceBounds": [
+        104,
+        9,
+        386,
+        615
+      ],
+      "offset": [
+        -85,
+        9
+      ]
+    },
+    {
+      "frame": 4,
+      "sourceBounds": [
+        74,
+        9,
+        354,
+        615
+      ],
+      "offset": [
+        -54,
+        9
+      ]
+    },
+    {
+      "frame": 5,
+      "sourceBounds": [
+        45,
+        9,
+        326,
+        615
+      ],
+      "offset": [
+        -26,
+        9
+      ]
+    }
+  ],
+  "sequence": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    2,
+    1,
+    5,
+    0
+  ],
+  "durationsMs": [
+    1600,
+    650,
+    750,
+    100,
+    110,
+    600,
+    550,
+    900,
+    900
+  ],
+  "loopDurationMs": 6160,
+  "processing": "Six equal source cells, translated onto a shared canvas to align baseline and silhouette center, packaged as still, atlas, and animated WebP. No generated pixels repainted; original alpha retained.",
+  "status": "Draft artwork only; not integrated into the game runtime."
+}
