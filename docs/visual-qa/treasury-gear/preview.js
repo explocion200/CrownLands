@@ -21,7 +21,7 @@ function updateOfficerMotion(){
 document.addEventListener("visibilitychange",updateOfficerMotion);
 const icons={
   treasury:'<path d="M4 13h24v15H4V8l4-4h16l4 4v5M4 13h24M9 5v23M23 5v23"/><path d="M13 11h6v8h-6z"/>',
-  coins:'<ellipse cx="13" cy="10" rx="9" ry="4"/><path d="M4 10v5c0 5 18 5 18 0v-5M4 15v5c0 4 9 5 13 3M22 11c8 0 8 7 0 7s-8-7 0-7m-6 4v10c0 5 13 5 13 0V15m-13 5c0 5 13 5 13 0"/>',
+  coins:'<g fill="none" stroke-width="1.5"><path fill="currentColor" fill-opacity=".12" d="M16 3 23 5 28 10 29 17 26 24 20 28 12 29 6 25 3 19 3 12 8 6Z"/><path fill="currentColor" fill-opacity=".25" stroke="none" d="M27 11 27 18 24 24 18 27 11 27 6 23 9 27 16 30 24 27 29 20 30 14Z"/><path stroke-width="1.1" d="M10 8 16 6 23 9M7 12l-1 5 3 6M22 24l3-4"/><path fill="currentColor" stroke-width=".5" d="m9 11 4 3 3-6 3 6 4-3-2 10H11Z"/><path d="M12 24h8"/></g>',
   bag:'<path d="M10 9 7 3h18l-4 6M10 9c-2 5-7 7-7 14 0 8 26 8 26 0 0-7-5-9-8-14ZM9 10h13m-8 5-2 6m7-6 2 6"/>',
   needle:'<path d="m7 26 16-20c4-5 8 0 4 4L7 26l-3 2zM22 9l3-3M10 23c4 11 20 6 13-1"/>',
   check:'<path d="m6 16 6 6L27 7"/>',
