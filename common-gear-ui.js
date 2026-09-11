@@ -810,6 +810,7 @@ function renderCommonGearBuilding(buildingId) {
     ${renderCommonGearMergeConfirmation(viewModel)}
   </section>`;
   bindCommonGearScreen(viewModel);
+  bindTreasuryGearPortrait();
   restoreCommonGearFocus();
   return true;
 }

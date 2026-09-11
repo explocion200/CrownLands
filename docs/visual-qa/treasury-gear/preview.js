@@ -7,7 +7,7 @@ const number=value=>Math.floor(Number(value)).toLocaleString("en-US");
 const percent=value=>Number(value).toFixed(2);
 const shortName=value=>value.replace("Master of Coin's ","");
 const art=(src,alt="")=>`<img src="${esc(src)}" alt="${esc(alt)}" draggable="false">`;
-const officerArt={still:"docs/visual-qa/treasury-gear/art/master-of-coin-still-v1.webp",animated:"docs/visual-qa/treasury-gear/art/master-of-coin-idle-v1.webp"};
+const officerArt={still:"assets/optimized/treasury-master-of-coin-still-320x640-60b046fa71b7.webp",animated:"assets/optimized/treasury-master-of-coin-idle-256x512-38144b452e4e.webp"};
 function officerMarkup(vm){
   if(portrait==="original")return `<figure class="tg-officer">${art(vm.building.characterArt,"Master of Coin")}<figcaption>Keeper of the treasury</figcaption></figure>`;
   return `<figure class="tg-officer has-sprite"><picture><source media="(prefers-reduced-motion: reduce)" srcset="${officerArt.still}"><img src="${officerArt.still}" data-officer-sprite alt="Illustrated Master of Coin holding his ledger" width="320" height="640" draggable="false"></picture><figcaption>Keeper of the treasury</figcaption></figure>`;

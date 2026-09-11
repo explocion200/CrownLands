@@ -61,11 +61,13 @@ async function main() {
     await wait("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");
     await evaluate(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,50));state.gear=normalizeCommonGearState(${JSON.stringify(gear)});state.gold=128400;authoritativeShopPricing={rawBaseGoldPerHour:48000};openInnerCastle(getMainCityReference().id);})()`);
     await evaluate("Promise.all(modal.getAnimations().map(a=>a.finished.catch(()=>{})))");
+    await evaluate("setAnimationModePreference('full')");
     for (const [width, height] of [[1440,900],[1024,768],[844,390],[667,375],[568,320]]) {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const [example, id] of [['ready',ready],['missing',missing],['max',max],['empty',''],['gold',ready]]) {
         await evaluate(`state.gold=${example === 'gold' ? 12000 : 128400};selectedCommonGearInstanceId=${JSON.stringify(id)};selectedCommonGearSlot=${JSON.stringify(id ? gear.instances[id].slot : 'gloves')};selectedCommonGearBagFilter='all';commonGearMergeConfirmOpen=false;renderCommonGearBuilding('treasury');`);
         await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))"); await paint();
+        assert(await evaluate(`(()=>{const image=modal.querySelector('[data-treasury-officer]'),bounds=image.getBoundingClientRect(),frame=image.parentElement.getBoundingClientRect();return image.complete&&image.naturalWidth===256&&image.currentSrc.includes('treasury-master-of-coin-idle-')&&bounds.x>=frame.x&&bounds.y>=frame.y&&bounds.right<=frame.right&&bounds.bottom<=frame.bottom;})()`), `Sprite must decode and fit its frame at ${width}x${height}.`);
         const data = await evaluate(`(()=>{const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};return{modal:rect(modal),slots:[...modal.querySelectorAll('[data-gear-slot]')].map(rect),actions:[...modal.querySelectorAll('.tg-actions button')].map(rect),back:rect(modal.querySelector('[data-gear-back]')),close:rect(closeModalBtn),bodyOverflow:modalBody.scrollHeight-modalBody.clientHeight,upgradeDisabled:modal.querySelector('[data-gear-merge]')?.disabled,gray:[...modal.querySelectorAll('[data-rarity=common]')].every(e=>getComputedStyle(e).backgroundColor==='rgb(217, 218, 214)'),emptyColor:getComputedStyle(modal.querySelector('.tg-slot.is-empty')).backgroundColor,text:modal.querySelector('.tg-details').innerText};})()`);
         results.push({ width, height, example, ...data });
         if (example === 'ready') {
@@ -91,6 +93,7 @@ async function main() {
     }
     await evaluate(`state.gold=128400;selectedCommonGearInstanceId=${JSON.stringify(ready)};renderCommonGearBuilding('treasury')`); await paint();
     await click('[data-gear-merge]');
+    assert(await evaluate("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.still"), 'Confirmation must pause decorative animation.');
     assert.equal(await evaluate('document.activeElement.hasAttribute("data-gear-merge-cancel")'), true);
     assert(await evaluate('modal.querySelector(".tg-main").inert && getComputedStyle(closeModalBtn).visibility === "hidden"'));
     await key('Tab','Tab',9); assert(await evaluate('document.activeElement.hasAttribute("data-gear-merge-confirm")'));
@@ -99,6 +102,7 @@ async function main() {
     fs.writeFileSync(path.join(out,'runtime-confirmation-small.png'), Buffer.from(confirmShot.data,'base64'));
     await key('Escape','Escape',27);
     assert(await evaluate('modal.open && !commonGearMergeConfirmOpen && document.activeElement.hasAttribute("data-gear-merge")'));
+    assert(await evaluate("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.idle"), 'Closing confirmation must restore full-mode animation.');
     await click('[data-gear-merge]'); await click('[data-gear-merge-cancel]');
     assert(await evaluate('!commonGearMergeConfirmOpen && document.activeElement.hasAttribute("data-gear-merge")'));
     await evaluate("const select=modal.querySelector('[data-gear-bag-select]');select.value='head';select.dispatchEvent(new Event('change')); "); await paint();
@@ -128,7 +132,26 @@ async function main() {
     await wait('!commonGearActionInFlight');
     assert(await evaluate("selectedCommonGearInstanceId==='treasury-upgraded' && createCommonGearViewModel('treasury').selected.level===3 && Object.keys(state.gear.instances).length===15"));
     await evaluate('getOnlineApi=window.__treasuryOriginalApi');
+    for (const mode of ['reduced', 'off', 'full']) {
+      await evaluate(`setAnimationModePreference('${mode}')`);
+      await wait(`modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.${mode === 'full' ? 'idle' : 'still'}`);
+    }
+    await evaluate("volatileAnimationModePreference='';localStorage.removeItem(ANIMATION_MODE_STORAGE_KEY);localStorage.removeItem(LEGACY_ANIMATION_MODE_STORAGE_KEY);renderAnimationModeSetting()");
+    await client.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    await wait("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.still");
+    await evaluate("setAnimationModePreference('full')");
+    await wait("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.idle");
+    await client.send('Emulation.setEmulatedMedia', { features: [] });
+    // Simulate visibility events without depending on headless browser tab scheduling.
+    await evaluate("Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))");
+    assert(await evaluate("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.still"));
+    await evaluate("delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))");
+    await wait("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.idle");
+    await evaluate("modal.querySelector('[data-treasury-officer]').dispatchEvent(new Event('error'))");
+    assert(await evaluate("modal.querySelector('[data-treasury-officer]').getAttribute('src')===TREASURY_OFFICER_ART.still"), 'A failed animation must fall back to the still.');
+    await evaluate("renderCommonGearBuilding('treasury')");
     await click('[data-gear-back]'); assert(await evaluate("modal.classList.contains('bailey-modal')&&!modal.dataset.commonGearBuildingId"));
+    assert(await evaluate('disposeTreasuryGearPortrait===null'), 'Back must dispose portrait listeners.');
     for (const building of ['barracks','gatehouse','royal-stables']) {
       await evaluate(`renderCommonGearBuilding(${JSON.stringify(building)})`); await paint();
       assert(await evaluate("!!modal.querySelector('.common-gear-screen')&&!modal.querySelector('.tg-shell')"));
@@ -136,9 +159,10 @@ async function main() {
     }
     await evaluate("renderCommonGearBuilding('treasury')"); await paint(); await click('#closeModalBtn');
     await wait('!modal.open');
+    await wait('disposeTreasuryGearPortrait===null');
     assert.equal(errors.length,0,JSON.stringify(errors));
     fs.writeFileSync(path.join(out,'runtime-checks.json'),JSON.stringify({results,errors,interactions:'passed'},null,2));
-    console.log('PASS: Treasury runtime, 25 desktop/landscape states, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close and other-officer isolation.');
+    console.log('PASS: Treasury runtime, 25 desktop/landscape states, sprite decoding/containment, animation settings/system preference/visibility/error fallback/cleanup, 44px controls, gray rarity surfaces, confirmation focus/Tab/Escape, selection/filter/scroll, empty inventory, pending/error action guards, upgrade response identity, Back/Close and other-officer isolation.');
   } finally {
     if (client) await client.send('Browser.close').catch(()=>{});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

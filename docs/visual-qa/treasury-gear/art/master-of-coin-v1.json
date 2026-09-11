@@ -123,5 +123,12 @@
   ],
   "loopDurationMs": 6160,
   "processing": "Six equal source cells, translated onto a shared canvas to align baseline and silhouette center, packaged as still, atlas, and animated WebP. No generated pixels repainted; original alpha retained.",
-  "status": "Draft artwork only; not integrated into the game runtime."
+  "status": "Approved artwork integrated into the Treasury on codex/treasury-gear-draft; pending merge and authorized deployment.",
+  "runtime": {
+    "still": "assets/optimized/treasury-master-of-coin-still-320x640-60b046fa71b7.webp",
+    "idle": "assets/optimized/treasury-master-of-coin-idle-256x512-38144b452e4e.webp",
+    "idleDimensions": [256, 512],
+    "idleBytes": 289374,
+    "processing": "Decoded review frames resized with Lanczos and encoded as animated WebP at quality 80, method 6, preserving alpha, durations and infinite looping."
+  }
 }

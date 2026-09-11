@@ -1,6 +1,6 @@
-# Master of Coin — candidate sprite v1
+# Master of Coin — approved sprite v1
 
-Status: artwork draft for review, created September 10, 2026. These files are used only by the local Treasury design review. The game runtime still uses its existing portrait. No equipment illustrations, equipment rules, or other officers changed.
+Status: created September 10, 2026; approved for continued integration. Optimized derivatives are integrated into the Treasury runtime on `codex/treasury-gear-draft`, pending merge and authorized deployment. The source and review exports stay in this documentation directory. No equipment illustrations, equipment rules, or other officers changed.
 
 ## Creation provenance
 
@@ -26,9 +26,11 @@ References uploaded for this request:
 
 Packaging divides the source into six equal 418×627 cells. Each cell is translated onto a 320×640 transparent canvas so its visible silhouette is centered and its foot baseline is at y=624. Bounds are measured with alpha greater than 64 for alignment only; the generated pixels are not repainted. WebP outputs use quality 90 and method 6.
 
-Playback uses zero-based frames `0, 1, 2, 3, 4, 2, 1, 5, 0` for `1600, 650, 750, 100, 110, 600, 550, 900, 900` milliseconds respectively. The closed-eye frame is brief. Small generated differences in the face, cloth, and stance remain part of this candidate and need visual approval.
+Playback uses zero-based frames `0, 1, 2, 3, 4, 2, 1, 5, 0` for `1600, 650, 750, 100, 110, 600, 550, 900, 900` milliseconds respectively. The closed-eye frame is brief. Small generated differences in the face, cloth, and stance remain in the approved illustration.
 
-Checks confirmed genuine PNG alpha, six aligned poses, valid transparent animated WebP frames, decoding in the browser, and containment between the equipment slots at all three supported review sizes. Browser checks also confirmed portrait switching, reduced-motion selection, and pause/resume during the upgrade confirmation. This is not a physical-phone performance certification or a runtime release.
+The approved runtime derivative resizes each decoded animation frame to 256×512 with Lanczos resampling and encodes WebP at quality 80, method 6, preserving all nine durations, alpha, and infinite looping. It is 289,374 bytes, compared with the review master's 579,718 bytes. The original still is retained at 320×640 and 64,010 bytes. Runtime files are recorded in `assets/optimized/manifest.json` as `treasury-master-of-coin-idle` and `treasury-master-of-coin-still`, with content hashes, dimensions, byte sizes, and this source PNG's path.
+
+Checks confirmed genuine PNG alpha, six aligned poses, valid transparent animated WebP frames, decoding in the browser, and containment between the equipment slots at all three supported review sizes. Browser checks also confirmed portrait switching, reduced-motion selection, and pause/resume during the upgrade confirmation. Runtime checks passed 25 states at five desktop/landscape sizes, including Full/Reduced/Off and system preferences, simulated visibility events, animation error fallback, confirmation pause/resume, and listener cleanup on Back/Close. This is not a physical-phone performance certification or a runtime release.
 
 ## Exact submitted prompt
 

@@ -1,5 +1,52 @@
 /* Approved Treasury presentation; values and actions stay in the shared Common Gear flow. */
-/* exported renderTreasuryGearScreen */
+/* exported renderTreasuryGearScreen, bindTreasuryGearPortrait */
+const TREASURY_OFFICER_ART = {
+  still: "assets/optimized/treasury-master-of-coin-still-320x640-60b046fa71b7.webp",
+  idle: "assets/optimized/treasury-master-of-coin-idle-256x512-38144b452e4e.webp",
+};
+let disposeTreasuryGearPortrait = null;
+function bindTreasuryGearPortrait() {
+  disposeTreasuryGearPortrait?.();
+  const image = modalBody.querySelector("[data-treasury-officer]");
+  if (!image) return;
+  const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let failed = false;
+  const setSource = source => {
+    if (image.getAttribute("src") !== source) image.setAttribute("src", source);
+  };
+  const update = () => {
+    if (!image.isConnected || modal.dataset.commonGearBuildingId !== "treasury") { dispose(); return; }
+    if (failed) return;
+    const mode = typeof getEffectiveAnimationMode === "function" ? getEffectiveAnimationMode() : (media.matches ? "reduced" : "full");
+    const animate = modal.open && !document.hidden && mode === "full" && !modalBody.querySelector(".tg-confirm");
+    setSource(animate ? TREASURY_OFFICER_ART.idle : TREASURY_OFFICER_ART.still);
+  };
+  const close = () => { if (!modal.open) dispose(); };
+  const onError = () => {
+    failed = true;
+    const source = image.getAttribute("src");
+    if (source === image.dataset.officerFallback) { image.hidden = true; return; }
+    setSource(source === TREASURY_OFFICER_ART.still ? image.dataset.officerFallback : TREASURY_OFFICER_ART.still);
+  };
+  const observer = new MutationObserver(update);
+  function dispose() {
+    observer.disconnect();
+    document.removeEventListener("visibilitychange", update);
+    media.removeEventListener("change", update);
+    modal.removeEventListener("close", close);
+    image.removeEventListener("error", onError);
+    if (!failed) setSource(TREASURY_OFFICER_ART.still);
+    disposeTreasuryGearPortrait = null;
+  }
+  disposeTreasuryGearPortrait = dispose;
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-animation-mode"] });
+  observer.observe(modal, { attributes: true, attributeFilter: ["open", "class", "data-common-gear-building-id"] });
+  document.addEventListener("visibilitychange", update);
+  media.addEventListener("change", update);
+  modal.addEventListener("close", close);
+  image.addEventListener("error", onError);
+  update();
+}
 const formatTreasuryGearNumber = value => Math.floor(Number(value) || 0).toLocaleString("en-US");
 const formatTreasuryGearPercent = value => Number(value).toFixed(2);
 const getTreasuryGearShortName=value=>value.replace("Master of Coin's ","");
@@ -54,7 +101,7 @@ function renderTreasuryGearScreen(vm) {
   const groups = vm.filteredBagGroups;
   return `<section class="tg-shell" data-common-gear-screen>
     <header class="tg-header" ${vm.mergeConfirmOpen?"inert":""}><div class="tg-seal">${renderTreasuryGearIcon("treasury")}</div><div class="tg-heading"><p>Inner Castle <span>· Master of Coin</span></p><h2 id="tgTitle">Treasury</h2></div><div class="tg-gold">${renderTreasuryGearIcon("coins")}<span><small>Gold</small>${formatTreasuryGearNumber(state.gold)}</span></div><button type="button" class="tg-back" data-gear-back><span aria-hidden="true">←</span><span>Back to Inner Castle</span></button><span class="tg-close-space" aria-hidden="true"></span></header>
-    <main class="tg-main" ${vm.mergeConfirmOpen?"inert":""}><section class="tg-loadout" aria-labelledby="tgOfficerTitle"><header class="tg-section-heading"><h3 id="tgOfficerTitle">Master of Coin</h3><span>Equipment</span></header><div class="tg-loadout-grid"><div class="tg-slot-column">${vm.leftSlots.map(renderTreasuryGearSlot).join("")}</div><figure class="tg-officer">${renderTreasuryGearArt(vm.building.characterArt,"Master of Coin")}<figcaption>Keeper of the treasury</figcaption></figure><div class="tg-slot-column">${vm.rightSlots.map(renderTreasuryGearSlot).join("")}</div></div><footer class="tg-loadout-footer"><span>${vm.slots.filter(s=>s.equipped).length} / 8 slots equipped</span><span><b>!</b> Upgrade material ready</span></footer></section>
+    <main class="tg-main" ${vm.mergeConfirmOpen?"inert":""}><section class="tg-loadout" aria-labelledby="tgOfficerTitle"><header class="tg-section-heading"><h3 id="tgOfficerTitle">Master of Coin</h3><span>Equipment</span></header><div class="tg-loadout-grid"><div class="tg-slot-column">${vm.leftSlots.map(renderTreasuryGearSlot).join("")}</div><figure class="tg-officer"><img data-treasury-officer data-officer-fallback="${escapeHtml(vm.building.characterArt)}" src="${TREASURY_OFFICER_ART.still}" alt="Illustrated Master of Coin holding his ledger" width="320" height="640" draggable="false"><figcaption>Keeper of the treasury</figcaption></figure><div class="tg-slot-column">${vm.rightSlots.map(renderTreasuryGearSlot).join("")}</div></div><footer class="tg-loadout-footer"><span>${vm.slots.filter(s=>s.equipped).length} / 8 slots equipped</span><span><b>!</b> Upgrade material ready</span></footer></section>
     <section class="tg-bag" aria-labelledby="tgBagTitle"><header class="tg-section-heading"><h3 id="tgBagTitle">${renderTreasuryGearIcon("bag")} Equipment Bag</h3><span>${vm.bagOwnedCount} owned</span></header><div class="tg-bag-controls"><label for="tgFilter">Show</label><select data-gear-bag-select id="tgFilter" aria-label="Filter equipment bag"><option value="all">All slots</option>${COMMON_GEAR.SLOTS.map(s=>`<option value="${s}" ${vm.bagFilter===s?"selected":""}>${titleCaseCommonGearLabel(s)}</option>`).join("")}</select></div><div class="tg-bag-scroll" data-gear-bag-scroll tabindex="0" aria-label="Equipment inventory"><div class="tg-items">${groups.map(renderTreasuryGearBagTile).join("")||`<div class="tg-empty"><h4>No equipment here</h4><p>${vm.instances.length?"Change the filter to see the Master of Coin’s other gear.":"Open Common Gear Boxes to find gear for the Master of Coin."}</p></div>`}</div></div><footer class="tg-bag-footer"><span>${groups.length} shown · ${vm.bagStackCount} stacks</span><span>${renderTreasuryGearIcon("check")} Equipped <b class="tg-legend-ready">!</b> Ready</span></footer></section>
     ${renderTreasuryGearDetails(vm)}</main>${renderTreasuryGearConfirmation(vm)}</section>`;
 }

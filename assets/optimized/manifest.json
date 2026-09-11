@@ -947,6 +947,28 @@
       "bytes": 4716,
       "sha256": "3218af1d5559bc192e4105985a7bbd03835d95daa0ce3e61204c3e3897e43f6b",
       "hasAlpha": true
+    },
+    {
+      "id": "treasury-master-of-coin-still",
+      "category": "gear",
+      "source": "docs/visual-qa/treasury-gear/art/master-of-coin-source-v1.png",
+      "output": "assets/optimized/treasury-master-of-coin-still-320x640-60b046fa71b7.webp",
+      "width": 320,
+      "height": 640,
+      "bytes": 64010,
+      "sha256": "60b046fa71b733b5c180e77f3fa81c663c010b37b74326f5fa768455958c1566",
+      "hasAlpha": true
+    },
+    {
+      "id": "treasury-master-of-coin-idle",
+      "category": "gear-animation",
+      "source": "docs/visual-qa/treasury-gear/art/master-of-coin-source-v1.png",
+      "output": "assets/optimized/treasury-master-of-coin-idle-256x512-38144b452e4e.webp",
+      "width": 256,
+      "height": 512,
+      "bytes": 289374,
+      "sha256": "38144b452e4e521226a3e4050c75a7bc5c2215885787218c0ee35b51beb4d880",
+      "hasAlpha": true
     }
   ]
 }
