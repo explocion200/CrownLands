@@ -46,3 +46,5 @@ The portrait controller follows the game's effective Full/Reduced/Off mode, incl
 Run `node tools/validate-treasury-gear-browser.js` for 25 live-renderer states across 1440×900, 1024×768, 844×390, 667×375, and 568×320. It checks control bounds, gray rarity surfaces, disabled and empty states, filter/selection/scroll, keyboard confirmation, mocked action failures and pending guards, an upgraded item response, Back/Close, and other-officer isolation. Screenshots and the report are saved to ignored `release-artifacts/treasury-gear/`.
 
 Physical-phone touch verification remains a manual follow-up. Nothing in this document claims a production deployment.
+
+The packaged base-client allowance increases from 25 MiB by one bounded 352 KiB step for the new animation and still. The measured artifact is 25.27 MiB before the separately measured prepared-world bundle. Source sheets and documentation remain excluded; world, combined-artifact, and installed-shell ceilings are unchanged.
