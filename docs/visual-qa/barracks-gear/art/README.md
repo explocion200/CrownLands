@@ -1,6 +1,6 @@
 # War Captain — static character v1
 
-Created September 11, 2026 for review in the approved Barracks layout. The user explicitly requested a character without motion. This is one still image, not a sprite sheet or animation. Runtime integration and art approval are pending.
+Created and approved September 11, 2026 for the Barracks layout. The user explicitly requested a character without motion. This is one still image, not a sprite sheet or animation. The identical 79,142-byte WebP is integrated at `assets/optimized/barracks-war-captain-still-400x800-b41f63401fb3.webp`, recorded in the optimized asset manifest. Publication requires release-channel verification.
 
 ## Creation provenance
 
@@ -17,7 +17,7 @@ Uploaded references:
 ## Files and packaging
 
 - `war-captain-source-v1.png`: unmodified downloaded 887 × 1774 RGBA source.
-- `war-captain-still-v1.webp`: centered 400 × 800 transparent static export, used only by the draft.
+- `war-captain-still-v1.webp`: centered 400 × 800 transparent static export; runtime uses a byte-identical optimized asset.
 - `war-captain-v1.json`: dimensions, hashes, crop, offset, and provenance.
 
 The export trims the transparent margin using visible bounds measured at alpha greater than 64, with ten source pixels of safety padding. It preserves the original colors and alpha within that region, resizes with Lanczos to fit 376 × 752, and centers the result on a 400 × 800 transparent canvas. WebP uses quality 90 and method 6. No character painting or background removal was performed after generation.

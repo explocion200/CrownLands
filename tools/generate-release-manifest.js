@@ -70,6 +70,7 @@ function createManifest() {
     "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "common-gear.js", "common-gear-ui.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",
     "treasury-gear-ui.js", "treasury-gear-ui.css",
+    "barracks-gear-ui.js", "barracks-gear-ui.css",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
     "region-catalog.js", "functions/world-travel-network.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",
