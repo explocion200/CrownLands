@@ -7,7 +7,7 @@ const number=value=>Math.floor(Number(value)).toLocaleString("en-US");
 const percent=value=>Number(value).toFixed(2);
 const shortName=value=>value.replace("War Captain's ","");
 const art=(src,alt="")=>`<img src="${esc(src)}" alt="${esc(alt)}" draggable="false">`;
-function officerMarkup(vm){return `<figure class="tg-officer">${art(vm.building.characterArt,"War Captain — existing portrait for layout review")}<figcaption>Captain of the warband</figcaption></figure>`;}
+function officerMarkup(){return `<figure class="tg-officer has-character">${art("docs/visual-qa/barracks-gear/art/war-captain-still-v1.webp","War Captain in burgundy and worn steel, holding rolled orders")}<figcaption>Captain of the warband</figcaption></figure>`;}
 const icons={
   barracks:"<g fill=\"none\" stroke-width=\"1.5\"><path fill=\"currentColor\" fill-opacity=\".12\" d=\"M8 18v7l8 5 8-5v-7ZM6 16 8 9q3-6 8-6t8 6l2 7Z\"/> <path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"M18 4q6 3 7 12h-6ZM19 20h5v5l-8 5v-5Z\"/> <path fill=\"currentColor\" stroke-width=\".5\" d=\"m5 14 22 1 3 3-1 2H3l-1-2ZM11 21h4v2h-4Zm6 0h4v2h-4Z\"/> <path d=\"m16 5-1 8m1 8v5\"/> <path stroke-width=\".9\" d=\"m10 25 2 2m0-3 2 2m5 1 2-2m-9-15 1-2\"/></g>",
   coins:'<g fill="none" stroke-width="1.5"><path fill="currentColor" fill-opacity=".12" d="M16 3 23 5 28 10 29 17 26 24 20 28 12 29 6 25 3 19 3 12 8 6Z"/><path fill="currentColor" fill-opacity=".25" stroke="none" d="M27 11 27 18 24 24 18 27 11 27 6 23 9 27 16 30 24 27 29 20 30 14Z"/><path stroke-width="1.1" d="M10 8 16 6 23 9M7 12l-1 5 3 6M22 24l3-4"/><path fill="currentColor" stroke-width=".5" d="m9 11 4 3 3-6 3 6 4-3-2 10H11Z"/><path d="M12 24h8"/></g>',

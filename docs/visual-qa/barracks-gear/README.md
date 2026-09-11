@@ -1,6 +1,6 @@
 # Barracks · War Captain equipment draft
 
-Status: **layout review awaiting user approval** on `codex/barracks-gear-draft`. The user requested a draft before pushing and merging. This folder is an isolated local preview; no game runtime, backend, inventory, production build, or live account is changed.
+Status: **layout approved; static War Captain art awaiting review** on `codex/barracks-gear-draft`. The user approved the layout and requested the Captain in the Treasury character style, without motion. The user requested a draft before pushing and merging. This folder is an isolated local preview; no game runtime, backend, inventory, production build, or live account is changed.
 
 Open `index.html` through the local preview server. The review offers the parchment draft and a captured current-layout comparison, with Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait orientation is outside this review.
 
@@ -8,7 +8,7 @@ Open `index.html` through the local preview server. The review offers the parchm
 
 - Reuses the approved Treasury layout and dimensions: officer between eight equipped slots, equipment bag in the middle, complete selected-item details on the right, with Equip/Unequip and Upgrade fixed at the bottom.
 - Retains the light gray Common backgrounds (`#d9dad6`), burgundy selection borders, parchment, moss, and readable ink. The gold symbol is the existing crown-stamped City Details coin. The Barracks seal and upgrade hammer reuse City Details' engraved helmet and upgrade artwork.
-- Uses the existing War Captain portrait and existing item illustrations for this layout review. A new portrait and idle animation are a separate art pass; this draft does not present old artwork as newly generated.
+- Uses the new transparent War Captain still, centered between the equipment slots without a portrait frame. The character is static: no animation, sprite sheet, or motion controller. Existing item illustrations remain. Current layout preserves the original portrait for comparison. See `art/README.md` for source, prompt, and provenance.
 - Includes upgrade-ready, missing-copy, maximum-level Valor Medallion, Officer Sword attack, empty-slot, and insufficient-gold examples. Selecting a slot or bag item retains all its available information; bag scrolling is preserved on item selection.
 - Preview actions do not change inventory or Gold. The upgrade confirmation retains its two-to-one consumption warning and returns focus after Cancel or Escape.
 
@@ -20,6 +20,6 @@ Armor grants troop production in all owned cities. The Officer Sword grants atta
 
 ## Validation
 
-The focused local draft check passed 15 states across the three supported desktop/landscape sizes: decoded images, eight reachable 44-pixel slots, visible 44-pixel action buttons, viewport containment, empty/disabled/low-Gold states, bag selection and filtering, upgrade confirmation, Escape/focus restoration, and the current-layout comparison. Browser review also verified the Sword's attack description and the Medallion's full recovery-limit text. No browser exceptions were reported. Physical-device touch and a future portrait animation are not validated by this layout draft.
+The focused local draft check passed 15 states across the three supported desktop/landscape sizes: decoded images, eight reachable 44-pixel slots, visible 44-pixel action buttons, viewport containment, empty/disabled/low-Gold states, bag selection and filtering, upgrade confirmation, Escape/focus restoration, and the current-layout comparison. Browser review also verified the Sword's attack description and the Medallion's full recovery-limit text. The character source and WebP have genuine alpha and a single frame; layout checks cover containment between the slots and the absence of character animation. No browser exceptions were reported. Physical-device touch is not validated by this local draft.
 
 Local capture/check scripts, screenshots, and results are retained under ignored `release-artifacts/barracks-gear/`. No full release gate, remote push, pull request, merge, or deployment is performed before the user's draft approval.

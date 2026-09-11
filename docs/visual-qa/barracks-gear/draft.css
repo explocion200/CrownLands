@@ -41,6 +41,9 @@ body.barracks-draft{font:14px/1.4 "Segoe UI",Arial,sans-serif;color:#302c22;colo
 .tg-officer{position:relative;align-self:stretch;display:flex;align-items:center;min-width:0;min-height:0;overflow:hidden}
 .tg-officer img{width:100%;max-height:100%;object-fit:contain;display:block;border:1px solid #9c8760;padding:3px;background:#dacaa4}
 .tg-officer figcaption{position:absolute;bottom:20px;width:100%;text-align:center;padding:10px 5px;font:italic 13px Georgia,serif;color:#6e5c3d}
+.tg-officer.has-character{justify-content:center;padding-bottom:36px}
+.tg-officer.has-character img{width:100%;height:100%;border:0;padding:0;background:transparent;object-fit:contain}
+.tg-officer.has-character figcaption{bottom:0}
 .tg-loadout-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;border-top:1px solid #b8a684;font-size:10px;color:#6b614f}.tg-loadout-footer b{display:inline-grid;place-items:center;margin-right:3px;width:13px;height:13px;border-radius:50%;background:#7a3937;color:#fff4d5;font:bold 10px Georgia,serif}
 .tg-bag{display:grid;grid-template-rows:45px 53px minmax(0,1fr) 45px;background:#e9dec0;border-right:1px solid var(--rule);border-left:1px solid var(--rule)}
 .tg-bag-controls{display:flex;align-items:center;gap:10px;padding:5px 12px;font-size:11px;color:#685e4a}.tg-bag-controls select{flex:1;min-width:0;background:#f5eacf;font-size:12px;padding:0 9px}
@@ -89,6 +92,7 @@ body.barracks-draft{font:14px/1.4 "Segoe UI",Arial,sans-serif;color:#302c22;colo
   .tg-loadout{grid-template-rows:30px minmax(0,1fr) 22px;padding:0 7px}.tg-loadout .tg-section-heading>span{display:none}.tg-loadout-grid{grid-template-columns:47px minmax(0,1fr) 47px;gap:5px;padding:6px 0}.tg-slot-column{gap:4px;grid-template-rows:repeat(4,minmax(44px,1fr))}
   .barracks-draft .tg-slot{padding:3px 1px;gap:1px;font-size:9px}.tg-slot small{margin-top:1px;font-size:9px}.tg-slot-art{height:25px}.tg-slot-art img{width:100%;max-height:25px}.tg-slot.is-empty .tg-icon{height:17px;width:17px}.tg-ready{width:12px;height:12px;top:2px;right:2px;font-size:9px}
   .tg-officer figcaption{display:none}.tg-officer img{padding:2px}.tg-loadout-footer{font-size:9px;justify-content:center}.tg-loadout-footer>span+span{display:none}
+  .tg-officer.has-character{padding-bottom:0}
   .tg-bag{grid-template-rows:30px 47px minmax(0,1fr) 22px}.tg-bag-controls{padding:2px 7px;gap:5px}.tg-bag-controls label{display:none}.tg-bag-controls select{font-size:11px;padding:0 5px;min-height:42px}.tg-bag .tg-section-heading>span{display:none}.tg-bag-scroll{padding:3px 6px 6px}.tg-items{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
   .barracks-draft .tg-item{grid-template-rows:44px minmax(24px,auto);min-height:79px;padding:4px 2px}.tg-item>img{height:43px}.tg-item-level,.tg-item-count{top:39px;font-size:9px}.tg-item-name{font-size:9px;padding-top:5px}.tg-item-mark b{font-size:8px}.tg-item-mark .tg-icon{height:13px;width:13px}.tg-item-mark{left:2px;top:2px}.tg-bag-footer{font-size:9px;justify-content:center;padding:2px 3px}.tg-bag-footer>span+span{display:none}
   .tg-details{grid-template-rows:30px minmax(0,1fr) 56px}.tg-detail-scroll{padding:8px 10px 12px}.tg-item-hero{grid-template-columns:55px minmax(0,1fr);gap:8px;padding-bottom:8px}.tg-inspected-art{height:59px}.tg-eyebrow{font-size:8px;letter-spacing:.5px;margin-bottom:2px!important}.tg-item-hero h4{font-size:18px;line-height:1.1;margin-bottom:4px}.tg-item-meta{font-size:9px}.tg-levels{margin-top:5px;gap:3px}.tg-levels i{width:13px;height:4px}
