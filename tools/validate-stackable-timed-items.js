@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
-const clientSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(path.join(root, "game.js"), "utf8")}`;
+const clientSource = `${fs.readFileSync(path.join(root, "instant-economy-actions.js"), "utf8")}\n${fs.readFileSync(path.join(root, "game.js"), "utf8")}\n${fs.readFileSync(path.join(root, "item-bag-ui.js"), "utf8")}`;
 
 const activationSource = serverSource.slice(
   serverSource.indexOf("exports.activateInventoryItem"),
@@ -132,7 +132,7 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /selectedEntryActiveRemaining > 0 && !selectedEntryIsStackable \? "disabled" : ""/,
+  /const disabled = activeRemaining > 0 && !isStackableTimedInventoryItem\(selectedEntry\);/,
   "Active stackable items must remain usable in the Bag."
 );
 assert.match(
