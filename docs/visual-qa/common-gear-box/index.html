@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crown Lands · Common Gear Box draft</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+  <header class="review-header"><div><p>CROWN LANDS · DESIGN REVIEW</p><h1>Common Gear Box · Opening & rewards</h1></div><span class="draft-badge">Draft only</span></header>
+  <nav class="review-controls" aria-label="Design preview controls">
+    <div class="control-group"><button data-viewport="desktop" aria-pressed="true">Desktop</button><button data-viewport="landscape" aria-pressed="false">Mobile landscape</button><button data-viewport="small" aria-pressed="false">Small landscape</button></div>
+    <div class="control-group"><label for="sample">Example</label><select id="sample"><option value="ready">5 boxes · Ready</option><option value="rewards">Rewards · More boxes</option><option value="last">Last box</option><option value="empty">No boxes</option><option value="slow">Slow response</option><option value="error">Opening fails once</option><option value="retry">Another box fails once</option></select></div>
+    <div class="control-group"><label for="motion">Motion</label><select id="motion"><option value="auto">Auto</option><option value="full">Full</option><option value="reduced">Reduced</option><option value="off">Off</option></select><button id="replay">Replay opening</button><button id="reset">Reset preview</button></div>
+  </nav>
+  <p class="review-note">Open the chest to reveal three Common pieces. Open Another Box continues one box at a time while any remain. The latch, hinged lid, and reward reveal are animated; Reduced and Off respect motion preferences. All items and box counts here are demonstration data.</p>
+  <main><div id="canvas"><iframe id="preview" title="Common Gear Box design preview" src="preview.html"></iframe></div></main>
+  <footer><span id="dimensions"></span><span id="reviewStatus" role="status">Interactive draft · No inventory or account changes</span></footer>
+</body></html>
