@@ -105,8 +105,8 @@ for (const category of ["gear-box", "item", "pickup", "status"]) {
   assert.match(optimizer, new RegExp(`FIXED_LAYOUT_CATEGORIES[\\s\\S]*?"${category}"`), `${category} must remain fixed-layout.`);
 }
 assert.match(game, /const COMMON_GEAR_BOX_OPEN_ART = "assets\/optimized\/item-common-gear-box-open-/);
-assert.match(game, /class="gear-box-closed-state"/);
-assert.match(game, /class="gear-box-open-state"/);
+assert.match(read("common-gear-box-ui.js"), /function createCommonGearChest\(host\)/, "The approved chest must have its illustrated hinged renderer.");
+assert.match(read("common-gear-box-ui.js"), /chest\.setOpen\(1 - Math\.pow/, "The approved chest must animate its hinged lid.");
 assert.match(styles, /@keyframes commonGearLatch/);
 assert.match(styles, /@keyframes commonGearBoxOpened/);
 assert.match(styles, /@keyframes commonGearCardSettle/);

@@ -131,6 +131,8 @@ const entrypointBudgets = {
   "gatehouse-gear-ui.css": 42 * 1024,
   "royal-stables-gear-ui.js": 16 * 1024,
   "royal-stables-gear-ui.css": 42 * 1024,
+  "common-gear-box-ui.js": 24 * 1024,
+  "common-gear-box-ui.css": 24 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add

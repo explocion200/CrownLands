@@ -1,0 +1,2 @@
+@import url("../compact-city-layout/review.css");
+.review-controls button{min-height:44px}.control-group{align-items:center}.control-group label{font-size:12px;margin-right:5px}.control-group select{min-height:44px;max-width:180px;padding:0 10px;border:1px solid #747963;background:#282d23;color:#eee5ce;font:12px "Segoe UI",sans-serif}.review-header{padding-top:14px}.review-note{max-width:1280px}.review-controls{gap:8px 14px}
