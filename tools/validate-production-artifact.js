@@ -91,7 +91,9 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 // The approved Treasury idle animation and still add 353,384 bytes on demand.
 // Bound their packaged payload by one 352 KiB step; source sheets stay excluded
 // and the service-worker installation budget is checked separately.
-const baseClientBudget = 25 * 1024 * 1024 + 352 * 1024;
+// Barracks adds one static character (80 KiB), renderer (16 KiB), and scoped
+// stylesheet (40 KiB); individual caps remain in the asset budget validator.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
