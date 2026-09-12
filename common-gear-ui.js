@@ -650,7 +650,7 @@ function bindCommonGearScreen(viewModel) {
     renderCommonGearBuilding(viewModel.buildingId);
   });
   screen.addEventListener("keydown", event => {
-    if (["treasury", "barracks"].includes(viewModel.buildingId) && viewModel.mergeConfirmOpen && event.key === "Tab") {
+    if (["treasury", "barracks", "gatehouse"].includes(viewModel.buildingId) && viewModel.mergeConfirmOpen && event.key === "Tab") {
       const first = screen.querySelector("[data-gear-merge-cancel]");
       const last = screen.querySelector("[data-gear-merge-confirm]");
       if (event.shiftKey && event.target === first) {
@@ -783,7 +783,7 @@ function renderCommonGearBuilding(buildingId) {
   modal.classList.add("common-gear-building-modal");
   modal.dataset.commonGearBuildingId = buildingId;
   modalTitle.textContent = `${building.name} — ${building.characterRole}`;
-  modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : buildingId === "barracks" ? renderBarracksGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
+  modalBody.innerHTML = buildingId === "treasury" ? renderTreasuryGearScreen(viewModel) : buildingId === "barracks" ? renderBarracksGearScreen(viewModel) : buildingId === "gatehouse" ? renderGatehouseGearScreen(viewModel) : `<section class="common-gear-building-shell common-gear-screen" data-common-gear-screen>
     <div class="common-gear-main">
       <section class="common-gear-loadout-panel" data-gear-panel="loadout" data-gear-officer="${escapeHtml(buildingId)}">
         <header><span aria-hidden="true">♜</span><strong>Equipment</strong><small>${escapeHtml(building.name)}</small></header>

@@ -17,6 +17,7 @@ const rootFiles = [
   "daily-rewards.css", "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
+  "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",

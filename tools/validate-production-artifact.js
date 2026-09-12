@@ -9,6 +9,7 @@ const required = [
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css",
   "treasury-gear-ui.js", "treasury-gear-ui.css",
   "barracks-gear-ui.js", "barracks-gear-ui.css",
+  "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
@@ -93,7 +94,8 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 // and the service-worker installation budget is checked separately.
 // Barracks adds one static character (80 KiB), renderer (16 KiB), and scoped
 // stylesheet (40 KiB); individual caps remain in the asset budget validator.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136) * 1024;
+// Gatehouse adds a static Commander (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

@@ -77,7 +77,8 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // The Treasury's lazy idle clip and still add under 352 KiB; existing headroom
 // permits one bounded 320 KiB increase without changing the installed shell.
 // The approved static War Captain adds at most 80 KiB to the existing art allowance.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80) * 1024;
+// Gatehouse adds one approved static Commander, bounded separately at 90 KiB.
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -125,6 +126,8 @@ const entrypointBudgets = {
   "treasury-gear-ui.css": 40 * 1024,
   "barracks-gear-ui.js": 16 * 1024,
   "barracks-gear-ui.css": 40 * 1024,
+  "gatehouse-gear-ui.js": 16 * 1024,
+  "gatehouse-gear-ui.css": 42 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add
@@ -321,7 +324,7 @@ for (const requiredShellFile of [
 assert.equal(manifest.schemaVersion, 1, "Unknown optimized-art manifest version.");
 assert(Array.isArray(manifest.assets) && manifest.assets.length >= 40, "The optimized-art manifest is incomplete.");
 
-const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
+const appReferenceSource = [indexSource, gameSource, commonGearUiScriptSource, read("treasury-gear-ui.js"), read("barracks-gear-ui.js"), read("gatehouse-gear-ui.js"), baseCitiesSource, commonGearSource, instantEconomyActionsSource, stylesSource, commonGearUiSource, interfaceThemeSource, manuscriptPrototypeSource, uiContrastCorrectionSource, profileThemeSource, crownlandsPaletteSource, actionButtonsSource, mobileViewportSource, siteInfoSource].join("\n");
 let optimizedBytes = 0;
 let sourceBytes = 0;
 for (const asset of manifest.assets) {
@@ -332,6 +335,7 @@ for (const asset of manifest.assets) {
 
   const payload = fs.readFileSync(outputPath);
   if (asset.id === "barracks-war-captain-still") assert(payload.length <= 80 * 1024, "The static War Captain must stay within its 80 KiB allowance.");
+  if (asset.id === "gatehouse-defensive-commander-still") assert(payload.length <= 90 * 1024, "The static Commander must stay within its 90 KiB allowance.");
   const digest = crypto.createHash("sha256").update(payload).digest("hex");
   const webp = getWebpMetadata(payload);
   assert.equal(payload.length, asset.bytes, `${asset.id} byte count drifted from the manifest.`);
