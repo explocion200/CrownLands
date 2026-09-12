@@ -1,0 +1,2 @@
+@import url("../common-gear-box/review.css");
+.review-controls{max-width:1400px}.review-controls select{max-width:190px}.review-note{max-width:1400px}.design-notes{max-width:1150px;margin:20px auto 40px;padding:0 24px;color:#c7c4ad;font-size:13px;line-height:1.65}.design-notes h2{font:24px Georgia;color:#eee5ce}.design-notes strong{color:#ece1c0}#reviewStatus{max-width:950px;line-height:1.5}button:disabled{opacity:.45;cursor:default}

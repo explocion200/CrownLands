@@ -766,6 +766,15 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 - Missed days pause progress, at most two earned rewards wait for collection, and unclaimed rewards expire at month rollover.
 - Current reward tables and production snapshots must be verified before balance changes.
 
+**Confirmed next design — 12 September 2026; not yet implemented or deployed:**
+
+- Replace the month-bound track with a personal 28-login-day cycle, arranged as four complete weeks. The user explicitly selected 28 days.
+- Carry the player's cycle and day forward across server/season resets instead of restarting at Day 1. This supersedes the monthly restart rule for the future implementation; the current live rules above remain in force until coordinated deployment.
+- Use the existing Common Gear Box (three Level 1 Common gear pieces), as explicitly selected by the user. Do not introduce a separate armor-only chest.
+- Clearly identify weekly milestones and provide stronger rewards toward the end of each week.
+- Randomize the reward arrangement when a new cycle starts; an active cycle must retain its arrangement across reopening and season changes.
+- The proposed reward amounts, bundle distribution, queue carry-over details and migration behavior are presented for review in [Daily Login cycle draft](./visual-qa/daily-login-cycle/README.md). Those proposals are not confirmed balance changes. Backend persistence, authoritative rolling and migration must be implemented and validated before this design can be described as live.
+
 ### Daily Missions
 
 - Three missions are assigned at 00:00 UTC. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
