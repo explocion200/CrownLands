@@ -1,0 +1,52 @@
+{
+  "created": "2026-09-12",
+  "conversation": "https://chatgpt.com/c/6aa4b0f1-a040-83e9-81a3-a6100dc89dc0",
+  "route": "signed-in ChatGPT Images web page; no API or paid CLI route used",
+  "pageTitle": "ChatGPT Images 2.5 | AI Image Generator",
+  "backendModelVerified": false,
+  "reference": "Approved War Captain image selected in ChatGPT Images; style reference only",
+  "source": {
+    "file": "defensive-commander-source-v1.png",
+    "size": [
+      887,
+      1774
+    ],
+    "mode": "RGBA",
+    "frames": 1,
+    "bytes": 2095521,
+    "sha256": "c52ecb1c71b1e6f53a0e2e469b952c879638f63be959c3e157d09cc65a0a48af",
+    "visibleBoundsAlpha64": [
+      82,
+      52,
+      819,
+      1707
+    ],
+    "embeddedModelLabels": []
+  },
+  "still": {
+    "file": "defensive-commander-still-v1.webp",
+    "size": [
+      400,
+      800
+    ],
+    "frames": 1,
+    "bytes": 89984,
+    "sha256": "91bb0b3d00eedd2ad3cc6ce4f334d42d46a88c5c350fa46da294ec877046499b",
+    "crop": [
+      72,
+      42,
+      829,
+      1717
+    ],
+    "resampledSize": [
+      340,
+      752
+    ],
+    "offset": [
+      30,
+      24
+    ],
+    "quality": 90,
+    "method": 6
+  }
+}
