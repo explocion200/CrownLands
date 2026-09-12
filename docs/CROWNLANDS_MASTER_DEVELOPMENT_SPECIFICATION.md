@@ -1010,6 +1010,16 @@ Status: `IN DEVELOPMENT` on `codex/barracks-gear-draft`; the user approved the l
 
 Status: `IN DEVELOPMENT` on `codex/gatehouse-gear-draft`; the user approved the layout, static character, merge, and deployment. Runtime integration is complete; publication requires separate channel verification. Review details: [Gatehouse equipment](./visual-qa/gatehouse-gear/README.md).
 
+### Confirmed Royal Stables equipment presentation
+
+- The approved Royal Stables Manage Gear screen follows the Treasury, Barracks, and Gatehouse parchment layout and matching dimensions: up to 1200 × 790 pixels on desktop, fitting mobile landscape. Portrait is not a design target.
+- The Cavalry Master is a static, transparent full-body illustration in riding armor and a slate-blue cloak, holding an upright lance. A saddled bay horse stands behind him. Both fit between the existing eight equipment slots, with the officer in front and no animation in any motion setting.
+- The equipment bag occupies the middle pane and complete selected-item details occupy the right. Both scroll independently while Equip/Unequip and Upgrade remain visible. Common items retain light gray `#d9dad6` backgrounds and burgundy selected borders. The approved crown-stamped Gold coin and engraved horseshoe seal are retained.
+- Armor retains owned-city transfer and reinforcement speed. The Lance retains attack and rally march speed. The Wayfinder Pendant retains scout speed. Existing bonuses, levels, Gold costs, matching-copy requirements, descriptions, progression paths, binding, quantities, equipped/new indicators, and server-authoritative actions remain unchanged.
+- Upgrade confirmation retains the two-to-one consumption warning, keyboard focus containment, and focus restoration. Treasury, Barracks, and Gatehouse retain their approved presentations.
+
+Status: `IN DEVELOPMENT` on `codex/royal-stables-gear-draft`; the user approved the layout, officer with horse, merge, and deployment on 12 September 2026. Runtime integration is complete; publication requires separate channel verification. Review details: [Royal Stables equipment](./visual-qa/royal-stables-gear/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

@@ -72,6 +72,7 @@ function createManifest() {
     "treasury-gear-ui.js", "treasury-gear-ui.css",
     "barracks-gear-ui.js", "barracks-gear-ui.css",
   "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
+  "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
     "release-config.js", "economy-config.js", "world-config.js", "ui-layout-config.js",
     "ui-layout-runtime.js", "ads-config.js", "assets/map-editor-data.js", "clan-heraldry-v2.css",
     "region-catalog.js", "functions/world-travel-network.js", "functions/clanHeraldryConfig.js", "functions/clanHeraldryAssets.js", "functions/clanHeraldryLegacyV1.js", "functions/clanHeraldryRenderer.js",

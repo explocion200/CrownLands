@@ -1,0 +1,52 @@
+{
+  "created": "2026-09-12",
+  "conversation": "https://chatgpt.com/c/6aa4ca11-8754-83ea-9f58-ed2a08c84987",
+  "route": "signed-in ChatGPT Images web page; no API or paid CLI route used",
+  "generationUi": "ChatGPT Images editor",
+  "qualityLabel": "Extra High",
+  "backendModelVerified": false,
+  "reference": "Cavalry Master v1 selected as the edit target in ChatGPT Images; one horse added behind the officer",
+  "source": {
+    "file": "cavalry-master-source-v2.png",
+    "size": [
+      887,
+      1774
+    ],
+    "mode": "RGBA",
+    "frames": 1,
+    "bytes": 2080412,
+    "sha256": "2d41962b095568100aae403a247896573c249aaa224acbf1cc13a88807b777c3",
+    "visibleBoundsAlpha64": [
+      72,
+      16,
+      875,
+      1726
+    ]
+  },
+  "still": {
+    "file": "cavalry-master-still-v2.webp",
+    "size": [
+      400,
+      800
+    ],
+    "frames": 1,
+    "bytes": 88862,
+    "sha256": "9cdb6657d969500c3d170e075ee7efc991e15d433263f30d72e22b7bf23b76ae",
+    "crop": [
+      62,
+      6,
+      885,
+      1736
+    ],
+    "resampledSize": [
+      340,
+      715
+    ],
+    "offset": [
+      30,
+      42
+    ],
+    "quality": 90,
+    "method": 6
+  }
+}
