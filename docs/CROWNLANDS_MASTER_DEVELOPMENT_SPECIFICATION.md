@@ -1041,6 +1041,16 @@ Status: `IN DEVELOPMENT` on `codex/common-gear-box-draft`; the user approved the
 
 Status: `IN DEVELOPMENT` on `codex/bag-inventory-draft`; the user approved the Bag design, updated chest, merge, and deployment on 12 September 2026. Runtime integration is complete and release validation is in progress. LIVE status requires separate channel verification. Review details: [Item Bag](./visual-qa/bag-inventory/README.md).
 
+### Confirmed Shop presentation
+
+- The Shop uses the approved parchment, olive actions, engraved Gold coin and burgundy selection treatment. It shares the Bag's maximum 1200 × 790 window dimensions, with desktop and mobile landscape layouts. Portrait is not a design target.
+- Provisions and Free boosts are separate tabs. The seven current provisions use a four-column, two-row grid, with full names and current prices beneath their illustrations. The selected item's illustration, full description, owned quantity, daily allowance and single-item purchase action are shown on the right. Long details scroll independently; purchase controls remain visible on short landscape screens.
+- Royal Peace Shield, War Drums, Royal Tax Decree, Veil of Silence, Swift March Order and Recall Horn use the six approved hand-inked medieval illustrations. Shared item references use the same art in the Shop, Bag and existing item presentations. The previously approved oak-and-iron Common Gear Box remains unchanged. This does not assign new rarity behavior.
+- Purchases retain existing scalable quotes, server authority, pending reservations, repeat-buy behavior, daily limits and rejected-action recovery. Full descriptions come from the existing item definitions. This presentation approval does not change item balance or resolve the older Section 4 pricing statements, which differ from the current client/server implementation.
+- Optional advertisements retain their existing estimates, watched counts, availability, shared cooldown, disclosure and server-backed completion flow. Countdown updates preserve the item controls. A pending Common Gear Box purchase remains disabled across item selection, and its completion does not replace a different open panel.
+
+Status: approved for integration, merge and deployment on 12 September 2026 on `codex/shop-ui-art-draft`. Publication requires separate channel verification. Review and validation details: [Shop UI and artwork](./visual-qa/shop-ui/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

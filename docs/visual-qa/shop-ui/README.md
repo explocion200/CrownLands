@@ -1,6 +1,6 @@
 # Shop UI and item artwork approval draft
 
-Status: awaiting visual approval. Branch: `codex/shop-ui-art-draft`.
+Status: user approved the design, merge and deployment on 2026-09-12. Branch: `codex/shop-ui-art-draft`. Runtime integration and release validation are in progress; LIVE status requires separate channel verification.
 
 Open `docs/visual-qa/shop-ui/index.html?viewport=landscape` through the repository preview server. The review includes desktop (1440 × 900), mobile landscape (844 × 390) and small landscape (568 × 320). There is no portrait design.
 
@@ -13,7 +13,7 @@ Open `docs/visual-qa/shop-ui/index.html?viewport=landscape` through the reposito
 - The purchase footer remains visible; long descriptions and supplemental information scroll independently on short screens.
 - Artwork control compares new illustrations with the previous images. Example control previews insufficient Gold, daily limits, pending and failed purchases, large quantities and advertisement availability states.
 
-This is an isolated interactive draft using synthetic data. Buying, retries and advertisement completion are simulated in memory. No account, storage, backend or advertisement provider is connected. Runtime files and production asset references have not changed. Approval is required before integrating this design; no PR, merge or deployment is part of this draft.
+This review page remains an isolated interactive draft using synthetic data. Buying, retries and advertisement completion are simulated in memory. No account, storage, backend or advertisement provider is connected to the review page. The approved production integration is implemented separately in `shop-ui.js` and `shop-ui.css`, using the game's existing purchase state, action queue and rewarded-ad pathways.
 
 ## Existing behavior and pricing
 
@@ -40,4 +40,4 @@ See [exact prompts and generation route](art/prompts.md) and [asset manifest](ar
 - Source and WebP alpha channels verified; originals preserved and only proportional preview resizing performed.
 - Whitespace/diff scope check; only this review directory is included.
 
-Full release, emulator and hosted checks were not run for this unapproved documentation-only draft. Real account purchases, ad-provider callbacks, production state synchronization and shared asset adoption in Bag/item dialogs require integration and focused validation after approval.
+These were draft checks. After approval, the integration adds focused actual-game validation in `tools/validate-shop-browser.js` for layout, complete descriptions, shared illustrations, purchase reservations, repeated purchases, daily limits, rejection/retry, pending Box selection, close handoff, stable countdown nodes and ad disclosure cancellation. Source and derivative hashes are recorded in `assets/optimized/manifest.json`; retired derivatives remain available for the historical draft comparison but are excluded from the production package. Release results are recorded in `release-artifacts/shop-ui/release-receipt.md` once publication is verified. Real account purchases, ad-provider completion and physical-phone touch remain manual verification steps.

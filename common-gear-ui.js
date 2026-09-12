@@ -1029,7 +1029,7 @@ async function buyCommonGearBox() {
   } catch (error) {
     showToast(error?.message || "The Common Gear Box could not be purchased.");
   }
-  renderShopModal();
+  if (modal.open && modal.classList.contains("shop-modal") && !modal.classList.contains("rewarded-ad-confirmation-modal")) renderShopModal();
 }
 
 function showCommonGearBoxReveal(receipt = null) {

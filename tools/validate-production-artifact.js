@@ -13,6 +13,7 @@ const required = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
+  "shop-ui.js", "shop-ui.css",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
