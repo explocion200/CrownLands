@@ -147,7 +147,7 @@ const sharedMaterialRule = gear.getUpgradeMaterialInstances.toString();
 assert.match(sharedMaterialRule, /candidate\.instanceId !== target\.instanceId[\s\S]{0,180}candidate\.gearKey === target\.gearKey[\s\S]{0,120}candidate\.level === target\.level[\s\S]{0,120}!candidate\.isEquipped/, "The shared rule must require a different, stored, same-key, same-level material.");
 assert.doesNotMatch(index, /candidate\.level === 1/, "The server must not accept Level 1 materials for every upgrade level.");
 assert.match(index, /relicRewardItem[\s\S]{0,180}crypto\.randomInt\(1, 101\)/, "Relic Camp bonus must roll only with a rewarded item payout.");
-assert.match(index, /claimedPosition\.day % 7 === 0 \? 1 : 0/, "Weekly daily-login milestones must award a Common Gear Box.");
+assert.match(index, /const commonGearBoxes = reward\.commonGearBoxes/, "Weekly daily-login milestones must award a Common Gear Box.");
 assert.match(index, /currentState\.completedCount[\s\S]{0,1500}gear\.commonGearBoxes \+= 1/, "Completing all three daily missions must award a box once.");
 assert.match(index, /getCasualtyRecoveryPercent[\s\S]{0,500}CASUALTY_RECOVERY_CAP_PERCENT/, "Field Medic plus gear recovery must be capped.");
 assert.match(
@@ -463,3 +463,5 @@ vm.runInNewContext(read("common-gear.js"), browserContext);
 assert.equal(browserContext.CROWNLANDS_COMMON_GEAR.DEFINITIONS.length, 32, "Browser Common Gear config failed to load.");
 
 console.log("Validated Common Gear definitions, male officer standard, canonical art dimensions, authoritative rewards/actions, secure storage, UI, bonuses, and optimized art.");
+
+assert.deepEqual(require("../functions/dailyLoginRewards.js").createSchedule().filter(reward => reward.commonGearBoxes).map(reward => reward.day), [7, 14, 21, 28], "Personal cycles retain four weekly gear chests.");

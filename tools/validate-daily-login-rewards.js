@@ -86,126 +86,69 @@ const tracks = Object.fromEntries([28, 29, 30, 31].map(monthLength => {
   return [String(monthLength), days];
 }));
 
-const stateBlockStart = server.indexOf("function getDailyLoginRewardMonthInfo");
-const stateBlockEnd = server.indexOf("function assertCurrentPlayerProfile");
-assert.ok(stateBlockStart >= 0 && stateBlockEnd > stateBlockStart, "Daily reward state model could not be extracted.");
-const stateContext = {
-  DAILY_LOGIN_REWARD_SCHEMA_VERSION: 3,
-  LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS: 30,
-  DAILY_LOGIN_REWARD_MAX_PENDING: 2,
-  DAILY_LOGIN_REWARD_TRACKS: tracks,
-  SHOP_ITEMS: Object.fromEntries(schedule.itemOrder.map(id => [id, { id }])),
-  clampInt: (value, min, max) => Math.max(min, Math.min(max, Math.floor(Number(value) || 0))),
-  safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
-  timestampToMs: value => Math.max(0, Number(value) || 0),
-  safeString: (value, max = 80) => String(value || "").trim().slice(0, max),
-  getCurrentDateKey: date => date.toISOString().slice(0, 10),
-  getNextUtcDayStartMs: nowMs => {
-    const date = new Date(nowMs);
-    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
-  },
-  getUtcMonthCycle: require(path.join(root, "functions", "seasonalAchievements.js")).getUtcMonthCycle,
-};
-vm.createContext(stateContext);
-vm.runInContext(
-  `${server.slice(stateBlockStart, stateBlockEnd)}
-  globalThis.dailyRewardModel = {
-    normalizeDailyLoginRewardState,
-    syncDailyLoginRewardAttendance,
-    createDailyLoginRewardStatus,
-    getDailyLoginRewardMonthInfo
-  };`,
-  stateContext
-);
-const model = stateContext.dailyRewardModel;
+const model = require(path.join(root, "functions/dailyLoginRewards.js"));
 const utc = value => Date.parse(`${value}T12:00:00.000Z`);
-
-let attendance = model.syncDailyLoginRewardAttendance({}, utc("2026-07-01"));
-assert.equal(attendance.state.monthKey, "2026-07");
-assert.equal(attendance.state.monthLengthDays, 31);
-assert.equal(attendance.state.nextDay, 1);
+for (let i = 0; i < 200; i++) {
+  const rewards = model.createSchedule();
+  assert.equal(rewards.length, 28);
+  assert.equal(rewards.reduce((sum, r) => sum + r.goldHours, 0), 111);
+  assert.equal(rewards.reduce((sum, r) => sum + r.troopHours, 0), 111);
+  assert.equal(rewards.reduce((sum, r) => sum + r.commonGearBoxes, 0), 4);
+  assert.deepEqual(rewards.flatMap(r => Object.keys(r.items)).sort(), [...schedule.itemOrder].sort());
+  for (const r of rewards) {
+    const weekday = (r.day - 1) % 7 + 1;
+    const hours = r.goldHours + r.troopHours;
+    assert.equal(r.commonGearBoxes, weekday === 7 ? 1 : 0);
+    assert.ok(weekday < 5 ? hours >= 2 && hours <= 6 : weekday < 7 ? hours >= 8 && hours <= 13 : hours === 16 || hours === 20);
+    if (weekday === 6) assert.equal(Object.keys(r.items).length, 1);
+  }
+}
+let attendance = model.sync({}, utc("2026-09-01"));
 assert.equal(attendance.state.earnedThroughDay, 1);
-assert.equal(model.createDailyLoginRewardStatus(attendance.state, utc("2026-07-01")).pendingCount, 1);
-const sameDay = model.syncDailyLoginRewardAttendance(attendance.state, utc("2026-07-01"));
-assert.equal(sameDay.state.earnedThroughDay, 1, "Repeated status reads must not earn extra rewards.");
+assert.deepEqual(model.sync(attendance.state, utc("2026-09-01")).state, attendance.state);
+attendance = model.sync(attendance.state, utc("2026-09-02"));
+attendance = model.sync(attendance.state, utc("2026-09-09"));
+assert.equal(model.pending(attendance.state), 2);
+assert.equal(attendance.state.deferredAttendanceDayKey, "2026-09-09");
+attendance = model.sync({ ...attendance.state, nextDay: 2, nextClaimOrdinal: 2, totalClaims: 1 }, utc("2026-09-09"));
+assert.equal(attendance.state.earnedThroughDay, 3);
+assert.equal(attendance.state.deferredAttendanceDayKey, "");
+const afterMonth = model.normalize(attendance.state, utc("2028-02-29"));
+assert.deepEqual(afterMonth, attendance.state, "A calendar or season change must preserve the entire cycle and guards.");
+const beforeEnd = { ...attendance.state, nextDay: 28, earnedThroughDay: 28, nextClaimOrdinal: 28, totalClaims: 27 };
+const finished = { ...beforeEnd, nextDay: 29, nextClaimOrdinal: 29, totalClaims: 28, lastReceipt: { claimId: "final" } };
+let next = model.sync(finished, utc("2026-09-09")).state;
+assert.equal(next.cycle, 2); assert.equal(next.nextDay, 1); assert.equal(model.pending(next), 0);
+assert.equal(next.lastReceipt.claimId, "final");
+assert.notEqual(next.cycleId, beforeEnd.cycleId);
+assert.notDeepEqual(next.schedule, beforeEnd.schedule);
+const deferredEnd = model.sync(beforeEnd, utc("2026-09-10")).state;
+assert.equal(deferredEnd.deferredAttendanceDayKey, "2026-09-10");
+next = model.sync({ ...deferredEnd, nextDay: 29, nextClaimOrdinal: 29, totalClaims: 28 }, utc("2026-09-10")).state;
+assert.equal(model.pending(next), 1, "Only a genuinely deferred visit can fill the next cycle on rollover.");
+assert.equal(model.pending(model.sync(next, utc("2026-09-10")).state), 1);
+for (const [month, length] of [["2027-02",28],["2028-02",29],["2026-09",30],["2026-01",31]]) {
+  const old = { schemaVersion: 3, monthKey: month, monthLengthDays: length, nextDay: length - 1,
+    earnedThroughDay: length, nextClaimOrdinal: 100, totalClaims: 99, lastAttendanceDayKey: "2026-09-09" };
+  const migrated = model.normalize(old, utc("2029-01-01"));
+  assert.equal(migrated.nextDay, length - 1); assert.equal(model.pending(migrated), 2);
+  assert.equal(migrated.cycleLengthDays, length); assert.equal(migrated.nextClaimOrdinal, 100);
+  assert.deepEqual(migrated.schedule.map(({commonGearBoxes, ...r}) => r), tracks[String(length)]);
+  assert.deepEqual(model.normalize(migrated, utc("2030-01-01")), migrated);
+}
+const ancient = model.normalize({ schemaVersion: 2, nextDay: 30, nextClaimOrdinal: 60, earnedThroughOrdinal: 60 }, utc("2027-02-01"));
+assert.equal(ancient.nextDay, 30); assert.equal(ancient.schedule.length, 30);
+assert.throws(() => model.normalize({schemaVersion:4, cycleId:"broken", schedule:[]}), /refusing to reroll/);
 
-attendance = model.syncDailyLoginRewardAttendance(sameDay.state, utc("2026-07-02"));
-assert.equal(model.createDailyLoginRewardStatus(attendance.state, utc("2026-07-02")).pendingCount, 2);
-attendance = model.syncDailyLoginRewardAttendance(attendance.state, utc("2026-07-03"));
-let status = model.createDailyLoginRewardStatus(attendance.state, utc("2026-07-03"));
-assert.equal(status.pendingCount, 2, "The earned queue must remain capped at two.");
-assert.equal(status.attendanceDeferred, true, "A full queue must remember today's attendance.");
-
-const afterOldestClaim = model.normalizeDailyLoginRewardState({
-  ...attendance.state,
-  nextDay: attendance.state.nextDay + 1,
-  nextClaimOrdinal: attendance.state.nextClaimOrdinal + 1,
-}, utc("2026-07-03"));
-attendance = model.syncDailyLoginRewardAttendance(afterOldestClaim, utc("2026-07-03"));
-status = model.createDailyLoginRewardStatus(attendance.state, utc("2026-07-03"));
-assert.equal(status.pendingCount, 2, "Claiming on a deferred day must immediately fill the freed slot.");
-assert.equal(status.attendanceDeferred, false);
-assert.equal(status.earnedThroughDay, 3);
-
-const afterTwoClaims = model.normalizeDailyLoginRewardState({
-  ...attendance.state,
-  nextDay: 3,
-  nextClaimOrdinal: 3,
-}, utc("2026-07-03"));
-attendance = model.syncDailyLoginRewardAttendance(afterTwoClaims, utc("2026-07-06"));
-assert.equal(attendance.state.earnedThroughDay, 4, "Missing UTC days must pause instead of skipping rewards.");
-assert.equal(attendance.state.lastAttendanceDayKey, "2026-07-06");
-
-const migrated = model.normalizeDailyLoginRewardState({
-  schemaVersion: 2,
-  cycle: 2,
-  nextDay: 4,
-  nextClaimOrdinal: 34,
-  earnedThroughOrdinal: 33,
-  lastClaimDayKey: "2026-06-30",
-  totalClaims: 33,
-}, utc("2026-08-05"));
-assert.equal(migrated.monthKey, "2026-08");
-assert.equal(migrated.nextDay, 4, "Version-2 progress must migrate without restarting at Day 1.");
-assert.equal(migrated.nextClaimOrdinal, 34);
-assert.equal(migrated.earnedThroughDay, 3);
-
-const februaryClamp = model.normalizeDailyLoginRewardState({
-  schemaVersion: 2,
-  nextDay: 30,
-  nextClaimOrdinal: 30,
-  earnedThroughOrdinal: 29,
-}, utc("2027-02-10"));
-assert.equal(februaryClamp.monthLengthDays, 28);
-assert.equal(februaryClamp.nextDay, 29, "Progress past February's track must migrate as complete.");
-
-const january = model.normalizeDailyLoginRewardState({
-  schemaVersion: 3,
-  monthKey: "2026-01",
-  monthLengthDays: 31,
-  nextDay: 10,
-  earnedThroughDay: 11,
-  nextClaimOrdinal: 10,
-  earnedThroughOrdinal: 11,
-  lastAttendanceDayKey: "2026-01-31",
-}, utc("2026-01-31"));
-const february = model.normalizeDailyLoginRewardState(january, utc("2026-02-01"));
-assert.equal(february.monthKey, "2026-02");
-assert.equal(february.nextDay, 1);
-assert.equal(february.earnedThroughDay, 0);
-assert.equal(february.lastAttendanceDayKey, "");
-assert.ok(february.nextClaimOrdinal > january.nextClaimOrdinal, "Month rollover must invalidate stale claim ordinals.");
-assert.equal(model.getDailyLoginRewardMonthInfo(utc("2028-02-01")).monthLengthDays, 29, "Leap-year February must have 29 rewards.");
-
-requireMatch(server, /tracksByMonthLength[\s\S]*DAILY_LOGIN_REWARD_TRACKS/, "Functions do not load all calendar-month tracks.");
+requireMatch(read("functions/dailyLoginRewards.js"), /tracksByMonthLength/, "Functions do not load all calendar-month tracks.");
 requireMatch(server, /dailyLoginRewardVersion:\s*DAILY_LOGIN_REWARD_SCHEMA_VERSION/, "Realm info does not advertise monthly rewards.");
-requireMatch(server, /createFreshResetPlayerProfile[\s\S]*dailyLoginReward:\s*createDefaultDailyLoginRewardState\(\)/, "Fresh reset profiles do not initialize daily rewards.");
-requireMatch(server, /expectedMonthKey !== statusBefore\.monthKey[\s\S]*new UTC month/, "Stale cross-month claims are not rejected.");
+requireMatch(server, /createFreshResetPlayerProfile[\s\S]*dailyLoginReward:\s*normalizeDailyLoginRewardState\(previous\.dailyLoginReward, nowMs\)/, "Fresh reset profiles do not initialize daily rewards.");
+requireMatch(server, /expectedCycleId !== statusBefore\.cycleId[\s\S]*new cycle/, "Stale cross-month claims are not rejected.");
 requireMatch(server, /expectedOrdinal !== statusBefore\.nextClaimOrdinal[\s\S]*Daily rewards changed/, "Stale multi-device claims are not rejected.");
 requireMatch(server, /nextDay:\s*claimedPosition\.day \+ 1[\s\S]*syncDailyLoginRewardAttendance\(claimedState,\s*nowMs\)/, "Claims do not consume the oldest reward and fill deferred attendance.");
 requireMatch(server, /getRewardedAdBaseRates\(economy\)[\s\S]*reward\.goldHours[\s\S]*reward\.troopHours/, "Daily claims do not use permanent base production rates.");
 requireMatch(server, /creditLevelUpTroopsToMainCity\(economy,[\s\S]*dailyLoginReward:\s*nextState/, "Daily troops are not credited atomically.");
-requireMatch(emulatorResetGate, /buildDailyRewardClaimRequest[\s\S]*expectedMonthKey/, "Emulator claims do not use the authoritative UTC month guard.");
+requireMatch(emulatorResetGate, /buildDailyRewardClaimRequest[\s\S]*expectedCycleId/, "Emulator claims do not use the authoritative UTC month guard.");
 requireMatch(emulatorResetGate, /prepareDailyRewardClaim[\s\S]*getDailyLoginRewardStatus/, "Emulator claims do not refresh authoritative reward status.");
 assert.doesNotMatch(
   emulatorResetGate,
@@ -219,8 +162,8 @@ requireMatch(client, /delete cleanProfile\.dailyLoginReward/, "Client saves do n
 requireMatch(client, /dispatch\("daily-login-reward"[\s\S]*profile\.dailyLoginReward/, "Realtime profile updates do not publish reward state.");
 
 requireMatch(html, /id="clanHudBtn"[\s\S]*id="dailyLoginRewardBtn"/, "Daily reward icon is not immediately after the clan icon.");
-requireMatch(game, /expectedMonthKey:\s*dailyLoginRewardStatus\.monthKey/, "Client claims are not guarded by UTC month.");
-requireMatch(game, /DAILY_LOGIN_REWARD_TRACKS\[String\(status\.monthLengthDays\)\]/, "UI does not select the live month-length track.");
+requireMatch(game, /expectedCycleId:\s*dailyLoginRewardStatus\.cycleId/, "Client claims are not guarded by UTC month.");
+requireMatch(game, /CrownlandsDailyLoginUI\.mount/, "UI does not select the live month-length track.");
 requireMatch(game, /getDailyLoginRewardCardState[\s\S]*"queued"[\s\S]*getDailyLoginRewardPresentation/, "Reward cards lost their queue states.");
 requireMatch(game, /startLoginPresentationDailyRefresh\(presentationGeneration\)[\s\S]*?markLoginPresentationMapReady\(presentationGeneration\)/, "Startup does not route attendance through the login presentation sequence.");
 requireMatch(game, /visibilitychange[\s\S]*handleGameForegroundSignal/, "Visible sessions do not refresh attendance.");
@@ -243,11 +186,8 @@ requireMatch(game, /modalHeaderNav\.hidden = true[\s\S]*modalHeaderNav\.replaceC
 requireMatch(game, /async function showDailyLoginRewardsModal[\s\S]*options\.initialTab[\s\S]*:\s*"rewards"/, "Opening the modal no longer defaults to Daily Login or accept direct tab navigation.");
 requireMatch(game, /function renderDailyMissionSection[\s\S]*dailyMissionsList[\s\S]*function renderDailyQuestTab[\s\S]*renderDailyMissionSection\(\)/, "Player Daily Missions are not rendered in the reward modal's Quests tab.");
 requireMatch(game, /function bindDailyQuestControls[\s\S]*handleDailyMissionListClick/, "Daily Mission controls are not connected inside the reward modal.");
-requireMatch(rewardModalSource, /const cardTag = isClaimableCard \? "button" : "article"[\s\S]*data-daily-reward-claim-card[\s\S]*class="daily-reward-card-day">Day \$\{reward\.day\}[\s\S]*daily-reward-card-icon[\s\S]*daily-reward-card-amount/, "Reward cards must expose their day number while only the available card exposes the guarded claim control.");
-requireMatch(rewardModalSource, /aria-label="Day \$\{reward\.day\}, \$\{escapeHtml\(presentation\.title\)\},[\s\S]*Ready; activate to claim/, "Reward-card accessible names no longer preserve the day, reward, and state.");
-assert.doesNotMatch(rewardModalSource, /daily-reward-(?:hero|meta|status-row|receipt|progress|actions|claim-btn|card-head|card-label|check)/, "Removed calendar chrome or card text returned to the Daily Login panel.");
-assert.doesNotMatch(rewardModalSource, /data-daily-reward-claim(?:\s|>)/, "A global Daily Login claim button returned.");
-assert.doesNotMatch(rewardModalSource, />\s*(?:Claimed|Ready|Queued|Next|Locked|Collect)/, "Reward cards expose forbidden state text.");
+requireMatch(rewardModalSource, /CrownlandsDailyLoginUI\.mount[\s\S]*claim: claimDailyLoginReward/, "Daily Login must use the approved presentation with the authoritative claim action.");
+requireMatch(read("daily-login-ui.js"), /common-gear-chest-r1\.svg/, "The approved chest art is missing.");
 const clanRewardsPanelSource = game.slice(
   game.indexOf("function renderClanRewardsPanel()"),
   game.indexOf("function getRallyParticipantForCurrentPlayer")
@@ -285,4 +225,4 @@ requireMatch(
   "Deployment callable-access gate must include daily reward endpoints."
 );
 
-console.log("Validated UTC calendar-month rewards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");
+console.log("Validated persistent 28-day cycles, saved-track migration, attendance and replay guards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");

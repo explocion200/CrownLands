@@ -1,6 +1,6 @@
 # Daily Login: persistent cycle approval draft
 
-Status: **LOCAL APPROVAL DRAFT** on `codex/daily-login-cycle-draft`. This page simulates the proposed behavior in memory. The production game and backend still use the existing monthly rules. No merge or deployment is authorized for this draft yet.
+Status: **APPROVED FOR IMPLEMENTATION, MERGE AND DEPLOYMENT** on `codex/daily-login-cycle-draft`. The design page remains an isolated simulation. The approved rules are implemented in `functions/dailyLoginRewards.js`; the game uses `daily-login-ui.js` and `daily-login-ui.css`. Release evidence records deployment verification.
 
 Open `index.html?viewport=landscape` through the existing preview server. Target sizes: desktop 1440 × 900, mobile landscape 844 × 390, small landscape 568 × 320. Window dimensions match the Shop/Bag cap of 1200 × 790, fitting the viewport with 12px margins. Portrait is not a design target. The draft changes only Daily Login; Quests and Achievements are separate future work.
 
@@ -12,7 +12,7 @@ Open `index.html?viewport=landscape` through the existing preview server. Target
 - Mark the end of each week and give better rewards toward that point.
 - Randomize each new cycle's reward arrangement.
 
-## Proposed schedule for approval
+## Approved schedule
 
 The current 28-day track's total envelope is retained: **111 production hours of Gold, 111 production hours of troops, one of each of the six existing items, and four Common Gear Boxes**. Current source already adds one Gear Box to every seventh login claim; the new presentation makes these bundles visible. Removing expiry and repeating personal 28-day cycles changes calendar-time progression, even with the same per-cycle totals.
 
@@ -24,7 +24,7 @@ The current 28-day track's total envelope is retained: **111 production hours of
 
 Every cycle has the same total envelope, while resource order, resource amounts within their bands, and item placements change. Later weeks are not required to be stronger than earlier weeks; each individual week has a clear end-of-week increase. All upcoming bundles are inspectable. Resource amounts shown in the draft use sample current base production and remain estimates until collected.
 
-## Proposed continuity and claim behavior
+## Approved continuity and claim behavior
 
 - A missed day pauses progress. Returning after seven days away earns one attendance day, not seven retroactive rewards.
 - Preserve the existing cap of two earned rewards waiting for collection. Carry both these earned rewards and their original arrangement across seasons; do not expire them at a month boundary.
@@ -45,12 +45,12 @@ Audited against `beb9c1d537aa29d25e9b047240b127ca89459e6f`:
 - The current renderer in `game.js` shows the fixed monthly grid. The current validation in `tools/validate-daily-login-rewards.js` explicitly expects monthly rollover and reset-to-default behavior.
 - The Master Specification's live monthly reset/expiry rule conflicts with the requested future design. Its Daily Login section now distinguishes live behavior from the user's confirmed replacement requirements.
 
-## Backend integration required after draft approval
+## Integration contract
 
 1. Introduce a versioned, account-owned cycle identity and persisted schedule, with server-generated randomness and transactional creation. This draft's seeded pseudorandom generator exists only to make review examples reproducible; it is not an authority or production randomness implementation.
 2. Preserve the cycle, pending rewards and UTC attendance guard in every applicable current-realm seasonal profile transition. Audit global/account persistence and shard entry paths so changing realms cannot create independent duplicate attendance or rerolls.
 3. Replace month-based claim guards with cycle identity and monotonically increasing claim ordinal. Keep atomic delivery, replay-safe receipts, valid main-city checks, and concurrency protection. Never trust a client-provided reward, seed or day.
-4. Migration proposal: freeze and carry the currently stored 28–31-day track and pending progress as a transition cycle, finish it, then begin the first randomized 28-day cycle. This preserves existing Day 29–31 and queued entitlements rather than truncating them. Read raw saved state before the old monthly normalizer can discard it. Avoid re-crediting previous claims; preserve/translate stale-request rejection. This transition policy remains a proposal to review before implementation.
+4. Migration proposal: freeze and carry the currently stored 28–31-day track and pending progress as a transition cycle, finish it, then begin the first randomized 28-day cycle. This preserves existing Day 29–31 and queued entitlements rather than truncating them. Read raw saved state before the old monthly normalizer can discard it. Avoid re-crediting previous claims; preserve/translate stale-request rejection. This transition policy was included in the approved draft.
 5. Integrate the approved presentation with the authoritative status/claim pathways; keep other reward tabs unchanged. Coordinate client and Functions release versions so old clients cannot submit monthly claims against a new cycle unnoticed.
 6. Validate migration (including Day 29–31), rollover with pending/deferred attendance, duplicate and simultaneous claims, season reset on the same UTC day, month/leap-year changes, multi-device/shard entry, no-city recovery, Box persistence and 28-day completion. Required release gates apply to that gameplay/backend update.
 
@@ -63,3 +63,7 @@ Audited against `beb9c1d537aa29d25e9b047240b127ca89459e6f`:
 ## Artwork
 
 Reuse the approved six Shop illustrations and oak-and-iron Common Gear Box. All chest displays use `assets/icons/common-gear-chest-r1.svg`, the same closed-pose illustration used by the Bag and Shop item definition. Gold uses `assets/icons/royal-shop-gold-r1.svg`. `troops.svg` reproduces the established City Details engraved helmet path, with muted iron colors. No new generated art or image API was needed.
+
+## Account and release integration
+
+The existing `players/{uid}` document is global, outside realm generations and shards. Status and claim transactions use its protected `dailyLoginReward` field; season entry preserves it in `createFreshResetPlayerProfile`. No new collection or cross-shard copy is needed. The live pointer was verified as `main-realm-2026-09`, generation `realm-2026-09`, shared realm `shard_0001`. Only the current release is targeted. Schema-3 economy tables remain for transition schedules; active reward state uses schema 4. Older clients are rejected at the claim boundary without granting rewards.

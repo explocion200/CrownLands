@@ -32,3 +32,7 @@ These checks are not production persistence, migration, transactional concurrenc
 ## Approved chest artwork follow-up
 
 Replaced the old raster thumbnail with `assets/icons/common-gear-chest-r1.svg`, the approved closed chest used by the Bag and Shop. Confirmed all six rendered references (four weekly tiles, selected hero, and bundle row) loaded the SVG. Visually checked the weekly-chest example at 1440 × 900, 844 × 390, and 568 × 320: images decoded, dialog stayed inside the viewport, Claim remained visible, and touch targets remained at least 44 × 44. Both reward rows remained visible on mobile landscape. JavaScript syntax and diff whitespace checks passed; reward logic was unchanged.
+
+## Runtime integration
+
+The actual game was reviewed in the isolated benchmark shell at desktop, 844 x 390 and 568 x 320. Weekly resource and Box rows fit above the fixed 44px Claim action. The real client claim handler sends cycle identity and ordinal, advances from Day 7 to Day 8 after its synthetic receipt, and disables the next claim until attendance is earned. Quests and Achievements open and return to Daily Login without retaining the new tab-specific window styling. All visible compact controls measured at least 44 x 44 and inside the viewport. Build the local runtime page with `node tools/prepare-daily-login-preview.js` while the preview server is running. These fixtures block production writes; emulator results cover the server transactions.
