@@ -334,7 +334,7 @@ const SHOP_PRICE_HOURS = Object.freeze({
 });
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 3;
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 4;
 const LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS = 30;
 const DAILY_LOGIN_REWARD_MONTH_LENGTHS = Object.freeze([28, 29, 30, 31]);
 const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
@@ -32361,6 +32361,7 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   const day = clamp(Math.floor(Number(raw.day) || 1), 1, monthLengthDays);
   return {
     cycle,
+    cycleId: String(raw.cycleId || ""),
     day,
     ordinal: Math.max(1, Math.floor(Number(raw.ordinal) || day)),
     monthKey: /^\d{4}-\d{2}$/.test(String(raw.monthKey || ""))
@@ -32399,7 +32400,7 @@ function getDailyLoginRewardMonthInfo(nowMs = Date.now()) {
 }
 
 function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
-  const source = raw && typeof raw === "object" ? raw : {};
+  const source = raw?.activeCycle || (raw && typeof raw === "object" ? raw : {});
   const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
   const currentMonth = getDailyLoginRewardMonthInfo(serverTimeMs);
   const monthKey = /^\d{4}-\d{2}$/.test(String(source.monthKey || ""))
@@ -32457,10 +32458,17 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
     ? source.claimedToday
     : lastClaimDayKey === dayKey;
   return {
-    schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+    schemaVersion: Number(source.schemaVersion) || 3,
+    cycleId: String(source.cycleId || ""),
+    transition: source.transition === true,
+    schedule: Array.isArray(source.schedule) ? source.schedule.map(reward => ({
+      day: Number(reward.day), goldHours: Math.max(0, Number(reward.goldHours) || 0),
+      troopHours: Math.max(0, Number(reward.troopHours) || 0), items: { ...reward.items },
+      commonGearBoxes: Math.max(0, Number(reward.commonGearBoxes) || 0),
+    })) : [],
     monthKey,
     monthLengthDays,
-    cycle: 1,
+    cycle: Math.max(1, Number(source.cycle) || 1),
     nextDay,
     nextClaimOrdinal,
     earnedThroughOrdinal,
@@ -32483,7 +32491,7 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
       ? source.attendanceDeferred
       : deferredAttendanceDayKey === dayKey,
     claimedToday,
-    earnedThroughCycle: 1,
+    earnedThroughCycle: Math.max(1, Number(source.cycle) || 1),
     earnedThroughDay,
     dayKey,
     serverTimeMs,
@@ -32513,7 +32521,7 @@ function applyDailyLoginRewardProfileState(rawState = null, options = {}) {
     dailyLoginRewardPendingClaim
     && (
       dailyLoginRewardPendingClaim.expectedOrdinal !== nextStatus.nextClaimOrdinal
-      || dailyLoginRewardPendingClaim.expectedMonthKey !== nextStatus.monthKey
+      || dailyLoginRewardPendingClaim.expectedCycleId !== nextStatus.cycleId
     )
   ) {
     dailyLoginRewardPendingClaim = null;
@@ -32597,7 +32605,7 @@ async function refreshDailyLoginRewardStatus(options = {}) {
         dailyLoginRewardPendingClaim
         && (
           dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
-          || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
+          || dailyLoginRewardPendingClaim.expectedCycleId !== dailyLoginRewardStatus.cycleId
         )
       ) {
         dailyLoginRewardPendingClaim = null;
@@ -33354,6 +33362,7 @@ function bindDailyQuestControls() {
 
 function renderDailyLoginRewardModal(options = {}) {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
+  modal.classList.toggle("daily-cycle-modal", activeDailyRewardModalTab === "rewards");
   const renderingAchievements = activeDailyRewardModalTab === "achievements";
   if (!renderingAchievements) clearSeasonalAchievementRenderTimer();
   if (
@@ -33412,41 +33421,25 @@ function renderDailyLoginRewardModal(options = {}) {
     return;
   }
 
-  const rewardTrack = DAILY_LOGIN_REWARD_TRACKS[String(status.monthLengthDays)]
-    || DAILY_LOGIN_REWARD_TRACKS["30"];
-  modalBody.innerHTML = `
-    <section id="dailyRewardPanelRewards" class="daily-reward-panel" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
-      <div class="daily-reward-grid" aria-label="${status.monthLengthDays}-day daily reward track">
-        ${rewardTrack.map(reward => {
-          const cardState = getDailyLoginRewardCardState(reward.day, status);
-          const presentation = getDailyLoginRewardPresentation(reward);
-          const stateLabel = cardState === "claimed"
-            ? "Claimed"
-            : cardState === "available"
-              ? "Ready"
-              : cardState === "queued"
-                ? "Queued"
-                : cardState === "next"
-                  ? "Next"
-                : "Locked";
-          const isClaimableCard = cardState === "available";
-          const cardTag = isClaimableCard ? "button" : "article";
-          const cardAttributes = isClaimableCard
-            ? `type="button" data-daily-reward-claim-card ${dailyLoginRewardClaimInFlight ? "disabled" : ""}`
-            : "";
-          return `
-            <${cardTag} class="daily-reward-card ${cardState} ${presentation.kind}" ${cardAttributes} aria-label="Day ${reward.day}, ${escapeHtml(presentation.title)}, ${isClaimableCard ? "Ready; activate to claim" : stateLabel}">
-              <span class="daily-reward-card-day">Day ${reward.day}</span>
-              <img class="daily-reward-card-icon" src="${escapeHtml(presentation.icon)}" alt="" draggable="false" />
-              <strong class="daily-reward-card-amount">${escapeHtml(presentation.amountLabel)}</strong>
-            </${cardTag}>
-          `;
-        }).join("")}
-      </div>
-    </section>
-  `;
+  if (status.schemaVersion < 4 || !status.cycleId || !status.schedule.length) {
+    modalBody.innerHTML = '<p class="daily-reward-loading">Daily Login is being updated. Refresh to load your saved cycle.</p>';
+    bindDailyRewardModalTabs();
+    return;
+  }
+  const dailyGlobalStats = getGlobalStatsSnapshot();
+  const dailyBaseRates = usesServerEconomyAuthority() && hasUsableGlobalStats(dailyGlobalStats)
+    ? { goldPerHour: dailyGlobalStats.baseGoldPerHour, troopsPerHour: dailyGlobalStats.baseTroopPerHour }
+    : getHarvestBonusBaseRates();
+  window.CrownlandsDailyLoginUI.mount(modalBody, {
+    status, rates: dailyBaseRates, busy: dailyLoginRewardClaimInFlight,
+    error: dailyLoginRewardError, hasCity: Number(dailyGlobalStats?.cityCount) > 0 || playerRegularCities().length > 0,
+    items: Object.fromEntries(DAILY_LOGIN_REWARD_ITEM_ORDER.map(id => {
+      const item = getShopItemById(id);
+      return [id, { label: escapeHtml(item.label), art: item.icon }];
+    })),
+    claim: claimDailyLoginReward,
+  });
   bindDailyRewardModalTabs();
-  modalBody.querySelector("[data-daily-reward-claim-card]")?.addEventListener("click", event => claimDailyLoginReward(event.currentTarget));
 }
 
 async function showDailyLoginRewardsModal(options = {}) {
@@ -33483,12 +33476,12 @@ async function claimDailyLoginReward(sourceElement = null) {
   if (
     !dailyLoginRewardPendingClaim
     || dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
-    || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
+    || dailyLoginRewardPendingClaim.expectedCycleId !== dailyLoginRewardStatus.cycleId
   ) {
     dailyLoginRewardPendingClaim = {
       claimId: createDailyLoginRewardClaimId(),
       expectedOrdinal: dailyLoginRewardStatus.nextClaimOrdinal,
-      expectedMonthKey: dailyLoginRewardStatus.monthKey,
+      expectedCycleId: dailyLoginRewardStatus.cycleId,
     };
   }
   dailyLoginRewardClaimInFlight = true;
@@ -33511,7 +33504,7 @@ async function claimDailyLoginReward(sourceElement = null) {
     } else if (receipt) {
       const receiptItemCount = Object.values(receipt.items).reduce((sum, quantity) => sum + quantity, 0);
       playRewardSound(receiptItemCount > 0 ? "item" : receipt.troops > 0 ? "troops" : "gold");
-      const rewardEventId = `daily-login:${receipt.monthKey}:${receipt.day}`;
+      const rewardEventId = `daily-login:${receipt.cycleId || receipt.monthKey}:${receipt.ordinal}`;
       if (receipt.gold > 0) {
         playRewardAnimation("gold", {
           id: `${rewardEventId}:gold`,
@@ -33536,7 +33529,7 @@ async function claimDailyLoginReward(sourceElement = null) {
       const itemCount = receiptItemCount;
       if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
       const summary = parts.join(", ");
-      addLog(`Daily reward ${receipt.monthKey}, day ${receipt.day}: ${summary}.`);
+      addLog(`Daily reward cycle ${receipt.cycle}, day ${receipt.day}: ${summary}.`);
       showToast(`Daily reward collected: ${summary}`);
     }
     saveGame();
@@ -39616,7 +39609,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("relinquish-city-modal");
   modal.classList.remove("public-player-profile-modal");
   modal.classList.remove("rewarded-ad-confirmation-modal");
-  modal.classList.remove("daily-login-reward-modal");
+  modal.classList.remove("daily-login-reward-modal", "daily-cycle-modal");
   modal.classList.remove("daily-mission-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
   const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());

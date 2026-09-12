@@ -152,11 +152,11 @@ function buildDailyRewardTrack(monthLengthDays) {
 
 function buildDailyRewardClaimRequest(statusResult, claimId, expectedOrdinal) {
   const status = statusResult?.dailyLoginRewardStatus;
-  const expectedMonthKey = String(status?.monthKey || "").trim();
-  assert(/^\d{4}-\d{2}$/.test(expectedMonthKey), "Daily reward status did not include a valid month guard.");
+  const expectedCycleId = String(status?.cycleId || "").trim();
+  assert(expectedCycleId.length > 0, "Daily reward status did not include a cycle guard.");
   return {
     claimId,
-    expectedMonthKey,
+    expectedCycleId,
     expectedOrdinal,
   };
 }
@@ -467,6 +467,9 @@ async function main() {
     trim: "double",
     finish: "battleworn",
   };
+  const persistentDaily = require("../dailyLoginRewards.js").normalize({});
+  Object.assign(persistentDaily, { cycle: 5, nextDay: 21, earnedThroughDay: 22, nextClaimOrdinal: 133,
+    totalClaims: 132, earnedThroughOrdinal: 134, lastAttendanceDayKey: new Date().toISOString().slice(0,10) });
   const persistentGear = {
     schemaVersion: 1,
     commonGearBoxes: 7,
@@ -528,6 +531,7 @@ async function main() {
       skillPresets: { modelVersion: 4, activeSlot: 2, slots: [{ slot: 2, name: "Archived" }] },
       shopItems: { shield_12h: 7, war_drums_1h: 4 },
       gear: persistentGear,
+      dailyLoginReward: persistentDaily,
       itemEffects: { warDrums: { expiresAtMs: Date.now() + 86_400_000 } },
       itemPurchaseCooldowns: { shield_12h: Date.now() + 86_400_000 },
       daily: { gold: 123, troops: 456, captures: 7 },
@@ -810,7 +814,7 @@ async function main() {
     ["purchaseShopItem", { itemId: "shield_12h", quantity: 1 }],
     ["activateInventoryItem", { itemId: "shield_12h", quantity: 1 }],
     ["getDailyLoginRewardStatus", {}],
-    ["claimDailyLoginReward", { claimId: "preclaim_daily_reward" }],
+    ["claimDailyLoginReward", { claimId: "preclaim_daily_reward", expectedOrdinal: 1, expectedCycleId: "preclaim-cycle" }],
     ["getDailyMissionStatus", {}],
     ["getSeasonalAchievementStatus", {}],
     ["spendSkillPoint", { skillId: "swordmastery" }],
@@ -933,6 +937,7 @@ async function main() {
   assert(new Set(claims.map(claim => claim.cityId)).size === 50, "Starting city assignments collided.");
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
+  require("node:assert/strict").deepEqual(profile.dailyLoginReward.activeCycle, persistentDaily, "Season entry must preserve the account cycle, pending rewards and same-day guard.");
   assert(
     profile.displayName === "Preserved Ruler" && profile.playerName === "Preserved Ruler",
     `Player display/name identity was not preserved (displayName=${profile.displayName}, playerName=${profile.playerName}).`
@@ -1444,6 +1449,7 @@ async function main() {
     lastAttendanceDayKey: currentUtcDayKey,
   });
 
+  await db.doc(`players/${users[0].uid}`).update({ dailyLoginReward: require("../dailyLoginRewards.js").normalize({}) });
   const dailyStatus = await callReplaySafeFunction("getDailyLoginRewardStatus", users[0].token);
   assert(
     dailyStatus?.dailyLoginRewardStatus?.eligible === true
@@ -1454,6 +1460,10 @@ async function main() {
     "A fresh reset profile did not begin on daily reward cycle 1, day 1."
   );
   const dailyGoldBefore = Number((await db.doc(`players/${users[0].uid}`).get()).data()?.gold || 0);
+  let oldClientRejected = false;
+  try { await callReplaySafeFunction("claimDailyLoginReward", users[0].token, { claimId: "old-client", expectedOrdinal: 1, expectedMonthKey: currentMonthKey }); }
+  catch (error) { oldClientRejected = /updated|refresh/i.test(String(error.message)); }
+  assert(oldClientRejected, "A monthly client must refresh before claiming a personal cycle.");
   const dayOneClaimRequest = buildDailyRewardClaimRequest(dailyStatus, "emulator-day-1", 1);
   const concurrentDailyClaims = await Promise.all([
     callReplaySafeFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest),
@@ -1470,8 +1480,8 @@ async function main() {
     dayOneClaim?.receipt?.day === 1
       && dayOneClaim.receipt.ordinal === 1
       && dayOneClaim.receipt.claimId === dayOneClaimRequest.claimId
-      && dayOneClaim.receipt.goldHours === currentDailyRewardTrack[0].goldHours
-      && dayOneClaim.receipt.gold > 0
+      && dayOneClaim.receipt.goldHours === dailyStatus.dailyLoginRewardStatus.schedule[0].goldHours
+      && (dayOneClaim.receipt.gold > 0 || dayOneClaim.receipt.troops > 0)
       && JSON.stringify(dayOneClaim.receipt) === JSON.stringify(dayOneReplay?.receipt),
     "The day-1 daily reward receipt was not deterministic."
   );
@@ -1484,7 +1494,7 @@ async function main() {
   const sameDayReplay = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest);
   assert(sameDayReplay?.replayed === true, "A repeated same-day daily reward claim was not idempotent.");
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     upgrades: { taxStewardship: 25, royalGranaries: 25 },
     itemEffects: {
       warDrumsExpiresAtMs: Date.now() + 60 * 60 * 1000,
@@ -1495,7 +1505,7 @@ async function main() {
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
-  }, { merge: true });
+  });
   const dayFiveProfileBefore = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   const dayFiveCityRef = db.doc(`islands/${claims[0].islandId}/cities/${claims[0].cityId}`);
   const dayFiveClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-5", 5);
@@ -1514,11 +1524,17 @@ async function main() {
     "The day-5 item was not added to the bag."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: buildPendingDailyRewardState(6),
-  }, { merge: true });
+  });
   const daySixClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-6", 6);
-  const daySixClaim = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, daySixClaimRequest);
+  const competingClaims = await Promise.allSettled([
+    callReplaySafeFunction("claimDailyLoginReward", users[0].token, daySixClaimRequest),
+    callReplaySafeFunction("claimDailyLoginReward", users[0].token, { ...daySixClaimRequest, claimId: "other-device-day-6" }),
+  ]);
+  const paidClaims = competingClaims.filter(result => result.status === "fulfilled" && result.value.claimed && !result.value.replayed);
+  assert(paidClaims.length === 1, "Different devices must not both receive the same reward.");
+  const daySixClaim = paidClaims[0].value;
   assert(
     daySixClaim?.receipt?.day === 6
       && daySixClaim.receipt.goldHours === currentDailyRewardTrack[5].goldHours
@@ -1528,15 +1544,16 @@ async function main() {
     "Daily gold hours included skill, Stronghold, or temporary production bonuses."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: buildPendingDailyRewardState(7),
-  }, { merge: true });
+  });
   const daySevenCityBefore = (await dayFiveCityRef.get()).data() || {};
   const daySevenClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-7", 7);
   const daySevenClaim = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, daySevenClaimRequest);
   const daySevenCityAfter = (await dayFiveCityRef.get()).data() || {};
   assert(
     daySevenClaim?.receipt?.day === 7
+      && daySevenClaim.receipt.commonGearBoxes === 1
       && daySevenClaim.receipt.troopHours === currentDailyRewardTrack[6].troopHours
       && daySevenClaim.receipt.troops === Math.floor(
         Number(firstStats.baseTroopPerHour || 0) * currentDailyRewardTrack[6].troopHours
@@ -1549,13 +1566,13 @@ async function main() {
     "The day-7 troop reward was not credited to the main city."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: {
       ...buildPendingDailyRewardState(currentMonthLengthDays),
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
-  }, { merge: true });
+  });
   const finalDayItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
   const finalDayClaimRequest = await prepareDailyRewardClaim(
     users[0],
@@ -1568,7 +1585,9 @@ async function main() {
       && finalDayClaim.receipt.goldHours === 0
       && finalDayClaim.receipt.troopHours === 0
       && finalDayClaim.receipt.items?.shield_12h === 1
-      && finalDayClaim.dailyLoginRewardStatus?.nextDay === currentMonthLengthDays + 1
+      && finalDayClaim.dailyLoginRewardStatus?.nextDay === 1
+      && finalDayClaim.dailyLoginRewardStatus?.cycle === 2
+      && finalDayClaim.dailyLoginRewardStatus?.cycleLengthDays === 28
       && finalDayClaim.dailyLoginRewardStatus?.eligible === false,
     "The current month's final reward did not complete the calendar track."
   );
@@ -1577,6 +1596,19 @@ async function main() {
     Number(finalDayItemsAfter.shield_12h || 0) === Number(finalDayItemsBefore.shield_12h || 0) + 1,
     "The current month's final reward did not credit the Royal Peace Shield."
   );
+
+  const bundledCycle = require("../dailyLoginRewards.js").normalize({});
+  const firstBundleDay = bundledCycle.schedule.find((reward, index, track) => Object.keys(reward.items).length && Object.keys(track[index + 1]?.items || {}).length).day;
+  Object.assign(bundledCycle, { nextDay: firstBundleDay, earnedThroughDay: firstBundleDay + 1,
+    nextClaimOrdinal: firstBundleDay, totalClaims: firstBundleDay - 1, lastAttendanceDayKey: currentUtcDayKey });
+  await db.doc(`players/${users[0].uid}`).update({ dailyLoginReward: bundledCycle });
+  const firstBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-first", firstBundleDay);
+  await callReplaySafeFunction("claimDailyLoginReward", users[0].token, firstBundleRequest);
+  const secondBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-second", firstBundleDay + 1);
+  const secondBundle = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
+  const bundleReplay = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
+  require("node:assert/strict").deepEqual(bundleReplay.receipt, secondBundle.receipt, "Consecutive item receipts must not retain an earlier day's item.");
+  assert(Object.keys(bundleReplay.receipt.items).length === 1 && bundleReplay.replayed, "Bundle retry returned an incorrect receipt.");
 
   await db.doc(`players/${users[1].uid}`).update({
     dailyLoginReward: {
@@ -1591,8 +1623,8 @@ async function main() {
   const pausedDailyStatus = await callReplaySafeFunction("getDailyLoginRewardStatus", users[1].token);
   assert(
     pausedDailyStatus?.dailyLoginRewardStatus?.eligible === true
-      && pausedDailyStatus.dailyLoginRewardStatus.monthKey === currentMonthKey
-      && pausedDailyStatus.dailyLoginRewardStatus.cycle === 1
+      && pausedDailyStatus.dailyLoginRewardStatus.transition === true
+      && pausedDailyStatus.dailyLoginRewardStatus.cycle === 3
       && pausedDailyStatus.dailyLoginRewardStatus.nextDay === 14,
     "Missing UTC days reset or skipped daily reward progress."
   );

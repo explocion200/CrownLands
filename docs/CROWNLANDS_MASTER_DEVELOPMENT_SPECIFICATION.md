@@ -761,10 +761,17 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 
 ### Daily Login
 
-- Daily Login follows the current UTC calendar month rather than a fixed 30-day loop. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
-- Each month distributes a documented total budget of 111 hours of Gold production, 111 hours of troop production, and six rotating items.
-- Missed days pause progress, at most two earned rewards wait for collection, and unclaimed rewards expire at month rollover.
-- Current reward tables and production snapshots must be verified before balance changes.
+**Approved 12 September 2026.** Deployment is verified separately in release evidence. This replaces the calendar-month reset and expiry rule.
+
+- A personal cycle lasts 28 login days in four weeks. Missed days pause progress. Up to two earned rewards and their arrangement carry across months and server/season resets.
+- Each cycle grants 111 hours of base Gold production, 111 hours of base troop production, one of each of the six existing items, and four Common Gear Boxes. A Box gives three Level 1 Common gear pieces.
+- Days 1-4 of each week give 2-6 production hours. Days 5-6 give 8-13 hours; all four Day 6 slots and two random Day 5 slots also include an item. Days 7, 14, 21 and 28 give 16 or 20 production hours plus one Box.
+- The server randomly arranges each new cycle within these bands and stores the complete schedule on the global player account. Every cycle has the same total budget. Reopening, realm selection and season reset cannot reroll it.
+- Attendance is credited once per UTC date, without retroactive credit for missed dates. Preserve attendance, deferred attendance, claim ordinal and receipt guards across resets. Claims collect the oldest earned reward atomically. A same-day deferred visit can fill a slot freed by a claim, including at cycle rollover; rollover itself grants no additional attendance.
+- Claims require an owned current-world main city. Resource amounts use current base production at claim time. Unopened Boxes retain their existing season persistence.
+- Migration freezes the currently saved 28-31-day monthly track, including queued Days 29-31, until it is finished. Then a randomized 28-day cycle begins. Read saved progress before any old month-reset normalization; do not restore rewards already expired before this release.
+- The approved parchment UI shows weekly milestones and the complete selected bundle with the shared updated chest illustration. Desktop and mobile landscape are supported. Quests and Achievements retain their existing presentation and rules.
+- Older clients must refresh before claiming. Requests must identify the current cycle and expected claim ordinal. See [Daily Login implementation notes](./visual-qa/daily-login-cycle/README.md).
 
 ### Daily Missions
 
