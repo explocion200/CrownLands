@@ -45,6 +45,13 @@ async function main() {
     };
     for (const viewport of [{ name: "desktop", width: 1440, height: 900 }, { name: "landscape", width: 844, height: 390 }]) {
       await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      // Each viewport needs a fresh synthetic profile, including name and scout reports.
+      if (results.length) {
+        await evaluate(`(() => {
+          const fixture = window.__CROWNLANDS_BENCHMARK_BOOTSTRAP__;
+          sessionStorage.removeItem('crownlands-benchmark-profile-' + fixture.benchmarkSeed + '-' + fixture.scenario.id);
+        })()`);
+      }
       await client.send("Page.navigate", { url: `${address.url}/__benchmark__/?scenario=A&visualMarches=0` });
       for (let i = 0; i < 480 && !await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status === 'ready'"); i++) await wait(250);
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status"), "ready");

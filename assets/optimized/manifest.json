@@ -969,6 +969,17 @@
       "bytes": 289374,
       "sha256": "38144b452e4e521226a3e4050c75a7bc5c2215885787218c0ee35b51beb4d880",
       "hasAlpha": true
+    },
+    {
+      "id": "barracks-war-captain-still",
+      "category": "gear",
+      "source": "docs/visual-qa/barracks-gear/art/war-captain-source-v1.png",
+      "output": "assets/optimized/barracks-war-captain-still-400x800-b41f63401fb3.webp",
+      "width": 400,
+      "height": 800,
+      "bytes": 79142,
+      "sha256": "b41f63401fb3fca21456f05896f140ba754ff05d603fdd88ebcb810786386425",
+      "hasAlpha": true
     }
   ]
 }

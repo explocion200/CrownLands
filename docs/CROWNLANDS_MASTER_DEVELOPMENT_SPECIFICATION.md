@@ -991,6 +991,15 @@ Status: `IN DEVELOPMENT` on the Inner Castle feature branch; visual direction an
 
 Status: `IN DEVELOPMENT` on `codex/treasury-gear-draft`, with user-approved design and runtime integration. Merge and deployment require separate authorization and verification. Review and validation details: [Treasury equipment](./visual-qa/treasury-gear/README.md).
 
+### Confirmed Barracks equipment presentation
+
+- The approved Barracks Manage Gear screen follows the Treasury parchment layout and matching dimensions: up to 1200 × 790 pixels on desktop, fitting the viewport on mobile landscape. Portrait is not a design target.
+- The War Captain is a static, transparent full-body illustration in the approved medieval ink-and-wash style, centered between the eight equipped slots. It has no animation in any motion setting. The equipment bag occupies the middle pane; selected-item details occupy the right, with Equip/Unequip and Upgrade kept visible.
+- Common items retain the light gray `#d9dad6` background and burgundy selected borders. The Gold icon reuses the approved crown-stamped coin. All existing information, quantities, levels, costs, matching-copy requirements, and upgrade confirmation behavior are retained.
+- Armor retains troop production in all owned cities; the Officer Sword retains attack strength for all attacks; the Valor Medallion retains casualty recovery with Field Medics, the 75% combined cap, and recovery to the Main City. Shared server-authoritative equipment actions remain unchanged. Gatehouse and Royal Stables retain their existing presentation.
+
+Status: `IN DEVELOPMENT` on `codex/barracks-gear-draft`; the user approved the layout, static character, merge, and deployment on 11 September 2026. Runtime integration is complete; release status requires separate channel verification. Review details: [Barracks equipment](./visual-qa/barracks-gear/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

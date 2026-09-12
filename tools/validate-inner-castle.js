@@ -89,7 +89,7 @@ const BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
 const CACHE_BUILD_ID = "20260909-city-details-r1";
 const STYLE_BUILD_ID = "20260827-instant-cross-map-city-upgrades-r1";
 const GAME_BUILD_ID = "20260909-city-details-r1";
-const GEAR_UI_BUILD_ID = "treasury-gear-sprite-r2";
+const GEAR_UI_BUILD_ID = "barracks-gear-r1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
