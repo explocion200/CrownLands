@@ -1,6 +1,6 @@
 # Royal Stables · Cavalry Master equipment draft
 
-Status: **layout and static Cavalry Master draft awaiting user review** on `codex/royal-stables-gear-draft`. This is an isolated presentation preview. It has not been integrated into the game, pushed, merged, or deployed. The user requested completion of the character after reviewing the layout; runtime integration and release remain separate steps.
+Status: **layout and static Cavalry Master with horse approved; runtime integrated, release pending** on `codex/royal-stables-gear-draft`. The user approved merge and deployment on 12 September 2026. This folder retains the isolated synthetic preview. Runtime integration uses `royal-stables-gear-ui.js`, `royal-stables-gear-ui.css`, the optimized version 2 illustration, and the existing Common Gear actions. A merge alone does not establish deployment.
 
 Open `index.html` through the local preview server. The review provides Parchment draft and Current layout, with Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait orientation is not a design target.
 
@@ -23,4 +23,10 @@ Upgrade confirmation retains the two-to-one consumption and irreversible-action 
 
 Passed 18 states across desktop and both mobile landscape sizes, covering six examples per size. Checks verified transparent character decoding, centering and containment without animation, eight reachable equipment slots at least 44 pixels high and wide, visible 44-pixel actions, viewport containment, correct disabled states, and all three Royal Stables bonus scopes. Bag selection, filtering, the empty slot, confirmation, Escape/focus restoration, and switching to the current-layout comparison passed without browser exceptions.
 
-Visual review checked the desktop layout, landscape Lance view, and small-landscape Wayfinder Pendant view. [Artwork provenance](art/README.md) records the original image, exact generation prompt, ChatGPT Images route, transparency, and export settings. Physical-device touch remains untested. Capture/check helpers, screenshots, and results remain under ignored `release-artifacts/royal-stables-gear/`. Runtime integration and release gates remain part of the later approved implementation.
+Visual review checked the desktop layout, landscape Lance view, and small-landscape Wayfinder Pendant view. [Artwork provenance](art/README.md) records the original image, exact generation prompt, ChatGPT Images route, transparency, and export settings. Physical-device touch remains untested. Capture/check helpers, screenshots, and results remain under ignored `release-artifacts/royal-stables-gear/`.
+
+## Runtime integration and release verification
+
+The renderer consumes the existing Common Gear view model and action bindings. Styling is scoped to Royal Stables. The approved 400 × 800 transparent WebP is copied byte-for-byte into the optimized asset manifest; original PNGs and review files stay outside the production package. The image is 88,862 bytes and has no animation. Packaging includes the new renderer and stylesheet, with a bounded 148 KiB allowance for this screen and its artwork.
+
+`tools/validate-royal-stables-gear-browser.js` exercises the actual game renderer and shared action handlers with synthetic inventory, including desktop and mobile landscape, all three speed scopes, confirmation focus, pending/error states, and upgrade response identity. Existing officer checks verify isolation. Release evidence is recorded separately in ignored `release-artifacts/royal-stables-gear/release-receipt.md` after both web and itch.io are verified.

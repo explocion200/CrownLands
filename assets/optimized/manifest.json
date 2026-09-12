@@ -991,6 +991,17 @@
       "bytes": 89984,
       "sha256": "91bb0b3d00eedd2ad3cc6ce4f334d42d46a88c5c350fa46da294ec877046499b",
       "hasAlpha": true
+    },
+    {
+      "id": "royal-stables-cavalry-master-still",
+      "category": "gear",
+      "source": "docs/visual-qa/royal-stables-gear/art/cavalry-master-source-v2.png",
+      "output": "assets/optimized/royal-stables-cavalry-master-still-400x800-9cdb6657d969.webp",
+      "width": 400,
+      "height": 800,
+      "bytes": 88862,
+      "sha256": "9cdb6657d969500c3d170e075ee7efc991e15d433263f30d72e22b7bf23b76ae",
+      "hasAlpha": true
     }
   ]
 }
