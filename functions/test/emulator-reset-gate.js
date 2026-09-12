@@ -1553,6 +1553,7 @@ async function main() {
   const daySevenCityAfter = (await dayFiveCityRef.get()).data() || {};
   assert(
     daySevenClaim?.receipt?.day === 7
+      && daySevenClaim.receipt.commonGearBoxes === 1
       && daySevenClaim.receipt.troopHours === currentDailyRewardTrack[6].troopHours
       && daySevenClaim.receipt.troops === Math.floor(
         Number(firstStats.baseTroopPerHour || 0) * currentDailyRewardTrack[6].troopHours
@@ -1595,6 +1596,19 @@ async function main() {
     Number(finalDayItemsAfter.shield_12h || 0) === Number(finalDayItemsBefore.shield_12h || 0) + 1,
     "The current month's final reward did not credit the Royal Peace Shield."
   );
+
+  const bundledCycle = require("../dailyLoginRewards.js").normalize({});
+  const firstBundleDay = bundledCycle.schedule.find((reward, index, track) => Object.keys(reward.items).length && Object.keys(track[index + 1]?.items || {}).length).day;
+  Object.assign(bundledCycle, { nextDay: firstBundleDay, earnedThroughDay: firstBundleDay + 1,
+    nextClaimOrdinal: firstBundleDay, totalClaims: firstBundleDay - 1, lastAttendanceDayKey: currentUtcDayKey });
+  await db.doc(`players/${users[0].uid}`).update({ dailyLoginReward: bundledCycle });
+  const firstBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-first", firstBundleDay);
+  await callReplaySafeFunction("claimDailyLoginReward", users[0].token, firstBundleRequest);
+  const secondBundleRequest = await prepareDailyRewardClaim(users[0], "bundle-second", firstBundleDay + 1);
+  const secondBundle = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
+  const bundleReplay = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, secondBundleRequest);
+  require("node:assert/strict").deepEqual(bundleReplay.receipt, secondBundle.receipt, "Consecutive item receipts must not retain an earlier day's item.");
+  assert(Object.keys(bundleReplay.receipt.items).length === 1 && bundleReplay.replayed, "Bundle retry returned an incorrect receipt.");
 
   await db.doc(`players/${users[1].uid}`).update({
     dailyLoginReward: {

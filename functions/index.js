@@ -14987,7 +14987,7 @@ exports.getDailyLoginRewardStatus = timedCallable(
       const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       if (attendance.changed) {
-        transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
+        transaction.update(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) });
       }
       return {
         ok: true,
@@ -15026,7 +15026,7 @@ exports.claimDailyLoginReward = timedCallable(
         && attendance.state.lastReceipt
       ) {
         if (attendance.changed) {
-          transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
+          transaction.update(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) });
         }
         return {
           ok: true,
@@ -15038,7 +15038,7 @@ exports.claimDailyLoginReward = timedCallable(
       }
       if (!statusBefore.eligible) {
         if (attendance.changed) {
-          transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
+          transaction.update(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) });
         }
         return {
           ok: true,
@@ -15137,12 +15137,13 @@ exports.claimDailyLoginReward = timedCallable(
       }, nowMs);
       const nextState = syncDailyLoginRewardAttendance(claimedState, nowMs).state;
 
+      // Replace the reward field as a whole: consecutive item receipts must not merge item keys.
+      transaction.update(profileRef, { dailyLoginReward: DAILY_LOGIN.store(nextState) });
       writePreparedEconomy(transaction, economy, {
         gold,
         goldFloat,
         shopItems,
         gear,
-        dailyLoginReward: DAILY_LOGIN.store(nextState),
       });
       return createEconomyResponse(economy, {
         gold,
