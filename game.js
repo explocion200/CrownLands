@@ -253,7 +253,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
-    icon: "assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp",
+    icon: "assets/optimized/item-peace-shield-384x384-c74d2eb2f8ac.webp",
     bagCategory: "defense",
   },
   {
@@ -262,7 +262,7 @@ const SHOP_ITEMS = [
     label: "War Drums",
     description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
-    icon: "assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp",
+    icon: "assets/optimized/item-war-drums-384x384-40892cafa303.webp",
     bagCategory: "boosts",
   },
   {
@@ -270,7 +270,7 @@ const SHOP_ITEMS = [
     label: "Royal Tax Decree",
     description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000),
-    icon: "assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp",
+    icon: "assets/optimized/item-royal-tax-decree-384x384-86d99a278ab1.webp",
     bagCategory: "boosts",
   },
   {
@@ -279,7 +279,7 @@ const SHOP_ITEMS = [
     label: "Veil of Silence",
     description: `Blocks enemy scouting for ${economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5)} minutes.`,
     cost: economyNumber("shopItems.veil_of_silence_30m.cost", 125_000),
-    icon: "assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp",
+    icon: "assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp",
     bagCategory: "defense",
   },
   {
@@ -287,7 +287,7 @@ const SHOP_ITEMS = [
     label: "Swift March Order",
     description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.",
     cost: economyNumber("shopItems.swift_march_order.cost", 300_000),
-    icon: "assets/optimized/item-swift-march-160x160-e857cc4d8977.webp",
+    icon: "assets/optimized/item-swift-march-384x384-cbdfa5099ab0.webp",
     bagCategory: "war",
   },
   {
@@ -295,7 +295,7 @@ const SHOP_ITEMS = [
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: economyNumber("shopItems.recall_horn.cost", 500_000),
-    icon: "assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp",
+    icon: "assets/optimized/item-recall-horn-384x384-66b7bde99a6d.webp",
     bagCategory: "war",
   },
 ];
@@ -34148,6 +34148,7 @@ function bindShopPurchaseBar() {
 }
 
 function patchShopPurchaseBar() {
+  if (modalBody?.querySelector(".rs-shop-shell")) { patchRoyalShopSelection(); return; }
   const current = modalBody?.querySelector("[data-shop-purchase-bar]");
   if (!current) return;
   const holder = document.createElement("div");
@@ -34207,13 +34208,13 @@ function bindShopItemSelection() {
   cards.forEach((card, index) => {
     card.addEventListener("click", () => selectShopItem(card.dataset.shopSelect || ""));
     card.addEventListener("keydown", event => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
       event.preventDefault();
       const nextIndex = event.key === "Home"
         ? 0
         : event.key === "End"
           ? cards.length - 1
-          : (index + (event.key === "ArrowRight" ? 1 : -1) + cards.length) % cards.length;
+          : (index + (event.key === "ArrowDown" ? 4 : event.key === "ArrowUp" ? -4 : event.key === "ArrowRight" ? 1 : -1) + cards.length) % cards.length;
       const next = cards[nextIndex];
       if (next) selectShopItem(next.dataset.shopSelect || "", { focus: true });
     });
@@ -34227,38 +34228,17 @@ function renderShopModal() {
   rememberShopCarouselScroll();
   const selectableIds = getSelectableShopItemIds();
   if (!selectableIds.includes(selectedShopItemId)) selectedShopItemId = selectableIds[0] || "";
+  const focus = document.activeElement;
+  const focusKey = ["data-shop-select", "data-shop-purchase-selected", "data-rs-section", "data-rs-reward", "data-rewarded-ad-watch"].find(key => focus?.hasAttribute(key));
+  const focusValue = focusKey ? focus.getAttribute(focusKey) : "";
+  const scroll = modalBody.querySelector(".rs-selection-scroll")?.scrollTop || 0;
   modal.classList.remove("rewarded-ad-confirmation-modal");
   modalTitle.textContent = "Shop";
-  modalBody.innerHTML = `
-    <div class="shop-panel">
-      <section class="shop-balance">
-        <span>Gold available</span>
-        <strong data-shop-balance>${formatNumber(getProjectedGold())}</strong>
-      </section>
-      <section class="shop-rewarded-section" aria-labelledby="shopRewardedHeading">
-        <header class="shop-rewarded-heading">
-          <div>
-            <span>Optional rewards</span>
-            <strong id="shopRewardedHeading">Free .5h Boosts</strong>
-          </div>
-          <small>One shared 30-minute cooldown</small>
-        </header>
-        <div class="shop-rewarded-items">
-          ${REWARDED_AD_ITEMS.map(renderRewardedAdShopItem).join("")}
-        </div>
-      </section>
-      <div class="shop-items" role="listbox" aria-label="Shop items" tabindex="-1">
-        ${renderCommonGearShopItem(selectedShopItemId)}
-        ${SHOP_ITEMS.map(item => renderShopItem(item, selectedShopItemId)).join("")}
-      </div>
-      ${renderShopPurchaseBar(selectedShopItemId)}
-    </div>
-  `;
-  modalBody.querySelectorAll("[data-rewarded-ad-watch]").forEach(button => {
-    button.addEventListener("click", event => startRewardedAdBoost(button.dataset.rewardedAdWatch, event.currentTarget));
-  });
-  bindShopItemSelection();
-  bindShopPurchaseBar();
+  modalBody.innerHTML = renderRoyalShopPanel();
+  bindRoyalShopPresentation();
+  const details = modalBody.querySelector(".rs-selection-scroll");
+  if (details) details.scrollTop = scroll;
+  if (focusKey) [...modalBody.querySelectorAll("[" + focusKey + "]")].find(element => element.getAttribute(focusKey) === focusValue)?.focus({ preventScroll: true });
   restoreShopCarouselScroll();
 }
 

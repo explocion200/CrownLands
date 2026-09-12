@@ -21,6 +21,7 @@ const rootFiles = [
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
+  "shop-ui.js", "shop-ui.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",
@@ -71,17 +72,18 @@ const productionHeraldryManifest = {
 };
 fs.writeFileSync(productionHeraldryManifestPath, `${JSON.stringify(productionHeraldryManifest, null, 2)}\n`, "utf8");
 copyDirectoryFiles("assets/icons", relativePath => !relativePath.endsWith("crownlands-icon-master.png"));
-// Prior Inner Castle derivatives remain in the repository for the historical UI comparison.
-// Ship only the seven current manifest entries, without duplicating that art in the client.
-const innerCastleRuntimeArt = new Set(
+// Prior Inner Castle and item derivatives remain for historical UI comparisons.
+// Ship the current manifest entries without duplicating retired art in the client.
+const currentUiRuntimeArt = new Set(
   JSON.parse(fs.readFileSync(path.join(root, "assets/optimized/manifest.json"), "utf8")).assets
-    .filter(asset => asset.category === "inner-castle")
+    .filter(asset => asset.category === "inner-castle" || asset.category === "item")
     .map(asset => asset.output),
 );
 copyDirectoryFiles("assets/optimized", relativePath => {
   const normalized = relativePath.replace(/\\/g, "/");
   return !normalized.endsWith("manifest.json")
-    && (!normalized.startsWith("assets/optimized/inner-castle-") || innerCastleRuntimeArt.has(normalized));
+    && (!normalized.startsWith("assets/optimized/inner-castle-") || currentUiRuntimeArt.has(normalized))
+    && (!/^assets\/optimized\/item-(peace-shield|war-drums|royal-tax-decree|veil-of-silence|swift-march|recall-horn)-/.test(normalized) || currentUiRuntimeArt.has(normalized));
 });
 copyDirectoryFiles("promo-screenshots", relativePath => /\.(?:png|jpe?g|webp)$/i.test(relativePath));
 copy("assets/worlds/world_01/map-manifest.json");

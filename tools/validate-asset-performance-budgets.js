@@ -66,7 +66,7 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The City List ledger reuses existing art/icons and adds under 20 KiB of
 // presentation source. Existing headroom plus one 16 KiB step bounds its shell.
 // The Item Bag adds at most 36 KiB of scoped code/styles to the installed shell.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36) * 1024;
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44) * 1024;
 // Approved compact rows and persistent side-by-side development add scoped CSS
 // to the existing files, with no new requests, art, or runtime JavaScript.
 // Bound the two presentation sources by an additional 8 KiB in total; keep the
@@ -80,7 +80,8 @@ assert(normalizedTextBytes("city-details-ui.js") + normalizedTextBytes("city-det
 // The approved static War Captain adds at most 80 KiB to the existing art allowance.
 // Gatehouse adds one approved static Commander, bounded separately at 90 KiB.
 // Royal Stables adds one static officer and horse, bounded separately at 90 KiB.
-const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90) * 1024;
+// Six approved 384px Shop illustrations add less than 180 KiB over their old 160px versions.
+const MAX_OPTIMIZED_ART_BYTES = (3020 + 80 + 90 + 90 + 180) * 1024;
 const MAX_WORLD_MAP_BYTES = 750 * 1024;
 const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 
@@ -91,7 +92,8 @@ const categoryFileBudgets = {
   hud: 32 * 1024,
   pickup: 24 * 1024,
   status: 24 * 1024,
-  item: 16 * 1024,
+  // Approved 384px Shop/Bag illustrations support the larger selected preview.
+  item: 52 * 1024,
   objective: 80 * 1024,
   "holding-tower-object": 48 * 1024,
   "stronghold-object": 80 * 1024,
@@ -136,6 +138,8 @@ const entrypointBudgets = {
   "common-gear-box-ui.css": 24 * 1024,
   "item-bag-ui.js": 12 * 1024,
   "item-bag-ui.css": 24 * 1024,
+  "shop-ui.js": 16 * 1024,
+  "shop-ui.css": 28 * 1024,
   "assets/icons/common-gear-chest-r1.svg": 16 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
