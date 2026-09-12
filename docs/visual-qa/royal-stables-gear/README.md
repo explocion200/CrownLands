@@ -1,13 +1,13 @@
 # Royal Stables · Cavalry Master equipment draft
 
-Status: **layout draft awaiting user approval** on `codex/royal-stables-gear-draft`. This is an isolated presentation preview. It has not been integrated into the game, pushed, merged, or deployed. The next step after layout approval is the new static Cavalry Master illustration.
+Status: **layout and static Cavalry Master draft awaiting user review** on `codex/royal-stables-gear-draft`. This is an isolated presentation preview. It has not been integrated into the game, pushed, merged, or deployed. The user requested completion of the character after reviewing the layout; runtime integration and release remain separate steps.
 
 Open `index.html` through the local preview server. The review provides Parchment draft and Current layout, with Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait orientation is not a design target.
 
 ## Presentation
 
 - Follows the approved Treasury, Barracks, and Gatehouse arrangement and matching dimensions: up to 1200 × 790 pixels on desktop, fitting mobile landscape. Eight equipped slots surround the officer, the equipment bag occupies the middle pane, and selected-item details appear on the right. Equip/Unequip and Upgrade stay visible while inventory and item details scroll independently.
-- Uses the existing Cavalry Master portrait and existing equipment illustrations for layout review. No new character art or animation is included. The surrounding review note identifies the portrait as temporary pending the separate art step.
+- Includes a new static, transparent Cavalry Master in olive-brown riding armor and a muted slate-blue cloak, with an upright lance, silver spurs, and a Wayfinder pendant. The complete figure sits between the eight equipment slots. No animation is included. Existing equipment illustrations are retained, and the Current layout comparison retains the original portrait.
 - Common items retain light gray backgrounds (`#d9dad6`) and burgundy selection borders; empty slots remain parchment. Gold uses the approved crown-stamped coin. The Royal Stables seal reuses the engraved horseshoe from the Inner Castle overview.
 - Interactive examples include an upgrade-ready Riding Helm, Riding Breeches without a matching copy, the maximum-level Wayfinder Pendant, the Lance, an empty Gloves slot, and insufficient Gold. Equipment actions and confirmation are previews and never change inventory or Gold.
 
@@ -21,6 +21,6 @@ Upgrade confirmation retains the two-to-one consumption and irreversible-action 
 
 ## Focused draft verification
 
-Passed 18 states across desktop and both mobile landscape sizes, covering six examples per size. Checks verified image decoding and containment, eight reachable equipment slots at least 44 pixels high and wide, visible 44-pixel actions, viewport containment, correct disabled states, and all three Royal Stables bonus scopes. Bag selection, filtering, the empty slot, confirmation, Escape/focus restoration, and switching to the current-layout comparison passed without browser exceptions.
+Passed 18 states across desktop and both mobile landscape sizes, covering six examples per size. Checks verified transparent character decoding, centering and containment without animation, eight reachable equipment slots at least 44 pixels high and wide, visible 44-pixel actions, viewport containment, correct disabled states, and all three Royal Stables bonus scopes. Bag selection, filtering, the empty slot, confirmation, Escape/focus restoration, and switching to the current-layout comparison passed without browser exceptions.
 
-Visual review checked the desktop layout, landscape Lance view, and small-landscape Wayfinder Pendant view. Physical-device touch remains untested. Capture/check helpers, screenshots, and results remain under ignored `release-artifacts/royal-stables-gear/`. Runtime integration and release gates remain part of the later approved implementation.
+Visual review checked the desktop layout, landscape Lance view, and small-landscape Wayfinder Pendant view. [Artwork provenance](art/README.md) records the original image, exact generation prompt, ChatGPT Images route, transparency, and export settings. Physical-device touch remains untested. Capture/check helpers, screenshots, and results remain under ignored `release-artifacts/royal-stables-gear/`. Runtime integration and release gates remain part of the later approved implementation.

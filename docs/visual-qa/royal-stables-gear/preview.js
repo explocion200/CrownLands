@@ -7,7 +7,7 @@ const number=value=>Math.floor(Number(value)).toLocaleString("en-US");
 const percent=value=>Number(value).toFixed(2);
 const shortName=value=>value.replace("Cavalry Master's ","");
 const art=(src,alt="")=>`<img src="${esc(src)}" alt="${esc(alt)}" draggable="false">`;
-function officerMarkup(vm){return `<figure class="tg-officer">${art(vm.building.characterArt,"Cavalry Master with a horse in the Royal Stables — existing portrait for layout review")}<figcaption>Master of the royal cavalry</figcaption></figure>`;}
+function officerMarkup(){return `<figure class="tg-officer has-character">${art("docs/visual-qa/royal-stables-gear/art/cavalry-master-still-v1.webp","Cavalry Master in worn riding armor and a slate-blue cloak, holding an upright lance")}<figcaption>Master of the royal cavalry</figcaption></figure>`;}
 const icons={
   stables:"<path fill=\"currentColor\" fill-opacity=\".12\" d=\"M9 3C-1 12 3 29 16 30 29 29 33 12 23 3l-5 3c8 7 5 17-2 18C9 23 6 13 14 6Z\"/><path fill=\"currentColor\" fill-opacity=\".25\" stroke=\"none\" d=\"M25 7c7 17-4 24-13 22 14 1 17-14 10-23Z\"/><path d=\"m9 7 2 1m-5 5 2 1m-2 6 2-1m1 7 1-2m11-17 2-1m1 7 2-1m-2 6 2 1m-4 5 1 2\"/>",
   coins:'<g fill="none" stroke-width="1.5"><path fill="currentColor" fill-opacity=".12" d="M16 3 23 5 28 10 29 17 26 24 20 28 12 29 6 25 3 19 3 12 8 6Z"/><path fill="currentColor" fill-opacity=".25" stroke="none" d="M27 11 27 18 24 24 18 27 11 27 6 23 9 27 16 30 24 27 29 20 30 14Z"/><path stroke-width="1.1" d="M10 8 16 6 23 9M7 12l-1 5 3 6M22 24l3-4"/><path fill="currentColor" stroke-width=".5" d="m9 11 4 3 3-6 3 6 4-3-2 10H11Z"/><path d="M12 24h8"/></g>',
