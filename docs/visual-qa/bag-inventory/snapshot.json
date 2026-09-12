@@ -33,7 +33,7 @@
       "id": "common_gear_box",
       "label": "Common Gear Box",
       "description": "Open to receive exactly 3 random Common gear pieces for your Inner Castle officers.",
-      "icon": "assets/optimized/item-common-gear-box-192x192-d31500be5747.webp",
+      "icon": "assets/icons/common-gear-chest-r1.svg",
       "bagCategory": "utility",
       "effect": "Contains: 3 Common gear pieces",
       "durationSeconds": 0,
@@ -99,5 +99,8 @@
       "durationSeconds": 0,
       "stackable": false
     }
-  ]
+  ],
+  "presentationOverrides": {
+    "common_gear_box": "Approved closed chest exported from createCommonGearChest in common-gear-box-ui.js"
+  }
 }

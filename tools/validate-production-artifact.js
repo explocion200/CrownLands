@@ -12,6 +12,8 @@ const required = [
   "gatehouse-gear-ui.js", "gatehouse-gear-ui.css",
   "royal-stables-gear-ui.js", "royal-stables-gear-ui.css",
   "common-gear-box-ui.js", "common-gear-box-ui.css",
+  "item-bag-ui.js", "item-bag-ui.css",
+  "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
   "home.html", "world.html", "community.html", "guides.html", "how-to-play.html", "updates.html", "support.html", "privacy.html", "terms.html", "game-rules.html", "sitemap.xml", "robots.txt", "site-info.css", "public-site.js",
@@ -99,7 +101,7 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 // Gatehouse adds a static Commander (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
 // Royal Stables adds officer/horse art (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
 // Animated Gear Box adds at most 48 KiB of scoped UI code and styles; no raster art.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48) * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

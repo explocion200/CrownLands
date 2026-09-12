@@ -351,6 +351,16 @@ function patchShopProjectedUi() {
 }
 
 function patchInventoryProjectedUi() {
+  // A restored last copy or a newly received stack needs a tile, not just a count patch.
+  const bagRoot = modalBody?.querySelector(".ib-bag-shell");
+  if (bagRoot && modal.open && modal.classList.contains("inventory-modal")) {
+    const visibleIds = [...bagRoot.querySelectorAll("[data-inventory-item]")].map(slot => slot.dataset.inventoryItem);
+    const projectedIds = getInventoryPageModel().entries.map(entry => entry.id);
+    if (visibleIds.length !== projectedIds.length || visibleIds.some((id, index) => id !== projectedIds[index])) {
+      showInventoryModal();
+      return;
+    }
+  }
   modalBody?.querySelectorAll("[data-inventory-select]").forEach(slot => {
     const itemId = slot.dataset.inventoryItem || "";
     const count = getProjectedBagItemCount(itemId);
@@ -358,19 +368,23 @@ function patchInventoryProjectedUi() {
     setTextIfChanged(slot.querySelector("[data-inventory-quantity]"), `x${formatNumber(count)}`);
     slot.disabled = count < 1;
     slot.classList.toggle("pending", pending);
-    slot.setAttribute("aria-label", `${slot.dataset.inventoryLabel || itemId}, ${formatNumber(count)} owned`);
+    slot.classList.toggle("ib-large-count", count >= 1000);
+    slot.setAttribute("aria-label", `${slot.dataset.inventoryLabel || itemId}, ${Math.max(0, Math.floor(Number(count) || 0)).toLocaleString("en-US")} owned`);
   });
   const useButton = modalBody?.querySelector("[data-inventory-use]");
   if (!useButton) return;
   const itemId = useButton.dataset.inventoryUse || "";
   const item = getShopItemById(itemId);
   const count = getProjectedBagItemCount(itemId);
-  setTextIfChanged(modalBody.querySelector("[data-inventory-owned]"), `Owned: ${formatNumber(count)}`);
+  const ownedLabel = modalBody.querySelector("[data-inventory-owned]");
+  setTextIfChanged(ownedLabel, Math.max(0, Math.floor(Number(count) || 0)).toLocaleString("en-US"));
+  ownedLabel?.classList.toggle("ib-large-owned", count >= 100000);
   const projectedExpiresAtMs = getProjectedItemEffectExpiresAtMs(item);
-  const effectLine = modalBody.querySelector("[data-inventory-active]");
-  if (effectLine && projectedExpiresAtMs > Date.now()) {
-    setTextIfChanged(effectLine, `Active: ${formatDuration(Math.ceil((projectedExpiresAtMs - Date.now()) / 1000))}`);
-  }
+  const remaining = Math.max(0, Math.ceil((projectedExpiresAtMs - Date.now()) / 1000));
+  modalBody.querySelectorAll("[data-inventory-active]").forEach(effectLine => {
+    effectLine.hidden = remaining === 0;
+    setTextIfChanged(effectLine, remaining ? `Active: ${formatDuration(remaining)}` : "");
+  });
   useButton.disabled = count < 1 || (!isStackableTimedInventoryItem(item) && projectedExpiresAtMs > Date.now());
   useButton.classList.toggle("pending", getInstantPendingItemDelta(itemId) < 0);
 }
@@ -440,6 +454,7 @@ function bindInventoryCategoryControls() {
       selectedInventoryItemId = "";
       selectedInventoryEntryKey = "";
       showInventoryModal();
+      modalBody.querySelector(`[data-inventory-category="${category}"]`)?.focus({ preventScroll: true });
     });
     button.addEventListener("keydown", event => {
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
@@ -456,10 +471,10 @@ function bindInventoryCategoryControls() {
 function renderInventorySlot(entry, selectedEntryKey = "") {
   const selected = entry.entryKey === selectedEntryKey;
   return `
-    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.entryKey)}" data-inventory-item="${escapeHtml(entry.id)}" data-inventory-label="${escapeHtml(entry.label)}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(`${entry.label}, ${formatNumber(entry.ownedCount)} owned`)}">
-      <span class="inventory-slot-count" data-inventory-quantity aria-hidden="true">x${formatNumber(entry.ownedCount)}</span>
-      <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
-      <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
+    <button class="inventory-slot ib-item-tile filled ${entry.ownedCount >= 1000 ? "ib-large-count" : ""} ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.entryKey)}" data-inventory-item="${escapeHtml(entry.id)}" data-inventory-label="${escapeHtml(entry.label)}" type="button" aria-pressed="${selected ? "true" : "false"}" aria-label="${escapeHtml(`${entry.label}, ${Math.max(0, Math.floor(Number(entry.ownedCount) || 0)).toLocaleString("en-US")} owned`)}">
+      <span class="inventory-slot-count ib-quantity" data-inventory-quantity aria-hidden="true">x${formatNumber(entry.ownedCount)}</span>
+      <span class="inventory-slot-icon ib-tile-art ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
+      <strong class="inventory-slot-name ib-item-name">${escapeHtml(entry.label)}</strong>
     </button>
   `;
 }

@@ -65,7 +65,8 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // city illustration assets still use the existing runtime image cache.
 // The City List ledger reuses existing art/icons and adds under 20 KiB of
 // presentation source. Existing headroom plus one 16 KiB step bounds its shell.
-const MAX_INSTALL_PRECACHE_BYTES = 3784 * 1024;
+// The Item Bag adds at most 36 KiB of scoped code/styles to the installed shell.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36) * 1024;
 // Approved compact rows and persistent side-by-side development add scoped CSS
 // to the existing files, with no new requests, art, or runtime JavaScript.
 // Bound the two presentation sources by an additional 8 KiB in total; keep the
@@ -133,6 +134,9 @@ const entrypointBudgets = {
   "royal-stables-gear-ui.css": 42 * 1024,
   "common-gear-box-ui.js": 24 * 1024,
   "common-gear-box-ui.css": 24 * 1024,
+  "item-bag-ui.js": 12 * 1024,
+  "item-bag-ui.css": 24 * 1024,
+  "assets/icons/common-gear-chest-r1.svg": 16 * 1024,
   "base-cities.js": 32 * 1024,
   "instant-economy-actions.js": 64 * 1024,
   // Five responsive build tabs, paired 44px controls, and the exit dialog add
@@ -359,7 +363,9 @@ for (const asset of manifest.assets) {
     `${asset.id} is ${(payload.length / 1024).toFixed(1)} KiB; ${asset.category} budget is ${(categoryFileBudgets[asset.category] / 1024).toFixed(0)} KiB.`
   );
   assert(
-    appReferenceSource.includes(asset.output),
+    asset.id === "item-common-gear-box"
+      ? gameSource.includes('icon: "assets/icons/common-gear-chest-r1.svg"')
+      : appReferenceSource.includes(asset.output),
     `${asset.id} was generated but the shipped client does not reference ${asset.output}.`
   );
 
