@@ -1,6 +1,6 @@
 # Gatehouse · Defensive Commander equipment draft
 
-Status: **draft for user approval** on `codex/gatehouse-gear-draft`. This folder is an isolated local design preview. No runtime integration, pull request, merge, or deployment has been performed for this update.
+Status: **layout and static Commander approved; runtime integrated, release pending** on `codex/gatehouse-gear-draft`. The user approved merge and deployment. This folder retains the isolated synthetic design preview. Runtime integration uses `gatehouse-gear-ui.js`, `gatehouse-gear-ui.css`, the optimized Commander artwork, and the existing Common Gear actions. A merge alone does not establish deployment.
 
 Open `index.html` through the local preview server. The review provides Parchment draft and Current layout, with Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait orientation is not a design target.
 
@@ -25,4 +25,4 @@ The upgrade confirmation preserves the two-to-one consumption and irreversible-a
 
 Focused draft validation passed 15 states across desktop and both mobile landscape sizes: image decoding, transparent static character containment, eight reachable 44-pixel slots, visible 44-pixel actions, viewport containment, empty/disabled/low-Gold states, selection/filtering, confirmation/Escape/focus restoration, and current-layout comparison. No browser exceptions were reported. A visual review checked the standard landscape and small-landscape layouts. Physical-device touch remains untested.
 
-Capture/check scripts, screenshots, and results remain under ignored `release-artifacts/gatehouse-gear/`. Production release gates belong to a later approved integration; this preview only changes files in this directory.
+Capture/check scripts, screenshots, and results remain under ignored `release-artifacts/gatehouse-gear/`. `tools/validate-gatehouse-gear-browser.js` covers actual runtime layout, static art, equipment selection and filtering, confirmation focus, pending/error guards, upgrade result identity, and Back/Close with synthetic inventory and a local API stub. It does not mutate production accounts. Release gates and publication evidence are recorded separately in the release handoff.

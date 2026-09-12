@@ -980,6 +980,17 @@
       "bytes": 79142,
       "sha256": "b41f63401fb3fca21456f05896f140ba754ff05d603fdd88ebcb810786386425",
       "hasAlpha": true
+    },
+    {
+      "id": "gatehouse-defensive-commander-still",
+      "category": "gear",
+      "source": "docs/visual-qa/gatehouse-gear/art/defensive-commander-source-v1.png",
+      "output": "assets/optimized/gatehouse-defensive-commander-still-400x800-91bb0b3d00ee.webp",
+      "width": 400,
+      "height": 800,
+      "bytes": 89984,
+      "sha256": "91bb0b3d00eedd2ad3cc6ce4f334d42d46a88c5c350fa46da294ec877046499b",
+      "hasAlpha": true
     }
   ]
 }

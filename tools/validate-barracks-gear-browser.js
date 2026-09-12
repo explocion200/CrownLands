@@ -141,7 +141,7 @@ async function main() {
     await click('[data-gear-back]'); assert(await evaluate("modal.classList.contains('bailey-modal')&&!modal.dataset.commonGearBuildingId"));
     for (const building of ['gatehouse','royal-stables']) {
       await evaluate(`renderCommonGearBuilding(${JSON.stringify(building)})`); await paint();
-      assert(await evaluate("!!modal.querySelector('.common-gear-screen')&&!modal.querySelector('.tg-shell')"));
+      assert(await evaluate(building === "gatehouse" ? "!!modal.querySelector('.tg-shell [data-gatehouse-officer]')" : "!!modal.querySelector('.common-gear-screen')&&!modal.querySelector('.tg-shell')"));
       await click('[data-gear-back]');
     }
     await evaluate("renderCommonGearBuilding('barracks')"); await paint(); await click('#closeModalBtn');

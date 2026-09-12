@@ -1000,6 +1000,16 @@ Status: `IN DEVELOPMENT` on `codex/treasury-gear-draft`, with user-approved desi
 
 Status: `IN DEVELOPMENT` on `codex/barracks-gear-draft`; the user approved the layout, static character, merge, and deployment on 11 September 2026. Runtime integration is complete; release status requires separate channel verification. Review details: [Barracks equipment](./visual-qa/barracks-gear/README.md).
 
+### Confirmed Gatehouse equipment presentation
+
+- The approved Gatehouse Manage Gear screen follows the Treasury/Barracks parchment layout and matching dimensions: up to 1200 × 790 pixels on desktop, fitting mobile landscape. Portrait is not a design target.
+- The Defensive Commander is a static, transparent full-body illustration in worn steel and a moss-green cloak, with fortress keys and a shield. He is centered between the existing eight equipment slots and has no animation in any motion setting.
+- The equipment bag occupies the middle pane; complete selected-item details occupy the right. Bag and details scroll independently while Equip/Unequip and Upgrade remain visible. Common items retain light gray `#d9dad6` backgrounds and burgundy selection borders. The approved crown-stamped Gold coin and engraved Gatehouse symbol are retained.
+- Armor retains wall strength in all owned cities. The Fortress Shield retains defending soldier strength in all owned cities. The Masonry Seal retains reduction to repair time added by new wall damage. Existing values, costs, matching-copy requirements, progression, binding, quantities, and server-authoritative actions remain unchanged.
+- Upgrade confirmation preserves the two-to-one consumption warning, keyboard focus containment, and focus restoration. Treasury and Barracks retain their approved presentations; Royal Stables retains its existing presentation.
+
+Status: `IN DEVELOPMENT` on `codex/gatehouse-gear-draft`; the user approved the layout, static character, merge, and deployment. Runtime integration is complete; publication requires separate channel verification. Review details: [Gatehouse equipment](./visual-qa/gatehouse-gear/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

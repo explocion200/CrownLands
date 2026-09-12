@@ -11,4 +11,4 @@ Conversation: https://chatgpt.com/c/6aa4b0f1-a040-83e9-81a3-a6100dc89dc0
 
 The export trims excess transparent margin using visible bounds at alpha greater than 64, retaining ten source pixels of safety padding. It preserves the original colors and alpha, resizes with Lanczos to 340 × 752, and centers the character at (30, 24) on a transparent 400 × 800 canvas. WebP quality is 90, method 6. No character repainting or background extraction was performed after generation.
 
-The character is static. The preview checks containment, centering, complete image decoding, and absence of animation at desktop and both mobile landscape sizes. The illustration is confined to this draft until the user approves integration.
+The character is static. The preview checks containment, centering, complete image decoding, and absence of animation at desktop and both mobile landscape sizes. The user approved integration; the runtime uses an identical content-hashed WebP under `assets/optimized/`. The original generated PNG remains unchanged in this folder.
