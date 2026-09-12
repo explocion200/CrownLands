@@ -62,6 +62,12 @@ function legacySchedule(length) {
 // A schedule is created only on first migration/creation or completed-cycle rollover.
 function normalize(raw = {}, _nowMs = Date.now()) {
   raw = raw && typeof raw === "object" ? raw : {};
+  // Old in-flight status handlers merge only the former flat fields. Keep the
+  // authoritative cycle beneath a field those handlers never write.
+  if (raw.activeCycle) {
+    if (raw.activeCycle.schemaVersion !== VERSION) throw new Error("Unsupported saved daily reward cycle.");
+    raw = raw.activeCycle;
+  }
   const version = int(raw.schemaVersion);
   const oldProgress = version > 0 && (int(raw.nextDay) > 1 || int(raw.earnedThroughDay) > 0
     || int(raw.earnedThroughOrdinal) > 0 || int(raw.totalClaims) > 0 || key(raw.lastAttendanceDayKey));
@@ -136,7 +142,7 @@ function sync(raw = {}, nowMs = Date.now()) {
     state.deferredAttendanceDayKey = "";
   }
   state.earnedThroughOrdinal = state.nextClaimOrdinal + state.earnedThroughDay - state.nextDay;
-  return { state, changed: Object.entries(state).some(([field, value]) => !isDeepStrictEqual(raw?.[field], value)), dayKey: today, serverTimeMs: nowMs };
+  return { state, changed: !raw?.activeCycle || Object.entries(state).some(([field, value]) => !isDeepStrictEqual(raw.activeCycle[field], value)), dayKey: today, serverTimeMs: nowMs };
 }
 
 function pending(state) { return Math.max(0, state.earnedThroughDay - state.nextDay + 1); }
@@ -150,4 +156,6 @@ function status(raw, nowMs = Date.now()) {
     nextUtcUnlockAtMs: Date.parse(`${today}T00:00:00Z`) + 86400000 };
 }
 
-module.exports = { VERSION, LIMIT, createSchedule, legacySchedule, normalize, sync, status, pending };
+function store(state) { return { ...state, activeCycle: state }; }
+
+module.exports = { VERSION, LIMIT, createSchedule, legacySchedule, normalize, sync, status, pending, store };

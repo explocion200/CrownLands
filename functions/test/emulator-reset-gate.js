@@ -814,7 +814,7 @@ async function main() {
     ["purchaseShopItem", { itemId: "shield_12h", quantity: 1 }],
     ["activateInventoryItem", { itemId: "shield_12h", quantity: 1 }],
     ["getDailyLoginRewardStatus", {}],
-    ["claimDailyLoginReward", { claimId: "preclaim_daily_reward" }],
+    ["claimDailyLoginReward", { claimId: "preclaim_daily_reward", expectedOrdinal: 1, expectedCycleId: "preclaim-cycle" }],
     ["getDailyMissionStatus", {}],
     ["getSeasonalAchievementStatus", {}],
     ["spendSkillPoint", { skillId: "swordmastery" }],
@@ -937,7 +937,7 @@ async function main() {
   assert(new Set(claims.map(claim => claim.cityId)).size === 50, "Starting city assignments collided.");
 
   const profile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
-  require("node:assert/strict").deepEqual(profile.dailyLoginReward, persistentDaily, "Season entry must preserve the account cycle, pending rewards and same-day guard.");
+  require("node:assert/strict").deepEqual(profile.dailyLoginReward.activeCycle, persistentDaily, "Season entry must preserve the account cycle, pending rewards and same-day guard.");
   assert(
     profile.displayName === "Preserved Ruler" && profile.playerName === "Preserved Ruler",
     `Player display/name identity was not preserved (displayName=${profile.displayName}, playerName=${profile.playerName}).`
@@ -1494,7 +1494,7 @@ async function main() {
   const sameDayReplay = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest);
   assert(sameDayReplay?.replayed === true, "A repeated same-day daily reward claim was not idempotent.");
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     upgrades: { taxStewardship: 25, royalGranaries: 25 },
     itemEffects: {
       warDrumsExpiresAtMs: Date.now() + 60 * 60 * 1000,
@@ -1505,7 +1505,7 @@ async function main() {
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
-  }, { merge: true });
+  });
   const dayFiveProfileBefore = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   const dayFiveCityRef = db.doc(`islands/${claims[0].islandId}/cities/${claims[0].cityId}`);
   const dayFiveClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-5", 5);
@@ -1524,9 +1524,9 @@ async function main() {
     "The day-5 item was not added to the bag."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: buildPendingDailyRewardState(6),
-  }, { merge: true });
+  });
   const daySixClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-6", 6);
   const competingClaims = await Promise.allSettled([
     callReplaySafeFunction("claimDailyLoginReward", users[0].token, daySixClaimRequest),
@@ -1544,9 +1544,9 @@ async function main() {
     "Daily gold hours included skill, Stronghold, or temporary production bonuses."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: buildPendingDailyRewardState(7),
-  }, { merge: true });
+  });
   const daySevenCityBefore = (await dayFiveCityRef.get()).data() || {};
   const daySevenClaimRequest = await prepareDailyRewardClaim(users[0], "emulator-day-7", 7);
   const daySevenClaim = await callReplaySafeFunction("claimDailyLoginReward", users[0].token, daySevenClaimRequest);
@@ -1565,13 +1565,13 @@ async function main() {
     "The day-7 troop reward was not credited to the main city."
   );
 
-  await db.doc(`players/${users[0].uid}`).set({
+  await db.doc(`players/${users[0].uid}`).update({
     dailyLoginReward: {
       ...buildPendingDailyRewardState(currentMonthLengthDays),
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
-  }, { merge: true });
+  });
   const finalDayItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
   const finalDayClaimRequest = await prepareDailyRewardClaim(
     users[0],

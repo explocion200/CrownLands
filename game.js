@@ -32400,7 +32400,7 @@ function getDailyLoginRewardMonthInfo(nowMs = Date.now()) {
 }
 
 function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
-  const source = raw && typeof raw === "object" ? raw : {};
+  const source = raw?.activeCycle || (raw && typeof raw === "object" ? raw : {});
   const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
   const currentMonth = getDailyLoginRewardMonthInfo(serverTimeMs);
   const monthKey = /^\d{4}-\d{2}$/.test(String(source.monthKey || ""))

@@ -14987,7 +14987,7 @@ exports.getDailyLoginRewardStatus = timedCallable(
       const profile = participation.profile;
       const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
       if (attendance.changed) {
-        transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+        transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
       }
       return {
         ok: true,
@@ -15026,7 +15026,7 @@ exports.claimDailyLoginReward = timedCallable(
         && attendance.state.lastReceipt
       ) {
         if (attendance.changed) {
-          transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+          transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
         }
         return {
           ok: true,
@@ -15038,7 +15038,7 @@ exports.claimDailyLoginReward = timedCallable(
       }
       if (!statusBefore.eligible) {
         if (attendance.changed) {
-          transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+          transaction.set(profileRef, { dailyLoginReward: DAILY_LOGIN.store(attendance.state) }, { merge: true });
         }
         return {
           ok: true,
@@ -15142,7 +15142,7 @@ exports.claimDailyLoginReward = timedCallable(
         goldFloat,
         shopItems,
         gear,
-        dailyLoginReward: nextState,
+        dailyLoginReward: DAILY_LOGIN.store(nextState),
       });
       return createEconomyResponse(economy, {
         gold,
@@ -17808,7 +17808,7 @@ function createFreshResetPlayerProfile({
     gear: createPersistentCommonGearForSeasonReset(previous),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
-    dailyLoginReward: normalizeDailyLoginRewardState(previous.dailyLoginReward, nowMs),
+    dailyLoginReward: DAILY_LOGIN.store(normalizeDailyLoginRewardState(previous.dailyLoginReward, nowMs)),
     daily: normalizeDaily({}, new Date(nowMs)),
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,

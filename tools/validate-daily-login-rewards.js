@@ -142,12 +142,12 @@ assert.throws(() => model.normalize({schemaVersion:4, cycleId:"broken", schedule
 
 requireMatch(read("functions/dailyLoginRewards.js"), /tracksByMonthLength/, "Functions do not load all calendar-month tracks.");
 requireMatch(server, /dailyLoginRewardVersion:\s*DAILY_LOGIN_REWARD_SCHEMA_VERSION/, "Realm info does not advertise monthly rewards.");
-requireMatch(server, /createFreshResetPlayerProfile[\s\S]*dailyLoginReward:\s*normalizeDailyLoginRewardState\(previous\.dailyLoginReward, nowMs\)/, "Fresh reset profiles do not initialize daily rewards.");
+requireMatch(server, /createFreshResetPlayerProfile[\s\S]*dailyLoginReward:\s*DAILY_LOGIN\.store\(normalizeDailyLoginRewardState\(previous\.dailyLoginReward, nowMs\)\)/, "Fresh reset profiles do not initialize daily rewards.");
 requireMatch(server, /expectedCycleId !== statusBefore\.cycleId[\s\S]*new cycle/, "Stale cross-month claims are not rejected.");
 requireMatch(server, /expectedOrdinal !== statusBefore\.nextClaimOrdinal[\s\S]*Daily rewards changed/, "Stale multi-device claims are not rejected.");
 requireMatch(server, /nextDay:\s*claimedPosition\.day \+ 1[\s\S]*syncDailyLoginRewardAttendance\(claimedState,\s*nowMs\)/, "Claims do not consume the oldest reward and fill deferred attendance.");
 requireMatch(server, /getRewardedAdBaseRates\(economy\)[\s\S]*reward\.goldHours[\s\S]*reward\.troopHours/, "Daily claims do not use permanent base production rates.");
-requireMatch(server, /creditLevelUpTroopsToMainCity\(economy,[\s\S]*dailyLoginReward:\s*nextState/, "Daily troops are not credited atomically.");
+requireMatch(server, /creditLevelUpTroopsToMainCity\(economy,[\s\S]*dailyLoginReward:\s*DAILY_LOGIN\.store\(nextState\)/, "Daily troops are not credited atomically.");
 requireMatch(emulatorResetGate, /buildDailyRewardClaimRequest[\s\S]*expectedCycleId/, "Emulator claims do not use the authoritative UTC month guard.");
 requireMatch(emulatorResetGate, /prepareDailyRewardClaim[\s\S]*getDailyLoginRewardStatus/, "Emulator claims do not refresh authoritative reward status.");
 assert.doesNotMatch(
@@ -226,3 +226,8 @@ requireMatch(
 );
 
 console.log("Validated persistent 28-day cycles, saved-track migration, attendance and replay guards, the Daily Missions quest tab, and Clan Rewards placement for Weekly Conquest.");
+
+const protectedCycle = model.store(attendance.state);
+const staleHandlerWrite = { ...protectedCycle, schemaVersion: 3, cycle: 1, nextDay: 1, earnedThroughDay: 0, lastAttendanceDayKey: "" };
+assert.deepEqual(model.normalize(staleHandlerWrite, utc("2030-01-01")), attendance.state, "Older status writes cannot destroy a persisted cycle.");
+assert.equal(model.sync(protectedCycle, utc("2026-09-09")).changed, false, "Unchanged status reads must not rewrite the player document.");

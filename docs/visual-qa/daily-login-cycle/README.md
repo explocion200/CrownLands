@@ -67,3 +67,5 @@ Reuse the approved six Shop illustrations and oak-and-iron Common Gear Box. All 
 ## Account and release integration
 
 The existing `players/{uid}` document is global, outside realm generations and shards. Status and claim transactions use its protected `dailyLoginReward` field; season entry preserves it in `createFreshResetPlayerProfile`. No new collection or cross-shard copy is needed. The live pointer was verified as `main-realm-2026-09`, generation `realm-2026-09`, shared realm `shard_0001`. Only the current release is targeted. Schema-3 economy tables remain for transition schedules; active reward state uses schema 4. Older clients are rejected at the claim boundary without granting rewards.
+
+For rollout safety, `dailyLoginReward.activeCycle` holds the authoritative schema-4 record, while flat fields remain response/compatibility mirrors. Old status handlers only merge flat fields and cannot overwrite the nested cycle. Deploy the guarded claim handler first, then season-entry and status handlers before publishing the client; this prevents old clients from collecting against a new schedule.
