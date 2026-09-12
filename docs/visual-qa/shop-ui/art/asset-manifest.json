@@ -1,0 +1,139 @@
+{
+  "route": "Signed-in ChatGPT Images web UI; initial page title ChatGPT Images 2.5 | AI Image Generator; Extra High setting. No direct API or CLI generation.",
+  "backendModelVerified": false,
+  "processing": "Original generated PNGs preserved. Proportional resize and WebP encoding only; no repainting or artificial background removal. Generated alpha retained.",
+  "items": [
+    {
+      "source": "recall-horn-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 1614514,
+      "sourceSha256": "7d6e2d5c0c180ffc94bb2ca24659fdb2c12735cb29ebaeb64f6d078b2adfac74",
+      "asset": "recall-horn-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 37304,
+      "alphaBounds": [
+        0,
+        23,
+        1239,
+        1212
+      ],
+      "assetSha256": "66b7bde99a6de106cbd23fa9385e3a2166f0b1edc7299b1b8592811854b5fe50"
+    },
+    {
+      "source": "royal-peace-shield-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 1887155,
+      "sourceSha256": "b46ef24802d4f8e6d8f887ec0b2a9c8c98bb2c1da10e72d9b90fa88bc3bd2135",
+      "asset": "royal-peace-shield-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 35838,
+      "alphaBounds": [
+        0,
+        52,
+        1222,
+        1214
+      ],
+      "assetSha256": "c74d2eb2f8acae4798daae70eb288ad73787a97f296bf2e78e79b54926046a82"
+    },
+    {
+      "source": "royal-tax-decree-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 1784210,
+      "sourceSha256": "6f6ef8f9d6d226836d47ade1d0faca07ed30ab50c077384a03146d29ea396ab8",
+      "asset": "royal-tax-decree-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 31642,
+      "alphaBounds": [
+        39,
+        64,
+        1184,
+        1220
+      ],
+      "assetSha256": "86d99a278ab1a989b0d3457e7656141f6d8fba126a3b508f1713ae4346b76668"
+    },
+    {
+      "source": "swift-march-order-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 1565141,
+      "sourceSha256": "0157a491a764d4b54aec262c73fb6862328e5cb764e4d4261354aaf954245ee0",
+      "asset": "swift-march-order-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 34216,
+      "alphaBounds": [
+        0,
+        9,
+        1223,
+        1254
+      ],
+      "assetSha256": "cbdfa5099ab0b516443b21ba1028d944a5b3c91c8aa3b6c59a1ba23e8e270b3d"
+    },
+    {
+      "source": "veil-of-silence-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 1681581,
+      "sourceSha256": "c39d15ff06786663147bbb62e3651c21599262be69f0994cea7df08db3dd692b",
+      "asset": "veil-of-silence-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 26456,
+      "alphaBounds": [
+        41,
+        21,
+        1222,
+        1223
+      ],
+      "assetSha256": "45fcf6e08b34b14b0839fe7dd2cc48c3353b0b536642047cb142916f9da67d91"
+    },
+    {
+      "source": "war-drums-source-v1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceBytes": 2344329,
+      "sourceSha256": "85f4c4f6e098c1636c75f550073152e7e014f3a0cfa337fae443f2f48439be3a",
+      "asset": "war-drums-v1.webp",
+      "assetSize": [
+        384,
+        384
+      ],
+      "assetBytes": 49840,
+      "alphaBounds": [
+        0,
+        19,
+        1234,
+        1222
+      ],
+      "assetSha256": "40892cafa303919d725bba9a87583755c547af650a72c3543637a0ee1f664323"
+    }
+  ]
+}

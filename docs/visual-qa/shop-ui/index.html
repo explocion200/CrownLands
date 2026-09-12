@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crown Lands · Shop draft</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+<header class="review-header"><div><p>CROWN LANDS · DESIGN REVIEW</p><h1>Shop · The royal market</h1></div><span class="draft-badge">Draft only</span></header>
+<nav class="review-controls" aria-label="Design preview controls">
+ <div class="control-group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div>
+ <div class="control-group"><label for="artwork">Artwork</label><select id="artwork"><option value="new">New illustrations</option><option value="previous">Previous images</option></select></div>
+ <div class="control-group"><label for="sample">Example</label><select id="sample"><option value="ready">Ready to buy</option><option value="low">Not enough Gold</option><option value="limit">Daily limit reached</option><option value="pending">Purchase pending</option><option value="error">Purchase fails once</option><option value="large">Large quantities</option><option value="rewards">Free boosts available</option><option value="cooldown">Shared ad cooldown</option><option value="adlimit">Ad daily limit</option><option value="unavailable">Ads unavailable</option></select><button id="reset">Reset preview</button></div>
+</nav>
+<p class="review-note">Select a provision to inspect its new artwork and full description. Buy previews one item at a time using sample Gold and the current pricing rules. Free boosts include their existing information and shared cooldown. Artwork can be compared above. No account changes.</p>
+<main><div id="canvas"><iframe id="preview" title="Shop design preview" src="preview.html"></iframe></div></main>
+<footer><span id="dimensions"></span><span id="reviewStatus" role="status">Interactive draft · Choose an item</span></footer>
+</body></html>

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Shop preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/shop-ui/draft.css"><script src="docs/visual-qa/shop-ui/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div>
+<dialog id="shopDialog" aria-labelledby="shopTitle"><div class="shop-shell">
+ <header class="shop-header"><span class="shop-seal" aria-hidden="true"></span><div class="shop-heading"><p>The royal market</p><h1 id="shopTitle">Shop</h1></div><div class="gold-balance"><span>Gold available</span><strong><img src="docs/visual-qa/shop-ui/coin.svg" alt=""><span id="goldBalance"></span></strong></div><button id="closeShop" class="close" type="button" aria-label="Close Shop">×</button></header>
+ <div class="shop-body"><section class="shop-catalog" aria-label="Shop catalog"><nav id="sections" role="tablist" aria-label="Shop sections"><button id="tab-provisions" role="tab" aria-controls="catalogPanel" data-section="provisions">Provisions <span>7</span></button><button id="tab-rewards" role="tab" aria-controls="catalogPanel" data-section="rewards">Free boosts <span>2</span></button></nav><div class="catalog-heading"><h2 id="catalogTitle">The royal stores</h2><span id="catalogNote"></span></div><div id="catalogPanel" role="tabpanel" aria-labelledby="tab-provisions"><div id="itemGrid"></div></div><footer class="catalog-footer" id="catalogFooter"></footer></section>
+ <section id="selection" class="shop-selection" aria-label="Selected item"></section></div>
+</div></dialog>
+<dialog id="adDialog" aria-labelledby="adTitle"><h2 id="adTitle">Watch an advertisement?</h2><p id="adConfirmText"></p><p class="draft-ad-note">This draft simulates completion. No advertisement is loaded.</p><div><button id="cancelAd">Cancel</button><button id="completeAd">Simulate completion</button></div></dialog>
+<section id="dismissed" hidden><p>Shop preview closed.</p><button id="reopen">Reopen Shop</button></section><p id="liveStatus" class="sr-only" role="status"></p>
+</body></html>
