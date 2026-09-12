@@ -102,7 +102,8 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 // Gatehouse adds a static Commander (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
 // Royal Stables adds officer/horse art (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
 // Animated Gear Box adds at most 48 KiB of scoped UI code and styles; no raster art.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52) * 1024;
+// Shop adds at most 44 KiB of presentation plus 180 KiB over the retired item art.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
