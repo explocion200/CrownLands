@@ -25,7 +25,7 @@ function render(focus=false){
   document.querySelector(".reward-view").hidden=!showingRewards;
   document.querySelector(".chest-stage").classList.toggle("is-opening",busy);
   document.querySelector(".chest-stage").classList.toggle("is-empty",empty);
-  document.querySelector(".contents-promise").hidden=empty;
+  document.querySelector(".contents-promise").hidden=empty;document.getElementById("chestArt").disabled=busy||empty;
   document.getElementById("chestTitle").innerHTML=empty?"No unopened boxes":"Break the seal.<br>Equip your realm.";
   document.querySelector(".chest-description").innerHTML=empty?"Your equipment is waiting<br> in the Inner Castle.":"An oak chest, bound in iron.<br> Three pieces of Common equipment inside.";
   const status=document.getElementById("openingStatus");status.textContent=error|| (busy?"Opening your box…":remaining===1?"Your last unopened box.":"");status.classList.toggle("error",!!error);
@@ -62,6 +62,7 @@ function dismiss(destination="closed"){
   phase="dismissed";render();document.getElementById("dismissedNote").textContent=destination==="castle"?"Go to Inner Castle selected. This draft stays separate from your game.":"Gear Box preview closed. Your sample rewards are retained.";document.getElementById("reopen").focus();announce(destination==="castle"?"Preview: Go to Inner Castle. No game navigation or inventory changes.":"Preview closed. Reopen to continue the demonstration.");
 }
 document.querySelector(".footer-actions").addEventListener("click",event=>{const b=event.target.closest("button[data-action]");if(!b||b.disabled)return;if(["open","another"].includes(b.dataset.action))openOne();else dismiss(b.dataset.action);});
+document.getElementById("chestArt").addEventListener("click",openOne);
 document.querySelector(".close").addEventListener("click",()=>dismiss());dialog.addEventListener("cancel",event=>{event.preventDefault();dismiss();});
 document.getElementById("reopen").addEventListener("click",()=>{phase=busy?"opening":rewards.length?"revealed":"ready";render(true);});
 media.addEventListener("change",()=>render());

@@ -1020,6 +1020,16 @@ Status: `IN DEVELOPMENT` on `codex/gatehouse-gear-draft`; the user approved the 
 
 Status: `IN DEVELOPMENT` on `codex/royal-stables-gear-draft`; the user approved the layout, officer with horse, merge, and deployment on 12 September 2026. Runtime integration is complete; publication requires separate channel verification. Review details: [Royal Stables equipment](./visual-qa/royal-stables-gear/README.md).
 
+### Confirmed Common Gear Box presentation
+
+- The approved opening and reward screen uses parchment, muted olive actions, an illustrated oak-and-iron chest, and gray Common item cards. It shares the officer panels' maximum 1200 × 790 desktop dimensions and fits mobile landscape. Portrait is not a design target.
+- Clicking or tapping the chest and pressing Open Box perform the same single-box action. The chest is also keyboard-operable. Full motion animates unsealing, the hinged lid, and the three reward cards. Reduced/Off preferences, system reduced motion, background visibility, and automatic performance settings are respected.
+- After a confirmed opening, Open Another Box remains available while unopened boxes remain. Each deliberate click opens one box, with no automatic batch opening. The remaining count is visible; at zero, Equip Later and Go to Inner Castle remain available. Primary actions stay visible on short landscape screens while long item details can scroll within their cards.
+- Exactly three server-rolled Common Level 1 pieces are retained, including their existing item art, officer, building, slot, level, and bonus scope. The server's inventory and count remain authoritative; animation never grants rewards or spends a box.
+- Pending chest and button controls share one request guard. An uncertain opening retains its request identity for retry and across closing/reopening the panel. Accepted results must not reopen a dismissed panel or replace a different screen. Failures preserve prior rewards, and old responses must not overwrite a newer profile snapshot or another account.
+
+Status: `IN DEVELOPMENT` on `codex/common-gear-box-draft`; the user approved the design, clickable chest, push, merge, and deployment on 12 September 2026. Runtime integration is undergoing release validation; LIVE status requires channel verification. Review details: [Common Gear Box](./visual-qa/common-gear-box/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

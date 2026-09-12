@@ -13,3 +13,5 @@ html[data-motion=full] .is-opening #chestArt{animation:unseal .3s ease-out both}
 @media(orientation:landscape) and (max-height:350px){.box-shell{grid-template-rows:48px minmax(0,1fr) 54px}.box-header{padding-block:2px}.box-seal{height:32px}.close{height:44px}.chest-copy h2{font-size:22px}.chest-copy .eyebrow{margin-bottom:5px}.ink-rule{margin:7px 0}.chest-description{margin-bottom:7px}.piece-seal{height:27px;width:26px;font-size:17px}.contents-promise strong{font-size:12px}.contents-promise small{font-size:8px}.opening-status{margin-top:5px;font-size:9px}.stage-caption{display:none}#chestArt svg{max-height:182px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important}}
 .stored-mark.error{color:var(--burgundy)}
+
+#chestArt{padding:0;border:0;background:transparent;border-radius:3px;color:inherit;min-width:44px;min-height:44px}#chestArt:disabled{opacity:1;cursor:default}

@@ -1032,67 +1032,6 @@ async function buyCommonGearBox() {
   renderShopModal();
 }
 
-function renderCommonGearCard(instanceId) {
-  const instance = state?.gear?.instances?.[instanceId];
-  const definition = instance ? COMMON_GEAR?.getDefinition(instance.gearKey) : null;
-  if (!instance || !definition) return "";
-  return `<article class="common-gear-reveal-card">
-    <img src="${escapeHtml(definition.art)}" alt="" draggable="false" onerror="this.hidden=true" />
-    <span class="common-gear-rarity">Common · Level ${instance.level}</span>
-    <strong>${escapeHtml(definition.gearName)}</strong>
-    <small>${escapeHtml(definition.buildingName)} · ${escapeHtml(definition.characterRole)} · ${escapeHtml(definition.slot)}</small>
-    <b>+${COMMON_GEAR.getBonusPercent(instance).toFixed(2)}%</b>
-    <small>${escapeHtml(definition.statLabel)}</small>
-  </article>`;
-}
-
 function showCommonGearBoxReveal(receipt = null) {
-  if (!state || !COMMON_GEAR) return;
-  modal.className = "common-gear-box-modal modal";
-  modalTitle.textContent = receipt ? "Common Gear Found" : "Common Gear Box";
-  const revealedIds = receipt?.instanceIds || [];
-  modalBody.innerHTML = receipt ? `
-    <section class="common-gear-reveal-shell revealed">
-      <div class="common-gear-reveal-cards">${revealedIds.map(renderCommonGearCard).join("")}</div>
-      <div class="modal-actions">
-        <button class="safe-action" type="button" data-gear-later>Equip Later</button>
-        <button type="button" data-gear-castle>Go to Inner Castle</button>
-      </div>
-    </section>` : `
-    <section class="common-gear-reveal-shell">
-      <button class="common-gear-box-open" type="button" data-open-common-gear aria-label="Open Common Gear Box">
-        <span class="common-gear-box-art" aria-hidden="true">
-          <img class="gear-box-closed-state" src="${COMMON_GEAR_BOX_ITEM.icon}" alt="" draggable="false" />
-          <img class="gear-box-open-state" src="${COMMON_GEAR_BOX_OPEN_ART}" alt="" draggable="false" />
-          <span class="gear-box-latch"></span>
-        </span>
-        <strong>Tap to open</strong>
-        <small>Exactly 3 Common pieces</small>
-      </button>
-    </section>`;
-  modalBody.querySelector("[data-open-common-gear]")?.addEventListener("click", async event => {
-    const button = event.currentTarget;
-    if (!getOnlineApi()?.openCommonGearBox) {
-      showToast("Connect to the realm to open this server-secured Gear Box.");
-      return;
-    }
-    button.disabled = true;
-    button.classList.add("opening");
-    try {
-      const result = await getOnlineApi().openCommonGearBox({ requestId: createDailyMissionRequestId("gear-box") });
-      state.gear = normalizeCommonGearState(result.gear);
-      window.setTimeout(() => showCommonGearBoxReveal(result.receipt), 420);
-    } catch (error) {
-      button.disabled = false;
-      button.classList.remove("opening");
-      showToast(error?.message || "The Gear Box could not be opened.");
-    }
-  });
-  modalBody.querySelector("[data-gear-later]")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("[data-gear-castle]")?.addEventListener("click", () => {
-    const mainCity = cityById(state.mainCityId);
-    if (mainCity) openInnerCastle(mainCity.id);
-    else showToast("Your main city is not available on this map.");
-  });
-  if (!modal.open) modal.showModal();
+  showCommonGearBoxScreen(receipt);
 }

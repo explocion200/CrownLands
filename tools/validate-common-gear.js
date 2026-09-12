@@ -164,7 +164,7 @@ const client = read("firebaseClient.js");
 assert.match(client, /delete cleanProfile\.gear;/, "Normal profile saves must strip authoritative gear.");
 const clientIndex = read("index.html");
 assert.match(clientIndex, /common-gear-ui\.css\?v=treasury-gear-ledger-r1/, "The equipment stylesheet must load with the approved Treasury cache token.");
-assert.match(clientIndex, /common-gear-ui\.js\?v=royal-stables-gear-r1[\s\S]*game\.js\?v=20260909-city-details-r1/, "The equipment runtime must load before game.js.");
+assert.match(clientIndex, /common-gear-ui\.js\?v=common-gear-box-r1[\s\S]*game\.js\?v=20260909-city-details-r1/, "The equipment runtime must load before game.js.");
 const gearUi = read("common-gear-ui.js");
 const game = `${read("game.js")}\n${gearUi}`;
 assert.match(game, /Common Gear Box/);
@@ -313,7 +313,7 @@ assert.match(gearUi, /isUpgradeReady \? `<span class="common-gear-upgrade-ready 
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
 assert.match(game, /class="common-gear-detail-art"[\s\S]{0,100}definition\.art/, "Selected gear and its upgrade view must render item artwork.");
 assert.match(game, /function renderCommonGearBagTile[\s\S]{0,1800}def\.art/, "Building inventory cards must render item artwork.");
-assert.match(game, /class="common-gear-reveal-card"[\s\S]{0,140}definition\.art/, "Box reveals must render item artwork.");
+assert.match(read("common-gear-box-ui.js"), /class="cgb-reward-art"[\s\S]{0,100}d\.art/, "Box reveals must render the authoritative item's artwork.");
 assert.match(game, /onerror="this\.hidden=true"/, "Gear art must fail gracefully without obscuring labels.");
 assert.match(
   game,
