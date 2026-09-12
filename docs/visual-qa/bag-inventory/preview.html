@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Item Bag preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/bag-inventory/draft.css"><script src="docs/visual-qa/bag-inventory/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div>
+<dialog id="bagDialog" aria-labelledby="bagTitle"><div class="bag-shell">
+  <header class="bag-header"><span class="bag-seal" aria-hidden="true"></span><div class="bag-heading"><p>The royal stores</p><h1 id="bagTitle">Item Bag</h1></div><div class="header-note">Provisions for your realm</div><button class="close" type="button" aria-label="Close Item Bag">×</button></header>
+  <div class="bag-body"><section class="bag-inventory" aria-label="Owned items"><nav id="categories" role="tablist" aria-label="Item categories"></nav><div class="ledger-heading"><h2 id="inventoryTitle">All items</h2><span id="stackCount"></span></div><div id="itemViewport" role="tabpanel" aria-labelledby="tab-all" tabindex="0"><div id="itemGrid"></div><div id="emptyBag" hidden></div></div><footer class="paging"><span class="paging-hint">Your items, gathered in one place</span><div><button id="previous" type="button" aria-label="Previous item page"></button><span id="pageStatus" aria-live="polite"></span><button id="next" type="button" aria-label="Next item page"></button></div></footer></section>
+  <section id="selection" class="bag-selection" aria-label="Selected item"></section></div>
+</div></dialog>
+<section id="dismissed" hidden><p>Item Bag preview closed.</p><button id="reopen" type="button">Reopen Item Bag</button></section><div id="liveStatus" class="sr-only" role="status"></div>
+</body></html>

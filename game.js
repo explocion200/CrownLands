@@ -153,7 +153,7 @@ const COMMON_GEAR_BOX_ITEM = Object.freeze({
   id: "common_gear_box",
   label: "Common Gear Box",
   description: "Open to receive exactly 3 random Common gear pieces for your Inner Castle officers.",
-  icon: "assets/optimized/item-common-gear-box-192x192-d31500be5747.webp",
+  icon: "assets/icons/common-gear-chest-r1.svg",
   bagCategory: "utility",
 });
 const COMMON_GEAR_BOX_OPEN_ART = "assets/optimized/item-common-gear-box-open-256x256-ebab7914d16b.webp";
@@ -34291,45 +34291,13 @@ function showInventoryModal() {
   const selectedEntryProjectedExpiresAtMs = selectedEntry ? getProjectedItemEffectExpiresAtMs(selectedEntry) : 0;
   const selectedEntryActiveRemaining = Math.max(0, Math.ceil((selectedEntryProjectedExpiresAtMs - Date.now()) / 1000));
   const selectedEntryIsGearBox = selectedEntry?.id === COMMON_GEAR_BOX_ITEM.id;
-  const selectedEntryIsStackable = isStackableTimedInventoryItem(selectedEntry);
   const selectedEntryActionLabel = selectedEntryIsGearBox ? "OPEN" : "USE";
   const effectLabel = getInventoryEffectLabel(selectedEntry);
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
-  modal.classList.add("inventory-modal");
+  commonGearBoxView?.dispose();
+  modal.className = "inventory-modal modal";
   modalTitle.textContent = "ITEM BAG";
-  modalBody.innerHTML = `
-    <div class="inventory-panel">
-      <div class="inventory-category-tabs" role="tablist" aria-label="Item categories">
-        ${INVENTORY_CATEGORIES.map(([id, label]) => `<button id="inventoryTab-${id}" class="inventory-category-tab ${model.category === id ? "selected" : ""}" data-inventory-category="${id}" type="button" role="tab" aria-selected="${model.category === id ? "true" : "false"}" aria-controls="inventoryCarouselViewport" tabindex="${model.category === id ? "0" : "-1"}">${label}</button>`).join("")}
-      </div>
-      <div class="inventory-carousel">
-        <button class="inventory-page-arrow previous" data-inventory-page="${model.page - 1}" type="button" aria-label="Previous item page" ${model.page <= 0 ? "disabled" : ""}>${renderCrownlandsIcon("back")}</button>
-        <div id="inventoryCarouselViewport" class="inventory-carousel-viewport" role="tabpanel" aria-labelledby="inventoryTab-${model.category}" aria-label="Item page ${model.page + 1} of ${model.pageCount}" tabindex="0">
-          ${model.entries.length ? `<div class="inventory-slots inventory-page" data-page-direction="${inventoryPageDirection}" role="group" aria-label="Owned items">${model.entries.map(entry => renderInventorySlot(entry, selectedInventoryEntryKey)).join("")}</div>` : `<div class="inventory-empty-state"><strong>Your bag is empty</strong><small>${model.category === "all" ? "Collect or purchase an item to place it here." : "No owned items are in this category."}</small></div>`}
-        </div>
-        <button class="inventory-page-arrow next" data-inventory-page="${model.page + 1}" type="button" aria-label="Next item page" ${model.page >= model.pageCount - 1 ? "disabled" : ""}>${renderCrownlandsIcon("forward")}</button>
-      </div>
-      <div class="inventory-page-status" aria-live="polite"><span>${formatNumber(model.totalEntries)} ${model.totalEntries === 1 ? "stack" : "stacks"}</span><strong>Page ${model.page + 1} of ${model.pageCount}</strong></div>
-      <section class="inventory-selection">
-        ${selectedEntry ? `
-          <span class="inventory-selection-icon ${selectedEntry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(selectedEntry, "inventory-selection-image")}</span>
-          <div class="inventory-selection-copy">
-            <strong>${escapeHtml(selectedEntry.label)}</strong>
-            <small>${escapeHtml(selectedEntry.description)}</small>
-            ${effectLabel ? `<small class="inventory-selection-effect">${escapeHtml(effectLabel)}</small>` : ""}
-            ${selectedEntryActiveRemaining > 0 ? `<small data-inventory-active>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : `<small data-inventory-active></small>`}
-            <span data-inventory-owned>Owned: ${formatNumber(selectedEntry.ownedCount)}</span>
-          </div>
-          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 && !selectedEntryIsStackable ? "disabled" : ""}>${selectedEntryActionLabel}</button>
-        ` : `
-          <div class="inventory-selection-empty">
-            <strong>Select an item</strong>
-            <small>Choose an item above to review its effect.</small>
-          </div>
-        `}
-      </section>
-    </div>
-  `;
+  modalBody.innerHTML = renderItemBagPanel(model, selectedEntry, selectedEntryActiveRemaining, selectedEntryActionLabel, effectLabel);
   bindInventoryCategoryControls();
   modalBody.querySelectorAll("[data-inventory-page]").forEach(button => {
     button.addEventListener("click", () => setInventoryPage(Number(button.dataset.inventoryPage), true));
@@ -34341,6 +34309,7 @@ function showInventoryModal() {
       selectedInventoryItemId = button.dataset.inventoryItem || "";
       inventoryPageDirection = 0;
       showInventoryModal();
+      modalBody.querySelector(`[data-inventory-select="${CSS.escape(selectedInventoryEntryKey)}"]`)?.focus({ preventScroll: true });
     });
   });
   modalBody.querySelectorAll("[data-inventory-use]").forEach(button => {
@@ -34352,6 +34321,7 @@ function showInventoryModal() {
   bindInventoryCarousel(modalBody.querySelector(".inventory-carousel-viewport"));
   inventoryPageDirection = 0;
   if (!modal.open) modal.showModal();
+  bindItemBagPresentation();
 }
 
 function consumeInventoryItem(item) {

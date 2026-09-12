@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
-const game = read("game.js");
+const game = read("game.js") + "\n" + read("item-bag-ui.js");
 const actions = read("instant-economy-actions.js");
 const styles = read("styles.css");
 const mobile = read("mobile-viewport.css");

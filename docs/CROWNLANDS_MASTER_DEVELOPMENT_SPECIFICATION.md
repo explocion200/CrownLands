@@ -1030,6 +1030,17 @@ Status: `IN DEVELOPMENT` on `codex/royal-stables-gear-draft`; the user approved 
 
 Status: `IN DEVELOPMENT` on `codex/common-gear-box-draft`; the user approved the design, clickable chest, push, merge, and deployment on 12 September 2026. Runtime integration is undergoing release validation; LIVE status requires channel verification. Review details: [Common Gear Box](./visual-qa/common-gear-box/README.md).
 
+### Confirmed Item Bag presentation
+
+- The approved Bag uses the same parchment, olive actions, engraved symbols, and burgundy selection treatment as the city and officer panels. Its window shares the maximum 1200 × 790 dimensions and fits desktop and mobile landscape; portrait is not a design target.
+- All, Boosts, War, Defense, and Utility remain in their existing order. Identical items retain one quantity stack. The grid keeps eight positions in four columns and two rows, with paging and existing keyboard, swipe, and horizontal-wheel navigation. The seven current item types and their full descriptions, effects, and eligibility rules are preserved.
+- The item grid is on the left. The selected item's larger illustration, name, category, description, and effect are on the right. On the smallest landscape screen, the illustration sits beside its name to make room for the details. Long details scroll independently while owned quantity and Use/Open remain visible. Active time also stays visible in the selected-pane heading.
+- Quantity badges use the existing compact number format. The selected pane and accessible item names expose the exact quantity. Consumable and unopened-box wells retain parchment without assigning new rarities; equipped Common items elsewhere retain their approved gray backgrounds.
+- The Common Gear Box uses a static export of the approved oak-and-iron opening chest in the Bag, its selected preview, and other existing shared item-icon uses. The animated opening screen is unchanged. Other Bag item artwork is retained.
+- Use and Open keep their current actions: timed items follow the existing server-backed activation/stacking rules, march items lead to eligible outgoing-march selection, and Open leads to the Gear Box screen without spending a box in the Bag. The projected UI refresh restores a tile when a rejected last-copy use returns its quantity. Category and item selection retain keyboard focus after rerendering.
+
+Status: `IN DEVELOPMENT` on `codex/bag-inventory-draft`; the user approved the Bag design, updated chest, merge, and deployment on 12 September 2026. Runtime integration is complete and release validation is in progress. LIVE status requires separate channel verification. Review details: [Item Bag](./visual-qa/bag-inventory/README.md).
+
 ### Confirmed interaction performance requirements
 
 - Pending action feedback must appear promptly without changing server authority, eligibility, costs, cooldowns, or intended march duration. Presentation failures must not prevent a request from completing or leave a request lock stuck.

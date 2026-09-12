@@ -98,7 +98,10 @@ for (const [id, sourcePath, runtimeSize, category] of expected) {
   assert(asset.hasAlpha, `${id} must preserve transparent padding.`);
   const webp = webpMetadata(fs.readFileSync(path.join(ROOT, asset.output)));
   assert.deepEqual(webp, { width: runtimeSize, height: runtimeSize, hasAlpha: true }, `${id} encoded output drifted.`);
-  assert(shippedReferences.includes(asset.output), `${id} optimized output is not referenced by a shipped UI context.`);
+  if (id === "item-common-gear-box") {
+    assert(game.includes('icon: "assets/icons/common-gear-chest-r1.svg"'), "The closed Box must use the approved still chest.");
+    assert(fs.statSync(path.join(ROOT, "assets/icons/common-gear-chest-r1.svg")).size <= 16 * 1024, "The still chest exceeds its 16 KiB limit.");
+  } else assert(shippedReferences.includes(asset.output), `${id} optimized output is not referenced by a shipped UI context.`);
 }
 
 for (const category of ["gear-box", "item", "pickup", "status"]) {
