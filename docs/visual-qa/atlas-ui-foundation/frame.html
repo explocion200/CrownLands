@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>Crownlands — City Details study</title>
+  <link rel="stylesheet" href="prototype.css">
+</head>
+<body class="atlas-ui">
+  <main id="previewSurface" class="preview-surface" aria-label="City Details design study">
+    <div class="map-context" aria-hidden="true"></div>
+    <div class="preview-placeholder"><h1>City Details</h1><button id="reopenCity" type="button">Reopen City Details</button></div>
+  </main>
+  <div id="orientation" class="orientation" tabindex="-1"><h1>Rotate to landscape</h1><p>City Details is designed for landscape mobile and desktop.</p></div>
+  <dialog id="cityPanel" class="city-panel" aria-labelledby="cityTitle">
+    <header class="city-heading"><div><p id="cityRelation" class="small-caps">Your main city</p><h1 id="cityTitle">Wyvernmarket Mead</h1></div><button class="close-button" id="closeCity" type="button" aria-label="Close City Details"><span class="icon" data-icon="close"></span></button></header>
+    <div class="city-ledger" id="cityLedger">
+      <section class="city-portrait"><div class="portrait-illustration"><img id="detailArt" src="../../../assets/worlds/core-expansion-v1/art/city-keep-eff443c6c279.webp" alt="Illustrated fortified settlement"><span class="sketched-ground" aria-hidden="true"></span></div><div><span class="level-mark">Level <b id="cityLevel">24</b></span><p id="cityOwner">Aldren of the Vale</p><span class="ownership-mark"><span class="icon" data-icon="allegiance"></span> Your kingdom</span></div></section>
+      <div class="ledger-tabs" role="tablist" aria-label="City information"><button id="overviewTab" type="button" role="tab" aria-selected="true" aria-controls="overview">Overview</button><button id="defencesTab" type="button" role="tab" aria-selected="false" aria-controls="defences" tabindex="-1">Defences</button></div>
+      <section id="overview" role="tabpanel" aria-labelledby="overviewTab">
+        <div class="garrison-line"><span class="icon" data-icon="troops"></span><span>Garrison<strong>18,240 <small>troops</small></strong></span><span class="garrison-note">Standing guard</span></div>
+        <dl class="ledger-stats"><div><dt><span class="icon" data-icon="coin"></span>Gold production</dt><dd>285 <small>/ hour</small></dd></div><div><dt><span class="icon" data-icon="troops"></span>Troop production</dt><dd>123 <small>/ hour</small></dd></div><div><dt><span class="icon" data-icon="wall"></span>City walls</dt><dd>Intact <span class="status-dot" aria-hidden="true"></span></dd></div><div><dt><span class="icon" data-icon="ledger"></span>Invested gold</dt><dd>24,860</dd></div></dl>
+        <button class="text-command" id="innerCastle" type="button"><span class="icon" data-icon="city"></span>Enter Inner Castle <span aria-hidden="true">→</span></button>
+        <p id="cityNotice" class="ledger-note" role="status" hidden></p>
+      </section>
+      <section id="defences" role="tabpanel" aria-labelledby="defencesTab" hidden><h2 class="section-title">Walls & garrison</h2><dl class="ledger-stats"><div><dt>Wall integrity</dt><dd>100% · Intact</dd></div><div><dt>Wall power</dt><dd>9,600</dd></div><div><dt>Soldier defence</dt><dd>23,712</dd></div></dl><p class="ledger-note">Walls absorb attack power before the garrison fights. Soldier defence and wall power are shown separately.</p></section>
+    </div>
+    <footer class="city-actions"><div class="upgrade-title"><span class="icon" data-icon="upgrade"></span><span><strong>Develop this city</strong><small id="upgradeHint">Level 24 → 25 · +1 level</small></span></div><div class="upgrade-options" role="group" aria-label="City upgrade amount"><button type="button" data-amount="1" aria-pressed="true">+1</button><button type="button" data-amount="5" aria-pressed="false">+5</button><button type="button" data-amount="max" aria-pressed="false">Max</button></div><button class="primary-command" id="upgradeButton" type="button" aria-describedby="upgradeHint actionFeedback"><span id="upgradeLabel">Upgrade to level 25</span><span class="price"><span class="icon" data-icon="coin"></span><b id="upgradeCost">640</b></span></button><div id="actionFeedback" class="action-feedback" role="status" aria-atomic="true"><span id="feedbackIcon" class="icon feedback-icon" data-icon="coin"></span><div class="feedback-copy"><strong id="feedbackTitle">Ready to develop</strong><span class="feedback-balance"><span id="feedbackMessage">Available: </span><b id="availableGold">84,620</b><span id="feedbackSuffix"> gold</span></span></div></div></footer>
+  </dialog>
+  <script src="prototype.js"></script>
+</body>
+</html>

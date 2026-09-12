@@ -1,0 +1,574 @@
+{
+  "date": "2026-09-09T17:38:21.272Z",
+  "scope": "City Details only",
+  "browser": "Headless Chrome",
+  "checks": [
+    {
+      "viewport": "1440x900",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 563,
+          "y": 705,
+          "right": 877,
+          "bottom": 753
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 44,
+            "width": 103.328125
+          },
+          {
+            "name": "+5",
+            "height": 44,
+            "width": 104.34375
+          },
+          {
+            "name": "Max",
+            "height": 44,
+            "width": 104.328125
+          },
+          {
+            "name": "upgradeButton",
+            "height": 48,
+            "width": 314
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+    },
+    {
+      "viewport": "844x390",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 410,
+          "y": 288,
+          "right": 578,
+          "bottom": 334
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "+5",
+            "height": 44,
+            "width": 45
+          },
+          {
+            "name": "Max",
+            "height": 44,
+            "width": 45
+          },
+          {
+            "name": "upgradeButton",
+            "height": 46,
+            "width": 168
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+    },
+    {
+      "viewport": "568x320",
+      "layout": {
+        "open": true,
+        "overflow": false,
+        "button": {
+          "x": 361,
+          "y": 196.59375,
+          "right": 545,
+          "bottom": 250.59375
+        },
+        "broken": [],
+        "scroll": true
+      },
+      "readability": {
+        "footerFits": true,
+        "ledgerFits": true,
+        "hintVisible": true,
+        "labelFits": true,
+        "feedbackVisible": true,
+        "touch": [
+          {
+            "name": "closeCity",
+            "height": 44,
+            "width": 44
+          },
+          {
+            "name": "overviewTab",
+            "height": 44,
+            "width": 61.65625
+          },
+          {
+            "name": "defencesTab",
+            "height": 44,
+            "width": 56.46875
+          },
+          {
+            "name": "+1",
+            "height": 44,
+            "width": 60
+          },
+          {
+            "name": "+5",
+            "height": 44,
+            "width": 61
+          },
+          {
+            "name": "Max",
+            "height": 44,
+            "width": 61
+          },
+          {
+            "name": "upgradeButton",
+            "height": 54,
+            "width": 184
+          }
+        ]
+      },
+      "interaction": "City Details only; scrolling to Inner Castle notice, tabs, arrow navigation, +5 and matching level preview, pending lock, local upgrade and affordability feedback, close/reopen and Escape focus restoration passed"
+    },
+    {
+      "viewport": "1440x900",
+      "state": "pending",
+      "feedback": {
+        "title": "Developing city…",
+        "balance": "Available: 84,620 gold",
+        "icon": "upgrade",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 543,
+          "y": 584.3125,
+          "width": 354,
+          "height": 220.6875
+        },
+        {
+          "x": 563,
+          "y": 705,
+          "width": 314,
+          "height": 48
+        },
+        {
+          "x": 563,
+          "y": 761,
+          "width": 314,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "1440x900",
+      "state": "success",
+      "feedback": {
+        "title": "Level 25 reached",
+        "balance": "Remaining: 83,980 gold",
+        "icon": "city",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 543,
+          "y": 584.3125,
+          "width": 354,
+          "height": 220.6875
+        },
+        {
+          "x": 563,
+          "y": 705,
+          "width": 314,
+          "height": 48
+        },
+        {
+          "x": 563,
+          "y": 761,
+          "width": 314,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "1440x900",
+      "state": "error",
+      "feedback": {
+        "title": "Upgrade failed",
+        "balance": "Gold unchanged: 84,620",
+        "icon": "ledger",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 543,
+          "y": 584.3125,
+          "width": 354,
+          "height": 220.6875
+        },
+        {
+          "x": 563,
+          "y": 705,
+          "width": 314,
+          "height": 48
+        },
+        {
+          "x": 563,
+          "y": 761,
+          "width": 314,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "1440x900",
+      "state": "disabled",
+      "feedback": {
+        "title": "Need 320 more gold",
+        "balance": "Available: 320 gold",
+        "icon": "coin",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 543,
+          "y": 584.3125,
+          "width": 354,
+          "height": 220.6875
+        },
+        {
+          "x": 563,
+          "y": 705,
+          "width": 314,
+          "height": 48
+        },
+        {
+          "x": 563,
+          "y": 761,
+          "width": 314,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "844x390",
+      "state": "pending",
+      "feedback": {
+        "title": "Developing city…",
+        "balance": "Available: 84,620 gold",
+        "icon": "upgrade",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 252,
+          "y": 252,
+          "width": 340,
+          "height": 125
+        },
+        {
+          "x": 410,
+          "y": 288,
+          "width": 168,
+          "height": 46
+        },
+        {
+          "x": 266,
+          "y": 338,
+          "width": 312,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "844x390",
+      "state": "success",
+      "feedback": {
+        "title": "Level 25 reached",
+        "balance": "Remaining: 83,980 gold",
+        "icon": "city",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 252,
+          "y": 252,
+          "width": 340,
+          "height": 125
+        },
+        {
+          "x": 410,
+          "y": 288,
+          "width": 168,
+          "height": 46
+        },
+        {
+          "x": 266,
+          "y": 338,
+          "width": 312,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "844x390",
+      "state": "error",
+      "feedback": {
+        "title": "Upgrade failed",
+        "balance": "Gold unchanged: 84,620",
+        "icon": "ledger",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 252,
+          "y": 252,
+          "width": 340,
+          "height": 125
+        },
+        {
+          "x": 410,
+          "y": 288,
+          "width": 168,
+          "height": 46
+        },
+        {
+          "x": 266,
+          "y": 338,
+          "width": 312,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "844x390",
+      "state": "disabled",
+      "feedback": {
+        "title": "Need 320 more gold",
+        "balance": "Available: 320 gold",
+        "icon": "coin",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 252,
+          "y": 252,
+          "width": 340,
+          "height": 125
+        },
+        {
+          "x": 410,
+          "y": 288,
+          "width": 168,
+          "height": 46
+        },
+        {
+          "x": 266,
+          "y": 338,
+          "width": 312,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "568x320",
+      "state": "pending",
+      "feedback": {
+        "title": "Developing city…",
+        "balance": "Available: 84,620 gold",
+        "icon": "upgrade",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 348,
+          "y": 68,
+          "width": 209,
+          "height": 241
+        },
+        {
+          "x": 361,
+          "y": 196.59375,
+          "width": 184,
+          "height": 54
+        },
+        {
+          "x": 361,
+          "y": 259.59375,
+          "width": 184,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "568x320",
+      "state": "success",
+      "feedback": {
+        "title": "Level 25 reached",
+        "balance": "Remaining: 83,980 gold",
+        "icon": "city",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 348,
+          "y": 68,
+          "width": 209,
+          "height": 241
+        },
+        {
+          "x": 361,
+          "y": 196.59375,
+          "width": 184,
+          "height": 54
+        },
+        {
+          "x": 361,
+          "y": 259.59375,
+          "width": 184,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "568x320",
+      "state": "error",
+      "feedback": {
+        "title": "Upgrade failed",
+        "balance": "Gold unchanged: 84,620",
+        "icon": "ledger",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 348,
+          "y": 68,
+          "width": 209,
+          "height": 241
+        },
+        {
+          "x": 361,
+          "y": 196.59375,
+          "width": 184,
+          "height": 54
+        },
+        {
+          "x": 361,
+          "y": 259.59375,
+          "width": 184,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "viewport": "568x320",
+      "state": "disabled",
+      "feedback": {
+        "title": "Need 320 more gold",
+        "balance": "Available: 320 gold",
+        "icon": "coin",
+        "atomic": "true"
+      },
+      "stableActionBounds": [
+        {
+          "x": 348,
+          "y": 68,
+          "width": 209,
+          "height": 241
+        },
+        {
+          "x": 361,
+          "y": 196.59375,
+          "width": 184,
+          "height": 54
+        },
+        {
+          "x": 361,
+          "y": 259.59375,
+          "width": 184,
+          "height": 32
+        }
+      ],
+      "result": "passed"
+    },
+    {
+      "interaction": "+1 succeeds; Max reaches sample cap and disables further upgrade",
+      "result": "passed"
+    },
+    {
+      "viewport": "390x844",
+      "result": "orientation prompt visible; modal closed; underlying preview inert"
+    }
+  ],
+  "externalRequests": [],
+  "runtimeErrors": [],
+  "limitations": [
+    "Synthetic data and outcomes; no backend validation",
+    "No physical touch-device, screen-reader or iOS Safari verification",
+    "City layout, colours and information retained by user request; design refinement continues"
+  ]
+}
