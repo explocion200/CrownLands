@@ -231,3 +231,6 @@ const protectedCycle = model.store(attendance.state);
 const staleHandlerWrite = { ...protectedCycle, schemaVersion: 3, cycle: 1, nextDay: 1, earnedThroughDay: 0, lastAttendanceDayKey: "" };
 assert.deepEqual(model.normalize(staleHandlerWrite, utc("2030-01-01")), attendance.state, "Older status writes cannot destroy a persisted cycle.");
 assert.equal(model.sync(protectedCycle, utc("2026-09-09")).changed, false, "Unchanged status reads must not rewrite the player document.");
+
+assert.ok(html.indexOf('<script src="daily-login-ui.js') < html.indexOf('<script src="game.js'), "The reward UI must initialize before game startup.");
+assert.doesNotMatch(html, /<script[^>]*daily-login-ui\.js[^>]*defer/, "Ordered reward UI initialization must not race cached game startup.");

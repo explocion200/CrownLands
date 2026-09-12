@@ -761,7 +761,7 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 
 ### Daily Login
 
-**Approved 12 September 2026; deployment verification pending.** This replaces the calendar-month reset and expiry rule.
+**Approved 12 September 2026.** Deployment is verified separately in release evidence. This replaces the calendar-month reset and expiry rule.
 
 - A personal cycle lasts 28 login days in four weeks. Missed days pause progress. Up to two earned rewards and their arrangement carry across months and server/season resets.
 - Each cycle grants 111 hours of base Gold production, 111 hours of base troop production, one of each of the six existing items, and four Common Gear Boxes. A Box gives three Level 1 Common gear pieces.
