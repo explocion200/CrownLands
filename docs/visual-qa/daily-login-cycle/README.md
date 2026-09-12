@@ -62,4 +62,4 @@ Audited against `beb9c1d537aa29d25e9b047240b127ca89459e6f`:
 
 ## Artwork
 
-Reuse the approved six Shop illustrations and oak-and-iron Common Gear Box. Gold uses `assets/icons/royal-shop-gold-r1.svg`. `troops.svg` reproduces the established City Details engraved helmet path, with muted iron colors. No new generated art or image API was needed.
+Reuse the approved six Shop illustrations and oak-and-iron Common Gear Box. All chest displays use `assets/icons/common-gear-chest-r1.svg`, the same closed-pose illustration used by the Bag and Shop item definition. Gold uses `assets/icons/royal-shop-gold-r1.svg`. `troops.svg` reproduces the established City Details engraved helmet path, with muted iron colors. No new generated art or image API was needed.

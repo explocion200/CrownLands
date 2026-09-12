@@ -28,3 +28,7 @@ The initial compact layout partially hid the second bundle row. Final spacing re
 - The standalone draft model checks passed for 200 seeds, schedule totals, all six items, fixed chest days, end-of-week increases, missed days, queue cap/deferred attendance, season and no-city behavior, duplicate same-day attempts, and full 28-day rollover.
 
 These checks are not production persistence, migration, transactional concurrency or live-player purchase tests. Those gates belong to the later approved backend/client implementation.
+
+## Approved chest artwork follow-up
+
+Replaced the old raster thumbnail with `assets/icons/common-gear-chest-r1.svg`, the approved closed chest used by the Bag and Shop. Confirmed all six rendered references (four weekly tiles, selected hero, and bundle row) loaded the SVG. Visually checked the weekly-chest example at 1440 × 900, 844 × 390, and 568 × 320: images decoded, dialog stayed inside the viewport, Claim remained visible, and touch targets remained at least 44 × 44. Both reward rows remained visible on mobile landscape. JavaScript syntax and diff whitespace checks passed; reward logic was unchanged.

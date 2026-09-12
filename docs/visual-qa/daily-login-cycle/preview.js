@@ -1,7 +1,7 @@
 "use strict";
 /* All state is synthetic, in memory. No account, storage, backend or ad calls. */
 const $=s=>document.querySelector(s),model=window.DailyLoginDraft;
-const art={gold:"assets/icons/royal-shop-gold-r1.svg",troops:"docs/visual-qa/daily-login-cycle/troops.svg",chest:"assets/optimized/item-common-gear-box-192x192-d31500be5747.webp"};
+const art={gold:"assets/icons/royal-shop-gold-r1.svg",troops:"docs/visual-qa/daily-login-cycle/troops.svg",chest:"assets/icons/common-gear-chest-r1.svg"};
 const items={
   war_drums_30m:{label:"War Drums",art:"assets/optimized/item-war-drums-384x384-40892cafa303.webp"},
   veil_of_silence_30m:{label:"Veil of Silence",art:"assets/optimized/item-veil-of-silence-384x384-45fcf6e08b34.webp"},
