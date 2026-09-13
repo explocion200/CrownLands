@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Clan Overview preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="clan-heraldry-v2.css"><link rel="stylesheet" href="docs/visual-qa/clan-overview/draft.css">
+<script src="functions/clanHeraldryConfig.js" defer></script><script src="functions/clanHeraldryAssets.js" defer></script><script src="functions/clanHeraldryLegacyV1.js" defer></script><script src="functions/clanHeraldryRenderer.js" defer></script><script src="docs/visual-qa/clan-overview/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div>
+<dialog id="clanDialog" aria-labelledby="clanTitle"><div class="clan-shell">
+  <header class="window-header"><div class="heading"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt=""><div><p>YOUR KINGDOM</p><h1 id="clanTitle">Clan</h1></div></div><nav class="kingdom-tabs" aria-label="Kingdom sections"><button data-preview="Profile">Profile</button><button aria-current="page" data-overview>Clan</button><button data-preview="Skills">Skills</button><button data-preview="Settings">Settings</button></nav><button id="close" class="icon-button" aria-label="Close Clan Overview">×</button></header>
+  <nav class="clan-tabs" aria-label="Clan sections"><button aria-current="page" data-overview>Overview</button><button data-preview="War Room">War Room <span id="rallyBadge" class="badge"></span></button><button data-preview="Rewards">Rewards <span id="rewardBadge" class="badge alert"></span></button><button data-preview="Members">Members <span id="memberBadge" class="badge"></span></button></nav>
+  <main class="overview-body">
+    <section class="identity" aria-label="Clan identity">
+      <div class="identity-hero"><div class="standard-mount"><i class="standard-rod" aria-hidden="true"></i><div class="cloth" aria-hidden="true"></div><button id="clanShield" class="shield-button" data-preview="Clan profile" aria-label="View clan public profile"></button></div><div class="identity-copy"><p id="role" class="eyebrow"></p><button id="clanName" class="clan-name" data-preview="Clan profile"></button><span id="clanTag" class="clan-tag"></span></div></div>
+      <div class="description-scroll" tabindex="0" aria-label="Clan description"><p id="description"></p><div class="flourish" aria-hidden="true"><span></span>◆<span></span></div></div>
+      <div id="leaderActions" class="leader-actions" aria-label="Leader clan management"><button data-preview="Edit Heraldry"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt="">Edit Heraldry</button><button data-preview="Rename Clan"><img src="assets/icons/skills/guildCharters.svg" alt="">Rename Clan</button></div>
+      <p id="memberNote" class="member-note" hidden>Your clan’s banner in the realm</p>
+    </section>
+    <section class="clan-ledger" aria-label="Clan activity overview">
+      <div class="clan-totals"><div class="power-total"><img src="assets/flag-symbols/selected/svg/crown.svg" alt=""><div><h2>Clan Power</h2><strong id="clanPower"></strong></div></div><div class="member-total"><span>Members</span><strong id="memberTotal"></strong></div></div>
+      <header class="activity-heading"><h2>Clan affairs</h2><span>The strength of your house</span></header>
+      <div class="activity-scroll" tabindex="0" aria-label="Clan activity shortcuts">
+        <div class="activity-grid">
+          <button class="activity-card war-room" data-preview="War Room"><img src="assets/icons/skills/marchOrders.svg" alt=""><span class="card-heading">War Room</span><strong id="rallyCount"></strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
+          <button class="activity-card gifts" data-preview="Rewards"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><span class="card-heading">Gold gifts</span><strong id="giftValue"></strong><span class="card-state" id="giftState"></span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
+          <button class="activity-card conquest" data-preview="Weekly Conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong id="conquestValue"></strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="2000"><i id="conquestFill"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
+          <button class="activity-card roster" data-preview="Members"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span class="card-heading">Roster</span><strong id="rosterValue"></strong><span class="card-state" id="rosterState"></span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div></dialog>
+<dialog id="detailDialog" aria-labelledby="detailTitle"><header><div><p class="eyebrow">ACTION PREVIEW</p><h2 id="detailTitle"></h2></div><button id="closeDetail" class="icon-button" aria-label="Close action preview">×</button></header><div id="detailBody"></div><button id="backToOverview" class="return-button">Back to Overview</button></dialog>
+<div id="dismissed" hidden><p>Clan Overview preview closed.</p><button id="reopen" class="return-button">Open Clan Overview</button></div><p id="liveStatus" class="sr-only" role="status"></p>
+</body></html>
