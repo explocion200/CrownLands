@@ -1,0 +1,651 @@
+/* Approved Clan ledger. Scoped presentation; game.js owns live data and actions. */
+#profileScreen.clan-active{--paper:#f2e8cd !important;--ink:#352f23 !important;--muted:#716247 !important;--line:#b8a684 !important;--moss:#4b583c !important;--burgundy:#703e3d !important;width:min(1200px,calc(100% - 24px)) !important;height:min(700px,calc(100dvh - 24px)) !important;grid-template-rows:83px minmax(0,1fr) !important;padding:5px !important;border:1px solid #766346 !important;border-radius:2px !important;background:var(--paper) !important;color:var(--ink) !important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 0 0 100vmax #20261f99,0 10px 45px #171b1b88 !important;backdrop-filter:none !important;font-family:"Segoe UI",Arial,sans-serif !important;overflow:hidden !important}
+#profileScreen.clan-active.open{display:grid !important}
+#profileScreen.clan-active *{box-sizing:border-box !important}
+#profileScreen.clan-active [hidden]{display:none !important}
+#profileScreen.clan-active h2,
+#profileScreen.clan-active h3,
+#profileScreen.clan-active h4,
+#profileScreen.clan-active p,
+#profileScreen.clan-active span,
+#profileScreen.clan-active strong,
+#profileScreen.clan-active small,
+#profileScreen.clan-active button{color:inherit !important;text-shadow:none !important;font-weight:400 !important;text-transform:none !important;letter-spacing:normal !important}
+#profileScreen.clan-active h2,
+#profileScreen.clan-active h3,
+#profileScreen.clan-active h4,
+#profileScreen.clan-active p{margin:0 !important}
+#profileScreen.clan-active button,
+#profileScreen.clan-active input{font:inherit !important;color:inherit !important}
+#profileScreen.clan-active button{cursor:pointer !important;min-width:0 !important;margin:0 !important;min-height:0 !important;border-radius:0 !important;transition:none !important;text-shadow:none !important}
+#profileScreen.clan-active button:disabled{cursor:default !important;opacity:.55 !important}
+#profileScreen.clan-active button:hover:not(:disabled){filter:brightness(1.06) !important}
+#profileScreen.clan-active button:focus-visible,
+#profileScreen.clan-active input:focus-visible,
+#profileScreen.clan-active .profile-skill-list:focus-visible{outline:2px solid #436f77 !important;outline-offset:1px !important}
+#profileScreen.clan-active img{object-fit:contain !important}
+#profileScreen.clan-active .profile-screen-header{color:var(--ink) !important;display:flex !important;align-items:center !important;gap:20px !important;padding:12px 20px !important;border:1px solid var(--line) !important;background:#e9dcb483 !important;border-radius:0 !important;box-shadow:none !important;margin:0 !important}
+#profileScreen.clan-active .profile-screen-heading{flex:none !important;display:grid !important;grid-template-columns:47px auto !important;grid-template-rows:auto auto !important;column-gap:12px !important;min-width:0 !important;text-align:left !important}
+#profileScreen.clan-active .profile-screen-heading::before{content:"" !important;width:47px !important;height:50px !important;grid-column:1 !important;grid-row:1/3 !important;background:url("assets/icons/skills/shieldwallDiscipline.svg") center/contain no-repeat !important}
+#profileScreen.clan-active .profile-screen-heading svg{display:none !important}
+#profileScreen.clan-active .profile-screen-heading>span{grid-column:2 !important;grid-row:1 !important;font-size:9px !important;letter-spacing:1.9px !important;color:var(--muted) !important;align-self:end !important;margin-bottom:4px !important}
+#profileScreen.clan-active .profile-screen-heading h2{grid-column:2 !important;grid-row:2 !important;font:30px/1 Georgia,serif !important;white-space:nowrap !important}
+#profileScreen.clan-active .profile-tabs{width:auto !important;display:flex !important;gap:6px !important;margin-left:auto !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;align-items:center !important;flex:none !important;overflow:visible !important}
+#profileScreen.clan-active .profile-tabs button{height:44px !important;min-width:78px !important;padding:0 14px !important;background:#e4d3ae !important;border:1px solid #ad956b !important;box-shadow:inset 0 0 0 2px #f8ecd377 !important;font-size:12px !important;flex:none !important}
+#profileScreen.clan-active .profile-tabs button.active{background:var(--burgundy) !important;color:#fff1d3 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
+#profileScreen.clan-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+#profileScreen.clan-active #profileCloseBtn svg{width:22px !important;height:22px !important;fill:currentColor !important}
+#profileScreen #clanContent .eyebrow{font-size:9px !important;letter-spacing:1.7px !important;color:var(--muted) !important}
+#profileScreen #clanContent .overview-body{min-height:0 !important;display:grid !important;grid-template-columns:minmax(0,.95fr) minmax(0,1.8fr) !important}
+#profileScreen #clanContent .identity{min-height:0 !important;display:grid !important;grid-template-rows:auto minmax(0,1fr) auto !important;padding:20px 24px 24px !important;border-right:1px solid var(--line) !important;background:linear-gradient(90deg,#d4c39433,transparent) !important;text-align:center !important}
+#profileScreen #clanContent .identity-hero{min-width:0 !important}
+#profileScreen #clanContent .standard-mount{position:relative !important;width:206px !important;height:234px !important;margin:0 auto 12px !important;display:grid !important;place-items:center !important;padding-top:12px !important}
+#profileScreen #clanContent .cloth{position:absolute !important;inset:10px 8px 0 !important;clip-path:polygon(0 0,100% 0,100% 88%,50% 100%,0 88%) !important;background:repeating-linear-gradient(90deg,#ffffff04 0,#ffffff04 2px,transparent 2px,transparent 5px),linear-gradient(90deg,#343f2d,#65714c 47%,#414b33) !important;box-shadow:inset 0 0 20px #1b251c66 !important}
+#profileScreen #clanContent .cloth:after{content:"" !important;position:absolute !important;inset:8px 9px 26px !important;border:1px solid #c7b27366 !important;border-bottom:0 !important}
+#profileScreen #clanContent .standard-rod{position:absolute !important;z-index:1 !important;top:6px !important;left:0 !important;right:0 !important;height:7px !important;background:linear-gradient(#c2a574,#776047) !important;box-shadow:0 2px 3px #30271944 !important}
+#profileScreen #clanContent .standard-rod:before,
+#profileScreen #clanContent .standard-rod:after{content:"" !important;position:absolute !important;width:12px !important;height:12px !important;top:-3px !important;border:1px solid #655338 !important;border-radius:50% !important;background:#ac956e !important}
+#profileScreen #clanContent .standard-rod:before{left:-4px !important}
+#profileScreen #clanContent .standard-rod:after{right:-4px !important}
+#profileScreen #clanContent .shield-button{position:relative !important;z-index:2 !important;display:block !important;width:176px !important;height:187px !important;background:transparent !important;border:0 !important;padding:0 !important;filter:drop-shadow(0 5px 4px #15201466) !important}
+#profileScreen #clanContent .shield-button>.clan-heraldry-v2,
+#profileScreen #clanContent .shield-button>.clan-shield{display:block !important;width:100% !important;height:100% !important}
+#profileScreen #clanContent .shield-button svg{width:100% !important;height:100% !important;display:block !important}
+#profileScreen #clanContent .identity-copy .eyebrow{margin-bottom:7px !important}
+#profileScreen #clanContent .clan-name{display:block !important;width:100% !important;font:29px/1.12 Georgia,serif !important;border:0 !important;padding:0 !important;background:transparent !important;overflow-wrap:anywhere !important}
+#profileScreen #clanContent .clan-name:hover{text-decoration:underline !important;text-decoration-thickness:1px !important;text-underline-offset:4px !important}
+#profileScreen #clanContent .clan-tag{display:inline-block !important;font:10px "Segoe UI",sans-serif !important;letter-spacing:2px !important;margin-top:9px !important;padding:4px 10px !important;border:1px solid #b6a17a !important;background:#ddcda7 !important}
+#profileScreen #clanContent .description-scroll{min-height:0 !important;overflow:auto !important;scrollbar-width:thin !important;scrollbar-color:#a18a5d #e5d5ad !important;overscroll-behavior:contain !important;margin:15px 0 12px !important}
+#profileScreen #clanContent .description-scroll p{font:13px/1.65 "Segoe UI",sans-serif !important;color:#716247 !important;overflow-wrap:anywhere !important}
+#profileScreen #clanContent .flourish{display:flex !important;align-items:center !important;justify-content:center !important;gap:9px !important;color:#a58e5c !important;font-size:10px !important;margin-top:20px !important}
+#profileScreen #clanContent .flourish span{width:36px !important;height:1px !important;background:#b8a684 !important}
+#profileScreen #clanContent .leader-actions{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:7px !important}
+#profileScreen #clanContent .leader-actions button{min-height:44px !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:6px !important;padding:6px !important;border:1px solid #a48d61 !important;background:#e4d2a9 !important;box-shadow:inset 0 0 0 2px #fff4d755 !important;font:12px Georgia,serif !important}
+#profileScreen #clanContent .leader-actions img{width:23px !important;height:25px !important}
+#profileScreen #clanContent .member-note{font:12px Georgia,serif !important;color:#7e6e50 !important;padding:12px 0 !important}
+#profileScreen #clanContent .clan-ledger{min-height:0 !important;display:grid !important;grid-template-rows:102px 54px minmax(0,1fr) !important;padding:20px 23px 24px !important}
+#profileScreen #clanContent .clan-totals{display:flex !important;align-items:center !important;gap:18px !important;border:1px solid #ad9770 !important;box-shadow:inset 0 0 0 3px #fff3d344 !important;background:linear-gradient(120deg,#e8d7b0,#f4e9cc) !important;padding:13px 21px !important}
+#profileScreen #clanContent .power-total{display:flex !important;align-items:center !important;gap:15px !important;min-width:0 !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:48px !important;height:48px !important;opacity:.75 !important}
+#profileScreen #clanContent .power-total h2{font:12px "Segoe UI",sans-serif !important;color:var(--muted) !important;margin-bottom:4px !important}
+#profileScreen #clanContent .power-total strong{font:42px/.98 Georgia,serif !important;font-variant-numeric:tabular-nums !important;color:var(--moss) !important;white-space:nowrap !important}
+#profileScreen #clanContent .member-total{display:grid !important;gap:3px !important;min-width:95px !important;margin-left:auto !important;border-left:1px solid #b6a27b !important;padding-left:23px !important;text-align:center !important}
+#profileScreen #clanContent .member-total span{font-size:11px !important;color:var(--muted) !important}
+#profileScreen #clanContent .member-total strong{font:27px Georgia,serif !important;white-space:nowrap !important}
+#profileScreen #clanContent .member-total small{font-size:14px !important;color:var(--muted) !important}
+#profileScreen #clanContent .activity-heading{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important}
+#profileScreen #clanContent .activity-heading h2{font:21px Georgia,serif !important}
+#profileScreen #clanContent .activity-heading>span{font-size:10px !important;color:#827052 !important}
+#profileScreen #clanContent .activity-scroll{min-height:0 !important;overflow:auto !important;overscroll-behavior:contain !important;scrollbar-width:thin !important;scrollbar-color:#a18a5d #e5d5ad !important;scroll-padding:4px !important}
+#profileScreen #clanContent .activity-grid{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;grid-template-rows:repeat(2,minmax(145px,1fr)) !important;gap:12px !important;min-height:100% !important}
+#profileScreen #clanContent .activity-card{position:relative !important;min-width:0 !important;display:grid !important;grid-template-columns:64px minmax(0,1fr) !important;grid-template-rows:25px minmax(32px,1fr) 24px 35px !important;column-gap:9px !important;text-align:left !important;padding:15px 16px 0 !important;border:1px solid #b8a47e !important;background:linear-gradient(115deg,#f8efd5,#e9dcbc) !important;box-shadow:inset 0 0 0 3px #fff9e555 !important}
+#profileScreen #clanContent .activity-card>img{width:60px !important;height:65px !important;grid-column:1 !important;grid-row:1/3 !important;align-self:center !important}
+#profileScreen #clanContent .card-heading{grid-column:2 !important;grid-row:1 !important;align-self:center !important;font:18px Georgia,serif !important}
+#profileScreen #clanContent .activity-card>strong{grid-column:2 !important;grid-row:2 !important;align-self:center !important;font:31px/1.1 Georgia,serif !important;color:var(--moss) !important;white-space:nowrap !important}
+#profileScreen #clanContent .card-state{grid-column:2 !important;grid-row:3 !important;font:10px/1.3 "Segoe UI",sans-serif !important;color:var(--muted) !important}
+#profileScreen #clanContent .card-footer{grid-column:1/-1 !important;grid-row:4 !important;display:flex !important;align-items:center !important;justify-content:space-between !important;border-top:1px solid #c5b38b !important;font:11px Georgia,serif !important;color:#625239 !important}
+#profileScreen #clanContent .card-footer i{font:24px Georgia,serif !important;font-style:normal !important}
+#profileScreen #clanContent .gifts.ready{border-color:#8e9a6c !important;background:linear-gradient(115deg,#f3efd5,#e0e1b7) !important}
+#profileScreen #clanContent .gifts>strong{font-size:26px !important}
+#profileScreen #clanContent .conquest>strong{font-size:27px !important}
+#profileScreen #clanContent .conquest-track{position:absolute !important;left:16px !important;right:16px !important;bottom:34px !important;height:3px !important;background:#cdbc95 !important}
+#profileScreen #clanContent .conquest-track>i{display:block !important;height:100% !important;background:#69764d !important}
+#profileScreen #clanContent .roster .card-state{color:#6f5038 !important}
+@media(max-height:600px),(max-width:1000px){
+#profileScreen #clanContent .overview-body{grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) !important}
+#profileScreen #clanContent .identity{padding:12px 12px 10px !important}
+#profileScreen #clanContent .identity-hero{display:grid !important;grid-template-columns:88px minmax(0,1fr) !important;gap:8px !important;align-items:center !important}
+#profileScreen #clanContent .standard-mount{width:83px !important;height:100px !important;margin:0 !important;padding-top:4px !important}
+#profileScreen #clanContent .cloth{inset:7px 3px 0 !important}
+#profileScreen #clanContent .cloth:after{inset:5px 5px 15px !important}
+#profileScreen #clanContent .standard-rod{height:4px !important;top:4px !important}
+#profileScreen #clanContent .standard-rod:before,
+#profileScreen #clanContent .standard-rod:after{width:8px !important;height:8px !important;top:-2px !important}
+#profileScreen #clanContent .shield-button{width:72px !important;height:77px !important}
+#profileScreen #clanContent .identity-copy .eyebrow{font-size:7px !important;letter-spacing:.8px !important;margin-bottom:5px !important}
+#profileScreen #clanContent .clan-name{font-size:20px !important}
+#profileScreen #clanContent .clan-tag{font-size:8px !important;margin-top:6px !important;padding:3px 7px !important;letter-spacing:1px !important}
+#profileScreen #clanContent .description-scroll{margin:10px 0 8px !important}
+#profileScreen #clanContent .description-scroll p{font-size:11px !important;line-height:1.45 !important}
+#profileScreen #clanContent .flourish{display:none !important}
+#profileScreen #clanContent .leader-actions{gap:5px !important}
+#profileScreen #clanContent .leader-actions button{font-size:11px !important;padding:4px !important;gap:4px !important}
+#profileScreen #clanContent .leader-actions img{width:18px !important;height:20px !important}
+#profileScreen #clanContent .member-note{font-size:10px !important;padding:13px 0 !important}
+#profileScreen #clanContent .clan-ledger{padding:6px 11px 5px !important;grid-template-rows:48px 20px minmax(0,1fr) !important}
+#profileScreen #clanContent .clan-totals{padding:5px 10px !important;gap:8px !important}
+#profileScreen #clanContent .power-total{gap:8px !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:27px !important;height:29px !important}
+#profileScreen #clanContent .power-total h2{font-size:9px !important;margin-bottom:2px !important}
+#profileScreen #clanContent .power-total strong{font-size:25px !important}
+#profileScreen #clanContent .member-total{padding-left:12px !important;min-width:65px !important;gap:0 !important}
+#profileScreen #clanContent .member-total span{font-size:9px !important}
+#profileScreen #clanContent .member-total strong{font-size:20px !important}
+#profileScreen #clanContent .member-total small{font-size:11px !important}
+#profileScreen #clanContent .activity-heading h2{font-size:14px !important}
+#profileScreen #clanContent .activity-heading>span{font-size:8px !important}
+#profileScreen #clanContent .activity-grid{gap:6px !important;grid-template-rows:repeat(2,minmax(78px,1fr)) !important}
+#profileScreen #clanContent .activity-card{padding:6px 8px 0 !important;grid-template-columns:31px minmax(0,1fr) !important;grid-template-rows:19px 25px 13px 20px !important;column-gap:6px !important}
+#profileScreen #clanContent .activity-card>img{width:30px !important;height:36px !important}
+#profileScreen #clanContent .card-heading{font-size:13px !important}
+#profileScreen #clanContent .activity-card>strong{font-size:21px !important}
+#profileScreen #clanContent .gifts>strong,
+#profileScreen #clanContent .conquest>strong{font-size:19px !important}
+#profileScreen #clanContent .card-state{font-size:9px !important;line-height:1.1 !important}
+#profileScreen #clanContent .card-footer{font-size:9px !important}
+#profileScreen #clanContent .card-footer i{font-size:19px !important}
+#profileScreen #clanContent .conquest-track{left:8px !important;right:8px !important;bottom:20px !important;height:2px !important}
+}
+@media(max-width:650px){
+#profileScreen #clanContent .overview-body{grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) !important}
+#profileScreen #clanContent .identity{padding:7px 7px 7px !important}
+#profileScreen #clanContent .identity-hero{grid-template-columns:54px minmax(0,1fr) !important;gap:6px !important}
+#profileScreen #clanContent .standard-mount{width:52px !important;height:66px !important}
+#profileScreen #clanContent .shield-button{width:46px !important;height:49px !important}
+#profileScreen #clanContent .cloth:after{display:none !important}
+#profileScreen #clanContent .clan-name{font-size:16px !important;line-height:1.1 !important}
+#profileScreen #clanContent .identity-copy .eyebrow{font-size:6px !important;letter-spacing:.5px !important;margin-bottom:4px !important}
+#profileScreen #clanContent .clan-tag{font-size:7px !important;padding:2px 5px !important;margin-top:5px !important}
+#profileScreen #clanContent .description-scroll{margin:8px 0 7px !important}
+#profileScreen #clanContent .description-scroll p{font-size:10px !important;line-height:1.4 !important}
+#profileScreen #clanContent .leader-actions button{font-size:10px !important}
+#profileScreen #clanContent .leader-actions img{display:none !important}
+#profileScreen #clanContent .clan-ledger{padding:6px 7px 7px !important;grid-template-rows:45px 23px minmax(0,1fr) !important}
+#profileScreen #clanContent .clan-totals{padding:4px 7px !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:22px !important;height:26px !important}
+#profileScreen #clanContent .power-total{gap:5px !important}
+#profileScreen #clanContent .power-total strong{font-size:22px !important}
+#profileScreen #clanContent .power-total h2{font-size:8px !important}
+#profileScreen #clanContent .member-total{padding-left:8px !important;min-width:53px !important}
+#profileScreen #clanContent .member-total strong{font-size:18px !important}
+#profileScreen #clanContent .member-total span{font-size:8px !important}
+#profileScreen #clanContent .activity-heading h2{font-size:13px !important}
+#profileScreen #clanContent .activity-heading>span{display:none !important}
+#profileScreen #clanContent .activity-grid{gap:5px !important;grid-template-rows:repeat(2,minmax(89px,1fr)) !important}
+#profileScreen #clanContent .activity-card{padding:5px 5px 0 !important;grid-template-columns:23px minmax(0,1fr) !important;grid-template-rows:20px 23px 17px 22px !important;gap:0 4px !important}
+#profileScreen #clanContent .activity-card>img{width:22px !important;height:27px !important}
+#profileScreen #clanContent .card-heading{font-size:11px !important}
+#profileScreen #clanContent .activity-card>strong{font-size:20px !important}
+#profileScreen #clanContent .gifts>strong,
+#profileScreen #clanContent .conquest>strong{font-size:16px !important}
+#profileScreen #clanContent .card-state{font-size:8px !important}
+#profileScreen #clanContent .card-footer{font-size:9px !important}
+#profileScreen #clanContent .conquest-track{left:5px !important;right:5px !important;bottom:22px !important}
+#profileScreen #clanContent .member-note{font-size:9px !important;padding:10px 0 !important}
+}
+#profileScreen #clanContent .paper{min-width:0 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important;border:1px solid var(--line) !important;box-shadow:inset 0 0 0 3px #fff9e533 !important}
+#profileScreen #clanContent .scroll-region{min-height:0 !important;overflow:auto !important;scrollbar-width:thin !important;scrollbar-color:#a18a5d #e5d5ad !important;overscroll-behavior:contain !important;scroll-padding:4px !important}
+#profileScreen #clanContent .section-bar{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important;padding:12px 15px !important;border-bottom:1px solid var(--line) !important;flex:none !important}
+#profileScreen #clanContent .section-bar h3{font-size:17px !important}
+#profileScreen #clanContent .section-bar>span{font-size:10px !important;color:var(--muted) !important}
+#profileScreen #clanContent .members-layout{display:grid !important;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) !important;gap:16px !important;flex:1 !important;min-height:0 !important}
+#profileScreen #clanContent .members-layout.member-only{grid-template-columns:1fr !important}
+#profileScreen #clanContent .roster-paper,
+#profileScreen #clanContent .applications-paper{display:flex !important;flex-direction:column !important;min-height:0 !important}
+#profileScreen #clanContent .roster-paper>.scroll-region,
+#profileScreen #clanContent .applications-paper>.scroll-region,
+#profileScreen #clanContent .public-roster>.scroll-region{flex:1 !important}
+#profileScreen #clanContent .applications-paper>.ledger-note{padding:8px 12px !important}
+#profileScreen #clanContent .applications-paper .empty-state{padding:18px 12px !important}
+#profileScreen #clanContent .applications-paper .empty-state img{width:50px !important;height:50px !important}
+#profileScreen #clanContent .applications-paper .empty-state h2{font-size:20px !important}
+#profileScreen #clanContent .applications-paper .empty-state p{font-size:11px !important}
+#profileScreen #clanContent .war-layout{display:grid !important;grid-template-columns:minmax(0,.72fr) minmax(0,1.6fr) !important;gap:16px !important;flex:1 !important;min-height:0 !important}
+#profileScreen #clanContent .rally-picker{display:flex !important;flex-direction:column !important;gap:8px !important}
+#profileScreen #clanContent .rally-picker>button{display:flex !important;align-items:center !important;gap:10px !important;text-align:left !important;padding:15px 12px !important;border:1px solid var(--line) !important;background:#e6d7b5 !important;min-height:90px !important;flex:none !important}
+#profileScreen #clanContent .rally-picker img{width:42px !important;height:48px !important}
+#profileScreen #clanContent .rally-picker strong{display:block !important;font:17px/1.2 Georgia,serif !important}
+#profileScreen #clanContent .rally-picker small{display:block !important;margin-top:6px !important}
+#profileScreen #clanContent .rally-picker [aria-pressed=true]{background:#d8c085 !important;border-color:#917545 !important;box-shadow:inset 0 0 0 2px #f5e0ac !important}
+#profileScreen #clanContent .rewards-tabs{display:flex !important;gap:5px !important;flex:none !important}
+#profileScreen #clanContent .rewards-tabs>button{flex:1 !important;min-height:44px !important;border:1px solid var(--line) !important;background:#e5d5b2 !important;font:14px Georgia,serif !important;padding:5px !important}
+#profileScreen #clanContent .rewards-tabs [aria-pressed=true]{background:#78805a !important;color:#fff5da !important;border-color:#5d6743 !important;box-shadow:inset 0 0 0 2px #d1c59055 !important}
+#profileScreen #clanContent .gifts-layout{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:18px !important;align-items:start !important}
+#profileScreen #clanContent .gift-feature{padding:24px !important;display:grid !important;grid-template-columns:100px minmax(0,1fr) !important;gap:18px !important;align-items:center !important}
+#profileScreen #clanContent .gift-art{width:100px !important;height:110px !important}
+#profileScreen #clanContent .gift-feature h3{font-size:23px !important;margin-bottom:8px !important}
+#profileScreen #clanContent .gift-feature p{font-size:12px !important;color:var(--muted) !important}
+#profileScreen #clanContent .treasury-layout{display:grid !important;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) !important;gap:18px !important;align-items:start !important}
+#profileScreen #clanContent .treasury-record{padding:18px !important}
+@media(max-height:600px),(max-width:1000px){
+#profileScreen #clanContent .section-bar{padding:7px 9px !important}
+#profileScreen #clanContent .section-bar h3{font-size:13px !important}
+#profileScreen #clanContent .section-bar>span{font-size:8px !important}
+#profileScreen #clanContent .members-layout{gap:8px !important;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) !important}
+#profileScreen #clanContent .applications-paper .empty-state img{width:35px !important;height:35px !important}
+#profileScreen #clanContent .applications-paper .empty-state h2{font-size:15px !important}
+#profileScreen #clanContent .applications-paper .empty-state p{font-size:10px !important}
+#profileScreen #clanContent .war-layout{gap:8px !important;grid-template-columns:minmax(0,.75fr) minmax(0,1.6fr) !important}
+#profileScreen #clanContent .rally-picker{gap:5px !important}
+#profileScreen #clanContent .rally-picker>button{padding:8px 7px !important;min-height:65px !important;gap:6px !important}
+#profileScreen #clanContent .rally-picker img{width:30px !important;height:34px !important}
+#profileScreen #clanContent .rally-picker strong{font-size:13px !important}
+#profileScreen #clanContent .rally-picker small{font-size:9px !important;margin-top:4px !important}
+#profileScreen #clanContent .rewards-tabs{gap:4px !important}
+#profileScreen #clanContent .rewards-tabs>button{font-size:12px !important}
+#profileScreen #clanContent .gifts-layout,
+#profileScreen #clanContent .treasury-layout{gap:8px !important}
+#profileScreen #clanContent .gift-feature{padding:12px !important;gap:10px !important;grid-template-columns:58px minmax(0,1fr) !important}
+#profileScreen #clanContent .gift-art{width:58px !important;height:62px !important}
+#profileScreen #clanContent .gift-feature h3{font-size:17px !important;margin-bottom:4px !important}
+#profileScreen #clanContent .gift-feature p{font-size:10px !important}
+#profileScreen #clanContent .treasury-record{padding:11px !important}
+}
+@media(max-width:650px){
+#profileScreen #clanContent .section-bar{padding:6px !important}
+#profileScreen #clanContent .section-bar h3{font-size:12px !important}
+#profileScreen #clanContent .section-bar>span{font-size:7px !important}
+#profileScreen #clanContent .members-layout{gap:5px !important;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) !important}
+#profileScreen #clanContent .war-layout{grid-template-columns:minmax(0,.7fr) minmax(0,1.6fr) !important;gap:5px !important}
+#profileScreen #clanContent .rally-picker>button{padding:7px 5px !important;gap:4px !important}
+#profileScreen #clanContent .rally-picker img{width:22px !important;height:28px !important}
+#profileScreen #clanContent .rally-picker strong{font-size:11px !important}
+#profileScreen #clanContent .rally-picker small{font-size:8px !important}
+#profileScreen #clanContent .rewards-tabs>button{font-size:11px !important}
+#profileScreen #clanContent .gift-feature{padding:8px !important;gap:7px !important;grid-template-columns:36px minmax(0,1fr) !important}
+#profileScreen #clanContent .gift-art{width:35px !important;height:43px !important}
+#profileScreen #clanContent .gift-feature h3{font-size:14px !important}
+#profileScreen #clanContent .gift-feature p{font-size:9px !important}
+#profileScreen #clanContent .treasury-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:6px !important}
+#profileScreen #clanContent .treasury-record{padding:8px !important}
+}
+#profileScreen #clanContent .rally-body{flex:1 !important;min-height:0 !important}
+#profileScreen #clanContent .rally-body .participant-list{overflow:visible !important}
+
+/* Layout and existing production component contracts. */
+#profileScreen.clan-active #clanView{display:block !important;min-width:0 !important;min-height:0 !important;height:100% !important;width:100% !important;padding:0 !important;margin:0 !important;overflow:hidden !important;border:1px solid var(--line) !important;border-top:0 !important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%) !important;box-shadow:none !important}
+#profileScreen.clan-active #onboardingProfileTip{display:none !important}
+#profileScreen #clanContent{height:100% !important;min-height:0 !important;min-width:0 !important;display:flex !important;flex-direction:column !important;gap:0 !important;padding:0 !important;margin:0 !important;overflow:hidden !important;color:#352f23 !important;font:13px 'Segoe UI',Arial,sans-serif !important}
+#profileScreen #clanContent :is(section,article,header,footer,nav,form){border-radius:0 !important;box-shadow:none !important;min-width:0 !important}
+#profileScreen #clanContent :is(h3,h4){font:21px/1.2 Georgia,serif !important;margin:0 !important}
+#profileScreen #clanContent p{font-size:12px !important;line-height:1.5 !important}
+#profileScreen #clanContent small{font-size:11px !important;color:#716247 !important}
+#profileScreen #clanContent :is(button,input,select,textarea){border-radius:0 !important}
+#profileScreen #clanContent button{min-height:44px !important;min-width:0 !important;padding:8px 14px !important;border:1px solid #aa9062 !important;background:#e1cfa4 !important;box-shadow:inset 0 0 0 2px #f9ecd066 !important;font:13px Georgia,serif !important;color:#352f23 !important}
+#profileScreen #clanContent button:disabled{opacity:.55 !important;cursor:default !important}
+#profileScreen #clanContent :is(.profile-primary-btn,.clan-rally-card footer button:first-child){background:#703e3d !important;color:#fff0d2 !important;border-color:#6f433d !important;box-shadow:inset 0 0 0 2px #c3937166 !important}
+#profileScreen #clanContent :is(.danger,.danger-action){background:#f0dcc1 !important;color:#723f37 !important;border-color:#9d7461 !important}
+#profileScreen #clanContent :is(.player-name-link,.clan-identity-link,.clan-member-select,.clan-hero-name){min-height:28px !important;width:auto !important;padding:2px 0 !important;text-align:left !important;font:16px/1.25 Georgia,serif !important;border:0 !important;background:transparent !important;box-shadow:none !important;color:#352f23 !important;overflow-wrap:anywhere !important;white-space:normal !important}
+#profileScreen #clanContent :is(.player-name-link,.clan-identity-link,.clan-member-select):hover{text-decoration:underline !important}
+#profileScreen #clanContent input:not([type=range]),#profileScreen #clanContent select,#profileScreen #clanContent textarea{min-height:44px !important;min-width:0 !important;padding:9px 11px !important;border:1px solid #ad9670 !important;background:#fff7df !important;color:#352f23 !important;font:14px 'Segoe UI',sans-serif !important;box-shadow:none !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav){display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:5px !important;padding:6px 17px !important;height:57px !important;min-height:57px !important;flex:none !important;background:#d9c7994a !important;border:0 !important;border-bottom:1px solid #b8a684 !important;margin:0 !important;overflow:visible !important}
+#profileScreen #clanContent .clan-browser-nav{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button{display:flex !important;align-items:center !important;justify-content:center !important;gap:10px !important;padding:5px !important;min-height:44px !important;font:16px Georgia,serif !important;background:#e5d5b2 !important;border:1px solid #b19a70 !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button.active{background:#d7be78 !important;border-color:#8a7043 !important;box-shadow:inset 0 0 0 2px #f5dea0 !important}
+#profileScreen #clanContent .clan-section-nav-mark,#profileScreen #clanContent .clan-browser-nav button>span{display:none !important}
+#profileScreen #clanContent .clan-section-nav b{min-width:22px !important;padding:4px 6px !important;font:10px 'Segoe UI',sans-serif !important;background:#d3c49f !important;color:#51462f !important;border:1px solid #b4a178 !important;border-radius:0 !important}
+#profileScreen #clanContent .clan-section-nav b.alert{background:#6e473e !important;color:#fff1d3 !important;border-color:#795244 !important}
+#profileScreen #clanContent .clan-section-panel{display:none !important;flex:1 !important;min-height:0 !important;padding:18px 22px !important;margin:0 !important;overflow:hidden !important;border:0 !important;background:none !important}
+#profileScreen #clanContent .clan-section-panel.active{display:flex !important;flex-direction:column !important;gap:12px !important}
+#profileScreen #clanContent .clan-overview-panel.active{display:grid !important;grid-template-columns:minmax(0,.95fr) minmax(0,1.8fr) !important;padding:0 !important;gap:0 !important}
+#profileScreen #clanContent .shield-button{background:transparent !important;border:0 !important;box-shadow:none !important;padding:0 !important;min-height:0 !important}
+#profileScreen #clanContent .clan-name{font:29px/1.12 Georgia,serif !important}
+#profileScreen #clanContent .clan-name .clan-hero-name{display:flex !important;flex-direction:column-reverse !important;align-items:center !important;width:100% !important;font:inherit !important;text-align:center !important}
+
+#profileScreen #clanContent .activity-card{padding:15px 16px 0 !important;text-align:left !important;background:linear-gradient(115deg,#f8efd5,#e9dcbc) !important;border:1px solid #b8a47e !important;box-shadow:inset 0 0 0 3px #fff9e555 !important}
+#profileScreen #clanContent .activity-card.gifts.ready{background:linear-gradient(115deg,#f3efd5,#e0e1b7) !important;border-color:#8e9a6c !important}
+#profileScreen #clanContent :is(.profile-section-heading,.clan-social-heading){display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important;flex-wrap:wrap !important;flex:none !important;min-height:43px !important;padding:0 !important;margin:0 !important;border:0 !important;background:none !important}
+#profileScreen #clanContent .profile-section-heading>span{font-size:9px !important;letter-spacing:1.5px !important;color:#716247 !important;flex-basis:100% !important}
+#profileScreen #clanContent .profile-section-heading h3,#profileScreen #clanContent .clan-social-heading strong{font:27px/1.1 Georgia,serif !important}
+#profileScreen #clanContent :is(.profile-section-heading,.clan-social-heading)>b{background:#e6d4a8 !important;border:1px solid #b8a684 !important;padding:8px 14px !important;color:#4b583c !important;font:18px Georgia,serif !important;border-radius:0 !important}
+#profileScreen #clanContent .members-layout{overflow:hidden !important}
+#profileScreen #clanContent .clan-roster{display:block !important;min-height:0 !important;max-height:none !important;padding:0 !important;overflow:auto !important;flex:1 !important}
+#profileScreen #clanContent .clan-member-row{display:flex !important;flex-wrap:wrap !important;align-items:center !important;gap:12px !important;padding:9px 14px !important;border:0 !important;border-bottom:1px solid #c6b89499 !important;margin:0 !important;background:none !important}
+#profileScreen #clanContent .clan-member-row.selected{background:#e8d9b6 !important}
+#profileScreen #clanContent .clan-member-copy{display:flex !important;flex-direction:column !important;min-width:0 !important;flex:1 !important}
+#profileScreen #clanContent .clan-member-copy>span{font-size:11px !important;color:#695c45 !important;line-height:1.5 !important}
+#profileScreen #clanContent .clan-member-copy>small{font-size:10px !important}
+#profileScreen #clanContent .clan-member-selection{display:flex !important;gap:6px !important;width:100% !important;padding:0 0 0 52px !important;margin:0 !important;border:0 !important;background:none !important}
+#profileScreen #clanContent .clan-member-selection button{flex:1 !important}
+#profileScreen #clanContent .clan-applications{margin:0 !important;padding:0 !important;display:flex !important;flex-direction:column !important;min-height:0 !important;gap:0 !important}
+#profileScreen #clanContent .clan-subsection-heading{padding:12px 15px !important;border-bottom:1px solid #b8a684 !important;display:flex !important;align-items:center !important;justify-content:space-between !important;flex:none !important}
+#profileScreen #clanContent .clan-subsection-heading h4{font:17px Georgia,serif !important}
+#profileScreen #clanContent .clan-applications article{display:flex !important;align-items:center !important;flex-wrap:wrap !important;gap:10px !important;padding:13px !important;border-bottom:1px solid #c6b89499 !important;background:none !important}
+#profileScreen #clanContent .clan-applications article>span:not(.kingdom-flag){flex:1 !important;min-width:0 !important}
+#profileScreen #clanContent .clan-applications article small{display:block !important}
+#profileScreen #clanContent .clan-applications article>div{display:flex !important;gap:7px !important;width:100% !important}
+#profileScreen #clanContent .clan-applications article button{flex:1 !important}
+#profileScreen #clanContent .clan-leave{flex:none !important;align-self:flex-end !important;width:auto !important;margin:0 !important}
+#profileScreen #clanContent .clan-warning,#profileScreen #clanContent .clan-muted{margin:10px !important;color:#716247 !important;font-size:12px !important}
+#profileScreen #clanContent .clan-warning{color:#813c32 !important}
+#profileScreen #clanContent .clan-rally-note{margin:0 !important;font-size:11px !important;color:#716247 !important}
+#profileScreen #clanContent .war-layout{overflow:hidden !important}
+#profileScreen #clanContent .rally-picker button{justify-content:flex-start !important;white-space:normal !important}
+#profileScreen #clanContent .clan-rally-card{display:flex !important;flex-direction:column !important;min-height:0 !important;padding:0 !important;margin:0 !important;overflow:hidden !important}
+#profileScreen #clanContent .clan-rally-card header{display:flex !important;align-items:center !important;justify-content:space-between !important;padding:15px !important;background:none !important;border:0 !important;gap:8px !important}
+#profileScreen #clanContent .clan-rally-card header strong{font:23px Georgia,serif !important}
+#profileScreen #clanContent .clan-rally-card header span{display:flex !important;flex-direction:column !important;gap:4px !important}
+#profileScreen #clanContent .clan-rally-card header b{padding:5px 8px !important;background:#e6d0a0 !important;border:1px solid #ab925a !important;font-size:12px !important;color:#65583e !important}
+#profileScreen #clanContent .clan-rally-summary{display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:10px !important;background:#dcccaa55 !important;border-block:1px solid #b8a684 !important;padding:10px 15px !important;margin:0 !important}
+#profileScreen #clanContent .clan-rally-summary>span{display:flex !important;flex-direction:column !important;font-size:10px !important;color:#716247 !important;gap:3px !important}
+#profileScreen #clanContent .clan-rally-summary>span:nth-child(-n+2){grid-column:1/-1 !important;flex-direction:row !important;align-items:center !important}
+#profileScreen #clanContent .clan-rally-summary strong{font:23px Georgia,serif !important;color:#4b583c !important}
+#profileScreen #clanContent .clan-rally-card ul{margin:0 !important;padding:0 15px !important;list-style:none !important;display:block !important;overflow:visible !important;max-height:none !important}
+#profileScreen #clanContent .clan-rally-card li{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important;padding:8px 0 !important;border:0 !important;border-bottom:1px solid #c8b996 !important;background:none !important}
+#profileScreen #clanContent .clan-rally-card li small{display:block !important}
+#profileScreen #clanContent .clan-rally-card li b{font:18px Georgia,serif !important;color:#4b583c !important}
+#profileScreen #clanContent .clan-rally-card footer{flex:none !important;padding:10px 15px !important;border-top:1px solid #b8a684 !important;display:flex !important;gap:8px !important;background:none !important}
+#profileScreen #clanContent .clan-rally-card footer button{flex:1 !important}
+#profileScreen #clanContent .clan-empty{display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;gap:12px !important;padding:24px !important;margin:auto !important;border:0 !important;background:none !important;overflow:auto !important}
+#profileScreen #clanContent .clan-empty img{width:80px !important;height:80px !important}
+#profileScreen #clanContent .clan-reward-body{flex:1 !important}
+#profileScreen #clanContent .rewards-tabs{min-height:44px !important}
+#profileScreen #clanContent .rewards-tabs button[aria-pressed=true]{background:#78805a !important;color:#fff5da !important;border-color:#5d6743 !important}
+#profileScreen #clanContent :is(.clan-gift-panel,.clan-quest-panel){padding:0 !important;margin:0 !important;border:0 !important;background:none !important;min-width:0 !important}
+#profileScreen #clanContent .gift-copy .profile-section-heading{display:block !important;min-height:0 !important;margin-bottom:8px !important}
+#profileScreen #clanContent .gift-copy h3{font:23px Georgia,serif !important}
+#profileScreen #clanContent .gift-copy p{color:#716247 !important}
+#profileScreen #clanContent .clan-gift-actions{grid-column:1/-1 !important;display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:6px 10px !important;align-items:start !important;margin:0 !important}
+#profileScreen #clanContent .clan-gift-actions small{grid-column:1 !important;grid-row:2 !important;text-align:center !important}
+#profileScreen #clanContent .clan-gift-actions button:last-child{grid-column:2 !important;grid-row:1 !important}
+#profileScreen #clanContent .clan-gift-stats{grid-column:1/-1 !important;display:flex !important;justify-content:space-between !important;gap:10px !important;border-top:1px solid #b8a684 !important;padding-top:15px !important;margin:0 !important}
+#profileScreen #clanContent .clan-gift-stats span{font-size:11px !important;color:#716247 !important}
+#profileScreen #clanContent .clan-gift-stats strong{display:block !important;font:23px Georgia,serif !important;color:#352f23 !important;margin-top:4px !important}
+#profileScreen #clanContent .clan-gift-donations{padding:0 !important;margin:0 !important}
+#profileScreen #clanContent .clan-gift-donations>strong{display:block !important;padding:12px 15px !important;font:17px Georgia,serif !important;border-bottom:1px solid #b8a684 !important}
+#profileScreen #clanContent .clan-gift-donations ol{padding:0 !important;margin:0 !important;list-style:none !important}
+#profileScreen #clanContent .clan-gift-donations li{display:flex !important;justify-content:space-between !important;align-items:center !important;gap:10px !important;padding:12px 15px !important;border-bottom:1px solid #c6b89499 !important}
+#profileScreen #clanContent .clan-gift-donations li>span{display:flex !important;flex-direction:column !important;font-size:11px !important}
+#profileScreen #clanContent .clan-quest-heading{margin-bottom:12px !important}
+#profileScreen #clanContent .clan-quest-heading>b{font:12px 'Segoe UI',sans-serif !important}
+#profileScreen #clanContent .clan-quest-progress{margin:12px 0 !important;padding:0 !important;border:0 !important;background:none !important;display:block !important}
+#profileScreen #clanContent .clan-quest-progress>div{display:flex !important;align-items:baseline !important;gap:14px !important;margin-bottom:8px !important}
+#profileScreen #clanContent .clan-quest-progress strong{font:23px Georgia,serif !important;color:#4b583c !important}
+#profileScreen #clanContent .clan-quest-progress span{font-size:12px !important;color:#716247 !important}
+#profileScreen #clanContent .clan-quest-progress-track{display:block !important;height:5px !important;background:#cbb88e !important;border:0 !important;border-radius:0 !important;overflow:hidden !important}
+#profileScreen #clanContent .clan-quest-progress-track i{display:block !important;height:100% !important;background:#69764d !important}
+#profileScreen #clanContent .clan-quest-grid{display:grid !important;grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:10px !important}
+#profileScreen #clanContent .clan-quest-card{display:grid !important;grid-template-columns:40px minmax(0,1fr) !important;gap:8px !important;padding:13px !important;align-items:center !important;border:1px solid #b8a684 !important;background:#f2e5c5 !important;min-height:0 !important}
+#profileScreen #clanContent .clan-quest-card.unlocked{background:#e3e4c3 !important;border-color:#9fa981 !important}
+#profileScreen #clanContent .clan-quest-card.claimed{background:#e8debf !important}
+#profileScreen #clanContent .clan-reward-art{width:38px !important;height:43px !important}
+#profileScreen #clanContent .clan-quest-card>div span{display:block !important;font-size:10px !important;color:#716247 !important}
+#profileScreen #clanContent .clan-quest-card strong{display:block !important;font:18px Georgia,serif !important;margin-top:5px !important;white-space:nowrap !important}
+#profileScreen #clanContent .clan-quest-card>small,#profileScreen #clanContent .clan-quest-card>button{grid-column:1/-1 !important}
+#profileScreen #clanContent .clan-quest-expiration{padding:6px 10px !important;background:#efddbe !important;color:#813c32 !important;margin:0 0 8px !important}
+#profileScreen #clanContent .clan-treasury-ledger{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:16px !important;border:0 !important;padding:0 !important}
+#profileScreen #clanContent .clan-treasury-ledger>div{padding:0 !important;background:none !important;border:0 !important}
+#profileScreen #clanContent .clan-treasury-ledger>div:first-child{grid-column:1/-1 !important;padding-bottom:12px !important;border-bottom:1px solid #b8a684 !important}
+#profileScreen #clanContent .clan-treasury-ledger strong{font:25px Georgia,serif !important;color:#4b583c !important}
+#profileScreen #clanContent .clan-treasury-allowance{padding-top:14px !important;margin-top:20px !important;border-top:1px solid #b8a684 !important}
+#profileScreen #clanContent .clan-treasury-allowance>div{display:block !important}
+#profileScreen #clanContent .clan-treasury-allowance strong{display:block !important;font:16px Georgia,serif !important}
+#profileScreen #clanContent .clan-treasury-allowance small{display:block !important;line-height:1.5 !important;margin-top:8px !important}
+#profileScreen #clanContent .clan-form{display:flex !important;flex-direction:column !important;gap:15px !important;padding:24px !important;margin:0 !important}
+#profileScreen #clanContent .clan-form label{display:flex !important;flex-direction:column !important;gap:7px !important;font-size:12px !important}
+#profileScreen #clanContent .clan-form input,#profileScreen #clanContent .clan-form select,#profileScreen #clanContent .clan-form textarea{width:100% !important}
+#profileScreen #clanContent .clan-treasury-donate>div{display:flex !important;flex-direction:column !important;gap:10px !important}
+#profileScreen #clanContent .clan-treasury-donate+p{padding:0 24px 20px !important;color:#716247 !important}
+#profileScreen #clanContent .clan-browser{display:block !important;flex:1 !important;min-height:0 !important;overflow:hidden !important;padding:18px 22px !important;border:0 !important;margin:0 !important}
+#profileScreen #clanContent .clan-browser-panel{display:none !important;min-height:0 !important;height:100% !important;padding:0 !important;border:0 !important;background:none !important;overflow:auto !important}
+#profileScreen #clanContent .clan-browser-panel.active{display:flex !important;flex-direction:column !important;gap:12px !important}
+#profileScreen #clanContent .clan-create-card.active{display:grid !important;grid-template-columns:minmax(0,.85fr) minmax(0,1.4fr) !important;align-items:start !important;gap:12px 30px !important}
+#profileScreen #clanContent .clan-create-card>.profile-section-heading{padding:24px !important;display:block !important;text-align:center !important}
+#profileScreen #clanContent .clan-create-card>.profile-section-heading::before{content:"" !important;display:block !important;width:145px !important;height:145px !important;margin:0 auto 20px !important;background:url('assets/icons/skills/guildCharters.svg') center/contain no-repeat !important}
+#profileScreen #clanContent .clan-create-card .clan-form{background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important;border:1px solid #b8a684 !important}
+#profileScreen #clanContent .clan-create-card>.clan-warning{grid-column:1/-1 !important}
+#profileScreen #clanContent .clan-search{display:flex !important;gap:8px !important;flex:none !important;margin:0 !important;padding:0 !important}
+#profileScreen #clanContent .clan-search input{flex:1 !important}
+#profileScreen #clanContent .clan-list{flex:1 !important;overflow:auto !important;display:flex !important;flex-direction:column !important;gap:10px !important;padding:0 !important;margin:0 !important}
+#profileScreen #clanContent .clan-list-row{display:flex !important;align-items:center !important;gap:18px !important;padding:18px !important;border:1px solid #b8a684 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important}
+#profileScreen #clanContent .clan-list-row>.clan-shield-link{width:76px !important;height:80px !important;flex:none !important;background:transparent !important;padding:0 !important;border:0 !important;box-shadow:none !important}
+#profileScreen #clanContent .clan-list-row>.clan-shield-link>*{width:100% !important;height:100% !important}
+#profileScreen #clanContent .clan-list-copy{flex:1 !important;min-width:0 !important}
+#profileScreen #clanContent .clan-list-copy>.clan-identity-link{font-size:22px !important}
+#profileScreen #clanContent .clan-list-copy>span,#profileScreen #clanContent .clan-list-copy>small{display:block !important;font-size:12px !important;color:#716247 !important;margin-top:5px !important}
+#profileScreen #clanContent .clan-list-row>button:last-child{flex:none !important;max-width:145px !important}
+#profileScreen #clanContent .clan-rename-card{margin:18px 22px !important;padding:24px !important;overflow:auto !important;border:1px solid #b8a684 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important}
+#profileScreen #clanContent .clan-rename-form{max-width:680px !important;padding:15px 0 !important}
+#profileScreen #clanContent .clan-rename-summary{display:flex !important;gap:20px !important}
+#profileScreen #clanContent .clan-rename-summary strong{display:block !important;font:20px Georgia,serif !important;margin-top:6px !important}
+#profileScreen #clanContent .clan-rename-actions{display:flex !important;justify-content:flex-end !important;gap:8px !important}
+#profileScreen #clanContent .clan-shield-editor{padding:18px 22px !important;display:grid !important;grid-template-columns:minmax(0,.65fr) minmax(0,1.8fr) !important;grid-template-rows:minmax(0,1fr) auto !important;gap:14px 18px !important;height:100% !important;max-height:none !important;min-height:0 !important;overflow:hidden !important}
+#profileScreen #clanContent .clan-shield-editor-preview{grid-row:1 !important;display:block !important;overflow:auto !important;padding:18px !important;border:1px solid #b8a684 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important;text-align:center !important}
+#profileScreen #clanContent .clan-shield-preview-stage{display:block !important;background:none !important;overflow:visible !important;padding:0 !important;min-height:0 !important}
+#profileScreen #clanContent .clan-shield-preview-full{width:210px !important;height:222px !important;max-width:100% !important;margin:auto !important}
+#profileScreen #clanContent .clan-shield-micro-preview{position:static !important;display:flex !important;align-items:center !important;justify-content:center !important;gap:12px !important;padding:8px 0 !important;margin:0 !important;border:0 !important;background:none !important;color:#716247 !important;box-shadow:none !important}
+#profileScreen #clanContent .clan-shield-micro-preview>.clan-heraldry-v2{width:44px !important;height:47px !important}
+#profileScreen #clanContent .clan-shield-editor-intro{padding:0 !important;background:none !important}
+#profileScreen #clanContent .clan-shield-editor-intro p,#profileScreen #clanContent .clan-shield-editor-intro small{color:#716247 !important;font-size:12px !important;line-height:1.5 !important}
+#profileScreen #clanContent .clan-shield-editor-workspace{grid-column:2 !important;grid-row:1 !important;display:grid !important;grid-template-rows:auto minmax(0,1fr) !important;gap:0 !important;border:1px solid #b8a684 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important;min-height:0 !important;overflow:hidden !important}
+#profileScreen #clanContent .clan-shield-editor-tabs{padding:7px !important;gap:5px !important;border:0 !important;border-bottom:1px solid #b8a684 !important;background:none !important;display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important}
+#profileScreen #clanContent .clan-shield-editor-tabs button.active{background:#78805a !important;color:#fff5da !important;border-color:#5d6743 !important}
+#profileScreen #clanContent .clan-shield-editor-controls{display:block !important;overflow:auto !important;padding:16px !important;min-height:0 !important}
+#profileScreen #clanContent .clan-shield-panel{display:none !important;padding:0 !important;background:none !important;border:0 !important}
+#profileScreen #clanContent .clan-shield-panel.active{display:block !important}
+#profileScreen #clanContent .clan-shield-control{padding:0 !important;border:0 !important;margin:0 0 22px !important;background:none !important}
+#profileScreen #clanContent .clan-shield-control legend{font:18px Georgia,serif !important;margin-bottom:10px !important;color:#352f23 !important}
+#profileScreen #clanContent .clan-shield-choice-grid{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:7px !important}
+#profileScreen #clanContent .clan-shield-choice-grid>button{display:flex !important;align-items:center !important;text-align:left !important;gap:6px !important;min-height:56px !important;padding:7px !important;background:#eadbb6 !important;font-size:11px !important}
+#profileScreen #clanContent .clan-shield-choice-grid>button.active{background:#d8c188 !important;border-color:#846b41 !important;box-shadow:inset 0 0 0 2px #f0dea9 !important}
+#profileScreen #clanContent .clan-shield-choice-icon{width:38px !important;height:42px !important;flex:none !important}
+#profileScreen #clanContent .clan-shield-color-group{padding:0 !important;margin:0 0 20px !important;border:0 !important;background:none !important}
+#profileScreen #clanContent .clan-shield-color-group>legend{display:block !important;font:18px Georgia,serif !important;margin-bottom:10px !important}
+#profileScreen #clanContent .clan-shield-swatch-grid{display:grid !important;grid-template-columns:repeat(8,minmax(0,1fr)) !important;gap:7px !important}
+#profileScreen #clanContent .clan-shield-swatch-grid button{height:44px !important;min-height:44px !important;padding:4px !important;background:var(--shield-swatch) !important;border:1px solid #a8956e !important;box-shadow:inset 0 0 0 3px #f4e9cf55 !important}
+#profileScreen #clanContent .clan-shield-swatch-grid button.active{outline:2px solid #6b5336 !important;outline-offset:1px !important}
+#profileScreen #clanContent .clan-shield-editor-actions{grid-column:1/-1 !important;grid-row:2 !important;display:flex !important;justify-content:flex-end !important;gap:8px !important;padding:8px 0 0 !important;background:none !important;border:0 !important;border-top:1px solid #b8a684 !important}
+#profileScreen #clanContent .clan-shield-editor-actions button:first-child{margin-right:auto !important}
+/* Shared modal chrome is scoped by clan-only content, so other game windows retain their themes. */
+#modal:has(.public-clan-details),#modal:has(.clan-rally-confirmation),#modal:has(.clan-ledger-confirmation),#modal:has(.troop-slider-panel.rally){width:min(1200px,calc(100vw - 24px)) !important;height:min(700px,calc(100dvh - 24px)) !important;max-width:none !important;max-height:none !important;padding:5px !important;border:1px solid #766346 !important;border-radius:2px !important;background:#f2e8cd !important;color:#352f23 !important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88 !important;overflow:hidden !important;grid-template-rows:auto minmax(0,1fr) !important}
+#modal:has(.clan-rally-confirmation),#modal:has(.clan-ledger-confirmation){width:min(550px,calc(100vw - 24px)) !important;height:auto !important}
+#modal:has(.public-clan-details) #modalBody,#modal:has(.troop-slider-panel.rally) #modalBody{height:100% !important;min-height:0 !important;overflow:hidden !important;padding:18px 22px !important}
+#modal:has(.public-clan-details) :is(h2,h3,p,span,strong,small,button,dt,dd),#modal:has(.troop-slider-panel.rally) :is(h2,h3,p,span,strong,small,button,label),#modal:has(.clan-rally-confirmation) :is(h2,h3,p,span,strong,small,button),#modal:has(.clan-ledger-confirmation) :is(h2,h3,p,span,strong,small,button){color:inherit !important;text-shadow:none !important;letter-spacing:normal !important;text-transform:none !important}
+#modal .public-clan-details{display:grid !important;grid-template-columns:minmax(0,.95fr) minmax(0,1.5fr) !important;gap:18px !important;height:100% !important;min-height:0 !important;overflow:hidden !important;color:#352f23 !important}
+#modal .public-clan-left,#modal .public-clan-right{min-height:0 !important;border:1px solid #b8a684 !important;background:linear-gradient(115deg,#fbf4deaa,#e9dcbc88) !important;padding:20px !important;overflow:auto !important}
+#modal .public-clan-right{display:flex !important;flex-direction:column !important;padding:0 !important;overflow:hidden !important}
+#modal .public-clan-identity{display:flex !important;flex-direction:column !important;align-items:center !important;text-align:center !important;padding:0 !important;gap:12px !important;border:0 !important;background:none !important}
+#modal .public-clan-identity>.clan-heraldry-v2,#modal .public-clan-identity>.clan-shield{width:180px !important;height:190px !important;flex:none !important}
+#modal .public-clan-identity h3{font:24px Georgia,serif !important}
+#modal .public-clan-identity p{font:12px/1.5 'Segoe UI',sans-serif !important;color:#716247 !important}
+#modal .public-clan-details dl{display:block !important;margin:15px 0 0 !important;padding:0 !important;border:0 !important;background:none !important}
+#modal .public-clan-details dl>div{display:flex !important;justify-content:space-between !important;gap:10px !important;padding:8px !important;border:0 !important;border-bottom:1px solid #b8a684 !important;background:none !important;font:12px 'Segoe UI',sans-serif !important}
+#modal .public-clan-details dd{margin:0 !important;color:#4b583c !important;font:inherit !important}
+#modal .public-clan-roster-heading{padding:12px 15px !important;border-bottom:1px solid #b8a684 !important;margin:0 !important;font:17px Georgia,serif !important;flex:none !important}
+#modal .public-clan-roster{display:block !important;flex:1 !important;min-height:0 !important;max-height:none !important;padding:0 !important;overflow:auto !important}
+#modal .public-clan-member{padding:9px 14px !important;border:0 !important;border-bottom:1px solid #c6b89499 !important;background:none !important;border-radius:0 !important}
+#modal .public-clan-member .player-name-link{font:16px Georgia,serif !important;background:none !important;border:0 !important;box-shadow:none !important;padding:2px 0 !important;min-height:28px !important}
+#modal .public-clan-member-power strong{font:20px Georgia,serif !important;color:#4b583c !important}
+#modal:has(.troop-slider-panel.rally) #modalBody{overflow:auto !important}
+#modal .troop-slider-panel.rally{display:grid !important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;gap:14px 20px !important;align-content:start !important;height:auto !important;min-height:100% !important;padding:0 !important;overflow:visible !important;background:none !important;color:#352f23 !important}
+#modal .rally .troop-route-summary{grid-column:1 !important;grid-row:1/5 !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:20px !important;padding:24px !important;border:1px solid #b8a684 !important;background:#e9dcbc88 !important}
+#modal .rally .troop-route-city{text-align:center !important}
+#modal .rally .troop-route-city strong{font:24px Georgia,serif !important}
+#modal .rally .troop-route-city small{font:11px/1.5 'Segoe UI',sans-serif !important}
+#modal .rally .troop-slider-control,#modal .rally .rally-limit-note,#modal .rally .troop-slider-preview{grid-column:2 !important;padding:12px !important;background:#fff7df !important;border:1px solid #b8a684 !important;border-radius:0 !important}
+#modal .rally .troop-slider-control strong{font:27px Georgia,serif !important;color:#4b583c !important}
+#modal .rally :is(.troop-slider-actions,.troop-slider-actions button){border-radius:0 !important}
+#modal .rally .troop-slider-actions{grid-column:1/-1 !important;position:sticky !important;bottom:0 !important;padding:8px 0 !important;background:#f2e8cd !important;display:flex !important;gap:8px !important}
+#modal .rally .troop-slider-actions button{min-height:44px !important;background:#703e3d !important;color:#fff1d3 !important;border:1px solid #754a43 !important;font:14px Georgia,serif !important}
+#modal .rally .troop-slider-actions button:last-child{background:#e1cfa4 !important;color:#352f23 !important}
+#modal .rally-troop-number{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:8px !important;font:12px 'Segoe UI',sans-serif !important;margin:8px 0 !important}
+#modal #rallyTroopNumber{min-width:0 !important;width:50% !important;height:44px !important;border:1px solid #ad9670 !important;background:#fff7df !important;color:#352f23 !important;font:16px Georgia,serif !important;padding:8px !important}
+#modal:has(.clan-rally-confirmation) #modalBody,#modal:has(.clan-ledger-confirmation) #modalBody{padding:16px !important;overflow:auto !important;max-height:calc(100dvh - 105px) !important}
+#modal .clan-rally-confirmation,#modal .clan-ledger-confirmation{background:none !important;padding:0 !important;color:#352f23 !important;border:0 !important}
+#modal .clan-rally-confirmation p,#modal .clan-ledger-confirmation p{font:13px/1.5 'Segoe UI',sans-serif !important}
+#modal .clan-rally-confirmation footer,#modal .clan-ledger-confirmation footer{display:flex !important;justify-content:flex-end !important;gap:8px !important;padding-top:12px !important;background:none !important}
+#modal .clan-rally-confirmation footer button,#modal .clan-ledger-confirmation footer button{min-height:44px !important;border:1px solid #aa9062 !important;background:#e1cfa4 !important;color:#352f23 !important;border-radius:0 !important;font:13px Georgia,serif !important}
+#modal .clan-rally-confirmation footer button:last-child,#modal .clan-ledger-confirmation footer button:last-child{background:#703e3d !important;color:#fff0d2 !important}
+@media(max-height:600px),(max-width:1000px){
+#profileScreen.clan-active{grid-template-rows:49px minmax(0,1fr) !important}
+#profileScreen.clan-active .profile-screen-header{padding:0 10px !important;gap:8px !important}
+#profileScreen.clan-active .profile-screen-heading{grid-template-columns:29px auto !important;column-gap:7px !important}
+#profileScreen.clan-active .profile-screen-heading::before{width:29px !important;height:33px !important}
+#profileScreen.clan-active .profile-screen-heading>span{font-size:7px !important;letter-spacing:1px !important;margin-bottom:3px !important}
+#profileScreen.clan-active .profile-screen-heading h2{font-size:23px !important}
+#profileScreen.clan-active .profile-tabs{gap:4px !important}
+#profileScreen.clan-active .profile-tabs button{min-width:56px !important;padding:0 10px !important;font-size:11px !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav){height:46px !important;min-height:46px !important;padding:1px 10px !important;gap:4px !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button{font-size:13px !important;gap:7px !important}
+#profileScreen #clanContent .clan-section-panel{padding:7px 11px !important}
+#profileScreen #clanContent .clan-section-panel.active{gap:6px !important}
+#profileScreen #clanContent .clan-overview-panel.active{gap:0 !important}
+#profileScreen #clanContent .clan-name{font-size:20px !important}
+
+#profileScreen #clanContent button{padding:5px 9px !important;font-size:11px !important}
+#profileScreen #clanContent .activity-card{padding:6px 8px 0 !important}
+#profileScreen #clanContent p{font-size:10px !important}
+#profileScreen #clanContent :is(.profile-section-heading,.clan-social-heading){min-height:29px !important;gap:4px !important}
+#profileScreen #clanContent .profile-section-heading>span{font-size:7px !important}
+#profileScreen #clanContent .profile-section-heading h3,#profileScreen #clanContent .clan-social-heading strong{font-size:19px !important}
+#profileScreen #clanContent :is(.profile-section-heading,.clan-social-heading)>b{padding:4px 7px !important;font-size:11px !important}
+#profileScreen #clanContent :is(.player-name-link,.clan-member-select){font-size:13px !important;min-height:24px !important}
+#profileScreen #clanContent .clan-member-row{padding:5px 8px !important;gap:7px !important}
+#profileScreen #clanContent .clan-member-copy>span{font-size:10px !important}
+#profileScreen #clanContent .clan-member-copy>small{font-size:9px !important}
+#profileScreen #clanContent .clan-member-selection{padding-left:0 !important;gap:4px !important}
+#profileScreen #clanContent .clan-member-flag{width:28px !important;height:35px !important;min-width:28px !important;flex:none !important}
+#profileScreen #clanContent .clan-subsection-heading{padding:7px 9px !important}
+#profileScreen #clanContent .clan-subsection-heading h4{font-size:13px !important}
+#profileScreen #clanContent .clan-applications article{padding:7px !important;gap:5px !important}
+#profileScreen #clanContent small,#profileScreen #clanContent .clan-rally-note{font-size:9px !important}
+#profileScreen #clanContent .clan-rally-card header{padding:6px 9px !important}
+#profileScreen #clanContent .clan-rally-card header strong{font-size:16px !important}
+#profileScreen #clanContent .clan-rally-summary{padding:5px 9px !important;gap:5px !important}
+#profileScreen #clanContent .clan-rally-summary strong{font-size:18px !important}
+#profileScreen #clanContent .clan-rally-summary>span{font-size:9px !important}
+#profileScreen #clanContent .clan-rally-card li{padding:3px 0 !important}
+#profileScreen #clanContent .clan-rally-card li b{font-size:14px !important}
+#profileScreen #clanContent .clan-rally-card footer{padding:4px 9px !important;gap:5px !important}
+#profileScreen #clanContent .clan-gift-stats{padding-top:8px !important}
+#profileScreen #clanContent .clan-gift-stats strong{font-size:18px !important}
+#profileScreen #clanContent .clan-gift-stats span{font-size:9px !important}
+#profileScreen #clanContent .gift-copy h3{font-size:17px !important}
+#profileScreen #clanContent .clan-gift-donations>strong{padding:7px 9px !important;font-size:13px !important}
+#profileScreen #clanContent .clan-gift-donations li{padding:6px 9px !important;gap:6px !important}
+#profileScreen #clanContent .clan-quest-grid{gap:6px !important}
+#profileScreen #clanContent .clan-quest-card{padding:8px !important;grid-template-columns:26px minmax(0,1fr) !important;gap:5px !important}
+#profileScreen #clanContent .clan-reward-art{width:25px !important;height:31px !important}
+#profileScreen #clanContent .clan-quest-card strong{font-size:14px !important}
+#profileScreen #clanContent .clan-quest-card>div span{font-size:9px !important}
+#profileScreen #clanContent .clan-quest-progress strong{font-size:18px !important}
+#profileScreen #clanContent .clan-treasury-ledger{gap:10px !important}
+#profileScreen #clanContent .clan-treasury-ledger strong{font-size:19px !important}
+#profileScreen #clanContent .clan-treasury-allowance{margin-top:12px !important;padding-top:8px !important}
+#profileScreen #clanContent .clan-treasury-allowance strong{font-size:13px !important}
+#profileScreen #clanContent .clan-form{padding:13px !important;gap:10px !important}
+#profileScreen #clanContent .clan-form label{font-size:10px !important}
+#profileScreen #clanContent input:not([type=range]),#profileScreen #clanContent select,#profileScreen #clanContent textarea{font-size:12px !important;padding:7px !important}
+#profileScreen #clanContent .clan-treasury-donate+p{padding:0 13px 12px !important}
+#profileScreen #clanContent .clan-browser{padding:7px 11px !important}
+#profileScreen #clanContent .clan-browser-panel.active{gap:6px !important}
+#profileScreen #clanContent .clan-list-row{padding:9px !important;gap:10px !important}
+#profileScreen #clanContent .clan-list-row>.clan-shield-link{width:50px !important;height:54px !important}
+#profileScreen #clanContent .clan-list-copy>.clan-identity-link{font-size:17px !important}
+#profileScreen #clanContent .clan-list-copy>span,#profileScreen #clanContent .clan-list-copy>small{font-size:10px !important}
+#profileScreen #clanContent .clan-create-card.active{gap:8px 12px !important}
+#profileScreen #clanContent .clan-create-card>.profile-section-heading{padding:10px !important}
+#profileScreen #clanContent .clan-create-card>.profile-section-heading::before{width:80px !important;height:80px !important;margin-bottom:10px !important}
+#profileScreen #clanContent .clan-rename-card{padding:13px !important;margin:7px 11px !important}
+#profileScreen #clanContent .clan-shield-editor{padding:7px 11px !important;gap:6px 8px !important;grid-template-columns:minmax(0,.58fr) minmax(0,1.8fr) !important}
+#profileScreen #clanContent .clan-shield-editor-preview{padding:6px !important}
+#profileScreen #clanContent .clan-shield-preview-full{width:87px !important;height:93px !important}
+#profileScreen #clanContent .clan-shield-micro-preview{gap:5px !important;padding:4px 0 !important}
+#profileScreen #clanContent .clan-shield-micro-preview>.clan-heraldry-v2{width:30px !important;height:32px !important}
+#profileScreen #clanContent .clan-shield-editor-intro h3{font-size:16px !important}
+#profileScreen #clanContent .clan-shield-editor-intro p,#profileScreen #clanContent .clan-shield-editor-intro small{font-size:9px !important}
+#profileScreen #clanContent .clan-shield-editor-controls{padding:8px !important}
+#profileScreen #clanContent .clan-shield-editor-tabs{padding:3px !important;gap:4px !important}
+#profileScreen #clanContent .clan-shield-choice-grid{gap:5px !important}
+#profileScreen #clanContent .clan-shield-choice-grid>button{padding:4px !important;gap:4px !important;font-size:9px !important;min-height:46px !important}
+#profileScreen #clanContent .clan-shield-choice-icon{width:26px !important;height:29px !important}
+#profileScreen #clanContent .clan-shield-control legend,#profileScreen #clanContent .clan-shield-color-group>legend{font-size:14px !important;margin-bottom:6px !important}
+#profileScreen #clanContent .clan-shield-control{margin-bottom:13px !important}
+#profileScreen #clanContent .clan-shield-editor-actions{padding-top:4px !important}
+#modal:has(.public-clan-details) #modalBody,#modal:has(.troop-slider-panel.rally) #modalBody{padding:7px 11px !important}
+#modal .public-clan-details{gap:8px !important}
+#modal .public-clan-left{padding:8px !important}
+#modal .public-clan-identity{gap:5px !important}
+#modal .public-clan-identity>.clan-heraldry-v2,#modal .public-clan-identity>.clan-shield{width:68px !important;height:72px !important}
+#modal .public-clan-identity h3{font-size:16px !important}
+#modal .public-clan-identity p{font-size:10px !important}
+#modal .public-clan-details dl>div{font-size:10px !important;padding:5px !important}
+#modal .public-clan-roster-heading{padding:7px 9px !important;font-size:13px !important}
+#modal .public-clan-member{padding:5px 8px !important}
+#modal .public-clan-member .player-name-link{font-size:13px !important;min-height:24px !important}
+#modal .public-clan-member-power strong{font-size:15px !important}
+#modal .troop-slider-panel.rally{gap:8px 10px !important}
+#modal .rally .troop-route-summary{padding:12px !important;gap:10px !important}
+#modal .rally .troop-route-city strong{font-size:18px !important}
+#modal .rally .troop-slider-control,#modal .rally .rally-limit-note,#modal .rally .troop-slider-preview{padding:8px !important}
+}
+@media(max-width:650px){
+#profileScreen.clan-active{width:calc(100% - 12px) !important;height:calc(100dvh - 12px) !important;padding:4px !important;grid-template-rows:48px minmax(0,1fr) !important}
+#profileScreen.clan-active .profile-screen-header{padding:0 4px !important;gap:5px !important}
+#profileScreen.clan-active .profile-screen-heading{display:block !important}
+#profileScreen.clan-active .profile-screen-heading::before,#profileScreen.clan-active .profile-screen-heading>span{display:none !important}
+#profileScreen.clan-active .profile-screen-heading h2{font-size:19px !important}
+#profileScreen.clan-active .profile-tabs{gap:2px !important}
+#profileScreen.clan-active .profile-tabs button{min-width:0 !important;font-size:10px !important;padding:0 9px !important}
+#profileScreen #clanContent .clan-section-panel{padding:5px 7px !important}
+#profileScreen #clanContent .clan-name{font-size:16px !important}
+#profileScreen #clanContent button{font-size:10px !important;padding:4px 6px !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav){height:45px !important;min-height:45px !important;padding:0 5px !important;gap:3px !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button{font-size:12px !important;gap:4px !important}
+#profileScreen #clanContent .activity-card{padding:5px 5px 0 !important}
+#profileScreen #clanContent .clan-member-row{padding:5px !important;gap:5px !important}
+#profileScreen #clanContent .clan-member-flag{width:23px !important;height:29px !important;min-width:23px !important}
+#profileScreen #clanContent .clan-quest-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+#profileScreen #clanContent .clan-shield-choice-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+#profileScreen #clanContent .clan-shield-swatch-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:5px !important}
+#profileScreen #clanContent .clan-shield-preview-full{width:61px !important;height:66px !important}
+#profileScreen #clanContent .clan-shield-choice-icon{width:22px !important;height:25px !important}
+#profileScreen #clanContent .clan-gift-actions{grid-template-columns:1fr !important}
+#profileScreen #clanContent .clan-gift-actions button:last-child{grid-column:1 !important;grid-row:3 !important}
+#profileScreen #clanContent .clan-form{padding:9px !important;gap:9px !important}
+#profileScreen #clanContent .clan-list-row{padding:7px !important;gap:7px !important}
+#profileScreen #clanContent .clan-list-row>.clan-shield-link{width:39px !important;height:43px !important}
+#profileScreen #clanContent .clan-list-copy>.clan-identity-link{font-size:15px !important}
+#profileScreen #clanContent .clan-list-copy>span,#profileScreen #clanContent .clan-list-copy>small{font-size:9px !important}
+#profileScreen #clanContent .clan-create-card>.profile-section-heading::before{width:60px !important;height:60px !important}
+}
+#profileScreen #clanContent :is(.clan-section-panel,.clan-rally-card,.clan-social-heading,.rally-picker,.clan-shield-editor,.clan-shield-editor-preview,.clan-shield-editor-workspace){color:#352f23 !important}
+#profileScreen #clanContent :is(h3,h4,p,strong,small,span,b){text-shadow:none !important;text-transform:none !important;letter-spacing:normal !important;color:inherit !important;font-weight:400 !important}
+#profileScreen #clanContent .profile-section-heading{display:grid !important;grid-template-columns:minmax(0,1fr) auto !important;grid-template-rows:auto auto !important;gap:3px 10px !important;text-align:left !important}
+#profileScreen #clanContent .profile-section-heading>span{grid-column:1 !important;grid-row:1 !important;text-align:left !important}
+#profileScreen #clanContent .profile-section-heading>h3{grid-column:1 !important;grid-row:2 !important}
+#profileScreen #clanContent .profile-section-heading>b{grid-column:2 !important;grid-row:1/3 !important}
+#profileScreen #clanContent .profile-section-heading::before,#profileScreen #clanContent .profile-section-heading::after{display:none !important}
+#profileScreen #clanContent .rally-picker small{font:11px 'Segoe UI',sans-serif !important}
+#profileScreen #clanContent .clan-shield-choice-icon svg{width:100% !important;height:100% !important}
+#profileScreen #clanContent .clan-section-panel.active{align-items:stretch !important;width:100% !important}
+#profileScreen #clanContent .clan-reward-body,#profileScreen #clanContent .rewards-tabs{width:100% !important;align-self:stretch !important}
+#profileScreen #clanContent .clan-quest-card{grid-template-rows:auto auto auto !important;align-content:start !important}
+#profileScreen #clanContent .clan-quest-card>img{grid-column:1 !important;grid-row:1 !important}
+#profileScreen #clanContent .clan-quest-card>div{grid-column:2 !important;grid-row:1 !important;display:block !important}
+#profileScreen #clanContent .clan-quest-card>small{grid-column:1/-1 !important;grid-row:2 !important}
+#profileScreen #clanContent .clan-quest-card>button{grid-column:1/-1 !important;grid-row:3 !important;position:static !important;width:100% !important;height:44px !important;align-self:stretch !important}
+#profileScreen #clanContent .clan-gift-donations>strong{color:#352f23 !important}
+#profileScreen #clanContent .clan-quest-expiration{border-radius:0 !important}
+#profileScreen #clanContent .clan-shield-control legend,#profileScreen #clanContent .clan-shield-color-group legend{background:none !important;color:#352f23 !important;text-shadow:none !important;padding:0 !important;box-shadow:none !important}
+#profileScreen #clanContent .clan-shield-preview-full,#profileScreen #clanContent .clan-shield-preview-stage,#profileScreen #clanContent .clan-shield-editor-actions{background:none !important;border-radius:0 !important;box-shadow:none !important;border-color:#b8a684 !important}
+#profileScreen #clanContent .clan-shield-editor-controls,#profileScreen #clanContent .clan-shield-editor-preview{scrollbar-color:#a18a5d #e5d5ad !important;scrollbar-width:thin !important}
+#profileScreen #clanContent .clan-shield-micro-preview>span:not(.clan-heraldry-v2){display:block !important}
+#modal:has(:is(.public-clan-details,.troop-slider-panel.rally,.clan-rally-confirmation,.clan-ledger-confirmation)) .modal-card{display:grid !important;grid-template-rows:auto minmax(0,1fr) !important;width:100% !important;height:100% !important;min-height:0 !important;max-height:100% !important;padding:0 !important;margin:0 !important;border:1px solid #b8a684 !important;border-radius:0 !important;background:#f2e8cd !important;color:#352f23 !important;box-shadow:none !important;overflow:hidden !important}
+#modal:has(:is(.public-clan-details,.troop-slider-panel.rally,.clan-rally-confirmation,.clan-ledger-confirmation)) #modalTitle{padding:14px 64px 14px 20px !important;min-height:60px !important;margin:0 !important;font:26px/1.2 Georgia,serif !important;background:#e9dcb483 !important;border:0 !important;border-bottom:1px solid #b8a684 !important;color:#352f23 !important;text-shadow:none !important;letter-spacing:normal !important;text-transform:none !important}
+#modal:has(:is(.public-clan-details,.troop-slider-panel.rally,.clan-rally-confirmation,.clan-ledger-confirmation)) #closeModalBtn{top:7px !important;right:8px !important;width:44px !important;height:44px !important;padding:0 !important;border:0 !important;background:transparent !important;color:#352f23 !important;box-shadow:none !important}
+#modal .public-clan-member,#modal .public-clan-details dl>div{box-shadow:none !important;border-radius:0 !important}
+#modal .public-clan-roster,#modal .public-clan-left{scrollbar-width:thin !important;scrollbar-color:#a18a5d #e5d5ad !important}
+#profileScreen #clanContent .clan-rename-card{display:grid !important;grid-template-columns:minmax(0,.85fr) minmax(0,1.4fr) !important;grid-template-rows:auto 1fr !important;gap:12px 30px !important;min-height:0 !important}
+#profileScreen #clanContent .clan-rename-card>.profile-section-heading{grid-column:1 !important;grid-row:1 !important;display:block !important;text-align:center !important}
+#profileScreen #clanContent .clan-rename-card>.profile-section-heading::before{content:"" !important;display:block !important;width:145px !important;height:145px !important;margin:0 auto 18px !important;background:url('assets/icons/skills/guildCharters.svg') center/contain no-repeat !important}
+#profileScreen #clanContent .clan-rename-card>p{grid-column:1 !important;grid-row:2 !important;text-align:center !important}
+#profileScreen #clanContent .clan-rename-form{grid-column:2 !important;grid-row:1/3 !important;align-self:start !important}
+@media(max-height:600px),(max-width:1000px){
+#modal:has(:is(.public-clan-details,.troop-slider-panel.rally,.clan-rally-confirmation,.clan-ledger-confirmation)) #modalTitle{min-height:49px !important;font-size:20px !important;padding:12px 54px 12px 10px !important}
+#modal:has(:is(.public-clan-details,.troop-slider-panel.rally,.clan-rally-confirmation,.clan-ledger-confirmation)) #closeModalBtn{top:2px !important;right:3px !important}
+#profileScreen #clanContent .clan-rename-card{gap:8px 12px !important}
+#profileScreen #clanContent .clan-rename-card>.profile-section-heading::before{width:80px !important;height:80px !important;margin-bottom:10px !important}
+}
+#profileScreen #clanContent .clan-shield-swatch-grid button{width:100% !important}
+#modal .rally .troop-route-summary{align-self:start !important;height:auto !important;justify-content:flex-start !important}
+#modal .rally .rally-limit-note{display:block !important;font:11px/1.4 'Segoe UI',sans-serif !important}
+#modal .rally .rally-limit-note strong,#modal .rally .rally-limit-note span{display:block !important;font:inherit !important;margin:0 !important}
+#modal .rally .troop-slider-readout{display:flex !important;justify-content:space-between !important;align-items:center !important}
+#modal .rally .troop-slider-panel,#modal .rally .troop-route-city{min-width:0 !important}
+
+#profileScreen #clanContent .clan-rename-form{width:100% !important;align-items:stretch !important;text-align:left !important}
+#profileScreen #clanContent .clan-rename-form label{width:100% !important;text-align:left !important}
+#profileScreen #clanContent .clan-rename-summary{color:#352f23 !important}
+#profileScreen #clanContent .clan-rename-summary span{flex:1 !important;color:#716247 !important}
+#profileScreen #clanContent .clan-rename-summary strong{color:#4b583c !important}

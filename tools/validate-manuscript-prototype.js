@@ -114,7 +114,8 @@ const staticCacheBytes = staticCacheUrls.reduce((total, url) => {
 // Item Bag adds at most 36 KiB of scoped presentation dependencies to the shell.
 // Shop adds at most 44 KiB of scoped presentation dependencies, matching the asset validator.
 // Skills adds the same bounded 32 KiB stylesheet allowance.
-assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32) * 1024, "The service-worker installation cache exceeds 3896 KiB.");
+// Full Clan presentation uses the same bounded 100 KiB allowance as the asset validator.
+assert.ok(staticCacheBytes <= (3784 + 36 + 44 + 32 + 100) * 1024, "The service-worker installation cache exceeds 3996 KiB.");
 assert.ok(!staticCacheUrls.some(url => url.includes("audio-manager.js")), "The optional audio controller should be runtime-cached.");
 
 assert.match(gallery, /before-\$\{screen\}-\$\{key\}\.jpg/);

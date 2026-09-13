@@ -47,7 +47,7 @@ assert.match(server, /exports\.launchClanRally\s*=\s*timedCallable/, "Clan rally
 assert.match(server, /exports\.cancelClanRally\s*=\s*timedCallable/, "Clan rally cancellation callable is missing.");
 assert.match(firebase, /function subscribeClanRallies/, "Clan rally subscription is missing.");
 assert.match(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview", "warroom", "rewards", "members"\]\)/, "Clan navigation is not using the rally-only War Room tab.");
-assert.match(client, /function renderClanRallyPanel[\s\S]*?isClanSectionActive\("warroom"\)[\s\S]*?Clan campaign coordination[\s\S]*?<strong>War Room<\/strong>[\s\S]*?<strong>Rallies<\/strong>[\s\S]*?onlineClanRallies\.map\(renderClanRallyCard\)/, "War Room does not render rallies as its sole feature.");
+assert.match(client, /function renderClanRallyPanel[\s\S]*?isClanSectionActive\("warroom"\)[\s\S]*?Clan campaign coordination[\s\S]*?<strong>War Room<\/strong>[\s\S]*?rally-picker[\s\S]*?data-clan-action="select-rally"[\s\S]*?renderClanRallyCard\(selected\)/, "War Room does not render rallies as its sole feature.");
 assert.match(client, /function renderActiveOperations[\s\S]*?Rallies|data-active-operations-tab/, "Kingdom Activity rally access is missing.");
 assert.match(rules, /match \/operations\/\{operationId\}[\s\S]*?allow read, create, update, delete: if false;[\s\S]*?match \/\{legacyDocument=\*\*\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy operation documents are not explicitly denied.");
 assert.match(rules, /match \/clanOperationReminders\/\{reminderId\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy reminder documents are not server-only.");

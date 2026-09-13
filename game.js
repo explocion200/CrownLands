@@ -2288,7 +2288,11 @@ let clanShieldSaving = false;
 let clanShieldEditorTab = "field";
 let clanShieldEditorSourceVersion = CLAN_HERALDRY_CONFIG.LEGACY_VERSION;
 let clanShieldMigrationNotice = "";
+let clanShieldUnresolvedFields = [];
 let clanRenameEditorOpen = false;
+let activeClanRewardSection = "gifts";
+let selectedClanRallyId = "";
+let clanLedgerConfirmationOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
 const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "rewards", "members"]);
@@ -13035,7 +13039,7 @@ async function showPublicClanDetails(clanId = "") {
     modalTitle.textContent = `${clan.name || "Clan"} Clan`;
     modalBody.innerHTML = `
       <section class="public-clan-details">
-        <div class="public-clan-identity">
+        <div class="public-clan-left"><div class="public-clan-identity">
           ${renderClanHeraldry(clan.shield || clan.banner, { size: "large", instance: `public-clan-${id}`, label: `${clan.name || "Clan"} shield` })}
           <div><span>Public Clan Profile</span><h3>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</h3><p>${escapeHtml(clan.description || "No description yet.")}</p></div>
         </div>
@@ -13044,7 +13048,7 @@ async function showPublicClanDetails(clanId = "") {
           <div><dt>Clan Power</dt><dd>${formatNumber(clan.totalKingPower || 0)}</dd></div>
           <div><dt>Admission</dt><dd>${clan.admissionMode === "open" ? "Open" : "Approval"}</dd></div>
         </dl>
-        <div class="public-clan-roster-heading"><span>Roster</span><strong>${formatNumber(members.length)} members</strong></div>
+        </div><div class="public-clan-right"><div class="public-clan-roster-heading"><span>Roster</span><strong>${formatNumber(members.length)} members</strong></div>
         <div class="public-clan-roster">${members.length ? members.map((member, index) => `
           <article class="public-clan-member">
             <div class="public-clan-member-identity">
@@ -13058,7 +13062,7 @@ async function showPublicClanDetails(clanId = "") {
               <strong>${formatNumber(member.kingPower || 0)}</strong>
               <small>King Power</small>
             </div>
-          </article>`).join("") : `<p class="public-profile-empty">No active members found.</p>`}</div>
+          </article>`).join("") : `<p class="public-profile-empty">No active members found.</p>`}</div></div>
       </section>`;
     members.forEach((member, index) => {
       FlagRenderer.render(modalBody.querySelector(`[data-public-clan-member-flag="${index}"]`), member.flag, {
@@ -24536,6 +24540,10 @@ function randomizeClanShieldDraft() {
 async function saveClanShieldEditor() {
   const api = getOnlineApi();
   if (clanShieldSaving) return;
+  if (clanShieldUnresolvedFields.length) {
+    showToast("Choose replacements for the unmapped legacy charges, or explicitly choose None, before saving.");
+    return;
+  }
   if (state?.clanRole !== "leader" || !api?.updateClanProfile || !clanShieldDraft) {
     showToast("The Clan Heraldry editor is not ready. Reopen it and try again.");
     return;
@@ -24584,6 +24592,8 @@ function syncClanNavigationState() {
   clanNavigationClanId = currentClanId;
   activeClanMobileSection = "overview";
   activeClanBrowserSection = "discover";
+  activeClanRewardSection = "gifts";
+  selectedClanRallyId = "";
 }
 
 function isClanSectionActive(section) {
@@ -24834,14 +24844,19 @@ async function loadClanTreasuryStatus({ force = false } = {}) {
 }
 
 async function donateClanTreasuryFromPanel() {
-  if (clanTreasuryActionInFlight) return;
+  if (clanTreasuryActionInFlight || clanLedgerConfirmationOpen) return;
   const input = clanContent?.querySelector("[data-clan-treasury-donation]");
+  if (input && !input.reportValidity()) return;
   const amount = Math.floor(Number(input?.value) || 0);
   const api = getOnlineApi();
   if (!amount || !api?.donateClanTreasuryGold) {
     rejectGameAction("Enter a positive whole-Gold donation.");
     return;
   }
+  const clanId = state.clanId;
+  const uid = getCurrentOnlineUid();
+  if (!await confirmClanLedgerAction("Donate to the Treasury?", `Donate ${formatNumber(amount)} of your personal Gold to the Clan Treasury. Donations are final and cannot be withdrawn.`, "Donate Gold")) return;
+  if (state.clanId !== clanId || getCurrentOnlineUid() !== uid || clanTreasuryActionInFlight) return;
   clanTreasuryActionInFlight = true;
   renderClanView();
   try {
@@ -24892,7 +24907,7 @@ function renderClanTreasuryPanel() {
         <h3 id="clanTreasuryTitle">Clan Treasury</h3>
         <b>${clanTreasuryLoading ? "Syncing…" : `${formatNumber(balance)} Gold`}</b>
       </div>
-      <div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury overview">
+      <div class="treasury-layout"><div class="paper treasury-record"><div class="clan-gift-stats clan-treasury-ledger" aria-label="Clan Treasury overview">
         <div><span>Treasury Balance</span><strong>${formatNumber(balance)}</strong></div>
         <div><span>Daily Donation Allowance</span><strong>${formatNumber(dailyCap)}</strong></div>
         <div><span>Remaining Today</span><strong>${formatNumber(remaining)}</strong></div>
@@ -24907,7 +24922,7 @@ function renderClanTreasuryPanel() {
             ? `Locked from the first successful donation at ${formatNumber(allowanceRate)} raw Gold/hour × 12 until 00:00 UTC.`
             : `Preview based on ${formatNumber(allowanceRate)} current raw Gold/hour. Your first successful donation locks today's cap.`}</small>
         </div>`}
-      <form class="clan-form clan-treasury-donate" data-clan-treasury-form>
+      </div><div class="paper"><form class="clan-form clan-treasury-donate" data-clan-treasury-form>
         <label for="clanTreasuryDonation">Donate personal Gold</label>
         <div>
           <input id="clanTreasuryDonation" data-clan-treasury-donation type="number" min="1" max="${remaining}" step="1" value="${defaultDonation || ""}" placeholder="Gold amount" ${worldUnavailable || !remaining ? "disabled" : ""} />
@@ -24917,7 +24932,7 @@ function renderClanTreasuryPanel() {
           ? "Available only in the active current Core realm."
           : `${formatNumber(remaining)} Gold available to donate today · resets 00:00 UTC`}</small>
       </form>
-      <p>Donations are final. Leaders and Officers spend Treasury Gold from an owned Holding Tower.</p>
+      <p>Donations are final. Leaders and Officers spend Treasury Gold from an owned Holding Tower.</p></div></div>
     </section>`;
 }
 
@@ -24936,9 +24951,9 @@ function renderClanGiftPanel() {
     .sort((left, right) => right.sentAtMs - left.sentAtMs)
     .slice(0, CLAN_GIFT_RECENT_DONATION_LIMIT);
   return `
-    <section class="clan-gift-panel">
-      <div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
-      <p>Send every other clan member 30 minutes of base gold production once every five hours.</p>
+    <section class="clan-gift-panel gifts-layout">
+      <div class="paper gift-feature"><img class="gift-art" src="assets/icons/royal-shop-gold-r1.svg" alt=""><div class="gift-copy"><div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
+      <p>Send every other clan member 30 minutes of base gold production once every five hours.</p></div>
       <div class="clan-gift-actions">
         <button type="button" data-clan-action="send-gift" ${clanGiftActionInFlight || cooldownMs ? "disabled" : ""}>${clanGiftActionInFlight ? "Sending…" : "Send .5h Gold Gift"}</button>
         <small data-clan-gift-cooldown>${cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now"}</small>
@@ -24949,7 +24964,7 @@ function renderClanGiftPanel() {
         <span>Received <strong>${formatNumber(clanMemberRewards?.giftCountReceived || 0)}</strong></span>
         <span>Collected <strong>${formatClanProductionHours(clanMemberRewards?.giftGoldMinutesClaimed || 0)}h</strong></span>
       </div>
-      <div class="clan-gift-donations" aria-label="Recent clan generosity">
+      </div><div class="clan-gift-donations paper" aria-label="Recent clan generosity">
         <strong>Recent generosity</strong>
         ${recentDonations.length ? `<ol>${recentDonations.map(donation => `
           <li>
@@ -24996,7 +25011,7 @@ function renderClanQuestPanel() {
         const status = claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Ready" : `${Math.min(captureCount, reward.captures)} / ${reward.captures}`;
         return `
           <article class="clan-quest-card ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
-            <div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
+            <img class="clan-reward-art" src="${reward.rewardType === "troops" ? "assets/icons/daily-login-troops-r1.svg" : "assets/icons/royal-shop-gold-r1.svg"}" alt=""><div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
             <small>${status}</small>
             <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" data-quest-period-id="${escapeHtml(period.questPeriodId)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Collect" : "Locked"}</button>
           </article>`;
@@ -25007,52 +25022,28 @@ function renderClanQuestPanel() {
 function renderClanOverviewPanel(canLead = false) {
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
   const captureCount = Math.max(0, Math.floor(Number(getCurrentClanQuestProgress()?.captureCount) || 0));
-  const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
-  const giftCooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
-  const giftValue = pendingMinutes
-    ? `${formatClanProductionHours(pendingMinutes)}h ready`
-    : giftCooldownMs
-      ? `Ready in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}`
-      : "Send now";
-  const activeClass = isClanSectionActive("overview") ? "active" : "";
+  const giftCooldownMs = Math.max(0, normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs) + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const giftValue = pendingMinutes ? `${formatClanProductionHours(pendingMinutes)}h ready` : giftCooldownMs ? "Resting" : "Send now";
+  const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   return `
-    <section id="clanOverviewPanel" class="clan-section-panel clan-overview-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabOverview">
-      <section class="clan-hero">
-        <div class="clan-hero-shield">
-          <button type="button" class="clan-shield-link clan-hero-shield-link" data-public-clan-id="${escapeHtml(clanSnapshot.id || state.clanId)}" aria-label="View ${escapeHtml(clanSnapshot.name || "Clan")} public clan profile">
-            ${renderClanHeraldry(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
-          </button>
-        </div>
-        <div class="clan-hero-copy">
-          <span>Your clan · ${clanRoleLabel(state.clanRole)}</span>
-          <h3>${renderClanIdentityLink({ clanId: clanSnapshot.id || state.clanId, clanName: clanSnapshot.name, clanTag: clanSnapshot.tag, className: "clan-hero-name" })}</h3>
-          <p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p>
-          ${canLead ? `<div class="clan-hero-actions" aria-label="Leader clan management">
-            <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Heraldry" : "Edit Heraldry"}</button>
-            <button type="button" data-clan-action="rename-clan">${clanRenameEditorOpen ? "Renaming Clan" : "Rename Clan"}</button>
-          </div>` : ""}
-        </div>
-        <div class="clan-power">
-          <span>Clan Power</span>
-          <strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong>
-          <small>${clanSnapshot.memberCount || 0}/30 members</small>
-        </div>
+    <section id="clanOverviewPanel" class="clan-section-panel clan-overview-panel overview-body ${isClanSectionActive("overview") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabOverview">
+      <section class="identity" aria-label="Clan identity">
+        <div class="identity-hero"><div class="standard-mount"><i class="standard-rod" aria-hidden="true"></i><div class="cloth" aria-hidden="true"></div>
+          <button type="button" class="shield-button" data-public-clan-id="${escapeHtml(clanSnapshot.id || state.clanId)}" aria-label="View ${escapeHtml(clanSnapshot.name || "Clan")} public clan profile">${renderClanHeraldry(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}</button>
+        </div><div class="identity-copy"><p class="eyebrow">Your clan · ${clanRoleLabel(state.clanRole)}</p><h3 class="clan-name">${renderClanIdentityLink({ clanId: clanSnapshot.id || state.clanId, clanName: clanSnapshot.name, clanTag: clanSnapshot.tag, className: "clan-hero-name", display: "name" })}</h3><span class="clan-tag">[${escapeHtml(clanSnapshot.tag || "")}]</span></div></div>
+        <div class="description-scroll" tabindex="0" aria-label="Clan description"><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p><div class="flourish" aria-hidden="true"><span></span>◆<span></span></div></div>
+        ${canLead ? `<div class="leader-actions" aria-label="Leader clan management"><button type="button" data-clan-action="edit-shield"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt="">Edit Heraldry</button><button type="button" data-clan-action="rename-clan"><img src="assets/icons/skills/guildCharters.svg" alt="">Rename Clan</button></div>` : '<p class="member-note">Your clan’s banner in the realm</p>'}
       </section>
-      <div class="clan-overview-grid" aria-label="Clan activity summary">
-        <button type="button" data-clan-action="section" data-clan-section="warroom" aria-label="Open War Room, ${formatNumber(onlineClanRallies.length)} active rallies">
-          <span>War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate clan rallies</small>
-        </button>
-        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
-          <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
-        </button>
-        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, weekly conquest progress ${formatNumber(captureCount)} of ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}">
-          <span>Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><small>Resets Monday UTC</small>
-        </button>
-        <button type="button" data-clan-action="section" data-clan-section="members" aria-label="Open Members, ${formatNumber(clanMembers.length)} in the roster">
-          <span>Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><small>View household</small>
-        </button>
-      </div>
-      ${canLead && clanRenameEditorOpen ? renderClanRenameEditor() : ""}
+      <section class="clan-ledger" aria-label="Clan activity overview">
+        <div class="clan-totals"><div class="power-total">${renderCrownlandsIcon("flag-crown")}<div><h2>Clan Power</h2><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong></div></div><div class="member-total"><span>Members</span><strong>${clanSnapshot.memberCount || 0}<small> / 30</small></strong></div></div>
+        <header class="activity-heading"><h2>Clan affairs</h2><span>The strength of your house</span></header>
+        <div class="activity-scroll" tabindex="0" aria-label="Clan activity shortcuts"><div class="activity-grid">
+          <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/marchOrders.svg" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card conquest" data-clan-action="section" data-clan-section="rewards" data-clan-reward="conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="${CLAN_QUEST_MAX_CAPTURES}" aria-valuenow="${Math.min(captureCount, CLAN_QUEST_MAX_CAPTURES)}"><i style="width:${Math.min(100,captureCount / CLAN_QUEST_MAX_CAPTURES * 100)}%"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
+        </div></div>
+      </section>
     </section>`;
 }
 
@@ -25065,15 +25056,15 @@ function renderClanMembersPanel(canLead = false, canManageApplications = false) 
         <h3>Members</h3>
         <b>${formatNumber(clanMembers.length)} / 30</b>
       </div>
-      <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
-      ${canManageApplications ? `<div class="clan-applications">
+      <div class="members-layout ${canManageApplications ? "" : "member-only"}"><div class="paper roster-paper"><div class="section-bar"><h3>Household roster</h3><span>Role · Power · Last login</span></div><div class="clan-roster scroll-region" tabindex="0" aria-label="Clan roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div></div>
+      ${canManageApplications ? `<div class="clan-applications paper applications-paper">
         <div class="clan-subsection-heading"><h4>Applications</h4>${clanApplications.length ? `<b>${formatNumber(clanApplications.length)}</b>` : ""}</div>
-        ${clanApplicationsError
+        <div class="scroll-region" tabindex="0" aria-label="Clan applications">${clanApplicationsError
           ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
           : clanApplications.length
             ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
             : `<p class="clan-muted">No pending applications.</p>`}
-      </div>` : ""}
+      </div></div>` : ""}</div>
       ${canLead
         ? `<button type="button" class="profile-secondary-btn clan-leave danger-action" data-clan-action="disband" ${clanUiLoading ? "disabled" : ""}>Disband Clan</button>`
         : `<button type="button" class="profile-secondary-btn clan-leave" data-clan-action="leave" ${clanUiLoading ? "disabled" : ""}>Leave Clan</button>`}
@@ -25081,13 +25072,12 @@ function renderClanMembersPanel(canLead = false, canManageApplications = false) 
 }
 
 function renderClanRewardsPanel() {
-  const activeClass = isClanSectionActive("rewards") ? "active" : "";
-  return `
-    <section id="clanRewardsPanel" class="clan-section-panel clan-rewards-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRewards">
-      ${renderClanTreasuryPanel()}
-      ${renderClanGiftPanel()}
-      ${renderClanQuestPanel()}
-    </section>`;
+  const sections = [{ key: "gifts", label: "Gold Gifts", render: renderClanGiftPanel }, { key: "conquest", label: "Weekly Conquest", render: renderClanQuestPanel }, { key: "treasury", label: "Treasury", render: renderClanTreasuryPanel }];
+  const selected = sections.find(section => section.key === activeClanRewardSection) || sections[0];
+  return `<section id="clanRewardsPanel" class="clan-section-panel clan-rewards-panel ${isClanSectionActive("rewards") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabRewards">
+    <nav class="rewards-tabs" aria-label="Clan rewards">${sections.map(section => `<button type="button" data-clan-action="reward-section" data-clan-reward="${section.key}" aria-pressed="${selected.key === section.key}">${section.label}</button>`).join("")}</nav>
+    <div class="clan-reward-body scroll-region" tabindex="0" aria-label="${selected.label}">${selected.render()}</div>
+  </section>`;
 }
 
 function getRallyParticipantForCurrentPlayer(rally) {
@@ -25164,40 +25154,29 @@ function renderClanRallyCard(rally) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
   }
   return `
-    <article class="clan-rally-card ${escapeHtml(rally.status || "")}">
-      <header>
+    <article class="clan-rally-card paper ${escapeHtml(rally.status || "")}">
+      <div class="rally-body scroll-region" tabindex="0" aria-label="Rally details"><header>
         <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
         <b>${activeParticipants.length || participants.length}/${CLAN_RALLY_MAX_PARTICIPANTS}</b>
       </header>
       <div class="clan-rally-summary">
-        <span>Leader ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span>
+        <span>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span><span>Assembly ${escapeHtml(rally.assemblyCityName || rally.assemblyCityId || "City")}</span>
         <span><strong>${formatNumber(recalling ? returningTroops || assembledTroops : assembledTroops)}</strong> ${recalling ? "returning" : launched ? "marching" : "assembled"}</span>
         <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
       </div>
-      <ul>${participantRows}</ul>
+      <ul>${participantRows}</ul></div>
       ${controls ? `<footer>${controls}</footer>` : ""}
     </article>`;
 }
 
 function renderClanRallyPanel() {
-  const activeClass = isClanSectionActive("warroom") ? "active" : "";
-  return `
-    <section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
-      <div class="clan-social-heading">
-        <span><small>Clan campaign coordination</small><strong>War Room</strong></span>
-        <b>${formatNumber(onlineClanRallies.length)}</b>
-      </div>
-      <div class="clan-war-room-feature">
-        <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
-        <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies. Every contribution must arrive and show Ready before the creator or Clan Leader can launch.</p>
-        <div class="clan-rally-list">
-          ${onlineClanRallies.length
-            ? onlineClanRallies.map(renderClanRallyCard).join("")
-            : `<p class="clan-muted">No rally requests are active.</p>`}
-        </div>
-      </div>
-    </section>`;
+  const selected = onlineClanRallies.find(rally => rally.id === selectedClanRallyId) || onlineClanRallies[0];
+  return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
+    <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
+    <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies from a map objective. Every contribution must arrive and show Ready before the creator or Clan Leader can launch.</p>
+    ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/marchOrders.svg" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
+  </section>`;
 }
 
 function upsertClanRallySnapshot(rally = null) {
@@ -25340,6 +25319,8 @@ function bindClanRallyControls(root = document) {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  const rosterScrollTop = clanContent.querySelector(".clan-roster")?.scrollTop || 0;
+  const applicationScrollTop = clanContent.querySelector(".clan-applications .scroll-region")?.scrollTop || 0;
   syncClanNavigationState();
   if (state?.clanRole !== "leader") {
     clanRenameEditorOpen = false;
@@ -25406,17 +25387,22 @@ function renderClanView() {
     clanContent.innerHTML = renderClanShieldEditor(clanShieldDraft);
     return;
   }
+  if (canLead && clanRenameEditorOpen) {
+    clanContent.innerHTML = renderClanRenameEditor();
+    updateClanNameChangeCountdown();
+    return;
+  }
   clanContent.innerHTML = `
     ${renderClanSectionNavigation(canManageApplications)}
     ${renderClanOverviewPanel(canLead)}
-    <div class="clan-columns clan-social-layout">
-      ${renderClanMembersPanel(canLead, canManageApplications)}
-      <div class="clan-social-panels">
-        ${renderClanRallyPanel()}
-        ${renderClanRewardsPanel()}
-      </div>
-    </div>`;
+    ${renderClanMembersPanel(canLead, canManageApplications)}
+    ${renderClanRallyPanel()}
+    ${renderClanRewardsPanel()}`;
   applyClanRosterFlags();
+  const roster = clanContent.querySelector(".clan-roster");
+  const applications = clanContent.querySelector(".clan-applications .scroll-region");
+  if (roster) roster.scrollTop = rosterScrollTop;
+  if (applications) applications.scrollTop = applicationScrollTop;
   bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
   updateClanNameChangeCountdown();
@@ -25438,7 +25424,7 @@ function confirmClanDisband() {
       <p>All ${formatNumber(memberCount)} members will be removed, shared clan bonuses will end, and pending applications will be cleared.</p>
       <p>${formingRallyCount
         ? `${formatNumber(formingRallyCount)} forming ${formingRallyCount === 1 ? "rally" : "rallies"} will be cancelled and committed troops will return.`
-        : "Any forming rallies will be cancelled and committed troops will return."} Clan armies already marching will continue normally.</p>
+        : "Any forming rallies will be cancelled and committed troops will return."} Launched Rallies are recalled automatically, without consuming a Recall Horn.</p>
       <p>Other members can join another clan immediately. Your 24-hour clan cooldown begins when the clan is disbanded.</p>
       <footer>
         <button type="button" class="profile-secondary-btn" data-clan-disband-confirm="cancel">Keep Clan</button>
@@ -25645,16 +25631,51 @@ async function handleClanSubmit(event) {
   }
 }
 
-function handleClanClick(event) {
+function confirmClanLedgerAction(title, copy, label) {
+  if (clanLedgerConfirmationOpen) return Promise.resolve(false);
+  clanLedgerConfirmationOpen = true;
+  modalTitle.textContent = title;
+  modalBody.innerHTML = `<section class="clan-ledger-confirmation"><p>${escapeHtml(copy)}</p><footer><button type="button" data-clan-ledger-confirm="cancel">Cancel</button><button type="button" data-clan-ledger-confirm="accept">${escapeHtml(label)}</button></footer></section>`;
+  if (!modal.open) modal.showModal();
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = accepted => {
+      if (settled) return;
+      settled = true;
+      clanLedgerConfirmationOpen = false;
+      modal.removeEventListener("close", onClose);
+      resolve(accepted);
+    };
+    const onClose = () => finish(false);
+    modal.addEventListener("close", onClose);
+    modalBody.querySelector('[data-clan-ledger-confirm="cancel"]').addEventListener("click", () => { finish(false); modal.close(); });
+    modalBody.querySelector('[data-clan-ledger-confirm="accept"]').addEventListener("click", () => { finish(true); modal.close(); });
+  });
+}
+
+async function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
-  if (!button) return;
+  if (!button || button.disabled) return;
   const action = button.dataset.clanAction;
   if (action === "donate-treasury") {
     event.preventDefault();
     void donateClanTreasuryFromPanel();
     return;
   }
+  if (action === "select-rally") {
+    selectedClanRallyId = button.dataset.clanRally || "";
+    renderClanView();
+    return;
+  }
+  if (action === "reward-section") {
+    if (!["gifts", "conquest", "treasury"].includes(button.dataset.clanReward)) return;
+    activeClanRewardSection = button.dataset.clanReward;
+    renderClanView();
+    focusClanNavigationButton("data-clan-reward", activeClanRewardSection);
+    return;
+  }
   if (action === "section") {
+    if (["gifts", "conquest", "treasury"].includes(button.dataset.clanReward)) activeClanRewardSection = button.dataset.clanReward;
     setClanMobileSection(button.dataset.clanSection);
     return;
   }
@@ -25671,11 +25692,13 @@ function handleClanClick(event) {
     if (clanShieldEditorSourceVersion === CLAN_HERALDRY_CONFIG.LEGACY_VERSION) {
       const migration = CLAN_HERALDRY_CONFIG.createV2DraftFromV1(savedHeraldry, clanSnapshot?.banner);
       clanShieldDraft = { ...migration.shield };
+      clanShieldUnresolvedFields = [...migration.unresolvedFields];
       clanShieldMigrationNotice = migration.requiresLeaderSelection
         ? "One or more legacy charges have no approved v2 equivalent; choose their replacements before saving."
         : "Compatible legacy charges were copied into this local v2 draft.";
     } else {
       clanShieldDraft = normalizeClanHeraldryDraft(savedHeraldry);
+      clanShieldUnresolvedFields = [];
       clanShieldMigrationNotice = "";
     }
     clanShieldEditorTab = "field";
@@ -25710,6 +25733,7 @@ function handleClanClick(event) {
   }
   if (action === "randomize-shield") {
     randomizeClanShieldDraft();
+    clanShieldUnresolvedFields = [];
     rerenderClanShieldEditor();
     return;
   }
@@ -25730,6 +25754,7 @@ function handleClanClick(event) {
     const allowedKeys = new Set(["shape", "division", "primary", "secondary", "borderColor", "charge", "secondaryCharge", "chargeColor", "secondaryChargeColor", "chargeLayout", "trim", "finish"]);
     if (!clanShieldDraft || !allowedKeys.has(key)) return;
     clanShieldDraft[key] = button.dataset.shieldValue || clanShieldDraft[key];
+    clanShieldUnresolvedFields = clanShieldUnresolvedFields.filter(field => field !== key);
     clanShieldDraft = normalizeClanHeraldryDraft(clanShieldDraft);
     rerenderClanShieldEditor();
     return;
@@ -25752,6 +25777,20 @@ function handleClanClick(event) {
   }
   const clanId = button.dataset.clanId || state?.clanId || "";
   const targetUid = button.dataset.memberId || "";
+  if (["promote", "demote", "kick", "leave"].includes(action)) {
+    if (clanUiLoading || clanLedgerConfirmationOpen) return;
+    const uid = getCurrentOnlineUid();
+    const member = clanMembers.find(entry => String(entry.uid || entry.id || "") === targetUid);
+    const name = cleanName(member?.displayName) || "this ruler";
+    const details = {
+      promote: ["Promote clan member?", `Promote ${name} to Officer. Officers may review applications and create Rallies.`, "Promote"],
+      demote: ["Demote clan officer?", `Return ${name} to the Member role.`, "Demote"],
+      kick: ["Remove clan member?", `Remove ${name} from your clan. A launched Rally created by this ruler will be recalled automatically.`, "Remove Member"],
+      leave: ["Leave your clan?", "Leave this clan and forfeit unclaimed clan rewards. A 24-hour cooldown begins. Any launched Rally you created will be recalled automatically.", "Leave Clan"],
+    }[action];
+    if (!await confirmClanLedgerAction(...details)) return;
+    if (state?.clanId !== clanId || getCurrentOnlineUid() !== uid || clanUiLoading) return;
+  }
   runClanAction(action, {
     clanId,
     targetUid,
@@ -29861,6 +29900,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
           <span>Troops to ${rallyOrder ? "commit" : isTransfer || isReinforcement ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
+        ${rallyOrder ? `<label class="rally-troop-number">Contribution<input id="rallyTroopNumber" type="number" min="1" max="${sliderSendLimit}" step="1" value="${selectedTroopAmount}" aria-label="Rally troop contribution"></label>` : ""}
         <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="${sliderMinimum}" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${rallyOrder ? "commit" : isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
         <div class="troop-slider-limits"><span>${formatNumber(sliderMinimum)}</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
@@ -29896,6 +29936,16 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
     updateTroopSliderModal(source, target, route);
   });
+  const rallyTroopNumber = modalBody.querySelector("#rallyTroopNumber");
+  rallyTroopNumber?.addEventListener("input", event => {
+    if (event.target.value === "" || !event.target.validity.valid) return;
+    selectedTroopAmount = Math.floor(Number(event.target.value));
+    updateTroopSliderModal(source, target, route);
+  });
+  rallyTroopNumber?.addEventListener("change", event => {
+    selectedTroopAmount = clamp(Math.floor(Number(event.target.value) || 1), 1, getTroopSliderSendLimit(source, target));
+    updateTroopSliderModal(source, target, route);
+  });
   const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
   swiftMarchToggle?.addEventListener("change", () => {
     const available = Math.max(
@@ -29927,6 +29977,8 @@ function updateTroopSliderModal(source, target, route) {
   slider.min = String(sliderMinimum);
   slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
+  const rallyNumber = modalBody.querySelector("#rallyTroopNumber");
+  if (rallyNumber) { rallyNumber.value = String(selectedTroopAmount); rallyNumber.max = String(sliderSendLimit); }
   const progress = sliderSendLimit <= 1 ? 100 : ((selectedTroopAmount - 1) / (sliderSendLimit - 1)) * 100;
   slider.style.setProperty("--slider-progress", `${progress}%`);
   modalBody.querySelector("#troopSliderAmount").textContent = formatNumber(selectedTroopAmount);

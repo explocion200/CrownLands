@@ -172,7 +172,7 @@ requires(
   /id="clanOverviewPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanMembersPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRewardsPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanWarroomPanel"[\s\S]*?role="tabpanel"/,
   "The clan Overview, Members, War Room, and Rewards panels are not exposed as tab panels."
 );
-requires(client, /function renderClanOverviewPanel[\s\S]*?<span>War Room<\/span>[\s\S]*?Gold gifts[\s\S]*?Weekly conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
+requires(client, /function renderClanOverviewPanel[\s\S]*?<span[^>]*>War Room<\/span>[\s\S]*?Gold gifts[\s\S]*?Weekly conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
 requires(
   client,
   /CLAN_BROWSER_SECTIONS\s*=\s*Object\.freeze\(\["discover",\s*"create"\]\)[\s\S]*?function renderClanBrowserNavigation[\s\S]*?key:\s*"discover"[\s\S]*?key:\s*"create"[\s\S]*?data-clan-browser-section="\$\{section\.key\}"[\s\S]*?id="clanBrowserCreatePanel"[\s\S]*?id="clanBrowserDiscoverPanel"/,
@@ -287,3 +287,6 @@ requires(styles, /\.clan-gift-donations\s*\{[\s\S]*?font-size:\s*\.65rem[\s\S]*?
 requires(styles, /\.clan-quest-heading\s*\{[\s\S]*?display:\s*grid[\s\S]*?margin-bottom:\s*\.62rem[\s\S]*?\.clan-quest-progress\s*>\s*div\s*\{[\s\S]*?flex-wrap:\s*wrap/, "The Weekly Conquest reset timer can overlap the capture summary at compact widths.");
 
 console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
+
+// Keep the production Clan presentation and dispatch checks in the existing clan gate.
+require("./validate-clan-ledger-ui");
