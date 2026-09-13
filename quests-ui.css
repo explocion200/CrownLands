@@ -1,0 +1,310 @@
+/* Approved Quests ledger. Scoped to its own reward tab. */
+#modal.quest-ledger-modal{--paper:#f2e8cd;--ink:#352f23;--muted:#77694f;--line:#b8a684;--moss:#485839;--burgundy:#703e3d;width:min(1200px,calc(100vw - 24px))!important;height:min(790px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;padding:5px!important;overflow:hidden!important;border:1px solid #766346!important;border-radius:2px!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important}
+#modal.quest-ledger-modal,#modal.quest-ledger-modal *{box-sizing:border-box}
+#modal.quest-ledger-modal>.modal-card{position:static!important;display:block!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important}
+#modal.quest-ledger-modal>.modal-card::before,#modal.quest-ledger-modal>.modal-card::after,#modal.quest-ledger-modal #modalTitle{display:none!important}
+#modal.quest-ledger-modal #modalBody{height:100%!important;max-height:none!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;display:block!important}
+
+#modal.quest-ledger-modal .quests-panel{font:14px/normal "Segoe UI",Arial,sans-serif!important;color:var(--ink)!important}
+#modal.quest-ledger-modal .quests-panel :where(h1,h2,h3,p,span,strong,b,small){color:inherit!important;font-family:inherit!important;text-transform:none!important;text-shadow:none!important;font-variant:normal!important;letter-spacing:normal}
+#modal.quest-ledger-modal .quests-panel :where(h1,h2,h3){min-height:0!important;border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+#modal.quest-ledger-modal .quests-panel button{border-radius:0!important;text-transform:none!important;text-shadow:none!important;letter-spacing:normal!important}
+#modal.quest-ledger-modal .quests-panel .cd-icon{display:grid!important;place-items:center!important;width:100%!important;height:100%!important}
+#modal.quest-ledger-modal .quests-panel *{box-sizing:border-box!important}
+#modal.quest-ledger-modal .quests-panel button{font:inherit!important;color:inherit!important;cursor:pointer!important}
+#modal.quest-ledger-modal .quests-panel button:disabled{cursor:default!important}
+#modal.quest-ledger-modal .quests-panel button:focus-visible{outline:2px solid #426f76!important;outline-offset:-4px!important}
+#modal.quest-ledger-modal .quests-panel button:hover:not(:disabled){filter:brightness(1.04)!important}
+#modal.quest-ledger-modal .quests-panel [hidden]{display:none!important}
+#modal.quest-ledger-modal .quests-panel h1,#modal.quest-ledger-modal .quests-panel h2,#modal.quest-ledger-modal .quests-panel h3,#modal.quest-ledger-modal .quests-panel p{margin:0!important}
+#modal.quest-ledger-modal .quests-panel button,#modal.quest-ledger-modal .quests-panel img{-webkit-tap-highlight-color:transparent!important}
+#modal.quest-ledger-modal .quests-panel img{object-fit:contain!important}
+#modal.quest-ledger-modal .quests-panel #questReplaceDialog::backdrop{background:#23281e65!important}
+#modal.quest-ledger-modal .quests-panel{height:100%!important;display:grid!important;grid-template-rows:80px minmax(0,1fr)!important;border:1px solid var(--line)!important}
+#modal.quest-ledger-modal .quests-panel .quest-header{display:flex!important;align-items:center!important;gap:15px!important;padding:10px 18px!important;border-bottom:1px solid var(--line)!important;background:#e9dcb483!important}
+#modal.quest-ledger-modal .quests-panel .heading-copy p{margin-bottom:3px!important;font:italic 12px Georgia,serif!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .heading-copy h1{font:32px/1.1 Georgia,serif!important}
+#modal.quest-ledger-modal .quests-panel .header-seal{width:45px!important;height:49px!important;border:1px solid #ab9265!important;display:grid!important;place-items:center!important;background:#dfc88e44!important}
+#modal.quest-ledger-modal .quests-panel .header-seal svg{width:32px!important;height:35px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock{margin-left:auto!important;text-align:right!important;min-width:108px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock span,#modal.quest-ledger-modal .quests-panel .reset-clock small{display:block!important;font-size:10px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock strong{display:block!important;font:20px/1.2 Georgia,serif!important;font-variant-numeric:tabular-nums!important;letter-spacing:1px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock small{font-size:9px!important;margin-top:2px!important}
+#modal.quest-ledger-modal .quests-panel .engraving{fill:none!important;stroke:#5d513b!important;stroke-width:1!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+#modal.quest-ledger-modal .quests-panel .engraving-surface{fill:#c6b78a!important}
+#modal.quest-ledger-modal .quests-panel .engraving-shadow{fill:#998a64!important;stroke:none!important}
+#modal.quest-ledger-modal .quests-panel .engraving-ink{fill:#625a43!important;stroke-width:.5!important}
+#modal.quest-ledger-modal .quests-panel .engraving-detail{stroke:#857552!important}
+#modal.quest-ledger-modal .quests-panel .engraving-fine{stroke-width:.7!important}
+#modal.quest-ledger-modal .quests-panel .quest-body{display:grid!important;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important;min-height:0!important;background:radial-gradient(ellipse at 35% 35%,#fff8df99,transparent 70%)!important}
+#modal.quest-ledger-modal .quests-panel .ledger{min-width:0!important;min-height:0!important;display:grid!important;grid-template-rows:66px minmax(0,1fr) 150px!important;gap:12px!important;padding:0 20px 18px!important;border-right:1px solid var(--line)!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading h2{font:23px Georgia,serif!important;margin-bottom:4px!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading p{font:italic 12px Georgia,serif!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel #completionCount{font-size:11px!important;color:var(--muted)!important;white-space:nowrap!important}
+#modal.quest-ledger-modal .quests-panel #questList{display:grid!important;grid-template-rows:repeat(3,minmax(0,1fr))!important;gap:12px!important;min-height:0!important;overflow:auto!important;scrollbar-width:thin!important}
+#modal.quest-ledger-modal .quests-panel .quest-card{position:relative!important;display:grid!important;grid-template-columns:58px minmax(0,1fr) 108px!important;gap:12px!important;align-items:center!important;min-width:0!important;min-height:114px!important;width:100%!important;padding:14px 14px 14px 10px!important;text-align:left!important;border:1px solid #bcaa86!important;background:linear-gradient(115deg,#f2e6c8,#e9d9b3)!important;box-shadow:inset 0 0 0 3px #fff6dc66!important}
+#modal.quest-ledger-modal .quests-panel .quest-card[aria-pressed=true]{border-color:var(--burgundy)!important;box-shadow:inset 3px 0 var(--burgundy),inset 0 0 0 1px #bd9b77!important;background:linear-gradient(115deg,#f5e9ca,#ead8ae)!important}
+#modal.quest-ledger-modal .quests-panel .quest-card.ready{background:linear-gradient(115deg,#f0ebcf,#e3dfbe)!important}
+#modal.quest-ledger-modal .quests-panel .quest-card.collected{background:#e4e2cb!important}
+#modal.quest-ledger-modal .quests-panel .quest-card.collected .quest-emblem{opacity:.65!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem{display:grid!important;justify-items:center!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem svg{width:43px!important;height:45px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem .number{font:11px Georgia,serif!important;color:#8b7856!important;letter-spacing:1px!important}
+#modal.quest-ledger-modal .quests-panel .quest-copy{min-width:0!important}
+#modal.quest-ledger-modal .quests-panel .card-kicker{display:flex!important;align-items:center!important;gap:7px!important;font-size:9px!important;letter-spacing:.7px!important;text-transform:uppercase!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .difficulty-dot{width:4px!important;height:4px!important;background:#9c8153!important;transform:rotate(45deg)!important}
+#modal.quest-ledger-modal .quests-panel .quest-name{display:block!important;font:20px/1.2 Georgia,serif!important;margin:5px 0 4px!important}
+#modal.quest-ledger-modal .quests-panel .quest-description{display:block!important;font-size:11px!important;line-height:1.45!important;color:#665a44!important}
+#modal.quest-ledger-modal .quests-panel .progress-line{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;margin-top:11px!important;font-size:10px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .progress-line strong{font-weight:600!important;color:#51482f!important;font-variant-numeric:tabular-nums!important}
+#modal.quest-ledger-modal .quests-panel .progress-track{display:block!important;height:5px!important;margin-top:6px!important;background:#d6c9a8!important;border:1px solid #bbae8e!important}
+#modal.quest-ledger-modal .quests-panel .progress-track i{display:block!important;height:100%!important;background:#829064!important}
+#modal.quest-ledger-modal .quests-panel .quest-card.ready .card-status,#modal.quest-ledger-modal .quests-panel .quest-card.collected .card-status{color:var(--moss)!important}
+#modal.quest-ledger-modal .quests-panel .card-status{white-space:nowrap!important}
+#modal.quest-ledger-modal .quests-panel .card-reward{display:flex!important;flex-direction:column!important;align-items:center!important;text-align:center!important;border-left:1px solid #c8b999!important;padding-left:9px!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward img{width:37px!important;height:39px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward img.item{width:46px!important;height:46px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward strong{font:17px Georgia,serif!important;line-height:1.1!important;overflow-wrap:anywhere!important}
+#modal.quest-ledger-modal .quests-panel .card-reward small{font-size:9px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .chest-milestone{min-height:0!important}
+#modal.quest-ledger-modal .quests-panel .chest-button{display:grid!important;grid-template-columns:100px minmax(0,1fr)!important;align-items:center!important;gap:16px!important;height:100%!important;width:100%!important;text-align:left!important;padding:10px 16px!important;border:1px solid #ab925b!important;background:linear-gradient(120deg,#dfc997,#ecddbc)!important;box-shadow:inset 0 0 0 3px #f8e9c888!important}
+#modal.quest-ledger-modal .quests-panel .chest-button[aria-pressed=true]{outline:2px solid var(--burgundy)!important;outline-offset:-2px!important}
+#modal.quest-ledger-modal .quests-panel .chest-button>img{width:100%!important;max-height:99px!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy .eyebrow{font-size:9px!important;letter-spacing:1px!important;text-transform:uppercase!important;color:#826941!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy h3{font:22px Georgia,serif!important;margin:4px 0 5px!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy p{font-size:11px!important;line-height:1.4!important;color:#6c5b3d!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:5px!important;margin:9px 0 5px!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress i{height:5px!important;background:#cab787!important;border:1px solid #ab9869!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress i.filled{background:var(--moss)!important;border-color:#55613d!important}
+#modal.quest-ledger-modal .quests-panel .chest-count{display:block!important;font-size:10px!important;color:#655234!important}
+#modal.quest-ledger-modal .quests-panel .chest-button.awarded{background:linear-gradient(120deg,#d8daba,#e9e5c8)!important;border-color:#8c9571!important}
+#modal.quest-ledger-modal .quests-panel .detail{min-width:0!important;min-height:0!important;display:grid!important;grid-template-rows:40px minmax(0,1fr) 105px!important;background:#eadfbf70!important}
+#modal.quest-ledger-modal .quests-panel .detail-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:0 20px!important;font-size:10px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel #detailState{color:var(--moss)!important}
+#modal.quest-ledger-modal .quests-panel .detail-scroll{min-height:0!important;overflow:auto!important;padding:8px 25px 15px!important;scrollbar-width:thin!important;scrollbar-color:#a8936c transparent!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero{text-align:center!important;border-top:1px solid var(--line)!important;padding-top:22px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion{position:relative!important;width:104px!important;height:106px!important;margin:0 auto 15px!important;display:grid!important;place-items:center!important;background:radial-gradient(ellipse,#ddc79788,transparent 70%)!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion::before{content:""!important;position:absolute!important;inset:1px 9px!important;border:1px solid #c3ad7e!important;outline:1px solid #dbccab!important;outline-offset:4px!important;clip-path:polygon(10% 0,90% 0,100% 80%,50% 100%,0 80%)!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion svg{width:68px!important;height:73px!important;position:relative!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion.chest{width:230px!important;height:132px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion.chest::before{display:none!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion img{width:100%!important;height:100%!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero h2{font:30px/1.12 Georgia,serif!important;margin-bottom:10px!important}
+#modal.quest-ledger-modal .quests-panel .eyebrow{color:var(--muted)!important;font-size:10px!important;letter-spacing:.9px!important;text-transform:uppercase!important}
+#modal.quest-ledger-modal .quests-panel .ornament{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;color:#ad9565!important;font-size:7px!important;margin:19px auto!important;width:105px!important}
+#modal.quest-ledger-modal .quests-panel .ornament::before,#modal.quest-ledger-modal .quests-panel .ornament::after{content:""!important;height:1px!important;flex:1!important;background:#bca77a!important}
+#modal.quest-ledger-modal .quests-panel .objective h3,#modal.quest-ledger-modal .quests-panel .reward-section h3{font-size:10px!important;text-transform:uppercase!important;letter-spacing:1px!important;color:var(--muted)!important;font-weight:400!important;margin-bottom:7px!important}
+#modal.quest-ledger-modal .quests-panel .objective p{font:19px/1.4 Georgia,serif!important}
+#modal.quest-ledger-modal .quests-panel .objective .progress-line{font-size:11px!important;margin-top:12px!important}
+#modal.quest-ledger-modal .quests-panel .objective .progress-track{height:6px!important}
+#modal.quest-ledger-modal .quests-panel .reward-section{margin-top:22px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box{display:flex!important;align-items:center!important;gap:14px!important;padding:13px!important;border:1px solid #c5b28e!important;background:#f6edda77!important}
+#modal.quest-ledger-modal .quests-panel .reward-box img{width:49px!important;height:51px!important;flex:none!important}
+#modal.quest-ledger-modal .quests-panel .reward-box img.item{width:60px!important;height:61px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box strong{display:block!important;font:22px/1.2 Georgia,serif!important;overflow-wrap:anywhere!important}
+#modal.quest-ledger-modal .quests-panel .reward-box small{display:block!important;font-size:11px!important;line-height:1.5!important;color:var(--muted)!important;margin-top:5px!important}
+#modal.quest-ledger-modal .quests-panel .reward-note{font-size:10px!important;color:var(--muted)!important;line-height:1.5!important;margin-top:7px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation{margin-top:18px!important;padding-top:12px!important;border-top:1px solid var(--line)!important}
+#modal.quest-ledger-modal .quests-panel .recommendation .eyebrow{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation strong{display:block!important;font:18px Georgia,serif!important;margin:5px 0!important}
+#modal.quest-ledger-modal .quests-panel .recommendation p{font-size:10px!important;line-height:1.5!important;color:#6c5a40!important}
+#modal.quest-ledger-modal .quests-panel .recommendation button{min-height:44px!important;margin:7px 0!important;background:#e4d3af!important;border:1px solid #a08a62!important;padding:0 12px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation small{display:block!important;font-size:9px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .action-footer{display:flex!important;flex-direction:column!important;justify-content:flex-end!important;gap:9px!important;padding:12px 20px 18px!important;border-top:1px solid var(--line)!important;background:#e8dbb7!important}
+#modal.quest-ledger-modal .quests-panel .action-footer p{font-size:11px!important;text-align:center!important;line-height:1.4!important;min-height:15px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .primary,#modal.quest-ledger-modal .quests-panel .secondary,#modal.quest-ledger-modal .quests-panel .action-footer button{width:100%!important;min-width:44px!important;min-height:48px!important;padding:10px 12px!important;border:1px solid #465133!important;background:var(--moss)!important;color:#fbf3da!important;font:16px Georgia,serif!important;box-shadow:inset 0 0 0 2px #81906366!important}
+#modal.quest-ledger-modal .quests-panel .secondary,#modal.quest-ledger-modal .quests-panel .action-footer button.secondary{background:#e8d8b5!important;color:#514129!important;border-color:#a28a5e!important;box-shadow:inset 0 0 0 2px #f8eac866!important}
+#modal.quest-ledger-modal .quests-panel .action-footer button:disabled{background:#d6d3b9!important;color:#6a7054!important;border-color:#a5a58a!important;box-shadow:none!important}
+#modal.quest-ledger-modal .quests-panel .action-footer .error{color:#8c3e37!important}
+#modal.quest-ledger-modal .quests-panel .task-checklist{list-style:none!important;padding:0!important;margin:15px 0!important;font-size:12px!important}
+#modal.quest-ledger-modal .quests-panel .task-checklist li{display:flex!important;gap:9px!important;padding:10px 0!important;border-bottom:1px solid #d2c19c!important}
+#modal.quest-ledger-modal .quests-panel .task-checklist span{color:var(--moss)!important}
+#modal.quest-ledger-modal .quests-panel .placeholder{grid-row:1/-1!important;display:grid!important;place-content:center!important;text-align:center!important;gap:14px!important;padding:25px!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel .placeholder svg{width:60px!important;height:65px!important;margin:auto!important}
+#modal.quest-ledger-modal .quests-panel .placeholder h3{font:25px Georgia,serif!important;color:var(--ink)!important}
+#modal.quest-ledger-modal .quests-panel .placeholder p{font-size:13px!important;line-height:1.5!important}
+#modal.quest-ledger-modal .quests-panel .placeholder button{min-height:44px!important;background:#e4d3af!important;border:1px solid #a28a5e!important;padding:8px 20px!important}
+#modal.quest-ledger-modal .quests-panel .detail-empty{padding:25px!important;font:16px/1.6 Georgia,serif!important;color:var(--muted)!important}
+#modal.quest-ledger-modal .quests-panel #questReplaceDialog{max-width:none!important;max-height:calc(100dvh - 24px)!important;width:min(420px,calc(100vw - 40px))!important;padding:5px!important;border:1px solid #87704d!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:0 12px 45px #15191288!important;overflow:auto!important}
+#modal.quest-ledger-modal .quests-panel .confirmation{border:1px solid var(--line)!important;padding:24px!important;text-align:center!important}
+#modal.quest-ledger-modal .quests-panel .confirmation-icon svg{width:44px!important;height:47px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation h2{font:26px Georgia,serif!important;margin:10px 0 15px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation p{font-size:13px!important;line-height:1.5!important}
+#modal.quest-ledger-modal .quests-panel .confirmation .eyebrow{margin-top:7px!important;font-size:10px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation .replace-note{font-size:11px!important;color:var(--muted)!important;margin-top:12px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation>div{display:flex!important;gap:8px!important;margin-top:22px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation button{min-height:44px!important;font-size:14px!important}
+#modal.quest-ledger-modal .quests-panel .sr-only{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+
+@media(orientation:landscape) and (max-height:550px){#modal.quest-ledger-modal .quests-panel{grid-template-rows:56px minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .quest-header{padding:5px 10px!important;gap:9px!important}
+#modal.quest-ledger-modal .quests-panel .header-seal{width:34px!important;height:39px!important}
+#modal.quest-ledger-modal .quests-panel .header-seal svg{width:25px!important;height:28px!important}
+#modal.quest-ledger-modal .quests-panel .heading-copy h1{font-size:25px!important}
+#modal.quest-ledger-modal .quests-panel .heading-copy p{font-size:9px!important;margin-bottom:2px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock strong{font-size:17px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock span{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock small{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .quest-body{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .ledger{padding:0 10px 8px!important;gap:6px!important;grid-template-rows:30px minmax(0,1fr) 64px!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading h2{font-size:16px!important;margin:0!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading p{display:none!important}
+#modal.quest-ledger-modal .quests-panel #completionCount{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel #questList{gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .quest-card{grid-template-columns:32px minmax(0,1fr) 69px!important;gap:7px!important;min-height:55px!important;padding:5px 7px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem{gap:2px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem svg{width:28px!important;height:29px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem .number{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .card-kicker{font-size:8px!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .quest-name{font-size:15px!important;margin:2px 0!important}
+#modal.quest-ledger-modal .quests-panel .quest-description{display:none!important}
+#modal.quest-ledger-modal .quests-panel .progress-line{font-size:9px!important;margin-top:4px!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .progress-track{height:4px!important;margin-top:3px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward{padding-left:6px!important;gap:3px!important;display:grid!important;grid-template-columns:19px minmax(0,1fr)!important;grid-template-rows:auto auto!important;align-items:center!important;text-align:left!important}
+#modal.quest-ledger-modal .quests-panel .card-reward img,#modal.quest-ledger-modal .quests-panel .card-reward img.item{width:20px!important;height:24px!important;grid-row:1/3!important}
+#modal.quest-ledger-modal .quests-panel .card-reward strong{font-size:13px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward small{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .chest-button{grid-template-columns:59px minmax(0,1fr)!important;gap:9px!important;padding:4px 8px!important}
+#modal.quest-ledger-modal .quests-panel .chest-button>img{height:48px!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy .eyebrow,#modal.quest-ledger-modal .quests-panel .chest-copy p{display:none!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy h3{font-size:15px!important;margin:0 0 3px!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress{margin:4px 0 3px!important;gap:4px!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress i{height:4px!important}
+#modal.quest-ledger-modal .quests-panel .chest-count{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .detail{grid-template-rows:27px minmax(0,1fr) 67px!important}
+#modal.quest-ledger-modal .quests-panel .detail-heading{padding:0 11px!important;font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .detail-scroll{padding:0 12px 8px!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero{display:grid!important;grid-template-columns:54px minmax(0,1fr)!important;gap:2px 7px!important;text-align:left!important;align-items:center!important;padding-top:7px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion{grid-row:1/3!important;width:48px!important;height:51px!important;margin:0!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion::before{inset:2px 3px!important;outline-offset:2px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion svg{width:34px!important;height:37px!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero h2{font-size:20px!important;margin:0!important;align-self:end!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero>.eyebrow{font-size:8px!important;align-self:start!important;line-height:1.5!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion.chest{width:58px!important;height:44px!important}
+#modal.quest-ledger-modal .quests-panel .ornament{margin:8px auto!important;width:80px!important;font-size:5px!important}
+#modal.quest-ledger-modal .quests-panel .objective h3,#modal.quest-ledger-modal .quests-panel .reward-section h3{font-size:8px!important;margin-bottom:3px!important}
+#modal.quest-ledger-modal .quests-panel .objective p{font-size:14px!important;line-height:1.35!important}
+#modal.quest-ledger-modal .quests-panel .objective .progress-line{font-size:9px!important;margin-top:6px!important}
+#modal.quest-ledger-modal .quests-panel .objective .progress-track{height:4px!important}
+#modal.quest-ledger-modal .quests-panel .reward-section{margin-top:10px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box{padding:6px!important;gap:8px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box img,#modal.quest-ledger-modal .quests-panel .reward-box img.item{width:29px!important;height:31px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box strong{font-size:16px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box small{font-size:9px!important;line-height:1.3!important;margin-top:2px!important}
+#modal.quest-ledger-modal .quests-panel .reward-note{font-size:9px!important;line-height:1.4!important;margin-top:4px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation{margin-top:10px!important;padding-top:7px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation strong{font-size:15px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation p{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation small{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation button{font-size:11px!important;margin:5px 0!important}
+#modal.quest-ledger-modal .quests-panel .action-footer{padding:3px 10px 7px!important;gap:4px!important}
+#modal.quest-ledger-modal .quests-panel .action-footer p{font-size:9px!important;min-height:12px!important}
+#modal.quest-ledger-modal .quests-panel .action-footer button{min-height:44px!important;padding:7px!important;font-size:13px!important}
+#modal.quest-ledger-modal .quests-panel .task-checklist{font-size:10px!important;margin:8px 0!important}
+#modal.quest-ledger-modal .quests-panel .task-checklist li{padding:6px 0!important}
+#modal.quest-ledger-modal .quests-panel .placeholder{padding:12px!important;gap:7px!important}
+#modal.quest-ledger-modal .quests-panel .placeholder svg{width:38px!important;height:40px!important}
+#modal.quest-ledger-modal .quests-panel .placeholder h3{font-size:19px!important}
+#modal.quest-ledger-modal .quests-panel .placeholder p{font-size:11px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation{padding:14px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation-icon{display:none!important}
+#modal.quest-ledger-modal .quests-panel .confirmation h2{font-size:23px!important;margin:6px 0 9px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation>div{margin-top:13px!important}
+#modal.quest-ledger-modal .quests-panel .confirmation .replace-note{margin-top:7px!important}
+
+}
+@media(orientation:landscape) and (max-width:650px){#modal.quest-ledger-modal .quests-panel{grid-template-rows:52px minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .header-seal,#modal.quest-ledger-modal .quests-panel .heading-copy p{display:none!important}
+#modal.quest-ledger-modal .quests-panel .quest-header{gap:6px!important;padding:3px 7px!important}
+#modal.quest-ledger-modal .quests-panel .heading-copy h1{font-size:23px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock{min-width:82px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock strong{font-size:14px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock span{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .reset-clock small{font-size:7px!important}
+#modal.quest-ledger-modal .quests-panel .quest-body{grid-template-columns:minmax(0,1.23fr) minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .ledger{padding:0 7px 6px!important;gap:4px!important;grid-template-rows:23px minmax(0,1fr) 53px!important}
+#modal.quest-ledger-modal .quests-panel .ledger-heading h2{font-size:14px!important}
+#modal.quest-ledger-modal .quests-panel #completionCount{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel #questList{gap:4px!important}
+#modal.quest-ledger-modal .quests-panel .quest-card{grid-template-columns:minmax(0,1fr) 61px!important;min-height:48px!important;padding:4px 5px!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .quest-emblem{display:none!important}
+#modal.quest-ledger-modal .quests-panel .quest-name{font-size:13px!important;line-height:1.05!important;margin:2px 0!important}
+#modal.quest-ledger-modal .quests-panel .card-kicker{font-size:7px!important;letter-spacing:.35px!important;gap:4px!important}
+#modal.quest-ledger-modal .quests-panel .progress-line{font-size:8px!important;margin-top:3px!important;gap:3px!important}
+#modal.quest-ledger-modal .quests-panel .progress-track{height:3px!important;margin-top:2px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward{padding-left:4px!important;gap:2px!important;grid-template-columns:16px minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .card-reward img,#modal.quest-ledger-modal .quests-panel .card-reward img.item{width:17px!important;height:22px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward strong{font-size:11px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward small{font-size:7px!important}
+#modal.quest-ledger-modal .quests-panel .chest-button{grid-template-columns:46px minmax(0,1fr)!important;gap:7px!important;padding:4px 6px!important}
+#modal.quest-ledger-modal .quests-panel .chest-button>img{height:37px!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy h3{font-size:13px!important}
+#modal.quest-ledger-modal .quests-panel .chest-count{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress{margin:3px 0!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress i{height:3px!important}
+#modal.quest-ledger-modal .quests-panel .detail{grid-template-rows:23px minmax(0,1fr) 65px!important}
+#modal.quest-ledger-modal .quests-panel .detail-heading{font-size:8px!important;padding:0 8px!important}
+#modal.quest-ledger-modal .quests-panel .detail-scroll{padding:0 9px 5px!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero{grid-template-columns:35px minmax(0,1fr)!important;gap:2px 5px!important;padding-top:5px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion{width:32px!important;height:35px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion svg{width:25px!important;height:28px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion::before{inset:1px 1px!important;outline-offset:1px!important}
+#modal.quest-ledger-modal .quests-panel .hero-medallion.chest{width:38px!important;height:33px!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero h2{font-size:17px!important}
+#modal.quest-ledger-modal .quests-panel .quest-hero>.eyebrow{font-size:7px!important}
+#modal.quest-ledger-modal .quests-panel .ornament{margin:5px auto!important}
+#modal.quest-ledger-modal .quests-panel .objective p{font-size:12px!important}
+#modal.quest-ledger-modal .quests-panel .objective h3,#modal.quest-ledger-modal .quests-panel .reward-section h3{font-size:7px!important}
+#modal.quest-ledger-modal .quests-panel .objective .progress-line{font-size:8px!important;margin-top:4px!important}
+#modal.quest-ledger-modal .quests-panel .reward-section{margin-top:7px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box{padding:4px!important;gap:5px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box img,#modal.quest-ledger-modal .quests-panel .reward-box img.item{width:23px!important;height:26px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box strong{font-size:14px!important}
+#modal.quest-ledger-modal .quests-panel .reward-box small{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .reward-note{font-size:8px!important}
+#modal.quest-ledger-modal .quests-panel .action-footer{padding:3px 7px 6px!important;gap:3px!important}
+#modal.quest-ledger-modal .quests-panel .action-footer p{font-size:8px!important;line-height:1.25!important}
+#modal.quest-ledger-modal .quests-panel .action-footer button{font-size:12px!important}
+#modal.quest-ledger-modal .quests-panel .recommendation p{font-size:8px!important}
+
+}
+@media(prefers-reduced-motion:no-preference){#modal.quest-ledger-modal .quests-panel .quest-card,#modal.quest-ledger-modal .quests-panel .chest-button{transition:background-color .15s,border-color .15s!important}
+#modal.quest-ledger-modal .quests-panel .progress-track i{transition:width .2s!important}
+}
+@media(orientation:landscape) and (max-height:550px){#modal.quest-ledger-modal .quests-panel .quest-card{grid-template-columns:32px minmax(0,1fr) 90px!important}
+#modal.quest-ledger-modal .quests-panel .card-kicker{line-height:1.05!important}
+#modal.quest-ledger-modal .quests-panel .quest-name{line-height:1.1!important;margin:1px 0!important}
+#modal.quest-ledger-modal .quests-panel .progress-line{line-height:1.1!important;margin-top:2px!important}
+#modal.quest-ledger-modal .quests-panel .progress-track{margin-top:2px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward strong{white-space:nowrap!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large strong{grid-row:1!important;grid-column:1/-1!important;text-align:center!important;font-size:11px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large img{grid-row:2!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large small{grid-row:2!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large{grid-template-columns:19px minmax(0,1fr)!important}
+
+}
+@media(orientation:landscape) and (max-width:650px){#modal.quest-ledger-modal .quests-panel .ledger{grid-template-rows:21px minmax(0,1fr) 44px!important;padding-bottom:4px!important}
+#modal.quest-ledger-modal .quests-panel .quest-card{grid-template-columns:minmax(0,1fr) 69px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large strong{font-size:9px!important}
+#modal.quest-ledger-modal .quests-panel .card-reward.large{grid-template-columns:16px minmax(0,1fr)!important}
+#modal.quest-ledger-modal .quests-panel .chest-button>img{height:31px!important}
+#modal.quest-ledger-modal .quests-panel .chest-copy h3{margin-bottom:1px!important}
+#modal.quest-ledger-modal .quests-panel .chest-progress{margin:2px 0!important}
+
+}
+
+#modal.quest-ledger-modal .quests-panel .quest-header{padding-right:226px!important}
+#modal.quest-ledger-modal #modalHeaderNav{top:23px!important;right:60px!important;width:150px!important;height:44px!important;margin:0!important;padding:0!important}
+#modal.quest-ledger-modal .daily-reward-tabs{display:flex!important;gap:5px!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#modal.quest-ledger-modal .daily-reward-tabs button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:4px!important;border:1px solid #a58d64!important;background:#e4d3ae!important;box-shadow:inset 0 0 0 2px #f8ecd377!important;border-radius:0!important}
+#modal.quest-ledger-modal .daily-reward-tabs button.active{background:#703e3d!important;border-color:#643938!important;box-shadow:inset 0 0 0 2px #ab8d69!important}
+#modal.quest-ledger-modal .daily-reward-tabs img{width:100%!important;height:100%!important;object-fit:contain!important}
+#modal.quest-ledger-modal .modal-close{top:23px!important;right:10px!important;width:44px!important;height:44px!important;min-height:44px!important;min-width:44px!important;color:#352f23!important;background:transparent!important;border:0!important;box-shadow:none!important;font-size:25px!important}
+#modal.quest-ledger-modal .quests-panel .action-footer p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(orientation:landscape) and (max-height:550px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:11px!important}#modal.quest-ledger-modal .quests-panel .quest-header{padding-right:218px!important}}
+@media(orientation:landscape) and (max-width:650px){#modal.quest-ledger-modal #modalHeaderNav,#modal.quest-ledger-modal .modal-close{top:9px!important}}
+
+#modal.quest-ledger-modal,#modal.quest-ledger-modal>.modal-card,#modal.quest-ledger-modal #modalBody{scrollbar-gutter:auto!important}
+#modal.quest-ledger-modal .quests-panel{width:100%!important}
+@media(min-height:551px) and (max-height:820px){#modal.quest-ledger-modal .quests-panel .ledger{grid-template-rows:50px minmax(0,1fr) 108px!important;gap:10px!important;padding-bottom:12px!important}#modal.quest-ledger-modal .quests-panel .quest-card{min-height:100px!important;padding-block:10px!important}}

@@ -10792,13 +10792,11 @@ async function processDailyMissionEvent(event) {
   const achievementStateRef = seasonalAchievementStateRef(raw.uid, achievementCycle.seasonId);
   const eventRef = snapshot?.ref || dailyMissionEventRef(raw.uid, raw.eventId || raw.id);
   return runTransactionWithInfrastructureRetry(async transaction => {
-    const playerRef = db.doc(`players/${raw.uid}`);
-    const [freshEventSnap, stateSnap, achievementStateSnap, statsSnap, playerSnap] = await Promise.all([
+    const [freshEventSnap, stateSnap, achievementStateSnap, statsSnap] = await Promise.all([
       transaction.get(eventRef),
       transaction.get(stateRef),
       transaction.get(achievementStateRef),
       transaction.get(playerGlobalStatsRef(raw.uid)),
-      transaction.get(playerRef),
     ]);
     if (!freshEventSnap.exists || !stateSnap.exists || !achievementStateSnap.exists) return null;
     const freshEvent = freshEventSnap.data() || {};
@@ -10865,11 +10863,7 @@ async function processDailyMissionEvent(event) {
         );
         achievementState = allCompletedResult.state;
         newlyCompletedAchievementIds.push(...allCompletedResult.newlyCompletedIds);
-        const gear = normalizeCommonGear(playerSnap.exists ? playerSnap.data() || {} : {});
-        gear.commonGearBoxes += 1;
-        gear.updatedAtMs = nowMs;
-        transaction.set(playerRef, { gear }, { merge: true });
-        nextState.allCompletedGearBoxAwardedAtMs = nowMs;
+        // The completion chest is granted atomically with the final reward claim.
       }
       transaction.set(achievementStateRef, {
         ...achievementState,
@@ -24234,11 +24228,22 @@ exports.claimDailyMissionReward = timedCallable(
         throw new HttpsError("internal", "That Daily Mission reward is unavailable.");
       }
 
+      // Read/write the same mission-state and profile documents as every claim.
+      // Existing completion-time awards retain their marker and cannot be granted twice.
+      const commonGearBoxes = !state.allCompletedGearBoxAwardedAtMs
+        && state.missions.length === 3
+        && state.missions.every(entry => entry?.claimedAtMs || entry?.id === missionId) ? 1 : 0;
+      const gear = normalizeCommonGear(economy.profileAfter);
+      if (commonGearBoxes) {
+        gear.commonGearBoxes += commonGearBoxes;
+        gear.updatedAtMs = nowMs;
+      }
       const receipt = {
         requestId,
         cycleKey: cycle.cycleKey,
         missionId,
         family: mission.family,
+        commonGearBoxes,
         claimedAtMs: nowMs,
         rewardType,
         lockedAmount,
@@ -24261,6 +24266,7 @@ exports.claimDailyMissionReward = timedCallable(
         missions,
         completedCount: missions.filter(entry => entry?.completedAtMs || entry?.claimedAtMs).length,
         claimedCount: missions.filter(entry => entry?.claimedAtMs).length,
+        allCompletedGearBoxAwardedAtMs: state.allCompletedGearBoxAwardedAtMs || (commonGearBoxes ? nowMs : 0),
         updatedAtMs: nowMs,
       };
       transaction.set(stateRef, {
@@ -24271,11 +24277,13 @@ exports.claimDailyMissionReward = timedCallable(
         gold,
         goldFloat,
         shopItems,
+        ...(commonGearBoxes ? { gear } : {}),
       }, [], { nowMs });
       return createEconomyResponse(economy, {
         gold,
         goldFloat,
         shopItems,
+        ...(commonGearBoxes ? { gear } : {}),
         claimed: true,
         replayed: false,
         receipt,

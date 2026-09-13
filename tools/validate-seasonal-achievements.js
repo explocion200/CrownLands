@@ -146,6 +146,7 @@ assert.match(styles, /\.seasonal-achievement-details[\s\S]*grid-column:\s*1\s*\/
 assert.match(styles, /\.daily-reward-tab-alert[\s\S]*#ff5148/, "The red claimable tab alert style is missing.");
 const achievementAsset = artManifest.assets.find(entry => entry.id === "hud-achievements");
 assert(achievementAsset?.hasAlpha && achievementAsset.width === 192 && achievementAsset.height === 192, "The optimized transparent Achievement icon is missing.");
-assert(game.includes(achievementAsset.output), "The reward center does not use the optimized Achievement icon.");
+assert(game.includes("assets/icons/reward-achievements-r1.svg"), "The reward center must use the approved crowned-shield Achievement icon.");
+assert.match(read("assets/icons/reward-achievements-r1.svg"), /viewBox="0 0 64 64"/, "The medieval Achievement icon must retain its scalable square canvas.");
 
 console.log("Validated 40 monthly server-authoritative Seasonal Achievements, locked rewards, UI filters, alerts, and icon integration.");
