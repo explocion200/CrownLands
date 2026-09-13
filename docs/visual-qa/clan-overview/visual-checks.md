@@ -1,15 +1,29 @@
-# Clan Overview draft checks
+# Full Clan draft checks
 
-Reviewed locally on 2026-09-13 in the in-app Chromium browser. This is design QA with synthetic data, not a live clan integration or multiplayer validation.
+Reviewed locally on 2026-09-13 in the in-app Chromium browser. These are design and in-memory interaction checks, not multiplayer or production validation.
 
-- Desktop, 1440 × 900: centered 1200 × 700 window; identity, description, leader controls, totals, and all four shortcuts fit. Activity region has no overflow.
-- Mobile landscape, 844 × 390: compact shield beside the clan name. All four activity shortcuts fit without scrolling; activity region measured 178px high with 178px of content. Leader controls remain visible.
-- Small landscape, 568 × 320: two activity columns scroll within the panel. Keyboard scrolling reaches Weekly Conquest and Roster; a 276-character description has its own scroll area. Clan navigation and leader controls remain in place. Cooldown text fits without horizontal overflow.
-- Leader / Officer / Member: only Leader sees Edit Heraldry and Rename Clan. Officer can see pending-application status; Member sees member count and no pending-application details.
-- New clan, cooldown, full clan, and long-description examples render the intended text and state. No horizontal overflow found in the inspected cards, identity, or clan name.
-- Current and original heraldry both render through the existing production renderer. Loaded image elements have valid natural dimensions; no browser warnings or errors were reported during review.
-- Four activity cards, three other clan tabs, three other kingdom tabs, shield/name profile actions, and both leadership buttons open their corresponding action previews (14 controls checked). Back to Overview closes the preview.
-- Escape closes an action preview and restores focus to its source control. Closing and reopening Clan Overview works.
-- `node --check` passes for `preview.js` and `review.js`.
+## Layout and assets
 
-Production integration, server permissions, multiplayer behavior, and release gates remain for the implementation after design approval. No backend or gameplay code is part of this draft.
+- All ten Screen-menu destinations were traversed at 1440 × 900, 844 × 390, and 568 × 320. Inspected panel, paper, and scroll-region widths had no unintended horizontal overflow.
+- Overview retains the existing desktop composition and fits all four shortcuts at standard mobile landscape size.
+- Members and applications scroll separately; management/footer controls remain available. Public profiles preserve the full roster.
+- War Room uses a rally selector and an independently scrollable detail body, with action controls outside that scroll area. This avoids squeezing participant content into a zero-height region on short screens.
+- Rewards retain all information in scrollable panels. All ten milestones fit on desktop; compact landscape layouts scroll to the later milestones.
+- Heraldry controls and the preview/notes can scroll. Save/Cancel remain outside the scrolling controls. The legacy replacement notice remains visible in the editor heading.
+- Current and original heraldry render through production modules. Existing icons and illustrative kingdom standards loaded; no warnings or errors appeared in the browser log during traversal and interaction checks.
+
+## Local interactions checked
+
+- Gifts: sending disables Send for the five-hour cooldown; collecting 3.5h changes the collection button to disabled 0h.
+- Conquest: collecting the 850 milestone marks it Collected and disables another claim. Joined-after-unlock example disables the eight previously unlocked milestones; the remaining two stay Locked.
+- Treasury: a confirmed 100,000 Gold donation increased balance to 6,500,000, total donated to 12,900,000, and today's donated amount to 340,000; remaining allowance became 620,000 and personal Gold became 1,980,000 after the tested gift/reward collection sequence. Unavailable Treasury disables donation.
+- Roster: promotion changed the selected member's role; accepting/rejecting applications updated roster and application counts. Full 30-member example disables Accept.
+- Permissions: Officer has application controls and Leave, without roster role-management selectors. Member has neither application nor role-management controls. The editor rejects a Member review entry.
+- Rallies: launch is disabled while a contribution is inbound; the Ready example launches after confirmation, then recalls to Returning using the creator's Horn action. A Member joined another creator's rally with 40,000 troops; the readout showed 20,000 remaining and the new contribution was Inbound with Withdraw available.
+- Heraldry: cancelling a legacy editor retained the original `.clan-shield` renderer. Save remained disabled until an unmapped original charge was replaced. Choosing Wolf Head enabled saving and produced a v2 shield. Oxblood and Battle-worn selections also saved successfully.
+- Rename: submitting a new valid name updated Overview. Low Gold and seven-day cooldown examples disable the submit button.
+- Discovery: Apply enabled Cancel application and blocked another application; cancellation restored Join. Joining an open clan showed Member permissions. Create accepted valid name/tag/description and opened a one-member Leader overview.
+- Departure: local Disband confirmation moved the example into discovery with a 24-hour clan cooldown. Reset restores the original fixture.
+- Errors: application retry, clan connection error/retry, and Hero Level 7 locked states were displayed.
+
+JavaScript syntax checks and `git diff --check` pass. Production scripts and backend are untouched; release/emulator gates have not been run for this local draft.

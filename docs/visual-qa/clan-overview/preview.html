@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Clan Overview preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="clan-heraldry-v2.css"><link rel="stylesheet" href="docs/visual-qa/clan-overview/draft.css">
-<script src="functions/clanHeraldryConfig.js" defer></script><script src="functions/clanHeraldryAssets.js" defer></script><script src="functions/clanHeraldryLegacyV1.js" defer></script><script src="functions/clanHeraldryRenderer.js" defer></script><script src="docs/visual-qa/clan-overview/preview.js" defer></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Full Clan UI preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="clan-heraldry-v2.css"><link rel="stylesheet" href="docs/visual-qa/clan-overview/draft.css"><link rel="stylesheet" href="docs/visual-qa/clan-overview/suite.css">
+<script src="functions/clanHeraldryConfig.js" defer></script><script src="functions/clanHeraldryAssets.js" defer></script><script src="functions/clanHeraldryLegacyV1.js" defer></script><script src="functions/clanHeraldryRenderer.js" defer></script><script src="docs/visual-qa/clan-overview/suite-data.js" defer></script><script src="docs/visual-qa/clan-overview/suite-views.js" defer></script><script src="docs/visual-qa/clan-overview/suite-controller.js" defer></script></head>
 <body><div class="backdrop" aria-hidden="true"></div>
 <dialog id="clanDialog" aria-labelledby="clanTitle"><div class="clan-shell">
-  <header class="window-header"><div class="heading"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt=""><div><p>YOUR KINGDOM</p><h1 id="clanTitle">Clan</h1></div></div><nav class="kingdom-tabs" aria-label="Kingdom sections"><button data-preview="Profile">Profile</button><button aria-current="page" data-overview>Clan</button><button data-preview="Skills">Skills</button><button data-preview="Settings">Settings</button></nav><button id="close" class="icon-button" aria-label="Close Clan Overview">×</button></header>
-  <nav class="clan-tabs" aria-label="Clan sections"><button aria-current="page" data-overview>Overview</button><button data-preview="War Room">War Room <span id="rallyBadge" class="badge"></span></button><button data-preview="Rewards">Rewards <span id="rewardBadge" class="badge alert"></span></button><button data-preview="Members">Members <span id="memberBadge" class="badge"></span></button></nav>
-  <main class="overview-body">
+  <header class="window-header"><div class="heading"><img src="assets/icons/skills/shieldwallDiscipline.svg" alt=""><div><p>YOUR KINGDOM</p><h1 id="clanTitle">Clan</h1></div></div><nav class="kingdom-tabs" aria-label="Kingdom sections"><button data-preview="Profile">Profile</button><button aria-current="page" data-overview>Clan</button><button data-preview="Skills">Skills</button><button data-preview="Settings">Settings</button></nav><button id="close" class="icon-button" aria-label="Close Clan">×</button></header>
+  <nav id="clanSections" class="clan-tabs" aria-label="Clan sections"><button aria-current="page" data-overview>Overview</button><button data-preview="War Room">War Room <span id="rallyBadge" class="badge"></span></button><button data-preview="Rewards">Rewards <span id="rewardBadge" class="badge alert"></span></button><button data-preview="Members">Members <span id="memberBadge" class="badge"></span></button></nav>
+  <div id="workspace"><main id="overviewBody" class="overview-body">
     <section class="identity" aria-label="Clan identity">
       <div class="identity-hero"><div class="standard-mount"><i class="standard-rod" aria-hidden="true"></i><div class="cloth" aria-hidden="true"></div><button id="clanShield" class="shield-button" data-preview="Clan profile" aria-label="View clan public profile"></button></div><div class="identity-copy"><p id="role" class="eyebrow"></p><button id="clanName" class="clan-name" data-preview="Clan profile"></button><span id="clanTag" class="clan-tag"></span></div></div>
       <div class="description-scroll" tabindex="0" aria-label="Clan description"><p id="description"></p><div class="flourish" aria-hidden="true"><span></span>◆<span></span></div></div>
@@ -24,8 +24,8 @@
         </div>
       </div>
     </section>
-  </main>
+  </main><section id="suitePanel" hidden aria-label="Clan screen"></section></div>
 </div></dialog>
-<dialog id="detailDialog" aria-labelledby="detailTitle"><header><div><p class="eyebrow">ACTION PREVIEW</p><h2 id="detailTitle"></h2></div><button id="closeDetail" class="icon-button" aria-label="Close action preview">×</button></header><div id="detailBody"></div><button id="backToOverview" class="return-button">Back to Overview</button></dialog>
-<div id="dismissed" hidden><p>Clan Overview preview closed.</p><button id="reopen" class="return-button">Open Clan Overview</button></div><p id="liveStatus" class="sr-only" role="status"></p>
+<dialog id="detailDialog" aria-labelledby="detailTitle"><header><div><p class="eyebrow">CLAN LEDGER</p><h2 id="detailTitle"></h2></div><button id="closeDetail" class="icon-button" aria-label="Close clan dialog">×</button></header><div id="detailBody"></div><footer id="detailActions"></footer></dialog>
+<div id="dismissed" hidden><p>Clan draft closed.</p><button id="reopen" class="return-button">Open Clan</button></div><p id="liveStatus" class="sr-only" role="status"></p>
 </body></html>

@@ -1,32 +1,42 @@
-# Clan Overview design draft
+# Full Clan UI design draft
 
-Status: local draft for user approval. Production UI and backend are unchanged.
+Status: local draft for user approval. The user expanded the original Overview-only request to the full clan draft. Production UI, gameplay, backend, and the Master Specification are unchanged.
 
-Open `index.html` through the repository preview server. Review controls provide desktop (1440 × 900), mobile landscape (844 × 390), and small landscape (568 × 320) screens. Portrait is outside this review.
+Open `index.html` on the repository preview server. The wrapper offers Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait is outside this design. Use the in-game tabs or the wrapper's Screen menu. Reset example restores synthetic state.
 
-## Scope and visual direction
+## Screens and source mapping
 
-Clan Overview only: the clan shield and identity sit beside a parchment activity ledger. Existing game artwork supplies the muted olive, burgundy, brass, and ink details. A decorative cloth behind the shield is presentation, not a new saved clan banner or replacement for player heraldry.
+| Draft screen | Existing source in game.js | Review coverage |
+| --- | --- | --- |
+| Overview | renderClanOverviewPanel, renderClanSectionNavigation | Shield, name/tag, role, description, power, membership, four shortcuts, permission-aware badges |
+| Members | renderClanMembersPanel, renderClanRosterMember | Role/power/last activity, member selection, profile links, promotion/demotion/removal, applications, Leave/Disband |
+| War Room | renderClanRallyPanel, renderClanRallyCard | Rally selector, objective/region/creator/assembly, contribution list, forming/launched/returning states, join/withdraw/launch/cancel/recall |
+| Gold Gifts | renderClanGiftPanel | Send cooldown, collection, sent/received/collected totals, recent generosity |
+| Weekly Conquest | renderClanQuestPanel, CLAN_QUEST_REWARDS | All ten existing milestones, progress, collected/ready/locked/joined-too-late states, expiry information |
+| Treasury | renderClanTreasuryPanel | Balance, daily cap/remaining, donated/spent totals, locked allowance, donation form and confirmation, unavailable state |
+| Discover/Create | renderClanView, renderClanDiscoveryAction | Name search, public links, open/approval/full states, application/cancellation, join, creation fields and cost, cooldown and Level 10 gate |
+| Public Clan Profile | showPublicClanDetails | Existing shield, identity, description, admission, power, membership, complete public roster |
+| Heraldry | renderClanShieldEditor and production heraldry modules | Field, Colors, Charges, Details, all catalog options, full/map preview, Inspire Me, Cancel/Save, explicit legacy conversion |
+| Rename | renderClanRenameEditor | Name validation, cost, balance, seven-day cooldown, insufficient-Gold state |
+| Rally order | beginCreateClanRally, beginJoinClanRallyContribution, showTroopSliderModal | Source/target, troop slider/input, remaining troops, contribution requirements, join/create outcomes |
 
-All displayed numbers and identities are synthetic examples. Role, empty activity, gift cooldown, long description, full membership, and original heraldry examples are available. Destination dialogs explain existing actions; they do not implement or redesign the linked screens.
+The Rewards sub-tabs are a presentation proposal for the existing Gold Gifts, Weekly Conquest, and Treasury sections. They do not add a new reward or currency. Rally creation remains a map entry point; the review-only Screen selector exposes its order draft without inventing a new War Room target selector.
 
-## Existing implementation preserved in the draft
+Shared Player Profile, Profile/Skills/Settings navigation, Clan Chat, map target/source selection, Holding Tower management, and battle reports retain their existing separate UIs. Their links are represented where present; this draft does not redesign those shared screens.
 
-Source: `game.js`, `renderClanSectionNavigation`, `renderClanOverviewPanel`, `renderClanContent`, and `renderClanRenameEditor`.
+## Art and interaction
 
-| Existing content or action | Draft placement |
-| --- | --- |
-| Clan shield, name, tag, role, description | Left identity panel; shield and name retain public-profile actions |
-| Clan Power and member total / 30 | Top of activity ledger |
-| Active rallies, Gold gift status, Weekly Conquest / 2,000, roster count | Four activity shortcuts |
-| War Room, Rewards, Members badges | Clan navigation; applications shown only to leaders/officers |
-| Edit Heraldry and Rename Clan | Bottom of identity panel, leader only |
-| Profile, Clan, Skills, Settings | Kingdom navigation |
+Parchment, olive cloth, muted brass, and burgundy continue the established UI. Existing game icons and heraldry art are reused. The original Overview composition remains the entry point. Roster flags are synthetic illustrative kingdom standards, not a replacement for the production player-flag renderer during integration.
 
-The draft uses the production heraldry config, assets, renderer, and frozen legacy renderer. It neither converts nor saves shields. `docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md` remains authoritative; no gameplay or design rules are changed by this draft.
+Every name, count, timestamp, route, resource balance, and action result is synthetic. Actions change memory only and Reset restores the fixture. No Firebase, gameplay script, account access, storage write, or production mutation is loaded. Creation/name availability and troop/resource settlement are examples, not authoritative validation.
 
-Members, applications, War Room, Rewards, the heraldry/name editors, public clan profile, and no-clan discovery/create flow remain separate scopes. Leave/Disband belong to the existing Members screen and are not added here.
+Role behavior follows the current UI: Leader manages identity and roster roles; Leader/Officer review applications; members donate and receive rewards; Rally control depends on role, creator, contribution, and phase. All ten conquest reward values match the existing table. No balance or progression change is proposed.
 
-## Approval boundary
+## Compatibility and release boundaries
 
-No Firebase, gameplay scripts, storage writes, purchases, or persistent mutations are used. Only local display state changes. After design approval, integrate against live clan data and permissions, then run the required release checks before any authorized merge or deployment.
+- Existing production heraldry config/assets/renderer and frozen v1 renderer are reused. Viewing/cancelling an original shield preserves v1. Entering the editor makes a separate v2 draft through `createV2DraftFromV1`; unmapped charges require a deliberate choice before Save.
+- The Master Specification is authoritative for Rally departure behavior. The old disband dialog says all marching clan armies continue normally, which conflicts with its confirmed automatic recall when a Rally creator departs. Draft confirmation copy reflects the confirmed creator-departure rule. No backend behavior is changed.
+- Treasury is included because it is in the current implementation. Its Master Specification status remains pending authorized deployment; this draft does not establish live availability. Verify the active Core release contract before production integration.
+- Production integration, authoritative permissions, name uniqueness, network failure recovery, multiplayer validation, and release gates remain after design approval. No PR, merge, or deployment is part of this draft update.
+
+See `visual-checks.md` for completed local review checks.

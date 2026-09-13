@@ -10,18 +10,23 @@ function resize() {
   document.getElementById("dimensions").textContent = `${width} × ${height} screen${scale < 1 ? ` · ${Math.round(scale * 100)}% preview` : ""}`;
   document.querySelectorAll("[data-viewport]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.viewport === viewport)));
 }
-function reset() {
+function reset(initial = false) {
   document.getElementById("reviewStatus").textContent = "Example reset. Changes stay in this draft.";
   if (frame.contentWindow?.location.pathname !== new URL("preview.html", location.href).pathname) { frame.src = "preview.html"; return; }
-  frame.contentWindow?.postMessage({ type: "clan-review", sample: document.getElementById("sample").value }, location.origin);
+  frame.contentWindow?.postMessage({ type: "clan-review", sample: document.getElementById("sample").value, ...(initial && query.get("section") ? {screen: document.getElementById("screen").value} : {}) }, location.origin);
 }
 document.querySelectorAll("[data-viewport]").forEach(button => button.addEventListener("click", () => {
-  viewport = button.dataset.viewport; resize(); history.replaceState(null, "", `?viewport=${viewport}`);
+  viewport = button.dataset.viewport; resize(); updateUrl();
 }));
-document.getElementById("sample").addEventListener("change", reset);
-document.getElementById("reset").addEventListener("click", reset);
-frame.addEventListener("load", reset);
+document.getElementById("sample").addEventListener("change", () => reset());
+document.getElementById("reset").addEventListener("click", () => reset());
+frame.addEventListener("load", () => reset(true));
 window.addEventListener("message", event => {
-  if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === "clan-review-status") document.getElementById("reviewStatus").textContent = event.data.message;
+  if (event.origin === location.origin && event.source === frame.contentWindow && event.data?.type === "clan-review-status") { document.getElementById("reviewStatus").textContent = event.data.message; if(event.data.screen) document.getElementById("screen").value=event.data.screen; if(event.data.sample) document.getElementById("sample").value=event.data.sample; updateUrl(); }
 });
 window.addEventListener("resize", resize); resize();
+
+function updateUrl() { const p=new URLSearchParams({viewport,section:document.getElementById("screen").value}); history.replaceState(null,"","?"+p); }
+const screenSelect=document.getElementById("screen");
+if([...screenSelect.options].some(o=>o.value===query.get("section")))screenSelect.value=query.get("section");
+screenSelect.addEventListener("change",()=>frame.contentWindow?.postMessage({type:"clan-review-screen",screen:screenSelect.value},location.origin));
