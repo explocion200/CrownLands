@@ -33390,6 +33390,8 @@ function renderDailyLoginRewardModal(options = {}) {
   modal.classList.toggle("daily-cycle-modal", activeDailyRewardModalTab === "rewards");
   modal.classList.toggle("quest-ledger-modal", activeDailyRewardModalTab === "quests");
   const renderingAchievements = activeDailyRewardModalTab === "achievements";
+  modal.classList.toggle("achievements-ledger-modal", renderingAchievements);
+  if (!renderingAchievements) window.CrownlandsAchievementsUI?.destroy(modalBody);
   if (!renderingAchievements) clearSeasonalAchievementRenderTimer();
   if (
     renderingAchievements
@@ -33419,6 +33421,24 @@ function renderDailyLoginRewardModal(options = {}) {
     return;
   }
   if (activeDailyRewardModalTab === "achievements") {
+    if (window.CrownlandsAchievementsUI) {
+      window.CrownlandsAchievementsUI.mount(modalBody, {
+        status: seasonalAchievementState, loading: seasonalAchievementStatusLoading, error: seasonalAchievementError,
+        available: supportsSeasonalAchievements(), busy: seasonalAchievementActionsInFlight.size > 0,
+        scope: getOnlineSessionRequestScope(), now: getSeasonalAchievementNowMs,
+        categories: Object.fromEntries(SEASONAL_ACHIEVEMENT_FILTERS.filter(([id]) => id !== "all")),
+        note: getSeasonalAchievementRequirementNote,
+        items: Object.fromEntries((seasonalAchievementState?.achievements || []).filter(entry => entry.rewardSpec.type === "item").map(entry => {
+          const item = getShopItemById(entry.rewardSpec.itemId);
+          return [entry.rewardSpec.itemId, { label: item?.label || "Royal Item", art: item?.icon || "assets/icons/reward-achievements-r1.svg" }];
+        })),
+        claim: claimSeasonalAchievement,
+        retry: () => refreshSeasonalAchievementStatus({ force: true, silent: false }),
+      });
+      bindDailyRewardModalTabs();
+      restoreSeasonalAchievementScrollAnchor(achievementScroll);
+      return;
+    }
     modalBody.innerHTML = `<section id="dailyRewardPanelAchievements" class="seasonal-achievement-tab-panel" role="tabpanel" aria-labelledby="dailyRewardTabAchievements">${renderSeasonalAchievementTab()}</section>`;
     bindDailyRewardModalTabs();
     bindSeasonalAchievementControls();
@@ -39633,7 +39653,8 @@ modal.addEventListener("close", () => {
   modal.classList.remove("relinquish-city-modal");
   modal.classList.remove("public-player-profile-modal");
   modal.classList.remove("rewarded-ad-confirmation-modal");
-  modal.classList.remove("daily-login-reward-modal", "daily-cycle-modal", "quest-ledger-modal");
+  window.CrownlandsAchievementsUI?.destroy(modalBody);
+  modal.classList.remove("daily-login-reward-modal", "daily-cycle-modal", "quest-ledger-modal", "achievements-ledger-modal");
   modal.classList.remove("daily-mission-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
   const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());

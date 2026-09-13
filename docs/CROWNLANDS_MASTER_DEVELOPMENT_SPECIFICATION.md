@@ -796,6 +796,8 @@ The verified `origin/main` reward values are 0.5 production hour for Easy, 1 hou
 
 The verified `origin/main` production-reward hours are 0.5 for Easy, 1 for Medium, 2 for Hard, 3 for Very Hard, and 6 for Prestige. Achievement production rewards are locked when the completion event is processed using the stored global-stat base rates, not when the monthly achievement set is generated. The achievement cycle identifier combines the reset generation and UTC year-month, and unclaimed rewards expire at monthly rollover.
 
+**Achievements presentation approved 13 September 2026.** The parchment ledger retains all 40 achievements in eight categories with matching medieval badges, category/status filters, and claimable rewards first. Selecting a compact row shows its full requirement and reward in a separate pane with a fixed Claim action. Desktop and mobile landscape use the same window dimensions as Daily Login and Quests. Existing reward art, values, completion-time reward locking, manual claims, and seasonal expiry remain unchanged. See [Achievements implementation notes](./visual-qa/achievements-ledger/README.md). Deployment is verified separately.
+
 ### Needs verification
 
 - Complete mission pool, scaling ranges, reroll exclusions, all 40 Achievement definitions, category behavior, and production runtime parity for the verified reward and reset logic.

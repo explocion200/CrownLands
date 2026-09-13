@@ -23,6 +23,7 @@ const rootFiles = [
   "item-bag-ui.js", "item-bag-ui.css",
   "shop-ui.js", "shop-ui.css",
   "quests-ui.js", "quests-ui.css",
+  "achievements-ui.js", "achievements-ui.css",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "daily-login-ui.js", "daily-login-ui.css", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",

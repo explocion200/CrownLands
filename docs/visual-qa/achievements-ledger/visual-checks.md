@@ -1,0 +1,37 @@
+# Achievements draft review
+
+Reviewed locally in the Codex browser against synthetic data. No production player data or rewards were changed.
+
+## Layout
+
+| Game viewport | Result |
+| --- | --- |
+| Desktop 1440×900 | Parchment layout and eight category badges inspected. Standard Conqueror III details and reward fit in the 448px detail area without scrolling. Claim is 44px high and inside the window. |
+| Landscape 844×390 | Category selector, compact rows, current item art, and separate detail scrolling inspected. Claim stays visible at 44px high. No horizontal page overflow. |
+| Small landscape 568×320 | Header, filters, large reward amounts, and fixed action inspected. Claim stays visible at 44px high. Details require contained scrolling; no horizontal page overflow. |
+
+No broken image references were reported on the rendered draft. No browser errors or warnings were captured during these interactions.
+
+## Data and interactions
+
+- All 40 IDs, titles, categories, difficulties, descriptions, metrics, targets, and reward specifications match current definitions.
+- Category controls expose Conquest 8, Combat 6, Camps 6, Growth 6, Strongholds 5, Crown 4, Clan 2, and Daily 3 entries.
+- Requirement notes exist for every metric. All three item reward assets exist at their current paths.
+- Fresh entries have zero progress. Mixed completed rewards match difficulty hours multiplied by the sample raw production at completion.
+- Eight generated SVG category badges are present.
+- Mixed state begins with 19 completed, 16 collected, and 3 ready. Claim failure preserves 3 ready and 16 collected; retry produces 2 ready and 17 collected. Claim is disabled during the request and after successful collection.
+- Empty Ready filter offers Show all achievements. It restores the full list.
+- Keyboard End reaches Dedicated Lord, the final achievement, and scrolls it fully into view.
+- Master of Strongholds shows all four required types and the current Swift March Order reward. Long Reign shows its continuous-hold requirement and the reset-on-loss note.
+- Loading, reconnecting, expired, fresh, all-collected, and large-value examples render. Reconnection retry restores the 40-entry list.
+- An ended season says Rewards expired. Load new season produces 0/40 complete and 0 ready.
+- Close and Reopen preserve the local preview and restore the dialog.
+- JavaScript syntax and whitespace checks pass.
+
+## Production integration review
+
+The approved component was also reviewed inside the actual game using the isolated benchmark adapter at 1440×900, 844×390, and 568×320. The shared Quests and Daily Login tabs opened and returned to Achievements. Full Long Reign requirements remained available, and the fixed action remained visible. A failed synthetic claim preserved 3 ready/16 collected; retry used the existing handler with season ID, achievement ID, and request ID, then showed 2 ready/17 collected and a disabled Collected action. Source validation of all 40 achievement definitions and existing server reward rules passed.
+
+Integration corrected inherited legacy list framing, filter typography, and detail alignment while preserving the approved layout. No production-account claim or physical-device test was performed. Required PR checks and published build/artifact verification are separate release steps recorded in release evidence.
+
+An earned Swift March Order was collected through the existing handler, and the expired-season example disabled all claim actions. Closing the actual game modal and reopening Achievements directly from Player Profile restored all 40 rows; the component recreates a disposed view even when its previous markup remains in the modal.
