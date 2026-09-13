@@ -14,6 +14,7 @@ const required = [
   "common-gear-box-ui.js", "common-gear-box-ui.css",
   "item-bag-ui.js", "item-bag-ui.css",
   "shop-ui.js", "shop-ui.css",
+  "achievements-ui.js", "achievements-ui.css",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
@@ -82,7 +83,7 @@ if (expectedInnerCastleArt.length !== 7 || JSON.stringify(shippedInnerCastleArt)
 const textInventory = files.filter(filePath => /\.(?:html|css|js|json)$/i.test(filePath))
   .map(filePath => fs.readFileSync(filePath, "utf8"))
   .join("\n");
-for (const fixtureMarker of ["core_fixture_", "layer_1_fixture_", "region_26_fixture", "fixture_clan"]) {
+for (const fixtureMarker of ["core_fixture_", "layer_1_fixture_", "region_26_fixture", "fixture_clan", "AchievementReviewSamples"]) {
   if (textInventory.includes(fixtureMarker)) throw new Error(`Development fixture ${fixtureMarker} leaked into production.`);
 }
 if (files.some(filePath => path.extname(filePath).toLowerCase() === ".wav")) {
@@ -103,7 +104,12 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 // Royal Stables adds officer/horse art (90 KiB), renderer (16 KiB), and stylesheet (42 KiB).
 // Animated Gear Box adds at most 48 KiB of scoped UI code and styles; no raster art.
 // Shop adds at most 44 KiB of presentation plus 180 KiB over the retired item art.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224) * 1024;
+// Achievements adds at most 60 KiB of renderer, inline badges, and scoped styles,
+// plus 4 KiB for game mounting, HTML entries, and inventory metadata. No raster art.
+const achievementUiBytes = ["achievements-ui.js", "achievements-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (achievementUiBytes > 60 * 1024) throw new Error("Achievements presentation exceeds its 60 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
