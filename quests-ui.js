@@ -67,7 +67,7 @@
     if (isClaimed(m)) { label = 'Reward collected'; note = 'New quests arrive at 00:00 UTC.'; disabled = true; }
     else if (isComplete(m)) { label = state.busy === m.id ? 'Collecting…' : 'Claim reward'; note = 'Ready for collection.'; action = 'claim'; }
     else { label = state.rerollsRemaining ? 'Replace quest' : 'No replacements left'; note = `${state.rerollsRemaining} / 1 daily replacement available`; action = 'replace'; secondary = true; disabled ||= !state.rerollsRemaining; }
-    const error = options.error || ''; 
+    const error = options.error || '';
     $('actionFooter').innerHTML = `<p class="${error ? 'error' : ''}" title="${escape(error || note)}" ${error ? 'role="alert"' : ''}>${escape(error || note)}</p><button ${action ? `data-${action}` : ''} class="${secondary ? 'secondary' : 'primary'}" ${disabled ? 'disabled' : ''}>${label}</button>`;
   }
 

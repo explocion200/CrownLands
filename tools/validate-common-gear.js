@@ -148,7 +148,7 @@ assert.match(sharedMaterialRule, /candidate\.instanceId !== target\.instanceId[\
 assert.doesNotMatch(index, /candidate\.level === 1/, "The server must not accept Level 1 materials for every upgrade level.");
 assert.match(index, /relicRewardItem[\s\S]{0,180}crypto\.randomInt\(1, 101\)/, "Relic Camp bonus must roll only with a rewarded item payout.");
 assert.match(index, /const commonGearBoxes = reward\.commonGearBoxes/, "Weekly daily-login milestones must award a Common Gear Box.");
-assert.match(index, /currentState\.completedCount[\s\S]{0,1500}gear\.commonGearBoxes \+= 1/, "Completing all three daily missions must award a box once.");
+assert.match(index, /const commonGearBoxes = !state\.allCompletedGearBoxAwardedAtMs[\s\S]{0,350}state\.missions\.every\([\s\S]{0,350}gear\.commonGearBoxes \+= commonGearBoxes/, "The final daily mission claim must award a box only when the cycle has no earlier award.");
 assert.match(index, /getCasualtyRecoveryPercent[\s\S]{0,500}CASUALTY_RECOVERY_CAP_PERCENT/, "Field Medic plus gear recovery must be capped.");
 assert.match(
   index,
