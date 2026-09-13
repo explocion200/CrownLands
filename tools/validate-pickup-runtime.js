@@ -54,7 +54,7 @@ function fixture() {
     onlineLastError: "",
   };
   vm.createContext(context);
-  for (const name of ["collectHarvestBonus", "updateServerHarvestBonuses"]) vm.runInContext(extract(name), context);
+  for (const name of ["getHarvestRequestGuard", "renderHarvestFeedback", "collectHarvestBonus", "updateServerHarvestBonuses"]) vm.runInContext(extract(name), context);
   return { context, stats, bonus, resolveClaim, rejectClaim };
 }
 

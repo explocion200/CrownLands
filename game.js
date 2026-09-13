@@ -49,8 +49,6 @@ const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
 const REGION_DEFINITION_CACHE_LIMIT = Math.max(1, Math.floor(Number(REGION_CATALOG.definitionCache?.maxRegions) || 4));
 const STARTER_REGION_TYPE = "starter";
-// Reuse derived map data during terrain/render reads without retaining evicted
-// city definitions. Descriptor updates invalidate this bounded cache as well.
 const editorMapCache = new Map();
 const EDITOR_MAP_CACHE_LIMIT = 64;
 const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLoader({
@@ -21149,8 +21147,7 @@ function createHarvestBonusPoint(regionId) {
       const x = center.x + Math.cos(angle) * radius;
       const y = center.y + Math.sin(angle) * radius;
       if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
-      // Candidates are ordered by increasing radius, so this is already the
-      // closest valid point in this zone. Farther terrain checks cannot improve it.
+      // Increasing radii make this the closest valid candidate in the zone.
       return { x, y };
     }
   }
@@ -21205,13 +21202,17 @@ function spawnHarvestBonus(regionId = getActiveMapRegionId(), type = getNextAvai
   return true;
 }
 
+function getHarvestRequestGuard() {
+  const initialState = state;
+  const generation = onlineSessionGeneration;
+  return () => state === initialState && onlineSessionGeneration === generation;
+}
+
 function updateServerHarvestBonuses() {
   if (!state || harvestSpawnRequestInFlight || pendingHarvestBonusIds.size) return;
   const api = getOnlineApi();
   if (!api?.reserveHarvestBonusSpawn) return;
-  const requestState = state;
-  const requestGeneration = onlineSessionGeneration;
-  const isCurrentRequest = () => state === requestState && onlineSessionGeneration === requestGeneration;
+  const isCurrentRequest = getHarvestRequestGuard();
   const daily = ensureDailyCaptureTracker();
   const activeBonus = getAllActiveHarvestBonuses()[0] || null;
   if (activeBonus) {
@@ -21348,6 +21349,15 @@ function getHarvestBonusRespawnToastSuffix(daily = ensureDailyCaptureTracker()) 
   return ` · Next pickup in ${formatNumber(minutes)} minute${minutes === 1 ? "" : "s"}`;
 }
 
+function renderHarvestFeedback(message = "") {
+  try {
+    renderHarvestBonuses();
+    if (message) showToast(message);
+  } catch (error) {
+    console.warn("Could not display pickup feedback", error);
+  }
+}
+
 async function collectHarvestBonus(bonusId, sourceElement = null) {
   if (!state || isGamePausedByOutcome()) return;
   const pendingId = String(bonusId || "");
@@ -21373,24 +21383,14 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
     }
     const api = getOnlineApi();
     if (!api?.collectHarvestBonus) {
-      showToast("Pickup collection needs the server update. Reload and try again.");
-      renderHarvestBonuses();
+      renderHarvestFeedback("Pickup collection needs the server update. Reload and try again.");
       return;
     }
-    const requestState = state;
-    const requestGeneration = onlineSessionGeneration;
-    const isCurrentRequest = () => state === requestState && onlineSessionGeneration === requestGeneration;
+    const isCurrentRequest = getHarvestRequestGuard();
     let claimConfirmed = false;
     pendingHarvestBonusIds.add(pendingId);
     try {
-      // Keep the authoritative pickup while pending, and do not let feedback
-      // failures prevent the request or strand its lock.
-      try {
-        renderHarvestBonuses();
-        showToast(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
-      } catch (error) {
-        console.warn("Could not display pending pickup", error);
-      }
+      renderHarvestFeedback(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
       const result = await api.collectHarvestBonus({
         bonusId: bonus.id,
         type,
@@ -21433,18 +21433,11 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       }
       onlineLastError = error?.message || String(error);
       console.warn("Could not collect harvest bonus", error);
-      try {
-        renderHarvestBonuses();
-        showToast(onlineLastError || "Could not collect pickup.");
-      } catch (displayError) {
-        console.warn("Could not display pickup failure", displayError);
-      }
+      renderHarvestFeedback(onlineLastError || "Could not collect pickup.");
     } finally {
       if (isCurrentRequest()) {
         pendingHarvestBonusIds.delete(pendingId);
-        try { renderHarvestBonuses(); } catch (error) {
-          console.warn("Could not refresh pickup display", error);
-        }
+        renderHarvestFeedback();
       }
     }
     return;
