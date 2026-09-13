@@ -25,7 +25,7 @@ const maximum = key => Math.ceil(config[key].maxPercent / config[key].percentPer
 const cost = (key, level) => level >= maximum(key) ? 0 : level + 1 >= maximum(key) - 4 ? 2 : 1;
 const spent = allocation => keys.reduce((sum, key) => sum + Array.from({ length: allocation[key] || 0 }, (_, level) => cost(key, level)).reduce((a, b) => a + b, 0), 0);
 const allocation = values => ({ ...empty(), ...values });
-let state, selected = 0, category = "attack", drafts = {}, pendingAction = null, toastTimer;
+let state, selected = 0, drafts = {}, pendingAction = null, toastTimer;
 const dialog = $("skillsDialog"), actionDialog = $("actionDialog");
 function notify(message) {
   $("toast").textContent = message; $("toast").classList.add("visible");
@@ -99,15 +99,16 @@ function skillCard(key) {
   return `<article class="skill-card ${cap ? "capped" : ""}" data-skill-card="${key}"><img src="${iconRoot}${key}.svg" alt=""><h3>${label}</h3><p class="description">${description}</p><div class="skill-values"><strong>+${level * rate}% <small class="cap-label">/ ${config[key].maxPercent}% cap</small></strong><span>Lv ${level} / ${max}</span></div><div class="stepper" role="group" aria-label="Adjust ${label}"><button data-adjust="${key}" data-delta="-1" ${level === 0 ? "disabled" : ""} aria-label="Remove one ${label} level and refund ${level ? cost(key, level - 1) : 0} points">−</button><span class="cost">${cap ? "MAX" : `${cost(key, level)} ${cost(key, level) === 1 ? "PT" : "PTS"}`}<small>${cap ? "Mastered" : `Next +${(level + 1) * rate}%`}</small></span><button data-adjust="${key}" data-delta="1" ${cap || unspent() < cost(key, level) ? "disabled" : ""} aria-label="Add one ${label} level for ${cost(key, level)} points">+</button></div></article>`;
 }
 function renderGroups() {
-  $("categoryTabs").innerHTML = groups.map(group => `<button data-category="${group.id}" aria-pressed="${group.id === category}"><img src="${iconRoot}${group.icon}.svg" alt="">${group.label}<small>${group.skills.reduce((sum, key) => sum + spent({ ...empty(), [key]: viewed()[key] }), 0)} pts</small></button>`).join("");
-  $("skillGroups").innerHTML = groups.map((group, index) => `<section class="skill-group ${category === group.id ? "current" : ""}" data-category="${group.id}" aria-label="${group.label} skills"><header class="group-heading"><img src="${iconRoot}${group.icon}.svg" alt=""><div><h2>${group.label}</h2><p>${group.skills.length} disciplines · ${group.skills.reduce((sum, key) => sum + spent({ ...empty(), [key]: viewed()[key] }), 0)} points assigned</p></div><span>${["I", "II", "III"][index]}</span></header><div class="group-cards">${group.skills.map(skillCard).join("")}</div></section>`).join("");
+  const scrollTop = $("skillGroups").scrollTop;
+  $("skillGroups").innerHTML = groups.map((group, index) => `<section class="skill-group" data-category="${group.id}" aria-label="${group.label} skills"><header class="group-heading"><img src="${iconRoot}${group.icon}.svg" alt=""><div><h2>${group.label}</h2><p>${group.skills.length} disciplines · ${group.skills.reduce((sum, key) => sum + spent({ ...empty(), [key]: viewed()[key] }), 0)} points assigned</p></div><span>${["I", "II", "III"][index]}</span></header><div class="group-cards">${group.skills.map(skillCard).join("")}</div></section>`).join("");
+  $("skillGroups").scrollTop = scrollTop;
 }
 function render(focus) {
   renderTabs(); renderBuild(); renderGroups();
   if (focus) document.querySelector(focus)?.focus({ preventScroll: true });
 }
 function setSample(sample = "established") {
-  selected = 0; category = "attack"; drafts = {};
+  selected = 0; drafts = {};
   state = { level: 76, gold: 185000, baseGold: 32400, applied: 0, live: allocation({ swordmastery: 15, marchOrders: 8, fieldMedics: 5, shieldwallDiscipline: 12, stoneworks: 8, taxStewardship: 10, royalGranaries: 7, guildCharters: 4 }) };
   state.slots = [25, 50, 75, 100].map((unlock, index) => ({ id: index + 1, unlock, name: ["War Council", "Stewardship", "Preset 3", "Preset 4"][index], saved: index < 2, skills: empty() }));
   state.slots[0].skills = allocation({ swordmastery: 18, marchOrders: 10, fieldMedics: 6, shieldwallDiscipline: 8, stoneworks: 4, taxStewardship: 5, royalGranaries: 6, guildCharters: 2 });
@@ -121,16 +122,13 @@ function setSample(sample = "established") {
   }
   if (actionDialog.open) { pendingAction = null; actionDialog.close(); }
   render(); if (!dialog.open) dialog.showModal();
+  $("skillGroups").scrollTop = 0;
   document.querySelector('[data-slot="0"]').focus({ preventScroll: true });
 }
 $("presetTabs").addEventListener("click", event => {
   const button = event.target.closest("[data-slot]"); if (!button || button.disabled) return;
   const next = Number(button.dataset.slot); if (next === selected) return;
   leaveDraft(() => { selected = next; render(`[data-slot="${next}"]`); });
-});
-$("categoryTabs").addEventListener("click", event => {
-  const button = event.target.closest("[data-category]"); if (!button) return;
-  category = button.dataset.category; renderGroups(); document.querySelector(`#categoryTabs [data-category="${category}"]`).focus();
 });
 $("skillGroups").addEventListener("click", event => {
   const button = event.target.closest("[data-adjust]"); if (!button || button.disabled) return;

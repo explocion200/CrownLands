@@ -6,9 +6,9 @@ Open `/docs/visual-qa/skills-ledger/index.html?viewport=landscape` on the reposi
 
 ## Design
 
-The window follows the approved Player Profile: parchment, olive, restrained brass, burgundy selection states, and a 1200 × 700 maximum desktop panel. Desktop shows Attack, Defense, and Utility together. Landscape uses category tabs with the selected group's cards side by side, keeping point controls visible without scrolling. The narrowest view retains Hero level, unspent/spent totals, the current bonus, cap, skill level, next bonus, and point cost.
+The window follows the approved Player Profile: parchment, olive, restrained brass, burgundy selection states, and a 1200 × 700 maximum desktop panel. Desktop shows Attack, Defense, and Utility together. Following the September 13 review, landscape shows all eight skills in one compact, vertically scrollable list with section headings. Each row is approximately 60 px tall. The window header, preset tabs, points, and build actions remain above the scrolling list. The narrowest view retains Hero level, unspent/spent totals, the current bonus, cap, skill level, next bonus, and point cost. Point controls keep 44 px button columns. Editing a skill preserves the list's scroll position; Reset example returns to the top.
 
-Eight original SVG emblems use ink outlines, steel, leather, olive cloth, grain, parchment, and seals. These are draft-local vector assets. The existing Gold icon is reused for Apply pricing. A gallery below the preview lets reviewers inspect the complete icon set.
+Eight original SVG emblems use ink outlines, steel, leather, olive cloth, grain, parchment, and seals. March Orders now shows a campaign standard and route map; Stoneworks shows a fortified gate with dressed stone walls and a portcullis. These are draft-local vector assets. The existing Gold icon is reused for Apply pricing. A gallery below the preview lets reviewers inspect the complete icon set.
 
 ## Existing rules represented
 
@@ -26,4 +26,4 @@ Values are synthetic examples: established ruler, new ruler, maximum/final-tier 
 
 ## Approval boundary
 
-Review layout, icons, density, category tabs, and preset actions first. Production integration, sync/pending/failure states, existing event handlers, packaging, required validation, and release work follow approval. See `visual-checks.md` for the focused checks completed on this draft.
+Review layout, icons, density, mobile scrolling, and preset actions first. Production integration, sync/pending/failure states, existing event handlers, packaging, required validation, and release work follow approval. See `visual-checks.md` for the focused checks completed on this draft.
