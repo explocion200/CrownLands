@@ -12,9 +12,9 @@ const labels = {
   guildCharters: ["Guild Charters", "City upgrade cost reduction."],
 };
 const groups = [
-  { id: "attack", label: "Attack", icon: "swordmastery", skills: ["swordmastery", "marchOrders", "fieldMedics"] },
-  { id: "defense", label: "Defense", icon: "shieldwallDiscipline", skills: ["shieldwallDiscipline", "stoneworks"] },
-  { id: "utility", label: "Utility", icon: "guildCharters", skills: ["taxStewardship", "royalGranaries", "guildCharters"] },
+  { id: "attack", label: "Attack", skills: ["swordmastery", "marchOrders", "fieldMedics"] },
+  { id: "defense", label: "Defense", skills: ["shieldwallDiscipline", "stoneworks"] },
+  { id: "utility", label: "Utility", skills: ["taxStewardship", "royalGranaries", "guildCharters"] },
 ];
 const config = window.CROWNLANDS_ECONOMY_CONFIG.skills;
 const keys = Object.keys(labels), iconRoot = "docs/visual-qa/skills-ledger/icons/";
@@ -100,7 +100,7 @@ function skillCard(key) {
 }
 function renderGroups() {
   const scrollTop = $("skillGroups").scrollTop;
-  $("skillGroups").innerHTML = groups.map((group, index) => `<section class="skill-group" data-category="${group.id}" aria-label="${group.label} skills"><header class="group-heading"><img src="${iconRoot}${group.icon}.svg" alt=""><div><h2>${group.label}</h2><p>${group.skills.length} disciplines · ${group.skills.reduce((sum, key) => sum + spent({ ...empty(), [key]: viewed()[key] }), 0)} points assigned</p></div><span>${["I", "II", "III"][index]}</span></header><div class="group-cards">${group.skills.map(skillCard).join("")}</div></section>`).join("");
+  $("skillGroups").innerHTML = groups.map(group => `<section class="skill-group" data-category="${group.id}" aria-label="${group.label} skills"><header class="group-heading"><h2>${group.label}</h2></header><div class="group-cards">${group.skills.map(skillCard).join("")}</div></section>`).join("");
   $("skillGroups").scrollTop = scrollTop;
 }
 function render(focus) {

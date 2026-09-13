@@ -6,9 +6,11 @@ Open `/docs/visual-qa/skills-ledger/index.html?viewport=landscape` on the reposi
 
 ## Design
 
+Category headings show only Attack, Defense, and Utility, following the latest review. Header emblems, discipline counts, group point subtotals, and Roman numerals have been removed; individual skill details and overall point totals remain visible.
+
 The window follows the approved Player Profile: parchment, olive, restrained brass, burgundy selection states, and a 1200 × 700 maximum desktop panel. Desktop and mobile landscape both show Attack, Defense, and Utility in three side-by-side columns. Mobile uses compact stacked cards and one shared vertical scrollbar; all three category headings remain visible while scrolling. Cards are 110 px tall at 844 × 390 and 122 px at 568 × 320, with the narrow layout placing the bonus above the point controls. The window header, preset tabs, points, and build actions remain above the scrolling area. Every skill retains its description, current bonus, cap, level, next bonus, and point cost. Point controls keep 44 px button columns. Editing a skill preserves the scroll position; Reset example returns to the top.
 
-Eight original SVG emblems use ink outlines, steel, leather, olive cloth, grain, parchment, and seals. March Orders shows a campaign standard and route map; the revised Stoneworks emblem shows cut stone blocks and an iron masonry hammer. These are draft-local vector assets. The existing Gold icon is reused for Apply pricing. A gallery below the preview lets reviewers inspect the complete icon set.
+Eight original SVG emblems use ink outlines, steel, leather, olive cloth, grain, parchment, and seals. Swordmastery's blade, guard, grip, and pommel now join along one centerline. March Orders shows a campaign standard and route map; the revised Stoneworks emblem shows cut stone blocks and an iron masonry hammer. These are draft-local vector assets. The existing Gold icon is reused for Apply pricing. A gallery below the preview lets reviewers inspect the complete icon set.
 
 ## Existing rules represented
 
