@@ -176,7 +176,7 @@ const rewardModalSource = game.slice(
   game.indexOf("async function showDailyLoginRewardsModal")
 );
 requireMatch(rewardTabsSource, /role="tablist"[\s\S]*aria-label="Daily rewards, quests, and achievements"[\s\S]*aria-selected[\s\S]*aria-controls/, "The reward modal is missing its accessible icon tabs.");
-requireMatch(rewardTabsSource, /daily-reward-160x160-9bd7a936016f\.webp[\s\S]*hud-report-192x192-21644b7390fb\.webp[\s\S]*hud-achievements-192x192-1efe6767ace6\.webp/, "Reward, Quest, and Achievement tab artwork drifted.");
+requireMatch(rewardTabsSource, /reward-daily-login-r1\.svg[\s\S]*reward-daily-quests-r1\.svg[\s\S]*reward-achievements-r1\.svg/, "Reward tabs must use the approved medieval calendar, scroll, and crowned-shield artwork.");
 requireMatch(rewardTabsSource, /aria-label="\$\{accessibleLabel\}" title="\$\{tab\.label\}"[\s\S]*<img[^>]*alt=""[^>]*>[\s\S]*<\/button>/, "Reward tabs must be icon-only while retaining names, claim alerts, and tooltips.");
 requireMatch(game, /\["ArrowLeft", "ArrowRight", "Home", "End"\][\s\S]*activateTab/, "Reward tabs lost keyboard arrow, Home, or End navigation.");
 requireMatch(html, /id="modalTitle"[\s\S]*id="modalHeaderNav" class="modal-header-nav" hidden[\s\S]*id="modalBody"/, "The shared modal is missing its unclipped header navigation slot.");
