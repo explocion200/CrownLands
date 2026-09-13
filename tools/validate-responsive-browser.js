@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { CdpClient } = require("./map-benchmark/cdp-client");
+const { verifyPickupInteractions } = require("./validate-pickup-browser");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const baselineRoot = process.argv.find(arg => arg.startsWith("--baseline-root="))?.split("=").slice(1).join("=");
 const root = baselineRoot ? path.resolve(baselineRoot) : path.resolve(__dirname, "..");
@@ -152,6 +153,7 @@ async function main() {
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
       await wait(400);
       const interruptedTouch = baselineRoot ? null : await verifyInterruptedTouch(client,evaluate);
+      const pickups = baselineRoot ? null : await verifyPickupInteractions(client,evaluate);
       const pinch = await evaluate(`new Promise(resolve => {
         const bounds = mapFrame.getBoundingClientRect();
         zoom = .6; updateCameraTransform();
@@ -287,7 +289,7 @@ async function main() {
       assert.equal(await evaluate("document.getElementById('chatDialog').open"), true);
       const shot = await client.send("Page.captureScreenshot", {format:"png"});
       fs.writeFileSync(path.join(artifacts, `chat-${baselineRoot?'before':'after'}-${viewport.name}.png`), Buffer.from(shot.data,"base64"));
-      results.push({viewport:viewport.name,startup,pinch,interruptedTouch,scout,shop,chat,connection,mapSwitch:{outMs:switching.neighborLatencyMs,backMs:switching.returnLatencyMs}});
+      results.push({viewport:viewport.name,startup,pinch,interruptedTouch,pickups,scout,shop,chat,connection,mapSwitch:{outMs:switching.neighborLatencyMs,backMs:switching.returnLatencyMs}});
       console.log(JSON.stringify(results[results.length-1]));
     }
     fs.writeFileSync(path.join(artifacts, `${baselineRoot?'before':'after'}-interactions.json`), JSON.stringify(results,null,2)+'\n');

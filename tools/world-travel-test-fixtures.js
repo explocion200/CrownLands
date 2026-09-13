@@ -64,6 +64,7 @@ function createClientScope(fixture) {
     window: { CROWNLANDS_WORLD_TRAVEL: network }, console,
     CORE_EXPANSION_TOPOLOGY_ACTIVE: true, REGION_CATALOG_RUNTIME: runtime,
     REGION_CATALOG: { regions: fixture.descriptors }, REGION_CATALOG_SUMMARIES_BY_ID: summaries,
+    editorMapCache: new Map(), EDITOR_MAP_CACHE_LIMIT: 64,
     regionDefinitionCache: new Map(), WORLD_REGIONS_BY_ID: summaries,
     DEFAULT_PORTAL_VISUAL_SIZE: 100, EDGE_TRANSITION_ROUTE_INSET_MIN: 24, EDGE_TRANSITION_ROUTE_INSET_MAX: 58,
     EDGE_TRANSITION_ARROW_INSET_MIN: 24, EDGE_TRANSITION_ARROW_INSET_MAX: 58,
