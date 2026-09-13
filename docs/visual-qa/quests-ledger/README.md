@@ -13,6 +13,7 @@ This is a design for approval, with local simulated actions. It changes no produ
 - Desktop 1440 × 900, mobile landscape 844 × 390, and small landscape 568 × 320. No portrait design.
 - Window dimensions follow Daily Login: maximum 1200 × 790 with at least 12px screen margins.
 - Reuses approved City Details engravings, Shop item illustrations, gold/troop art, and `assets/icons/common-gear-chest-r1.svg`.
+- Recreates the three reward navigation icons as matching SVG illustrations: `reward-daily-login-r1.svg` (parchment calendar and sun seal), `reward-daily-quests-r1.svg` (scroll, quill, and wax seal), and `reward-achievements-r1.svg` (crowned shield and laurels). Files live in `assets/icons/` for later reuse; only this draft references them so far. The review page also shows enlarged artwork and active-tab samples below the window.
 - Simulates progress, claiming, collection, one daily replacement with confirmation, loading/retry, a new UTC day, and a failed claim with retry.
 
 ## Behavior and source evidence

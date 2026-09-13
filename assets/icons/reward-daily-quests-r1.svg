@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#574b34" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <title>Daily Quests — royal scroll, quill and wax seal</title>
+  <path fill="#b9a16e" d="M14 9 45 7l-1 37-4 8-26 2-5-5Z"/>
+  <path fill="#e8d8ad" d="m13 10 29-2-1 31c0 5-2 9-6 11l-23 2 2-8 1-26Z"/>
+  <path fill="#cab683" stroke="none" d="m37 9 5-1-1 31c0 5-2 9-6 11l-23 2 1-5 23-2Z"/>
+  <path fill="#ddc999" d="m12 8 31-2c4 0 5 7 1 9l-29 2c3-4 1-9-3-9Z"/>
+  <path fill="#ad925e" d="M12 8c-6 0-5 10 1 9 4-1 3-9-1-9Z"/>
+  <path stroke="#6f5c3d" stroke-width="1.2" d="M11 11c-2 1-1 4 1 3"/>
+  <path fill="#dec999" d="m10 44 23-2c-4 1-4 7-1 9l-21 2c-6 0-6-8-1-9Z"/>
+  <path stroke="#9c8559" stroke-width="1.2" d="m19 22 15-1m-15 6 13-1m-13 6 10-.7m-10 6 6-.5m-15 9 16-1"/>
+  <path fill="#d5c796" d="M30 37c0-12 12-26 27-31-1 12-7 25-20 29l-6 6Z"/>
+  <path fill="#a39868" stroke="none" d="M57 6c-3 12-9 22-20 29l-6 6-1-4 14-17Z"/>
+  <path stroke="#756742" stroke-width="1.2" d="m47 12 1 6m-9 1 2 6m-7 0 1 5m16-12-6 2m3 5-7 1m2 5-7 1"/>
+  <path d="M56 7C42 23 35 34 26 49"/>
+  <path fill="#805041" d="m21 49-3 10 5-2 3 3 2-12m-1 1 5 9 1-5 4 1-5-10Z"/>
+  <path fill="#895147" d="m25 40 4 1 3 3 1 4-3 4-4 2-4-1-3-3-1-4 2-4Z"/>
+  <path fill="#603d35" stroke="none" d="m31 43 2 5-3 4-4 2-4-1-3-3 6 2 5-4Z"/>
+  <path fill="#c99d79" stroke="#6f4439" stroke-width=".9" d="m21 45 3 2 2-4 2 4 3-2-2 5h-6Z"/>
+</svg>

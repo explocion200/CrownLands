@@ -31,3 +31,11 @@ The right detail area can scroll for long content and target recommendations. Cl
 ## Boundaries
 
 No Firebase calls, production claims, live inventory grants, or emulator suites were run for this isolated draft. The daily chest server award remains the documented pre-integration issue. Production integration must validate real claim/reroll/status responses, day rollover, duplicate requests, and the intended chest grant before release. No portrait view was created or reviewed.
+
+## Reward navigation icon revision
+
+- Replaced the three older header illustrations with a matched calendar/sun seal, scroll/quill/wax seal, and crowned shield/laurel set. Added enlarged and active-tab samples below the preview for approval.
+- All three new SVG files parse successfully and use a 64 × 64 view box with transparent backgrounds.
+- Verified all three header assets load at 1440 × 900, 844 × 390, and 568 × 320. Buttons remain 44 × 44 with Daily Login, Daily Quests, and Achievements accessible labels.
+- Visually inspected the icons on parchment and on the burgundy active state. The small landscape header remains within the window.
+- Only the draft currently uses these new asset paths. Shared production navigation integration remains pending approval.

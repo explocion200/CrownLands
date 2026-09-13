@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#574b34" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <title>Achievements — crowned shield and laurel branches</title>
+  <path stroke="#6e7148" stroke-width="2" d="M31 57C15 53 7 41 9 23m24 34c16-4 24-16 22-34"/>
+  <g fill="#929460" stroke="#61633f" stroke-width="1.2">
+    <path d="M10 33C4 31 3 26 5 23c5 2 7 5 5 10Zm3 10c-7-1-10-5-9-9 5 1 8 4 9 9Zm6 8c-7 2-12-1-12-5 5-1 9 1 12 5Zm7 4c-5 4-11 3-13 0 4-3 9-3 13 0ZM9 30c-2-5 0-9 3-12 3 5 2 8-3 12Z"/>
+    <path d="M54 33c6-2 7-7 5-10-5 2-7 5-5 10Zm-3 10c7-1 10-5 9-9-5 1-8 4-9 9Zm-6 8c7 2 12-1 12-5-5-1-9 1-12 5Zm-7 4c5 4 11 3 13 0-4-3-9-3-13 0Zm17-25c2-5 0-9-3-12-3 5-2 8 3 12Z"/>
+  </g>
+  <path fill="#bea364" d="m16 19 16-3 16 3-1 16c-1 9-7 15-15 21-8-6-14-12-15-21Z"/>
+  <path fill="#987f48" stroke="none" d="m42 19 6 .2-1 16c-1 9-7 15-15 21l-3-3c12-8 16-17 13-34Z"/>
+  <path fill="#794840" d="m20 23 12-2 12 2-1 12c-1 7-5 12-11 17-6-5-10-10-11-17Z"/>
+  <path fill="#9b6752" stroke="none" d="m22 25 10-2v26c-5-5-8-9-9-15Z"/>
+  <path fill="#d4bd7b" stroke-width="1.4" d="m19 8 7 5 6-9 6 9 7-5-3 12-20 .5Z"/>
+  <path fill="#a58a4d" stroke="none" d="m38 13 7-5-3 12-20 .5-.8-3.2 19.3-.7Z"/>
+  <path stroke="#8b713e" stroke-width="1" d="m25 16 14-.4M32 10v4"/>
+  <path fill="#d4bd7b" stroke-width="1.2" d="m32 27 2.6 5.5 6 .8-4.4 4.3 1 6-5.2-2.8-5.2 2.8 1-6-4.4-4.3 6-.8Z"/>
+  <path stroke="#ad8e56" stroke-width="1" d="m31.6 31 .4 5.4 3.6 3m-3.6-3-3.6 3"/>
+  <path stroke="#d4bd7b" stroke-width=".9" d="m20 35 1 5m1 3 2 3m18-11-1 5m-1 3-2 3"/>
+</svg>
