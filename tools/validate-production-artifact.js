@@ -15,6 +15,7 @@ const required = [
   "item-bag-ui.js", "item-bag-ui.css",
   "shop-ui.js", "shop-ui.css",
   "achievements-ui.js", "achievements-ui.css",
+  "player-profile-ui.js", "player-profile-ui.css",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
@@ -109,7 +110,11 @@ const baseClientBytes = totalBytes - preparedWorldBytes;
 const achievementUiBytes = ["achievements-ui.js", "achievements-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (achievementUiBytes > 60 * 1024) throw new Error("Achievements presentation exceeds its 60 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64) * 1024;
+// Profile adds scoped presentation and production details, reusing existing art.
+const profileUiBytes = ["player-profile-ui.js", "player-profile-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (profileUiBytes > 44 * 1024) throw new Error("Profile presentation exceeds its 44 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

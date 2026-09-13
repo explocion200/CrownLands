@@ -17,8 +17,17 @@ Reviewed September 13, 2026 using the local preview server and the Codex in-app 
 - Closing and reopening the Profile retains the visible draft and actions.
 - No browser warning/error logs were reported during the checked interactions.
 
-## Scope and remaining work
+## Approved integration checks
 
-This is an approval draft, not an integrated runtime test. Flag and clan shield artwork demonstrates framing using synthetic heraldry; production integration must retain the actual renderers and stored heraldry. Navigation previews for Clan, Skills, Settings, public profiles, and Inner Castle do not implement those screens. The source interface's production total/bonus calculation and achievement seasonal rules remain the integration source of truth.
+The actual Profile screen was checked through the local benchmark fixture with mock services, without a production account.
 
-Review the design before implementation. Then wire the approved layout to existing state/actions, test actual-game navigation and synchronization, and run the repository's required release workflow before proposing a merge. No pull request, merge, or deployment has occurred for this draft.
+- Desktop 1440 × 900: identity, statistic grid, and achievement content have matching client/scroll dimensions; saved flag crown, colors/pattern and actual clan shield render.
+- Landscape 844 × 390: all information and bottom actions fit. Gold details show 192K/h base + 76K/h included bonus = 268K/h total; troop details show 14K/h + 5.7K/h = 19K/h using the existing abbreviated formatter. Closing by button or Escape preserves the underlying Profile.
+- Small landscape 568 × 320 with long ruler/clan names and large totals: identity, statistic grid and achievements have equal client/scroll heights of 253, 161 and 161 px; both primary actions remain 44 px tall. Production bonuses remain visible.
+- Existing name editor saved Eleanor through the mock identity handler. Flag editor opened and cancelled successfully; Profile styling was removed while editing.
+- Skills, Settings and Clan tabs retain their current screens; returning restores the overview. View Achievements opens the actual achievement ledger and closing it restores Profile. Inner Castle opens the existing Main City Royal Bailey.
+- No-clan affiliation is hidden, zero XP displays correctly, Loading remains actionable, and Unavailable disables the achievement button.
+- No browser warning/error logs during these checks. Temporary viewport override was reset.
+- Production artifact build and validation passed: 601 files, 26.16 MiB base plus 16.68 MiB lazy world. Profile reuses the packaged heraldry sprite and approved art.
+
+Required local and GitHub release checks are recorded by prepare-pr and the release receipt. No production-account mutations or physical-device test were performed.
