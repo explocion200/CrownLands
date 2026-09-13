@@ -66,7 +66,11 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The City List ledger reuses existing art/icons and adds under 20 KiB of
 // presentation source. Existing headroom plus one 16 KiB step bounds its shell.
 // The Item Bag adds at most 36 KiB of scoped code/styles to the installed shell.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44) * 1024;
+// The Skills ledger adds one stylesheet bounded at 30 KiB to the offline shell.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32) * 1024;
+const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills"));
+assert.equal(skillEmblemFiles.length, 8, "Skills must ship exactly eight approved emblems.");
+for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
 // Approved compact rows and persistent side-by-side development add scoped CSS
 // to the existing files, with no new requests, art, or runtime JavaScript.
 // Bound the two presentation sources by an additional 8 KiB in total; keep the
@@ -124,7 +128,9 @@ const entrypointBudgets = {
   // The follow-up identity steps and arrows add under one 8 KiB runtime step.
   // Report sync feedback and session-safe reward recovery add under 4 KiB.
   // The City List ledger adds under one 4 KiB runtime step.
-  "game.js": 1748 * 1024,
+  // Skills card markup adds under 2 KiB; its stylesheet and emblems are bounded separately.
+  "game.js": 1750 * 1024,
+  "skills-ledger-ui.css": 30 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "treasury-gear-ui.js": 16 * 1024,
   "treasury-gear-ui.css": 40 * 1024,

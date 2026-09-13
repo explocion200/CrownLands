@@ -23584,6 +23584,7 @@ function showProfileSkills(options = {}) {
   updateProfileTabHeader();
   renderProfileSkills();
   resetUiScrollTop(skillsView);
+  if (enteringSkills) resetUiScrollTop(skillsView.querySelector(".profile-skill-list"));
   animateUiTabPanel(skillsView);
 }
 
@@ -25925,6 +25926,11 @@ function renderSkillPresetPanel() {
   const dirty = isSkillPresetDraftDirty(draft);
   const remainingAfterApply = selected && valid ? getAvailableSkillPoints(state.character, draft.upgrades) : 0;
   const activePreset = presets.slots.find(slot => slot.slot === presets.activeSlot) || null;
+  const summary = `<div class="profile-skill-summary" aria-label="Hero skill progress">
+    <div><strong data-skill-points></strong><span>unspent</span></div>
+    <div><strong data-skill-spent></strong><span>spent</span></div>
+    <div class="skill-hero-level"><span>Hero</span><strong data-skill-hero-level>${formatNumber(level)}</strong></div>
+  </div>`;
   const liveStatus = activePreset
     ? skillPresetAllocationsMatch(state.upgrades, activePreset.upgrades)
       ? `${activePreset.name} active`
@@ -25958,16 +25964,18 @@ function renderSkillPresetPanel() {
       </div>
       ${!selected
         ? `<article class="skill-preset-detail current-build" role="tabpanel">
-          <header><div><strong>Current Build</strong><small>${escapeHtml(liveStatus)}</small></div></header>
-          <p class="skill-preset-points">Use the − and + controls below to adjust your live build immediately. Select an unlocked preset to plan a build without changing these active skills.</p>
+          <header><div><strong>Current Build</strong><small class="skill-live-hint">Changes apply immediately</small><small data-skill-sync-status hidden></small></div></header>
+          ${summary}
+          <section class="profile-skill-reset"><button id="resetSkillsBtn" type="button">Reset skills<small data-skill-reset-copy></small></button></section>
         </article>`
         : `<article class="skill-preset-detail ${unlocked ? "" : "locked"}" role="tabpanel">
         <header>
-          <div><strong>${escapeHtml(normalizeSkillPresetName(draft?.name, selected.slot))}</strong><small data-skill-preset-status>${escapeHtml(getSkillPresetEditorStatus(selected, presets, draft))}</small></div>
+          <div class="skill-preset-identity"><strong>${escapeHtml(normalizeSkillPresetName(draft?.name, selected.slot))}</strong><small data-skill-preset-status>${escapeHtml(getSkillPresetEditorStatus(selected, presets, draft))}</small><small data-skill-sync-status hidden></small></div>
           ${unlocked ? `<div class="skill-preset-rename">
             <input id="skillPresetNameInput" type="text" maxlength="${SKILL_PRESET_NAME_MAX_LENGTH}" value="${escapeHtml(draft?.name || selected.name)}" aria-label="Name preset ${selected.slot}" ${controlsBlocked ? "disabled" : ""}>
           </div>` : ""}
         </header>
+        ${summary}
         ${!unlocked
           ? `<p class="skill-preset-locked-copy">Reach Hero Level ${selected.unlockLevel} to name, edit, save, and apply this preset.</p>`
           : `${valid
@@ -25975,7 +25983,7 @@ function renderSkillPresetPanel() {
               : `<p class="skill-preset-error">This draft exceeds the current skill limits or earned-point budget. Remove points before saving.</p>`}
             <footer>
               <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked || !valid || (selected.saved && !dirty) ? "disabled" : ""}>Save Preset</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply · ${formatNumber(applyCost)}</button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" aria-label="Apply · ${formatNumber(applyCost)} Gold" title="${canAffordSkillPreset(applyCost) ? "1 hour of base Gold production" : `Need ${formatNumber(applyCost)} Gold; have ${formatNumber(state.gold)}.`}" ${controlsBlocked || dirty || !selected.saved || !valid || !canAffordSkillPreset(applyCost) ? "disabled" : ""}>Apply<small><img src="assets/icons/royal-shop-gold-r1.svg" alt="">${formatNumber(applyCost)}</small></button>
             </footer>`}
       </article>`}
     </section>`;
@@ -26045,7 +26053,8 @@ function updateSkillPresetDraftActionState() {
   const status = getSkillPresetEditorStatus(slot, presets, draft);
   if (saveButton) saveButton.disabled = blocked || !valid || (slot.saved && !dirty);
   if (applyButton) applyButton.disabled = blocked || dirty || !slot.saved || !valid || !canAffordSkillPreset();
-  setTextIfChanged(skillsView.querySelector("[data-skill-preset-status]"), status);
+  setTextIfChanged(skillsView.querySelector("[data-skill-preset-status]"), !dirty && !canAffordSkillPreset()
+    ? `Need ${formatNumber(getSkillPresetApplyCost())} Gold · have ${formatNumber(state.gold)}` : status);
   setTextIfChanged(skillsView.querySelector(`[data-skill-preset-tab-status="${slot.slot}"]`), dirty
     ? presets.activeSlot === slot.slot ? "Active · Unsaved" : "Unsaved"
     : presets.activeSlot === slot.slot
@@ -26121,6 +26130,7 @@ function updateProfileSkillState() {
   const syncing = isSkillSpendSyncing();
   setTextIfChanged(skillsView.querySelector("[data-skill-points]"), formatNumber(points));
   setTextIfChanged(skillsView.querySelector("[data-skill-spent]"), formatNumber(spentPoints));
+  setTextIfChanged(skillsView.querySelector("[data-skill-hero-level]"), formatNumber(state.character.level));
   const syncStatus = skillsView.querySelector("[data-skill-sync-status]");
   if (syncStatus) {
     syncStatus.hidden = !syncing;
@@ -26145,7 +26155,11 @@ function updateProfileSkillState() {
     const decrementButton = row?.querySelector("button[data-skill-decrement]");
     const costLabel = row?.querySelector("[data-skill-cost]");
     const refundPointCost = level > 0 ? getSkillPointCost(skill, level - 1) : 0;
-    setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
+    setTextIfChanged(label, config.label);
+    setTextIfChanged(row?.querySelector("[data-skill-percent]"), `+${percent}%`);
+    setTextIfChanged(row?.querySelector("[data-skill-rank]"), `Lv ${level} / ${getSkillMaxLevel(skill)}`);
+    setTextIfChanged(row?.querySelector("[data-skill-next]"), capped ? "Mastered" : `Next +${Math.min((level + 1) * config.percentPerLevel, config.maxPercent)}%`);
+    row?.classList.toggle("capped", capped);
     if (button) {
       button.disabled = skillActionInFlight || (editingPreset && syncing) || points < nextPointCost || capped;
       button.setAttribute("aria-label", capped
@@ -26174,23 +26188,12 @@ function renderProfileSkills() {
   if (needsMarkup) {
     skillsViewMarkupReady = true;
     skillsView.innerHTML = `
-    <div class="profile-skill-summary" aria-label="Hero skill progress">
-      <div><span>Skill points</span><strong data-skill-points></strong><small data-skill-sync-status hidden></small></div>
-      <div><span>Points spent</span><strong data-skill-spent></strong></div>
-    </div>
     <div data-skill-preset-panel-root>${renderSkillPresetPanel()}</div>
-    <section class="profile-skill-reset">
-      <div>
-        <strong>Reset skills</strong>
-        <small data-skill-reset-copy></small>
-      </div>
-      <button id="resetSkillsBtn" type="button">Reset</button>
-    </section>
-    <div class="profile-skill-list" aria-label="Skills by role">
+    <div class="profile-skill-list" aria-label="Skills by role" tabindex="0">
       ${SKILL_GROUPS.map(group => `
         <section class="profile-skill-group skill-group-${group.id}" aria-label="${escapeHtml(group.label)} skills">
-          <header><strong>${escapeHtml(group.label)}</strong><small>${group.skills.length} ${group.skills.length === 1 ? "skill" : "skills"}</small></header>
-          <div>${group.skills.map(skillRow).join("")}</div>
+          <header><h3>${escapeHtml(group.label)}</h3></header>
+          <div class="skill-group-cards">${group.skills.map(skillRow).join("")}</div>
         </section>
       `).join("")}
     </div>
@@ -35167,13 +35170,15 @@ function showEmpireModal() {
 
 function skillRow(key) {
   const config = SKILL_CONFIG[key];
-  const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
   return `
     <div class="skill-row" data-skill-row="${key}">
-      <div><strong data-skill-level></strong><br><small>${config.description}${capText}.</small></div>
+      <img class="skill-emblem" src="assets/icons/skills/${key}.svg" alt="">
+      <h4 data-skill-level>${escapeHtml(config.label)}</h4>
+      <p class="skill-description">${escapeHtml(config.description)}</p>
+      <div class="skill-values"><strong><span data-skill-percent></span> <small>/ ${config.maxPercent}% cap</small></strong><span data-skill-rank></span></div>
       <div class="skill-row-actions" role="group" aria-label="Adjust ${escapeHtml(config.label)}">
         <button type="button" data-skill-decrement="${key}" aria-label="Remove one ${escapeHtml(config.label)} level">−</button>
-        <span data-skill-cost aria-live="polite">1 PT</span>
+        <span class="skill-cost-wrap"><span data-skill-cost aria-live="polite">1 PT</span><small data-skill-next></small></span>
         <button type="button" data-skill="${key}" aria-label="Add one ${escapeHtml(config.label)} level">+</button>
       </div>
     </div>

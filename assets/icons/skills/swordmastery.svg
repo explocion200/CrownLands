@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#574b34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <title>Swordmastery · forged sword over an olive war pennant</title>
+  <path fill="#79805a" d="M8 18 31 14l17 10-5 29-24-2-9-13Z"/>
+  <path fill="#525e44" stroke="none" d="m31 14-3 35 15 4 5-29Z"/>
+  <path stroke="#c0bd86" stroke-width="1" d="m13 24 3 12m1-14 1 6m20 13 3 3m-8 2 3 3"/>
+  <!-- Blade, guard, grip and pommel share one continuous centreline. -->
+  <g transform="rotate(35 32 32)">
+    <path fill="#aaaF9d" d="M32 3 37 13 36 43H28l-1-30Z"/>
+    <path fill="#e0deca" stroke="none" d="m32 6 1 8-1 27h-3l-1-28Z"/>
+    <path fill="#8e9c8d" stroke="none" d="m33 12 3 2-1 27h-3Z"/>
+    <path stroke="#738171" stroke-width=".9" d="M32 13v26"/>
+    <path fill="#845846" d="M29 42h6v14h-6Z"/>
+    <path fill="#634837" stroke="none" d="M33 44h2v12h-2Z"/>
+    <path stroke="#c39971" stroke-width="1" d="m29 47 6-1m-6 4 6-1m-6 4 6-1"/>
+    <path fill="#c4a762" d="m19 40 4-1 5 2h8l5-2 4 1-1 5-4-1-4-1h-8l-4 1-4 1Z"/>
+    <path stroke="#efd497" stroke-width=".8" d="m22 41 6 1h8l6-1"/>
+    <path fill="#b79553" d="M28 54h8v3h-8Z"/>
+    <circle cx="32" cy="59" r="3.7" fill="#c5a566"/>
+    <path stroke="#ead29b" stroke-width="1" d="M30.2 58.7a2 2 0 0 1 2-1.6"/>
+  </g>
+</svg>

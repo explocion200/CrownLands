@@ -24,3 +24,18 @@ Checked September 13, 2026 in the Codex in-app browser against the local reposit
 - Three-column scroll behavior: increasing Guild Charters while scrolled to the bottom changed 69 spent / 6 unspent to 70 spent / 5 unspent and retained scroll position 179 px. Reset example restored the sample and returned to the top. Keyboard scrolling was exercised; wheel scrolling was also verified in the earlier shared-scroll revision. Desktop keeps its existing three-column layout.
 
 Production save/sync, server-side enforcement, real account balances, multiplayer effects, and deployment remain outside this isolated draft. Integration requires the repository's normal validation workflow after approval.
+
+## Approved integration checks — September 13, 2026
+
+The actual game was exercised through the localhost benchmark fixture with mock services, using the existing Skills handlers.
+
+- Desktop 1440 × 900: all eight illustrated cards fit; title, close action, and name-only disciplines remain readable.
+- Landscape 844 × 390 and 568 × 320: three columns, compact cards, fixed controls, and shared scrolling inspected. At the bottom, Guild Charters incremented successfully while the last row and all discipline names remained visible.
+- Live Swordmastery increment changed 69/6 to 70/5 spent/unspent; minus restored the weighted point.
+- Saved a renamed Battle Council preset with 60 assigned points, then applied it through the existing Gold confirmation. The preset became Active with burgundy selection and a gold outline.
+- Insufficient Gold displayed Need 32K Gold / have 1.2K and disabled Apply.
+- Veteran Swordmastery refund returned two points (145/5 to 143/7); adding the final level restored them. Free Reset returned all 150 earned points and kept War Council saved.
+- Leaving Skills removed its scoped class and restored the Profile ledger.
+- Focused validators passed for Skills, preset costs/refunds/affordability, Profile theme, and bounded asset size. The release workflow records the required repository and GitHub gates separately.
+
+No production account was used for a spending mutation. Backend authority is covered by the required emulator gates; live deployment verification checks published build identity and assets.

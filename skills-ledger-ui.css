@@ -1,0 +1,202 @@
+/* Approved Skills ledger. Scoped to the existing Skills tab; game handlers own every action. */
+#profileScreen.skills-active{--paper:#f2e8cd !important;--ink:#352f23 !important;--muted:#716247 !important;--line:#b8a684 !important;--moss:#4b583c !important;--burgundy:#703e3d !important;width:min(1200px,calc(100% - 24px)) !important;height:min(700px,calc(100dvh - 24px)) !important;grid-template-rows:83px minmax(0,1fr) !important;padding:5px !important;border:1px solid #766346 !important;border-radius:2px !important;background:var(--paper) !important;color:var(--ink) !important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 0 0 100vmax #20261f99,0 10px 45px #171b1b88 !important;backdrop-filter:none !important;font-family:"Segoe UI",Arial,sans-serif !important;overflow:hidden !important}
+#profileScreen.skills-active.open{display:grid !important}
+#profileScreen.skills-active *{box-sizing:border-box !important}
+#profileScreen.skills-active [hidden]{display:none !important}
+#profileScreen.skills-active h2,
+#profileScreen.skills-active h3,
+#profileScreen.skills-active h4,
+#profileScreen.skills-active p,
+#profileScreen.skills-active span,
+#profileScreen.skills-active strong,
+#profileScreen.skills-active small,
+#profileScreen.skills-active button{color:inherit !important;text-shadow:none !important;font-weight:400 !important;text-transform:none !important;letter-spacing:normal !important}
+#profileScreen.skills-active h2,
+#profileScreen.skills-active h3,
+#profileScreen.skills-active h4,
+#profileScreen.skills-active p{margin:0 !important}
+#profileScreen.skills-active button,
+#profileScreen.skills-active input{font:inherit !important;color:inherit !important}
+#profileScreen.skills-active button{cursor:pointer !important;min-width:0 !important;margin:0 !important;min-height:0 !important;border-radius:0 !important;transition:none !important;text-shadow:none !important}
+#profileScreen.skills-active button:disabled{cursor:default !important;opacity:.55 !important}
+#profileScreen.skills-active button:hover:not(:disabled){filter:brightness(1.06) !important}
+#profileScreen.skills-active button:focus-visible,
+#profileScreen.skills-active input:focus-visible,
+#profileScreen.skills-active .profile-skill-list:focus-visible{outline:2px solid #436f77 !important;outline-offset:1px !important}
+#profileScreen.skills-active img{object-fit:contain !important}
+#profileScreen.skills-active .profile-screen-header{color:var(--ink) !important;display:flex !important;align-items:center !important;gap:20px !important;padding:12px 20px !important;border:1px solid var(--line) !important;background:#e9dcb483 !important;border-radius:0 !important;box-shadow:none !important;margin:0 !important}
+#profileScreen.skills-active .profile-screen-heading{flex:none !important;display:grid !important;grid-template-columns:47px auto !important;grid-template-rows:auto auto !important;column-gap:12px !important;min-width:0 !important;text-align:left !important}
+#profileScreen.skills-active .profile-screen-heading::before{content:"" !important;width:47px !important;height:50px !important;grid-column:1 !important;grid-row:1/3 !important;background:url("assets/icons/skills/guildCharters.svg") center/contain no-repeat !important}
+#profileScreen.skills-active .profile-screen-heading svg{display:none !important}
+#profileScreen.skills-active .profile-screen-heading>span{grid-column:2 !important;grid-row:1 !important;font-size:9px !important;letter-spacing:1.9px !important;color:var(--muted) !important;align-self:end !important;margin-bottom:4px !important}
+#profileScreen.skills-active .profile-screen-heading h2{grid-column:2 !important;grid-row:2 !important;font:30px/1 Georgia,serif !important;white-space:nowrap !important}
+#profileScreen.skills-active .profile-tabs{width:auto !important;display:flex !important;gap:6px !important;margin-left:auto !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;align-items:center !important;flex:none !important;overflow:visible !important}
+#profileScreen.skills-active .profile-tabs button{height:44px !important;min-width:78px !important;padding:0 14px !important;background:#e4d3ae !important;border:1px solid #ad956b !important;box-shadow:inset 0 0 0 2px #f8ecd377 !important;font-size:12px !important;flex:none !important}
+#profileScreen.skills-active .profile-tabs button.active{background:var(--burgundy) !important;color:#fff1d3 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
+#profileScreen.skills-active #profileCloseBtn{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;padding:0 !important;flex:none !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+#profileScreen.skills-active #profileCloseBtn svg{width:22px !important;height:22px !important;fill:currentColor !important}
+#profileScreen.skills-active #skillsView{display:grid !important;grid-template-rows:auto minmax(0,1fr) !important;min-height:0 !important;min-width:0 !important;width:100% !important;height:100% !important;padding:0 !important;margin:0 !important;gap:0 !important;overflow:hidden !important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%) !important;border:1px solid var(--line) !important;border-top:0 !important;box-shadow:none !important}
+#profileScreen.skills-active [data-skill-preset-panel-root]{min-width:0 !important;min-height:0 !important;margin:0 !important;padding:0 !important}
+#profileScreen.skills-active .skill-preset-panel{display:block !important;margin:0 !important;padding:0 !important;gap:0 !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;background:none !important;min-width:0 !important}
+#profileScreen.skills-active .skill-preset-tabs{display:grid !important;grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:5px !important;padding:8px 16px 7px !important;height:61px !important;background:#d9c7994a !important;border:0 !important;border-bottom:1px solid var(--line) !important;box-shadow:none !important;overflow:visible !important}
+#profileScreen.skills-active .skill-preset-tabs button{min-height:44px !important;min-width:0 !important;display:grid !important;align-content:center !important;gap:3px !important;text-align:left !important;padding:5px 12px !important;border:1px solid #b19a70 !important;background:#e5d5b2 !important;box-shadow:inset 0 0 0 2px #fff1d04d !important;position:relative !important;overflow:hidden !important}
+#profileScreen.skills-active .skill-preset-tabs strong{display:block !important;font:15px Georgia,serif !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important}
+#profileScreen.skills-active .skill-preset-tabs small{display:block !important;font-size:10px !important;line-height:1 !important;color:#655840 !important;white-space:nowrap !important;overflow:hidden !important;text-overflow:ellipsis !important}
+#profileScreen.skills-active .skill-preset-tabs .selected{background:#d7be78 !important;box-shadow:inset 0 0 0 2px #f5dea0 !important;border-color:#8a7043 !important}
+#profileScreen.skills-active .skill-preset-tabs .active{background:var(--burgundy) !important;color:#fff0d0 !important;border-color:#623837 !important}
+#profileScreen.skills-active .skill-preset-tabs .active small{color:#f5dfb7 !important}
+#profileScreen.skills-active .skill-preset-tabs .active.selected{box-shadow:inset 0 0 0 2px #e7c97f !important;outline:1px solid #d0ad57 !important;outline-offset:-1px !important}
+#profileScreen.skills-active .skill-preset-tabs .locked{background:repeating-linear-gradient(135deg,#dbd2b7 0,#dbd2b7 6px,#d1c7aa 6px,#d1c7aa 7px) !important;opacity:.72 !important}
+#profileScreen.skills-active .skill-preset-tabs .locked strong::before{content:"" !important;display:inline-block !important;width:8px !important;height:8px !important;background:#807455 !important;border:1px solid #625944 !important;margin-right:6px !important;border-radius:4px 4px 0 0 !important}
+#profileScreen.skills-active .skill-preset-detail{display:grid !important;grid-template-columns:minmax(0,1fr) auto auto !important;align-items:center !important;gap:0 20px !important;min-height:70px !important;margin:0 !important;padding:10px 18px !important;border:0 !important;border-bottom:1px solid var(--line) !important;border-radius:0 !important;box-shadow:none !important;background:#f9efd666 !important;min-width:0 !important}
+#profileScreen.skills-active .skill-preset-detail>header{display:flex !important;flex-direction:column !important;align-items:stretch !important;justify-content:center !important;gap:3px !important;min-width:0 !important;grid-column:1 !important;grid-row:1 !important;padding:0 !important;margin:0 !important;border:0 !important;background:none !important}
+#profileScreen.skills-active .skill-preset-detail>header strong{font:19px Georgia,serif !important;display:block !important;white-space:nowrap !important}
+#profileScreen.skills-active .skill-preset-detail>header small{display:block !important;font-size:10px !important;line-height:1.2 !important;color:var(--muted) !important;margin-top:3px !important}
+#profileScreen.skills-active .skill-preset-identity>strong{display:none !important}
+#profileScreen.skills-active .skill-preset-rename{display:block !important;min-width:0 !important;margin:0 !important;padding:0 !important}
+#profileScreen.skills-active #skillPresetNameInput{min-height:0 !important;display:block !important;width:min(240px,100%) !important;height:30px !important;padding:3px 7px !important;background:#fff6df !important;border:1px solid #ad956b !important;border-radius:0 !important;box-shadow:none !important;font:15px Georgia,serif !important;margin:0 !important;min-width:0 !important}
+#profileScreen.skills-active .skill-preset-points{display:none !important}
+#profileScreen.skills-active .skill-preset-error,
+#profileScreen.skills-active .skill-preset-locked-copy{grid-column:1/-1 !important;font:11px/1.3 "Segoe UI",sans-serif !important;color:#813c32 !important;margin-top:5px !important}
+#profileScreen.skills-active .skill-preset-detail>header:has([data-skill-sync-status]:not([hidden])) .skill-live-hint{display:none !important}
+#profileScreen.skills-active .skill-preset-detail>header [data-skill-sync-status]{color:#5a6640 !important;font-size:9px !important}
+#profileScreen.skills-active .profile-skill-summary{grid-column:2 !important;grid-row:1 !important;display:flex !important;align-items:center !important;gap:20px !important;margin:0 !important;padding:0 !important;border:0 !important;background:none !important;border-radius:0 !important;box-shadow:none !important;min-width:0 !important}
+#profileScreen.skills-active .profile-skill-summary>div{display:grid !important;gap:3px !important;text-align:center !important;min-width:0 !important;min-height:0 !important;width:auto !important;margin:0 !important;padding:0 !important;border:0 !important;background:none !important;border-radius:0 !important;box-shadow:none !important}
+#profileScreen.skills-active .profile-skill-summary strong{font:25px/.95 Georgia,serif !important;font-variant-numeric:tabular-nums !important;white-space:nowrap !important}
+#profileScreen.skills-active .profile-skill-summary span{font-size:11px !important;white-space:nowrap !important;line-height:1.2 !important}
+#profileScreen.skills-active .profile-skill-summary>div:first-child{color:var(--moss) !important}
+#profileScreen.skills-active .profile-skill-summary .skill-hero-level{color:var(--muted) !important;border-left:1px solid var(--line) !important;padding-left:20px !important}
+#profileScreen.skills-active .skill-hero-level span{font-size:10px !important}
+#profileScreen.skills-active .skill-hero-level strong{font-size:20px !important}
+#profileScreen.skills-active .profile-skill-reset,
+#profileScreen.skills-active .skill-preset-detail>footer{grid-column:3 !important;grid-row:1 !important;display:flex !important;align-items:center !important;justify-content:flex-end !important;gap:7px !important;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;background:none !important}
+#profileScreen.skills-active #resetSkillsBtn,
+#profileScreen.skills-active .skill-preset-detail>footer button{min-height:44px !important;border:1px solid #997e51 !important;padding:7px 14px !important;background:#e3d0a7 !important;font:13px Georgia,serif !important;box-shadow:inset 0 0 0 2px #f8ebce77 !important;width:auto !important;white-space:nowrap !important}
+#profileScreen.skills-active [data-skill-reset-copy]{display:block !important;font:9px/1.2 "Segoe UI",sans-serif !important;margin-top:3px !important;color:var(--muted) !important}
+#profileScreen.skills-active .skill-preset-detail>footer [data-apply-skill-preset]{background:linear-gradient(#81514b,#693e3a) !important;color:#fff1d6 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #af8d6855 !important}
+#profileScreen.skills-active [data-apply-skill-preset] small{display:flex !important;align-items:center !important;justify-content:center !important;gap:4px !important;font:11px "Segoe UI",sans-serif !important;margin-top:2px !important}
+#profileScreen.skills-active [data-apply-skill-preset] img{width:14px !important;height:14px !important}
+#profileScreen.skills-active .profile-skill-list{align-items:stretch !important;min-height:0 !important;display:grid !important;grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:0 !important;padding:0 14px 12px !important;margin:0 !important;overflow:hidden !important;background:none !important;border:0 !important}
+#profileScreen.skills-active .profile-skill-group{align-content:stretch !important;overflow:visible !important;min-width:0 !important;min-height:0 !important;display:grid !important;grid-template-rows:57px minmax(0,1fr) !important;padding:0 10px !important;border:0 !important;background:none !important;border-radius:0 !important;box-shadow:none !important;gap:0 !important;margin:0 !important}
+#profileScreen.skills-active .profile-skill-group+.profile-skill-group{border-left:1px solid #c6b58e !important}
+#profileScreen.skills-active .profile-skill-group>header{color:var(--ink) !important;display:flex !important;align-items:center !important;border-bottom:1px solid var(--line) !important;margin:0 0 8px !important;padding:0 !important;background:none !important}
+#profileScreen.skills-active .profile-skill-group>header h3{font:21px Georgia,serif !important}
+#profileScreen.skills-active .skill-group-cards{padding:0 !important;display:grid !important;grid-template-rows:repeat(3,minmax(0,1fr)) !important;gap:7px !important;min-height:0 !important}
+#profileScreen.skills-active .skill-row{min-width:0 !important;min-height:0 !important;border:1px solid #b8a47e !important;background:linear-gradient(115deg,#f8efd5,#e9dcbc) !important;box-shadow:inset 0 0 0 2px #fff9e54d !important;padding:7px 9px !important;display:grid !important;grid-template-columns:57px minmax(0,1fr) 158px !important;grid-template-rows:26px minmax(25px,1fr) 25px !important;column-gap:8px !important;row-gap:0 !important;position:relative !important;margin:0 !important;border-radius:0 !important;align-items:stretch !important;overflow:visible !important}
+#profileScreen.skills-active .skill-row .skill-emblem{width:57px !important;height:58px !important;grid-column:1 !important;grid-row:1/3 !important;align-self:center !important;filter:none !important}
+#profileScreen.skills-active .skill-row h4{font:16px/1.12 Georgia,serif !important;align-self:center !important;grid-column:2/4 !important;grid-row:1 !important}
+#profileScreen.skills-active .skill-description{font:11px/1.35 "Segoe UI",sans-serif !important;color:#695d45 !important;grid-column:2/4 !important;grid-row:2 !important;align-self:start !important}
+#profileScreen.skills-active .skill-values{display:flex !important;flex-direction:column !important;justify-content:center !important;grid-column:1/3 !important;grid-row:3 !important;gap:2px !important;align-self:end !important;min-width:0 !important}
+#profileScreen.skills-active .skill-values strong{font:16px Georgia,serif !important;color:var(--moss) !important;white-space:nowrap !important}
+#profileScreen.skills-active .skill-values>span,
+#profileScreen.skills-active .skill-values small{font:9px "Segoe UI",sans-serif !important;color:var(--muted) !important}
+#profileScreen.skills-active .skill-row-actions{display:grid !important;grid-template-columns:44px 68px 44px !important;align-self:end !important;height:44px !important;width:auto !important;border:1px solid #a68c60 !important;grid-column:3 !important;grid-row:3 !important;background:#ddcba1 !important;padding:0 !important;margin:0 !important;gap:0 !important;box-shadow:none !important;border-radius:0 !important}
+#profileScreen.skills-active .skill-row-actions button{width:44px !important;height:42px !important;min-height:0 !important;border:0 !important;box-shadow:none !important;background:#dac394 !important;font:24px Georgia,serif !important;padding:0 !important}
+#profileScreen.skills-active .skill-row-actions button:last-child{color:#fff1d6 !important;background:#68704a !important}
+#profileScreen.skills-active .skill-row-actions button:disabled{opacity:1 !important;background:#d6cfb9 !important;color:#a2997e !important}
+#profileScreen.skills-active .skill-cost-wrap{display:grid !important;place-content:center !important;text-align:center !important;font:10px/1.3 "Segoe UI",sans-serif !important;background:#f0e3c0 !important;border-left:1px solid #b79e6f !important;border-right:1px solid #b79e6f !important;min-width:0 !important}
+#profileScreen.skills-active [data-skill-cost]{font:10px/1.3 "Segoe UI",sans-serif !important;min-width:0 !important;border:0 !important;padding:0 !important;background:none !important;color:var(--ink) !important}
+#profileScreen.skills-active [data-skill-next]{display:block !important;font:8px "Segoe UI",sans-serif !important;color:var(--muted) !important}
+#profileScreen.skills-active .skill-row.capped{background:linear-gradient(115deg,#eee9c9,#e1dfb5) !important}
+#profileScreen.skills-active .skill-row.syncing{border-color:#798453 !important}
+
+@media(max-height:600px),(max-width:1000px){#profileScreen.skills-active{grid-template-rows:49px minmax(0,1fr) !important}
+#profileScreen.skills-active .profile-screen-header{padding:0 10px !important;gap:8px !important}
+#profileScreen.skills-active .profile-screen-heading{grid-template-columns:29px auto !important;column-gap:7px !important}
+#profileScreen.skills-active .profile-screen-heading::before{width:29px !important;height:33px !important}
+#profileScreen.skills-active .profile-screen-heading>span{font-size:7px !important;letter-spacing:1px !important;margin-bottom:3px !important}
+#profileScreen.skills-active .profile-screen-heading h2{font-size:23px !important}
+#profileScreen.skills-active .profile-tabs{gap:4px !important}
+#profileScreen.skills-active .profile-tabs button{min-width:56px !important;padding:0 10px !important;font-size:11px !important}
+#profileScreen.skills-active .skill-preset-tabs{height:46px !important;gap:4px !important;padding:1px 10px !important}
+#profileScreen.skills-active .skill-preset-tabs button{padding:4px 8px !important}
+#profileScreen.skills-active .skill-preset-tabs strong{font-size:12px !important}
+#profileScreen.skills-active .skill-preset-tabs small{font-size:9px !important}
+#profileScreen.skills-active .skill-preset-detail{min-height:49px !important;padding:2px 11px !important;column-gap:12px !important}
+#profileScreen.skills-active .skill-preset-detail>header strong{font-size:16px !important}
+#profileScreen.skills-active .skill-preset-detail>header small{font-size:9px !important;margin-top:0 !important}
+#profileScreen.skills-active #skillPresetNameInput{height:24px !important;font-size:13px !important}
+#profileScreen.skills-active .profile-skill-summary{gap:12px !important}
+#profileScreen.skills-active .profile-skill-summary strong{font-size:20px !important}
+#profileScreen.skills-active .profile-skill-summary span{font-size:9px !important}
+#profileScreen.skills-active .profile-skill-summary .skill-hero-level{padding-left:12px !important}
+#profileScreen.skills-active .skill-hero-level span{font-size:8px !important}
+#profileScreen.skills-active .skill-hero-level strong{font-size:16px !important}
+#profileScreen.skills-active #resetSkillsBtn,
+#profileScreen.skills-active .skill-preset-detail>footer button{font-size:12px !important;padding:5px 10px !important}
+#profileScreen.skills-active [data-skill-reset-copy]{font-size:8px !important}
+#profileScreen.skills-active .skill-preset-detail>footer{gap:5px !important}
+#profileScreen.skills-active [data-apply-skill-preset] small{font-size:10px !important}
+#profileScreen.skills-active .profile-skill-list{align-items:stretch !important;grid-template-rows:max-content !important;overflow-y:auto !important;overflow-x:hidden !important;overscroll-behavior:contain !important;scrollbar-width:thin !important;scrollbar-color:#a18a5d #e5d5ad !important;scrollbar-gutter:stable !important;padding:0 5px 8px !important;scroll-padding-top:39px !important}
+#profileScreen.skills-active .profile-skill-group{display:block !important;height:auto !important;padding:0 5px 4px !important}
+#profileScreen.skills-active .profile-skill-group>header{height:35px !important;margin:0 0 5px !important;position:sticky !important;top:0 !important;z-index:1 !important;background:#eee3c4 !important}
+#profileScreen.skills-active .profile-skill-group>header h3{font-size:15px !important}
+#profileScreen.skills-active .skill-group-cards{height:auto !important;grid-template-columns:minmax(0,1fr) !important;grid-template-rows:none !important;grid-auto-rows:minmax(110px,auto) !important;gap:5px !important}
+#profileScreen.skills-active .skill-row{min-height:110px !important;padding:5px 7px !important;grid-template-columns:30px minmax(0,1fr) !important;grid-template-rows:26px minmax(28px,auto) 44px !important;column-gap:6px !important;scroll-margin-top:39px !important}
+#profileScreen.skills-active .skill-row .skill-emblem{width:30px !important;height:32px !important;grid-column:1 !important;grid-row:1 !important}
+#profileScreen.skills-active .skill-row h4{font-size:14px !important;grid-column:2 !important;grid-row:1 !important}
+#profileScreen.skills-active .skill-description{grid-column:1/3 !important;grid-row:2 !important;font-size:10px !important;line-height:1.25 !important;align-self:center !important}
+#profileScreen.skills-active .skill-values{grid-column:1/3 !important;grid-row:3 !important;align-self:center !important;justify-self:start !important;gap:3px !important}
+#profileScreen.skills-active .skill-values strong{font-size:13px !important}
+#profileScreen.skills-active .skill-values>span,
+#profileScreen.skills-active .skill-values small{font-size:8px !important}
+#profileScreen.skills-active .skill-row-actions{grid-column:1/3 !important;grid-row:3 !important;grid-template-columns:44px minmax(0,1fr) 44px !important;align-self:center !important;justify-self:end !important;width:138px !important}
+#profileScreen.skills-active [data-skill-next]{font-size:7px !important}
+
+}
+@media(max-width:780px){#profileScreen.skills-active .skill-group-cards{grid-auto-rows:minmax(122px,auto) !important}
+#profileScreen.skills-active .skill-row{min-height:122px !important;grid-template-rows:27px minmax(25px,auto) 15px 44px !important}
+#profileScreen.skills-active .skill-values{grid-row:3 !important;flex-direction:row !important;align-items:center !important;justify-content:space-between !important;justify-self:stretch !important;gap:2px !important}
+#profileScreen.skills-active .skill-row-actions{grid-row:4 !important;justify-self:stretch !important;width:auto !important}
+
+}
+@media(max-width:650px){#profileScreen.skills-active{width:calc(100% - 12px) !important;height:calc(100dvh - 12px) !important;padding:4px !important;grid-template-rows:48px minmax(0,1fr) !important}
+#profileScreen.skills-active .profile-screen-header{padding:0 4px !important;gap:5px !important}
+#profileScreen.skills-active .profile-screen-heading{display:block !important}
+#profileScreen.skills-active .profile-screen-heading::before,
+#profileScreen.skills-active .profile-screen-heading>span{display:none !important}
+#profileScreen.skills-active .profile-screen-heading h2{font-size:18px !important}
+#profileScreen.skills-active .profile-tabs{gap:2px !important}
+#profileScreen.skills-active .profile-tabs button{min-width:0 !important;padding:0 9px !important;font-size:10px !important}
+#profileScreen.skills-active .skill-preset-tabs{height:44px !important;padding:0 5px !important;gap:3px !important}
+#profileScreen.skills-active .skill-preset-tabs button{padding:3px 5px !important;gap:2px !important}
+#profileScreen.skills-active .skill-preset-tabs strong{font-size:11px !important}
+#profileScreen.skills-active .skill-preset-tabs small{font-size:8px !important}
+#profileScreen.skills-active .skill-preset-detail{min-height:44px !important;padding:0 6px !important;column-gap:8px !important}
+#profileScreen.skills-active .skill-preset-detail>header strong{font-size:13px !important}
+#profileScreen.skills-active .skill-preset-detail>header small{font-size:8px !important}
+#profileScreen.skills-active .profile-skill-summary{gap:9px !important}
+#profileScreen.skills-active .profile-skill-summary>div{gap:1px !important}
+#profileScreen.skills-active .profile-skill-summary strong{font-size:18px !important}
+#profileScreen.skills-active .profile-skill-summary span{font-size:8px !important}
+#profileScreen.skills-active .profile-skill-summary .skill-hero-level{padding-left:6px !important}
+#profileScreen.skills-active .skill-hero-level span{font-size:7px !important}
+#profileScreen.skills-active .skill-hero-level strong{font-size:15px !important}
+#profileScreen.skills-active #resetSkillsBtn,
+#profileScreen.skills-active .skill-preset-detail>footer button{font-size:10px !important;padding:4px 7px !important}
+#profileScreen.skills-active [data-skill-reset-copy]{font-size:7px !important}
+#profileScreen.skills-active .skill-preset-detail>footer{gap:4px !important}
+#profileScreen.skills-active .skill-preset-detail:not(.current-build)>header{max-width:130px !important}
+#profileScreen.skills-active #skillPresetNameInput{height:23px !important;font-size:11px !important}
+#profileScreen.skills-active [data-apply-skill-preset] small{font-size:9px !important}
+#profileScreen.skills-active .profile-skill-list{padding:0 2px 6px !important}
+#profileScreen.skills-active .profile-skill-group{padding:0 3px 3px !important}
+#profileScreen.skills-active .profile-skill-group>header h3{font-size:13px !important}
+#profileScreen.skills-active .skill-group-cards{gap:4px !important}
+#profileScreen.skills-active .skill-row{padding:4px 5px !important;grid-template-columns:24px minmax(0,1fr) !important;column-gap:4px !important}
+#profileScreen.skills-active .skill-row .skill-emblem{width:24px !important;height:28px !important}
+#profileScreen.skills-active .skill-row h4{font-size:12px !important;line-height:1.1 !important}
+#profileScreen.skills-active .skill-description{font-size:10px !important;line-height:1.2 !important}
+#profileScreen.skills-active .skill-values strong{font-size:12px !important}
+#profileScreen.skills-active .skill-values>span,
+#profileScreen.skills-active .skill-values small{font-size:7px !important}
+
+}
+
+#profileScreen.skills-active .skill-values small{display:inline !important;margin:0 !important}
+#profileScreen.skills-active .skill-preset-detail [data-skill-sync-status][hidden]{display:none !important}
+
+#profileScreen.skills-active .skill-preset-detail>header .skill-preset-identity>strong{display:none !important}
+#profileScreen.skills-active .skill-preset-identity{order:1 !important}
+
+#profileScreen.skills-active .skill-current-build-tab{grid-column:auto !important}
