@@ -52,10 +52,13 @@ async function main() {
   const sourceDescriptor = fixture.descriptors.find(region => region.id === source.regionId);
   const originalConnections = sourceDescriptor.connections;
   sourceDescriptor.connections = {};
+  // Production descriptor registration invalidates the derived map cache.
+  client.editorMapCache.clear();
   client.attackForeignCity(destination.id);
   assert.match(rejected, /No connected road route/);
   assert.doesNotMatch(rejected, /no troops/);
   sourceDescriptor.connections = originalConnections;
+  client.editorMapCache.clear();
 
   const loader = runtime.createRegionDefinitionLoader({ catalog: { regions: fixture.descriptors }, cacheLimit: 4,
     fetchJson: file => JSON.parse(fs.readFileSync(path.join(root, file), "utf8")) });
