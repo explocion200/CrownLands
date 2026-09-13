@@ -49,6 +49,10 @@ const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
 const REGION_DEFINITION_CACHE_LIMIT = Math.max(1, Math.floor(Number(REGION_CATALOG.definitionCache?.maxRegions) || 4));
 const STARTER_REGION_TYPE = "starter";
+// Reuse derived map data during terrain/render reads without retaining evicted
+// city definitions. Descriptor updates invalidate this bounded cache as well.
+const editorMapCache = new Map();
+const EDITOR_MAP_CACHE_LIMIT = 64;
 const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLoader({
   catalog: REGION_CATALOG,
   cacheLimit: REGION_DEFINITION_CACHE_LIMIT,
@@ -58,8 +62,12 @@ const REGION_DEFINITION_LOADER = REGION_CATALOG_RUNTIME.createRegionDefinitionLo
     if (!response.ok) throw new Error(`${summary.name || summary.id} definition returned HTTP ${response.status}.`);
     return response.json();
   },
-  onLoad: regionId => playableBaseCitiesByRegionCache?.delete(regionId),
+  onLoad: regionId => {
+    editorMapCache.delete(regionId);
+    playableBaseCitiesByRegionCache?.delete(regionId);
+  },
   onEvict: regionId => {
+    editorMapCache.delete(regionId);
     playableBaseCitiesByRegionCache?.delete(regionId);
     for (const [cityId, city] of playableBaseCitiesByIdCache || []) {
       if (city?.regionId === regionId) playableBaseCitiesByIdCache.delete(cityId);
@@ -507,9 +515,17 @@ function getEditorMap(regionId) {
   if (!targetRegionId) return null;
   if (CORE_EXPANSION_TOPOLOGY_ACTIVE) {
     const summary = REGION_CATALOG_SUMMARIES_BY_ID.get(targetRegionId);
-    return summary
-      ? buildCatalogEditorMap(summary, regionDefinitionCache.get(targetRegionId)?.definition)
-      : null;
+    if (!summary) return null;
+    const definition = regionDefinitionCache.get(targetRegionId)?.definition;
+    const cached = editorMapCache.get(targetRegionId);
+    if (cached?.summary === summary && cached.definition === definition && cached.assetVersion === REGION_CATALOG.assetVersion) {
+      return cached.map;
+    }
+    const map = buildCatalogEditorMap(summary, definition);
+    editorMapCache.delete(targetRegionId);
+    editorMapCache.set(targetRegionId, { summary, definition, assetVersion: REGION_CATALOG.assetVersion, map });
+    while (editorMapCache.size > EDITOR_MAP_CACHE_LIMIT) editorMapCache.delete(editorMapCache.keys().next().value);
+    return map;
   }
   return getEditorMapEntries(MAP_EDITOR_DATA).find(map => map.id === targetRegionId) || null;
 }
@@ -2879,6 +2895,7 @@ function registerCoreExpansionRegions(regions = []) {
     .filter(region => region?.id);
   if (!descriptors.length) return false;
   REGION_DEFINITION_LOADER.register(descriptors);
+  editorMapCache.clear();
   for (const summary of Array.isArray(REGION_CATALOG.regions) ? REGION_CATALOG.regions : []) {
     const regionId = cleanEditorRegionId(summary?.id);
     if (regionId) REGION_CATALOG_SUMMARIES_BY_ID.set(regionId, summary);
@@ -5111,8 +5128,11 @@ function renderIslandTeleporters() {
 
 function renderHarvestBonuses() {
   if (!harvestLayer) return;
-  harvestLayer.innerHTML = "";
-  if (!state) return;
+  const existingNodes = new Map(Array.from(harvestLayer.querySelectorAll(".harvest-bonus-node"), node => [node.dataset.harvestBonusId, node]));
+  if (!state) {
+    existingNodes.forEach(node => node.remove());
+    return;
+  }
   const activeRegionId = getActiveMapRegionId();
   const daily = ensureDailyCaptureTracker();
   getActiveHarvestBonuses(activeRegionId).forEach(bonus => {
@@ -5120,25 +5140,34 @@ function renderHarvestBonuses() {
     const remaining = getHarvestBonusRemaining(type, daily);
     const label = type === "troops" ? "troop bonus" : "gold bonus";
     const mapPoint = worldToMapPoint(bonus);
-    const buttonElement = document.createElement("button");
-    buttonElement.type = "button";
+    let buttonElement = existingNodes.get(bonus.id);
+    existingNodes.delete(bonus.id);
+    if (!buttonElement) {
+      buttonElement = document.createElement("button");
+      buttonElement.type = "button";
+      buttonElement.dataset.harvestBonusId = bonus.id;
+      buttonElement.addEventListener("click", event => {
+        event.stopPropagation();
+        collectHarvestBonus(bonus.id, event.currentTarget);
+      });
+      harvestLayer.appendChild(buttonElement);
+    }
+    if (buttonElement.dataset.harvestBonusType !== type) {
+      buttonElement.dataset.harvestBonusType = type;
+      buttonElement.innerHTML = `<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;
+    }
+    const pending = pendingHarvestBonusIds.has(bonus.id);
     buttonElement.className = `harvest-bonus-node harvest-bonus-${type}`;
-    buttonElement.dataset.harvestBonusId = bonus.id;
-    buttonElement.dataset.harvestBonusType = type;
     buttonElement.style.left = `${mapPoint.x}px`;
     buttonElement.style.top = `${mapPoint.y}px`;
-    buttonElement.disabled = remaining <= 0;
-    buttonElement.setAttribute("aria-label", remaining > 0 ? `Harvest ${label}` : `Daily ${label} limit reached`);
-    buttonElement.title = remaining > 0
+    buttonElement.disabled = pending || remaining <= 0;
+    buttonElement.setAttribute("aria-busy", String(pending));
+    buttonElement.setAttribute("aria-label", pending ? `Collecting ${label}` : remaining > 0 ? `Harvest ${label}` : `Daily ${label} limit reached`);
+    buttonElement.title = pending ? `Collecting ${label}...` : remaining > 0
       ? `Harvest ${label} - ${formatNumber(remaining)} left today`
       : `Daily ${label} limit reached`;
-    buttonElement.innerHTML = `<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;
-    buttonElement.addEventListener("click", event => {
-      event.stopPropagation();
-      collectHarvestBonus(bonus.id, event.currentTarget);
-    });
-    harvestLayer.appendChild(buttonElement);
   });
+  existingNodes.forEach(node => node.remove());
 }
 
 function getEditorEdgeConnectionDefinitions(regionId) {
@@ -15308,6 +15337,8 @@ function retireActiveOnlineIslandSubscription() {
 
 function disconnectOnlineWorld() {
   onlineSessionGeneration += 1;
+  harvestSpawnRequestInFlight = false;
+  pendingHarvestBonusIds = new Set();
   pendingDirectScoutTargets.clear();
   cancelAuthoritativeRoutePreviewRefresh();
   cancelLoginPresentationSequence();
@@ -21111,8 +21142,6 @@ function createHarvestBonusPoint(regionId) {
   for (const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS) {
     const maximumRadius = shortestDimension * fraction;
     const angleOffset = Math.random() * Math.PI * 2;
-    let closestPoint = null;
-    let closestDistance = Number.POSITIVE_INFINITY;
     for (let attempt = 0; attempt < HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE; attempt += 1) {
       const angle = angleOffset + attempt * HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
       const radiusFraction = (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;
@@ -21120,11 +21149,10 @@ function createHarvestBonusPoint(regionId) {
       const x = center.x + Math.cos(angle) * radius;
       const y = center.y + Math.sin(angle) * radius;
       if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
-      if (radius >= closestDistance) continue;
-      closestPoint = { x, y };
-      closestDistance = radius;
+      // Candidates are ordered by increasing radius, so this is already the
+      // closest valid point in this zone. Farther terrain checks cannot improve it.
+      return { x, y };
     }
-    if (closestPoint) return closestPoint;
   }
   return null;
 }
@@ -21178,9 +21206,12 @@ function spawnHarvestBonus(regionId = getActiveMapRegionId(), type = getNextAvai
 }
 
 function updateServerHarvestBonuses() {
-  if (!state || harvestSpawnRequestInFlight) return;
+  if (!state || harvestSpawnRequestInFlight || pendingHarvestBonusIds.size) return;
   const api = getOnlineApi();
   if (!api?.reserveHarvestBonusSpawn) return;
+  const requestState = state;
+  const requestGeneration = onlineSessionGeneration;
+  const isCurrentRequest = () => state === requestState && onlineSessionGeneration === requestGeneration;
   const daily = ensureDailyCaptureTracker();
   const activeBonus = getAllActiveHarvestBonuses()[0] || null;
   if (activeBonus) {
@@ -21202,22 +21233,24 @@ function updateServerHarvestBonuses() {
       y: Math.round(point.y),
     };
     harvestSpawnRequestInFlight = true;
-    api.reserveHarvestBonusSpawn({
+    Promise.resolve().then(() => isCurrentRequest() ? api.reserveHarvestBonusSpawn({
       relocateActive: true,
       activeBonusId: activeBonus.id,
       type: activeBonus.type,
       regionId: activeRegionId,
       daily: normalizeDailyCaptureTracker(daily),
       bonus: relocatedBonus,
-    }).then(result => {
-      applyServerEconomyResult(result);
-      if (result?.relocated || result?.spawned) renderHarvestBonuses();
-      harvestRelocationRetryAtMs = 0;
+    }) : null).then(result => {
+      if (!isCurrentRequest()) return;
+      applyServerEconomyResult(result, { renderCities: false });
+      harvestRelocationRetryAtMs = result?.relocated || result?.spawned
+        ? 0 : Date.now() + HARVEST_BONUS_SERVER_RETRY_SECONDS * 1000;
     }).catch(error => {
+      if (!isCurrentRequest()) return;
       console.warn("Could not move harvest pickup to the current map", error);
       harvestRelocationRetryAtMs = Date.now() + HARVEST_BONUS_SERVER_RETRY_SECONDS * 1000;
     }).finally(() => {
-      harvestSpawnRequestInFlight = false;
+      if (isCurrentRequest()) harvestSpawnRequestInFlight = false;
     });
     return;
   }
@@ -21238,19 +21271,23 @@ function updateServerHarvestBonuses() {
   }
   const bonus = createHarvestBonusRecord(activeRegionId, nextType, point);
   harvestSpawnRequestInFlight = true;
-  api.reserveHarvestBonusSpawn({
+  Promise.resolve().then(() => isCurrentRequest() ? api.reserveHarvestBonusSpawn({
     type: nextType,
     regionId: activeRegionId,
     daily: normalizeDailyCaptureTracker(daily),
     bonus,
-  }).then(result => {
-    applyServerEconomyResult(result);
-    if (result?.spawned) renderHarvestBonuses();
+  }) : null).then(result => {
+    if (!isCurrentRequest()) return;
+    applyServerEconomyResult(result, { renderCities: false });
+    if (!result?.spawned && getHarvestSpawnDelaySeconds() <= 0) {
+      setHarvestSpawnDelay(HARVEST_BONUS_SERVER_RETRY_SECONDS);
+    }
   }).catch(error => {
+    if (!isCurrentRequest()) return;
     console.warn("Could not reserve harvest pickup spawn", error);
     setHarvestSpawnDelay(HARVEST_BONUS_SERVER_RETRY_SECONDS);
   }).finally(() => {
-    harvestSpawnRequestInFlight = false;
+    if (isCurrentRequest()) harvestSpawnRequestInFlight = false;
   });
 }
 
@@ -21320,33 +21357,49 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
   if (index < 0) return;
   const bonus = state.harvestBonuses[index];
   const type = normalizeHarvestBonusType(bonus.type);
-  const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
+  let rewardSourceAnchor = null;
+  try { rewardSourceAnchor = captureAnimationAnchor(sourceElement); } catch (error) {
+    console.warn("Could not capture pickup animation anchor", error);
+  }
   const daily = ensureDailyCaptureTracker();
   if (!canHarvestBonusType(type, daily)) {
     showToast(`Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
     return;
   }
-  state.harvestBonuses.splice(index, 1);
-
   if (usesServerEconomyAuthority()) {
+    if (harvestSpawnRequestInFlight) {
+      showToast("Pickup location is updating. Try again in a moment.");
+      return;
+    }
     const api = getOnlineApi();
     if (!api?.collectHarvestBonus) {
-      state.harvestBonuses.splice(index, 0, bonus);
       showToast("Pickup collection needs the server update. Reload and try again.");
       renderHarvestBonuses();
       return;
     }
-
+    const requestState = state;
+    const requestGeneration = onlineSessionGeneration;
+    const isCurrentRequest = () => state === requestState && onlineSessionGeneration === requestGeneration;
+    let claimConfirmed = false;
     pendingHarvestBonusIds.add(pendingId);
-    renderHarvestBonuses();
-    showToast(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
     try {
+      // Keep the authoritative pickup while pending, and do not let feedback
+      // failures prevent the request or strand its lock.
+      try {
+        renderHarvestBonuses();
+        showToast(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
+      } catch (error) {
+        console.warn("Could not display pending pickup", error);
+      }
       const result = await api.collectHarvestBonus({
         bonusId: bonus.id,
         type,
         regionId: normalizeRegionId(bonus.regionId),
         daily: normalizeDailyCaptureTracker(daily),
       });
+      if (!isCurrentRequest()) return;
+      claimConfirmed = true;
+      state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses).filter(item => item.id !== bonus.id);
       applyServerEconomyResult(result, { renderCities: false });
       const reward = Math.max(0, Math.floor(Number(result?.reward) || 0));
       const serverDaily = normalizeDailyCaptureTracker(result?.currentUser?.daily || state.daily);
@@ -21369,20 +21422,35 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
         });
       }
     } catch (error) {
+      if (!isCurrentRequest()) return;
+      if (claimConfirmed) {
+        console.warn("Could not display collected harvest bonus", error);
+        return;
+      }
       state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
       if (!state.harvestBonuses.some(item => item.id === bonus.id)) {
         state.harvestBonuses.splice(Math.min(index, state.harvestBonuses.length), 0, bonus);
       }
       onlineLastError = error?.message || String(error);
       console.warn("Could not collect harvest bonus", error);
-      renderHarvestBonuses();
-      showToast(onlineLastError || "Could not collect pickup.");
+      try {
+        renderHarvestBonuses();
+        showToast(onlineLastError || "Could not collect pickup.");
+      } catch (displayError) {
+        console.warn("Could not display pickup failure", displayError);
+      }
     } finally {
-      pendingHarvestBonusIds.delete(pendingId);
+      if (isCurrentRequest()) {
+        pendingHarvestBonusIds.delete(pendingId);
+        try { renderHarvestBonuses(); } catch (error) {
+          console.warn("Could not refresh pickup display", error);
+        }
+      }
     }
     return;
   }
 
+  state.harvestBonuses.splice(index, 1);
   if (type === "troops") {
     const troopReward = getHarvestBonusTroopReward();
     const rewardCity = getHarvestBonusTroopTargetCity();

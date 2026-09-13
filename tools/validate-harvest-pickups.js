@@ -505,3 +505,8 @@ profileTroopTotal.getClientRects = () => [{}];
 assert.equal(destinationContext.getVisibleTroopRewardDestination(), profileTroopTotal);
 
 console.log("Validated halved raw-production pickup rewards, independent 30-per-type UTC caps, authoritative Main City crediting, and cross-region profile animation routing.");
+
+require("./validate-pickup-runtime").run().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
