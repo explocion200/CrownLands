@@ -28,6 +28,8 @@ No broken image references were reported on the rendered draft. No browser error
 - Close and Reopen preserve the local preview and restore the dialog.
 - JavaScript syntax and whitespace checks pass.
 
-## Remaining before release
+## Production integration review
 
-Design approval is pending. The real game still uses its existing Achievements implementation. Backend claims, live season transitions, real account navigation, production integration, and required release/PR checks have not been exercised by this design-only preview. This branch is not release-ready and has not been merged or deployed.
+The approved component was also reviewed inside the actual game using the isolated benchmark adapter at 1440×900, 844×390, and 568×320. The shared Quests and Daily Login tabs opened and returned to Achievements. Full Long Reign requirements remained available, and the fixed action remained visible. A failed synthetic claim preserved 3 ready/16 collected; retry used the existing handler with season ID, achievement ID, and request ID, then showed 2 ready/17 collected and a disabled Collected action. Source validation of all 40 achievement definitions and existing server reward rules passed.
+
+Integration corrected inherited legacy list framing, filter typography, and detail alignment while preserving the approved layout. No production-account claim or physical-device test was performed. Required PR checks and published build/artifact verification are separate release steps recorded in release evidence.

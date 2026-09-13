@@ -1,0 +1,292 @@
+/* Approved Achievements ledger. Scoped to its own reward tab. */
+#modal.achievements-ledger-modal{--paper:#f2e8cd;--ink:#352f23;--muted:#77694f;--line:#b8a684;--moss:#485839;--burgundy:#703e3d;width:min(1200px,calc(100vw - 24px))!important;height:min(790px,calc(100dvh - 24px))!important;max-width:none!important;max-height:none!important;padding:5px!important;overflow:hidden!important;border:1px solid #766346!important;border-radius:2px!important;background:var(--paper)!important;color:var(--ink)!important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88!important}
+#modal.achievements-ledger-modal,#modal.achievements-ledger-modal *{box-sizing:border-box}
+#modal.achievements-ledger-modal>.modal-card{position:static!important;display:block!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important}
+#modal.achievements-ledger-modal>.modal-card::before,#modal.achievements-ledger-modal>.modal-card::after,#modal.achievements-ledger-modal #modalTitle{display:none!important}
+#modal.achievements-ledger-modal #modalBody{height:100%!important;max-height:none!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important;display:block!important}
+
+#modal.achievements-ledger-modal .achievements-panel{font:14px/normal "Segoe UI",Arial,sans-serif!important;color:var(--ink)!important}
+#modal.achievements-ledger-modal .achievements-panel :where(h1,h2,h3,p,span,strong,b,small){color:inherit!important;font-family:inherit!important;text-transform:none!important;text-shadow:none!important;font-variant:normal!important;letter-spacing:normal}
+#modal.achievements-ledger-modal .achievements-panel :where(h1,h2,h3){min-height:0!important;border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+#modal.achievements-ledger-modal .achievements-panel button{border-radius:0!important;text-transform:none!important;text-shadow:none!important;letter-spacing:normal!important}
+#modal.achievements-ledger-modal .achievements-panel .cd-icon{display:grid!important;place-items:center!important;width:100%!important;height:100%!important}
+#modal.achievements-ledger-modal .achievements-panel *{box-sizing:border-box!important}
+#modal.achievements-ledger-modal .achievements-panel button,#modal.achievements-ledger-modal .achievements-panel select{font:inherit!important;color:inherit!important}
+#modal.achievements-ledger-modal .achievements-panel button{cursor:pointer!important}
+#modal.achievements-ledger-modal .achievements-panel button:disabled{cursor:default!important}
+#modal.achievements-ledger-modal .achievements-panel button:focus-visible,#modal.achievements-ledger-modal .achievements-panel select:focus-visible,#modal.achievements-ledger-modal .achievements-panel [tabindex]:focus-visible{outline:2px solid #426f76!important;outline-offset:-3px!important}
+#modal.achievements-ledger-modal .achievements-panel button:hover:not(:disabled){filter:brightness(1.035)!important}
+#modal.achievements-ledger-modal .achievements-panel [hidden]{display:none!important!important}
+#modal.achievements-ledger-modal .achievements-panel h1,#modal.achievements-ledger-modal .achievements-panel h2,#modal.achievements-ledger-modal .achievements-panel h3,#modal.achievements-ledger-modal .achievements-panel p{margin:0!important}
+#modal.achievements-ledger-modal .achievements-panel img{object-fit:contain!important}
+#modal.achievements-ledger-modal .achievements-panel button,#modal.achievements-ledger-modal .achievements-panel img{-webkit-tap-highlight-color:transparent!important}
+#modal.achievements-ledger-modal .achievements-panel{height:100%!important;display:grid!important;grid-template-rows:80px 62px 62px minmax(0,1fr)!important;border:1px solid var(--line)!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-header{display:flex!important;align-items:center!important;gap:15px!important;padding:10px 18px!important;border-bottom:1px solid var(--line)!important;background:#e9dcb483!important}
+#modal.achievements-ledger-modal .achievements-panel .header-seal{width:49px!important;height:53px!important}
+#modal.achievements-ledger-modal .achievements-panel .heading-copy p{margin-bottom:3px!important;font:italic 12px Georgia,serif!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .heading-copy h1{font:32px/1.1 Georgia,serif!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock{margin-left:auto!important;text-align:right!important;min-width:108px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock span,#modal.achievements-ledger-modal .achievements-panel .season-clock small{display:block!important;font-size:10px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock strong{display:block!important;font:20px/1.3 Georgia,serif!important;font-variant-numeric:tabular-nums!important;letter-spacing:.5px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock small{font-size:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-summary{display:flex!important;align-items:center!important;gap:26px!important;padding:8px 23px!important;border-bottom:1px solid #c8b895!important;background:#e7d9b588!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title{min-width:165px!important;display:grid!important;gap:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title span{font-size:8px!important;letter-spacing:1.5px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title strong{font:20px Georgia,serif!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track{flex:1!important;max-width:430px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track>div{display:flex!important;justify-content:space-between!important;font-size:10px!important;gap:8px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track strong{color:var(--ink)!important;font-weight:600!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-track{display:block!important;height:5px!important;margin-top:6px!important;background:#d6c9a8!important;border:1px solid #bbae8e!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-track i{display:block!important;height:100%!important;background:#829064!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total{display:flex!important;align-items:center!important;gap:9px!important;margin-left:auto!important;border-left:1px solid #bfac82!important;padding-left:22px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total strong{font:24px Georgia,serif!important;white-space:nowrap!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total span{font-size:10px!important;color:var(--muted)!important;max-width:52px!important;line-height:1.4!important}
+#modal.achievements-ledger-modal .achievements-panel .ready-count{background:#4d5a3e!important;color:#f7efd9!important;padding:7px 12px!important;border:1px solid #66704a!important;box-shadow:inset 0 0 0 2px #98a07555!important;font-size:11px!important;white-space:nowrap!important}
+#modal.achievements-ledger-modal .achievements-panel .filters{display:flex!important;align-items:center!important;gap:16px!important;padding:8px 18px!important;border-bottom:1px solid var(--line)!important}
+#modal.achievements-ledger-modal .achievements-panel #categories{display:flex!important;align-items:center!important;gap:3px!important;flex:1!important}
+#modal.achievements-ledger-modal .achievements-panel #categories button{display:flex!important;align-items:center!important;gap:4px!important;min-height:44px!important;padding:5px 8px!important;border:1px solid transparent!important;background:transparent!important;font-size:11px!important;color:#65563d!important;white-space:nowrap!important}
+#modal.achievements-ledger-modal .achievements-panel #categories button[aria-pressed=true]{border-color:#ad9567!important;background:#e0cca0!important;box-shadow:inset 0 0 0 2px #f6e8c766!important;color:#443a27!important}
+#modal.achievements-ledger-modal .achievements-panel #categories svg{width:25px!important;height:29px!important}
+#modal.achievements-ledger-modal .achievements-panel .status-filter,#modal.achievements-ledger-modal .achievements-panel .mobile-category{display:flex!important;align-items:center!important;gap:8px!important;font-size:10px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .filters select{height:44px!important;border:1px solid #ab9770!important;background:#ece0c1!important;padding:0 25px 0 9px!important;border-radius:0!important;font-size:11px!important;max-width:160px!important}
+#modal.achievements-ledger-modal .achievements-panel .mobile-category{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-body{display:grid!important;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)!important;min-height:0!important;background:radial-gradient(ellipse at 35% 35%,#fff8df99,transparent 70%)!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger{min-width:0!important;min-height:0!important;display:grid!important;grid-template-rows:35px minmax(0,1fr) 29px!important;padding:0 17px!important;border-right:1px solid var(--line)!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;color:var(--muted)!important;font-size:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading>span{font:italic 14px Georgia,serif!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading small{font-size:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-note{align-self:center!important;text-align:center!important;font-size:10px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel #achievementList{min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;scrollbar-width:thin!important;scrollbar-color:#b09c73 transparent!important;padding:1px 5px 3px 1px!important;scroll-padding:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row{width:100%!important;min-height:88px!important;display:grid!important;grid-template-columns:53px minmax(0,1fr) 105px!important;align-items:center!important;gap:11px!important;padding:8px 10px!important;margin:0 0 7px!important;border:1px solid #bda982!important;background:linear-gradient(115deg,#f3e8cd,#eaddbc)!important;box-shadow:inset 0 0 0 3px #fff5dc66!important;text-align:left!important;position:relative!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row[aria-pressed=true]{border-color:#8d5f4b!important;box-shadow:inset 3px 0 var(--burgundy),inset 0 0 0 1px #bd9b77!important;background:linear-gradient(115deg,#f8edce,#ead6aa)!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row.ready{background:linear-gradient(115deg,#ecebcf,#dddcbc)!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row.claimed{background:#e5e1c9!important}
+#modal.achievements-ledger-modal .achievements-panel .row-badge{position:relative!important;width:53px!important;height:60px!important}
+#modal.achievements-ledger-modal .achievements-panel .category-badge{width:100%!important;height:100%!important}
+#modal.achievements-ledger-modal .achievements-panel .claimed .row-badge svg{opacity:.68!important}
+#modal.achievements-ledger-modal .achievements-panel .seal-check{position:absolute!important;right:-2px!important;bottom:0!important;border:1px solid #793f36!important;border-radius:50%!important;width:20px!important;height:20px!important;background:#97604d!important;color:#fcf0d6!important;font:12px/18px Georgia!important;text-align:center!important;box-shadow:inset 0 0 0 2px #ba877055!important}
+#modal.achievements-ledger-modal .achievements-panel .row-copy{min-width:0!important}
+#modal.achievements-ledger-modal .achievements-panel .row-kicker{display:flex!important;align-items:center!important;gap:6px!important;text-transform:uppercase!important;letter-spacing:.7px!important;font-size:8px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .row-kicker i{height:3px!important;width:3px!important;flex:none!important;background:#a08a5e!important;transform:rotate(45deg)!important}
+#modal.achievements-ledger-modal .achievements-panel .row-title{display:block!important;font:18px/1.18 Georgia,serif!important;margin:3px 0!important}
+#modal.achievements-ledger-modal .achievements-panel .row-description{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:10px!important;color:#6d6048!important;line-height:1.45!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:7px!important;margin-top:6px!important;font-size:9px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-label strong{font-weight:600!important;color:#594f39!important;font-variant-numeric:tabular-nums!important}
+#modal.achievements-ledger-modal .achievements-panel .row-copy .progress-track{height:4px!important;margin-top:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-status{white-space:nowrap!important}
+#modal.achievements-ledger-modal .achievements-panel .ready .row-status{color:var(--moss)!important;font-weight:600!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward{min-height:51px!important;border-left:1px solid #c5b797!important;padding-left:10px!important;display:grid!important;grid-template-columns:29px minmax(0,1fr)!important;gap:3px 5px!important;align-content:center!important;align-items:center!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward img{width:28px!important;height:31px!important;grid-row:1/3!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward strong{font:17px/1.1 Georgia,serif!important;overflow-wrap:anywhere!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward small{font-size:9px!important;color:var(--muted)!important;line-height:1.25!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.large{grid-template-columns:1fr!important;text-align:center!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.large img{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.large strong{font-size:14px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item{grid-template-columns:35px 1fr!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item img{width:36px!important;height:39px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item small{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail{display:grid!important;grid-template-rows:35px minmax(0,1fr) 89px!important;min-height:0!important;min-width:0!important;background:#eadfbf70!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-heading{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;padding:0 22px!important;font-size:10px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel #detailState{color:var(--moss)!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-scroll{min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;padding:4px 27px 20px!important;scrollbar-width:thin!important;scrollbar-color:#a8936c transparent!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero{text-align:center!important;border-top:1px solid var(--line)!important;padding-top:15px!important}
+#modal.achievements-ledger-modal .achievements-panel .hero-badge{width:107px!important;height:117px!important;display:block!important;margin:0 auto 10px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero h2{font:29px/1.15 Georgia,serif!important;margin-bottom:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .eyebrow{font-size:9px!important;letter-spacing:1px!important;text-transform:uppercase!important;color:var(--muted)!important;line-height:1.4!important}
+#modal.achievements-ledger-modal .achievements-panel .ornament{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;color:#ad9565!important;font-size:7px!important;margin:17px auto!important;width:105px!important}
+#modal.achievements-ledger-modal .achievements-panel .ornament::before,#modal.achievements-ledger-modal .achievements-panel .ornament::after{content:""!important;height:1px!important;flex:1!important;background:#bca77a!important}
+#modal.achievements-ledger-modal .achievements-panel .objective h3,#modal.achievements-ledger-modal .achievements-panel .reward-section h3{font-size:10px!important;letter-spacing:1px!important;text-transform:uppercase!important;color:var(--muted)!important;font-weight:400!important;margin-bottom:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .objective p{font:19px/1.4 Georgia,serif!important}
+#modal.achievements-ledger-modal .achievements-panel .objective .progress-label{font-size:10px!important;margin-top:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .requirement-note{margin-top:10px!important;padding-left:9px!important;border-left:2px solid #bea573!important;font-size:11px!important;line-height:1.6!important;color:#786647!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-section{margin-top:19px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box{display:flex!important;align-items:center!important;gap:14px!important;padding:12px!important;border:1px solid #b8a174!important;background:linear-gradient(100deg,#ede0bd,#e1d0a4)!important;box-shadow:inset 0 0 0 3px #f5e9ca66!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box img{width:51px!important;height:53px!important;flex:none!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box strong{display:block!important;font:23px/1.15 Georgia,serif!important;overflow-wrap:anywhere!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box small{display:block!important;font-size:10px!important;color:#715d3e!important;margin-top:5px!important;line-height:1.4!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-note{font-size:10px!important;line-height:1.6!important;color:var(--muted)!important;margin-top:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer{display:flex!important;flex-direction:column!important;justify-content:flex-end!important;gap:7px!important;padding:10px 20px 14px!important;border-top:1px solid var(--line)!important;background:#e8dbb7!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer p{font-size:10px!important;text-align:center!important;min-height:13px!important;color:var(--muted)!important;line-height:1.3!important}
+#modal.achievements-ledger-modal .achievements-panel .primary,#modal.achievements-ledger-modal .achievements-panel .action-footer button{width:100%!important;min-height:44px!important;padding:10px 12px!important;border:1px solid #465133!important;background:var(--moss)!important;color:#fbf3da!important;font:16px Georgia,serif!important;box-shadow:inset 0 0 0 2px #81906366!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer button:disabled{background:#d6d3b9!important;color:#65694f!important;border-color:#a5a58a!important;box-shadow:none!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer p.error{color:#8c3e37!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder{min-height:100%!important;display:grid!important;place-content:center!important;text-align:center!important;gap:12px!important;padding:20px!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder svg{width:60px!important;height:65px!important;margin:auto!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder h3{font:24px Georgia,serif!important;color:var(--ink)!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder p{font-size:12px!important;line-height:1.5!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder button{min-height:44px!important;background:#e4d3af!important;border:1px solid #a28a5e!important;padding:8px 20px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-empty{padding:22px!important;font:17px/1.6 Georgia,serif!important;color:var(--muted)!important}
+#modal.achievements-ledger-modal .achievements-panel .sr-only{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+
+
+@media(min-height:551px){#modal.achievements-ledger-modal .achievements-panel .detail-scroll{padding:4px 22px 12px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero{padding-top:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .hero-badge{width:76px!important;height:84px!important;margin-bottom:6px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero h2{font-size:27px!important;margin-bottom:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .ornament{margin:10px auto!important}
+#modal.achievements-ledger-modal .achievements-panel .objective p{font-size:17px!important;line-height:1.35!important}
+#modal.achievements-ledger-modal .achievements-panel .requirement-note{margin-top:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-section{margin-top:12px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box{padding:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-note{line-height:1.45!important}
+}
+@media(max-width:1050px){#modal.achievements-ledger-modal .achievements-panel #categories{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .mobile-category{display:flex!important;flex:1!important}
+#modal.achievements-ledger-modal .achievements-panel .filters{gap:12px!important}
+#modal.achievements-ledger-modal .achievements-panel .mobile-category select{min-width:155px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-summary{gap:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title{min-width:145px!important}
+}
+@media(orientation:landscape) and (max-height:550px){#modal.achievements-ledger-modal .achievements-panel{grid-template-rows:56px 39px 49px minmax(0,1fr)!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-header{padding:5px 10px!important;gap:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .header-seal{width:33px!important;height:39px!important}
+#modal.achievements-ledger-modal .achievements-panel .heading-copy h1{font-size:25px!important}
+#modal.achievements-ledger-modal .achievements-panel .heading-copy p{font-size:9px!important;margin-bottom:2px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock{min-width:94px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock strong{font-size:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock span{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock small{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-summary{padding:4px 12px!important;gap:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title{min-width:135px!important;gap:2px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title span{font-size:7px!important;letter-spacing:.8px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title strong{font-size:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track>div{font-size:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track .progress-track{margin-top:4px!important;height:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total{padding-left:12px!important;gap:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total strong{font-size:19px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total span{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .ready-count{font-size:9px!important;padding:5px 9px!important}
+#modal.achievements-ledger-modal .achievements-panel .filters{padding:2px 11px!important;gap:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .filters select{height:44px!important;font-size:11px!important;background:#ede2c6!important}
+#modal.achievements-ledger-modal .achievements-panel .status-filter,#modal.achievements-ledger-modal .achievements-panel .mobile-category{font-size:9px!important;gap:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .mobile-category select{min-width:170px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-body{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger{grid-template-rows:24px minmax(0,1fr) 22px!important;padding:0 9px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading>span{font-size:12px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading small{font-size:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-note{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row{min-height:69px!important;grid-template-columns:35px minmax(0,1fr) 85px!important;gap:7px!important;padding:5px 7px!important;margin-bottom:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-badge{width:35px!important;height:43px!important}
+#modal.achievements-ledger-modal .achievements-panel .seal-check{width:15px!important;height:15px!important;font-size:9px!important;line-height:13px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-kicker{font-size:7px!important;letter-spacing:.4px!important;gap:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-title{font-size:15px!important;margin:2px 0!important}
+#modal.achievements-ledger-modal .achievements-panel .row-description{font-size:9px!important;line-height:1.25!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-label{font-size:8px!important;margin-top:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-copy .progress-track{height:3px!important;margin-top:3px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward{padding-left:7px!important;grid-template-columns:22px minmax(0,1fr)!important;gap:3px 4px!important;min-height:39px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward img{width:23px!important;height:26px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward strong{font-size:14px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward small{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.large strong{font-size:11px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item{grid-template-columns:28px 1fr!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item img{width:29px!important;height:32px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item small{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail{grid-template-rows:24px minmax(0,1fr) 64px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-heading{padding:0 12px!important;font-size:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-scroll{padding:0 13px 8px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero{display:grid!important;grid-template-columns:47px minmax(0,1fr)!important;gap:2px 8px!important;align-items:center!important;text-align:left!important;padding-top:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .hero-badge{grid-row:1/3!important;width:45px!important;height:51px!important;margin:0!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero h2{font-size:20px!important;margin:0!important;align-self:end!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero .eyebrow{font-size:7px!important;align-self:start!important;line-height:1.4!important}
+#modal.achievements-ledger-modal .achievements-panel .ornament{margin:7px auto!important;font-size:5px!important;width:75px!important}
+#modal.achievements-ledger-modal .achievements-panel .objective h3,#modal.achievements-ledger-modal .achievements-panel .reward-section h3{font-size:8px!important;margin-bottom:3px!important}
+#modal.achievements-ledger-modal .achievements-panel .objective p{font-size:14px!important;line-height:1.35!important}
+#modal.achievements-ledger-modal .achievements-panel .objective .progress-label{font-size:9px!important;margin-top:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .objective .progress-track{margin-top:4px!important;height:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .requirement-note{font-size:9px!important;margin-top:6px!important;padding-left:6px!important;line-height:1.45!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-section{margin-top:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box{gap:8px!important;padding:6px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box img{width:29px!important;height:31px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box strong{font-size:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box small{font-size:9px!important;margin-top:2px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-note{font-size:9px!important;line-height:1.45!important;margin-top:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer{padding:3px 10px 6px!important;gap:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer p{font-size:9px!important;min-height:11px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer button{min-height:44px!important;padding:7px!important;font-size:13px!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder{padding:12px!important;gap:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder svg{width:36px!important;height:39px!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder h3{font-size:18px!important}
+#modal.achievements-ledger-modal .achievements-panel .placeholder p{font-size:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-empty{padding:14px!important;font-size:13px!important}
+
+}
+@media(orientation:landscape) and (max-width:650px){#modal.achievements-ledger-modal .achievements-panel{grid-template-rows:52px 35px 47px minmax(0,1fr)!important}
+#modal.achievements-ledger-modal .achievements-panel .header-seal,#modal.achievements-ledger-modal .achievements-panel .heading-copy p{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-header{padding:3px 7px!important;gap:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .heading-copy h1{font-size:22px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock{min-width:80px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock strong{font-size:14px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock small{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-clock span{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-summary{padding:4px 8px!important;gap:9px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title{min-width:111px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title strong{font-size:13px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-title span{font-size:6px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track>div{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track>div>span{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .season-track strong{white-space:nowrap!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total{padding-left:8px!important;gap:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total strong{font-size:16px!important}
+#modal.achievements-ledger-modal .achievements-panel .collected-total span{font-size:7px!important;max-width:40px!important}
+#modal.achievements-ledger-modal .achievements-panel .ready-count{font-size:8px!important;padding:4px 6px!important}
+#modal.achievements-ledger-modal .achievements-panel .filters{padding:1px 7px!important;gap:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .mobile-category select{min-width:140px!important}
+#modal.achievements-ledger-modal .achievements-panel .status-filter,#modal.achievements-ledger-modal .achievements-panel .mobile-category{font-size:8px!important;gap:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .filters select{font-size:10px!important;max-width:155px!important;padding-left:7px!important;padding-right:18px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-body{grid-template-columns:minmax(0,1.28fr) minmax(0,1fr)!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger{padding:0 6px!important;grid-template-rows:21px minmax(0,1fr) 20px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading>span{font-size:11px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-heading small{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .ledger-note{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-row{min-height:67px!important;grid-template-columns:26px minmax(0,1fr) 60px!important;gap:4px!important;padding:5px!important;margin-bottom:4px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-badge{width:26px!important;height:33px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-title{font-size:13px!important;line-height:1.1!important}
+#modal.achievements-ledger-modal .achievements-panel .row-kicker{font-size:6px!important;letter-spacing:.2px!important;gap:3px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-description{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .progress-label{font-size:7px!important;gap:2px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-status{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward{padding-left:4px!important;grid-template-columns:1fr!important;text-align:center!important;gap:2px!important;min-height:36px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward img{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward strong{font-size:12px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward small{font-size:7px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.large strong{font-size:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item{grid-template-columns:1fr!important}
+#modal.achievements-ledger-modal .achievements-panel .row-reward.item img{display:none!important}
+#modal.achievements-ledger-modal .achievements-panel .detail{grid-template-rows:21px minmax(0,1fr) 62px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-heading{padding:0 8px!important;font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .detail-scroll{padding:0 9px 7px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero{grid-template-columns:34px minmax(0,1fr)!important;gap:2px 6px!important}
+#modal.achievements-ledger-modal .achievements-panel .hero-badge{width:33px!important;height:38px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero h2{font-size:17px!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero .eyebrow{font-size:6px!important}
+#modal.achievements-ledger-modal .achievements-panel .ornament{margin:5px auto!important}
+#modal.achievements-ledger-modal .achievements-panel .objective p{font-size:12px!important}
+#modal.achievements-ledger-modal .achievements-panel .requirement-note,#modal.achievements-ledger-modal .achievements-panel .reward-note{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box img{width:25px!important;height:28px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box{padding:5px!important;gap:5px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box strong{font-size:14px!important}
+#modal.achievements-ledger-modal .achievements-panel .reward-box small{font-size:8px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer{padding:3px 7px 5px!important;gap:3px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer p{font-size:8px!important;min-height:10px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer button{font-size:12px!important}
+
+}
+
+#modal.achievements-ledger-modal .achievements-panel .achievement-header{padding-right:226px!important}
+#modal.achievements-ledger-modal #modalHeaderNav{top:23px!important;right:60px!important;width:150px!important;height:44px!important;margin:0!important;padding:0!important}
+#modal.achievements-ledger-modal .daily-reward-tabs{display:flex!important;gap:5px!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#modal.achievements-ledger-modal .daily-reward-tabs button{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:4px!important;border:1px solid #a58d64!important;background:#e4d3ae!important;box-shadow:inset 0 0 0 2px #f8ecd377!important;border-radius:0!important}
+#modal.achievements-ledger-modal .daily-reward-tabs button.active{background:#703e3d!important;border-color:#643938!important;box-shadow:inset 0 0 0 2px #ab8d69!important}
+#modal.achievements-ledger-modal .daily-reward-tabs img{width:100%!important;height:100%!important;object-fit:contain!important}
+#modal.achievements-ledger-modal .modal-close{top:23px!important;right:10px!important;width:44px!important;height:44px!important;min-height:44px!important;min-width:44px!important;color:#352f23!important;background:transparent!important;border:0!important;box-shadow:none!important;font-size:25px!important}
+#modal.achievements-ledger-modal .achievements-panel .action-footer p{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(orientation:landscape) and (max-height:550px){#modal.achievements-ledger-modal #modalHeaderNav,#modal.achievements-ledger-modal .modal-close{top:11px!important}#modal.achievements-ledger-modal .achievements-panel .achievement-header{padding-right:218px!important}}
+@media(orientation:landscape) and (max-width:650px){#modal.achievements-ledger-modal #modalHeaderNav,#modal.achievements-ledger-modal .modal-close{top:9px!important}}
+
+#modal.achievements-ledger-modal,#modal.achievements-ledger-modal>.modal-card,#modal.achievements-ledger-modal #modalBody{scrollbar-gutter:auto!important}
+#modal.achievements-ledger-modal .achievements-panel{width:100%!important}
+#modal.achievements-ledger-modal .achievements-panel select,#modal.achievements-ledger-modal .achievements-panel label{font-family:"Segoe UI",Arial,sans-serif!important;font-weight:400!important;letter-spacing:normal!important;text-shadow:none!important}
+#modal.achievements-ledger-modal .achievements-panel .eyebrow{font-weight:400!important}
+#modal.achievements-ledger-modal .achievements-panel .achievement-hero h2{text-align:inherit!important}
+#modal.achievements-ledger-modal .achievements-panel #categories button:not([aria-pressed=true]){box-shadow:none!important}
+#modal.achievements-ledger-modal .achievements-panel #achievementList{display:block!important;border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important;gap:0!important}
