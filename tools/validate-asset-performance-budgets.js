@@ -369,6 +369,8 @@ for (const asset of manifest.assets) {
   assert(
     asset.id === "item-common-gear-box"
       ? gameSource.includes('icon: "assets/icons/common-gear-chest-r1.svg"')
+      : asset.id === "hud-achievements"
+        ? gameSource.includes('icon: "assets/icons/reward-achievements-r1.svg"')
       : appReferenceSource.includes(asset.output),
     `${asset.id} was generated but the shipped client does not reference ${asset.output}.`
   );
