@@ -14,22 +14,29 @@
  .profile-header{padding:0 10px;gap:8px}.heading{gap:7px}.heading img{width:29px;height:33px}.heading p{font-size:7px;letter-spacing:1px;margin-bottom:3px}.heading h1{font-size:23px}.profile-tabs{gap:4px}.profile-tabs button{min-width:56px;padding:0 10px;font-size:11px}
  .preset-tabs{gap:4px;padding:1px 10px}.preset-tabs button{padding:4px 8px}.preset-tabs strong{font-size:12px}.preset-tabs small{font-size:9px}
  .build-bar{padding:2px 11px;gap:12px}.build-name-row>strong{font-size:16px}.build-tag{font-size:7px;padding:3px 4px}#buildHint{font-size:9px;margin-top:3px}.points{font-size:9px;gap:12px}.points strong{font-size:20px}.points .hero-level{padding-left:12px;font-size:8px}.points .hero-level strong{font-size:16px}.primary,.secondary{font-size:12px;padding:5px 10px}.build-actions{gap:5px}.build-actions small{font-size:8px}.build-actions .primary{gap:1px}.build-actions .primary>span{font-size:10px}#presetName{height:24px;font-size:13px}.build-bar.editing .build-name-row{display:none}
- .skill-groups{display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a18a5d #e5d5ad;scrollbar-gutter:stable;padding:0 10px 8px;scroll-padding-top:32px}
- .skill-group{display:block;height:auto;padding:0 0 7px}.skill-group+.skill-group{border-left:0}
- .group-heading{height:28px;margin:0 0 4px;gap:6px;position:sticky;top:0;z-index:1;background:#eee3c4}.group-heading img{width:24px;height:25px}.group-heading>div{display:flex;align-items:baseline;gap:9px}.group-heading h2{font-size:15px}.group-heading p{font-size:9px;margin:0}.group-heading>span{font-size:13px}
- .group-cards,.skill-group[data-category="defense"] .group-cards{display:grid;height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;gap:4px}
- .skill-card{min-height:60px;padding:5px 8px;grid-template-columns:44px minmax(0,1fr) 112px 154px;grid-template-rows:21px minmax(27px,auto);column-gap:10px;row-gap:0;scroll-margin-top:32px}
- .skill-card>img{width:44px;height:46px;grid-column:1;grid-row:1/3}.skill-card h3{font-size:15px;grid-column:2;grid-row:1}.description{grid-column:2;grid-row:2;font-size:11px;line-height:1.2;align-self:center}
- .skill-values{grid-column:3;grid-row:1/3;align-self:center;gap:3px}.skill-values strong{font-size:14px}.skill-values span,.skill-values .cap-label{font-size:9px}
- .stepper{grid-column:4;grid-row:1/3;grid-template-columns:44px minmax(0,1fr) 44px;align-self:center;height:44px}.stepper .cost{font-size:11px}.stepper .cost small{font-size:8px}
+ .skill-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;grid-template-rows:max-content;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a18a5d #e5d5ad;scrollbar-gutter:stable;padding:0 5px 8px;scroll-padding-top:39px}
+ .skill-group{display:block;height:auto;padding:0 5px 4px}.skill-group+.skill-group{border-left:1px solid #c6b58e}
+ .group-heading{height:35px;margin:0 0 5px;gap:5px;position:sticky;top:0;z-index:1;background:#eee3c4}.group-heading img{width:26px;height:28px}.group-heading>div{min-width:0}.group-heading h2{font-size:15px}.group-heading p{font-size:8px;margin-top:2px;white-space:nowrap}.group-heading>span{font-size:13px}
+ .group-cards,.skill-group[data-category="defense"] .group-cards{display:grid;height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:minmax(110px,auto);gap:5px}
+ .skill-card{min-height:110px;padding:5px 7px;grid-template-columns:30px minmax(0,1fr);grid-template-rows:26px minmax(28px,auto) 44px;column-gap:6px;row-gap:0;scroll-margin-top:39px}
+ .skill-card>img{width:30px;height:32px;grid-column:1;grid-row:1}.skill-card h3{font-size:14px;grid-column:2;grid-row:1}.description{grid-column:1/3;grid-row:2;font-size:10px;line-height:1.25;align-self:center}
+ .skill-values{grid-column:1/3;grid-row:3;align-self:center;justify-self:start;gap:3px}.skill-values strong{font-size:13px}.skill-values span,.skill-values .cap-label{font-size:8px}
+ .stepper{grid-column:1/3;grid-row:3;grid-template-columns:44px minmax(0,1fr) 44px;align-self:center;justify-self:end;width:138px;height:44px}.stepper .cost{font-size:10px}.stepper .cost small{font-size:7px}
  .skill-card.capped::after{display:none}.skill-card.capped h3{padding:0}
+}
+@media(max-width:780px){
+ .group-cards,.skill-group[data-category="defense"] .group-cards{grid-auto-rows:minmax(122px,auto)}
+ .skill-card{min-height:122px;grid-template-rows:27px minmax(25px,auto) 15px 44px}
+ .skill-values{grid-row:3;flex-direction:row;align-items:center;justify-content:space-between;justify-self:stretch;gap:2px}
+ .stepper{grid-row:4;justify-self:stretch;width:auto}
 }
 @media(max-width:650px){
  #skillsDialog{width:calc(100vw - 12px);height:calc(100dvh - 12px);padding:4px}.skills-shell{grid-template-rows:44px 44px 44px minmax(0,1fr)}
  .profile-header{padding:0 4px;gap:5px}.heading img,.heading p{display:none}.heading h1{font-size:18px}.profile-tabs{gap:2px}.profile-tabs button{min-width:0;padding:0 9px;font-size:10px}.close{width:44px;height:44px}
  .preset-tabs{padding:0 5px;gap:3px}.preset-tabs button{padding:3px 5px;gap:2px}.preset-tabs strong{font-size:11px}.preset-tabs small{font-size:8px}
  .build-bar{padding:0 6px;gap:8px}.build-name-row{gap:5px}.build-name-row>strong{font-size:13px}.build-tag{display:none}#buildHint{font-size:8px}.points{gap:9px;font-size:8px}.points>span{gap:1px}.points strong{font-size:18px}.points .hero-level{padding-left:6px;font-size:7px}.points .hero-level strong{font-size:15px}.build-actions{gap:4px}.primary,.secondary{font-size:10px;padding:4px 7px}.build-actions small{font-size:7px}.build-actions .primary>span{font-size:9px}.build-bar.editing .build-identity{max-width:130px}.build-bar.editing .points{margin-left:auto}.build-bar.editing #buildHint{font-size:8px;white-space:nowrap}#presetName{font-size:11px;height:23px}
- .skill-groups{padding:0 5px 6px}.group-heading{height:26px}.group-heading h2{font-size:13px}.group-heading p{font-size:8px}.group-heading img{width:22px;height:23px}
- .skill-card{padding:5px 6px;grid-template-columns:36px minmax(0,1fr) 94px 138px;column-gap:6px}.skill-card>img{width:36px;height:42px}.skill-card h3{font-size:13px}.description{font-size:10px}.skill-values strong{font-size:13px}.skill-values span,.skill-values .cap-label{font-size:8px}.stepper .cost{font-size:10px}.stepper .cost small{font-size:7px}
+ .skill-groups{padding:0 2px 6px}.skill-group{padding:0 3px 3px}.group-heading{height:35px;gap:4px}.group-heading h2{font-size:13px}.group-heading p{font-size:7px}.group-heading img{width:21px;height:23px}.group-heading>span{display:none}
+ .group-cards,.skill-group[data-category="defense"] .group-cards{grid-auto-rows:minmax(122px,auto);gap:4px}
+ .skill-card{min-height:122px;padding:4px 5px;grid-template-columns:24px minmax(0,1fr);grid-template-rows:27px minmax(25px,auto) 15px 44px;column-gap:4px;row-gap:0}.skill-card>img{width:24px;height:28px}.skill-card h3{font-size:12px;line-height:1.1}.description{font-size:10px;line-height:1.2}.skill-values{grid-row:3;display:flex;flex-direction:row;align-items:center;justify-content:space-between;justify-self:stretch;gap:2px}.skill-values strong{font-size:12px}.skill-values span,.skill-values .cap-label{font-size:7px}.stepper{grid-row:4;justify-self:stretch;width:auto}.stepper .cost{font-size:10px}.stepper .cost small{font-size:7px}
  #actionDialog{padding:10px 14px}#actionDialog h2{font-size:20px}#actionDialog p{margin:10px 0;font-size:12px}#actionDialog footer{margin-top:12px}
 }
