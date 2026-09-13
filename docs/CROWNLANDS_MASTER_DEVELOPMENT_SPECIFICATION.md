@@ -640,6 +640,7 @@ The current Core mappings are fixed:
 
 ### Clans
 
+- The approved Clan UI uses the parchment, olive, brass, and burgundy style for desktop and mobile landscape. Overview, War Room, Rewards, and Members share one window; Rewards separates Gold Gifts, Weekly Conquest, and Treasury. Discovery, creation, public clan profiles, heraldry, renaming, Rally orders, and confirmations follow the same design. Existing information, server permissions, rewards, costs, and Rally rules remain authoritative. **Status:** `APPROVED — IMPLEMENTED, PENDING RELEASE VERIFICATION`.
 - Players may create or join clans, hold clan roles, coordinate through Clan Chat, send clan gifts, complete weekly clan goals, reinforce allies, and participate in rallies. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current operative roles include Leader, Officer, and Member. Exact permission tables are **NEEDS VERIFICATION** against current backend rules.
 - Clan ID, clan name, clan tag, clan heraldry, member roster, and each member’s current role—including Leader, Officer, and Member—persist across seasons.

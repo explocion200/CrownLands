@@ -1,6 +1,6 @@
 # Full Clan UI design draft
 
-Status: local draft for user approval. The user expanded the original Overview-only request to the full clan draft. Production UI, gameplay, backend, and the Master Specification are unchanged.
+Status: full design approved and integrated with production Clan renderers. `clan-ledger-ui.css` provides scoped desktop and mobile-landscape styling; `game.js` retains authoritative service calls and role checks. Release verification is recorded separately. The files described below remain an isolated design reference.
 
 Open `index.html` on the repository preview server. The wrapper offers Desktop (1440 × 900), Mobile landscape (844 × 390), and Small landscape (568 × 320). Portrait is outside this design. Use the in-game tabs or the wrapper's Screen menu. Reset example restores synthetic state.
 
@@ -37,6 +37,6 @@ Role behavior follows the current UI: Leader manages identity and roster roles; 
 - Existing production heraldry config/assets/renderer and frozen v1 renderer are reused. Viewing/cancelling an original shield preserves v1. Entering the editor makes a separate v2 draft through `createV2DraftFromV1`; unmapped charges require a deliberate choice before Save.
 - The Master Specification is authoritative for Rally departure behavior. The old disband dialog says all marching clan armies continue normally, which conflicts with its confirmed automatic recall when a Rally creator departs. Draft confirmation copy reflects the confirmed creator-departure rule. No backend behavior is changed.
 - Treasury is included because it is in the current implementation. Its Master Specification status remains pending authorized deployment; this draft does not establish live availability. Verify the active Core release contract before production integration.
-- Production integration, authoritative permissions, name uniqueness, network failure recovery, multiplayer validation, and release gates remain after design approval. No PR, merge, or deployment is part of this draft update.
+- `tools/prepare-clan-ledger-preview.js` assembles the actual game with loopback-only benchmark services and `runtime-fixture.js`. This checks production markup and dispatch without a production account. Neither fixture is shipped. Required release gates and deployed-build verification follow integration.
 
 See `visual-checks.md` for completed local review checks.

@@ -87,7 +87,7 @@ requires(client, /function showCityInfoModal[\s\S]*?renderPlayerNameLink\(city\.
 requires(client, /function renderLeaderboardRow[\s\S]*?renderPlayerNameLink\(entry\.uid/, "Player leaderboard names are not linked.");
 
 requires(client, /function renderProfileClanAffiliation[\s\S]*?dataset\.publicClanId\s*=\s*state\.clanId/, "The current player's clan affiliation does not open its public page.");
-requires(client, /function renderClanOverviewPanel[\s\S]*?clan-hero-shield-link[\s\S]*?renderClanIdentityLink/, "The current clan Overview shield or identity is not linked.");
+requires(client, /function renderClanOverviewPanel[\s\S]*?shield-button[\s\S]*?renderClanIdentityLink/, "The current clan Overview shield or identity is not linked.");
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?clan-shield-link[\s\S]*?renderClanIdentityLink/, "Clan discovery shield or identity is not linked.");
 requires(client, /function renderObjectiveClanAffiliation[\s\S]*?data-public-clan-id/, "Objective clan identities are not linked.");
 assert.doesNotMatch(client, /function renderBattleClanIdentity/, "Compact battle details still render removed clan branding.");

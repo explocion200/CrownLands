@@ -17,6 +17,7 @@ const required = [
   "achievements-ui.js", "achievements-ui.css",
   "player-profile-ui.js", "player-profile-ui.css",
   "skills-ledger-ui.css",
+  "clan-ledger-ui.css",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",
   "index.html", "styles.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "common-gear-ui.js", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "player-flag-editor.css", "clan-heraldry-v2.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js", "region-catalog.js",
