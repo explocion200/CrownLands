@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="#574b34" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <title>Stoneworks · cut stone blocks and masonry hammer</title>
+  <path fill="#96936d" stroke="none" opacity=".25" d="M5 54c10-6 32-4 51 0l2 6H8Z"/>
+  <path fill="#bbb49a" d="m6 41 19-6 19 7v14l-20 5-18-7Z"/>
+  <path fill="#ddd0b0" d="m6 41 19-6 19 7-20 6Z"/>
+  <path fill="#8f927f" d="m24 48 20-6v14l-20 5Z"/>
+  <path fill="#c8bda0" d="m6 41 18 7v13L6 54Z"/>
+  <path fill="#c3b99b" d="m12 27 18-5 17 6v14l-19 5-16-6Z"/>
+  <path fill="#e0d3b1" d="m12 27 18-5 17 6-19 6Z"/>
+  <path fill="#9b9f8a" d="m28 34 19-6v14l-19 5Z"/>
+  <path stroke="#8c8166" stroke-width="1" d="m16 32 8 3m-9 2 5 2m-9 8 8 3m-5 2 4 2m14-15 9-2m-8 17 6-2"/>
+  <path stroke="#eee3c6" stroke-width="1" d="m15 28 12 4m-18 11 12 5m10-12 11-3"/>
+  <path fill="#987046" d="m32 15 5-3 23 39c2 4-4 8-7 4Z"/>
+  <path stroke="#d0a777" stroke-width="1.1" d="m38 23 15 27"/>
+  <path fill="#b3b6a6" d="m18 11 7-7 19 7 6 10-7 7-23-9Z"/>
+  <path fill="#d2d3be" d="m18 11 7-7 19 7-8 7Z"/>
+  <path fill="#788173" d="m36 18 8-7 6 10-7 7Z"/>
+  <path fill="#a3aa99" d="m18 11 18 7 7 10-23-9Z"/>
+  <path stroke="#e1deca" stroke-width="1" d="m22 11 10 4"/>
+  <path stroke="#65725f" stroke-width="1" d="m22 16 11 5m9-2 3 5"/>
+  <path stroke="#6a764d" stroke-width="1.1" d="m5 55 3 3 3-2m21 4 4-2"/>
+</svg>

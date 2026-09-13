@@ -35,6 +35,7 @@ const STATIC_CACHE_URLS = [
   "/index.html",
   "/play/index.html",
   "/manifest.webmanifest",
+  "/skills-ledger-ui.css?v=20260913-skills-ledger-r1",
   "/styles.css?v=20260827-instant-cross-map-city-upgrades-r1",
   "/holding-tower-ui.css?v=20260903-clan-tower-visibility-r1",
   "/interface-theme.css?v=20260814-readability-r38",

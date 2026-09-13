@@ -317,6 +317,7 @@ console.log("Validated signed live skill refunds, free resets, weighted costs, s
 // Exercise the same affordability update used during periodic renders and name editing.
 const applyButton = { disabled: false };
 const saveButton = { disabled: false };
+const affordabilityStatus = { textContent: "" };
 const priceContext = {
   SKILL_PRESET_APPLY_HOURS: 1,
   rate: 1200,
@@ -324,7 +325,8 @@ const priceContext = {
   selectedSkillPresetSlot: 1,
   skillActionInFlight: false,
   dirty: false,
-  skillsView: { querySelector: selector => selector === "[data-apply-skill-preset]" ? applyButton : selector === "[data-save-skill-preset]" ? saveButton : null },
+  skillsView: { querySelector: selector => selector === "[data-apply-skill-preset]" ? applyButton : selector === "[data-save-skill-preset]" ? saveButton : selector === "[data-skill-preset-status]" ? affordabilityStatus : null },
+  formatNumber: value => Number(value).toLocaleString("en-US"),
   getShopPricingContext: () => ({ rawBaseGoldPerHour: priceContext.rate, cityPremium: 9 }),
   getSkillPresetSlot: () => ({ slot: 1, saved: true }),
   getSkillPresetDraft: () => ({}),
@@ -333,7 +335,7 @@ const priceContext = {
   isValidLocalSkillPresetAllocation: () => true,
   isSkillSpendSyncing: () => false,
   getSkillPresetEditorStatus: () => "Saved",
-  setTextIfChanged: () => {},
+  setTextIfChanged: (element, text) => { if (element) element.textContent = text; },
 };
 vm.createContext(priceContext);
 vm.runInContext([
@@ -344,6 +346,7 @@ vm.runInContext([
 assert.equal(priceContext.getSkillPresetApplyCost(), 1200, "Hourly pricing must not add the shop city premium.");
 priceContext.updateSkillPresetDraftActionState();
 assert.equal(applyButton.disabled, true, "One gold short must disable Apply.");
+assert.equal(affordabilityStatus.textContent, "Need 1,200 Gold · have 1,199", "Unaffordable Apply must explain the required and available Gold.");
 priceContext.state.gold = 1200;
 priceContext.updateSkillPresetDraftActionState();
 assert.equal(applyButton.disabled, false, "Exactly enough gold must enable Apply.");
