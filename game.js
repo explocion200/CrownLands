@@ -31979,6 +31979,7 @@ function normalizeDailyMissionState(raw = null, fallbackServerTimeMs = Date.now(
     rerollsRemaining: Math.max(0, Math.min(1, Math.floor(Number(raw.rerollsRemaining) || 0))),
     completedCount: missions.filter(mission => mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target).length,
     claimedCount: missions.filter(mission => mission.claimedAtMs).length,
+    allCompletedGearBoxAwardedAtMs: normalizeTimestampMs(raw.allCompletedGearBoxAwardedAtMs),
     missions,
   };
 }
@@ -32007,6 +32008,7 @@ function formatDailyMissionReward(reward = {}) {
 }
 
 function updateDailyMissionCountdown() {
+  window.CrownlandsQuestsUI?.updateCountdown(modalBody);
   const dailyMissionsCountdown = document.getElementById("dailyMissionsCountdown");
   if (!dailyMissionsCountdown) return;
   dailyMissionsCountdown.textContent = dailyMissionState?.resetsAtMs
@@ -32143,6 +32145,22 @@ function stopDailyMissionLifecycle({ clear = false } = {}) {
 }
 
 function renderDailyMissions() {
+  if (modal?.classList.contains("quest-ledger-modal") && activeDailyRewardModalTab === "quests") {
+    window.CrownlandsQuestsUI.mount(modalBody, {
+      status: dailyMissionState, loading: dailyMissionStatusLoading, error: dailyMissionError,
+      available: supportsDailyMissions(), busy: dailyMissionActionsInFlight.values().next().value || "",
+      scope: getOnlineSessionRequestScope(), now: getDailyMissionNowMs,
+      icon: cityDetailsIcon, regionLabel: getRegionLabel,
+      items: Object.fromEntries((dailyMissionState?.missions || []).filter(m => m.reward.type === "item").map(m => {
+        const item = getShopItemById(m.reward.itemId);
+        return [m.reward.itemId, { label: item?.label || "Royal Item", art: item?.icon || "assets/icons/common-gear-chest-r1.svg" }];
+      })),
+      claim: claimDailyMission, replace: rerollDailyMission,
+      retry: () => refreshDailyMissionStatus({ force: true, silent: false }),
+      map: recommendation => { void focusBattleReportTarget(recommendation.cityId, recommendation.regionId); },
+    });
+    return;
+  }
   const dailyMissionsSection = document.getElementById("dailyMissionsSection");
   const dailyMissionsCompleted = document.getElementById("dailyMissionsCompleted");
   const dailyMissionsRerolls = document.getElementById("dailyMissionsRerolls");
@@ -32262,18 +32280,21 @@ function createDailyMissionRequestId(prefix = "mission") {
 async function rerollDailyMission(missionId = "") {
   const mission = getDailyMissionById(missionId);
   const api = getOnlineApi();
-  if (!mission || !api?.rerollDailyMission || dailyMissionActionsInFlight.has(mission.id)) return;
+  if (!mission || !api?.rerollDailyMission || dailyMissionActionsInFlight.size || mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target || !dailyMissionState?.rerollsRemaining || getDailyMissionNowMs() >= dailyMissionState.resetsAtMs) return;
+  const requestScope = getOnlineSessionRequestScope(), cycleKey = dailyMissionState.cycleKey;
   dailyMissionActionsInFlight.add(mission.id);
   renderDailyMissions();
   try {
     const result = await api.rerollDailyMission({
-      cycleKey: dailyMissionState?.cycleKey || "",
+      cycleKey,
       missionId: mission.id,
       requestId: createDailyMissionRequestId("reroll"),
     });
+    if (requestScope !== getOnlineSessionRequestScope() || cycleKey !== dailyMissionState?.cycleKey) return;
     if (result?.dailyMissionState) applyDailyMissionStatus(result.dailyMissionState, result.dailyMissionState.serverTimeMs || getDailyMissionNowMs());
     showToast(result?.rerolled ? "Daily Mission replaced." : result?.message || "No different mission is available.");
   } catch (error) {
+    if (requestScope !== getOnlineSessionRequestScope() || cycleKey !== dailyMissionState?.cycleKey) return;
     dailyMissionError = error?.message || "That mission could not be replaced.";
     showToast(dailyMissionError);
     void refreshDailyMissionStatus({ force: true, silent: true });
@@ -32286,17 +32307,20 @@ async function rerollDailyMission(missionId = "") {
 async function claimDailyMission(missionId = "", sourceElement = null) {
   const mission = getDailyMissionById(missionId);
   const api = getOnlineApi();
-  if (!mission || !api?.claimDailyMissionReward || dailyMissionActionsInFlight.has(mission.id)) return;
+  if (!mission || !api?.claimDailyMissionReward || dailyMissionActionsInFlight.size || mission.claimedAtMs || (!mission.completedAtMs && mission.progress < mission.target) || getDailyMissionNowMs() >= dailyMissionState.resetsAtMs) return;
+  const requestScope = getOnlineSessionRequestScope(), cycleKey = dailyMissionState.cycleKey;
   const sourceAnchor = captureAnimationAnchor(sourceElement);
   dailyMissionActionsInFlight.add(mission.id);
   renderDailyMissions();
   try {
     const result = await api.claimDailyMissionReward({
-      cycleKey: dailyMissionState?.cycleKey || "",
+      cycleKey,
       missionId: mission.id,
       requestId: createDailyMissionRequestId("claim"),
     });
+    if (requestScope !== getOnlineSessionRequestScope()) return;
     if (result?.currentUser || result?.cityUpdates) applyServerEconomyResult(result, { renderCities: true });
+    if (cycleKey !== dailyMissionState?.cycleKey) return;
     if (result?.dailyMissionState) applyDailyMissionStatus(result.dailyMissionState, result.dailyMissionState.serverTimeMs || getDailyMissionNowMs());
     const receipt = result?.receipt || {};
     if (!result?.replayed) {
@@ -32311,7 +32335,7 @@ async function claimDailyMission(missionId = "", sourceElement = null) {
         destinationCityId: receipt.targetCityId || "",
       });
       const item = rewardType === "item" ? getShopItemById(receipt.itemId || mission.reward.itemId) : null;
-      showToast(`Mission reward: ${item?.label || `${formatNumber(amount)} ${rewardType}`}.`);
+      showToast(`Mission reward: ${item?.label || `${formatNumber(amount)} ${rewardType}`}.${receipt.commonGearBoxes ? " Daily completion: 1 Common Gear Box added to your Bag." : ""}`);
       addLog(`Daily Mission complete: ${mission.title}.`);
     } else {
       showToast("That mission reward was already collected.");
@@ -32319,6 +32343,7 @@ async function claimDailyMission(missionId = "", sourceElement = null) {
     saveGame();
     queueOnlineSave();
   } catch (error) {
+    if (requestScope !== getOnlineSessionRequestScope() || cycleKey !== dailyMissionState?.cycleKey) return;
     dailyMissionError = error?.message || "That mission reward could not be claimed.";
     showToast(dailyMissionError);
     void refreshDailyMissionStatus({ force: true, silent: true });
@@ -33267,17 +33292,17 @@ function renderDailyRewardModalTabs() {
     {
       id: "rewards",
       label: "Daily Login",
-      icon: "assets/optimized/daily-reward-160x160-9bd7a936016f.webp",
+      icon: "assets/icons/reward-daily-login-r1.svg",
     },
     {
       id: "quests",
-      label: "Quests",
-      icon: "assets/optimized/hud-report-192x192-21644b7390fb.webp",
+      label: "Daily Quests",
+      icon: "assets/icons/reward-daily-quests-r1.svg",
     },
     {
       id: "achievements",
       label: "Achievements",
-      icon: "assets/optimized/hud-achievements-192x192-1efe6767ace6.webp",
+      icon: "assets/icons/reward-achievements-r1.svg",
     },
   ];
   return `
@@ -33363,6 +33388,7 @@ function bindDailyQuestControls() {
 function renderDailyLoginRewardModal(options = {}) {
   if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
   modal.classList.toggle("daily-cycle-modal", activeDailyRewardModalTab === "rewards");
+  modal.classList.toggle("quest-ledger-modal", activeDailyRewardModalTab === "quests");
   const renderingAchievements = activeDailyRewardModalTab === "achievements";
   if (!renderingAchievements) clearSeasonalAchievementRenderTimer();
   if (
@@ -33388,9 +33414,7 @@ function renderDailyLoginRewardModal(options = {}) {
     modalHeaderNav.hidden = false;
   }
   if (activeDailyRewardModalTab === "quests") {
-    modalBody.innerHTML = renderDailyQuestTab();
     bindDailyRewardModalTabs();
-    bindDailyQuestControls();
     renderDailyMissions();
     return;
   }
@@ -39609,7 +39633,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("relinquish-city-modal");
   modal.classList.remove("public-player-profile-modal");
   modal.classList.remove("rewarded-ad-confirmation-modal");
-  modal.classList.remove("daily-login-reward-modal", "daily-cycle-modal");
+  modal.classList.remove("daily-login-reward-modal", "daily-cycle-modal", "quest-ledger-modal");
   modal.classList.remove("daily-mission-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
   const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());

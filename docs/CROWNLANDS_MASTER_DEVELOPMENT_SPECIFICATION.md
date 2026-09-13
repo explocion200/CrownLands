@@ -783,6 +783,8 @@ The reset initializer now applies an explicit Common Gear persistence allowlist 
 
 The verified `origin/main` reward values are 0.5 production hour for Easy, 1 hour for Medium, and 2 hours for Hard. Camp-capture and Clan Gift special missions always use 0.5 hour. Production rewards are locked when missions are generated from the then-current raw production snapshot. A non-special Hard mission has a 20% item-substitution chance subject to the configured price constraint. Claiming all three daily missions grants one Common Gear Box.
 
+**Quests presentation approved 12 September 2026.** The parchment ledger keeps three quests visible beside the selected objective, progress, fixed reward, and any recommended target. Claim/Replace remains visible in a fixed action area on desktop and mobile landscape. The shared Daily Login, Daily Quests, and Achievements navigation uses the approved calendar/sun-seal, scroll/quill, and crowned-shield illustrations. Objectives, reward values, UTC renewal, and the one unfinished replacement limit are unchanged. The completion chest is awarded atomically with the final reward claim; retain any earlier completion-time award marker to prevent a duplicate. See [Quests implementation notes](./visual-qa/quests-ledger/README.md). Deployment status is verified separately.
+
 ### Achievements
 
 - Crownlands currently has 40 seasonal Achievements. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.

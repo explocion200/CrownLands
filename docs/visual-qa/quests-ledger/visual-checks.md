@@ -30,7 +30,7 @@ The right detail area can scroll for long content and target recommendations. Cl
 
 ## Boundaries
 
-No Firebase calls, production claims, live inventory grants, or emulator suites were run for this isolated draft. The daily chest server award remains the documented pre-integration issue. Production integration must validate real claim/reroll/status responses, day rollover, duplicate requests, and the intended chest grant before release. No portrait view was created or reviewed.
+No Firebase calls, production claims, live inventory grants, or emulator suites were run for this isolated draft. The following integration checks supersede the initial chest-audit limitation. Production integration must validate real claim/reroll/status responses, day rollover, duplicate requests, and the intended chest grant before release. No portrait view was created or reviewed.
 
 ## Reward navigation icon revision
 
@@ -38,4 +38,14 @@ No Firebase calls, production claims, live inventory grants, or emulator suites 
 - All three new SVG files parse successfully and use a 64 × 64 view box with transparent backgrounds.
 - Verified all three header assets load at 1440 × 900, 844 × 390, and 568 × 320. Buttons remain 44 × 44 with Daily Login, Daily Quests, and Achievements accessible labels.
 - Visually inspected the icons on parchment and on the burgundy active state. The small landscape header remains within the window.
-- Only the draft currently uses these new asset paths. Shared production navigation integration remains pending approval.
+- The integrated shared reward navigation also uses these assets; channel deployment is verified separately.
+
+## Approved production integration checks
+
+- Actual `game.js` and `quests-ui.js` ran in the isolated mock-Firebase benchmark, rather than the standalone draft renderer.
+- Desktop 1440 × 900, landscape 844 × 390, and small landscape 568 × 320 matched the window dimensions above. All three mission rows remained visible without list scrolling. Claim/Replace remained 48px/44px/44px high, within the window. No horizontal panel overflow or broken icons.
+- Actual claim wiring changed a completed quest to Collected. Replacement cancel kept the mission; confirmation replaced the selected mission and consumed the one daily replacement.
+- Daily Login and Achievements tabs opened correctly; returning to Quests restored three rows and functioning controls.
+- Failed final claim preserved 2/3 rewards collected; retry succeeded and displayed one earned chest at 3/3.
+- Focused `emulator-daily-missions.js` passed: no chest on objective completion/first claim; concurrent final claims grant exactly one; retries and a saved legacy award marker do not grant a duplicate; expired cycles reject claims. Existing private-state, mission-generation, reroll, event-progress and migration checks also passed.
+- Focused ESLint and Daily Missions static validation passed. Full release checks are recorded in PR/release evidence.

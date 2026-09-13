@@ -418,6 +418,7 @@ async function main() {
   assert(Number((await stateRef.get()).data()?.missions?.[1]?.progress || 0) === 0, "A failed camp battle progressed a Daily Mission.");
 
   const campEventRef = db.doc(`dailyMissionEvents/gold_camp_${player.uid}`);
+  const boxesBeforeCompletion = Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0);
   await campEventRef.set({
     eventId: `gold_camp_${player.uid}`,
     uid: player.uid,
@@ -442,6 +443,8 @@ async function main() {
     "A successful Gold Camp capture did not complete both the specific and any-camp Daily Missions."
   );
   assert(Number(campCompletedState.completedCount) === 3, "Daily Mission completion totals did not include both camp missions.");
+  assert(!campCompletedState.allCompletedGearBoxAwardedAtMs, "The chest was awarded before all mission rewards were claimed.");
+  assert(Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0) === boxesBeforeCompletion, "Completing objectives granted an early chest.");
 
   const outboxRead = await clientDocumentRequest(player, `dailyMissionEvents/valid_${player.uid}`);
   assert(outboxRead.status === 403, "A client read the protected Daily Mission event outbox.");
@@ -471,6 +474,26 @@ async function main() {
   assert(goldAfter >= goldBefore + 12_345 && goldAfter < goldBefore + 12_600, `Mission reward was duplicated or misvalued (${goldBefore} -> ${goldAfter}).`);
   const claimedState = (await stateRef.get()).data() || {};
   assert(Number(claimedState.missions?.[0]?.claimedAtMs || 0) > 0, "The claimed mission did not persist its claimed state.");
+  assert(Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0) === boxesBeforeCompletion, "The first claim granted the completion chest.");
+
+  const finalClaims = await Promise.all([goldCampMission.id, anyCampMission.id, anyCampMission.id].map(missionId =>
+    callFunction("claimDailyMissionReward", player.token, { cycleKey:first.cycleKey, missionId, requestId:`final-${crypto.randomUUID()}` })));
+  assert(finalClaims.filter(result => !result.replayed).length === 2, "The last two rewards did not settle exactly once.");
+  assert(finalClaims.filter(result => !result.replayed && result.receipt?.commonGearBoxes === 1).length === 1, "Concurrent final claims did not award exactly one chest.");
+  assert(Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0) === boxesBeforeCompletion + 1, "The completion chest inventory grant was missing or duplicated.");
+  const finalState = (await stateRef.get()).data();
+  assert(finalState.claimedCount === 3 && finalState.allCompletedGearBoxAwardedAtMs > 0, "The chest grant marker was not committed with the final claim.");
+  await callFunction("claimDailyMissionReward", player.token, { cycleKey:first.cycleKey, missionId:anyCampMission.id, requestId:'another-retry' });
+  assert(Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0) === boxesBeforeCompletion + 1, "A retry duplicated the chest.");
+
+  // Simulate a pre-release cycle whose chest arrived at objective completion.
+  await stateRef.set({ missions:finalState.missions.map(m => ({...m, claimedAtMs:0})), claimedCount:0 }, {merge:true});
+  await Promise.all(finalState.missions.map(m => callFunction("claimDailyMissionReward", player.token, {
+    cycleKey:first.cycleKey, missionId:m.id, requestId:`legacy-award-${crypto.randomUUID()}`,
+  })));
+  assert(Number((await profileRef.get()).data()?.gear?.commonGearBoxes || 0) === boxesBeforeCompletion + 1, "A saved legacy chest marker did not prevent a second grant.");
+  const expiredClaim = await invokeFunction("claimDailyMissionReward", player.token, { cycleKey:'expired-cycle', missionId:anyCampMission.id });
+  assert(!expiredClaim.ok && expiredClaim.error?.status === "FAILED_PRECONDITION", "An expired cycle accepted a chest claim.");
 
   const legacyUnsafeReward = { type: "troops", lockedAmount: 9_876, productionHours: 0.5, itemId: "" };
   const legacyVolumeReward = { type: "troops", lockedAmount: 22_222, productionHours: 2, itemId: "" };
