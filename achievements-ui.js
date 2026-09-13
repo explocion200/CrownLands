@@ -132,7 +132,7 @@ function render(viewOptions={}){
     }};
   }
   window.CrownlandsAchievementsUI={
-    mount(root,options){let view=views.get(root);if(!root.querySelector('.achievements-panel')){view?.destroy();view=createView(root);views.set(root,view);}view.update(options);},
+    mount(root,options){let view=views.get(root);if(!view||!root.querySelector('.achievements-panel')){view?.destroy();view=createView(root);views.set(root,view);}view.update(options);},
     destroy(root){views.get(root)?.destroy();views.delete(root);}
   };
 })();
