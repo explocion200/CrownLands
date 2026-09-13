@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="daily-login-ui.css?v=20260912-daily-cycle-r1" />
   <link rel="stylesheet" href="quests-ui.css?v=20260913-quests-r1" />
   <link rel="stylesheet" href="achievements-ui.css?v=20260913-achievements-r1" />
+  <link rel="stylesheet" href="player-profile-ui.css?v=20260913-profile-ledger-r1" />
 </head>
 <body>
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -310,28 +311,23 @@
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
         <header class="profile-screen-header">
-          <div class="profile-screen-heading"><span>Kingdom</span><h2 id="profileScreenTitle">Profile</h2></div>
+          <div class="profile-screen-heading"><svg class="profile-ledger-crown" aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-flag-crown"></use></svg><span>Kingdom</span><h2 id="profileScreenTitle">Profile</h2></div>
           <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
             <button id="profileTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="profileView">Profile</button>
             <button id="clanTabBtn" type="button" role="tab" aria-selected="false" aria-controls="clanView">Clan</button>
             <button id="skillsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="skillsView">Skills</button>
             <button id="settingsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="settingsView">Settings</button>
           </div>
-          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
+          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close icon-button close" type="button" aria-label="Close profile"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
         </header>
 
         <div id="onboardingProfileTip" class="onboarding-profile-tip" hidden></div>
-        <div id="profileView" class="profile-view" role="tabpanel" aria-labelledby="profileTabBtn">
-          <section class="profile-identity" aria-label="Ruler identity">
-            <button id="profileFlagBtn" class="profile-flag-button" type="button" aria-label="Edit kingdom flag">
-              <span id="profileKingdomFlag" class="kingdom-flag kingdom-flag-large" aria-hidden="true"><span class="flag-symbol"></span></span>
-              <span class="profile-flag-edit">Edit flag</span>
-            </button>
-
-            <div class="profile-name-block">
-              <div id="profileNameDisplay" class="profile-name-row">
-                <h3 id="profileNameText">Ruler</h3>
-                <button id="profileNameEditBtn" class="profile-icon-btn profile-edit-btn" type="button" aria-label="Edit ruler name"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-edit"></use></svg></button>
+  <div id="profileView" class="profile-view profile-body" role="tabpanel" aria-labelledby="profileTabBtn">
+    <section class="profile-identity identity" aria-label="Ruler identity">
+      <div class="banner-mount"><span class="banner-rod" aria-hidden="true"></span><button id="profileFlagBtn" class="profile-flag-button flag-button" aria-label="Edit kingdom flag" type="button"><span id="profileKingdomFlag" class="ruler-flag kingdom-flag kingdom-flag-large" aria-hidden="true"><span class="flag-symbol"></span></span><span class="profile-flag-edit flag-caption">Edit flag <span aria-hidden="true">✎</span></span></button></div>
+      <div class="ruler-copy profile-name-block"><p class="eyebrow">RULER OF THE REALM</p><div id="profileNameDisplay" class="profile-name-row name-display">
+                <h3 id="profileNameText" class="ruler-name">Ruler</h3>
+                <button id="profileNameEditBtn" class="profile-icon-btn profile-edit-btn icon-button edit-name" type="button" aria-label="Edit ruler name"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-edit"></use></svg></button>
               </div>
               <div id="profileNameEditor" class="profile-name-editor" hidden>
                 <input id="profileNameInput" maxlength="18" aria-label="Ruler name, 18 characters maximum" title="Maximum 18 characters" />
@@ -339,47 +335,27 @@
                 <button id="profileNameCancelBtn" class="profile-icon-btn" type="button" aria-label="Cancel name edit"><svg class="cl-icon" aria-hidden="true"><use href="#cl-icon-close"></use></svg></button>
               </div>
 
-              <div class="profile-level-row">
-                <strong id="profileLevelText">Level 1</strong>
-                <span id="profileXpLabel">0 / 250 XP</span>
-              </div>
-              <div class="profile-xp-track" aria-label="XP progress"><span id="profileXpFill"></span></div>
-            </div>
-
-            <button id="profileClanAffiliation" class="profile-clan-affiliation" type="button" hidden>
-              <span id="profileClanShield" class="profile-clan-shield" aria-hidden="true"></span>
-              <span><small>Clan</small><strong id="profileClanName"></strong></span>
-            </button>
-          </section>
-
-          <section class="kingdom-overview" aria-label="Kingdom totals">
-            <div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div>
-            <div class="kingdom-stat-grid">
-              <div class="kingdom-stat kingdom-stat-wide kingdom-stat-power">
-                <span>King Power</span>
-                <strong id="profileKingPowerStat">0</strong>
-              </div>
-              <div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong id="profileCitiesStat">1</strong></div>
-              <div class="kingdom-stat"><span>Gold</span><strong id="profileGoldStat">500</strong></div>
-              <div class="kingdom-stat"><span>Troops</span><strong id="profileTroopsStat">50</strong></div>
-              <div class="kingdom-stat"><span>Gold production</span><strong id="profileGoldProductionStat">0/h</strong></div>
-              <div class="kingdom-stat"><span>Troops production</span><strong id="profileTroopProductionStat">0/h</strong></div>
-            </div>
-            <div class="profile-inner-castle-actions">
-              <button id="profileInnerCastleBtn" class="profile-inner-castle-btn" type="button">Inner Castle</button>
-            </div>
-          </section>
-
-          <section class="profile-achievement-summary" aria-label="Seasonal Achievements summary">
-            <div class="profile-section-heading"><span>Season</span><h3>Achievements</h3></div>
-            <div class="profile-achievement-summary-grid">
-              <div><span>Complete</span><strong id="profileAchievementCompleted">0 / 40</strong></div>
-              <div><span>Claimed</span><strong id="profileAchievementClaimed">0 / 40</strong></div>
-              <div><span>Remaining</span><strong id="profileAchievementRemaining">—</strong></div>
-            </div>
-            <button id="profileViewAchievementsBtn" class="profile-view-achievements-btn" type="button">View Achievements</button>
-          </section>
-        </div>
+              <div class="hero-progress"><div class="profile-level-row hero-level"><strong id="profileLevelText"></strong><span>HERO</span></div><div id="profileXpTrack" class="profile-xp-track progress-track" role="progressbar" aria-label="Hero XP"><span id="profileXpFill"></span></div><p id="profileXpLabel"></p></div></div>
+      <button id="profileClanAffiliation" class="profile-clan-affiliation clan-affiliation" type="button"><span id="profileClanShield" class="profile-clan-shield" aria-hidden="true"></span><span><small>CLAN</small><strong id="profileClanName"></strong></span><span aria-hidden="true">›</span></button>
+      <div class="identity-flourish" aria-hidden="true"><span></span>◆<span></span></div>
+    </section>
+    <section class="kingdom-overview kingdom-ledger" aria-labelledby="kingdomTitle"><header class="profile-section-heading section-heading"><div><p class="eyebrow">THE ROYAL ACCOUNTS</p><h2 id="kingdomTitle">Kingdom overview</h2></div><span class="folio" aria-hidden="true">I</span></header>
+      <div class="kingdom-stat-grid stat-grid">
+        <article class="kingdom-stat kingdom-stat-wide kingdom-stat-power stat power"><svg aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-flag-crown"></use></svg><div><h3>King Power</h3><strong id="profileKingPowerStat"></strong></div></article>
+        <article class="kingdom-stat stat"><img src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" alt=""><div><h3>Cities</h3><strong id="profileCitiesStat"></strong></div></article>
+        <article class="kingdom-stat stat"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><div><h3>Gold</h3><strong id="profileGoldStat"></strong></div></article>
+        <article class="kingdom-stat stat"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><h3>Troops</h3><strong id="profileTroopsStat"></strong></div></article>
+        <button class="kingdom-stat stat production" id="profileGoldProductionBtn" type="button"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><span><span class="stat-label">Gold production <span class="info-mark" aria-hidden="true">i</span></span><strong id="profileGoldProductionStat"></strong></span></button>
+        <button class="kingdom-stat stat production" id="profileTroopProductionBtn" type="button"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span><span class="stat-label">Troops production <span class="info-mark" aria-hidden="true">i</span></span><strong id="profileTroopProductionStat"></strong></span></button>
+      </div>
+      <div class="profile-inner-castle-actions castle-action"><img src="assets/optimized/inner-castle-great-hall-512x512-11afdcfaa594.webp" alt=""><button id="profileInnerCastleBtn" class="profile-inner-castle-btn primary" type="button">Inner Castle <span aria-hidden="true">›</span></button></div>
+    </section>
+    <section class="profile-achievement-summary honors" aria-labelledby="honorsTitle"><header class="profile-section-heading section-heading"><div><p class="eyebrow">THIS SEASON</p><h2 id="honorsTitle">Achievements</h2></div><span class="folio" aria-hidden="true">II</span></header>
+      <div class="honors-scroll"><img class="honors-seal" src="assets/icons/reward-achievements-r1.svg" alt=""><div class="season-score"><strong id="profileAchievementHero"></strong><span>achievements complete</span></div><div id="profileAchievementTrack" class="profile-xp-track progress-track" role="progressbar" aria-label="Seasonal achievement completion"><span id="profileAchievementFill"></span></div>
+      <dl class="profile-achievement-summary-grid honor-totals"><div><dt>Complete</dt><dd id="profileAchievementCompleted"></dd></div><div><dt>Claimed</dt><dd id="profileAchievementClaimed"></dd></div><div><dt>Remaining</dt><dd id="profileAchievementRemaining"></dd></div></dl><p class="season-note">Progress and unclaimed rewards reset each season.</p></div>
+      <button id="profileViewAchievementsBtn" class="profile-view-achievements-btn primary achievement-action" type="button"><span>View Achievements</span><span id="profileAchievementReady" class="ready-count"></span><span class="action-arrow" aria-hidden="true">›</span></button>
+    </section>
+  </div>
 
         <div id="skillsView" class="profile-skills-view" role="tabpanel" aria-labelledby="skillsTabBtn" hidden></div>
 
@@ -656,6 +632,7 @@
   <script src="daily-login-ui.js?v=20260912-daily-cycle-r1"></script>
   <script src="quests-ui.js?v=20260913-quests-r1"></script>
   <script src="achievements-ui.js?v=20260913-achievements-r1"></script>
+  <script src="player-profile-ui.js?v=20260913-profile-ledger-r1"></script>
   <script src="game.js?v=20260909-city-details-r1"></script>
   <script src="ui-layout-runtime.js?v=20260818-global-clan-chat-r1"></script>
 </body>

@@ -23449,6 +23449,7 @@ function closeProfileScreen(options = {}) {
     return;
   }
   profileScreen.classList.remove("open");
+  window.CrownlandsPlayerProfileUI?.setOverview(false);
   profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
   profileScreen.setAttribute("aria-hidden", "true");
   clearFlagEditorSession();
@@ -25698,6 +25699,7 @@ function handleClanClick(event) {
 }
 
 function updateProfileTabHeader() {
+  window.CrownlandsPlayerProfileUI?.setOverview(activeProfileTab === "profile" && Boolean(flagEditorView?.hidden));
   const showingSkills = activeProfileTab === "skills";
   const showingSettings = activeProfileTab === "settings";
   const showingClan = activeProfileTab === "clan";
@@ -25793,6 +25795,11 @@ function renderProfileScreen() {
   });
   renderProfileClanAffiliation();
   updatePushAlertsUi();
+  window.CrownlandsPlayerProfileUI?.update({
+    summary, xp: state.character.xp, xpRequired,
+    completed: seasonalAchievementState?.completedCount || 0,
+    claimable: getSeasonalAchievementClaimableCount(), format: formatNumber,
+  });
 }
 
 function getSkillPresetApplyCost() {
@@ -39605,7 +39612,7 @@ modal.addEventListener("cancel", event => {
   }
 });
 document.addEventListener("pointerdown", event => {
-  if (!profileScreen?.classList.contains("open") || modal.open) return;
+  if (!profileScreen?.classList.contains("open") || modal.open || document.getElementById("profileProductionDialog")?.open) return;
   if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target)) return;
   event.preventDefault();
   event.stopPropagation();

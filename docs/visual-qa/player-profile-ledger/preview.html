@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Player Profile preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/player-profile-ledger/draft.css"><script src="docs/visual-qa/player-profile-ledger/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div>
+<dialog id="profileDialog" aria-labelledby="profileTitle"><div class="profile-shell">
+  <header class="profile-header"><div class="heading"><img src="assets/flag-symbols/selected/svg/crown.svg" alt=""><div><p>YOUR KINGDOM</p><h1 id="profileTitle">Player Profile</h1></div></div><nav class="profile-tabs" aria-label="Kingdom sections"><button aria-current="page" data-section="Profile">Profile</button><button data-section="Clan">Clan</button><button data-section="Skills">Skills</button><button data-section="Settings">Settings</button></nav><button id="close" class="icon-button close" aria-label="Close Player Profile">×</button></header>
+  <main class="profile-body">
+    <section class="identity" aria-label="Ruler identity">
+      <div class="banner-mount"><span class="banner-rod" aria-hidden="true"></span><button id="flagButton" class="flag-button" aria-label="Edit kingdom flag"><span id="rulerFlag" class="ruler-flag"><img src="assets/flag-symbols/selected/svg/crown.svg" alt=""></span><span class="flag-caption">Edit flag <span aria-hidden="true">✎</span></span></button></div>
+      <div class="ruler-copy"><p class="eyebrow">RULER OF THE REALM</p><div id="nameDisplay" class="name-display"><button id="rulerName" class="ruler-name" aria-label="View ruler's public profile">Aldric</button><button id="editName" class="icon-button edit-name" aria-label="Edit ruler name">✎</button></div><form id="nameEditor" hidden><label class="sr-only" for="nameInput">Ruler name, 18 characters maximum</label><input id="nameInput" maxlength="18" required><div class="name-actions"><button type="submit">Save</button><button id="cancelName" type="button">Cancel</button></div></form>
+      <div class="hero-progress"><div class="hero-level"><strong id="heroLevel"></strong><span>HERO</span></div><div id="xpTrack" class="progress-track" role="progressbar" aria-label="Hero XP"><span id="xpFill"></span></div><p id="heroXp"></p></div></div>
+      <button id="clanAffiliation" class="clan-affiliation"><span class="clan-shield" aria-hidden="true"><img src="assets/flag-symbols/selected/svg/lion.svg" alt=""></span><span><small>CLAN</small><strong id="clanName"></strong></span><span aria-hidden="true">›</span></button>
+      <div class="identity-flourish" aria-hidden="true"><span></span>◆<span></span></div>
+    </section>
+    <section class="kingdom-ledger" aria-labelledby="kingdomTitle"><header class="section-heading"><div><p class="eyebrow">THE ROYAL ACCOUNTS</p><h2 id="kingdomTitle">Kingdom overview</h2></div><span class="folio" aria-hidden="true">I</span></header>
+      <div class="stat-grid">
+        <article class="stat power"><img src="assets/flag-symbols/selected/svg/crown.svg" alt=""><div><h3>King Power</h3><strong id="kingPower"></strong></div></article>
+        <article class="stat"><img src="assets/optimized/hud-city-list-192x192-29705553a45a.webp" alt=""><div><h3>Cities</h3><strong id="cities"></strong></div></article>
+        <article class="stat"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><div><h3>Gold</h3><strong id="gold"></strong></div></article>
+        <article class="stat"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><h3>Troops</h3><strong id="troops"></strong></div></article>
+        <button class="stat production" id="goldProduction"><img src="assets/icons/royal-shop-gold-r1.svg" alt=""><span><span class="stat-label">Gold production <span class="info-mark" aria-hidden="true">i</span></span><strong id="goldRate"></strong><small id="goldBonus"></small></span></button>
+        <button class="stat production" id="troopProduction"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><span><span class="stat-label">Troops production <span class="info-mark" aria-hidden="true">i</span></span><strong id="troopRate"></strong><small id="troopBonus"></small></span></button>
+      </div>
+      <div class="castle-action"><img src="assets/optimized/inner-castle-great-hall-512x512-11afdcfaa594.webp" alt=""><button id="innerCastle" class="primary">Inner Castle <span aria-hidden="true">›</span></button></div>
+    </section>
+    <section class="honors" aria-labelledby="honorsTitle"><header class="section-heading"><div><p class="eyebrow">THIS SEASON</p><h2 id="honorsTitle">Achievements</h2></div><span class="folio" aria-hidden="true">II</span></header>
+      <div class="honors-scroll"><img class="honors-seal" src="assets/icons/reward-achievements-r1.svg" alt=""><div class="season-score"><strong id="completedHero"></strong><span>achievements complete</span></div><div id="honorsTrack" class="progress-track" role="progressbar" aria-label="Seasonal achievement completion"><span id="honorsFill"></span></div>
+      <dl class="honor-totals"><div><dt>Complete</dt><dd id="completed"></dd></div><div><dt>Claimed</dt><dd id="claimed"></dd></div><div><dt>Remaining</dt><dd id="remaining"></dd></div></dl><p class="season-note">Progress and unclaimed rewards reset each season.</p></div>
+      <button id="viewAchievements" class="primary achievement-action"><span>View Achievements</span><span id="ready" class="ready-count"></span><span class="action-arrow" aria-hidden="true">›</span></button>
+    </section>
+  </main>
+</div></dialog>
+<dialog id="detailDialog" aria-labelledby="detailTitle"><header><h2 id="detailTitle"></h2><button id="closeDetail" class="icon-button" aria-label="Close preview detail">×</button></header><div id="detailBody"></div></dialog>
+<div id="dismissed" hidden><p>Player Profile preview closed.</p><button id="reopen" class="primary">Reopen Player Profile</button></div><p id="liveStatus" class="sr-only" role="status"></p>
+</body></html>

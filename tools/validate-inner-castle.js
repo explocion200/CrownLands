@@ -280,11 +280,16 @@ assert.match(guardSource, /!\s*isStronghold\(city\)/, "Strongholds must not expo
 assert.match(guardSource, /isMainCityForList\(city\)/, "Inner Castle entry must use the canonical main-city helper.");
 
 const profileButtonMatch = indexSource.match(
-  /<section class="kingdom-overview"[\s\S]*?<div class="kingdom-stat-grid">([\s\S]*?)<\/div>\s*<div class="profile-inner-castle-actions">\s*<button id="profileInnerCastleBtn" class="profile-inner-castle-btn" type="button">Inner Castle<\/button>/
+  /<section class="kingdom-overview(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/section>/
 );
-assert.ok(profileButtonMatch, "Profile Overview must place the Inner Castle button directly after the six-stat grid.");
+assert.ok(profileButtonMatch, "Profile Overview must retain its kingdom overview section.");
+const profileOverview = profileButtonMatch[1];
+assert.match(profileOverview, /class="profile-inner-castle-actions(?:\s[^"]*)?"[\s\S]*?<button id="profileInnerCastleBtn"[^>]*type="button"[^>]*>Inner Castle/, "The overview must retain its dedicated Inner Castle action.");
 assert.equal((profileButtonMatch[1].match(/class="kingdom-stat(?:\s|\")/g) || []).length, 6, "Profile Overview must retain all six Kingdom statistics before the Inner Castle button.");
-assert.ok(indexSource.indexOf('id="profileInnerCastleBtn"') < indexSource.indexOf('class="profile-achievement-summary"'), "The Inner Castle button must remain above the Achievements section.");
+for (const id of ["profileKingPowerStat", "profileCitiesStat", "profileGoldStat", "profileTroopsStat", "profileGoldProductionStat", "profileTroopProductionStat"]) {
+  assert.ok(profileOverview.includes(`id="${id}"`) && profileOverview.indexOf(`id="${id}"`) < profileOverview.indexOf('class="profile-inner-castle-actions'), `${id} must remain before the Inner Castle action.`);
+}
+assert.ok(indexSource.indexOf('id="profileInnerCastleBtn"') < indexSource.indexOf('class="profile-achievement-summary'), "The Inner Castle action must remain in the overview before the Achievements section.");
 
 const profileOpenSource = extractFunction(gameSource, "openProfileInnerCastle");
 assert.match(profileOpenSource, /getMainCityReference\(\)/, "The Profile entry must use the canonical main-city reference.");

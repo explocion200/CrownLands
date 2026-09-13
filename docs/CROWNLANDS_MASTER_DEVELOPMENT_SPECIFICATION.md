@@ -293,6 +293,8 @@ The web world also contains Regions 16, 17, 19, 21, and 22. These are temporary 
 
 ### Hero and skill progression
 
+- The Player Profile overview uses the approved parchment layout with ruler identity and existing saved heraldry on the left, all six kingdom statistics in the center, and seasonal Achievements on the right. Desktop and mobile landscape retain name/flag editing, public player/clan links, Hero level/XP, total and included-bonus production, Inner Castle entry through the existing Main City selection, and the existing Profile/Clan/Skills/Settings navigation. Inner Castle and View Achievements remain reachable at the bottom of their columns. A production detail dialog shows base, included bonus, and total without changing the calculation. Confirmed September 13, 2026; design approval does not establish deployment status.
+
 - Hero XP awards Hero Levels, and each Hero Level awards one skill point. Earlier levels in a skill cost one point; the final five levels of every skill cost two points per level. Removing a live skill level is free and refunds the exact weighted point cost of that level, while Reset Skills is a free clear-all shortcut that changes no Gold and consumes no stored legacy reset credit. Existing legacy credit data remains stored and harmless. **Status:** base Hero progression, the weighted point ledger, free live refunds, and free Reset Skills are `LIVE — ALL PUBLISHED CHANNELS` in build `fdf326a...`.
 - The current skill groups are Attack, Defense, and Utility. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - Current skills include Swordmastery, March Orders, Field Medics, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, and Guild Charters. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
