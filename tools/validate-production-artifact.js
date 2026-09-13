@@ -117,7 +117,8 @@ const profileUiBytes = ["player-profile-ui.js", "player-profile-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (profileUiBytes > 44 * 1024) throw new Error("Profile presentation exceeds its 44 KiB payload budget.");
 // Skills adds at most 30 KiB of scoped CSS, 16 KiB of eight emblems, and 2 KiB of card markup.
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48) * 1024;
+// Clan adds at most 84 KiB of scoped CSS and 16 KiB of client presentation, reusing existing art.
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

@@ -66,7 +66,7 @@
 #profileScreen #clanContent .clan-ledger{min-height:0 !important;display:grid !important;grid-template-rows:102px 54px minmax(0,1fr) !important;padding:20px 23px 24px !important}
 #profileScreen #clanContent .clan-totals{display:flex !important;align-items:center !important;gap:18px !important;border:1px solid #ad9770 !important;box-shadow:inset 0 0 0 3px #fff3d344 !important;background:linear-gradient(120deg,#e8d7b0,#f4e9cc) !important;padding:13px 21px !important}
 #profileScreen #clanContent .power-total{display:flex !important;align-items:center !important;gap:15px !important;min-width:0 !important}
-#profileScreen #clanContent .power-total>img{width:48px !important;height:48px !important;opacity:.75 !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:48px !important;height:48px !important;opacity:.75 !important}
 #profileScreen #clanContent .power-total h2{font:12px "Segoe UI",sans-serif !important;color:var(--muted) !important;margin-bottom:4px !important}
 #profileScreen #clanContent .power-total strong{font:42px/.98 Georgia,serif !important;font-variant-numeric:tabular-nums !important;color:var(--moss) !important;white-space:nowrap !important}
 #profileScreen #clanContent .member-total{display:grid !important;gap:3px !important;min-width:95px !important;margin-left:auto !important;border-left:1px solid #b6a27b !important;padding-left:23px !important;text-align:center !important}
@@ -115,7 +115,7 @@
 #profileScreen #clanContent .clan-ledger{padding:6px 11px 5px !important;grid-template-rows:48px 20px minmax(0,1fr) !important}
 #profileScreen #clanContent .clan-totals{padding:5px 10px !important;gap:8px !important}
 #profileScreen #clanContent .power-total{gap:8px !important}
-#profileScreen #clanContent .power-total>img{width:27px !important;height:29px !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:27px !important;height:29px !important}
 #profileScreen #clanContent .power-total h2{font-size:9px !important;margin-bottom:2px !important}
 #profileScreen #clanContent .power-total strong{font-size:25px !important}
 #profileScreen #clanContent .member-total{padding-left:12px !important;min-width:65px !important;gap:0 !important}
@@ -152,7 +152,7 @@
 #profileScreen #clanContent .leader-actions img{display:none !important}
 #profileScreen #clanContent .clan-ledger{padding:6px 7px 7px !important;grid-template-rows:45px 23px minmax(0,1fr) !important}
 #profileScreen #clanContent .clan-totals{padding:4px 7px !important}
-#profileScreen #clanContent .power-total>img{width:22px !important;height:26px !important}
+#profileScreen #clanContent .power-total>.cl-icon{width:22px !important;height:26px !important}
 #profileScreen #clanContent .power-total{gap:5px !important}
 #profileScreen #clanContent .power-total strong{font-size:22px !important}
 #profileScreen #clanContent .power-total h2{font-size:8px !important}
