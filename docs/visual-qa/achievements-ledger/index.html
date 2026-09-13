@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crown Lands · Achievements draft</title><link rel="icon" href="../../../assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="review.css"><script src="review.js" defer></script></head>
+<body>
+<header class="review-header"><div><p>CROWN LANDS · DESIGN REVIEW</p><h1>Achievements · The season's honors</h1></div><span class="draft-badge">Draft for approval</span></header>
+<nav class="review-controls" aria-label="Design preview controls">
+  <div class="control-group"><button data-viewport="desktop">Desktop</button><button data-viewport="landscape">Mobile landscape</button><button data-viewport="small">Small landscape</button></div>
+  <div class="control-group"><label for="sample">Example</label><select id="sample"><option value="mixed">Ready / underway / collected</option><option value="item">Item reward</option><option value="crown">Crown &amp; continuous reign</option><option value="large">Large reward values</option><option value="fresh">Fresh season</option><option value="collected">All 40 collected</option><option value="loading">Loading</option><option value="error">Reconnecting</option><option value="expired">Season ended</option></select><button data-action="reset">Reset example</button></div>
+  <div class="control-group"><button data-action="fail">Try a failed claim</button></div>
+</nav>
+<p class="review-note">Browse all 40 achievements, switch categories, and select a row to inspect its requirements and reward. Claims are simulated locally. The window uses the same dimensions as Daily Login and Quests.</p>
+<main><div id="canvas"><iframe id="preview" title="Achievements design preview" src="preview.html"></iframe></div></main>
+<footer><span id="dimensions"></span><span id="reviewStatus" role="status">Interactive approval draft</span></footer>
+<section class="design-notes"><h2>For this review</h2><p>Eight medieval category badges, compact progress rows, claimable rewards first, and a fixed action area. The list and selected details scroll separately. Desktop and mobile landscape only.</p><p>All 40 objectives, targets, rewards, and requirement notes come from the current game. Production reward amounts become fixed on completion. Achievement progress and unclaimed rewards reset with the season; this draft adds no permanent honors or new rewards.</p><p>Review examples use synthetic data. No production game files or player data are changed.</p></section>
+</body></html>
