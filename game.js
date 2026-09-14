@@ -37654,6 +37654,10 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
   const { attacker, defender } = getLegacyBattleSides(report, siege);
   const [left, right] = report?.type === "defense" ? [defender, attacker] : [attacker, defender];
   const target = { name: report.cityName, level: report.cityLevel, regionId: report.regionId, targetType: report.targetType === "camp" ? "camp" : "city", strongholdType: "" };
+  if (window.CrownlandsBattleReportUI) {
+    return window.CrownlandsBattleReportUI.render({ report, badge, left, right, defender, target, siege, message,
+      viewerRole: report.type === "defense" ? "defender" : "attacker", resultLabel: getLegacyBattleResultLabel(report) });
+  }
   return `
     <div class="battle-report-detail battle-visual-report detailed-battle-report ${badge.tone}">
       ${renderBattleReportNavigation(report, target)}
@@ -37698,6 +37702,11 @@ function renderDetailedBattleReport(report, snapshot, badge) {
   const defender = getBattleSidePresentationModel(snapshot, "defender");
   const left = viewerRole === "defender" ? defender : attacker;
   const right = viewerRole === "defender" ? attacker : defender;
+  if (window.CrownlandsBattleReportUI) {
+    return window.CrownlandsBattleReportUI.render({ report, snapshot, badge, left, right, defender, viewerRole,
+      target: snapshot.target, siege: snapshot.siege, ruleLabel, resultLabel: getViewerBattleResultLabel(snapshot, viewerRole, report),
+      forecast: viewerRole === "attacker" ? renderBattleForecastChanges(report, snapshot) : "" });
+  }
   return `
     <div class="battle-report-detail battle-visual-report detailed-battle-report ${badge.tone}">
       ${renderBattleReportNavigation(report, snapshot.target)}
@@ -37806,12 +37815,13 @@ async function showBattleReportDetail(reportId) {
     ? renderScoutAttemptReportDetail(report, badge)
     : !report.battleId
       ? renderLegacyBattleReportDetail(report, badge)
-    : `
+    : window.CrownlandsBattleReportUI?.loading(report, badge) || `
       <div class="battle-report-detail ${badge.tone}">
         <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">${renderCrownlandsIcon("back")} Back to reports</button>
         <div class="battle-report-detail-head"><span>${badge.label}</span><strong>${escapeHtml(report.cityName)}</strong><small>Loading participant battle statistics…</small></div>
         <div class="battle-report-detail-loading" role="status">Loading the authoritative battle snapshot…</div>
       </div>`;
+  if (report.type !== "scout") window.CrownlandsBattleReportUI?.mount(modal, modalBody, closeModalBtn);
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
@@ -37846,6 +37856,7 @@ async function showBattleReportDetail(reportId) {
     );
     applyLegacyBattleFlags(report);
   }
+  window.CrownlandsBattleReportUI?.mount(modal, modalBody, closeModalBtn);
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
 }
@@ -39738,6 +39749,7 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   battleReportVisitViewedAtMs = null;
+  modal.classList.remove("battle-report-detail-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"

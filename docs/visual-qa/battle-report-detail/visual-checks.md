@@ -24,4 +24,17 @@ Checked September 14, 2026 in the Codex in-app browser using the repository's lo
 - Close removed the dialog's open state; Open Battle Report restored it. Reset example restored the selected sample and scroll position zero.
 - Browser console contained no warnings or errors after final review. Both draft JavaScript files passed `node --check`.
 
-No physical device, authenticated production account, server battle calculation, or production snapshot loading was exercised. Full integration and release verification follow approval.
+## Approved production integration checks
+
+Checked September 14, 2026 using the actual game entry point with local benchmark services and synthetic snapshots from `runtime-fixture.js`.
+
+- All 16 runtime examples passed at 1440 × 900, 844 × 390, and 568 × 320 (48 states): no horizontal content overflow, broken images, or header/section buttons smaller than 44 × 44. Window dimensions match the isolated draft and Reports list.
+- The actual saved-flag renderer, viewer-oriented side models, bonus/Gear helper, conditional rewards, and legacy/unavailable fallback render through the new presentation module.
+- Defense defeat and Citadel loss retained red shields; held defense retained olive. Camp Gold, troops, item/quantity, and Deed city/location rewards rendered without wall sections or duplicated generic rewards. The Common Gear Box uses the updated chest art.
+- Every rally section shortcut at the smallest landscape size scrolled to the correct section, focused its heading, selected the matching shortcut, and kept the header fixed. Rewards remain reachable.
+- The existing forecast disclosure expanded with the actual before/after garrison, reinforcement, and total-defense values and arrival-time explanation; no overflow was detected.
+- Back returned to the existing Reports ledger. Map navigation and Close closed the dialog and removed the detail style scope. The shared profile-link helper and saved-flag hooks are retained.
+- The only observed browser warnings were the three deliberately unavailable-snapshot examples during the state matrix. No unexpected errors were observed.
+- `validate-report-system.js` passed with the new focused renderer coverage: settled values, escaping, viewer order, missing historical statistics, Gear/recovery, rally rows, all Camp reward types, defeat shield, age/navigation hooks, and loading. Existing scout lifecycle, UI contrast, and clan-objective battle validations also passed.
+
+No physical device, authenticated production account, server battle calculation, or production snapshot loading was exercised in this local review. Required release checks and published-build evidence are recorded in the release artifacts after completion.

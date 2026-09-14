@@ -1,6 +1,6 @@
 # Full Battle Report design draft
 
-Status: isolated draft for approval, created September 14, 2026 on `codex/battle-report-detail-draft`, based on `c90f47b8ed19dbcc754d6cea53620435102a1b70`. It is not integrated, merged, or deployed. No production game files or Master Specification rules are changed.
+Status: design approved September 14, 2026 and integrated on `codex/battle-report-detail-draft`, based on `c90f47b8ed19dbcc754d6cea53620435102a1b70`. Merge and deployment were authorized; their completion is recorded separately in the release receipt. The production presentation is in `battle-report-detail-ui.js` and its scoped stylesheet. The Master Specification records the confirmed presentation without changing gameplay rules.
 
 Open `/docs/visual-qa/battle-report-detail/index.html?viewport=desktop&sample=victory` on the existing local preview server. If needed, start it from the repository root with `node tools/map-benchmark/start-server.js 61703`. The wrapper provides desktop (1440 × 900), mobile landscape (844 × 390), and small landscape (568 × 320). Portrait is outside this design.
 
@@ -35,6 +35,6 @@ The 13 examples cover attack victory, defensive defeat, held defense, protected 
 
 The examples use synthetic presentation values, not combat calculations, current production balance, real accounts, or promised rewards. For illustration, resolved losses and rewards are supplied directly. No state is persisted. The draft imports no game/backend modules and makes no service calls. Reports, map, and ruler actions announce their intended navigation in the outer review footer; Close, Reopen, section scrolling, and the forecast disclosure work locally.
 
-After design approval, integrate through the existing detail renderers, snapshot loading, late-response guard, flag rendering, rule/outcome helpers, fallback and navigation handlers. Do not alter battle resolution, rewards, recovery caps, permissions, retention, read marking, or scout intelligence. Scout detail pages remain a separate review.
+Integration uses the existing detail renderers, snapshot loading, late-response guard, flag rendering, rule/outcome helpers, fallback and navigation handlers. Battle resolution, rewards, recovery caps, permissions, retention, read marking, and scout intelligence are unchanged. Scout detail pages remain a separate review.
 
-See `visual-checks.md` for local draft verification. Production integration and its release gates remain pending approval.
+For the actual game UI with local mock services, run `node tools/prepare-battle-report-detail-preview.js` and open its printed URL. That fixture uses the real detail entry point, saved-flag renderer, shared presentation models, reward helpers, and navigation with 16 synthetic examples. It is never included in the production build. See `visual-checks.md` for local design and integration verification. Release gates and deployment evidence are recorded under the ignored `release-artifacts/battle-report-detail/` directory.
