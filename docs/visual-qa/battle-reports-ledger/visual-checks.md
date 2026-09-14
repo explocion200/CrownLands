@@ -21,4 +21,10 @@ All eight examples were reviewed at desktop 1440×900, mobile landscape 844×390
 - Special outcome labels retain their distinct meanings, and an unavailable target has a disabled map action.
 - No browser warning or error messages were reported during the review.
 
-Detailed report screens and real navigation are deliberately pending their next design step. Physical-device and production integration checks belong to the implementation stage.
+## Approved integration
+
+Actual game with local mock services checked at 1280×720, 844×390, and 568×320. Lists and Realm Activity fit without horizontal overflow; ready-state list heights were 414px, 169px, and 172px respectively. Map/report/filter controls retain 44px height. Defensive held outcomes use the olive shield; defensive defeat, lost, and breached outcomes use the red shield. The live scout countdown remains visible and updates.
+
+Defense filtering and full-report/Back navigation work with existing handlers; detailed reports shed the list-only scope class. The report recovery validator now exercises an incoming report while the inner list is scrolled and confirms preservation of that position. Report recovery and scout lifecycle validators pass. Inherited action placement, hidden sync banner, and Realm Activity footer styles were corrected during this review.
+
+Detailed report design remains a later UI step. No physical-device or authenticated production-account gameplay test is claimed by these local checks.

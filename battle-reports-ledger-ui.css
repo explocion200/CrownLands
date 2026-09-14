@@ -1,0 +1,242 @@
+/* Approved report list only. Existing detail screens retain their own styles. */
+#modal.battle-reports-ledger *{font-variant:normal !important}
+#modal.battle-reports-ledger .activity-card{min-width:0 !important}
+#modal.battle-reports-ledger .proclamation{display:block !important;box-shadow:none !important;min-width:0 !important}
+#modal.battle-reports-ledger .activity-foot>span{display:block !important;flex:0 1 auto !important;min-width:0 !important;overflow-wrap:anywhere !important}
+#modal.battle-reports-ledger .location-button{width:auto !important;max-width:none !important;grid-column:auto !important}
+#modal.battle-reports-ledger [data-report-sync][hidden]{display:none !important}
+#modal.battle-reports-ledger .heading h2{padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important}
+
+#modal.battle-reports-ledger .filters{border:0 !important;border-bottom:1px solid #c4b18d !important;background:none !important;box-shadow:none !important;border-radius:0 !important}
+
+#modal.battle-reports-ledger .report-list{display:block !important}
+
+#modal.battle-reports-ledger .report-list:focus-visible{outline:2px solid #376872 !important;outline-offset:-2px !important}
+
+#modal.battle-reports-ledger .realm-activity-age{white-space:nowrap !important;font:10px "Segoe UI",Arial,sans-serif !important;color:#716247 !important}
+
+#modal.battle-reports-ledger .proclamation .player-name-link{font:inherit !important;text-decoration:underline !important;text-underline-offset:3px !important}
+
+#modal.battle-reports-ledger{display:block !important;font-weight:400 !important}
+
+#modal.battle-reports-ledger:not([open]){display:none !important}
+
+#modal.battle-reports-ledger::before,#modal.battle-reports-ledger::after{display:none !important}
+
+#modal.battle-reports-ledger>.modal-card{height:100% !important;max-height:none !important;display:block !important;padding:0 !important;margin:0 !important;width:100% !important;min-width:0 !important;background:none !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;overflow:hidden !important}
+
+#modal.battle-reports-ledger>.modal-card>:not(#modalBody){display:none !important}
+
+#modal.battle-reports-ledger #modalBody{height:100% !important;max-height:none !important;min-height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important}
+
+#modal.battle-reports-ledger :is(h2,h3,p,span,strong,small,button,a,div,footer,nav){text-shadow:none !important;text-transform:none !important;letter-spacing:normal !important;font-weight:400 !important;color:inherit !important}
+
+#modal.battle-reports-ledger :is(button,a){margin:0 !important;border-radius:0 !important;min-width:0 !important;transition:none !important}
+
+#modal.battle-reports-ledger :is(.report-row,.activity-card,.battle-report-empty){box-shadow:none !important;border-radius:0 !important;border:0 !important}
+
+#modal.battle-reports-ledger .report-row{overflow:visible !important}
+
+#modal.battle-reports-ledger :is(.reports-shell,.filters,.battle-report-list){gap:0 !important}
+
+#modal.battle-reports-ledger .battle-report-filters{flex-wrap:nowrap !important}
+
+#modal.battle-reports-ledger .battle-report-actions{grid-column:auto !important;grid-row:auto !important;flex-direction:row !important}
+
+#modal.battle-reports-ledger .battle-report-target-flag{width:26px !important;height:33px !important;flex:none !important}
+
+#modal.battle-reports-ledger .ruler .name-link{display:flex !important;align-items:center !important;background:none !important;box-shadow:none !important}
+
+#modal.battle-reports-ledger .activity-head{padding:0 !important;background:none !important;border:0 !important;display:flex !important}
+
+#modal.battle-reports-ledger .activity-foot{background:none !important}
+
+#modal.battle-reports-ledger .proclamation{padding:0 !important;background:none !important;border:0 !important;border-radius:0 !important}
+
+#modal.battle-reports-ledger .proclamation :is(button,a){font:inherit !important;padding:0 !important;border:0 !important;background:none !important;box-shadow:none !important;text-decoration:underline !important;text-underline-offset:3px !important}
+
+#modal.battle-reports-ledger{color-scheme:light !important;--paper:#f2e8cd !important;--ink:#352f23 !important;--muted:#716247 !important;--line:#b8a684 !important;--olive:#4b583c !important;--red:#703e3d !important;font-family:"Segoe UI",Arial,sans-serif !important;color:var(--ink) !important;background:#30382a !important}
+#modal.battle-reports-ledger *{box-sizing:border-box !important}
+#modal.battle-reports-ledger h1,#modal.battle-reports-ledger h2,#modal.battle-reports-ledger h3,#modal.battle-reports-ledger p{margin:0 !important}
+#modal.battle-reports-ledger button{font:inherit !important;color:inherit !important;cursor:pointer !important}
+#modal.battle-reports-ledger button:disabled{cursor:default !important;opacity:.45 !important}
+#modal.battle-reports-ledger button:hover:not(:disabled){filter:brightness(1.05) !important}
+#modal.battle-reports-ledger button:focus-visible,#modal.battle-reports-ledger main:focus-visible{outline:2px solid #376872 !important;outline-offset:2px !important}
+#modal.battle-reports-ledger [hidden]{display:none!important}
+#modal.battle-reports-ledger .sr-only{position:absolute !important;width:1px !important;height:1px !important;overflow:hidden !important;clip-path:inset(50%) !important;white-space:nowrap !important}
+#modal.battle-reports-ledger{width:min(1200px,calc(100vw - 24px)) !important;height:min(700px,calc(100dvh - 24px)) !important;max-width:none !important;max-height:none !important;margin:auto !important;padding:5px !important;border:1px solid #766346 !important;border-radius:2px !important;background:var(--paper) !important;color:var(--ink) !important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88 !important;overflow:hidden !important}
+#modal.battle-reports-ledger .reports-shell{height:100% !important;display:flex !important;flex-direction:column !important;border:1px solid var(--line) !important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%) !important}
+#modal.battle-reports-ledger .heading .mobile-summary{display:none !important}
+#modal.battle-reports-ledger .window-header{display:flex !important;gap:20px !important;align-items:center !important;min-height:78px !important;flex:none !important;padding:10px 20px !important;border-bottom:1px solid var(--line) !important;background:#e9dcb483 !important}
+#modal.battle-reports-ledger .heading{display:flex !important;align-items:center !important;gap:12px !important;min-width:0 !important}
+#modal.battle-reports-ledger .header-art{width:50px !important;height:54px !important;flex:none !important}
+#modal.battle-reports-ledger .heading p{font-size:9px !important;letter-spacing:1.9px !important;color:var(--muted) !important;margin-bottom:4px !important}
+#modal.battle-reports-ledger .heading h2{font:30px/1 Georgia,serif !important}
+#modal.battle-reports-ledger .header-motto{margin-left:auto !important;font:italic 13px Georgia,serif !important;color:#847250 !important}
+#modal.battle-reports-ledger .icon-button{display:grid !important;place-items:center !important;width:44px !important;height:44px !important;min-width:44px !important;border:0 !important;background:transparent !important;font:26px Georgia,serif !important}
+#modal.battle-reports-ledger .filters{display:flex !important;align-items:center !important;gap:7px !important;flex:none !important;padding:12px 22px !important;border-bottom:1px solid #c4b18d !important}
+#modal.battle-reports-ledger .filters button{display:flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;min-height:48px !important;padding:3px 15px !important;background:#e4d3ae !important;border:1px solid #ad956b !important;box-shadow:inset 0 0 0 2px #f8ecd377 !important;font:14px Georgia,serif !important;min-width:105px !important}
+#modal.battle-reports-ledger .filters svg{width:30px !important;height:32px !important;flex:none !important}
+#modal.battle-reports-ledger .filters button[aria-pressed="true"]{background:var(--red) !important;color:#fff1d3 !important;border-color:#643938 !important;box-shadow:inset 0 0 0 2px #ab8d6966 !important}
+#modal.battle-reports-ledger .ledger-caption{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:10px !important;min-height:51px !important;flex:none !important;padding:8px 25px !important}
+#modal.battle-reports-ledger .ledger-caption>div{display:flex !important;align-items:baseline !important;gap:13px !important}
+#modal.battle-reports-ledger .ledger-caption h3{font:21px Georgia,serif !important}
+#modal.battle-reports-ledger .ledger-caption #battleReportCount{font-size:11px !important;color:var(--muted) !important}
+#modal.battle-reports-ledger #battleReportArrivalNote{font-size:11px !important;color:var(--red) !important}
+#modal.battle-reports-ledger #battleReportArrivalNote:not(:empty)::before{content:"" !important;display:inline-block !important;width:6px !important;height:6px !important;background:var(--red) !important;transform:rotate(45deg) !important;margin-right:7px !important}
+#modal.battle-reports-ledger .column-labels,#modal.battle-reports-ledger .report-row{display:grid !important;grid-template-columns:218px minmax(0,1fr) 120px 170px 100px !important;gap:12px !important;align-items:center !important}
+#modal.battle-reports-ledger .column-labels{margin:0 22px !important;padding:8px 15px !important;color:#817152 !important;background:#e6d8b680 !important;border-top:1px solid #c3b18a !important;border-bottom:1px solid #c3b18a !important;font-size:9px !important;text-transform:uppercase !important;letter-spacing:1px !important;flex:none !important}
+#modal.battle-reports-ledger .column-labels span:last-child{text-align:center !important}
+#modal.battle-reports-ledger .report-list{flex:1 !important;min-height:0 !important;overflow:auto !important;overscroll-behavior:contain !important;touch-action:pan-y !important;scrollbar-color:#ae9360 #e7dabc !important;scrollbar-width:thin !important;margin:0 22px !important;padding:0 0 10px !important}
+#modal.battle-reports-ledger .report-row{position:relative !important;min-height:85px !important;padding:11px 15px !important;border-bottom:1px solid #cbb992 !important;background:#f9f0d64d !important}
+#modal.battle-reports-ledger .report-row:nth-child(even){background:#e9d9b636 !important}
+#modal.battle-reports-ledger .report-row:hover{background:#fdf6e482 !important}
+#modal.battle-reports-ledger .report-row.new::before{content:"" !important;position:absolute !important;left:0 !important;top:15px !important;bottom:15px !important;width:3px !important;background:#845046 !important}
+#modal.battle-reports-ledger .report-row.selected{background:#e7d7ad !important;box-shadow:inset 0 0 0 1px #ab925f !important}
+#modal.battle-reports-ledger .report-result{display:flex !important;align-items:center !important;gap:12px !important;min-width:0 !important}
+#modal.battle-reports-ledger .report-art{width:43px !important;height:47px !important;flex:none !important}
+#modal.battle-reports-ledger .result-copy{min-width:0 !important}
+#modal.battle-reports-ledger .result-line{display:flex !important;align-items:center !important;gap:7px !important;flex-wrap:wrap !important}
+#modal.battle-reports-ledger .outcome{font:17px/1.15 Georgia,serif !important;color:var(--olive) !important}
+#modal.battle-reports-ledger .defeat .outcome{color:#804a42 !important}
+#modal.battle-reports-ledger .scout .outcome{color:#446063 !important}
+#modal.battle-reports-ledger .new-tag{font-size:8px !important;text-transform:uppercase !important;letter-spacing:.6px !important;color:#7f4740 !important;border:1px solid #b38b76 !important;padding:2px 4px !important;background:#edd3b477 !important}
+#modal.battle-reports-ledger .time{display:block !important;font-size:10px !important;line-height:1.45 !important;color:var(--muted) !important;margin-top:5px !important}
+#modal.battle-reports-ledger .expiry{display:block !important;color:#7b6940 !important}
+#modal.battle-reports-ledger .expiry.urgent{color:#88483f !important}
+#modal.battle-reports-ledger .target{min-width:0 !important}
+#modal.battle-reports-ledger .target-meta{font-size:9px !important;letter-spacing:.6px !important;color:#7c6a4a !important;display:block !important;margin-bottom:5px !important}
+#modal.battle-reports-ledger .target strong{display:block !important;font:18px/1.2 Georgia,serif !important;overflow-wrap:anywhere !important}
+#modal.battle-reports-ledger .troops{min-width:0 !important}
+#modal.battle-reports-ledger .troops strong{display:block !important;font:23px/1.05 Georgia,serif !important;font-variant-numeric:tabular-nums !important}
+#modal.battle-reports-ledger .troops small{display:block !important;font-size:10px !important;margin-top:5px !important;color:var(--muted) !important}
+#modal.battle-reports-ledger .ruler{display:flex !important;align-items:center !important;min-width:0 !important;gap:9px !important}
+#modal.battle-reports-ledger .ruler .flag{width:26px !important;height:33px !important;flex:none !important}
+#modal.battle-reports-ledger .name-link{padding:0 !important;border:0 !important;background:transparent !important;text-align:left !important;text-decoration:underline !important;text-decoration-color:#a5936d !important;text-underline-offset:3px !important;min-height:44px !important;font:14px/1.3 Georgia,serif !important;overflow-wrap:anywhere !important}
+#modal.battle-reports-ledger .name-link:hover{text-decoration-color:#5f4b2d !important}
+#modal.battle-reports-ledger .actions{display:flex !important;justify-content:flex-end !important;gap:6px !important}
+#modal.battle-reports-ledger .row-action{display:grid !important;place-items:center !important;width:44px !important;min-width:44px !important;height:44px !important;border:1px solid #ad966d !important;background:#e4d2ab !important;box-shadow:inset 0 0 0 2px #fff2d157 !important;color:#685234 !important}
+#modal.battle-reports-ledger .row-action svg{width:23px !important;height:23px !important}
+#modal.battle-reports-ledger .row-action.open{background:#67704c !important;border-color:#59623e !important;color:#fff0c9 !important;box-shadow:inset 0 0 0 2px #c4c19144 !important}
+#modal.battle-reports-ledger .ledger-footer{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:10px !important;min-height:36px !important;flex:none !important;padding:7px 24px !important;border-top:1px solid #c4b18d !important;font-size:10px !important;color:#7b6a4c !important;background:#e9dcb45e !important}
+#modal.battle-reports-ledger .sync-banner{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:12px !important;margin:0 22px 8px !important;padding:4px 10px !important;border:1px solid #b2986c !important;background:#e8d6ab !important;flex:none !important;font-size:11px !important;line-height:1.5 !important}
+#modal.battle-reports-ledger .sync-banner button{min-height:44px !important;min-width:60px !important;padding:0 10px !important;border:1px solid #ac9365 !important;background:#f1e3bf !important;font-size:12px !important}
+#modal.battle-reports-ledger .empty{min-height:100% !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;gap:12px !important;padding:28px !important}
+#modal.battle-reports-ledger .empty svg{width:76px !important;height:80px !important;opacity:.75 !important}
+#modal.battle-reports-ledger .empty h3{font:24px Georgia,serif !important}
+#modal.battle-reports-ledger .empty p{font-size:12px !important;line-height:1.6 !important;color:var(--muted) !important;max-width:390px !important}
+#modal.battle-reports-ledger .activity-card{display:grid !important;grid-template-columns:108px minmax(0,1fr) !important;column-gap:20px !important;padding:21px 16px !important;border-bottom:1px solid #cbb992 !important;background:#f9f0d64d !important}
+#modal.battle-reports-ledger .activity-card:nth-child(even){background:#e9d9b636 !important}
+#modal.battle-reports-ledger .objective-art{width:108px !important;height:108px !important;object-fit:contain !important;grid-row:1/3 !important}
+#modal.battle-reports-ledger .activity-head{display:flex !important;justify-content:space-between !important;align-items:baseline !important;gap:12px !important}
+#modal.battle-reports-ledger .activity-head h3{font:21px/1.25 Georgia,serif !important;color:#654332 !important}
+#modal.battle-reports-ledger .activity-head time{white-space:nowrap !important;font-size:10px !important;color:var(--muted) !important}
+#modal.battle-reports-ledger .proclamation{margin-top:9px !important;font-size:12px !important;line-height:1.6 !important}
+#modal.battle-reports-ledger .proclamation .herald{font:italic 13px Georgia,serif !important;margin-bottom:5px !important;color:#786442 !important}
+#modal.battle-reports-ledger .proclamation .closing{margin-top:4px !important;color:#736249 !important;font-style:italic !important}
+#modal.battle-reports-ledger .proclamation .name-link{display:inline !important;min-height:0 !important;font:inherit !important}
+#modal.battle-reports-ledger .proclamation .name-link:focus-visible{outline-offset:3px !important}
+#modal.battle-reports-ledger .activity-foot{grid-column:2 !important;display:flex !important;align-items:center !important;gap:24px !important;margin-top:12px !important;padding-top:10px !important;border-top:1px solid #cbb992 !important;font-size:11px !important}
+#modal.battle-reports-ledger .activity-foot span{min-width:0 !important}
+#modal.battle-reports-ledger .activity-foot b{display:block !important;font-size:8px !important;text-transform:uppercase !important;letter-spacing:1px !important;color:#7b6a4c !important;font-weight:400 !important;margin-bottom:4px !important}
+#modal.battle-reports-ledger .location-button{min-height:44px !important;flex:none !important;padding:0 14px !important;margin-left:auto !important;background:#e4d2ab !important;border:1px solid #ad966d !important;box-shadow:inset 0 0 0 2px #fff2d157 !important;font:12px Georgia,serif !important}
+
+@media(max-height:600px),(max-width:1000px){#modal.battle-reports-ledger .window-header{min-height:46px !important;padding:0 9px !important;gap:8px !important}
+#modal.battle-reports-ledger .header-art{width:30px !important;height:34px !important}
+#modal.battle-reports-ledger .heading{gap:7px !important}
+#modal.battle-reports-ledger .heading p{font-size:7px !important;letter-spacing:1.1px !important;margin-bottom:3px !important}
+#modal.battle-reports-ledger .heading h2{font-size:23px !important}
+#modal.battle-reports-ledger .header-motto{font-size:10px !important}
+#modal.battle-reports-ledger .filters{padding:5px 10px !important;gap:5px !important}
+#modal.battle-reports-ledger .filters button{min-height:44px !important;min-width:90px !important;padding:3px 10px !important;font-size:12px !important;gap:6px !important}
+#modal.battle-reports-ledger .filters svg{width:26px !important;height:28px !important}
+#modal.battle-reports-ledger .ledger-caption{min-height:33px !important;padding:5px 13px !important}
+#modal.battle-reports-ledger .ledger-caption h3{font-size:17px !important}
+#modal.battle-reports-ledger .ledger-caption #battleReportCount,#modal.battle-reports-ledger #battleReportArrivalNote{font-size:9px !important}
+#modal.battle-reports-ledger .ledger-caption>div{gap:8px !important}
+#modal.battle-reports-ledger .column-labels,#modal.battle-reports-ledger .report-row{grid-template-columns:150px minmax(0,1fr) 70px 120px 94px !important;gap:8px !important}
+#modal.battle-reports-ledger .column-labels{margin:0 10px !important;padding:5px 10px !important;font-size:8px !important;letter-spacing:.4px !important}
+#modal.battle-reports-ledger .report-list{margin:0 10px !important;padding-bottom:5px !important}
+#modal.battle-reports-ledger .report-row{min-height:77px !important;padding:8px 10px !important}
+#modal.battle-reports-ledger .report-result{gap:7px !important}
+#modal.battle-reports-ledger .report-art{width:32px !important;height:38px !important}
+#modal.battle-reports-ledger .outcome{font-size:15px !important}
+#modal.battle-reports-ledger .time{font-size:9px !important;margin-top:4px !important}
+#modal.battle-reports-ledger .result-line{gap:4px !important}
+#modal.battle-reports-ledger .new-tag{font-size:7px !important;padding:1px 3px !important}
+#modal.battle-reports-ledger .target-meta{font-size:8px !important;margin-bottom:3px !important;letter-spacing:.2px !important}
+#modal.battle-reports-ledger .target strong{font-size:15px !important}
+#modal.battle-reports-ledger .troops strong{font-size:18px !important}
+#modal.battle-reports-ledger .troops small{font-size:9px !important}
+#modal.battle-reports-ledger .ruler{gap:6px !important}
+#modal.battle-reports-ledger .ruler .flag{width:22px !important;height:29px !important}
+#modal.battle-reports-ledger .name-link{font-size:12px !important}
+#modal.battle-reports-ledger .ledger-footer{min-height:26px !important;padding:4px 12px !important;font-size:9px !important}
+#modal.battle-reports-ledger .sync-banner{margin:0 10px 5px !important;font-size:10px !important;padding:1px 7px !important}
+#modal.battle-reports-ledger .activity-card{padding:12px 9px !important;grid-template-columns:70px minmax(0,1fr) !important;column-gap:12px !important}
+#modal.battle-reports-ledger .objective-art{width:70px !important;height:75px !important}
+#modal.battle-reports-ledger .activity-head h3{font-size:17px !important}
+#modal.battle-reports-ledger .activity-head time{font-size:9px !important}
+#modal.battle-reports-ledger .proclamation{font-size:11px !important;margin-top:6px !important}
+#modal.battle-reports-ledger .proclamation .herald{font-size:11px !important}
+#modal.battle-reports-ledger .activity-foot{gap:12px !important;margin-top:8px !important;padding-top:7px !important;font-size:10px !important}
+#modal.battle-reports-ledger .location-button{font-size:11px !important;padding:0 10px !important}
+#modal.battle-reports-ledger .empty{padding:16px !important;gap:7px !important}
+#modal.battle-reports-ledger .empty svg{width:47px !important;height:49px !important}
+#modal.battle-reports-ledger .empty h3{font-size:20px !important}
+#modal.battle-reports-ledger .empty p{font-size:11px !important}
+
+}
+
+@media(max-width:650px){#modal.battle-reports-ledger .column-labels,#modal.battle-reports-ledger .ledger-caption{display:none !important}
+#modal.battle-reports-ledger .heading .mobile-summary{display:block !important;font-size:7px !important;letter-spacing:.4px !important}
+#modal.battle-reports-ledger{width:calc(100vw - 12px) !important;height:calc(100dvh - 12px) !important;padding:4px !important}
+#modal.battle-reports-ledger .window-header{padding:0 6px !important}
+#modal.battle-reports-ledger .heading h2{font-size:21px !important}
+#modal.battle-reports-ledger .heading p,#modal.battle-reports-ledger .header-motto{display:none !important}
+#modal.battle-reports-ledger .icon-button{margin-left:auto !important}
+#modal.battle-reports-ledger .filters{padding:4px 6px !important;gap:4px !important}
+#modal.battle-reports-ledger .filters button{min-width:0 !important;flex:1 !important;padding:2px 4px !important;font-size:11px !important;gap:4px !important}
+#modal.battle-reports-ledger .filters svg{width:22px !important;height:26px !important}
+#modal.battle-reports-ledger .ledger-caption{padding:4px 9px !important;min-height:31px !important}
+#modal.battle-reports-ledger .ledger-caption h3{font-size:16px !important}
+#modal.battle-reports-ledger .column-labels,#modal.battle-reports-ledger .report-row{grid-template-columns:112px minmax(0,1fr) 52px 90px 90px !important;gap:5px !important}
+#modal.battle-reports-ledger .column-labels{margin:0 6px !important;padding:5px 7px !important;font-size:7px !important;letter-spacing:0 !important}
+#modal.battle-reports-ledger .report-list{margin:0 6px !important}
+#modal.battle-reports-ledger .report-row{min-height:88px !important;padding:8px 7px !important}
+#modal.battle-reports-ledger .report-result{gap:4px !important;align-items:flex-start !important}
+#modal.battle-reports-ledger .report-art{width:25px !important;height:32px !important}
+#modal.battle-reports-ledger .outcome{font-size:13px !important}
+#modal.battle-reports-ledger .time{font-size:8px !important;line-height:1.5 !important}
+#modal.battle-reports-ledger .target strong{font-size:14px !important}
+#modal.battle-reports-ledger .target-meta{font-size:8px !important}
+#modal.battle-reports-ledger .troops strong{font-size:16px !important}
+#modal.battle-reports-ledger .troops small{font-size:8px !important}
+#modal.battle-reports-ledger .ruler .flag{width:19px !important;height:25px !important}
+#modal.battle-reports-ledger .ruler{gap:4px !important}
+#modal.battle-reports-ledger .name-link{font-size:11px !important}
+#modal.battle-reports-ledger .actions{gap:2px !important}
+#modal.battle-reports-ledger .row-action svg{width:21px !important;height:21px !important}
+#modal.battle-reports-ledger .new-tag{font-size:6px !important}
+#modal.battle-reports-ledger .ledger-footer{font-size:8px !important;padding:4px 8px !important;min-height:25px !important}
+#modal.battle-reports-ledger .sync-banner{margin:0 6px 4px !important;font-size:9px !important}
+#modal.battle-reports-ledger .activity-card{grid-template-columns:52px minmax(0,1fr) !important;gap:7px !important;padding:11px 7px !important}
+#modal.battle-reports-ledger .objective-art{width:52px !important;height:62px !important}
+#modal.battle-reports-ledger .activity-head{align-items:flex-start !important;gap:7px !important}
+#modal.battle-reports-ledger .activity-head h3{font-size:15px !important}
+#modal.battle-reports-ledger .activity-head time{font-size:8px !important}
+#modal.battle-reports-ledger .proclamation{font-size:10px !important;line-height:1.5 !important}
+#modal.battle-reports-ledger .activity-foot{grid-column:1/-1 !important;gap:10px !important;font-size:9px !important}
+#modal.battle-reports-ledger .activity-foot b{font-size:7px !important}
+#modal.battle-reports-ledger .location-button{padding:0 8px !important;font-size:10px !important}
+
+}
+
+
+#modal.battle-reports-ledger .filters button[data-report-filter="realm_activity"]{margin-left:auto !important}
+
+#modal.battle-reports-ledger .heading .mobile-summary{display:none !important}
+
+@media(max-width:650px){#modal.battle-reports-ledger .heading .mobile-summary{display:block !important}
+#modal.battle-reports-ledger .header-motto{display:none !important}
+}

@@ -413,11 +413,12 @@ let reportSounds = 0;
 let reportRewards = 0;
 let reportAnimations = 0;
 let reportListRenders = 0;
+let preservedReportScrollTop = null;
 Object.assign(historySandbox, {
   state: { battleReports: [], scoutReports: {} },
   appliedServerReportRevisions: new Map(),
   modal: { open: false, dataset: {}, classList: { contains: () => true } },
-  modalBody: { scrollTop: 80 },
+  modalBody: { scrollTop: 80, querySelector: () => ({ scrollTop: 240 }) },
   deedRewardReportsVfxHydrated: true,
   CITADEL_ASSAULT_EVENT_KIND: "citadel_assault",
   REWARD_FOLLOWUP_AUDIO_DELAY_MS: 0,
@@ -425,14 +426,14 @@ Object.assign(historySandbox, {
   mergeServerScoutReport: () => false,
   normalizeScoutReports: value => value || {},
   saveGame() {}, renderCities() {}, renderHud() {},
-  showLogModal() { reportListRenders += 1; },
+  showLogModal(options) { reportListRenders += 1; preservedReportScrollTop = options.preserveScrollTop; },
   claimBulkArrivalAudio: () => true,
   playGameSound() { reportSounds += 1; },
   queueLevelUpReward() { reportRewards += 1; },
   cityById: () => ({}),
   playCityAttackAnimation() { reportAnimations += 1; },
 });
-for (const name of ["normalizeServerBattleReport", "mergeServerReports", "mergeOnlineBattleReports"]) {
+for (const name of ["getBattleReportListScrollTop", "normalizeServerBattleReport", "mergeServerReports", "mergeOnlineBattleReports"]) {
   vm.runInContext(functionBody(client, name), historySandbox);
 }
 const arrivalReport = {
@@ -455,6 +456,7 @@ assert.equal(historySandbox.mergeServerReports([arrivalReport], { notify: true }
 assert.equal(historySandbox.state.battleReports.length, 1);
 assert.equal(historySandbox.state.battleReports[0].troopsAwarded, 100, "Recovery lost the recorded troop reward.");
 assert.equal(reportListRenders, 1, "Recovery did not refresh the open Reports list.");
+assert.equal(preservedReportScrollTop, 240, "Recovery lost the ledger list's scroll position.");
 assert.equal(reportSounds, 1, "Recovery replayed notification audio.");
 assert.equal(reportRewards, 1, "Recovery replayed a level reward.");
 assert.equal(reportAnimations, 1, "Recovery replayed the battle animation.");
