@@ -35862,12 +35862,7 @@ function showOutgoingAttacksModal() {
 }
 
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
-  const previousMarchList = modalBody.querySelector(".march-list");
-  const previousScroll = previousMarchList?.scrollTop || 0;
-  const focusedControl = modalBody.contains(document.activeElement) ? document.activeElement : null;
-  const focusedAction = ["data-outgoing-march", "data-swift-march-order", "data-recall-horn", "data-player-profile-uid", "data-close-marches", "data-active-operations-tab"]
-    .find(attribute => focusedControl?.hasAttribute(attribute));
-  const focusedValue = focusedAction ? focusedControl.getAttribute(focusedAction) : null;
+  const previousMarchView = captureMarchesListView();
   const normalizedOperations = operations?.marches
     ? operations
     : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
@@ -35895,7 +35890,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalTitle.textContent = "Kingdom Activity";
   modalBody.innerHTML = `
     <div class="active-operations-panel">
-      ${marchesView ? `<header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><div class="carried-items" aria-label="March items in your bag"><span>${renderItemIcon(getShopItemById(SWIFT_MARCH_ORDER_ITEM_ID))}<span>Swift Orders <strong>${formatMarchesNumber(getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID))}</strong></span></span><span>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall Horns <strong>${formatMarchesNumber(getProjectedInventoryCount(RECALL_HORN_ITEM_ID))}</strong></span></span></div><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>` : ""}
+      ${marchesView ? renderMarchesHeader() : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
         ${tabs.map(tab => `
           <button class="active-operations-tab ${activeOperationsTab === tab.id ? "active" : ""}" data-active-operations-tab="${tab.id}" type="button" role="tab" aria-selected="${activeOperationsTab === tab.id}">
@@ -35912,16 +35907,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalBody.querySelectorAll("[data-close-marches]").forEach(button => {
     button.addEventListener("click", () => modal.close());
   });
-  const marchList = modalBody.querySelector(".march-list");
-  if (marchList && previousMarchList) {
-    marchList.scrollTop = previousScroll;
-    if (focusedAction) {
-      const replacement = [...modalBody.querySelectorAll(`[${focusedAction}]`)]
-        .find(control => control.getAttribute(focusedAction) === focusedValue);
-      if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
-      else marchList.focus({ preventScroll: true });
-    } else if (focusedControl === previousMarchList) marchList.focus({ preventScroll: true });
-  }
+  restoreMarchesListView(previousMarchView);
   modalBody.querySelectorAll("[data-active-operations-tab]").forEach(button => {
     button.addEventListener("click", () => {
       activeOperationsTab = button.dataset.activeOperationsTab || "marches";

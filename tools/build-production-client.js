@@ -31,7 +31,7 @@ const rootFiles = [
   "battle-reports-ledger-ui.css",
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
-  "marches-activity-ui.css",
+  "marches-activity-ui.css", "marches-activity-ui.js",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "daily-login-ui.js", "daily-login-ui.css", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",

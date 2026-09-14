@@ -22,7 +22,7 @@ const required = [
   "battle-reports-ledger-ui.css",
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
-  "marches-activity-ui.css",
+  "marches-activity-ui.css", "marches-activity-ui.js",
   "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
