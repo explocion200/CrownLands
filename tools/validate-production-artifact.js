@@ -21,6 +21,7 @@ const required = [
   "settings-ledger-ui.css",
   "battle-reports-ledger-ui.css",
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
+  "scout-report-ui.css", "scout-report-ui.js",
   "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
@@ -128,7 +129,11 @@ if (profileUiBytes > 44 * 1024) throw new Error("Profile presentation exceeds it
 const battleReportDetailBytes = ["battle-report-detail-ui.js", "battle-report-detail-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (battleReportDetailBytes > 48 * 1024) throw new Error("Full Battle Report presentation exceeds its 48 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52) * 1024;
+// Scout Reports adds at most 64 KiB of scoped presentation and 4 KiB for game mounting/entries; no new art.
+const scoutReportBytes = ["scout-report-ui.js", "scout-report-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (scoutReportBytes > 64 * 1024) throw new Error("Scout Report presentation exceeds its 64 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
