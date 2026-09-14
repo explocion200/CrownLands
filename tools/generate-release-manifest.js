@@ -72,7 +72,7 @@ function createManifest() {
     "player-profile-ui.js", "player-profile-ui.css",
     "skills-ledger-ui.css",
     "clan-ledger-ui.css",
-  "settings-ledger-ui.css",
+    "settings-ledger-ui.css", "assets/icons/settings-ledger.svg",
     ...fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg")).map(name => `assets/icons/skills/${name}`),
     "assets/icons/reward-daily-login-r1.svg", "assets/icons/reward-daily-quests-r1.svg", "assets/icons/reward-achievements-r1.svg",
     "daily-login-ui.js", "daily-login-ui.css", "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "game.js", "holding-tower-ui.js", "base-cities.js", "common-gear.js", "common-gear-ui.js", "instant-economy-actions.js", "firebaseClient.js", "animation-manager.js", "audio-manager.js",
