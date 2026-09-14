@@ -599,20 +599,13 @@ function validateSettingsLayoutContracts(indexSource, stylesSource) {
     (indexSource.match(/class=["'][^"']*audio-channel-card[^"']*["']/g) || []).length === 2,
     "the audio mixer must contain exactly two compact channel cards"
   );
-  check(indexSource.includes('class="audio-channel-grid"'), "the audio mixer grid is missing");
-  check(indexSource.includes('class="settings-secondary-grid"'), "the Notifications and Privacy grid is missing");
-  check(
-    /\.audio-channel-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(stylesSource),
-    "the audio mixer is not a two-column desktop layout"
-  );
-  check(
-    /@media\s*\(max-width:\s*640px\)[\s\S]*?\.audio-channel-grid,[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(stylesSource),
-    "the audio mixer does not stack at the mobile breakpoint"
-  );
-  check(
-    /\.audio-mute-button\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/.test(stylesSource),
-    "audio mute buttons must retain 44px touch targets"
-  );
+  const ledgerStyles = readSource("settings-ledger-ui.css");
+  check(indexSource.includes('settings-column audio-column'), "the sound settings column is missing");
+  check(indexSource.includes('settings-column preferences-column'), "the preferences column is missing");
+  check(ledgerStyles.includes('grid-template-columns:minmax(0,.93fr) minmax(0,1.07fr)'), "Settings must retain two desktop columns");
+  check(ledgerStyles.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr)'), "Compact landscape must retain both settings columns");
+  check(/#settingsView\{[^}]*overflow:auto/.test(ledgerStyles), "Settings must share a vertical scroll area");
+  check(/\.mute-button\{[^}]*min-height:44px/.test(ledgerStyles), "Audio mute buttons must retain 44px touch targets");
   check(
     stylesSource.includes("env(safe-area-inset-right)")
       && stylesSource.includes("env(safe-area-inset-bottom)")
