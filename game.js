@@ -10287,6 +10287,7 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
       modalBody.querySelectorAll("[data-scout-report-expires]").forEach(label => {
         label.textContent = formatDuration(remaining);
       });
+      window.CrownlandsScoutReportUI?.updateTiming(modalBody, remaining);
     }
   }
 
@@ -14520,7 +14521,7 @@ function showIslandSwitcherModal() {
     showToast("Finish loading the current island first.");
     return;
   }
-  modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "offline-reward-modal");
+  modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "scout-report-ledger", "offline-reward-modal");
   modal.classList.add("island-switcher-modal");
   modalTitle.textContent = "Map";
   renderIslandSwitcherModalContent();
@@ -28289,9 +28290,15 @@ function showScoutReportModal(cityId) {
     ? `<small data-fortification-repair-at-ms="${siege.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}</small>`
     : `<small>Fully repaired now</small>`;
   modal.className = "modal scout-report-modal";
+  delete modal.dataset.battleReportDetailId;
   modal.dataset.scoutReportCityId = cityId;
   modalTitle.textContent = "Detailed scout report";
-  modalBody.innerHTML = `
+  modalBody.innerHTML = window.CrownlandsScoutReportUI?.renderIntel({
+    city, report, remaining, age, reportedOwnerName, reportedOwnerUid, currentPlayerUid,
+    rewardCampTarget, cityLevel, soldierDefenseEnabled, defensePercent, cityWalls,
+    cityDefenseBonus, baseCityWalls, baseTotalDefense, reinforcements, reinforcementTroops,
+    ownerTroops, siege, defenderGearCopy, wallGearCopy, wallGearPercent, siegeRepair,
+  }) || `
     ${renderOnboardingTip("scout", city, "report")}
     <div class="detailed-scout-report">
       <div class="scout-report-identities">
@@ -28369,6 +28376,8 @@ function showScoutReportModal(cityId) {
   `;
   FlagRenderer.render(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag, { stableKey: currentPlayerUid, context: "scout-report" });
   FlagRenderer.render(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag, { stableKey: reportedOwnerUid, context: "scout-report" });
+  window.CrownlandsScoutReportUI?.mount(modal, modalBody, closeModalBtn);
+  modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
@@ -37755,6 +37764,7 @@ function applyLegacyBattleFlags(report = null) {
 }
 
 function renderDefenderScoutReportDetail(report, badge) {
+  if (window.CrownlandsScoutReportUI) return window.CrownlandsScoutReportUI.renderDisclosure(report, badge);
   const d = report.scoutDisclosure;
   const attacker = report.opponentName || "Unknown ruler";
   const fromCity = report.sourceCityName || "Unknown city";
@@ -37776,6 +37786,7 @@ function renderDefenderScoutReportDetail(report, badge) {
 }
 
 function renderScoutAttemptReportDetail(report, badge) {
+  if (window.CrownlandsScoutReportUI) return window.CrownlandsScoutReportUI.renderAttempt(report, badge);
   if (isDefenderScoutReport(report)) return renderDefenderScoutReportDetail(report, badge);
   const explanation = report.summary || "The scout did not return usable intelligence.";
   return `
@@ -37822,11 +37833,14 @@ async function showBattleReportDetail(reportId) {
         <div class="battle-report-detail-loading" role="status">Loading the authoritative battle snapshot…</div>
       </div>`;
   if (report.type !== "scout") window.CrownlandsBattleReportUI?.mount(modal, modalBody, closeModalBtn);
+  else window.CrownlandsScoutReportUI?.mount(modal, modalBody, closeModalBtn);
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
   if (report.type === "scout") {
     if (isDefenderScoutReport(report)) {
+      const playerFlag = modalBody.querySelector("#scoutedReportPlayerFlag");
+      if (playerFlag) FlagRenderer.render(playerFlag, state.flag, { stableKey: getCurrentOnlineUid(), context: "scout-report" });
       FlagRenderer.render(
         modalBody.querySelector("#scoutedReportAttackerFlag"),
         report.opponentFlag,
@@ -39749,7 +39763,7 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   battleReportVisitViewedAtMs = null;
-  modal.classList.remove("battle-report-detail-ledger");
+  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"

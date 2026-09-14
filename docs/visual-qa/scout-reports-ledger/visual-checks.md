@@ -10,4 +10,14 @@ September 14, 2026. Synthetic examples only; no production account or gameplay a
 - Close and Reopen worked. Section shortcuts reached the corresponding content. Sample selection and desktop/landscape size controls updated the draft and review URL.
 - Rapid switching briefly observed pending image loads in two combinations. Subsequent inspection confirmed the SVGs loaded; these were loading observations, not missing resources.
 
-This is a local visual draft, not a production validation or release receipt. Full static/emulator/CI gates, production data wiring, live timer expiry, navigation handlers, and deployment verification are deferred until design approval and implementation.
+## Approved integration review
+
+September 14, 2026. The approved presentation is mounted through the actual game entry points using the loopback-only runtime fixture. All data in this review is synthetic.
+
+- All 14 report examples passed geometry and disclosure checks at 1440 × 900, 844 × 390, and 568 × 320 (42 combinations). No horizontal overflow or missing images; fixed controls remain above the scrolling body.
+- Actual saved flags render for both rulers. City success reports retain all eight skills and complete integer values; unavailable intelligence contains no troop, defense, or skill rows.
+- A four-second expiry returned to Reports automatically and removed the intelligence. The two wall repair labels counted down together and both changed to “Fully repaired — wall integrity restored.”
+- Back and Close returned correctly and removed the scoped presentation. View map closed the report and returned to the target holding. The Skills shortcut reached the section, and small landscape scrolling exposed the final skill rows and base attack while retaining the header.
+- Focused report validation passed: snapshot values, zero power, breached walls, historical fields, camp rules, disclosure boundaries, escaping, saved flags, navigation, mirrored timers, authoritative recovery, retention, and account isolation.
+
+Release gates and published-build verification are recorded separately in the release receipt; these local checks alone do not establish deployment.

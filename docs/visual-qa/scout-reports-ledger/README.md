@@ -1,6 +1,6 @@
 # Scout Reports design draft
 
-Status: **awaiting design approval**. Local draft on `codex/scout-reports-draft`, based on `afdeb8b7c6bbe376236f3b6b0f7de10b33992e2e`. No production integration, PR, merge, or deployment is part of this review checkpoint.
+Status: **design approved September 14, 2026**, integrated on `codex/scout-reports-draft`, based on `afdeb8b7c6bbe376236f3b6b0f7de10b33992e2e`. Production presentation is in `scout-report-ui.js` and its scoped stylesheet. Merge and deployment were authorized; their completion is recorded separately in the release receipt.
 
 Open `/docs/visual-qa/scout-reports-ledger/index.html?viewport=desktop&sample=success` on the existing local server. Start that server if needed with `node tools/map-benchmark/start-server.js 61703` from the repository root.
 
@@ -14,7 +14,7 @@ The defender perspective shows who scouted the holding, the source and destinati
 
 ## Existing source mapping
 
-Read the Master Specification's Scouting and Reports and UI/UX Standards sections before integration. The draft is a proposal and does not change confirmed specification rules.
+Read the Master Specification's Scouting and Reports and UI/UX Standards sections. It records the approved presentation without changing gameplay rules.
 
 | Draft information | Existing implementation |
 | --- | --- |
@@ -36,6 +36,8 @@ The 14 examples cover a successful city scout, reinforcements, damaged walls, im
 
 The draft makes no game/backend imports, service calls, writes to storage, or player actions. It reuses the existing Reports draft shell and shipped SVG art. No production entry point imports these files. Navigation/profile actions announce their intended destinations in the review footer; section scrolling, sample selection, viewport controls, Close, Escape, and Reopen work locally.
 
-Approval should precede production wiring. Integration must retain authoritative snapshot values, exact report outcome/summary wording, availability and ownership checks, no-disclosure states, active-realm scoping, read marking, and existing timing/expiry behavior. Missing historical fields must not be fabricated; defense layers must not be counted twice. The draft's fixed timers must be replaced by existing runtime updates, including hiding intelligence when it becomes unavailable. Existing contextual onboarding remains supported. No attack/rally/paid-scout action is added by this design.
+Integration uses the existing snapshot preparation, exact report summary/outcome helpers, availability and ownership checks, active-realm scoping, read marking, saved flags, player links, and timer updates. The overview and wall-section repair labels stay synchronized. Expired successful intelligence returns to Reports through the existing lifecycle. Opening a Scout Report clears the previous battle-detail request identity so a late battle response cannot overwrite it. Existing contextual onboarding remains supported. No attack/rally/paid-scout action is added.
 
-See `visual-checks.md` for local review evidence. Release checks and a PR come with the approved implementation, not this draft checkpoint.
+Historical missing power values are labeled “Not recorded”; a recorded zero stays zero. Troop/power figures are displayed in full instead of abbreviated K/M values. Scout fortification snapshots supply wall totals and modifier percentages, so production displays the recorded Stoneworks/Gear percentages rather than reconstructing power contributions that are absent from the snapshot.
+
+For the actual game with local mock services, run `node tools/prepare-scout-report-preview.js` and open the printed URL. Its 16 synthetic examples exercise the real entry points, flags, scroll controls, and lifecycle; it is excluded from production. See `visual-checks.md` for local review evidence. Release checks and deployment evidence are recorded under the ignored `release-artifacts/scout-reports/` directory.
