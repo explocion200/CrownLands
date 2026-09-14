@@ -30,7 +30,7 @@ The isolated styles import the existing Battle Report Detail draft's frame and r
 
 ## Approved runtime integration
 
-The game now renders the approved Marches structure through the existing `renderOutgoingAttacksModalContent`, `renderMarchesOperationPanel`, and `renderOutgoingAttackCard` functions. `marches-activity-ui.css` is scoped to the Marches view and included in the entry point, production artifact, client fingerprint, and service-worker cache. The other operation tabs and profile navigation retain their existing layouts.
+The game now renders the approved Marches structure through the existing `renderOutgoingAttacksModalContent`, `renderMarchesOperationPanel`, and `renderOutgoingAttackCard` functions. `marches-activity-ui.css` is scoped to the Marches view and included in the entry point, production artifact, and client fingerprint. It uses the existing service-worker runtime cache rather than expanding the install-time cache. The other operation tabs and profile navigation retain their existing layouts.
 
 The renderer uses current shared Shop item art (the 384-pixel Swift and Recall assets), projected inventory counts, and the existing eligibility and dispatch handlers. `patchMarchItemActionUi` refreshes the ledger so pending updates retain images, disable both item actions on the affected army, and refresh the inventory header. The list retains scroll and focused controls through snapshot replacement.
 
