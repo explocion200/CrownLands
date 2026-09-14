@@ -1,7 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 
-async function verifyPickupInteractions(client, evaluate, baselinePlacement = "null", baselineEditorMap = "null") {
+async function verifyPickupInteractions(client, evaluate, baselinePlacement = "null", baselineEditorMap = "null", bonusType = "gold") {
   const placement = await evaluate(`(() => {
     const original = {valid:isValidHarvestBonusPoint,random:Math.random,bonuses:state.harvestBonuses,editorMap:getEditorMap,buildMap:buildCatalogEditorMap};
     const beforePlace = ${baselinePlacement};
@@ -35,7 +35,7 @@ async function verifyPickupInteractions(client, evaluate, baselinePlacement = "n
     const qa=window.pickupBrowserQa={calls:0,reservations:0,original:{usesServerEconomyAuthority,getOnlineApi,bonuses:state.harvestBonuses,daily:state.daily,next:state.harvestNextSpawnAtMs,timer:state.harvestSpawnTimer}};
     state.harvestBonuses=[];
     const region=getActiveMapRegionId(),point=createHarvestBonusPoint(region);
-    qa.bonus={...createHarvestBonusRecord(region,'gold',point),id:'pickup-browser-regression'};
+    qa.bonus={...createHarvestBonusRecord(region,${JSON.stringify(bonusType)},point),id:'pickup-browser-regression'};
     state.harvestBonuses=[qa.bonus];
     state.daily={date:currentDailyDateKey(),harvestedBonuses:0,harvestedGoldBonuses:0,harvestedTroopBonuses:0};
     state.harvestNextSpawnAtMs=Date.now()-1000;
@@ -61,14 +61,20 @@ async function verifyPickupInteractions(client, evaluate, baselinePlacement = "n
       return {calls:qa.calls,reservations:qa.reservations,stable:qa.node===harvestLayer.querySelector('.harvest-bonus-node'),disabled:qa.node.disabled,busy:qa.node.getAttribute('aria-busy')};
     })()`);
     assert.deepEqual(pending,{calls:1,reservations:0,stable:true,disabled:true,busy:"true"},"A repaint swallowed the click or allowed competing pickup requests.");
+    const pendingArt = await evaluate(`(() => {
+      const style = getComputedStyle(pickupBrowserQa.node);
+      return { backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage, filter: style.filter };
+    })()`);
+    assert.deepEqual(pendingArt,{backgroundColor:"rgba(0, 0, 0, 0)",backgroundImage:"none",filter:"none"},"Pending collection picked up the global disabled-button background or gray filter.");
     await evaluate("pickupBrowserQa.reject(new Error('Controlled pickup rejection'))");
     await evaluate("new Promise(resolve=>setTimeout(resolve,0))");
     assert.equal(await evaluate("!pickupBrowserQa.node.disabled && pickupBrowserQa.node===harvestLayer.querySelector('.harvest-bonus-node') && pendingHarvestBonusIds.size===0"),true,"Failed collection did not restore the same usable button.");
     await evaluate("pickupBrowserQa.node.click()");
-    await evaluate(`pickupBrowserQa.resolve({reward:125,currentUser:{harvestBonuses:[],harvestNextSpawnAtMs:Date.now()+120000,harvestSpawnTimer:120,daily:{date:currentDailyDateKey(),harvestedBonuses:1,harvestedGoldBonuses:1,harvestedTroopBonuses:0}}})`);
+    await evaluate(`pickupBrowserQa.resolve({reward:125,currentUser:{harvestBonuses:[],harvestNextSpawnAtMs:Date.now()+120000,harvestSpawnTimer:120,daily:{date:currentDailyDateKey(),harvestedBonuses:1,harvestedGoldBonuses:${bonusType === "gold" ? 1 : 0},harvestedTroopBonuses:${bonusType === "troops" ? 1 : 0}}}})`);
     await evaluate("new Promise(resolve=>setTimeout(resolve,0))");
+    await evaluate("for(let i=0;i<30;i++) renderHarvestBonuses()");
     assert.equal(await evaluate("harvestLayer.querySelector('.harvest-bonus-node')===null && pendingHarvestBonusIds.size===0 && pickupBrowserQa.calls===2"),true,"Confirmed collection left a ghost pickup.");
-    return {placement,pending,failedRetry:true,confirmedRemoval:true};
+    return {bonusType,placement,pending,pendingArt,failedRetry:true,confirmedRemoval:true};
   } finally {
     await evaluate(`(() => {const original=pickupBrowserQa.original;usesServerEconomyAuthority=original.usesServerEconomyAuthority;getOnlineApi=original.getOnlineApi;state.harvestBonuses=original.bonuses;state.daily=original.daily;state.harvestNextSpawnAtMs=original.next;state.harvestSpawnTimer=original.timer;renderHarvestBonuses();delete window.pickupBrowserQa;})()`);
   }
@@ -107,8 +113,10 @@ if (require.main === module) (async () => {
       for(let i=0;i<240&&!await evaluate("window.__CROWNLANDS_BENCHMARK__?.getStatus().status==='ready'");i++)await new Promise(resolve=>setTimeout(resolve,250));
       assert.equal(await evaluate("window.__CROWNLANDS_BENCHMARK__.getStatus().status"),"ready");
       await evaluate("window.__CROWNLANDS_BENCHMARK__.closeModal()");
-      const result={viewport:viewport.name,...await verifyPickupInteractions(client,evaluate,baseline,baselineMap)};
-      results.push(result);console.log(JSON.stringify(result));
+      for (const bonusType of ["gold", "troops"]) {
+        const result={viewport:viewport.name,...await verifyPickupInteractions(client,evaluate,baseline,baselineMap,bonusType)};
+        results.push(result);console.log(JSON.stringify(result));
+      }
     }
     const output=path.join(__dirname,"../release-artifacts/performance/pickup-interactions.json");
     fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(results,null,2)+"\n");

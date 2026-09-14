@@ -2539,6 +2539,18 @@ input[type="range"] {
   animation: harvestMarkerIdle 2.2s ease-in-out infinite;
 }
 
+/* Map artwork stays transparent while the server confirms a collection.
+   Override the more specific disabled-button rules in the global themes. */
+#harvestLayer .harvest-bonus-node:disabled {
+  background: transparent !important;
+  border-color: transparent !important;
+  filter: none;
+}
+
+#harvestLayer .harvest-bonus-node[aria-busy="true"] {
+  cursor: progress;
+}
+
 .harvest-bonus-node::before {
   inset: 1px;
   border: 2px solid var(--pickup-glow-bright);
