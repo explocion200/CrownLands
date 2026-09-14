@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Kingdom Activity Marches preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/kingdom-activity-marches/draft.css"><script src="docs/visual-qa/kingdom-activity-marches/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Kingdom Activity</button>
+<dialog id="reportDialog" aria-labelledby="reportTitle"><div class="report-shell">
+  <header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h1 id="reportTitle">Kingdom Activity</h1></div><div class="carried-items" aria-label="March items in your bag"><span><img src="assets/optimized/item-swift-march-160x160-e857cc4d8977.webp" alt=""><span>Swift Orders <strong id="swiftCount">3</strong></span></span><span><img src="assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp" alt=""><span>Recall Horns <strong id="recallCount">2</strong></span></span></div><button id="close" class="close-button" aria-label="Close Kingdom Activity">×</button></header>
+  <nav class="activity-tabs" aria-label="Kingdom activity categories"><button aria-current="page" id="marchesTab">Marches <span id="marchCount">0</span></button><button disabled>Rallies <span>0</span></button><button disabled>Reinforcements <span>0</span></button><button disabled>Camps <span>0</span></button><button disabled>Strongholds <span>0</span></button></nav>
+  <section id="marchSummary" class="march-summary" aria-label="March summary"></section>
+  <div class="column-labels" aria-hidden="true"><span>Order</span><span>Origin &amp; destination</span><span>Force</span><span>Arrival</span><span>Commands</span></div>
+  <main id="marchList" class="march-list" tabindex="0" aria-label="Active marches"></main>
+  <footer class="report-footer"><span id="panelStatus" role="status">Orders in motion across the realm</span><span>Scroll for all marches</span></footer>
+</div></dialog><p id="liveStatus" class="sr-only" role="status"></p></body></html>

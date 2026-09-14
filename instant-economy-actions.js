@@ -588,6 +588,10 @@ function patchCityUpgradeUi(dirtyCityKeys = null) {
 }
 
 function patchMarchItemActionUi() {
+  if (modal?.open && modal.classList.contains("outgoing-attack-modal") && modal.classList.contains("marches-activity-ledger")) {
+    renderOutgoingAttacksModalContent();
+    return;
+  }
   modalBody?.querySelectorAll("[data-swift-march-order]").forEach(button => {
     const pending = swiftMarchOrderRequests.has(button.dataset.swiftMarchOrder || "");
     button.disabled = pending || getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID) < 1;
