@@ -180,8 +180,8 @@ assert.match(css, /\.profile-screen \.skill-preset-tabs button\.active\s*\{[\s\S
 assert.match(css, /\.profile-screen \.skill-preset-tabs button\.selected:not\(\.active\),[\s\S]*?button\[aria-selected="true"\]:not\(\.active\)[\s\S]*?background:\s*linear-gradient\(180deg, #285f86, #123c5c\)/, "A previewed non-active skill preset must use a distinct blue treatment.");
 assert.match(css, /\.toast\.map-location-announcement\s*\{[\s\S]*?top:\s*calc\(env\(safe-area-inset-top, 0px\) \+ 64px\);[\s\S]*?bottom:\s*auto !important;[\s\S]*?grid-template-columns:\s*44px minmax\(0, 1fr\);/, "The map location announcement is not anchored below the top safe area in a compact banner.");
 assert.match(css, /\.toast\.map-location-announcement\.visible[\s\S]*?translate3d\(-50%, 0, 0\)[\s\S]*?\.map-location-announcement-mark[\s\S]*?\.map-location-announcement-copy strong/, "The map location announcement is missing its entrance state or heraldic presentation.");
-assert.match(game, /class="battle-report-detail-btn"[\s\S]{0,220}aria-label="View full report" title="View full report"/, "The full-report action lacks a clear label.");
-assert.match(game, /aria-label="View full report" title="View full report">\$\{renderCrownlandsIcon\("forward"\)\}/, "The full-report action does not use the visible forward icon.");
+assert.match(game, /class="battle-report-detail-btn row-action open"[\s\S]{0,220}aria-label="View full report for \$\{escapeHtml\(report.cityName\)\}" title="View full report"/, "The full-report action lacks its target-specific accessible label.");
+assert.match(game, /title="View full report">\$\{renderBattleReportLedgerIcon\("open"\)\}/, "The full-report action does not use the approved forward icon.");
 assert.match(css, /\.battle-report-card \.battle-report-detail-btn[\s\S]*?background:\s*linear-gradient\(180deg, #fff0c7, #d5ae67\) !important/, "The full-report action is not visibly styled.");
 
 assert.match(baseCss, /\.flag-swatch-grid \.flag-color-swatch[\s\S]*?background-color:\s*var\(--flag-swatch\)/, "Flag swatches do not paint their actual heraldic colors.");

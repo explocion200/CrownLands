@@ -1,0 +1,2 @@
+@import url("../player-profile-ledger/review.css");
+.emblem-review{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px}.emblem-review figure{display:flex;align-items:center;gap:14px;margin:0;padding:12px 20px;border:1px solid #a48e63;background:#eee2c2;color:#443b2b}.emblem-review svg{width:58px;height:58px}.emblem-review figcaption{font:18px Georgia,serif}

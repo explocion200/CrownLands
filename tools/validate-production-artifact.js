@@ -19,6 +19,8 @@ const required = [
   "skills-ledger-ui.css",
   "clan-ledger-ui.css",
   "settings-ledger-ui.css",
+  "battle-reports-ledger-ui.css",
+  "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
   "play/index.html",

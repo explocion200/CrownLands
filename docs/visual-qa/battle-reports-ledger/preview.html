@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Battle Reports preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/battle-reports-ledger/draft.css"><script src="docs/visual-qa/battle-reports-ledger/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Battle Reports</button>
+<dialog id="reportsDialog" aria-labelledby="reportsTitle"><div class="reports-shell">
+  <header class="window-header"><div class="heading"><svg class="header-art" aria-hidden="true"><use href="docs/visual-qa/battle-reports-ledger/icons.svg#dispatch"></use></svg><div><p>ROYAL DISPATCHES</p><p id="mobileSummary" class="mobile-summary"></p><h1 id="reportsTitle">Battle Reports</h1></div></div><span class="header-motto">News carried by sword &amp; seal</span><button id="close" class="icon-button" aria-label="Close Battle Reports">×</button></header>
+  <nav id="filters" class="filters" aria-label="Report filters"></nav>
+  <div class="ledger-caption"><div><h2 id="listTitle">All dispatches</h2><span id="count"></span></div><span id="arrivalNote"></span></div>
+  <div id="syncBanner" class="sync-banner" hidden><span id="syncMessage" role="status"></span><button id="retry">Retry</button></div>
+  <div id="columnLabels" class="column-labels" aria-hidden="true"><span>Outcome &amp; time</span><span>Target</span><span>Troops</span><span>Ruler</span><span>Actions</span></div>
+  <main id="reportList" class="report-list" tabindex="0" aria-label="Battle report list"></main>
+  <footer class="ledger-footer"><span id="retention">Battle reports · 24 hours</span><span id="footerNote">Scout intelligence · 10 minutes</span></footer>
+</div></dialog><p id="liveStatus" class="sr-only" role="status"></p></body></html>

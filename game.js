@@ -2315,6 +2315,7 @@ let holdingTowerRequestToken = 0;
 let clanGiftCountdownTimer = 0;
 let clanJoinCountdownTimer = 0;
 let battleReportFilter = "all";
+let battleReportVisitViewedAtMs = null;
 const battleSnapshotCache = new Map();
 const clanPublicSnapshotCache = new Map();
 let cityListSortKey = "level";
@@ -9889,23 +9890,21 @@ function renderRealmActivityCard(event = {}) {
     ? `${properName} · ${copy.objectiveLabel}`
     : copy.objectiveLabel;
   return `
-    <article class="realm-activity-card ${copy.tone}" data-realm-activity-id="${escapeHtml(event.eventId)}">
-      <header class="realm-activity-card-head">
-        <img src="${escapeHtml(getRealmActivityArtSrc(event))}" width="96" height="96" alt="" draggable="false" decoding="async" />
-        <div>
-          <strong>${escapeHtml(copy.title)}</strong>
-          ${renderBattleReportAge(event, "realm-activity-age")}
-        </div>
+    <article class="realm-activity-card activity-card ${copy.tone}" data-realm-activity-id="${escapeHtml(event.eventId)}">
+      <img class="objective-art" src="${escapeHtml(getRealmActivityArtSrc(event))}" width="96" height="96" alt="" draggable="false" decoding="async" />
+      <header class="realm-activity-card-head activity-head">
+        <h3>${escapeHtml(copy.title)}</h3>
+        ${renderBattleReportAge(event, "realm-activity-age")}
       </header>
-      <div class="realm-activity-proclamation">
-        <p class="realm-activity-herald">${escapeHtml(copy.herald)}</p>
+      <div class="realm-activity-proclamation proclamation">
+        <p class="realm-activity-herald herald">${escapeHtml(copy.herald)}</p>
         <p>${copy.body}</p>
-        <p class="realm-activity-closing">${copy.closing}</p>
+        <p class="realm-activity-closing closing">${copy.closing}</p>
       </div>
-      <footer class="realm-activity-card-foot">
+      <footer class="realm-activity-card-foot activity-foot">
         <span><b>Objective</b>${escapeHtml(objectiveMeta)}</span>
         <span><b>Location</b>${escapeHtml(getRegionLabel(event.regionId))}</span>
-        <button class="realm-activity-location-btn" type="button" data-realm-activity-location="${escapeHtml(event.eventId)}">View Location</button>
+        <button class="realm-activity-location-btn location-button" type="button" data-realm-activity-location="${escapeHtml(event.eventId)}">View Location</button>
       </footer>
     </article>
   `;
@@ -11563,7 +11562,7 @@ function mergeServerReports(reports = [], options = {}) {
     cityRenderSignature = "";
     renderCities(true);
     if (reportListOpen) {
-      const scrollTop = modalBody.scrollTop;
+      const scrollTop = getBattleReportListScrollTop();
       showLogModal({ silentAudio: true, preserveScrollTop: scrollTop });
     } else if (reportsPanelOpen) {
       void markLoadedReportsViewed();
@@ -18388,7 +18387,7 @@ function mergeRealmActivitySnapshot(events = [], metadata = {}) {
     const reportsPanelOpen = Boolean(modal?.open && modal.classList.contains("battle-report-modal"));
     const reportListOpen = reportsPanelOpen && !String(modal.dataset.battleReportDetailId || "");
     if (reportListOpen && battleReportFilter === "realm_activity") {
-      const scrollTop = modalBody.scrollTop;
+      const scrollTop = getBattleReportListScrollTop();
       showLogModal({ silentAudio: true, preserveScrollTop: scrollTop });
     } else if (reportsPanelOpen) {
       void markLoadedReportsViewed();
@@ -36571,24 +36570,36 @@ function setOnlineReportSyncState(status) {
     : `No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.`;
 }
 
+function renderBattleReportLedgerIcon(icon, className = "") {
+  return `<svg class="${className}" aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#${icon}"></use></svg>`;
+}
+
+function getBattleReportListScrollTop() {
+  return modalBody.querySelector(".battle-report-list")?.scrollTop ?? modalBody.scrollTop;
+}
+
 function showLogModal(options = {}) {
   if (!state) return;
   if (!options.silentAudio) {
     playGameSound("parchment_open", { cooldownMs: 120, allowCrossMap: true });
   }
+  if (battleReportVisitViewedAtMs === null || !modal.open || !modal.classList.contains("battle-report-modal")) {
+    battleReportVisitViewedAtMs = Math.max(normalizeTimestampMs(state.reportsViewedAtMs), normalizeTimestampMs(reportsViewedPendingAtMs));
+  }
   state.battleReports = normalizeBattleReports(state.battleReports);
   delete modal.dataset.scoutReportCityId;
   delete modal.dataset.battleReportDetailId;
   modal.className = "modal battle-report-modal";
+  modal.classList.add("battle-reports-ledger");
   modalTitle.textContent = "Battle Reports";
   const realmActivityAvailable = supportsRealmActivity();
   if (battleReportFilter === "realm_activity" && !realmActivityAvailable) battleReportFilter = "all";
   const filters = [
-    { key: "all", label: "All" },
-    { key: "attack", label: "Attack" },
-    { key: "defense", label: "Defense" },
-    { key: "scout", label: "Scout" },
-    ...(realmActivityAvailable ? [{ key: "realm_activity", label: "Realm Activity" }] : []),
+    { key: "all", label: "All", icon: "dispatch", title: "All dispatches" },
+    { key: "attack", label: "Attack", icon: "attack", title: "Attack reports" },
+    { key: "defense", label: "Defense", icon: "defense", title: "Defense reports" },
+    { key: "scout", label: "Scout", icon: "scout", title: "Scout reports" },
+    ...(realmActivityAvailable ? [{ key: "realm_activity", label: "Realm Activity", icon: "realm", title: "Proclamations of the realm" }] : []),
   ];
   const filteredReports = state.battleReports
     .filter(report => battleReportFilter === "all" || report.type === battleReportFilter)
@@ -36596,32 +36607,35 @@ function showLogModal(options = {}) {
     .sort(compareBattleReportsNewestFirst);
   const showingRealmActivity = battleReportFilter === "realm_activity";
   const realmActivityEvents = normalizeRealmActivityEvents(onlineRealmActivityEvents);
+  const arrivals = showingRealmActivity ? 0 : filteredReports.filter(report => getBattleReportOccurredAtMs(report) > battleReportVisitViewedAtMs).length;
+  const count = showingRealmActivity ? realmActivityEvents.length : filteredReports.length;
+  const summary = `${count} ${showingRealmActivity ? "proclamations" : "reports"} · newest first`;
 
   modalBody.innerHTML = `
-    <div class="battle-report-panel">
-      ${!showingRealmActivity ? `<div class="battle-report-toolbar" data-report-sync hidden><span role="status" aria-live="polite"></span><div class="battle-report-filters"><button type="button">Retry</button></div></div>` : ""}
-      <div class="battle-report-toolbar">
-        <span>Filter</span>
-        <div class="battle-report-filters">
-          ${filters.map(filter => `
-            <button class="${battleReportFilter === filter.key ? "active" : ""}" data-report-filter="${filter.key}" type="button">${filter.label}</button>
-          `).join("")}
-        </div>
-      </div>
-      <div class="battle-report-list">
+    <div class="battle-report-panel reports-shell">
+      <header class="window-header"><div class="heading">${renderBattleReportLedgerIcon("dispatch", "header-art")}<div><p>ROYAL DISPATCHES</p><p class="mobile-summary">${summary}${arrivals ? ` · ${arrivals} new` : ""}</p><h2>Battle Reports</h2></div></div><span class="header-motto">News carried by sword &amp; seal</span><button class="icon-button" data-reports-close type="button" aria-label="Close Battle Reports">×</button></header>
+      <nav class="battle-report-filters filters" aria-label="Report filters">
+        ${filters.map(filter => `<button class="${battleReportFilter === filter.key ? "active" : ""}" aria-pressed="${battleReportFilter === filter.key}" data-report-filter="${filter.key}" type="button">${renderBattleReportLedgerIcon(filter.icon)}<span>${filter.label}</span></button>`).join("")}
+      </nav>
+      <div class="ledger-caption"><div><h3>${filters.find(filter => filter.key === battleReportFilter).title}</h3><span id="battleReportCount">${summary}</span></div><span id="battleReportArrivalNote">${arrivals ? `${arrivals} new this visit` : ""}</span></div>
+      ${!showingRealmActivity ? `<div class="battle-report-toolbar sync-banner" data-report-sync hidden><span role="status" aria-live="polite"></span><button type="button">Retry</button></div>` : ""}
+      ${!showingRealmActivity ? '<div class="column-labels" aria-hidden="true"><span>Outcome &amp; time</span><span>Target</span><span>Troops</span><span>Ruler</span><span>Actions</span></div>' : ""}
+      <div class="battle-report-list report-list" tabindex="0" aria-label="${showingRealmActivity ? "Realm activity list" : "Battle report list"}">
         ${showingRealmActivity
           ? realmActivityEvents.length
             ? realmActivityEvents.map(renderRealmActivityCard).join("")
-            : `<div class="battle-report-empty">No Realm Activity yet. Major Stronghold and Crown Citadel captures will be recorded here.</div>`
+            : `<div class="battle-report-empty empty">${renderBattleReportLedgerIcon("realm")}<h3>No Realm Activity yet.</h3><p>Major Stronghold and Crown Citadel captures will be recorded here.</p></div>`
           : filteredReports.length
             ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
-            : `<div class="battle-report-empty" data-report-empty>No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
+            : `<div class="battle-report-empty empty">${renderBattleReportLedgerIcon("dispatch")}<h3 data-report-empty>No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</h3></div>`}
       </div>
+      <footer class="ledger-footer"><span>${showingRealmActivity ? "Stronghold & Crown Citadel captures" : "Battle reports · 24 hours"}</span><span>${showingRealmActivity ? "Realm Activity" : "Scout intelligence · 10 minutes"}</span></footer>
     </div>
   `;
 
   if (!showingRealmActivity) applyBattleReportTargetFlags(filteredReports);
   setOnlineReportSyncState(onlineReportSyncState);
+  modalBody.querySelector("[data-reports-close]").addEventListener("click", () => modal.close());
   modalBody.querySelector("[data-report-sync] button")?.addEventListener("click", () => {
     clearOnlineServerReportWatcher();
     subscribeOnlineServerReports();
@@ -36631,6 +36645,7 @@ function showLogModal(options = {}) {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";
       showLogModal({ silentAudio: true });
+      modalBody.querySelector(`[data-report-filter="${battleReportFilter}"]`)?.focus();
     });
   });
   modalBody.querySelectorAll("[data-report-detail]").forEach(button => {
@@ -36638,10 +36653,10 @@ function showLogModal(options = {}) {
   });
   bindBattleReportJumpButtons();
   bindRealmActivityLocationButtons();
-  if (Number.isFinite(Number(options.preserveScrollTop))) {
-    modalBody.scrollTop = Math.max(0, Number(options.preserveScrollTop) || 0);
-  }
   if (!modal.open) modal.showModal();
+  if (Number.isFinite(Number(options.preserveScrollTop))) {
+    modalBody.querySelector(".battle-report-list").scrollTop = Math.max(0, Number(options.preserveScrollTop) || 0);
+  }
   if (options.markViewed !== false) void markLoadedReportsViewed();
 }
 
@@ -36657,33 +36672,17 @@ function renderBattleReportCard(report, index = 0) {
     : "";
   const troopLabel = defenderScout ? "troops seen" : report.type === "scout" ? "reported" : "sent";
   const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
-  const timingLabel = scoutExpiresAtMs
-    ? `<small>${renderBattleReportAge(report)}<span aria-hidden="true"> · </span><span data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</span></small>`
-    : `<small>${renderBattleReportAge(report)}</small>`;
-  const locateButton = renderBattleReportLocateButton(report);
+  const timingLabel = `<small class="time">${renderBattleReportAge(report)}${scoutExpiresAtMs ? `<span class="expiry" data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</span>` : ""}</small>`;
+  const isNew = battleReportVisitViewedAtMs !== null && getBattleReportOccurredAtMs(report) > battleReportVisitViewedAtMs;
+  const icon = report.type === "defense" && badge.tone === "defeat" ? "defense-defeat" : report.type;
+  const locateButton = renderBattleReportLocateButton(report, "row-action");
   return `
-    <article class="battle-report-card ${badge.tone}${defenderScout ? " scout-defender" : ""}" data-report-card-id="${escapeHtml(report.id)}">
-      <div class="battle-report-result">
-        <strong>${badge.label}</strong>
-        ${timingLabel}
-      </div>
-      <div class="battle-report-city">
-        <span>${report.targetType === "camp" ? "Camp" : `Lv ${formatNumber(report.cityLevel)}`}</span>
-        <strong>${escapeHtml(report.cityName)}</strong>
-      </div>
-      <div class="battle-report-troops">
-        <span aria-hidden="true">${renderCrownlandsIcon(report.type === "scout" ? "scout" : "troops")}</span>
-        <strong>${formatNumber(troopValue)}</strong>
-        <small>${troopLabel}</small>
-      </div>
-      <div class="battle-report-opponent">
-        ${opponentFlag}
-        ${renderPlayerNameLink(report.opponentUid, opponent, "battle-report-opponent-link")}
-      </div>
-      <div class="battle-report-actions">
-        ${locateButton}
-        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="View full report" title="View full report">${renderCrownlandsIcon("forward")}</button>
-      </div>
+    <article class="battle-report-card report-row ${badge.tone}${defenderScout ? " scout-defender" : ""}${isNew ? " new" : ""}" data-report-card-id="${escapeHtml(report.id)}">
+      <div class="report-result">${renderBattleReportLedgerIcon(icon, "report-art")}<div class="result-copy"><div class="result-line"><strong class="outcome">${badge.label}</strong>${isNew ? '<span class="new-tag">New</span>' : ""}</div>${timingLabel}</div></div>
+      <div class="target"><span class="target-meta">${report.targetType === "camp" ? "Camp" : `Lv ${formatNumber(report.cityLevel)}`}</span><strong>${escapeHtml(report.cityName)}</strong></div>
+      <div class="troops"><strong>${formatNumber(troopValue)}</strong><small>${troopLabel}</small></div>
+      <div class="ruler">${opponentFlag}${renderPlayerNameLink(report.opponentUid, opponent, "name-link battle-report-opponent-link")}</div>
+      <div class="battle-report-actions actions">${locateButton}<button class="battle-report-detail-btn row-action open" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="View full report for ${escapeHtml(report.cityName)}" title="View full report">${renderBattleReportLedgerIcon("open")}</button></div>
     </article>
   `;
 }
@@ -36702,13 +36701,14 @@ function applyBattleReportTargetFlags(reports = []) {
 
 function renderBattleReportLocateButton(report, extraClass = "") {
   const cityId = getResolvableReportCityId(report?.cityId);
+  const icon = extraClass === "row-action" ? renderBattleReportLedgerIcon("map") : renderCrownlandsIcon("locate");
   if (!cityId) {
-    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>${renderCrownlandsIcon("locate")}</button>`;
+    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>${icon}</button>`;
   }
   const loadedCity = getArmyTargetById(cityId);
   const regionId = report.regionId || getCityRegionId(loadedCity || cityId);
   const label = report.cityName || "target city";
-  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${renderCrownlandsIcon("locate")}</button>`;
+  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${icon}</button>`;
 }
 
 function getResolvableReportCityId(cityId) {
@@ -39737,6 +39737,7 @@ document.addEventListener("pointerdown", event => {
   closeProfileScreen();
 }, true);
 modal.addEventListener("close", () => {
+  battleReportVisitViewedAtMs = null;
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"
