@@ -28,3 +28,10 @@ Reviewed locally on September 13, 2026, in the in-app Chromium browser. These ch
 - JavaScript syntax, SVG XML parsing, and whitespace checks passed.
 
 Production files, accounts, saved settings, notification permissions, and audio playback were not changed. Integration, real persistence/permission checks, PR gates, and deployment follow approval. No physical-device test was performed.
+# Production integration checks
+
+- Actual game inspected at desktop 1280×720, landscape 844×390, and small landscape 568×320. Both columns and fixed navigation remain visible; the shared content area scrolls without horizontal overflow. Small landscape window: 556×308; content: 249px client height / 506px scroll height. Visible controls retain at least 44×44px targets; sliders are 44px tall.
+- Music changed to 1%, then muted; Effects stayed 80%. Reload retained 1%, muted Music, 80% Effects, and explicitly selected Reduced motion. Effects changed to 100% while muted and retained that value when unmuted.
+- First steps & help opens the existing help modal; Close returns to Settings. Profile and Skills navigation still works, the Settings key stays hidden on Profile, and returning to Settings retains preferences. Privacy retains the existing policy URL and new-tab security attributes.
+- Missing-key notification state disables both choices and displays its status. The remaining permission/connection behavior uses unchanged game handlers; draft state review covers long/error text. No real notification permission, token registration, or production account mutation was performed.
+- No browser warning/error entries during the actual-game review. Audio contract, persistent audio/lifecycle suite, asset budgets, manuscript contract, and production artifact checks passed before the required PR pipeline. Physical-device verification remains manual.

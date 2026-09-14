@@ -1362,6 +1362,12 @@
         button.setAttribute("aria-label", label);
         button.setAttribute("title", label);
         button.dataset.audioMuted = String(muted);
+        const visibleLabel = button.querySelector?.("[data-audio-mute-label]");
+        if (visibleLabel) visibleLabel.textContent = label;
+        const status = document.getElementById(`${channel}Status`);
+        if (status) status.textContent = `${channel === "music" ? "Music" : "Effects"} ${muted ? "muted" : "on"}`;
+        const card = button.closest?.("[data-audio-channel]");
+        if (card) card.dataset.muted = String(muted);
         const icon = button.querySelector?.("[data-audio-mute-icon]");
         setCrownlandsAudioIcon(icon, muted);
       };

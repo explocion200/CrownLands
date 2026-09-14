@@ -68,7 +68,7 @@ const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 // The Item Bag adds at most 36 KiB of scoped code/styles to the installed shell.
 // The Skills ledger adds one stylesheet bounded at 30 KiB to the offline shell.
 // The complete Clan ledger adds at most 84 KiB CSS and 16 KiB client markup.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100) * 1024;
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40) * 1024;
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills"));
 assert.equal(skillEmblemFiles.length, 8, "Skills must ship exactly eight approved emblems.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
@@ -134,6 +134,7 @@ const entrypointBudgets = {
   "game.js": 1766 * 1024,
   "skills-ledger-ui.css": 30 * 1024,
   "clan-ledger-ui.css": 84 * 1024,
+  "settings-ledger-ui.css": 32 * 1024,
   "common-gear-ui.js": 64 * 1024,
   "treasury-gear-ui.js": 16 * 1024,
   "treasury-gear-ui.css": 40 * 1024,

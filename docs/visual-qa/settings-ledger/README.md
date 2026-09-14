@@ -1,6 +1,6 @@
 # Settings ledger draft
 
-Status: local interactive draft for design approval, on `codex/settings-ledger-draft`.
+Status: approved and integrated on `codex/settings-ledger-draft`; release verification is separate from approval.
 
 Open `/docs/visual-qa/settings-ledger/index.html?viewport=desktop` on the repository preview server. Review controls select desktop (1440×900), mobile landscape (844×390), and small landscape (568×320). Start the existing preview server with `node tools/map-benchmark/start-server.js 61703` if necessary.
 
@@ -19,4 +19,6 @@ Sources: `index.html` Settings markup, `game.js` notification UI and animation p
 
 ## Approval boundary
 
-This directory is isolated from the production game. Its controls use in-memory example values only. It has no backend imports, audio playback, browser notification requests, or persistent storage. Production integration, real preference persistence/permissions, packaging, PR, and deployment follow design approval. No Master Specification change is made for an unapproved layout proposal.
+The original `preview.html` remains isolated and uses in-memory examples. Production uses the approved markup in `index.html`, scoped `settings-ledger-ui.css`, and `assets/icons/settings-ledger.svg`, with existing game/audio handlers. Normal On/Off notification status retains the game's existing hidden behavior; exceptional statuses remain visible. Audio synchronization also updates visible mute labels and channel status without changing stored preferences or playback rules.
+
+For an actual-game review with mock services, run `node tools/prepare-settings-ledger-preview.js` and open its printed localhost URL. `runtime-fixture.js` is restricted to the local benchmark and is excluded from production packaging.

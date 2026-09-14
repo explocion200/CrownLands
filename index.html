@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="player-profile-ui.css?v=20260913-profile-ledger-r1" />
   <link rel="stylesheet" href="skills-ledger-ui.css?v=20260913-skills-ledger-r1" />
   <link rel="stylesheet" href="clan-ledger-ui.css?v=20260913-clan-ledger-r1" />
+  <link rel="stylesheet" href="settings-ledger-ui.css?v=20260913-settings-ledger-r1" />
 </head>
 <body>
   <svg class="cl-icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
@@ -313,7 +314,7 @@
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
         <header class="profile-screen-header">
-          <div class="profile-screen-heading"><svg class="profile-ledger-crown" aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-flag-crown"></use></svg><span>Kingdom</span><h2 id="profileScreenTitle">Profile</h2></div>
+          <div class="profile-screen-heading"><svg class="profile-ledger-crown" aria-hidden="true"><use href="assets/flag-symbols/runtime.svg#cl-icon-flag-crown"></use></svg><svg class="settings-ledger-key" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#key"></use></svg><span>Kingdom</span><h2 id="profileScreenTitle">Profile</h2></div>
           <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
             <button id="profileTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="profileView">Profile</button>
             <button id="clanTabBtn" type="button" role="tab" aria-selected="false" aria-controls="clanView">Clan</button>
@@ -365,79 +366,42 @@
           <div id="clanContent" class="clan-content" aria-live="polite"></div>
         </div>
 
-        <div id="settingsView" class="profile-settings-view" role="tabpanel" aria-labelledby="settingsTabBtn" hidden>
-          <section class="profile-settings-section audio-settings-section" aria-labelledby="audioSettingsTitle">
-            <div class="settings-section-header">
-              <div class="profile-section-heading"><span>Settings</span><h3 id="audioSettingsTitle">Audio</h3></div>
-              <p>Balance the realm's soundtrack and action cues.</p>
-            </div>
-            <div class="audio-channel-grid">
-              <article class="audio-channel-card" data-audio-channel="music">
-                <div class="audio-channel-header">
-                  <span class="audio-channel-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
-                  <span class="audio-channel-copy"><strong>Music</strong><small>Soundtrack and ambient themes</small></span>
-                  <output id="musicVolumeValue" for="musicVolume">70%</output>
-                  <button id="musicMute" class="audio-mute-button" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
-                    <span data-audio-mute-icon aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
-                  </button>
-                </div>
-                <label class="audio-volume-control" for="musicVolume">
-                  <span class="sr-only">Music volume</span>
-                  <input id="musicVolume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume" />
-                </label>
-              </article>
-              <article class="audio-channel-card" data-audio-channel="effects">
-                <div class="audio-channel-header">
-                  <span class="audio-channel-glyph" aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-attack"></use></svg></span>
-                  <span class="audio-channel-copy"><strong>Effects</strong><small>Interface, battle, and reward cues</small></span>
-                  <output id="effectsVolumeValue" for="effectsVolume">80%</output>
-                  <button id="effectsMute" class="audio-mute-button" type="button" aria-label="Mute effects" aria-pressed="false" title="Mute effects" data-audio-control>
-                    <span data-audio-mute-icon aria-hidden="true"><svg class="cl-icon"><use href="#cl-icon-sound"></use></svg></span>
-                  </button>
-                </div>
-                <label class="audio-volume-control" for="effectsVolume">
-                  <span class="sr-only">Effects volume</span>
-                  <input id="effectsVolume" type="range" min="0" max="100" step="1" value="80" aria-label="Effects volume" />
-                </label>
-              </article>
-            </div>
-          </section>
-          <section class="profile-settings-section settings-compact-section" aria-label="First steps guidance">
-            <button id="helpBtn" type="button">First steps &amp; help</button>
-          </section>
-          <section class="profile-settings-section settings-compact-section animation-settings-section" aria-labelledby="animationSettingsTitle" aria-describedby="animationSettingsDescription animationModeStatus">
-            <div class="profile-section-heading"><span>Display</span><h3 id="animationSettingsTitle">Animations</h3></div>
-            <p id="animationSettingsDescription" class="settings-card-description">Choose the amount of movement and visual effects shown during play.</p>
-            <div class="animation-mode-toggle" role="group" aria-label="Animation intensity">
-              <button class="animation-mode-option active" type="button" data-animation-mode-option="full" aria-pressed="true">Full</button>
-              <button class="animation-mode-option" type="button" data-animation-mode-option="reduced" aria-pressed="false">Reduced</button>
-              <button class="animation-mode-option" type="button" data-animation-mode-option="off" aria-pressed="false">Off</button>
-            </div>
-            <span id="animationModeStatus" class="animation-mode-status" role="status" aria-live="polite">Full animations</span>
-          </section>
-          <div class="settings-secondary-grid">
-            <section class="profile-settings-section settings-compact-section notification-settings-section">
-              <div class="profile-section-heading"><span>Alerts</span><h3>Notifications</h3></div>
-              <p class="settings-card-description">Choose whether Crownlands can send browser alerts.</p>
-              <div class="profile-notification-row">
-                <div>
-                  <strong>Browser alerts</strong>
-                  <small>Marches, reports, and kingdom events</small>
-                </div>
-                <div class="push-alerts-toggle" role="group" aria-label="Notifications">
-                  <button id="pushAlertsOnBtn" class="push-alerts-option" type="button" aria-pressed="false">On</button>
-                  <button id="pushAlertsOffBtn" class="push-alerts-option active" type="button" aria-pressed="true">Off</button>
-                </div>
-              </div>
-              <span id="pushAlertsStatus" class="push-alerts-status" aria-live="polite" hidden>Notifications Off</span>
-            </section>
-            <section class="profile-settings-section settings-compact-section privacy-settings-section">
-              <div class="profile-section-heading"><span>Legal</span><h3>Privacy</h3></div>
-              <p class="settings-card-description">Review how account and gameplay information is handled.</p>
-              <a class="profile-secondary-btn privacy-settings-link" href="privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
-            </section>
-          </div>
-        </div>
+        <div id="settingsView" class="profile-settings-view settings-body" role="tabpanel" aria-labelledby="settingsTabBtn" tabindex="0" hidden>
+        <section class="settings-column audio-column" aria-labelledby="audioTitle">
+          <div class="column-heading"><span class="folio" aria-hidden="true">I</span><div><h2 id="audioTitle">Sounds of the realm</h2><p>Balance the realm’s soundtrack and action cues.</p></div></div>
+          <article class="audio-card audio-channel-card" data-audio-channel="music">
+            <header class="audio-heading"><svg class="setting-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#lute"></use></svg><div><h3>Music</h3><p>Soundtrack and ambient themes</p></div></header>
+            <div class="volume-heading"><label for="musicVolume">Volume</label><output id="musicVolumeValue" for="musicVolume">70<span>%</span></output></div>
+            <input id="musicVolume" class="volume-slider" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume">
+            <div class="volume-scale" aria-hidden="true"><span>0</span><span>100</span></div>
+            <footer class="audio-footer"><span class="audio-status" id="musicStatus">Music on</span><button type="button" id="musicMute" class="mute-button" data-audio-control aria-label="Mute music" aria-pressed="false"><span class="mute-symbol" aria-hidden="true"></span><span class="mute-label" data-audio-mute-label>Mute music</span></button></footer>
+          </article>
+          <article class="audio-card audio-channel-card" data-audio-channel="effects">
+            <header class="audio-heading"><svg class="setting-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#drum"></use></svg><div><h3>Effects</h3><p>Interface, battle, and reward cues</p></div></header>
+            <div class="volume-heading"><label for="effectsVolume">Volume</label><output id="effectsVolumeValue" for="effectsVolume">80<span>%</span></output></div>
+            <input id="effectsVolume" class="volume-slider" type="range" min="0" max="100" step="1" value="80" aria-label="Effects volume">
+            <div class="volume-scale" aria-hidden="true"><span>0</span><span>100</span></div>
+            <footer class="audio-footer"><span class="audio-status" id="effectsStatus">Effects on</span><button type="button" id="effectsMute" class="mute-button" data-audio-control aria-label="Mute effects" aria-pressed="false"><span class="mute-symbol" aria-hidden="true"></span><span class="mute-label" data-audio-mute-label>Mute effects</span></button></footer>
+          </article>
+          <button type="button" id="helpBtn" class="resource-card"><svg class="resource-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#scroll"></use></svg><span><strong>First steps &amp; help</strong><small>Open the realm’s guidance</small></span><span class="resource-arrow" aria-hidden="true">›</span></button>
+        </section>
+        <section class="settings-column preferences-column" aria-labelledby="preferencesTitle">
+          <div class="column-heading"><span class="folio" aria-hidden="true">II</span><div><h2 id="preferencesTitle">Your preferences</h2><p>Movement, alerts, and account information.</p></div></div>
+          <article class="preference-card animation-card" aria-labelledby="animationSettingsTitle" aria-describedby="animationSettingsDescription animationModeStatus">
+            <header class="preference-heading"><svg class="setting-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#banner"></use></svg><div><span class="eyebrow">Display</span><h3 id="animationSettingsTitle">Animations</h3></div></header>
+            <p id="animationSettingsDescription" class="description">Choose the amount of movement and visual effects shown during play.</p>
+            <div class="segmented animation-options" role="group" aria-label="Animation intensity"><button type="button" class="animation-mode-option" data-animation-mode-option="full" aria-pressed="true">Full</button><button type="button" class="animation-mode-option" data-animation-mode-option="reduced" aria-pressed="false">Reduced</button><button type="button" class="animation-mode-option" data-animation-mode-option="off" aria-pressed="false">Off</button></div>
+            <p id="animationModeStatus" class="setting-status" role="status" aria-live="polite">Full animations selected.</p>
+          </article>
+          <article class="preference-card notification-card" aria-labelledby="notificationTitle">
+            <header class="preference-heading"><svg class="setting-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#bell"></use></svg><div><span class="eyebrow">Alerts</span><h3 id="notificationTitle">Notifications</h3></div></header>
+            <p class="description">Choose whether Crownlands can send browser alerts.</p>
+            <div class="notification-row"><div><strong>Browser alerts</strong><small>Marches, reports, and kingdom events</small></div><div class="segmented notification-options" role="group" aria-label="Notifications"><button type="button" id="pushAlertsOnBtn" class="push-alerts-option" data-notification="on" aria-pressed="false">On</button><button type="button" id="pushAlertsOffBtn" class="push-alerts-option" data-notification="off" aria-pressed="true">Off</button></div></div>
+            <p id="pushAlertsStatus" hidden class="setting-status" role="status" aria-live="polite">Notifications Off</p>
+          </article>
+          <a class="resource-card privacy-card" id="privacyLink" href="privacy.html" target="_blank" rel="noopener"><svg class="resource-art" aria-hidden="true"><use href="assets/icons/settings-ledger.svg#key"></use></svg><span><span class="eyebrow">Privacy</span><strong>View Privacy Policy</strong><small>Review how account and gameplay information is handled.</small></span><span class="resource-arrow" aria-hidden="true">›</span></a>
+        </section>
+      </div>
 
         <div id="flagEditorView" class="flag-editor-view player-flag-editor" hidden>
           <div class="player-flag-editor__workspace">
