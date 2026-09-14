@@ -327,7 +327,7 @@ assert.doesNotMatch(
 );
 requires(
   compactReportCard,
-  /data-battle-report-target-flag[\s\S]*?battle-report-opponent[\s\S]*?renderPlayerNameLink\(report\.opponentUid,\s*opponent/,
+  /data-battle-report-target-flag[\s\S]*?<div class="ruler">\$\{opponentFlag\}\$\{renderPlayerNameLink\(report\.opponentUid,\s*opponent/,
   "Compact report rows do not limit the target identity to its optional kingdom flag and name."
 );
 requires(
