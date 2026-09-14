@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Full Battle Report preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/battle-report-detail/draft.css"><script src="docs/visual-qa/battle-report-detail/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Battle Report</button>
+<dialog id="reportDialog" aria-labelledby="reportTitle"><div class="report-shell">
+  <header class="window-header"><button class="back-button" data-action="Reports" aria-label="Back to reports"><span aria-hidden="true">‹</span> Reports</button><div class="heading"><p>ROYAL DISPATCHES</p><h1 id="reportTitle">Attack Report</h1></div><time id="reportTime">14 minutes ago</time><button class="map-button" id="mapButton" data-action="Map" aria-label="Locate battle on map"><svg aria-hidden="true"><use href="assets/icons/battle-reports-ledger-r1.svg#map"></use></svg><span>View map</span></button><button id="close" class="close-button" aria-label="Close Battle Report">×</button></header>
+  <nav id="sections" class="section-nav" aria-label="Report sections"></nav>
+  <main id="reportBody" class="report-body" tabindex="0" aria-label="Full battle report"></main>
+  <footer class="report-footer"><span>Battle reports · retained for 24 hours</span><span id="footerHint">Scroll for the full account</span></footer>
+</div></dialog><p id="liveStatus" class="sr-only" role="status"></p></body></html>
