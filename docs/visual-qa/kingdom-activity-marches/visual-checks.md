@@ -45,3 +45,5 @@ After approval, the actual game renderer was checked with the same eight scenari
 These are controlled browser results, not physical-device testing. No production armies or item transactions were created for visual verification.
 
 The initial release gate caught install-cache and main-script size overruns. Marches assets were kept in the existing runtime cache, and the header/scroll/focus presentation helpers were separated from `game.js`. The asset-budget validator then passed (3.93 MiB installation cache), as did instant-economy action validation. Full release preparation was restarted for the corrected commit.
+
+The packaged artifact follows the existing per-panel budget pattern: the two Marches presentation files have a 36 KiB cap, with 4 KiB reserved for mounting and entries. The startup-cache, core-script, prepared-world, and combined-artifact limits remain unchanged.
