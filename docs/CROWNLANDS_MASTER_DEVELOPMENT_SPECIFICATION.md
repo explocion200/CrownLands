@@ -1098,6 +1098,15 @@ Implementation and controlled evidence: [Server response and connection reliabil
 - Tips are optional reading aids. “Got it” dismisses a topic; it does not claim that an action succeeded. “Hide tips” hides all guidance. These preferences are local to the browser, account, and realm, survive reload where browser storage is available, and never gate or submit gameplay actions.
 - Copy uses existing costs and report lifetime. Guidance preserves server authority, balance, hidden intelligence, action blockers, and the compact travel section. Existing opt-outs survive the addition of name and flag topics. Implementation and release verification are recorded in `docs/CONTEXTUAL_NEW_PLAYER_ONBOARDING.md`.
 
+### Confirmed Kingdom Activity Marches presentation
+
+- The approved Marches tab uses the parchment ledger style, engraved order symbols, and current shared Swift March Order and Recall Horn art. Desktop is capped at 1200 × 700 pixels; desktop and mobile landscape fit the viewport, with fixed header, category tabs, and summary above one scrolling list. Small landscape places force and commands beneath the route. Portrait is not a design target.
+- Each row retains its order type, origin, destination and map, available target ruler and troop information, own troop count, and arrival state. Full known counts are displayed without abbreviation; unknown or estimated values retain their existing disclosure rules. Returning armies retain their original target and home destination. List scroll position and keyboard focus survive snapshot updates.
+- Existing current-position Map, ruler-profile navigation, server-derived timing, Swift and Recall eligibility, inventory accounting, request IDs, and pending/checking/resolving states remain authoritative. The image buttons and inventory header update together during pending item actions. This is a presentation change, with no new travel or item rules.
+- Rallies, Reinforcements, Camps, and Strongholds remain functional and retain their current panel designs for separate reviews.
+
+Status: approved for implementation and release on September 14, 2026; deployment must be verified separately. Design and controlled runtime evidence: [Kingdom Activity Marches](./visual-qa/kingdom-activity-marches/README.md).
+
 ### Current presentation status
 
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.

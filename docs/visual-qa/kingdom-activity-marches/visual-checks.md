@@ -30,3 +30,16 @@ On small landscape, keyboard scrolling reached the eighteenth march while the he
 ## Scope of validation
 
 Both draft JavaScript files passed `node --check`; the draft was served successfully by the existing local HTTP server. These checks validate an isolated UI prototype with synthetic data. They do not validate live march synchronization, production eligibility, inventory transactions, routing, server arrival times, or release readiness. Runtime integration and its required checks follow design approval.
+
+## Approved runtime integration checks
+
+After approval, the actual game renderer was checked with the same eight scenarios at 1440 × 900, 844 × 390, and 568 × 320. The fixture was corrected to use the existing request Sets and to retain an active holding when Marches is empty; pending and empty cases were then repeated at all three sizes. Dialog bounds, horizontal overflow, image loading, 44-pixel enabled controls, and full large troop counts passed.
+
+- Scrolling the 18-march list to the bottom and refreshing its snapshot preserved scrollTop (2155 pixels at small landscape) and kept the final row accessible.
+- Clicking Swift passed the selected army ID to the existing binding. The production UI patch retained the icon, displayed Applying Swift Order, and disabled both Swift and Recall on that army. Item dispatch itself was intercepted by the fixture; no production item was consumed.
+- Sending, Checking, Resolving, applying Swift, and recalling states all had zero enabled item commands. Unknown personal counts displayed Syncing. The no-items scenario exposed no item actions.
+- Rallies, Reinforcements, Camps, and Strongholds retained their current panels and visible headers after leaving Marches. Ruler-profile navigation removed the outgoing modal scope and retained the profile header.
+- The current-position Map binding reached the existing syncing fallback for incomplete fixture routes. The focused map-interaction validator separately checked live-march resolution, current interpolated position, and cross-region navigation.
+- Existing active-operations, Swift March Order, incoming army disclosure, map interaction, and universal profile-link validators passed. Full release validation is reported in the release handoff.
+
+These are controlled browser results, not physical-device testing. No production armies or item transactions were created for visual verification.

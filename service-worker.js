@@ -32,6 +32,7 @@ function getNotificationOpenUrl(notificationData = {}) {
 }
 
 const STATIC_CACHE_URLS = [
+  "/marches-activity-ui.css?v=20260914-marches-r1",
   "/index.html",
   "/play/index.html",
   "/manifest.webmanifest",

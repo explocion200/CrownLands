@@ -1,6 +1,6 @@
 # Kingdom Activity: Marches draft
 
-Status: local design draft awaiting approval, September 14, 2026.
+Status: design approved and integrated for release, September 14, 2026. Deployment is recorded separately after verification.
 
 Branch: `codex/kingdom-activity-marches-draft`.
 Base: `35c7390e95fe6accfbe7e66702512543112a5fdd` (Scout Reports).
@@ -28,4 +28,12 @@ Shared approved assets: `assets/icons/battle-reports-ledger-r1.svg`, `assets/ico
 
 The isolated styles import the existing Battle Report Detail draft's frame and review styling. No shared stylesheet, image, game file, or build output was modified.
 
-See [visual-checks.md](visual-checks.md) for completed local checks. Production integration, required release gates, PR creation, merge, and deployment remain pending design approval.
+## Approved runtime integration
+
+The game now renders the approved Marches structure through the existing `renderOutgoingAttacksModalContent`, `renderMarchesOperationPanel`, and `renderOutgoingAttackCard` functions. `marches-activity-ui.css` is scoped to the Marches view and included in the entry point, production artifact, client fingerprint, and service-worker cache. The other operation tabs and profile navigation retain their existing layouts.
+
+The renderer uses current shared Shop item art (the 384-pixel Swift and Recall assets), projected inventory counts, and the existing eligibility and dispatch handlers. `patchMarchItemActionUi` refreshes the ledger so pending updates retain images, disable both item actions on the affected army, and refresh the inventory header. The list retains scroll and focused controls through snapshot replacement.
+
+Run `node tools/prepare-marches-preview.js` against the existing loopback benchmark server to prepare an actual-game preview under ignored `release-artifacts/marches/`. Its `runtime-fixture.js` supplies synthetic snapshots and intercepts item dispatch without contacting production. Existing location interpolation is exercised with incomplete fixture routes only; its syncing fallback is expected. A held Stronghold keeps the empty Marches example valid while the existing all-operations-empty auto-close rule remains unchanged.
+
+See [visual-checks.md](visual-checks.md) for completed local checks. The release handoff records required gates, PR, merge, synchronized main, and verified deployment channels.

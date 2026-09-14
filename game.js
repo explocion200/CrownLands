@@ -35862,6 +35862,12 @@ function showOutgoingAttacksModal() {
 }
 
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
+  const previousMarchList = modalBody.querySelector(".march-list");
+  const previousScroll = previousMarchList?.scrollTop || 0;
+  const focusedControl = modalBody.contains(document.activeElement) ? document.activeElement : null;
+  const focusedAction = ["data-outgoing-march", "data-swift-march-order", "data-recall-horn", "data-player-profile-uid", "data-close-marches", "data-active-operations-tab"]
+    .find(attribute => focusedControl?.hasAttribute(attribute));
+  const focusedValue = focusedAction ? focusedControl.getAttribute(focusedAction) : null;
   const normalizedOperations = operations?.marches
     ? operations
     : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
@@ -35874,6 +35880,8 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     { id: "strongholds", label: "Strongholds", count: strongholds.length },
   ];
   if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
+  const marchesView = activeOperationsTab === "marches";
+  modal.classList.toggle("marches-activity-ledger", marchesView);
   const panel = activeOperationsTab === "rallies"
     ? renderClanRallyOperationPanel(rallies)
     : activeOperationsTab === "reinforcements"
@@ -35887,6 +35895,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalTitle.textContent = "Kingdom Activity";
   modalBody.innerHTML = `
     <div class="active-operations-panel">
+      ${marchesView ? `<header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h2>Kingdom Activity</h2></div><div class="carried-items" aria-label="March items in your bag"><span>${renderItemIcon(getShopItemById(SWIFT_MARCH_ORDER_ITEM_ID))}<span>Swift Orders <strong>${formatMarchesNumber(getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID))}</strong></span></span><span>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall Horns <strong>${formatMarchesNumber(getProjectedInventoryCount(RECALL_HORN_ITEM_ID))}</strong></span></span></div><button class="close-button" data-close-marches type="button" aria-label="Close Kingdom Activity">×</button></header>` : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
         ${tabs.map(tab => `
           <button class="active-operations-tab ${activeOperationsTab === tab.id ? "active" : ""}" data-active-operations-tab="${tab.id}" type="button" role="tab" aria-selected="${activeOperationsTab === tab.id}">
@@ -35896,9 +35905,23 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       <div class="active-operations-content" role="tabpanel" aria-label="${escapeHtml(tabs.find(tab => tab.id === activeOperationsTab)?.label || "Marches")}">
         ${panel}
       </div>
+      ${marchesView ? '<footer class="report-footer"><span>Orders in motion across the realm</span><span>Scroll for all marches</span></footer>' : ""}
     </div>
   `;
 
+  modalBody.querySelectorAll("[data-close-marches]").forEach(button => {
+    button.addEventListener("click", () => modal.close());
+  });
+  const marchList = modalBody.querySelector(".march-list");
+  if (marchList && previousMarchList) {
+    marchList.scrollTop = previousScroll;
+    if (focusedAction) {
+      const replacement = [...modalBody.querySelectorAll(`[${focusedAction}]`)]
+        .find(control => control.getAttribute(focusedAction) === focusedValue);
+      if (replacement && !replacement.disabled) replacement.focus({ preventScroll: true });
+      else marchList.focus({ preventScroll: true });
+    } else if (focusedControl === previousMarchList) marchList.focus({ preventScroll: true });
+  }
   modalBody.querySelectorAll("[data-active-operations-tab]").forEach(button => {
     button.addEventListener("click", () => {
       activeOperationsTab = button.dataset.activeOperationsTab || "marches";
@@ -36014,18 +36037,17 @@ function renderReinforcementOperationCard(entry) {
     </article>`;
 }
 
+function formatMarchesNumber(value) {
+  return Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
+}
+
 function renderMarchesOperationPanel(marches) {
-  if (!marches.length) return `<div class="incoming-attack-empty">No active troop marches.</div>`;
-  const summary = formatOutgoingMissionSummary(marches);
-  return `
-    <div class="incoming-attack-panel">
-      <div class="incoming-attack-summary">
-        <strong>${formatNumber(marches.length)}</strong>
-        <span>${summary} ${marches.length === 1 ? "is" : "are"} traveling now.</span>
-        <small>${marches[0].serverPending ? marches[0].serverRetrying ? "Checking the same order with the server" : "Sending order to server" : marches[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(marches[0].remaining)}`}</small>
-      </div>
-      <div class="incoming-attack-list">${marches.map(renderOutgoingAttackCard).join("")}</div>
-    </div>`;
+  const first = marches[0];
+  const pendingLabel = first?.serverPending ? first.serverRetrying ? "Checking the same order with the server" : "Sending order to server" : first?.isResolving ? "Resolving arrived order" : "Soonest arrival";
+  const timing = first?.serverPending ? first.serverRetrying ? "Checking" : "Sending" : first?.isResolving ? "Resolving" : first ? formatDuration(first.remaining) : "";
+  return `<div class="marches-panel"><section class="march-summary" aria-label="March summary"><div class="summary-copy"><h3>${marches.length ? `${formatMarchesNumber(marches.length)} ${marches.length === 1 ? "march" : "marches"} underway` : "Your armies are at rest"}</h3><p>${escapeHtml(marches.length ? formatOutgoingMissionSummary(marches) : "No active troop marches")}</p></div>${first ? `<div class="summary-next"><span>${pendingLabel}</span><strong>${timing}</strong></div>` : ""}</section>
+    <div class="column-labels" aria-hidden="true"><span>Order</span><span>Origin &amp; destination</span><span>Force</span><span>Arrival</span><span>Commands</span></div>
+    <div class="march-list" tabindex="0" aria-label="Active marches">${marches.length ? marches.map(renderOutgoingAttackCard).join("") : '<div class="empty-state"><img src="assets/icons/skills/marchOrders.svg" alt=""><h3>No active troop marches</h3><p>Armies, scouts, transfers and returning troops will appear here when they are on the move.</p><button data-close-marches type="button">Return to map</button></div>'}</div></div>`;
 }
 
 function formatHeldCampReward(camp) {
@@ -36191,81 +36213,52 @@ function settleConfirmedRecallHorn(action, result) {
 }
 
 function renderOutgoingAttackCard(mission) {
-  const city = mission.target;
-  const sourceCity = mission.source;
-  const sourceName = mission.source?.name || mission.fromName || "Unknown city";
+  const city = mission.target, sourceCity = mission.source;
+  const sourceName = sourceCity?.name || mission.fromName || "Unknown city";
   const originalTargetName = city?.name || mission.toName || "Unknown target";
-  const isReturning = Boolean(mission.returning);
+  const isReturning = Boolean(mission.returning), isScout = mission.kind === "scout", isTransfer = mission.kind === "transfer";
+  const isRallyJoin = mission.kind === "rally_join", isCampReturn = isTransfer && Boolean(mission.campReturn);
+  const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
+  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isRallyJoin ? "Rally Assembly" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
+  const kind = isReturning ? "returning" : isScout ? "scout" : isRallyJoin ? "rally" : isCampReturn ? "camp-return" : isReinforcement ? "reinforce" : isTransfer ? "transfer" : "attack";
   const targetName = isReturning ? sourceName : originalTargetName;
   const regionName = getRegionLabel(isReturning
     ? sourceCity ? getCityRegionId(sourceCity) : normalizeRegionId(mission.returnDestinationRegionId || mission.sourceRegionId)
     : city ? getCityRegionId(city) : mission.targetRegionId || getCityRegionId(mission.toId));
-  const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
-  const isScout = mission.kind === "scout";
-  const isTransfer = mission.kind === "transfer";
-  const isRallyJoin = mission.kind === "rally_join";
-  const isCampReturn = isTransfer && Boolean(mission.campReturn);
-  const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
-  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isRallyJoin ? "Rally Assembly" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
   const troopDisplay = getArmyTroopDisplayText(mission);
-  const forceDetails = isScout
-    ? `1 scout from ${escapeHtml(sourceName)}`
-    : troopDisplay
-      ? `${escapeHtml(troopDisplay)}${troopDisplay === "Syncing" ? " troop count" : " troops"} from ${escapeHtml(sourceName)}`
-      : `Troop count syncing from ${escapeHtml(sourceName)}`;
-  const targetDetails = isReturning
-    ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
-    : isCampReturn
-    ? `Withdrawing stationed troops to ${escapeHtml(targetName)}`
-    : isRallyJoin
-    ? `Joining the clan rally at ${escapeHtml(targetName)}`
-    : isTransfer
-    ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
-    : city
-    ? `${renderPlayerNameLink(city.ownerUid, ownerName, "outgoing-target-owner-link")} - ${formatNumber(city.troops)} troops`
+  const fullTroops = isScout ? "1" : troopDisplay && troopDisplay !== "Syncing" && !isArmyTroopEstimate(mission)
+    ? formatMarchesNumber(mission.troops) : troopDisplay || "Syncing";
+  const forceLabel = fullTroops === "Syncing" ? "Troop count syncing" : isScout ? "scout" : "troops";
+  const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
+  const targetDetails = isReturning ? `Returning to ${escapeHtml(sourceName)}`
+    : isCampReturn ? `Withdrawing stationed troops to ${escapeHtml(targetName)}`
+    : isRallyJoin ? `Joining the clan rally at ${escapeHtml(targetName)}`
+    : isTransfer ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
+    : city ? `${renderPlayerNameLink(city.ownerUid, ownerName, "owner-link")} <span>· ${formatMarchesNumber(city.troops)} troops</span>`
     : "Target details are loading";
-  const onlineId = getOnlineArmyResolutionId(mission);
-  const marchId = String(mission.key || onlineId || "").trim();
-  const locateButton = marchId
-    ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">${renderCrownlandsIcon("locate")}</button>`
-    : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>${renderCrownlandsIcon("locate")}</button>`;
-  const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
-  const swiftItemCount = getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID);
-  const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
-    ? `<button class="swift-march-order-btn" data-swift-march-order="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${swiftMarchOrderRequests.has(onlineId) ? "Applying Swift Order..." : "Use Swift March Order"}</button>`
-    : mission.swiftMarchUsedAtMs && !isReturning
-      ? `<div class="swift-march-order-used">Swift March Order applied</div>`
-      : "";
-  const recallHornCount = getProjectedInventoryCount(RECALL_HORN_ITEM_ID);
-  const recallHornButton = isRecallHornEligible(mission) && recallHornCount > 0
-    ? `<button class="recall-horn-btn" data-recall-horn="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${recallHornRequests.has(onlineId) ? "Sounding Recall..." : "Use Recall Horn"}</button>`
-    : isReturning
-      ? `<div class="recall-horn-status">Returning to ${escapeHtml(sourceName)}</div>`
-      : "";
-  const itemActions = swiftOrderButton || recallHornButton
-    ? `<div class="march-item-actions">${swiftOrderButton}${recallHornButton}</div>`
-    : "";
-
-  return `
-    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer || isRallyJoin ? "outgoing-transfer-card" : ""}">
-      <div class="incoming-attack-badge">
-        <strong>${mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
-        <small>${missionLabel}</small>
-      </div>
-      <div class="incoming-attack-city">
-        <span>${escapeHtml(regionName)}</span>
-        <strong>${escapeHtml(targetName)}</strong>
-        <small>${targetDetails}</small>
-      </div>
-      <div class="incoming-attack-force">
-        <span>Origin</span>
-        <strong>${escapeHtml(sourceName)}</strong>
-        <small>${forceDetails}</small>
-      </div>
-      ${locateButton}
-      ${itemActions}
-    </article>
-  `;
+  const onlineId = getOnlineArmyResolutionId(mission), marchId = String(mission.key || onlineId || "").trim();
+  const swiftBusy = swiftMarchOrderRequests.has(onlineId), recallBusy = recallHornRequests.has(onlineId), itemActionBusy = swiftBusy || recallBusy;
+  const swiftCount = getProjectedInventoryCount(SWIFT_MARCH_ORDER_ITEM_ID), recallCount = getProjectedInventoryCount(RECALL_HORN_ITEM_ID);
+  const swiftEligible = isSwiftMarchOrderEligible(mission), recallEligible = isRecallHornEligible(mission);
+  const swiftButton = swiftEligible && (swiftCount > 0 || swiftBusy)
+    ? `<button class="command swift" data-swift-march-order="${escapeHtml(onlineId)}" type="button" aria-label="Use Swift March Order on ${escapeHtml(targetName)}" ${itemActionBusy ? "disabled" : ""}>${renderItemIcon(getShopItemById(SWIFT_MARCH_ORDER_ITEM_ID))}<span>Swift Order</span></button>` : "";
+  const recallButton = recallEligible && (recallCount > 0 || recallBusy)
+    ? `<button class="command recall" data-recall-horn="${escapeHtml(onlineId)}" type="button" aria-label="Use Recall Horn on ${escapeHtml(targetName)}" ${itemActionBusy ? "disabled" : ""}>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall</span></button>` : "";
+  const mapButton = `<button class="command locate" ${marchId ? `data-outgoing-march="${escapeHtml(marchId)}"` : "disabled"} type="button" title="Go to current march location" aria-label="Go to current march location">${renderBattleReportLedgerIcon("map")}<span>Map</span></button>`;
+  const commandNote = swiftBusy ? "Applying Swift Order..." : recallBusy ? "Sounding Recall..." : !swiftCount && !recallCount && (swiftEligible || recallEligible) ? "No march items in your bag" : "";
+  const pending = mission.serverPending || mission.isResolving;
+  const timing = mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining);
+  const timingNote = mission.serverPending ? mission.serverRetrying ? "Checking the same order" : "Order being sent" : mission.isResolving ? "Arrived · awaiting result" : isReturning || isCampReturn ? "Until return" : "Until arrival";
+  const emblem = isReturning || isCampReturn ? renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))
+    : isTransfer && !isReinforcement ? '<img src="assets/icons/skills/marchOrders.svg" alt="">'
+    : renderBattleReportLedgerIcon(isScout ? "scout" : isReinforcement ? "defense" : isRallyJoin ? "realm" : "attack");
+  return `<article class="march-row ${kind}${fullTroops.length > 8 ? " wide-force" : ""}" aria-label="${escapeHtml(missionLabel)} to ${escapeHtml(targetName)}">
+    <div class="march-kind">${emblem}<strong>${missionLabel}</strong></div>
+    <div class="march-route"><div class="route-point source"><span>${isReturning ? "Recalled before" : "Origin"}</span><strong>${escapeHtml(isReturning ? originalTargetName : sourceName)}</strong></div><span class="route-arrow" aria-hidden="true">${isReturning ? "↩" : "→"}</span><div class="route-point destination"><span>${isReturning ? "Returning to" : "Destination"} · ${escapeHtml(regionName)}</span><strong>${escapeHtml(targetName)}</strong><div class="target-info">${targetDetails}</div></div></div>
+    <div class="march-force"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong>${escapeHtml(fullTroops)}</strong><small>${forceLabel}</small></div>
+    <div class="march-arrival${pending ? " pending" : mission.remaining <= 30 ? " urgent" : ""}"><strong>${timing}</strong><small>${timingNote}</small>${mission.swiftMarchUsedAtMs && !isReturning ? '<small class="applied">Swift March Order applied</small>' : ""}</div>
+    <div class="march-actions">${swiftButton}${recallButton}${mapButton}${commandNote ? `<small class="command-note">${commandNote}</small>` : ""}</div>
+  </article>`;
 }
 
 async function focusOutgoingMarchLocation(marchId) {
@@ -39763,7 +39756,7 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   battleReportVisitViewedAtMs = null;
-  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger");
+  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"
