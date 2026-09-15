@@ -69,6 +69,7 @@ function createManifest() {
   const clientFiles = [
     "marches-activity-ui.css", "marches-activity-ui.js",
     "rallies-activity-ui.css", "rallies-activity-ui.js",
+    "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",
     "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
     "quests-ui.js", "quests-ui.css",
     "achievements-ui.js", "achievements-ui.css",

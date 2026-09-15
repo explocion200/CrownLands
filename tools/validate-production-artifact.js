@@ -24,6 +24,7 @@ const required = [
   "scout-report-ui.css", "scout-report-ui.js",
   "marches-activity-ui.css", "marches-activity-ui.js",
   "rallies-activity-ui.css", "rallies-activity-ui.js",
+  "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",
   "modal-ui.js",
   "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
   "assets/icons/battle-reports-ledger-r1.svg",
@@ -145,7 +146,11 @@ if (marchesUiBytes > 36 * 1024) throw new Error("Marches presentation exceeds it
 const ralliesUiBytes = ["rallies-activity-ui.js", "rallies-activity-ui.css", "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (ralliesUiBytes > 60 * 1024) throw new Error("Rallies presentation exceeds its 60 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64) * 1024;
+// Reinforcements adds at most 60 KiB of scoped presentation plus 4 KiB of mounting, reusing packaged art.
+const reinforcementUiBytes = ["reinforcements-activity-ui.js", "reinforcements-activity-ui.css"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (reinforcementUiBytes > 60 * 1024) throw new Error("Reinforcements presentation exceeds its 60 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

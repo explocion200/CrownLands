@@ -300,11 +300,27 @@ assert.doesNotMatch(
   /notification\.troops\s*=/,
   "Clan reinforcement notifications must not include an exact troop-count data field."
 );
-assert.match(
-  clientSource,
-  /function renderReinforcementOperationCard[\s\S]*?isArmyTroopEstimate\(entry\)[\s\S]*?Estimated \$\{escapeHtml\(troopDisplay\)\} troops/,
-  "Incoming clan reinforcement cards must label their troop range as estimated."
-);
+// Exercise the presentation rather than requiring the previous inline sentence layout.
+vm.runInContext(fs.readFileSync(path.join(root, "reinforcements-activity-ui.js"), "utf8"), clientSandbox);
+Object.assign(clientSandbox, {
+  CITADEL_ASSAULT_EVENT_KIND: "citadel_assault",
+  escapeHtml: value => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+  formatNumber: value => Number(value).toLocaleString("en-US"),
+  formatDuration: () => "1:00",
+  renderPlayerNameLink: () => "Clan member",
+  getRegionLabel: value => value,
+});
+for (const name of ["normalizeArmyTroopEstimate", "isArmyTroopEstimate", "getArmyTroopDisplayText", "formatMarchesNumber", "renderReinforcementOperationCard"]) {
+  vm.runInContext(readFunction(clientSource, name), clientSandbox);
+}
+const incomingSupport = { id: "support-estimate", kind: "reinforce", ownerUid: "other-ruler", targetOwnerUid: "viewer-1", incomingClanReinforcement: true, troopVisibility: "estimate", troopEstimateMin: 10000, troopEstimateMax: 100000, troops: 24681, remaining: 60 };
+const estimatedSupportCard = clientSandbox.renderReinforcementOperationCard(incomingSupport);
+assert.match(estimatedSupportCard, /10K–100K/);
+assert.match(estimatedSupportCard, /Estimated troops/, "Incoming clan reinforcement ranges must remain labeled as estimates.");
+assert.doesNotMatch(estimatedSupportCard, /24,681|24681/, "The presentation must not expose the underlying exact estimate count.");
+const hiddenSupportCard = clientSandbox.renderReinforcementOperationCard({ ...incomingSupport, troopVisibility: "hidden", troops: null });
+assert.match(hiddenSupportCard, /Syncing/);
+assert.doesNotMatch(hiddenSupportCard, /10K–100K/, "Hidden troop counts must not be rendered from estimate metadata.");
 assert.match(
   serverSource,
   /async function backfillActiveArmyVisibilityViews[\s\S]*?writeArmyMovementCopies\(transaction, army,/,
