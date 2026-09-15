@@ -66,6 +66,9 @@ async function main() {
       await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
       for (const sample of ['ready', 'unselected', 'shield', 'boost', 'last', 'empty', 'category-empty', 'large']) {
         await evaluate(`__bagQA.reset('${sample}')`); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
+        // Two frames can now finish before the opening scale transition. Measure
+        // settled touch targets without relying on slow rendering to hide it.
+        await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");
         const data = await evaluate(`(()=>{const r=modal.getBoundingClientRect(),buttons=[...modal.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>{const b=e.getBoundingClientRect();return{label:e.ariaLabel||e.textContent,w:b.width,h:b.height,inside:b.x>=r.x&&b.y>=r.y&&b.right<=r.right+1&&b.bottom<=r.bottom+1}}),tiles=[...modal.querySelectorAll('[data-inventory-select]')].map(e=>{const a=e.querySelector('img').getBoundingClientRect(),n=e.querySelector('.ib-item-name'),b=n.getBoundingClientRect();return{artAboveLabel:a.bottom<=b.y+1,nameClipped:n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1}});return{within:r.x>=0&&r.y>=0&&r.right<=innerWidth&&r.bottom<=innerHeight,bodyOverflow:modalBody.scrollHeight-modalBody.clientHeight,buttons,tiles,slots:modal.querySelectorAll('.ib-item-grid>*').length,chest:modal.querySelector('.ib-selected-art img')?.getAttribute('src'),columns:modal.querySelector('.ib-item-grid')?getComputedStyle(modal.querySelector('.ib-item-grid')).gridTemplateColumns.split(' ').length:0}})()`);
         await shot(`runtime-${width}x${height}-${sample}`);
         assert(data.within && data.bodyOverflow <= 1, JSON.stringify({ width,height,sample,...data }));
