@@ -48,13 +48,13 @@ async function main() {
             const route = { points: [source, target], length: 2000, previewStatus: 'authoritative',
               authoritativeDurationSeconds: 1673, authoritativeRequestedTroops: 4, authoritativeSpeedMultiplier: ${speed} };
             showTroopSliderModalWithRoute(source, orderTarget, route, {orderKind: '${kind}'});
-            return document.querySelector('.travel-time-summary').innerText;
+            return [...document.querySelector('.travel-time-summary').children].map(element => element.textContent).join(' ');
           })()`);
           assert.equal(summary.replace(/\s+/g, " "), `Travel bonus ${speed === 1 ? "0" : "73.95"}% Travel time 27m 53s`);
           await wait(100);
-          await evaluate("modalBody.scrollTop = modalBody.scrollHeight");
+          await evaluate("modalBody.querySelector('.order-body').scrollTop = modalBody.querySelector('.order-body').scrollHeight");
           const bounds = await evaluate(`(() => { const travel = document.querySelector('.travel-time-summary').getBoundingClientRect();
-            const actions = document.querySelector('.troop-slider-actions').getBoundingClientRect();
+            const actions = document.querySelector('.order-actions').getBoundingClientRect();
             return {bottom: travel.bottom, actionsTop: actions.top, actionsBottom:actions.bottom, left: travel.left, right: travel.right}; })()`);
           assert(bounds.bottom <= bounds.actionsTop + 1, `${kind}/${viewport.name}: Travel details are covered by action buttons: ${JSON.stringify(bounds)}`);
           assert(bounds.left >= 0 && bounds.right <= viewport.width, "Travel details overflow the viewport.");
