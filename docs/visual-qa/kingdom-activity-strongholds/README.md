@@ -9,6 +9,8 @@ Base: `81a35aed85301606fc4147294bef57ef0f297d9c` (Reinforcements release, PR #30
 
 The user confirmed one combined release for Camps and Strongholds, reviewing one panel at a time. [Camps](../kingdom-activity-camps/README.md) is design approved. This is the second draft on the same branch. After Strongholds approval, integrate both panels and run `prepare-pr` on the final combined change. The full release gate is deferred until that update is ready; this checkpoint is not ready to merge.
 
+The subsequent “next update” request continues design review with [Attack / Send Troops](../troop-orders/README.md) on the current batch branch. No runtime integration or release was requested by that message. The new draft is also pending approval; finalize the approved batch scope before integration.
+
 ## Preview
 
 Open `/docs/visual-qa/kingdom-activity-strongholds/index.html?viewport=desktop&sample=standard` on the loopback review server. Controls provide desktop 1440 × 900, mobile landscape 844 × 390, and small landscape 568 × 320. Portrait is outside the supported design target.
