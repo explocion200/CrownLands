@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Kingdom Activity Strongholds preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/kingdom-activity-strongholds/draft.css"><script src="docs/visual-qa/kingdom-activity-strongholds/fixtures.js" defer></script><script src="docs/visual-qa/kingdom-activity-strongholds/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Kingdom Activity</button>
+<dialog id="reportDialog" aria-labelledby="reportTitle"><div class="report-shell">
+  <header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h1 id="reportTitle">Kingdom Activity</h1></div><span class="hold-heading">Held strongholds</span><button id="close" class="close-button" aria-label="Close Kingdom Activity">×</button></header>
+  <nav class="activity-tabs" aria-label="Kingdom activity categories"><button disabled>Marches <span>4</span></button><button disabled>Rallies <span>2</span></button><button disabled>Reinforcements <span>7</span></button><button disabled>Camps <span>4</span></button><button aria-current="page">Strongholds <span id="holdCount">4</span></button></nav>
+  <section id="holdSummary" class="hold-summary" aria-label="Held Stronghold summary"></section>
+  <div id="holdColumns" class="hold-columns" aria-hidden="true"><span>Stronghold &amp; map</span><span>Specialization</span><span>Garrison</span><span>Defense level</span><span>Locate</span></div>
+  <main id="holdLedger" class="hold-ledger" tabindex="0" aria-label="Your held Strongholds"></main>
+  <footer class="report-footer"><span id="panelStatus" role="status">Bonuses follow existing control and clan-sharing rules.</span><span>Scroll for all Strongholds</span></footer>
+</div></dialog>
+<div id="mapPreview" class="map-preview" hidden><div class="map-location-card"><p class="map-preview-label">DRAFT MAP PREVIEW</p><img id="mapHoldArt" src="assets/worlds/core-expansion-v1/art/stronghold-gold-37d993bdce7f.webp" alt=""><h2 id="mapHoldName">Aurum Keep</h2><p id="mapRegionName"></p><p class="map-help">In the game, Map closes this window and locates the Stronghold on its map.</p><button id="backToLedger">Back to Strongholds</button></div></div>
+<p id="liveStatus" class="sr-only" role="status"></p></body></html>

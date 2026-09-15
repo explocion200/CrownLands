@@ -1,13 +1,13 @@
 # Kingdom Activity: Camps draft
 
-Status: **DRAFT — awaiting design approval**. No runtime integration, pull request, merge or deployment.
+Status: **DESIGN APPROVED — awaiting combined integration**. The user approved this draft on September 15, 2026 and requested the next panel. No runtime integration, pull request, merge or deployment.
 
 Branch: `codex/kingdom-activity-camps-strongholds`.
 Base: `81a35aed85301606fc4147294bef57ef0f297d9c` (Reinforcements release, PR #305).
 
 ## Combined update
 
-The user confirmed one combined release for Camps and Strongholds, reviewing one panel at a time. Review Camps first. After its design approval, prepare Strongholds on this same branch. Integrate both approved panels and run `prepare-pr` on the final combined change. This draft is not a completed release candidate; the full release gate is deferred until that combined update is ready.
+The user confirmed one combined release for Camps and Strongholds, reviewing one panel at a time. Camps is approved; [Strongholds is the next draft](../kingdom-activity-strongholds/README.md) on this same branch. Integrate both approved panels and run `prepare-pr` on the final combined change. This draft is not a completed release candidate; the full release gate is deferred until that combined update is ready.
 
 ## Preview
 
@@ -27,6 +27,6 @@ Map simulates the existing close-and-locate action in a disclosed preview card, 
 - Current map illustrations are reused, including the Warband, Gold, Brightmere/Relic and Brambleford/Deed art. No new image generation is needed for this draft.
 - The existing Activity renderer reads configured base Gold/troop rewards, not a private next-payout calculation. The draft labels those values **Base hold reward**, preserving the values without promising an exact production-scaled payout. Random city/item rewards remain explicitly random. Integration must preserve daily allowances, production scaling, server resolution and reward privacy.
 - Preserve held-camp discovery across unvisited maps, deduplication, loss/removal handling, known Map targets, contested states, and independent public hold timers. No Claim, Recall, abandon, new reward, daily allowance or camp-balance rule is introduced.
-- No Master Specification update is made before design approval.
+- The confirmed Camps presentation is now recorded in the Master Specification. Approval does not establish integration or deployment status.
 
 Focused visual evidence is recorded in `visual-checks.md`. Production behavior and full release checks belong to the final combined integration.

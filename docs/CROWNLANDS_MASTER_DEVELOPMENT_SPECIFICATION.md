@@ -1123,6 +1123,14 @@ Status: approved for implementation and release on September 14, 2026; deploymen
 
 Status: approved for integration and release on September 15, 2026; deployment requires separate verification. Design and evidence: [Kingdom Activity Reinforcements](./visual-qa/kingdom-activity-reinforcements/README.md).
 
+### Approved Kingdom Activity Camps presentation
+
+- The approved Camps tab shares the Kingdom Activity parchment frame and 1200 × 700 pixel desktop cap, with viewport-fitting desktop and mobile landscape layouts. A fixed heading, activity tabs and camp summary sit above one scrolling ledger. Portrait is not a design target.
+- Rows preserve the current camp artwork, name and map, hold reward, full garrison, controlled/contested state, countdown, Resolving/Syncing states and Map action. Small landscape places rewards and garrisons beneath identity/timing. Gold and troop values from the existing base configuration are labeled Base hold reward; random city and item rewards remain explicit. No new payout calculation or guaranteed reward is introduced.
+- Preserve held-camp discovery across unvisited maps, deduplication, loss/removal handling, independent hold timers, daily allowances, production scaling, reward privacy and server resolution. Map retains the existing close-and-locate behavior. The draft's map preview is only a review aid. No Claim, Recall, abandon or balance change is included.
+
+Status: design approved September 15, 2026; awaiting integration with the separately reviewed Strongholds panel. The combined update requires release validation and deployment verification. Design and controlled evidence: [Kingdom Activity Camps](./visual-qa/kingdom-activity-camps/README.md).
+
 ### Current presentation status
 
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.
