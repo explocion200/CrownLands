@@ -1115,6 +1115,14 @@ Status: approved for implementation and release on September 14, 2026; deploymen
 
 Status: approved for implementation and release on September 14, 2026; deployment must be verified separately. Design and controlled runtime evidence: [Kingdom Activity Rallies](./visual-qa/kingdom-activity-rallies/README.md).
 
+### Approved Kingdom Activity Reinforcements presentation
+
+- The Reinforcements tab uses the approved parchment frame with the same 1200 × 700 pixel desktop cap and viewport-fitting desktop/mobile landscape layouts. Three fixed section shortcuts lead to Traveling, Stationed with allies, and Defending your holdings in one scrolling ledger. Portrait is not a design target.
+- Preserve known routes and maps, ruler-profile links, full visible troop counts, explicit estimates or syncing states, arrival status, return destinations and Main City fallback details. Small landscape moves return information and commands below each holding. Scroll position and keyboard focus survive snapshot updates; countdown-only updates preserve control identity.
+- Contributors use Recall and holding owners use Send Home for stationed troops. Existing confirmation, permissions, pending-request guards, fallback routing and server acknowledgements remain authoritative. Failed returns retain the assignment and expose retry feedback. These stationed returns do not use Recall Horns; no cost, capacity, visibility or return rule changes. The draft's HTML confirmation is a review aid; production retains its existing confirmation.
+
+Status: approved for integration and release on September 15, 2026; deployment requires separate verification. Design and evidence: [Kingdom Activity Reinforcements](./visual-qa/kingdom-activity-reinforcements/README.md).
+
 ### Current presentation status
 
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.

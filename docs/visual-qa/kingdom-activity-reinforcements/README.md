@@ -1,6 +1,6 @@
 # Kingdom Activity: Reinforcements draft
 
-Status: local design draft awaiting approval, September 15, 2026.
+Status: design approved for integration, merge and deployment on September 15, 2026. The preview remains an isolated review fixture; deployment must be verified separately.
 
 Branch: `codex/kingdom-activity-reinforcements-draft`.
 Base: `190fa25d19429c81623e02a5fdbe231d0fcf4a08` (Rallies UI plus the merged modal/performance/pickup corrections).
@@ -27,3 +27,7 @@ Sources inspected: `game.js` functions `getActiveOperationsSnapshot`, `getIncomi
 This is isolated HTML/CSS/JS with synthetic data, fixed arrival times and no game script, account, server or persistent storage. Recall and Send Home use an HTML confirmation with the existing game's wording, then simulate acknowledgement after 650 ms. The HTML confirmation keeps the review usable in the in-app browser; it does not replace the production native confirmation. Reset cancels open confirmations and invalidates pending callbacks. The retry example begins with a disclosed failed order; retry then simulates success. Profile links describe the existing destination. Other activity tabs are disabled review context.
 
 Existing March Orders, Shieldwall Discipline, troop woodcut and fortress heraldry art is reused. CSS imports earlier approved draft frame styles; nothing in the production game imports this draft. Browser validation is recorded in `visual-checks.md`. Production integration, PR release gates, merge and deployment follow design approval.
+
+## Production integration
+
+The game renders this presentation from existing reinforcement snapshots. Scoped `reinforcements-activity-ui.css` and `reinforcements-activity-ui.js` provide the frame and view restoration, and are included in the production file inventory. The existing `returnClanReinforcement` action retains native confirmation and server handling; bounded, account-keyed inline errors clear on retry and modal close. Countdown text uses the existing stable-node patcher; structural updates restore ledger scroll and focus. Release evidence is retained under the ignored `release-artifacts/reinforcements/` directory.

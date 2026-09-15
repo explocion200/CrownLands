@@ -38,3 +38,11 @@ The original preview used `window.confirm`, which stalled browser automation. It
 JavaScript syntax and staged whitespace checks pass. The branch difference contains only the seven files in this draft directory. No production code, gameplay rules, shared assets or backend data are changed.
 
 No production test suite, emulator gate, PR preparation, merge or deployment was run. This is ready for design review, not a release-ready implementation. Integration after approval must retain the existing server return API and the stable refresh/close handling introduced in PR #304, then complete the relevant release checks.
+
+## Approved production integration — September 15
+
+The section above records the original draft review. After approval, the production renderers and scoped CSS were checked in an isolated browser harness with all production styles and synthetic data. Seven examples (mixed, traveling, long, many, pending, retry and empty) passed at 1440 × 900, 844 × 390 and 568 × 320: window fit, vertical scrolling, no horizontal overflow, complete assets and minimum 44-pixel controls after the opening animation. The actual profile-link renderer also retained 44-pixel targets.
+
+The production return action was checked against a simulated server for cancellation, contributor/holder result privacy, duplicate pending requests, failure/retry cleanup and original-source/Main City fallback. Browser Recall and Send Home showed pending controls and acknowledged state updates; an own return retained the ledger scroll position through subsequent countdown updates. Confirmation was answered by the harness; no live account or troops were used. The production native confirmation remains unchanged.
+
+Focused reinforcement, retargeting, profile-link and estimate-privacy validators pass. The estimate validator now executes the renderer to check range labeling and prevent exact-count disclosure instead of requiring the retired sentence markup. The initial production artifact passed with 628 files and 107 resources per entry. Final release gates and published-channel evidence are recorded separately under `release-artifacts/reinforcements/`; these pre-release results alone do not establish deployment.
