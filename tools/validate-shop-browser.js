@@ -65,6 +65,9 @@ async function main() {
       await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
       for (const sample of ['ready','low','limit','pending','large','rewards','cooldown','adlimit','unavailable']) {
         await evaluate(`__shopQA.reset('${sample}')`); await paint(); await evaluate("Promise.all([...modal.querySelectorAll('img')].map(i=>i.decode()))");
+        // Measure settled touch targets after the opening scale transition;
+        // two fast frames do not imply that the animation has finished.
+        await wait("modal.querySelector(':scope > .modal-card').getAnimations().every(a => !a.pending && a.playState !== 'running')");
         const data = await evaluate(`(()=>{const r=modal.getBoundingClientRect(),buttons=[...modal.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>{const b=e.getBoundingClientRect();return{label:e.ariaLabel||e.textContent,w:b.width,h:b.height,inside:b.x>=r.x&&b.y>=r.y&&b.right<=r.right+1&&b.bottom<=r.bottom+1}}),tiles=[...modal.querySelectorAll('.rs-item-tile')].map(e=>{const a=e.querySelector('.rs-tile-art img').getBoundingClientRect(),n=e.querySelector('.rs-item-name'),b=n.getBoundingClientRect();return{artHeight:a.height,artAboveLabel:a.bottom<=b.y+1,nameClipped:n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1}});return{within:r.x>=0&&r.y>=0&&r.right<=innerWidth&&r.bottom<=innerHeight,bodyOverflow:modalBody.scrollHeight-modalBody.clientHeight,buttons,tiles,disabled:modal.querySelector('.rs-buy-button').disabled,columns:getComputedStyle(document.querySelector('#royalShopItemGrid')).gridTemplateColumns.split(' ').length}})()`);
         assert(data.within&&data.bodyOverflow<=1,JSON.stringify({width,height,sample,...data}));
         assert(data.buttons.every(b=>b.w>=44&&b.h>=44&&b.inside),JSON.stringify({width,height,sample,buttons:data.buttons}));

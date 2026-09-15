@@ -111,7 +111,7 @@ Close. Incoming countdowns and rally arrival/launch eligibility are covered too.
   Incoming Threats, and rally eligibility. Included in `gate:static`.
 - `node tools/validate-onboarding-browser.js`: first-step controls, visibility,
   arrows, focus, account isolation, dismissal, and replay.
-- Item Bag geometry validation now waits for the actual card opening transition
+- Item Bag and Shop geometry validation now wait for the actual card opening transition
   before measuring. Faster rendering exposed its previous two-frame timing
   assumption (43.4 px mid-scale versus the settled 44 px control); the touch-target
   threshold and all interaction assertions remain unchanged.
