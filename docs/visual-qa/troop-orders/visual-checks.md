@@ -2,7 +2,15 @@
 
 Checked September 15, 2026 in the local in-app browser. Synthetic UI fixtures only; no production account or server operations.
 
-## Current revision: origin and destination city levels
+## Current revision: primary slider and battle-only bonuses
+
+- Attack and Transfer use a full-width troop-selection panel above supporting details. The native range uses a local crossed-swords SVG as its 48px handle, with WebKit and Firefox thumb rules. The unrelated Other buffs & items list and its fixtures/rendering were removed; attack power still separates base, Swordmastery and equipped weapon contributions.
+- Checked eight samples (attack, transfer, no-item, long, unknown, error, rally and protected) at all three review sizes: 24 combinations. No horizontal overflow or clipped footer actions; visible action buttons remain at least 44px. Attack/Transfer sliders span 1002px desktop, 744px landscape and 494px small landscape in the standard fixtures and are fully visible on opening. Standard desktop Attack and Transfer require no body scrolling. Long content and mobile supporting details scroll within the unchanged window dimensions.
+- Dragged the swords on mobile landscape: selection changed from 750,000 to 1,091,499, and own attack power updated to 1,925,813. Keyboard End selected 1,250,000 with zero source remainder and 2,205,468 power. Home then ArrowRight selected 2 with 3 total power.
+- Transfer End selected 1,250,000 and displayed 1,435,000 arriving troops; enabling Swift March retained 4m 6s travel and 148% travel bonus in this fixture. No troops or items were consumed.
+- Visually inspected desktop hierarchy, mobile slider, and the complete scrolled mobile battle breakdown. Browser warning/error log was empty. Node.js 22 syntax, SVG XML and whitespace checks passed. The existing power formula is unchanged; no repeat of backend arithmetic or release gates was needed for this presentation revision.
+
+## Previous revision: origin and destination city levels
 
 - Added compact `Lv. 64` and `Lv. 82` badges to the From and To route headings for attacks. The fixture levels match the reused keep/castle stage ranges. City levels are separately labeled for accessibility.
 - Checked attack, long names, Camp and unavailable-intelligence samples at desktop 1440 × 900, landscape 844 × 390 and small landscape 568 × 320 (12 combinations). Badges fit within their location panels, no horizontal overflow occurred, and the fixed action footer stayed inside the dialog.
