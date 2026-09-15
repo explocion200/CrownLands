@@ -25,4 +25,16 @@ The final twentieth participant was reached by keyboard at 568 × 320. The roste
 - Cancel reaches the no-active-rallies state. Return to map closes the draft, and Open Kingdom Activity reopens it.
 - Close/Reopen, review viewport/example selection and Reset were checked in the review shell.
 
-JavaScript syntax and whitespace checks passed. The complete change is confined to this new draft directory. No game runtime, backend, shared art, build files, Master Specification or live data was changed. Production integration, release gates, PR creation and deployment follow design approval.
+JavaScript syntax and whitespace checks passed for the isolated draft before approval.
+
+## Approved runtime integration
+
+The actual game renderer was checked through the local benchmark's mock services after approval, at the same three sizes and all eleven examples (33 cases). All windows fitted their viewport; checked panels had no horizontal overflow; command and profile targets retained at least 44 pixels of height; no images were broken. Available commands remained fixed and visible. This includes no-horn, pending, empty, long-name and large-force cases.
+
+- At 568 × 320 the twentieth participant was reached by scrolling to 1,398 pixels. Its full row was visible inside the 76-pixel roster viewport. Refresh preserved that scroll position. The fifth rally was selectable with the picker scrolled to 304 pixels; refresh preserved selection and scroll. Removing that selected rally fell back to the first remaining rally.
+- Creator and Clan Leader controls, member withdrawal, joining, full capacity, non-creator launched and no-horn states displayed the appropriate existing actions. The live Launch control opened the existing confirmation; Keep Forming closed it and cleared the activity styling.
+- Withdrawal reached the mock API through the real action handler, displayed “Sending your order…” and disabled the command. Recall reached the selected army's local boundary, retained the updated horn image and disabled the action while pending. Join passed the selected rally to the existing join entry boundary and closed the modal.
+- Switching to Marches restored the Marches class/header. Switching to Reinforcements removed both ledger classes and retained its existing empty-state view. Returning to Rallies restored the selected detail. Browser warning/error logs were empty.
+- Focused existing Clan ledger, Clan War Room, rally, active-operations and instant-economy validation passed. JavaScript/ESLint, asset budgets and production artifact validation passed. Full required release gates and GitHub checks are recorded separately with the release receipt.
+
+These are synthetic local renderer/binding checks, not production army mutations or physical-device tests. Actual server authorization, contribution settlement and failure handling remain covered by the existing required multiplayer gate.

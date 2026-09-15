@@ -1107,6 +1107,14 @@ Implementation and controlled evidence: [Server response and connection reliabil
 
 Status: approved for implementation and release on September 14, 2026; deployment must be verified separately. Design and controlled runtime evidence: [Kingdom Activity Marches](./visual-qa/kingdom-activity-marches/README.md).
 
+### Confirmed Kingdom Activity Rallies presentation
+
+- The approved Rallies tab shares the Marches parchment frame and 1200 × 700 pixel desktop cap. Desktop and mobile landscape fit the viewport. A scrolling clan-rally selector sits beside the selected target; its title and commands stay fixed while creator, assembly city, full troop totals and all participants scroll between them. Small landscape retains access to all twenty participants and all five active rallies. Portrait is not a design target.
+- The roster retains ruler-profile links, leader/ally and own-ruler labels, troop counts, Ready/inbound/Arriving/Marching/Returning/Stationed/Settled states, readiness and capacity. Selection, scroll position and keyboard focus survive snapshot updates; account/clan changes reset the selected rally. Existing March Orders, fortress/crown heraldry and shared Recall Horn art are reused.
+- The existing readiness, role checks, join entry, launch/cancel confirmation, withdrawal, Recall Horn eligibility and inventory, pending requests and server results remain authoritative. This changes presentation only: formation has no expiry or automatic launch timer, and no rally rule, cost, capacity or target rule changes. Clan War Room retains its existing presentation.
+
+Status: approved for implementation and release on September 14, 2026; deployment must be verified separately. Design and controlled runtime evidence: [Kingdom Activity Rallies](./visual-qa/kingdom-activity-rallies/README.md).
+
 ### Current presentation status
 
 - Broad medieval UI theme and readability corrections: `LIVE — ALL PUBLISHED CHANNELS`.

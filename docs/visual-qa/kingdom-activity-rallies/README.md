@@ -1,6 +1,6 @@
 # Kingdom Activity: Rallies draft
 
-Status: local design draft awaiting approval, September 14, 2026.
+Status: approved design and production integration, September 14, 2026. The user authorized merge and deployment; published status must be verified separately.
 
 Branch: `codex/kingdom-activity-rallies-draft`.
 Base: `4b49d05211a361c7485254dc59477c645186dfe5` (approved Marches release).
@@ -19,10 +19,10 @@ This is an isolated HTML/CSS/JS review with synthetic data. It loads no account,
 
 ## Existing implementation references
 
-- `game.js`: `renderClanRallyOperationPanel`, `renderClanRallyCard`, `getClanRallyParticipantStatusLabel`, `getRallyParticipantForCurrentPlayer`, `renderOutgoingAttacksModalContent`.
-- `renderClanRallyCard` is shared with the approved Clan War Room. Later integration must keep the Kingdom Activity presentation scoped and preserve the War Room's layout and handlers.
+- `rallies-activity-ui.js`: selected-rally presentation, full counts, existing profile/item art, and view-state capture/restoration. `game.js` retains the shared role/readiness calculations, participant status helper, rally actions, confirmation and Kingdom Activity routing.
+- `renderClanRallyCard` is shared with the approved Clan War Room. Its explicit optional activity mode uses the new renderer; ordinary calls retain the War Room's layout and handlers. Styling requires both the outgoing activity modal and the Rallies class, which is removed on close or category change.
 - Existing active/assembled/inbound/returning totals and disclosure rules remain authoritative. Eligibility derives from the live helpers and server, not these sample booleans. Only the creator or Clan Leader may launch/cancel a forming ordinary Rally; only the creator may recall its launched army. The minimum is two ready participants and every contribution must have arrived. Capacity is twenty rulers and five active clan rallies.
-- The Master Specification's Rallies and UI/UX Standards sections informed the draft. No confirmed specification, runtime file, game rule or release artifact was changed.
+- The Master Specification records the approved presentation. No backend, world data, balance or game rule is changed.
 
 ## Shared art
 
@@ -30,4 +30,6 @@ Existing `marchOrders.svg`, the full `fortress-keep.svg` and `crown.svg` from Cl
 
 ## Validation
 
-Visual and interaction review is recorded in `visual-checks.md` after completion. This draft is not a production integration, pull request or deployment.
+Visual and interaction review is recorded in `visual-checks.md`. To reproduce the actual-game preview, run `node tools/prepare-rallies-preview.js` against the existing loopback benchmark server, then open the printed URL. It embeds only the draft's synthetic fixture factory into an ignored preview page and loads the real runtime through mock Firebase. The local example picker covers the same eleven states. Refresh and Remove selected exercise snapshot reconciliation. Launch/cancel use the real confirmation and dispatch through a pending mock API; Join and Recall stop at local handler boundaries. No live gameplay actions are performed.
+
+The production builder and manifest explicitly include the scoped helper, stylesheet and two existing heraldry SVGs. Review tools and fixtures are excluded. This presentation has a bounded 60 KiB asset allowance plus 4 KiB for entry/mounting overhead; existing map, login and install-cache budgets are unchanged. Required release gates, PR checks and both published-channel verification follow the integration checks.

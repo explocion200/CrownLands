@@ -23,6 +23,8 @@ const required = [
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
   "marches-activity-ui.css", "marches-activity-ui.js",
+  "rallies-activity-ui.css", "rallies-activity-ui.js",
+  "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
   "assets/icons/battle-reports-ledger-r1.svg",
   "assets/icons/settings-ledger.svg",
   "assets/icons/common-gear-chest-r1.svg",
@@ -138,7 +140,11 @@ if (scoutReportBytes > 64 * 1024) throw new Error("Scout Report presentation exc
 const marchesUiBytes = ["marches-activity-ui.js", "marches-activity-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (marchesUiBytes > 36 * 1024) throw new Error("Marches presentation exceeds its 36 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40) * 1024;
+// Rallies adds at most 60 KiB of scoped presentation and reused emblems, plus 4 KiB for mounting/entries.
+const ralliesUiBytes = ["rallies-activity-ui.js", "rallies-activity-ui.css", "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (ralliesUiBytes > 60 * 1024) throw new Error("Rallies presentation exceeds its 60 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

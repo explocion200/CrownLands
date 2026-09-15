@@ -1,0 +1,299 @@
+/* Approved Rallies presentation, scoped to Kingdom Activity. */
+#modal.outgoing-attack-modal.rallies-activity-ledger{display:block !important;font-weight:400 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger:not([open]){display:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger::before,#modal.outgoing-attack-modal.rallies-activity-ledger::after{display:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger>.modal-card{height:100% !important;max-height:none !important;display:block !important;padding:0 !important;margin:0 !important;width:100% !important;min-width:0 !important;background:none !important;border:0 !important;border-radius:0 !important;box-shadow:none !important;overflow:hidden !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger>.modal-card>:not(#modalBody){display:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger #modalBody{height:100% !important;max-height:none !important;min-height:0 !important;overflow:hidden !important;margin:0 !important;padding:0 !important;scrollbar-gutter:auto !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger *{font-variant:normal !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger :is(h2,h3,h4,p,span,strong,small,button,a,div,footer,nav){text-shadow:none !important;text-transform:none !important;letter-spacing:normal !important;font-weight:400 !important;color:inherit !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger :is(button,a){margin:0 !important;border-radius:0 !important;min-width:0 !important;transition:none !important;width:auto !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger :is(h2,h3,h4){background:none !important;box-shadow:none !important;border:0 !important;padding:0 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .player-name-link{background:none !important;box-shadow:none !important;white-space:normal !important;cursor:pointer !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .flag{margin:0 !important;min-width:0 !important;max-width:none !important;max-height:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger :is(p,span,strong,small,button,a,div,footer,nav){font-family:"Segoe UI",Arial,sans-serif!important;font-variant-caps:normal!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger :is(button,a){box-shadow:none!important;background-image:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger{color-scheme:light !important;--paper:#f2e8cd !important;--ink:#352f23 !important;--muted:#716247 !important;--line:#b8a684 !important;--olive:#4b583c !important;--red:#803f38 !important;font-family:"Segoe UI",Arial,sans-serif !important;color:var(--ink) !important;background:#30382a !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger *{box-sizing:border-box !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger h1,#modal.outgoing-attack-modal.rallies-activity-ledger h2,#modal.outgoing-attack-modal.rallies-activity-ledger h3,#modal.outgoing-attack-modal.rallies-activity-ledger h4,#modal.outgoing-attack-modal.rallies-activity-ledger p{margin:0 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger button{font:inherit !important;color:inherit !important;cursor:pointer !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger button:disabled{cursor:default !important;opacity:.45 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger button:hover:not(:disabled){filter:brightness(1.06) !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger button:focus-visible,#modal.outgoing-attack-modal.rallies-activity-ledger main:focus-visible,#modal.outgoing-attack-modal.rallies-activity-ledger summary:focus-visible{outline:2px solid #376872 !important;outline-offset:2px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger [hidden]{display:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sr-only{position:absolute !important;width:1px !important;height:1px !important;overflow:hidden !important;clip-path:inset(50%) !important;white-space:nowrap !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger{width:min(1200px,calc(100vw - 24px)) !important;height:min(700px,calc(100dvh - 24px)) !important;max-width:none !important;max-height:none !important;margin:auto !important;padding:5px !important;border:1px solid #766346 !important;border-radius:2px !important;background:var(--paper) !important;color:var(--ink) !important;box-shadow:inset 0 0 0 3px #d6c49e,inset 0 0 0 4px #a99876,0 10px 45px #171b1b88 !important;overflow:hidden !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-panel{height:100% !important;display:flex !important;flex-direction:column !important;border:1px solid var(--line) !important;background:radial-gradient(ellipse at 48% 40%,#fff9e288,transparent 75%) !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header{display:flex !important;align-items:center !important;gap:18px !important;flex:none !important;min-height:76px !important;padding:9px 16px !important;border-bottom:1px solid var(--line) !important;background:#e9dcb483 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header button{min-height:44px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading p{font-size:8px !important;letter-spacing:1.8px !important;color:var(--muted) !important;margin-bottom:4px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading h2{font:27px Georgia,serif !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading{min-width:0 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header time{margin-left:auto !important;font-size:11px !important;color:var(--muted) !important;white-space:nowrap !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .close-button{width:44px !important;min-width:44px !important;border:0 !important;background:transparent !important;font:26px Georgia,serif !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer{display:flex !important;align-items:center !important;justify-content:space-between !important;gap:10px !important;min-height:32px !important;flex:none !important;padding:7px 23px !important;border-top:1px solid #c4b18d !important;background:#e9dcb45e !important;font-size:10px !important;color:#7b6a4c !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header{gap:12px !important;min-height:72px !important;padding:8px 18px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading-art{width:42px !important;height:46px !important;object-fit:contain !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading h2{font-size:29px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items{display:flex !important;gap:18px !important;margin-left:auto !important;align-items:center !important;color:var(--muted) !important;font-size:11px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items>span{display:flex !important;gap:7px !important;align-items:center !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items img{width:31px !important;height:34px !important;object-fit:contain !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items strong{display:inline-block !important;margin-left:5px !important;font:20px Georgia,serif !important;color:var(--ink) !important;font-variant-numeric:tabular-nums !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs{display:grid !important;grid-template-columns:1fr 1fr 1.3fr 1fr 1.1fr !important;gap:5px !important;padding:6px 17px !important;background:#e9dcba !important;border-bottom:1px solid #b8a684 !important;flex:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button{min-height:44px !important;padding:0 10px !important;border:1px solid transparent !important;background:transparent !important;font:15px Georgia,serif !important;white-space:nowrap !important;display:flex !important;gap:10px !important;justify-content:center !important;align-items:center !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button[aria-current]{border-color:#633c36 !important;background:#753f3a !important;color:#fbefd3 !important;box-shadow:inset 0 0 0 2px #b59c7866 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button strong{font:12px "Segoe UI",sans-serif !important;padding:2px 6px !important;border:1px solid #c1ac814d !important;background:#59453510 !important;border-radius:2px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button:disabled{opacity:.65 !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer{min-height:29px !important;padding:6px 20px !important;font-size:10px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer>span:first-child{min-width:0 !important;overflow:hidden !important;text-overflow:ellipsis !important;white-space:nowrap !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer>span:last-child{flex:none !important;margin-left:8px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state{display:flex !important;min-height:100% !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;text-align:center !important;padding:30px !important;gap:12px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state img{width:76px !important;height:76px !important;object-fit:contain !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3{font:26px Georgia,serif !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state p{font-size:13px !important;max-width:390px !important;line-height:1.6 !important;color:var(--muted) !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state button{min-height:44px !important;background:#e6d4ac !important;border:1px solid #ac956c !important;padding:0 18px !important;font:15px Georgia,serif !important}
+@media(max-height:600px),(max-width:1000px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header{min-height:50px !important;padding:2px 10px !important;gap:8px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading-art{width:30px !important;height:34px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading p{display:none !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading h2{font-size:22px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items{gap:12px !important;font-size:9px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items img{width:23px !important;height:26px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items strong{font-size:17px !important;margin-left:3px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs{padding:2px 8px !important;gap:3px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button{font-size:12px !important;min-height:44px !important;padding:0 5px !important;gap:6px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button strong{font-size:10px !important;padding:1px 5px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer{min-height:22px !important;padding:3px 10px !important;font-size:8px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state{padding:15px !important;gap:7px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state img{width:44px !important;height:44px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3{font-size:21px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state p{font-size:11px !important}
+}
+@media(max-width:650px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading-art{width:24px !important;height:29px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .heading h2{font-size:19px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header{gap:5px !important;padding-inline:6px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items{gap:6px !important;font-size:8px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items>span{gap:3px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items img{width:19px !important;height:23px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .carried-items strong{font-size:16px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs{gap:0 !important;padding-inline:3px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button{font-size:10px !important;gap:3px !important;padding:0 3px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button strong{padding:1px 3px !important;font-size:9px !important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .report-footer>span:last-child{display:none !important}
+}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-content{display:flex!important;flex:1!important;min-height:0!important;overflow:hidden!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-panel{gap:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs{border-top:0!important;border-left:0!important;border-right:0!important;border-radius:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button.active{border-color:#633c36!important;background:#753f3a!important;color:#fbefd3!important;box-shadow:inset 0 0 0 2px #b59c7866!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .active-operations-tabs button strong{min-width:0!important;height:auto!important;display:block!important;color:inherit!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3{width:auto!important;margin:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .window-header .heading h2{color:var(--ink)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content{flex:1!important;min-height:0!important;display:grid!important;grid-template-columns:225px minmax(0,1fr)!important;overflow:hidden!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-sidebar{display:flex!important;flex-direction:column!important;min-height:0!important;background:#e5d8b566!important;border-right:1px solid #b7a17a!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:16px 18px 12px!important;flex:none!important;border-bottom:1px solid #c8b38a!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading h3{font:21px Georgia,serif!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading strong{font:14px Georgia,serif!important;white-space:nowrap!important;color:var(--muted)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-picker{flex:1!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;touch-action:pan-y!important;padding:9px!important;scrollbar-width:thin!important;scrollbar-color:#a48d64 #e4d8ba!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick{width:100%!important;display:grid!important;grid-template-columns:33px minmax(0,1fr)!important;gap:6px 9px!important;text-align:left!important;padding:14px 10px!important;border:1px solid transparent!important;border-bottom-color:#c3ae83!important;background:transparent!important;min-height:112px!important;position:relative!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick[aria-pressed="true"]{background:#f5eaca!important;border-color:#a58c60!important;box-shadow:inset 3px 0 #7a4239,inset 0 0 0 3px #fff8df66!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick img{width:31px!important;height:37px!important;object-fit:contain!important;grid-row:span 2!important;align-self:center!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick strong{font:18px/1.14 Georgia,serif!important;overflow-wrap:anywhere!important;align-self:end!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick small{font-size:10px!important;color:var(--muted)!important;line-height:1.45!important;overflow-wrap:anywhere!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick .pick-meta{grid-column:1/-1!important;display:flex!important;gap:5px!important;justify-content:space-between!important;align-items:center!important;font-size:10px!important;margin-top:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill{display:inline-flex!important;gap:5px!important;align-items:center!important;font-size:10px!important;font-weight:600!important;color:#79562d!important;white-space:nowrap!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill:before{content:""!important;width:5px!important;height:5px!important;background:currentColor!important;transform:rotate(45deg)!important;flex:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill.launched{color:#843f39!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill.returning{color:#456973!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-detail{min-width:0!important;min-height:0!important;display:flex!important;flex-direction:column!important;background:#fff8e024!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title{display:flex!important;align-items:center!important;gap:13px!important;padding:13px 23px!important;flex:none!important;border-bottom:1px solid #bca77e!important;background:#f3e7c95c!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal{width:56px!important;height:62px!important;flex:none!important;padding:9px!important;background:#e2d4ae!important;border:1px solid #b9a06f!important;outline:1px solid #d2ba8a!important;outline-offset:3px!important;clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal img{width:100%!important;height:100%!important;object-fit:contain!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading{min-width:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading h3{font:29px/1.1 Georgia,serif!important;overflow-wrap:anywhere!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading p{font-size:10px!important;color:var(--muted)!important;margin-top:6px!important;line-height:1.35!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title>.status-pill{margin-left:auto!important;flex:none!important;border:1px solid #c3ad84!important;padding:7px 10px!important;background:#ebddb955!important;font-size:11px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-scroll{flex:1!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;touch-action:pan-y!important;scrollbar-width:thin!important;scrollbar-color:#a48d64 #e4d8ba!important;padding:0 23px 15px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;border-bottom:1px solid #c5b38c!important;align-items:center!important;padding:9px 0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div{min-width:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta small{display:block!important;font-size:10px!important;color:var(--muted)!important;line-height:1.3!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta strong{font:18px/1.15 Georgia,serif!important;overflow-wrap:anywhere!important;display:block!important;margin-top:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content .player-name-link{font:17px/1.2 Georgia,serif!important;min-height:44px!important;min-width:44px!important;border:0!important;background:transparent!important;padding:5px 0!important;color:#704735!important;text-decoration:underline!important;text-decoration-color:#bca17b!important;text-underline-offset:3px!important;overflow-wrap:anywhere!important;text-align:left!important;max-width:100%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals{display:grid!important;grid-template-columns:1.05fr 1.05fr 1fr!important;border-bottom:1px solid #bba580!important;padding:13px 0!important;gap:12px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals>div{min-width:0!important;border-right:1px solid #cbbb97!important;padding-right:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals>div:last-child{border:0!important;padding:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals small{display:block!important;font-size:10px!important;color:var(--muted)!important;margin-bottom:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals strong{display:block!important;font:27px/1.1 Georgia,serif!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals .ready-total{color:var(--olive)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals.large strong{font-size:23px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading{display:flex!important;justify-content:space-between!important;align-items:baseline!important;gap:10px!important;padding:16px 0 9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading h4{font:21px Georgia,serif!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading span{font-size:10px!important;color:var(--muted)!important;text-align:right!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table{width:100%!important;border-collapse:separate!important;border-spacing:0!important;table-layout:fixed!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th{position:sticky!important;top:0!important;z-index:1!important;background:#e7d8b5!important;font-size:9px!important;letter-spacing:.7px!important;text-transform:uppercase!important;font-weight:500!important;padding:9px 11px!important;border-bottom:1px solid #ad9670!important;text-align:left!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:first-child{width:53%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:nth-child(2){width:24%!important;text-align:right!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:last-child{width:23%!important;text-align:right!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td{padding:5px 11px!important;border-bottom:1px solid #c7b48c!important;font-size:12px!important;vertical-align:middle!important;overflow-wrap:anywhere!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table tbody tr:nth-child(even){background:#e9ddbe55!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td:nth-child(2){text-align:right!important;font:19px Georgia,serif!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td:last-child{text-align:right!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-identity{display:flex!important;gap:10px!important;align-items:center!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-number{display:flex!important;align-items:center!important;justify-content:center!important;width:27px!important;height:30px!important;flex:none!important;border:1px solid #bfab83!important;background:#e2d2ab!important;color:#7a633d!important;font:12px Georgia,serif!important;clip-path:polygon(0 0,100% 0,100% 78%,50% 100%,0 78%)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-identity>span:last-child{min-width:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-identity small{font-size:9px!important;display:block!important;color:var(--muted)!important;margin-bottom:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table .player-name-link{padding-bottom:1px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status strong{display:block!important;font-weight:500!important;color:#516044!important;font-size:12px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status small{display:block!important;font-size:9px!important;color:var(--muted)!important;margin-top:4px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.inbound strong{color:#886534!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.returning strong{color:#466771!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.marching strong{color:#7d4038!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-actions{flex:none!important;display:flex!important;gap:18px!important;align-items:center!important;justify-content:space-between!important;padding:12px 23px!important;min-height:70px!important;border-top:1px solid #b29b71!important;background:#e8dbb9!important;box-shadow:0 -4px 9px #9882630c!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .order-note{min-width:0!important;font-size:11px!important;line-height:1.5!important;color:#746247!important;max-width:370px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .order-note strong{font-weight:600!important;color:#52603e!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .action-buttons{display:flex!important;gap:8px!important;flex:none!important;align-items:center!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command{min-height:44px!important;min-width:80px!important;padding:0 18px!important;background:#ece0bd!important;border:1px solid #a78f65!important;box-shadow:inset 0 0 0 2px #fff6d76b!important;font:16px Georgia,serif!important;display:flex!important;justify-content:center!important;align-items:center!important;gap:8px!important;white-space:nowrap!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command.primary{background:#606b45!important;border-color:#444f32!important;color:#fff3d4!important;box-shadow:inset 0 0 0 2px #bac09544!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command.danger{color:#854639!important;border-color:#b18f73!important;background:#e6d4b2!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command img{width:28px!important;height:30px!important;object-fit:contain!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command:disabled{opacity:.52!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content.is-empty{display:flex!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content>.empty-state{flex:1!important;min-height:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state .empty-emblem{width:85px!important;height:95px!important;background:#e5d6b4!important;border:1px solid #bca276!important;padding:15px!important;clip-path:polygon(0 0,100% 0,100% 80%,50% 100%,0 80%)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-emblem img{width:100%!important;height:100%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state p{max-width:430px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal img,#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick img,#modal.outgoing-attack-modal.rallies-activity-ledger .empty-emblem img{opacity:.78!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .pick-kind{display:none!important}
+@media(max-height:600px),(max-width:1000px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content{grid-template-columns:164px minmax(0,1fr)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading{padding:9px 10px!important;gap:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading h3{font-size:17px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading strong{font-size:12px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-picker{padding:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick{grid-template-columns:24px minmax(0,1fr)!important;gap:4px 6px!important;padding:9px 8px!important;min-height:92px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick img{width:23px!important;height:29px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick strong{font-size:15px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick small,#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick .pick-meta{font-size:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill{font-size:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title{gap:10px!important;padding:7px 13px!important;min-height:54px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal{width:34px!important;height:38px!important;padding:5px!important;outline-offset:2px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading h3{font-size:22px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading p{font-size:9px!important;margin-top:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title>.status-pill{font-size:9px!important;padding:5px 7px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-scroll{padding:0 13px 8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta{padding:5px 0!important;gap:10px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta small{font-size:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta strong{font-size:15px!important;margin-top:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content .player-name-link{font-size:14px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals{padding:8px 0!important;gap:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals small{font-size:9px!important;margin-bottom:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals strong{font-size:22px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals.large strong{font-size:18px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading{padding:10px 0 6px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading h4{font-size:17px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading span{font-size:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th{padding:6px 7px!important;font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td{padding:3px 7px!important;font-size:11px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td:nth-child(2){font-size:16px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-identity{gap:6px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-number{width:22px!important;height:26px!important;font-size:10px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-identity small{font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status strong{font-size:11px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status small{font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-actions{gap:9px!important;padding:5px 13px!important;min-height:56px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .order-note{font-size:9px!important;line-height:1.4!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .action-buttons{gap:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command{font-size:13px!important;padding:0 12px!important;min-width:65px!important;gap:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command img{width:23px!important;height:25px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state .empty-emblem{width:55px!important;height:60px!important;padding:10px!important}
+}
+@media(max-height:600px),(max-width:1000px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title{min-height:32px!important;padding:5px 13px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal{width:19px!important;height:22px!important;padding:3px!important;outline:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading h3{font-size:18px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading p{display:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .pick-kind{display:inline!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading{display:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div:first-child{position:relative!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div:first-child>small{position:absolute!important;top:0!important;left:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div:first-child .player-name-link{padding-top:15px!important;padding-bottom:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title>.status-pill{padding-block:3px!important}
+}
+@media(min-width:651px) and (max-height:600px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-overview{display:grid!important;grid-template-columns:1.2fr 1.1fr 1fr 1fr .65fr!important;gap:10px!important;align-items:center!important;padding:7px 0!important;border-bottom:1px solid #bba580!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta,#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals{display:contents!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div,#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals>div{min-width:0!important;border:0!important;padding:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta strong{font-size:14px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta .player-name-link{font-size:14px!important;line-height:1.2!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals strong{font-size:21px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals.large strong{font-size:16px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading{padding:7px 0 6px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading h4{font-size:16px!important}
+}
+@media(max-width:650px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content{grid-template-columns:124px minmax(0,1fr)!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading{padding:8px 7px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading h3{font-size:15px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .sidebar-heading strong{font-size:10px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-picker{padding:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick{grid-template-columns:minmax(0,1fr)!important;gap:3px!important;padding:9px 7px!important;min-height:85px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick img{display:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick strong{font-size:14px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick .pick-meta{font-size:8px!important;gap:2px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .status-pill{font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title{padding:6px 9px!important;gap:7px!important;min-height:50px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal{width:25px!important;height:30px!important;padding:4px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading h3{font-size:18px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-heading p{font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title>.status-pill{font-size:8px!important;padding:4px 5px!important;gap:4px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-scroll{padding-inline:9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta{gap:7px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta strong{font-size:13px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content .player-name-link{font-size:13px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals{gap:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals small{font-size:8px!important;line-height:1.3!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals strong{font-size:20px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals.large strong{font-size:15px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals>div{padding-right:4px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading h4{font-size:16px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-heading span{font-size:8px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:first-child{width:45%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:nth-child(2){width:29%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th:last-child{width:26%!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table th,#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td{padding-inline:5px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-number{display:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table td:nth-child(2){font-size:13px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status strong{font-size:10px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-actions{padding:4px 9px!important;gap:6px!important;min-height:52px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .order-note{font-size:8px!important;line-height:1.35!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command{padding:0 8px!important;min-width:58px!important;font-size:12px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-command img{width:21px!important;height:24px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .action-buttons{gap:4px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3{font-size:19px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state p{font-size:10px!important}
+}
+@media(max-width:650px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-title{min-height:32px!important;padding:5px 9px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .target-seal{width:19px!important;height:22px!important;padding:3px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta{padding:3px 0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-totals{padding:6px 0!important}
+}
+@media(max-height:600px),(max-width:1000px){
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content>.empty-state{display:grid!important;grid-template-columns:60px minmax(0,360px)!important;justify-content:center!important;align-content:center!important;gap:5px 15px!important;padding:12px 24px!important;text-align:left!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state .empty-emblem{grid-column:1!important;grid-row:1/4!important;align-self:center!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3,#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state p,#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state button{grid-column:2!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state h3{font-size:21px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .empty-state button{justify-self:start!important;margin-top:3px!important}
+}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rallies-content{width:100%!important;min-width:0!important;font-size:13px!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-detail{margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .player-name-link{display:inline-flex!important;align-items:center!important;min-width:44px!important;min-height:44px!important;white-space:normal!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-meta>div:first-child .player-name-link{align-items:center!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .rally-pick{border-radius:0!important;margin:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table{background:transparent!important;box-shadow:none!important;border:0!important;margin:0!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .muster-table :is(th,td){color:var(--ink)!important;letter-spacing:normal!important;text-shadow:none!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status strong{color:#516044!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.inbound strong{color:#886534!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.returning strong{color:#466771!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .participant-status.marching strong{color:#7d4038!important}
+#modal.outgoing-attack-modal.rallies-activity-ledger .player-name-link:focus-visible,#modal.outgoing-attack-modal.rallies-activity-ledger .rally-scroll:focus-visible{outline:2px solid #376872!important;outline-offset:2px!important}
