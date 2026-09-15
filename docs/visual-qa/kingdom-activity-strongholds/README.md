@@ -1,6 +1,6 @@
 # Kingdom Activity: Strongholds draft
 
-Status: **DRAFT — awaiting design approval**. Isolated preview prepared September 15, 2026. No runtime integration, pull request, merge or deployment.
+Status: **APPROVED — integrated for the combined release**. Camps, Strongholds, Attack and Transfer (olive marching banner) were approved September 15, 2026. Merge/deployment were explicitly authorized. Release verification is recorded separately; design approval alone does not establish deployment.
 
 Branch: `codex/kingdom-activity-camps-strongholds`.
 Base: `81a35aed85301606fc4147294bef57ef0f297d9c` (Reinforcements release, PR #305).
@@ -34,3 +34,7 @@ Map opens a disclosed mock location card with the selected Stronghold and map. B
 - The Master Specification records Camps approval only. Strongholds presentation remains pending the user's review.
 
 Focused evidence is in [visual-checks.md](visual-checks.md). Runtime behavior and required release checks belong to the final combined integration.
+
+## Production integration
+
+The combined batch is connected to the existing game renderers, data and authoritative handlers. Runtime code and styles are isolated in `objectives-activity-ui.*` and `troop-orders-ui.*`; production never imports this draft. See [combined validation evidence](../troop-orders/integration-checks.md).

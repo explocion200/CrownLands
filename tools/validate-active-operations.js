@@ -2,9 +2,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 require("./validate-held-camp-operations");
+require("./validate-military-ui");
 
 const root = path.resolve(__dirname, "..");
 const gameSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const objectivesSource = fs.readFileSync(path.join(root, "objectives-activity-ui.js"), "utf8");
 const firebaseSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const readabilitySource = fs.readFileSync(path.join(root, "readability.css"), "utf8");
 const visualQaSource = fs.readFileSync(path.join(root, "docs", "visual-qa", "report-leaderboard-readability", "index.html"), "utf8");
@@ -16,8 +18,10 @@ assert.match(gameSource, /function getActiveOperationsSnapshot[\s\S]*?marches:[\
 assert.match(gameSource, /function showIncomingAttacksModal\(\)[\s\S]*?modal\.className\s*=\s*"modal incoming-attack-modal";/, "Incoming Threats can retain a stale modal layout that clips marches.");
 assert.match(gameSource, /function showOutgoingAttacksModal\(\)[\s\S]*?modal\.className\s*=\s*"modal outgoing-attack-modal";/, "Kingdom Activity can retain a stale modal layout that clips marches.");
 assert.match(gameSource, /data-active-operations-tab="\$\{tab\.id\}"/, "Kingdom activity should render category tabs.");
-assert.match(gameSource, /function renderHeldCampOperationCard[\s\S]*?timerLabel[\s\S]*?renderActiveOperationLocationButton/, "Held camp cards should include their timer and location control.");
-assert.match(gameSource, /function renderHeldStrongholdOperationCard[\s\S]*?Held[\s\S]*?renderActiveOperationLocationButton/, "Held stronghold cards should include a location control without a timer.");
+assert.match(gameSource, /function renderHeldCampOperationCard[\s\S]*?return renderHeldCampView\(camp\)/, "Held camps must use the objective renderer.");
+assert.match(objectivesSource, /function renderHeldCampView[\s\S]*?Syncing[\s\S]*?Resolving[\s\S]*?renderObjectiveMapButton\(camp, false\)/, "Camp rows must retain timer states and map actions.");
+assert.match(gameSource, /function renderHeldStrongholdOperationCard[\s\S]*?return renderHeldStrongholdView\(stronghold\)/, "Held strongholds must use the objective renderer.");
+assert.match(objectivesSource, /function renderHeldStrongholdView[\s\S]*?Held by you[\s\S]*?renderObjectiveMapButton\(holding, true\)/, "Stronghold rows must retain their ownership and map action.");
 assert.match(gameSource, /function getHeldStrongholdsForActiveOperations[\s\S]*?getCrownCitadelHolderUid\(\) === currentUid[\s\S]*?onlineOwnedCitiesCache = onlineOwnedCitiesCache\.filter\(city => !isCrownCitadel\(city\)\)/, "Kingdom Activity should evict a stale Citadel after authoritative control changes.");
 assert.match(stylesSource, /\.active-operations-tabs\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/, "The three activity categories should use a stable segmented layout.");
 assert.match(stylesSource, /:is\(\.incoming-attack-modal,\.outgoing-attack-modal,\.battle-report-modal,\.scout-report-modal\) \.modal-card #modalBody\s*\{[\s\S]*?overflow-y:\s*auto !important;/, "Incoming and outgoing march lists must remain vertically scrollable.");

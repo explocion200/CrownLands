@@ -1,6 +1,6 @@
 # Attack / Send Troops draft
 
-Status: **DRAFT — awaiting design approval**. Prepared September 15, 2026 as the next UI draft requested during the current batched review. No production integration, PR, merge or deployment.
+Status: **APPROVED — integrated for the combined release**. Camps, Strongholds, Attack and Transfer (olive marching banner) were approved September 15, 2026. Merge/deployment were explicitly authorized. Release verification is recorded separately; design approval alone does not establish deployment.
 
 Branch: `codex/kingdom-activity-camps-strongholds`.
 Base: `81a35aed85301606fc4147294bef57ef0f297d9c` (Reinforcements release, PR #305).
@@ -9,7 +9,7 @@ Base: `81a35aed85301606fc4147294bef57ef0f297d9c` (Reinforcements release, PR #30
 
 Open `/docs/visual-qa/troop-orders/index.html?viewport=desktop&sample=attack` on the loopback preview server. Desktop is 1440 × 900, landscape is 844 × 390, and small landscape is 568 × 320. No portrait game design is included.
 
-The parchment military order sheet uses current city, Stronghold, Camp, skill and item artwork. Attack and Transfer now lead with a full-width troop slider and prominent selected count, using a 48px handle: crossed swords for Attack and a proposed olive marching banner for Transfer. Attack power and the enemy forecast/travel summary sit beneath it. Transfer groups its arrival troop total, journey time/bonus, and eligible Swift March control into three matching panels below selection. Reinforcement and Rally retain their two-column layout. Desktop and mobile landscape keep the same window sizes; long content scrolls inside the window. Close, Cancel and the primary order action stay fixed. The shield-loss summary remains beside Reinforce even when the detailed warning is scrolled away.
+The parchment military order sheet uses current city, Stronghold, Camp, skill and item artwork. Attack and Transfer now lead with a full-width troop slider and prominent selected count, using a 48px handle: crossed swords for Attack and the approved olive marching banner for Transfer. Attack power and the enemy forecast/travel summary sit beneath it. Transfer groups its arrival troop total, journey time/bonus, and eligible Swift March control into three matching panels below selection. Reinforcement and Rally retain their two-column layout. Desktop and mobile landscape keep the same window sizes; long content scrolls inside the window. Close, Cancel and the primary order action stay fixed. The shield-loss summary remains beside Reinforce even when the detailed warning is scrolled away.
 
 Eighteen samples cover a scouted attack, no buffs/equipped weapon, a stored unequipped sword, maximum Swordmastery/weapon, one-troop rounding, likely wall hold, missing intelligence, obsolete scout model, wall-free Camp, eligible friendly Transfer, unavailable Swift March Order, Reinforcement with shield warning, Rally creation, Rally joining, route calculation, failed route, protected home base, and long labels/large numbers.
 
@@ -49,3 +49,7 @@ Camps and Strongholds are approved. The user approved the Attack presentation, t
 After the batch's designs and implementation scope are confirmed, integrate the approved presentation, commit and run `pnpm run prepare-pr` on the final combined change. Required checks are deferred at this draft checkpoint, not waived. This draft is not ready to merge. Confirmed presentation requirements are recorded in the Master Specification; the latest Transfer refinement and release authorization remain separate.
 
 See [visual-checks.md](visual-checks.md) for focused evidence.
+
+## Production integration
+
+The combined batch is connected to the existing game renderers, data and authoritative handlers. Runtime code and styles are isolated in `objectives-activity-ui.*` and `troop-orders-ui.*`; production never imports this draft. See [combined validation evidence](../troop-orders/integration-checks.md).
