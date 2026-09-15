@@ -12941,8 +12941,7 @@ async function showPublicPlayerProfile(uid = "") {
   }
   publicClanProfileRequestId += 1;
   const requestId = ++publicPlayerProfileRequestId;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
-  modal.classList.add("public-player-profile-modal");
+  modal.className = "modal public-player-profile-modal";
   modalTitle.textContent = "Player Profile";
   modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading player profile…</div>`;
   if (!modal.open) modal.showModal();
@@ -13018,8 +13017,7 @@ async function showPublicClanDetails(clanId = "") {
   }
   publicPlayerProfileRequestId += 1;
   const requestId = ++publicClanProfileRequestId;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
-  modal.classList.add("public-player-profile-modal");
+  modal.className = "modal public-player-profile-modal";
   modalTitle.textContent = "Clan Profile";
   modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading clan profile…</div>`;
   if (!modal.open) modal.showModal();
@@ -35762,7 +35760,7 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
 
   modalTitle.textContent = incoming.length === 1 ? "Incoming Threat" : "Incoming Threats";
   const summary = formatIncomingThreatSummary(incoming);
-  modalBody.innerHTML = `
+  const markup = `
     <div class="incoming-attack-panel">
       <div class="incoming-attack-summary">
         <strong>${formatNumber(incoming.length)}</strong>
@@ -35775,6 +35773,8 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
     </div>
   `;
 
+  if (patchOperationModalText(markup)) return;
+  modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-incoming-city]").forEach(button => {
     button.addEventListener("click", () => focusIncomingAttackCity(button.dataset.incomingCity));
   });
@@ -35863,9 +35863,36 @@ function showOutgoingAttacksModal() {
   if (!modal.open) modal.showModal();
 }
 
+// Countdown/quantity changes must not replace a control between pointerdown and
+// click. Patch text only when the complete structure and attributes still match;
+// identity, permissions, busy state, and row changes take the normal rebind path.
+function patchOperationModalText(markup) {
+  const template = document.createElement("template");
+  template.innerHTML = markup;
+  const updates = [];
+  function compare(current, next) {
+    if (current.nodeType !== next.nodeType || current.nodeName !== next.nodeName) return false;
+    if (current.nodeType === Node.TEXT_NODE) {
+      if (current.nodeValue !== next.nodeValue) updates.push([current, next.nodeValue]);
+      return true;
+    }
+    if (current.nodeType !== Node.ELEMENT_NODE) return current.nodeValue === next.nodeValue;
+    if (current.attributes.length !== next.attributes.length) return false;
+    for (const attribute of next.attributes) {
+      if (current.getAttribute(attribute.name) !== attribute.value) return false;
+    }
+    return compareChildren(current, next);
+  }
+  function compareChildren(current, next) {
+    if (current.childNodes.length !== next.childNodes.length) return false;
+    return [...current.childNodes].every((child, index) => compare(child, next.childNodes[index]));
+  }
+  if (!compareChildren(modalBody, template.content)) return false;
+  for (const [node, value] of updates) node.nodeValue = value;
+  return true;
+}
+
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
-  const previousMarchView = captureMarchesListView();
-  const previousRallyView = captureRalliesActivityView();
   const normalizedOperations = operations?.marches
     ? operations
     : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
@@ -35893,7 +35920,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       : renderMarchesOperationPanel(marches);
 
   modalTitle.textContent = "Kingdom Activity";
-  modalBody.innerHTML = `
+  const markup = `
     <div class="active-operations-panel">
       ${marchesView ? renderMarchesHeader() : ralliesView ? renderRalliesActivityHeader() : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
@@ -35910,6 +35937,10 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     </div>
   `;
 
+  if (patchOperationModalText(markup)) return;
+  const previousMarchView = captureMarchesListView();
+  const previousRallyView = captureRalliesActivityView();
+  modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-close-marches]").forEach(button => {
     button.addEventListener("click", () => modal.close());
   });
@@ -37976,12 +38007,26 @@ function renderOnboardingMapTip() {
     }
     markup = topic ? renderOnboardingTip(topic, target || source) : "";
   }
-  host.hidden = !markup;
   if (host.dataset.guidanceMarkup !== markup) {
     host.innerHTML = markup;
     host.dataset.guidanceMarkup = markup;
   }
+  updateOnboardingMapTipVisibility();
   scheduleOnboardingPointer();
+}
+
+function updateOnboardingMapTipVisibility() {
+  const host = document.getElementById("onboardingMapTip");
+  if (!host) return;
+  // Observe overlay state directly. A body:has(...) rule makes unrelated HUD
+  // text updates invalidate the styling of the entire game subtree in Chromium.
+  const hidden = !host.dataset.guidanceMarkup || Boolean(
+    document.querySelector("dialog[open]")
+    || profileScreen?.classList.contains("open")
+    || toast?.classList.contains("visible")
+    || setupScreen?.classList.contains("visible")
+  );
+  if (host.hidden !== hidden) host.hidden = hidden;
 }
 
 function scheduleOnboardingPointer() {
@@ -37994,6 +38039,7 @@ function scheduleOnboardingPointer() {
 }
 
 function settleOnboardingPointer() {
+  updateOnboardingMapTipVisibility();
   scheduleOnboardingPointer();
   clearTimeout(onboardingSettleTimer);
   onboardingSettleTimer = setTimeout(scheduleOnboardingPointer, 350);
@@ -39663,8 +39709,12 @@ for (const eventName of ["transitionend", "animationend"]) document.addEventList
 window.addEventListener("resize", settleOnboardingPointer);
 document.addEventListener("visibilitychange", scheduleOnboardingPointer);
 const onboardingPanelObserver = new MutationObserver(settleOnboardingPointer);
-onboardingPanelObserver.observe(modal, { attributes: true, attributeFilter: ["open"] });
-onboardingPanelObserver.observe(profileScreen, { attributes: true, attributeFilter: ["class"] });
+document.querySelectorAll("dialog").forEach(dialog => {
+  onboardingPanelObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] });
+});
+[profileScreen, toast, setupScreen].filter(Boolean).forEach(panel => {
+  onboardingPanelObserver.observe(panel, { attributes: true, attributeFilter: ["class"] });
+});
 window.addEventListener("storage", event => {
   if (event.key === null || event.key === `crownlands-first-steps-v1:${onboardingScope}`) {
     onboardingScope = "";
@@ -39735,8 +39785,11 @@ document.addEventListener("pointerdown", event => {
   closeProfileScreen();
 }, true);
 modal.addEventListener("close", () => {
+  // Native dialog close events are queued. A same-turn reopen owns the current
+  // classes, request IDs, timers, and content; the old event must not clear them.
+  if (modal.open) return;
   battleReportVisitViewedAtMs = null;
-  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
+  modal.classList.remove("battle-reports-ledger", "battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"
