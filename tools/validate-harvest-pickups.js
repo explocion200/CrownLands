@@ -285,6 +285,7 @@ for (const map of currentMaps) {
 let randomSeed = 0x5f3759df;
 const deterministicMath = {
   PI: Math.PI,
+  round: Math.round,
   cos: Math.cos,
   sin: Math.sin,
   sqrt: Math.sqrt,

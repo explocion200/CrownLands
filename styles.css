@@ -14844,8 +14844,7 @@ html.holding-tower-qa .modal::backdrop { background: rgba(2,6,8,.82); backdrop-f
 #helpBtn:focus-visible { outline: 2px solid var(--cl-burgundy); outline-offset: 2px; }
 .onboarding-map-tip { position: absolute; z-index: 45; right: 84px; top: 10px; width: min(490px, calc(100% - 420px)); }
 .onboarding-map-tip .onboarding-tip { margin: 0; box-shadow: 0 3px 12px #0006; }
-.onboarding-map-tip[hidden],
-body:has(dialog[open], .profile-screen.open, .toast.visible, .setup-screen.visible) .onboarding-map-tip { display: none; }
+.onboarding-map-tip[hidden] { display: none; }
 .onboarding-profile-tip[hidden] { display: none; }
 .profile-screen:has(> .onboarding-profile-tip:not([hidden])) { grid-template-rows: auto auto minmax(0, 1fr); }
 .onboarding-profile-tip { min-width: 0; margin: 0 .7rem; }

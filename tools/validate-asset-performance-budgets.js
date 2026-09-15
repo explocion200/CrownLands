@@ -133,6 +133,7 @@ const entrypointBudgets = {
   // Skills card markup adds under 2 KiB; its stylesheet and emblems are bounded separately.
   // Clan presentation adds bounded navigation, confirmation, and order-entry markup.
   "game.js": 1766 * 1024,
+  "modal-ui.js": 4 * 1024,
   "skills-ledger-ui.css": 30 * 1024,
   "clan-ledger-ui.css": 84 * 1024,
   "settings-ledger-ui.css": 32 * 1024,

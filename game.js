@@ -12941,8 +12941,7 @@ async function showPublicPlayerProfile(uid = "") {
   }
   publicClanProfileRequestId += 1;
   const requestId = ++publicPlayerProfileRequestId;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
-  modal.classList.add("public-player-profile-modal");
+  modal.className = "modal public-player-profile-modal";
   modalTitle.textContent = "Player Profile";
   modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading player profile…</div>`;
   if (!modal.open) modal.showModal();
@@ -13018,8 +13017,7 @@ async function showPublicClanDetails(clanId = "") {
   }
   publicPlayerProfileRequestId += 1;
   const requestId = ++publicClanProfileRequestId;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
-  modal.classList.add("public-player-profile-modal");
+  modal.className = "modal public-player-profile-modal";
   modalTitle.textContent = "Clan Profile";
   modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading clan profile…</div>`;
   if (!modal.open) modal.showModal();
@@ -21135,8 +21133,8 @@ function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   const bounds = getIslandMapBounds(activeRegionId);
   const center = {
-    x: bounds.left + bounds.width / 2,
-    y: bounds.top + bounds.height / 2,
+    x: Math.round(bounds.left + bounds.width / 2),
+    y: Math.round(bounds.top + bounds.height / 2),
   };
   if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId)) return center;
 
@@ -21148,8 +21146,8 @@ function createHarvestBonusPoint(regionId) {
       const angle = angleOffset + attempt * HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
       const radiusFraction = (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;
       const radius = maximumRadius * Math.sqrt(radiusFraction);
-      const x = center.x + Math.cos(angle) * radius;
-      const y = center.y + Math.sin(angle) * radius;
+      const x = Math.round(center.x + Math.cos(angle) * radius);
+      const y = Math.round(center.y + Math.sin(angle) * radius);
       if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
       // Increasing radii make this the closest valid candidate in the zone.
       return { x, y };
@@ -35762,7 +35760,7 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
 
   modalTitle.textContent = incoming.length === 1 ? "Incoming Threat" : "Incoming Threats";
   const summary = formatIncomingThreatSummary(incoming);
-  modalBody.innerHTML = `
+  const markup = `
     <div class="incoming-attack-panel">
       <div class="incoming-attack-summary">
         <strong>${formatNumber(incoming.length)}</strong>
@@ -35775,6 +35773,8 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
     </div>
   `;
 
+  if (patchOperationModalText(modalBody, markup)) return;
+  modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-incoming-city]").forEach(button => {
     button.addEventListener("click", () => focusIncomingAttackCity(button.dataset.incomingCity));
   });
@@ -35864,8 +35864,6 @@ function showOutgoingAttacksModal() {
 }
 
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
-  const previousMarchView = captureMarchesListView();
-  const previousRallyView = captureRalliesActivityView();
   const normalizedOperations = operations?.marches
     ? operations
     : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
@@ -35893,7 +35891,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       : renderMarchesOperationPanel(marches);
 
   modalTitle.textContent = "Kingdom Activity";
-  modalBody.innerHTML = `
+  const markup = `
     <div class="active-operations-panel">
       ${marchesView ? renderMarchesHeader() : ralliesView ? renderRalliesActivityHeader() : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
@@ -35910,6 +35908,10 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     </div>
   `;
 
+  if (patchOperationModalText(modalBody, markup)) return;
+  const previousMarchView = captureMarchesListView();
+  const previousRallyView = captureRalliesActivityView();
+  modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-close-marches]").forEach(button => {
     button.addEventListener("click", () => modal.close());
   });
@@ -37976,11 +37978,11 @@ function renderOnboardingMapTip() {
     }
     markup = topic ? renderOnboardingTip(topic, target || source) : "";
   }
-  host.hidden = !markup;
   if (host.dataset.guidanceMarkup !== markup) {
     host.innerHTML = markup;
     host.dataset.guidanceMarkup = markup;
   }
+  updateOnboardingMapTipVisibility();
   scheduleOnboardingPointer();
 }
 
@@ -37994,6 +37996,7 @@ function scheduleOnboardingPointer() {
 }
 
 function settleOnboardingPointer() {
+  updateOnboardingMapTipVisibility();
   scheduleOnboardingPointer();
   clearTimeout(onboardingSettleTimer);
   onboardingSettleTimer = setTimeout(scheduleOnboardingPointer, 350);
@@ -39662,9 +39665,7 @@ for (const eventName of ["transitionend", "animationend"]) document.addEventList
 }, true);
 window.addEventListener("resize", settleOnboardingPointer);
 document.addEventListener("visibilitychange", scheduleOnboardingPointer);
-const onboardingPanelObserver = new MutationObserver(settleOnboardingPointer);
-onboardingPanelObserver.observe(modal, { attributes: true, attributeFilter: ["open"] });
-onboardingPanelObserver.observe(profileScreen, { attributes: true, attributeFilter: ["class"] });
+observeOnboardingOverlays(settleOnboardingPointer);
 window.addEventListener("storage", event => {
   if (event.key === null || event.key === `crownlands-first-steps-v1:${onboardingScope}`) {
     onboardingScope = "";
@@ -39734,9 +39735,10 @@ document.addEventListener("pointerdown", event => {
   event.stopPropagation();
   closeProfileScreen();
 }, true);
-modal.addEventListener("close", () => {
+installGameModalLifecycle(modal, handleGameModalClose);
+function handleGameModalClose() {
   battleReportVisitViewedAtMs = null;
-  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
+  modal.classList.remove("battle-reports-ledger", "battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"
@@ -39794,7 +39796,7 @@ modal.addEventListener("close", () => {
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
-});
+}
 if (levelUpRewardModal) {
   levelUpRewardModal.addEventListener("cancel", event => {
     event.preventDefault();

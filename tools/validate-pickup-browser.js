@@ -22,11 +22,25 @@ async function verifyPickupInteractions(client, evaluate, baselinePlacement = "n
       if(beforeMap)getEditorMap=beforeMap;
       const before=beforePlace?measure(beforePlace):null;
       getEditorMap=original.editorMap;
-      return {region:getActiveMapRegionId(),before,after:measure(createHarvestBonusPoint)};
+      const after=measure(createHarvestBonusPoint), persisted=[];
+      // These seeds placed a fractional point on land, then rounded the saved
+      // pickup across its terrain boundary so the next update deleted it.
+      for(const fixtureSeed of [2,22,31]) {
+        let seed=(fixtureSeed*2654435761)>>>0;
+        Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/0x100000000);
+        state.harvestBonuses=[];
+        const region=getActiveMapRegionId(),point=createHarvestBonusPoint(region);
+        if(!point) throw new Error('No valid pickup placement for seed '+fixtureSeed);
+        const bonus=createHarvestBonusRecord(region,'gold',point);
+        state.harvestBonuses=[bonus];pruneExpiredHarvestBonuses();
+        persisted.push({seed:fixtureSeed,retained:state.harvestBonuses.length===1});
+      }
+      return {region:getActiveMapRegionId(),before,after,persisted};
     }
     finally {isValidHarvestBonusPoint=original.valid;Math.random=original.random;state.harvestBonuses=original.bonuses;getEditorMap=original.editorMap;buildCatalogEditorMap=original.buildMap;}
   })()`);
   assert(placement.after.points.every(Boolean), "Current-map terrain did not permit a pickup.");
+  assert(placement.persisted.every(result=>result.retained), `Saving a pickup moved it off valid terrain: ${JSON.stringify(placement.persisted)}`);
   if (placement.before) {
     assert.deepEqual(placement.after.points, placement.before.points, "Early exit changed the selected placement.");
     assert(placement.after.checks <= placement.before.checks, "Placement added terrain checks.");
