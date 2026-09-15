@@ -2,7 +2,14 @@
 
 Checked September 15, 2026 in the local in-app browser. Synthetic UI fixtures only; no production account or server operations.
 
-## Current revision: requested attack-power breakdown
+## Current revision: origin and destination city levels
+
+- Added compact `Lv. 64` and `Lv. 82` badges to the From and To route headings for attacks. The fixture levels match the reused keep/castle stage ranges. City levels are separately labeled for accessibility.
+- Checked attack, long names, Camp and unavailable-intelligence samples at desktop 1440 × 900, landscape 844 × 390 and small landscape 568 × 320 (12 combinations). Badges fit within their location panels, no horizontal overflow occurred, and the fixed action footer stayed inside the dialog.
+- Both city badges remain available without scouting. Camp attacks show only the origin city level. Displayed own-army totals remain unchanged.
+- Visually inspected standard desktop and mobile landscape. Node.js 22 syntax and whitespace checks passed. No runtime gameplay or release changes.
+
+## Previous revision: requested attack-power breakdown
 
 - Compared the draft own-power helper against the current server `createAttackCombatSnapshot` function extracted from `functions/index.js`: 216 vectors covered 0/1/3/17/999/120,000/750,000/1,234,567,890/4,294,967,295 troops, 0/2/40/60% Swordmastery, and no equipped weapon or Common weapon levels 1–5. All totals and per-troop values matched the server arithmetic; raw source contributions summed to the pre-rounding result within floating-point tolerance. This is arithmetic validation with controlled inputs, not a production-server invocation.
 - Default displayed total: 1,323,281. Moving the slider to 1,250,000 troops updated base to 1,562,500, Swordmastery to +625,000, weapon to +17,968.75 and total to 2,205,468.

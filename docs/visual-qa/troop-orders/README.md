@@ -19,6 +19,8 @@ Troop selection updates the displayed amount and source remainder. Transfer arri
 
 ## Requested attack-power breakdown
 
+Attack route headers also show the origin and destination city levels in compact badges (sample Level 64 keep → Level 82 castle). Levels remain visible when enemy scout intelligence is unavailable. Camp targets omit a city-level badge. Integration must read levels from the current source and target city state, separately from scout-time combat snapshots; the displayed fixture levels are not runtime defaults.
+
 The user explicitly requested an attack preparation breakdown of player buffs/items and their added power. This requirement is recorded in the Master Specification; the revised layout is still a draft for approval.
 
 - `functions/index.js` `createAttackCombatSnapshot` and both client/server `getAttackPower` apply `1.25 × (1 + Swordmastery% / 100 + equipped attack-strength% / 100)` per troop. Multiply by selected troops, then floor the final total. Skill and Gear bonuses both apply to base power; Gear does not multiply already skill-boosted power.
@@ -44,6 +46,6 @@ The user explicitly requested an attack preparation breakdown of player buffs/it
 
 Camps is approved. Strongholds remains recorded as pending explicit design approval. The user's “next update” request moved review to this troop-order draft; it was not a merge/deploy instruction. Retain the existing branch as the current UI review batch, with no unrelated feature work.
 
-After the batch's designs and implementation scope are confirmed, integrate the approved presentation, commit and run `pnpm run prepare-pr` on the final combined change. Required checks are deferred at this draft checkpoint, not waived. This draft is not ready to merge. Only the explicitly requested attack-power breakdown requirement is newly recorded in the Master Specification; full layout approval and release authorization remain separate.
+After the batch's designs and implementation scope are confirmed, integrate the approved presentation, commit and run `pnpm run prepare-pr` on the final combined change. Required checks are deferred at this draft checkpoint, not waived. This draft is not ready to merge. Only the explicitly requested attack-power breakdown and city-level display requirements are newly recorded in the Master Specification; full layout approval and release authorization remain separate.
 
 See [visual-checks.md](visual-checks.md) for focused evidence.

@@ -481,6 +481,8 @@ These formulas are verified repository implementation. Exact deployed backend pa
 
 - Attack preparation must show the selected army's own attack-power total and a source breakdown: base troop power, Swordmastery percentage and added power, and the equipped War Captain weapon's percentage and added power. Values respond to the selected troop count and preserve the current additive-to-base stacking and final whole-power rounding. Other active buffs, equipped effects and carried items identify their actual role; effects that do not add direct attack power show zero, and unequipped/stored gear does not grant its bonus. Own-army information remains available without enemy scout intelligence. This presentation request was confirmed September 15, 2026; the [Troop Orders draft](./visual-qa/troop-orders/README.md) remains under design review, with production integration and deployment unverified. No item, skill, Gear or combat-balance rule changes.
 
+- Attack preparation must display the origin and destination city levels beside their route headings, using current city state independently of scout-time combat intelligence. Non-city Camp targets omit a city-level badge. This presentation request was confirmed September 15, 2026; the Troop Orders draft remains under review, with production integration and deployment unverified.
+
 ### Combat
 
 - Combat uses a two-stage siege: attack power damages one physical wall, then remaining attack power fights the garrison. Capture requires remaining attack power to exceed garrison defense. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.

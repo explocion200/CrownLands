@@ -82,12 +82,13 @@ function announce(message) {
   if (parent !== window) parent.postMessage({ type: "orders-status", message }, location.origin);
 }
 function open() { reopen.hidden = true; if (!dialog.open) dialog.showModal(); }
-function locationPanel(label, name, map, image, detail, destination = false) {
-  return `<section class="order-location ${destination ? "destination" : ""}"><img class="location-art" src="${image}" alt=""><div class="location-copy"><span>${label}</span><h2>${escape(name)}</h2><p>${escape(map)}${detail ? ` · ${escape(detail)}` : ""}</p></div></section>`;
+function locationPanel(label, name, map, image, detail, destination = false, level = null) {
+  const levelBadge = Number.isSafeInteger(level) && level > 0 ? `<span class="location-level" aria-label="City level ${level}">Lv. ${num(level)}</span>` : "";
+  return `<section class="order-location ${destination ? "destination" : ""}"><img class="location-art" src="${image}" alt=""><div class="location-copy"><div class="location-meta"><span class="location-label">${label}</span>${levelBadge}</div><h2>${escape(name)}</h2><p>${escape(map)}${detail ? ` · ${escape(detail)}` : ""}</p></div></section>`;
 }
 function setSample(key) {
   const sample = Object.hasOwn(samples, key) ? key : "attack";
-  current = { kind: "attack", from: "Northwatch Keep", fromMap: "Greybanner Hold", to: "Stonebridge Castle", toMap: "Ironwatch", fromArt: art.keep, toArt: art.castle, targetLabel: "Enemy city", troops: 1250000, amount: 750000, defense: 684500, outcome: "Likely capture", tone: "win", forecast: "scouted", route: "ready", seconds: 492, bonus: 24, swordmastery: 40, weaponLevel: 4, otherEffects: true, ...samples[sample] };
+  current = { kind: "attack", from: "Northwatch Keep", fromMap: "Greybanner Hold", fromLevel: 64, to: "Stonebridge Castle", toMap: "Ironwatch", toLevel: 82, fromArt: art.keep, toArt: art.castle, targetLabel: "Enemy city", troops: 1250000, amount: 750000, defense: 684500, outcome: "Likely capture", tone: "win", forecast: "scouted", route: "ready", seconds: 492, bonus: 24, swordmastery: 40, weaponLevel: 4, otherEffects: true, ...samples[sample] };
   if (current.kind === "attack" && !Object.hasOwn(samples[sample], "bonus")) current.bonus = 20;
   amount = current.amount; swift = false;
   const command = commandNames[current.kind];
@@ -106,9 +107,9 @@ function setSample(key) {
   if (current.shield) notes.push('<div class="order-note warning"><strong>Shield warning</strong>Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally\'s shield is not affected.</div>');
   if (current.kind === "reinforce") notes.push('<div class="order-note"><strong>1 / 2 assignments with Rowan</strong>Each assignment must support a different holding owned by this clanmate.</div><div class="order-note"><strong>2 / 5 reinforcement slots</strong>Ordinary cities reserve one slot per contributing clanmate when a march launches.</div>');
   if (isRally()) notes.push(`<div class="order-note"><strong>2–20 participants</strong>${current.kind === "rally" ? "You will lead this manual-launch Rally. Launch stays blocked until every participant is Ready." : "Your troops march visibly to the assembly city and must arrive before launch."}</div>`);
-  body.innerHTML = `<div class="order-route">${locationPanel("From", current.from, current.fromMap, current.fromArt, "")}
+  body.innerHTML = `<div class="order-route">${locationPanel("From", current.from, current.fromMap, current.fromArt, "", false, current.kind === "attack" ? current.fromLevel : null)}
     <svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>
-    ${locationPanel("To", current.to, current.toMap, current.toArt, current.targetLabel, true)}</div>
+    ${locationPanel("To", current.to, current.toMap, current.toArt, current.targetLabel, true, current.kind === "attack" && !current.camp ? current.toLevel : null)}</div>
     <div class="order-columns ${current.kind === "attack" ? "attack-layout" : ""}"><section class="force-column" aria-label="Troop selection"><p class="force-label">Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : "send"}</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong id="amountValue"></strong></div><p class="remaining"><b id="remainingValue"></b> of ${num(current.troops)} remain at source</p>
     ${isRally() ? `<label class="contribution">Contribution<input id="contribution" type="number" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Rally troop contribution"></label>` : ""}
     <input id="troopRange" class="troop-range" type="range" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : current.kind === "reinforce" ? "reinforce with" : "transfer"}"><div class="range-labels"><span>1</span><span>Max ${num(current.troops)}</span></div>
