@@ -28,9 +28,11 @@ turn. Native dialog `close` events are queued. The previous event removed the ne
 window's class, cleared its request state, and could stop its timers. In the test,
 the reopened City List shrank from its 1040×790 layout to the generic 560×720 card.
 
-The shared cleanup handler now ignores an old close event when the dialog is
-already open again. This protects the current presentation, timers, and request
-IDs. The actual final close still performs cleanup.
+Programmatic close now retires the old view synchronously before its successor
+can open, including invalidating old asynchronous requests. The shared cleanup
+handler ignores already-handled events and events delivered while the dialog is
+open again. Native keyboard dismissal still runs cleanup. This protects the new
+presentation, timers, and request IDs without retaining the old view's state.
 
 ### 3. Routine HUD updates recalculate the whole page — confirmed
 

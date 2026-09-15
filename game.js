@@ -35773,7 +35773,7 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
     </div>
   `;
 
-  if (patchOperationModalText(markup)) return;
+  if (patchOperationModalText(modalBody, markup)) return;
   modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-incoming-city]").forEach(button => {
     button.addEventListener("click", () => focusIncomingAttackCity(button.dataset.incomingCity));
@@ -35863,35 +35863,6 @@ function showOutgoingAttacksModal() {
   if (!modal.open) modal.showModal();
 }
 
-// Countdown/quantity changes must not replace a control between pointerdown and
-// click. Patch text only when the complete structure and attributes still match;
-// identity, permissions, busy state, and row changes take the normal rebind path.
-function patchOperationModalText(markup) {
-  const template = document.createElement("template");
-  template.innerHTML = markup;
-  const updates = [];
-  function compare(current, next) {
-    if (current.nodeType !== next.nodeType || current.nodeName !== next.nodeName) return false;
-    if (current.nodeType === Node.TEXT_NODE) {
-      if (current.nodeValue !== next.nodeValue) updates.push([current, next.nodeValue]);
-      return true;
-    }
-    if (current.nodeType !== Node.ELEMENT_NODE) return current.nodeValue === next.nodeValue;
-    if (current.attributes.length !== next.attributes.length) return false;
-    for (const attribute of next.attributes) {
-      if (current.getAttribute(attribute.name) !== attribute.value) return false;
-    }
-    return compareChildren(current, next);
-  }
-  function compareChildren(current, next) {
-    if (current.childNodes.length !== next.childNodes.length) return false;
-    return [...current.childNodes].every((child, index) => compare(child, next.childNodes[index]));
-  }
-  if (!compareChildren(modalBody, template.content)) return false;
-  for (const [node, value] of updates) node.nodeValue = value;
-  return true;
-}
-
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
   const normalizedOperations = operations?.marches
     ? operations
@@ -35937,7 +35908,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     </div>
   `;
 
-  if (patchOperationModalText(markup)) return;
+  if (patchOperationModalText(modalBody, markup)) return;
   const previousMarchView = captureMarchesListView();
   const previousRallyView = captureRalliesActivityView();
   modalBody.innerHTML = markup;
@@ -38015,20 +37986,6 @@ function renderOnboardingMapTip() {
   scheduleOnboardingPointer();
 }
 
-function updateOnboardingMapTipVisibility() {
-  const host = document.getElementById("onboardingMapTip");
-  if (!host) return;
-  // Observe overlay state directly. A body:has(...) rule makes unrelated HUD
-  // text updates invalidate the styling of the entire game subtree in Chromium.
-  const hidden = !host.dataset.guidanceMarkup || Boolean(
-    document.querySelector("dialog[open]")
-    || profileScreen?.classList.contains("open")
-    || toast?.classList.contains("visible")
-    || setupScreen?.classList.contains("visible")
-  );
-  if (host.hidden !== hidden) host.hidden = hidden;
-}
-
 function scheduleOnboardingPointer() {
   if (onboardingFrame) return;
   if (!onboardingPrefs?.enabled && !document.getElementById("onboardingArrow")) return;
@@ -39708,13 +39665,7 @@ for (const eventName of ["transitionend", "animationend"]) document.addEventList
 }, true);
 window.addEventListener("resize", settleOnboardingPointer);
 document.addEventListener("visibilitychange", scheduleOnboardingPointer);
-const onboardingPanelObserver = new MutationObserver(settleOnboardingPointer);
-document.querySelectorAll("dialog").forEach(dialog => {
-  onboardingPanelObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] });
-});
-[profileScreen, toast, setupScreen].filter(Boolean).forEach(panel => {
-  onboardingPanelObserver.observe(panel, { attributes: true, attributeFilter: ["class"] });
-});
+observeOnboardingOverlays(settleOnboardingPointer);
 window.addEventListener("storage", event => {
   if (event.key === null || event.key === `crownlands-first-steps-v1:${onboardingScope}`) {
     onboardingScope = "";
@@ -39784,10 +39735,8 @@ document.addEventListener("pointerdown", event => {
   event.stopPropagation();
   closeProfileScreen();
 }, true);
-modal.addEventListener("close", () => {
-  // Native dialog close events are queued. A same-turn reopen owns the current
-  // classes, request IDs, timers, and content; the old event must not clear them.
-  if (modal.open) return;
+installGameModalLifecycle(modal, handleGameModalClose);
+function handleGameModalClose() {
   battleReportVisitViewedAtMs = null;
   modal.classList.remove("battle-reports-ledger", "battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
@@ -39847,7 +39796,7 @@ modal.addEventListener("close", () => {
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
-});
+}
 if (levelUpRewardModal) {
   levelUpRewardModal.addEventListener("cancel", event => {
     event.preventDefault();

@@ -375,7 +375,7 @@ assert.match(cleanupSource, /delete modal\.dataset\.innerCastleCityId/, "Modal c
 assert.match(cleanupSource, /modal\.classList\.remove\([^)]*["']inner-castle-modal["']/, "Modal cleanup must restore the shared dialog layout.");
 assert.match(
   gameSource,
-  /modal\.addEventListener\(["']close["'][\s\S]*?clearInnerCastleModalState\(\)/,
+  /installGameModalLifecycle\(modal, handleGameModalClose\)[\s\S]*?function handleGameModalClose\(\)[\s\S]*?clearInnerCastleModalState\(\)/,
   "Closing the shared dialog must clean up Inner Castle state."
 );
 

@@ -77,6 +77,7 @@ const STATIC_CACHE_URLS = [
   "/shop-ui.js?v=royal-shop-r1",
   "/shop-ui.css?v=royal-shop-r1",
   "/city-details-ui.js?v=20260909-city-details-r1",
+  "/modal-ui.js?v=20260915-modal-lifecycle-r1",
   "/game.js?v=20260909-city-details-r1",
   "/ui-layout-runtime.js?v=20260818-global-clan-chat-r1",
   "/route-worker.js?v=20260721-structure-route-clearance",

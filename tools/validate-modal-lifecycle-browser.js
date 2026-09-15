@@ -106,6 +106,22 @@ async function main() {
     assert(reopen.open && reopen.classes.includes("city-list-modal") && reopen.sameRequestId, `Queued close cleared a reopened window: ${JSON.stringify(reopen)}`);
     await evaluate("modal.close()");
     await wait(100);
+    const replacement = await evaluate(`(async () => {
+      showLogModal(); const oldRequest = publicPlayerProfileRequestId;
+      modal.close(); showCityInfoModal(playerCities()[0].id);
+      const retired = oldRequest !== publicPlayerProfileRequestId;
+      await new Promise(resolve => setTimeout(resolve, 150));
+      const status = modalLifecycleQa.closeState(); modal.close();
+      return { ...status, retired };
+    })()`);
+    assert(replacement.visible && replacement.usable && replacement.retired && !replacement.classes.includes('ledger'),
+      `Same-turn replacement retained the old view or request: ${JSON.stringify(replacement)}`);
+    await wait(100);
+    await evaluate("showCityListModal()");
+    await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await wait(100);
+    assert.equal(await evaluate("!modal.open && !modal.classList.contains('city-list-modal')"), true, "Native Escape bypassed dialog cleanup.");
     const timing = await evaluate(`(() => {
       const operations = getActiveOperationsSnapshot();
       if (!operations.marches.length) throw new Error('Fixture has no outgoing marches');
