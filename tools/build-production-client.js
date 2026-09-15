@@ -34,6 +34,8 @@ const rootFiles = [
   "marches-activity-ui.css", "marches-activity-ui.js",
   "rallies-activity-ui.css", "rallies-activity-ui.js",
   "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",
+  "objectives-activity-ui.css", "objectives-activity-ui.js",
+  "troop-orders-ui.css", "troop-orders-ui.js",
   "modal-ui.js",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",

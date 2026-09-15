@@ -29879,7 +29879,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   const demoLimited = sliderSendLimit < source.troops;
   selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
   troopSliderActive = true;
-  modal.classList.add("troop-slider-modal");
+  modal.className = "modal troop-slider-modal";
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
     <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
@@ -29939,6 +29939,8 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     </div>
   `;
 
+  decorateTroopOrderView(source, target, orderKind, commandLabel);
+
   const slider = modalBody.querySelector("#troopAmountSlider");
   slider.addEventListener("input", () => {
     selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
@@ -29989,14 +29991,20 @@ function updateTroopSliderModal(source, target, route) {
   if (rallyNumber) { rallyNumber.value = String(selectedTroopAmount); rallyNumber.max = String(sliderSendLimit); }
   const progress = sliderSendLimit <= 1 ? 100 : ((selectedTroopAmount - 1) / (sliderSendLimit - 1)) * 100;
   slider.style.setProperty("--slider-progress", `${progress}%`);
-  modalBody.querySelector("#troopSliderAmount").textContent = formatNumber(selectedTroopAmount);
-  modalBody.querySelector("#troopSliderRemaining").textContent = formatNumber(source.troops - selectedTroopAmount);
+  modalBody.querySelector("#troopSliderAmount").textContent = formatMarchesNumber(selectedTroopAmount);
+  modalBody.querySelector("#troopSliderRemaining").textContent = formatMarchesNumber(source.troops - selectedTroopAmount);
+  const sourceTotal = modalBody.querySelector("#troopSliderSourceTotal");
+  if (sourceTotal) sourceTotal.textContent = formatMarchesNumber(source.troops);
   const maxLabel = modalBody.querySelector("#troopSliderMaxLabel");
-  if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
+  if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatMarchesNumber(sliderSendLimit)}`;
 
   const orderKind = getTroopOrderKind(target, activeTroopOrderKind);
   const actionNotice = modalBody.querySelector("#troopSliderActionNotice");
   if (actionNotice) { actionNotice.textContent = ""; actionNotice.hidden = true; }
+  if (actionNotice && orderKind === "reinforce" && getActivePeaceShieldExpiresAtMs() > Date.now()) {
+    actionNotice.textContent = "Sending removes your Royal Peace Shield. Your ally’s shield is not affected.";
+    actionNotice.hidden = false;
+  }
   const routeIsEstimated = route?.previewStatus === "estimated";
   const confirmButton = modalBody.querySelector("#troopSliderConfirm");
   if (confirmButton) {
@@ -30047,6 +30055,7 @@ function updateTroopSliderModal(source, target, route) {
     : getTravelSpeedMultiplier("player", orderKind === "rally_create" ? "attack" : orderKind);
   const effectiveSpeedMultiplier = speedMultiplier * baseTravel / travel;
   const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(Math.max(0, (effectiveSpeedMultiplier - 1) * 100))}%</strong><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : ""}${formatDuration(travel)}</strong></div>`;
+  updateTroopOrderPower();
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (!isOrderRouteReady(route)) {
     previewEl.className = "troop-slider-preview unknown";
@@ -30067,7 +30076,7 @@ function updateTroopSliderModal(source, target, route) {
     }
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
-      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
+      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatMarchesNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
       ${travelSummary}
     `;
     return;
@@ -30075,7 +30084,7 @@ function updateTroopSliderModal(source, target, route) {
   if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
-      <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
+      <div><span>Arrival</span><strong>${formatMarchesNumber(target.troops + selectedTroopAmount)} troops</strong></div>
       ${travelSummary}
     `;
     return;
@@ -35881,6 +35890,8 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   const marchesView = activeOperationsTab === "marches";
   const ralliesView = activeOperationsTab === "rallies";
   const reinforcementsView = activeOperationsTab === "reinforcements";
+  const objectivesView = activeOperationsTab === "camps" || activeOperationsTab === "strongholds";
+  modal.classList.toggle("objectives-activity-ledger", objectivesView);
   modal.classList.toggle("marches-activity-ledger", marchesView);
   modal.classList.toggle("rallies-activity-ledger", ralliesView);
   modal.classList.toggle("reinforcements-activity-ledger", reinforcementsView);
@@ -35897,7 +35908,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalTitle.textContent = "Kingdom Activity";
   const markup = `
     <div class="active-operations-panel">
-      ${marchesView ? renderMarchesHeader() : ralliesView ? renderRalliesActivityHeader() : reinforcementsView ? renderReinforcementsActivityHeader() : ""}
+      ${marchesView ? renderMarchesHeader() : ralliesView ? renderRalliesActivityHeader() : reinforcementsView ? renderReinforcementsActivityHeader() : objectivesView ? renderObjectivesActivityHeader(activeOperationsTab === "strongholds") : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
         ${tabs.map(tab => `
           <button class="active-operations-tab ${activeOperationsTab === tab.id ? "active" : ""}" data-active-operations-tab="${tab.id}" type="button" role="tab" aria-selected="${activeOperationsTab === tab.id}">
@@ -35910,6 +35921,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       ${marchesView ? '<footer class="report-footer"><span>Orders in motion across the realm</span><span>Scroll for all marches</span></footer>' : ""}
       ${ralliesView ? renderRalliesActivityFooter() : ""}
       ${reinforcementsView ? renderReinforcementsActivityFooter() : ""}
+      ${objectivesView ? renderObjectivesActivityFooter(activeOperationsTab === "strongholds") : ""}
     </div>
   `;
 
@@ -35917,6 +35929,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   const previousMarchView = captureMarchesListView();
   const previousRallyView = captureRalliesActivityView();
   const previousSupportView = captureReinforcementsActivityView();
+  const previousObjectivesView = captureObjectivesActivityView();
   modalBody.innerHTML = markup;
   modalBody.querySelectorAll("[data-close-marches]").forEach(button => {
     button.addEventListener("click", () => modal.close());
@@ -35924,6 +35937,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   restoreMarchesListView(previousMarchView);
   bindRalliesActivityView(previousRallyView);
   bindReinforcementsActivityView(previousSupportView);
+  restoreObjectivesActivityView(previousObjectivesView);
   modalBody.querySelectorAll("[data-active-operations-tab]").forEach(button => {
     button.addEventListener("click", () => {
       activeOperationsTab = button.dataset.activeOperationsTab || "marches";
@@ -36017,72 +36031,23 @@ function formatHeldCampReward(camp) {
   if (!config) return "Camp reward";
   if (config.rewardType === "city") return "1 random neutral city";
   if (config.rewardType === "item") return "1 random usable item";
-  return `${formatNumber(config.baseReward)} ${config.rewardLabel}`;
+  return `${formatMarchesNumber(config.baseReward)} ${config.rewardLabel}`;
 }
 
 function renderHeldCampsOperationPanel(camps) {
-  if (!camps.length) return `<div class="incoming-attack-empty">You are not holding a camp.</div>`;
-  const soonest = camps.find(camp => camp.payoutAtMs > Date.now());
-  return `
-    <div class="incoming-attack-panel">
-      <div class="incoming-attack-summary active-objective-summary">
-        <strong>${formatNumber(camps.length)}</strong>
-        <span>${camps.length === 1 ? "One camp is" : `${formatNumber(camps.length)} camps are`} under your control.</span>
-        <small>${soonest ? `Next camp reward: ${formatDuration(Math.max(0, Math.ceil((soonest.payoutAtMs - Date.now()) / 1000)))}` : "Camp reward state is syncing."}</small>
-      </div>
-      <div class="incoming-attack-list">${camps.map(renderHeldCampOperationCard).join("")}</div>
-    </div>`;
+  return renderHeldObjectivesView(camps, false);
 }
 
 function renderHeldCampOperationCard(camp) {
-  const remaining = camp.payoutAtMs > 0 ? Math.max(0, Math.ceil((camp.payoutAtMs - Date.now()) / 1000)) : 0;
-  const timerLabel = camp.payoutAtMs > 0 ? (remaining > 0 ? formatDuration(remaining) : "Resolving") : "Syncing";
-  return `
-    <article class="incoming-attack-card outgoing-attack-card active-objective-card held-camp-operation-card">
-      <div class="incoming-attack-badge active-objective-badge"><strong>${timerLabel}</strong><small>Camp</small></div>
-      <div class="incoming-attack-city">
-        <span>${escapeHtml(getRegionLabel(getCityRegionId(camp)))}</span>
-        <strong>${escapeHtml(camp.name)}</strong>
-        <small>Hold reward: ${escapeHtml(formatHeldCampReward(camp))}</small>
-      </div>
-      <div class="incoming-attack-force">
-        <span>Garrison</span>
-        <strong>${formatNumber(camp.currentGarrison || camp.troops || 0)} troops</strong>
-        <small>${camp.state === "contested" ? "Control contested" : "Controlled by you"}</small>
-      </div>
-      ${renderActiveOperationLocationButton(camp, "camp")}
-    </article>`;
+  return renderHeldCampView(camp);
 }
 
 function renderHeldStrongholdsOperationPanel(strongholds) {
-  if (!strongholds.length) return `<div class="incoming-attack-empty">You do not control a stronghold.</div>`;
-  return `
-    <div class="incoming-attack-panel">
-      <div class="incoming-attack-summary active-objective-summary">
-        <strong>${formatNumber(strongholds.length)}</strong>
-        <span>${strongholds.length === 1 ? "One stronghold is" : `${formatNumber(strongholds.length)} strongholds are`} under your control.</span>
-        <small>Stronghold bonuses remain active while you hold them.</small>
-      </div>
-      <div class="incoming-attack-list">${strongholds.map(renderHeldStrongholdOperationCard).join("")}</div>
-    </div>`;
+  return renderHeldObjectivesView(strongholds, true);
 }
 
 function renderHeldStrongholdOperationCard(stronghold) {
-  return `
-    <article class="incoming-attack-card outgoing-attack-card active-objective-card held-stronghold-operation-card">
-      <div class="incoming-attack-badge active-objective-badge"><strong>Held</strong><small>Stronghold</small></div>
-      <div class="incoming-attack-city">
-        <span>${escapeHtml(getRegionLabel(getCityRegionId(stronghold)))}</span>
-        <strong>${escapeHtml(stronghold.name)}</strong>
-        <small>${escapeHtml(getStrongholdBonusLabel(stronghold))}</small>
-      </div>
-      <div class="incoming-attack-force">
-        <span>Garrison</span>
-        <strong>${formatNumber(stronghold.troops || 0)} troops</strong>
-        <small>Level ${formatNumber(stronghold.level || getStrongholdDefenseLevel(stronghold))} defense</small>
-      </div>
-      ${renderActiveOperationLocationButton(stronghold, "stronghold")}
-    </article>`;
+  return renderHeldStrongholdView(stronghold);
 }
 
 function renderActiveOperationLocationButton(target, type) {

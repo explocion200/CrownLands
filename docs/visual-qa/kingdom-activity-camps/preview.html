@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../../../"><title>Kingdom Activity Camps preview</title><link rel="icon" href="assets/icons/crownlands-favicon-32.png"><link rel="stylesheet" href="docs/visual-qa/kingdom-activity-camps/draft.css"><script src="docs/visual-qa/kingdom-activity-camps/fixtures.js" defer></script><script src="docs/visual-qa/kingdom-activity-camps/preview.js" defer></script></head>
+<body><div class="backdrop" aria-hidden="true"></div><button id="reopen" class="reopen">Open Kingdom Activity</button>
+<dialog id="reportDialog" aria-labelledby="reportTitle"><div class="report-shell">
+  <header class="window-header"><img class="heading-art" src="assets/icons/skills/marchOrders.svg" alt=""><div class="heading"><p>ORDERS OF THE REALM</p><h1 id="reportTitle">Kingdom Activity</h1></div><span class="camp-heading">Held camps</span><button id="close" class="close-button" aria-label="Close Kingdom Activity">×</button></header>
+  <nav class="activity-tabs" aria-label="Kingdom activity categories"><button disabled>Marches <span>4</span></button><button disabled>Rallies <span>2</span></button><button disabled>Reinforcements <span>7</span></button><button aria-current="page">Camps <span id="campCount">4</span></button><button disabled>Strongholds <span>2</span></button></nav>
+  <section id="campSummary" class="camp-summary" aria-label="Held camp summary"></section>
+  <div id="campColumns" class="camp-columns" aria-hidden="true"><span>Camp &amp; map</span><span>Hold reward</span><span>Garrison &amp; control</span><span>Reward in</span><span>Locate</span></div>
+  <main id="campLedger" class="camp-ledger" tabindex="0" aria-label="Your held camps"></main>
+  <footer class="report-footer"><span id="panelStatus" role="status">Hold the camp through its timer to earn the applicable reward.</span><span>Scroll for all camps</span></footer>
+</div></dialog>
+<div id="mapPreview" class="map-preview" hidden><div class="map-location-card"><p class="map-preview-label">DRAFT MAP PREVIEW</p><img id="mapCampArt" src="assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp" alt=""><h2 id="mapCampName">Gold Camp</h2><p id="mapRegionName"></p><p class="map-help">In the game, Map closes this window and locates the camp on its map.</p><button id="backToLedger">Back to Camps</button></div></div>
+<p id="liveStatus" class="sr-only" role="status"></p></body></html>

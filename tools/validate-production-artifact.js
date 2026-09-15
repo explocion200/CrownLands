@@ -25,6 +25,9 @@ const required = [
   "marches-activity-ui.css", "marches-activity-ui.js",
   "rallies-activity-ui.css", "rallies-activity-ui.js",
   "reinforcements-activity-ui.css", "reinforcements-activity-ui.js",
+  "objectives-activity-ui.css", "objectives-activity-ui.js",
+  "troop-orders-ui.css", "troop-orders-ui.js",
+  "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg",
   "modal-ui.js",
   "assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg", "assets/clan-heraldry/art-set-v1/svg/full/crown.svg",
   "assets/icons/battle-reports-ledger-r1.svg",
@@ -150,7 +153,12 @@ if (ralliesUiBytes > 60 * 1024) throw new Error("Rallies presentation exceeds it
 const reinforcementUiBytes = ["reinforcements-activity-ui.js", "reinforcements-activity-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (reinforcementUiBytes > 60 * 1024) throw new Error("Reinforcements presentation exceeds its 60 KiB payload budget.");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64) * 1024;
+// Camps, Strongholds and Troop Orders share existing illustrations. Bound the
+// two scoped presentation modules/styles and two small slider SVGs to 128 KiB.
+const militaryUiBytes = ["objectives-activity-ui.js", "objectives-activity-ui.css", "troop-orders-ui.js", "troop-orders-ui.css", "assets/icons/troop-orders/crossed-swords.svg", "assets/icons/troop-orders/marching-banner.svg"]
+  .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
+if (militaryUiBytes > 128 * 1024) throw new Error("Combined military presentation exceeds its 128 KiB payload budget.");
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132) * 1024;
 if (baseClientBytes > baseClientBudget) {
   throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }

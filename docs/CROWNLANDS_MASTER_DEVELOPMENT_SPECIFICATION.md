@@ -479,6 +479,10 @@ These formulas are verified repository implementation. Exact deployed backend pa
 - Normal troop-march duration has no maximum cap. The authoritative route distance continues through every traversed map, and the existing distance, order-kind, troop-band, speed-skill, Gear, Stronghold, and minimum-duration rules calculate the full travel time even when it exceeds 30 minutes. The server rebuilds the route and duration from trusted endpoints and modifiers; client-provided geometry, distance, ETA, or duration cannot shorten an authoritative march.
 - The attacking army’s launch-time attack value is locked when dispatched. Defender troops, reinforcements, ownership, wall repair, and applicable live defensive state may change until arrival. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 
+- Attack preparation must show the selected army's own attack-power total and a source breakdown: base troop power, Swordmastery percentage and added power, and the equipped War Captain weapon's percentage and added power. Values respond to the selected troop count and preserve the current additive-to-base stacking and final whole-power rounding. The user narrowed this presentation to bonuses affecting the battle forecast: unrelated production, gold, travel, scouting protection, casualty recovery and stored/inactive-item listings are omitted from the attack-power breakdown. Unequipped/stored gear does not grant its bonus. Own-army information remains available without enemy scout intelligence. Attack and Transfer use a prominent full-width troop slider with supporting information below. Attack uses a crossed-swords handle; Transfer uses three aligned panels for destination troops, journey time/bonus and the eligible Swift March option. Transfer uses the approved olive marching-banner handle. Existing travel and item rules remain unchanged. These presentation requests were confirmed September 15, 2026; the [Troop Orders design](./visual-qa/troop-orders/README.md) is approved for integration and release with Camps and Strongholds. Deployment requires separate verification. No item, skill, Gear or combat-balance rule changes.
+
+- Attack preparation must display the origin and destination city levels beside their route headings, using current city state independently of scout-time combat intelligence. Non-city Camp targets omit a city-level badge. This presentation request was confirmed September 15, 2026; the Troop Orders design is approved for integration and release; deployment requires separate verification.
+
 ### Combat
 
 - Combat uses a two-stage siege: attack power damages one physical wall, then remaining attack power fights the garrison. Capture requires remaining attack power to exceed garrison defense. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
@@ -1122,6 +1126,20 @@ Status: approved for implementation and release on September 14, 2026; deploymen
 - Contributors use Recall and holding owners use Send Home for stationed troops. Existing confirmation, permissions, pending-request guards, fallback routing and server acknowledgements remain authoritative. Failed returns retain the assignment and expose retry feedback. These stationed returns do not use Recall Horns; no cost, capacity, visibility or return rule changes. The draft's HTML confirmation is a review aid; production retains its existing confirmation.
 
 Status: approved for integration and release on September 15, 2026; deployment requires separate verification. Design and evidence: [Kingdom Activity Reinforcements](./visual-qa/kingdom-activity-reinforcements/README.md).
+
+### Approved Kingdom Activity Camps presentation
+
+- The approved Camps tab shares the Kingdom Activity parchment frame and 1200 × 700 pixel desktop cap, with viewport-fitting desktop and mobile landscape layouts. A fixed heading, activity tabs and camp summary sit above one scrolling ledger. Portrait is not a design target.
+- Rows preserve the current camp artwork, name and map, hold reward, full garrison, controlled/contested state, countdown, Resolving/Syncing states and Map action. Small landscape places rewards and garrisons beneath identity/timing. Gold and troop values from the existing base configuration are labeled Base hold reward; random city and item rewards remain explicit. No new payout calculation or guaranteed reward is introduced.
+- Preserve held-camp discovery across unvisited maps, deduplication, loss/removal handling, independent hold timers, daily allowances, production scaling, reward privacy and server resolution. Map retains the existing close-and-locate behavior. The draft's map preview is only a review aid. No Claim, Recall, abandon or balance change is included.
+
+Status: design and combined integration approved September 15, 2026 with Strongholds and Troop Orders. The combined update requires release validation and deployment verification. Design and controlled evidence: [Kingdom Activity Camps](./visual-qa/kingdom-activity-camps/README.md).
+
+### Approved Kingdom Activity Strongholds presentation
+
+- The Strongholds tab uses the matching parchment frame on desktop and mobile landscape, with a fixed header, category tabs and summary above one scrolling ledger.
+- Each holding preserves its current illustration, name/map, specialization, full garrison, defense level and Map action. The Crown Citadel shows its five existing bonuses together. Bonuses come from current runtime configuration; ownership filtering and Citadel authority remain unchanged.
+- No new gameplay action, reward, objective bonus or defense rule is introduced. Map continues to close the window and locate the holding. Production integration is approved as one release with Camps and Troop Orders; deployment requires separate verification.
 
 ### Current presentation status
 

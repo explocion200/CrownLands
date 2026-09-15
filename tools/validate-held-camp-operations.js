@@ -6,6 +6,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const objectives = fs.readFileSync(path.join(root, "objectives-activity-ui.js"), "utf8");
 const client = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const layout = require("../functions/core-expansion-world-layout.json");
 
@@ -52,13 +53,14 @@ const context = {
   normalizeRegionId: value => value,
   normalizeTimestampMs: value => Number(value) || 0,
   readVisualSize: (value, fallback) => Number(value) || fallback,
-  formatNumber: String, formatDuration: seconds => `${seconds}s`, escapeHtml: String,
+  formatNumber: String, formatMarchesNumber: String, formatDuration: seconds => `${seconds}s`, escapeHtml: String,
   getCityRegionId: camp => camp.regionId, getRegionLabel: value => value,
   renderCrownlandsIcon: () => "",
   notifyMovementHudOccupancyChange() {}, syncWorldMusicState() {}, renderCities() {},
   getCampVfxSnapshot: () => null,
 };
 vm.createContext(context);
+vm.runInContext(objectives, context);
 for (const name of [
   "getCampConfigForType", "getRewardCampConfig", "normalizeOnlineCampState",
   "getCampTargetById", "applyOnlineHeldCamps", "applyOnlineCamps",
@@ -81,6 +83,10 @@ for (const camp of camps) {
   const card = context.renderHeldCampOperationCard(held);
   assert(card.includes(`data-operation-region="${camp.regionId}"`), "Locate lost the unloaded map.");
   assert(card.includes(`data-operation-location="${camp.id}"`), "Locate lost the held camp.");
+  assert(card.includes("Until reward"), "An active hold lost its countdown.");
+  assert(context.renderHeldCampOperationCard({ ...held, payoutAtMs: 0 }).includes("Syncing"), "Missing timer must remain syncing.");
+  assert(context.renderHeldCampOperationCard({ ...held, payoutAtMs: nowMs - 1000 }).includes("Resolving"), "An elapsed timer must await the server.");
+  assert(context.renderHeldCampOperationCard({ ...held, currentGarrison: 0, troops: 999 }).includes('class="garrison-number">0</strong>'), "An authoritative zero garrison must not fall back to stale troops.");
   context.applyOnlineHeldCamps([]);
   assert.equal(context.outgoingAttackBtn.hidden, true, "A completed or lost hold remained in Outbound.");
 }
