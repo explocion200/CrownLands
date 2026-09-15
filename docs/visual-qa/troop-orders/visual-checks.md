@@ -2,7 +2,15 @@
 
 Checked September 15, 2026 in the local in-app browser. Synthetic UI fixtures only; no production account or server operations.
 
-## Current revision: primary slider and battle-only bonuses
+## Current revision: Transfer boots and aligned summary
+
+- Transfer uses the existing leather-boot illustration in its 48px native slider handle. Attack retains crossed swords. Arrival troops, journey time/bonus and Swift March now form three matching panels beneath the main selector.
+- Checked Transfer and no-item fixtures at desktop, mobile landscape and small landscape (six combinations): each summary row shares the same top and panel height, without horizontal overflow or missing images. Footer actions remain visible and the unavailable-item switch stays disabled.
+- Visually inspected all three sizes. On mobile the summary remains reachable through the existing body scroll, with Transfer/Cancel fixed below it.
+- Selecting maximum troops and enabling Swift March still produces 1,435,000 troops after arrival, 4m 6s travel time and 148% travel bonus in the sample. The preview leaves all three items available and consumes none. Attack still shows 1,323,281 power with no Transfer panels or boot override.
+- Browser warning/error log was empty. Node.js 22 syntax and whitespace checks passed. Existing battle, inventory and route calculations were preserved; this remains a draft, not a deployment.
+
+## Previous revision: primary slider and battle-only bonuses
 
 - Attack and Transfer use a full-width troop-selection panel above supporting details. The native range uses a local crossed-swords SVG as its 48px handle, with WebKit and Firefox thumb rules. The unrelated Other buffs & items list and its fixtures/rendering were removed; attack power still separates base, Swordmastery and equipped weapon contributions.
 - Checked eight samples (attack, transfer, no-item, long, unknown, error, rally and protected) at all three review sizes: 24 combinations. No horizontal overflow or clipped footer actions; visible action buttons remain at least 44px. Attack/Transfer sliders span 1002px desktop, 744px landscape and 494px small landscape in the standard fixtures and are fully visible on opening. Standard desktop Attack and Transfer require no body scrolling. Long content and mobile supporting details scroll within the unchanged window dimensions.

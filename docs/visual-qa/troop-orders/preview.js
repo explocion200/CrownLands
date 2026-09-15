@@ -7,6 +7,7 @@ const art = {
   camp: "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp",
   stronghold: "assets/worlds/core-expansion-v1/art/stronghold-defense-bc42b1436d02.webp",
   swift: "assets/optimized/item-swift-march-160x160-e857cc4d8977.webp",
+  boots: "assets/optimized/gear-barracks-boots-192x192-31f6f4acf5a8.webp",
   attack: "assets/icons/skills/swordmastery.svg",
   transfer: "assets/icons/skills/marchOrders.svg",
   reinforce: "assets/icons/skills/shieldwallDiscipline.svg",
@@ -57,6 +58,13 @@ function renderPowerBreakdown() {
     <div class="power-source"><img class="common-item" src="${weaponDefinition.art}" alt=""><div><strong>${equipped ? escape(weaponDefinition.gearName) : "War Captain weapon"}</strong><small>${equipped ? `Equipped · Level ${current.weaponLevel} · +${precise(gearData.getBonusPercent({ level: current.weaponLevel }))}%` : "No attack weapon equipped"}</small></div><b id="weaponPowerValue"></b></div>
     <p class="power-equation"><span id="perTroopValue"></span><strong id="combinedAttackBonus"></strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.</p></section>`;
 }
+function renderTransferDetails() {
+  return `<div class="transfer-details" aria-label="Transfer summary">
+    <section id="forecast" class="transfer-card" aria-label="Troops at destination"></section>
+    <section class="transfer-card transfer-journey" aria-label="Journey details"><p class="transfer-card-title"><img src="${art.boots}" alt="">Journey</p><div id="travelSummary" class="travel-summary"></div></section>
+    <section class="transfer-card transfer-options" aria-label="Swift March option"><p class="transfer-card-title"><img src="${art.swift}" alt="">Swift March Order</p><div class="transfer-swift-control"><div><strong>${num(current.swift)} available</strong><small>${current.swift ? "Use one to shorten this journey" : "No orders in your bag"}</small></div><label class="swift-toggle"><span id="swiftState">Off</span><input id="swiftToggle" type="checkbox" role="switch" aria-label="Use a Swift March Order" ${current.swift ? "" : "disabled"}></label></div></section>
+  </div>`;
+}
 function announce(message) {
   document.getElementById("liveStatus").textContent = message;
   if (parent !== window) parent.postMessage({ type: "orders-status", message }, location.origin);
@@ -95,8 +103,7 @@ function setSample(key) {
     ${isRally() ? `<label class="contribution">Contribution<input id="contribution" type="number" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Rally troop contribution"></label>` : ""}
     <input id="troopRange" class="troop-range" type="range" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : current.kind === "reinforce" ? "reinforce with" : "transfer"}"><div class="range-labels"><span>1</span><span>Max ${num(current.troops)}</span></div>
     ${notes.length ? `<div class="order-notes">${notes.join("")}</div>` : ""}</section>
-    ${current.swift !== undefined ? `<section class="transfer-options" aria-label="Transfer item"><div class="swift-option ${current.swift ? "" : "unavailable"}"><img src="${art.swift}" alt=""><div class="swift-copy"><strong>Swift March Order</strong><small>Available: ${current.swift}</small></div><label class="swift-toggle"><span id="swiftState">Off</span><input id="swiftToggle" type="checkbox" role="switch" aria-label="Use a Swift March Order" ${current.swift ? "" : "disabled"}></label></div></section>` : ""}
-    ${current.kind === "attack" ? renderPowerBreakdown() : ""}<section class="intelligence-column" aria-label="Forecast and travel"><div class="forecast-travel"><div id="forecast"></div><div id="travelSummary" class="travel-summary"></div></div></section></div>`;
+    ${current.kind === "transfer" ? renderTransferDetails() : `${current.kind === "attack" ? renderPowerBreakdown() : ""}<section class="intelligence-column" aria-label="Forecast and travel"><div class="forecast-travel"><div id="forecast"></div><div id="travelSummary" class="travel-summary"></div></div></section>`}</div>`;
   body.querySelector("#troopRange").addEventListener("input", event => setAmount(event.target.value));
   const contribution = body.querySelector("#contribution");
   contribution?.addEventListener("input", event => { if (event.target.value !== "" && event.target.validity.valid) setAmount(event.target.value); });
@@ -133,7 +140,7 @@ function update() {
     fields = `<div><strong>${current.route === "error" ? "Route unavailable" : "Calculating travel time…"}</strong><small>${current.route === "error" ? "The route could not be confirmed. Try again." : "Checking the connected roads and arrival time."}</small>${current.route === "error" ? '<button id="retryRoute" class="route-retry">Try again</button>' : ""}</div>`;
     document.getElementById("actionNotice").textContent = current.route === "error" ? "Route unavailable. Try again before sending." : "Confirming the route before troops can be sent.";
   } else if (current.kind === "transfer") {
-    heading = "Friendly arrival"; fields = `<div><span>Arrival</span><strong>${num(current.targetTroops + amount)} troops</strong></div>`;
+    heading = "At destination"; fields = `<div><strong>${num(current.targetTroops + amount)}</strong><small>Troops after arrival</small></div>`;
   } else if (current.kind === "reinforce") {
     heading = "Reinforcement order"; fields = `<div><span>Your stationed support</span><strong>${num(current.stationed + amount)} troops</strong><small>Owned by you and merged at this holding</small></div>`;
   } else if (isRally()) {
@@ -143,11 +150,12 @@ function update() {
   } else {
     fields = `<div><span>Scouted ${current.camp ? "total" : "siege"} defense</span><strong>${num(current.defense)} power</strong></div><div><span>Forecast at scout time</span><strong class="outcome-value">${current.outcome}</strong></div>`;
   }
-  forecast.innerHTML = `<div class="forecast-sheet ${tone}"><p class="forecast-title"><img src="${art[current.kind === "attack" ? "reinforce" : current.kind === "join" ? "rally" : current.kind]}" alt="">${heading}</p><div class="forecast-values">${fields}</div></div>`;
+  forecast.innerHTML = `<div class="forecast-sheet ${tone}"><p class="forecast-title"><img src="${current.kind === "transfer" ? "assets/icons/daily-login-troops-r1.svg" : art[current.kind === "attack" ? "reinforce" : current.kind === "join" ? "rally" : current.kind]}" alt="">${heading}</p><div class="forecast-values">${fields}</div></div>`;
   travel.hidden = current.route !== "ready";
   const seconds = swift ? Math.max(1, current.seconds * 0.5) : current.seconds;
   const bonus = swift ? Math.round(((1 + current.bonus / 100) * current.seconds / seconds - 1) * 100) : current.bonus;
-  travel.innerHTML = `<div><span>Travel bonus</span><strong>${bonus}%</strong></div><div><span>Travel time</span><strong>${duration(seconds)}</strong></div>`;
+  const travelBonus = `<div><span>Travel bonus</span><strong>${bonus}%</strong></div>`, travelTime = `<div><span>Travel time</span><strong>${duration(seconds)}</strong></div>`;
+  travel.innerHTML = current.kind === "transfer" ? travelTime + travelBonus : travelBonus + travelTime;
   document.getElementById("retryRoute")?.addEventListener("click", () => { current.route = "ready"; document.getElementById("actionNotice").textContent = ""; update(); confirm.focus(); announce("Sample route recovered. This is a mock result; no server was contacted."); });
 }
 document.getElementById("close").addEventListener("click", () => dialog.close());
