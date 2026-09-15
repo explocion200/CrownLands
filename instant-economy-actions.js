@@ -588,7 +588,7 @@ function patchCityUpgradeUi(dirtyCityKeys = null) {
 }
 
 function patchMarchItemActionUi() {
-  if (modal?.open && modal.classList.contains("outgoing-attack-modal") && modal.classList.contains("marches-activity-ledger")) {
+  if (modal?.open && modal.classList.contains("outgoing-attack-modal") && (modal.classList.contains("marches-activity-ledger") || modal.classList.contains("rallies-activity-ledger"))) {
     renderOutgoingAttacksModalContent();
     return;
   }

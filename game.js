@@ -25106,7 +25106,7 @@ function getClanRallyParticipantStatusLabel(rally, participant, nowMs = Date.now
   return "Settled";
 }
 
-function renderClanRallyCard(rally) {
+function renderClanRallyCard(rally, activityLedger = false) {
   const currentUid = getCurrentOnlineUid();
   const participants = Array.isArray(rally?.participants) ? rally.participants : [];
   const activeParticipants = participants.filter(participant => ["assembled", "inbound"].includes(participant.status));
@@ -25131,6 +25131,7 @@ function renderClanRallyCard(rally) {
     ? getRenderableArmies().find(army => getOnlineArmyResolutionId(army) === String(rally.armyId || ""))
     : null;
   const canRecall = leader && launchArmy && isRecallHornEligible(launchArmy);
+  if (activityLedger === true) return renderRalliesActivityCard(rally, { currentUid, participants, activeParticipants, assembledTroops, inboundTroops, returningTroops, ownParticipant, leader, canManageFormingRally, forming, launched, recalling, busy, canRecall });
   const participantRows = participants.map(participant => {
     const eta = getClanRallyParticipantStatusLabel(rally, participant);
     return `
@@ -25268,6 +25269,7 @@ async function runClanRallyAction(action, rally) {
   }
   rallyActionRequests.add(rally.id);
   renderClanView();
+  if (modal?.open && modal.classList.contains("rallies-activity-ledger")) renderOutgoingAttacksModalContent();
   try {
     const request = {
       clanId: rally.clanId || state?.clanId,
@@ -35863,6 +35865,7 @@ function showOutgoingAttacksModal() {
 
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
   const previousMarchView = captureMarchesListView();
+  const previousRallyView = captureRalliesActivityView();
   const normalizedOperations = operations?.marches
     ? operations
     : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
@@ -35876,7 +35879,9 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   ];
   if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
   const marchesView = activeOperationsTab === "marches";
+  const ralliesView = activeOperationsTab === "rallies";
   modal.classList.toggle("marches-activity-ledger", marchesView);
+  modal.classList.toggle("rallies-activity-ledger", ralliesView);
   const panel = activeOperationsTab === "rallies"
     ? renderClanRallyOperationPanel(rallies)
     : activeOperationsTab === "reinforcements"
@@ -35890,7 +35895,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalTitle.textContent = "Kingdom Activity";
   modalBody.innerHTML = `
     <div class="active-operations-panel">
-      ${marchesView ? renderMarchesHeader() : ""}
+      ${marchesView ? renderMarchesHeader() : ralliesView ? renderRalliesActivityHeader() : ""}
       <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
         ${tabs.map(tab => `
           <button class="active-operations-tab ${activeOperationsTab === tab.id ? "active" : ""}" data-active-operations-tab="${tab.id}" type="button" role="tab" aria-selected="${activeOperationsTab === tab.id}">
@@ -35901,6 +35906,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
         ${panel}
       </div>
       ${marchesView ? '<footer class="report-footer"><span>Orders in motion across the realm</span><span>Scroll for all marches</span></footer>' : ""}
+      ${ralliesView ? renderRalliesActivityFooter() : ""}
     </div>
   `;
 
@@ -35908,6 +35914,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     button.addEventListener("click", () => modal.close());
   });
   restoreMarchesListView(previousMarchView);
+  bindRalliesActivityView(previousRallyView);
   modalBody.querySelectorAll("[data-active-operations-tab]").forEach(button => {
     button.addEventListener("click", () => {
       activeOperationsTab = button.dataset.activeOperationsTab || "marches";
@@ -35933,19 +35940,6 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   });
   bindClanRallyControls(modalBody);
   bindHoldingReinforcementButtons();
-}
-
-function renderClanRallyOperationPanel(rallies = []) {
-  if (!rallies.length) return `<div class="incoming-attack-empty">No clan rallies are active.</div>`;
-  return `
-    <div class="clan-rally-operation-panel">
-      <div class="incoming-attack-summary">
-        <strong>${formatNumber(rallies.length)}</strong>
-        <span>${rallies.length === 1 ? "One coordinated assault is" : `${formatNumber(rallies.length)} coordinated assaults are`} active.</span>
-        <small>Only clan members can see forming rally targets.</small>
-      </div>
-      <div class="clan-rally-list">${rallies.map(renderClanRallyCard).join("")}</div>
-    </div>`;
 }
 
 function renderReinforcementOperationPanel(entries = []) {
@@ -39742,7 +39736,7 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   battleReportVisitViewedAtMs = null;
-  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger");
+  modal.classList.remove("battle-report-detail-ledger", "scout-report-ledger", "marches-activity-ledger", "rallies-activity-ledger");
   const closedCityListSession = modal.classList.contains("city-list-modal");
   const closedLoginPresentationKind = modal.classList.contains("daily-login-reward-modal")
     ? "daily"

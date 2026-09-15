@@ -32,6 +32,7 @@ const rootFiles = [
   "battle-report-detail-ui.css", "battle-report-detail-ui.js",
   "scout-report-ui.css", "scout-report-ui.js",
   "marches-activity-ui.css", "marches-activity-ui.js",
+  "rallies-activity-ui.css", "rallies-activity-ui.js",
   "daily-rewards-guide.html",
   "firebase-messaging-sw.js", "firebaseClient.js", "chat-ui.js", "chat.css", "game-rules.html", "game.js", "base-cities.js", "holding-tower-ui.js", "instant-economy-actions.js",
   "guides.html", "home.html", "how-to-play.html", "daily-login-ui.js", "daily-login-ui.css", "index.html", "manifest.webmanifest", "objectives-guide.html", "patch-notes.js", "region-catalog.js",
@@ -65,6 +66,8 @@ rootFiles.forEach(relativePath => copy(relativePath));
 copy("assets/map-editor-data.js");
 copy("assets/flag-symbols/runtime.svg");
 copyDirectoryFiles("assets/clan-heraldry", relativePath => /(?:manifest\.json|charges-(?:full|micro)\.svg)$/i.test(relativePath));
+copy("assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg");
+copy("assets/clan-heraldry/art-set-v1/svg/full/crown.svg");
 const productionHeraldryManifestPath = path.join(output, "assets", "clan-heraldry", "art-set-v1", "manifest.json");
 const sourceHeraldryManifest = JSON.parse(fs.readFileSync(productionHeraldryManifestPath, "utf8"));
 const productionHeraldryManifest = {
