@@ -301,6 +301,7 @@ assert.doesNotMatch(
   "Clan reinforcement notifications must not include an exact troop-count data field."
 );
 // Exercise the presentation rather than requiring the previous inline sentence layout.
+vm.runInContext(fs.readFileSync(path.join(root, "reinforcements-activity-ui.js"), "utf8"), clientSandbox);
 Object.assign(clientSandbox, {
   CITADEL_ASSAULT_EVENT_KIND: "citadel_assault",
   escapeHtml: value => String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"),
