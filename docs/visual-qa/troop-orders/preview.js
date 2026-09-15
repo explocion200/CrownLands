@@ -1,6 +1,6 @@
 "use strict";
 
-// Synthetic review snapshots. This file deliberately does not implement combat or routing.
+// Synthetic review snapshots. Own-army power responds; enemy outcomes and routes are fixed samples.
 const art = {
   keep: "assets/optimized/castle-keep-256x256-ce263706d73e.webp",
   castle: "assets/optimized/castle-castle-256x256-5e8edd306418.webp",
@@ -26,6 +26,10 @@ const samples = {
   calculating: { route: "calculating" },
   error: { route: "error" },
   protected: { blocked: true, to: "The Royal Home", targetLabel: "Main City" },
+  unbuffed: { swordmastery: 0, weaponLevel: 0, otherEffects: false, bonus: 0 },
+  stored: { swordmastery: 0, weaponLevel: 0, storedWeaponLevel: 5, otherEffects: false, bonus: 0 },
+  maximum: { swordmastery: 60, weaponLevel: 5 },
+  rounding: { troops: 17, amount: 1, swordmastery: 2, weaponLevel: 1, otherEffects: false, forecast: "unknown", bonus: 0 },
   long: { from: "Northwatch Keep beyond the Western Kingsroad", fromMap: "The Northern Marches of Greybanner", to: "Stonebridge Castle of the Southern Borderlands", toMap: "The Southern Borderlands of Ironwatch", troops: 4294967295, amount: 1234567890, defense: 987654321, seconds: 8472 }
 };
 const commandNames = { attack: "Attack", transfer: "Transfer", reinforce: "Reinforce", rally: "Create Rally", join: "Join Rally" };
@@ -36,6 +40,43 @@ const num = value => Math.floor(Number(value) || 0).toLocaleString("en-US");
 const escape = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 const duration = value => { const seconds = Math.ceil(value); return seconds >= 3600 ? `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m ${seconds % 60}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`; };
 const isRally = () => current.kind === "rally" || current.kind === "join";
+const gearData = CROWNLANDS_COMMON_GEAR;
+const weaponDefinition = gearData.getDefinition("barracks_weapon_common_01");
+const necklaceDefinition = gearData.getDefinition("barracks_necklace_common_01");
+const precise = value => Number(value).toLocaleString("en-US", { maximumFractionDigits: 6 });
+function contributionValue(value, signed = false) {
+  const precision = Math.abs(value) < 1 ? 6 : 2;
+  const scale = 10 ** precision;
+  const rounded = Math.round(value * scale) / scale;
+  return `${Math.abs(value - rounded) > 0.000001 ? "≈" : ""}${signed ? "+" : ""}${rounded.toLocaleString("en-US", { maximumFractionDigits: precision })}`;
+}
+function renderPowerBreakdown() {
+  const equipped = current.weaponLevel > 0;
+  return `<section class="attack-power-sheet" aria-label="Your attack power breakdown"><header><div><span>YOUR ATTACK POWER</span><strong id="ownAttackTotal"></strong></div><img src="${art.attack}" alt=""></header>
+    <div class="power-source"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><div><strong>Base troop power</strong><small>1.25 power per troop</small></div><b id="basePowerValue"></b></div>
+    <div class="power-source"><img src="${art.attack}" alt=""><div><strong>Swordmastery</strong><small>Level ${current.swordmastery / 2} · +${precise(current.swordmastery)}% attack</small></div><b id="skillPowerValue"></b></div>
+    <div class="power-source"><img class="common-item" src="${weaponDefinition.art}" alt=""><div><strong>${equipped ? escape(weaponDefinition.gearName) : "War Captain weapon"}</strong><small>${equipped ? `Equipped · Level ${current.weaponLevel} · +${precise(gearData.getBonusPercent({ level: current.weaponLevel }))}%` : "No attack weapon equipped"}</small></div><b id="weaponPowerValue"></b></div>
+    <p class="power-equation"><span id="perTroopValue"></span><strong id="combinedAttackBonus"></strong></p><p class="power-note">Bonuses add to base power. Final total rounds down to whole points.</p></section>`;
+}
+function effectRow(image, name, state, effect, common = false) {
+  return `<div class="other-effect"><img ${common ? 'class="common-item"' : ""} src="${image}" alt=""><div><strong>${escape(name)}</strong><small>${escape(state)}</small><p>${escape(effect)}</p></div><span>+0<small>attack power</small></span></div>`;
+}
+function renderOtherEffects() {
+  const rows = [];
+  if (current.otherEffects) {
+    rows.push(effectRow(art.transfer, "March Orders", "Level 10 · Active skill", "+20% march speed"));
+    rows.push(effectRow("assets/icons/skills/fieldMedics.svg", "Field Medics", "Level 10 · Active skill", "20% casualty recovery"));
+    rows.push(effectRow(necklaceDefinition.art, necklaceDefinition.gearName, "Equipped · Level 4", "+1.15% casualty recovery", true));
+    rows.push(effectRow("assets/optimized/item-war-drums-160x160-0d7a58c4b986.webp", "War Drums", "Active · 18m left · 1 in bag", "+30% troop production"));
+    rows.push(effectRow("assets/optimized/item-royal-tax-decree-160x160-d160f6b40e14.webp", "Royal Tax Decree", "Active · 12m left · 0 in bag", "+50% base gold production"));
+    rows.push(effectRow("assets/optimized/item-veil-of-silence-160x160-ea2992af0cd1.webp", "Veil of Silence", "Active · 9m left · 0 in bag", "Blocks enemy scouting"));
+    rows.push(effectRow(art.swift, "Swift March Order", "In bag · 3 available", "Travel-time item · not active"));
+    rows.push(effectRow("assets/optimized/item-recall-horn-160x160-b261d10e9c8b.webp", "Recall Horn", "In bag · 2 available", "Recalls eligible marches · not active"));
+    rows.push(effectRow("assets/optimized/item-peace-shield-160x160-4cc2aabe0087.webp", "Royal Peace Shield", "In bag · 1 available", "Protection item · not active"));
+  }
+  if (current.storedWeaponLevel) rows.push(effectRow(weaponDefinition.art, weaponDefinition.gearName, `In gear bag · Level ${current.storedWeaponLevel} · Unequipped`, "Equip to apply its attack bonus", true));
+  return `<details class="other-effects"><summary><span>Other buffs &amp; items<small>${rows.length ? `${rows.length} shown · +0 attack power` : "No other effects or carried items"}</small></span><span class="details-chevron" aria-hidden="true">⌄</span></summary><div class="other-effects-body">${rows.length ? rows.join("") : '<p class="no-other-effects">No other active effects or carried items in this loadout.</p>'}</div></details>`;
+}
 function announce(message) {
   document.getElementById("liveStatus").textContent = message;
   if (parent !== window) parent.postMessage({ type: "orders-status", message }, location.origin);
@@ -46,7 +87,8 @@ function locationPanel(label, name, map, image, detail, destination = false) {
 }
 function setSample(key) {
   const sample = Object.hasOwn(samples, key) ? key : "attack";
-  current = { kind: "attack", from: "Northwatch Keep", fromMap: "Greybanner Hold", to: "Stonebridge Castle", toMap: "Ironwatch", fromArt: art.keep, toArt: art.castle, targetLabel: "Enemy city", troops: 1250000, amount: 750000, defense: 684500, outcome: "Likely capture", tone: "win", forecast: "scouted", route: "ready", seconds: 492, bonus: 24, ...samples[sample] };
+  current = { kind: "attack", from: "Northwatch Keep", fromMap: "Greybanner Hold", to: "Stonebridge Castle", toMap: "Ironwatch", fromArt: art.keep, toArt: art.castle, targetLabel: "Enemy city", troops: 1250000, amount: 750000, defense: 684500, outcome: "Likely capture", tone: "win", forecast: "scouted", route: "ready", seconds: 492, bonus: 24, swordmastery: 40, weaponLevel: 4, otherEffects: true, ...samples[sample] };
+  if (current.kind === "attack" && !Object.hasOwn(samples[sample], "bonus")) current.bonus = 20;
   amount = current.amount; swift = false;
   const command = commandNames[current.kind];
   dialog.dataset.sample = sample;
@@ -67,11 +109,11 @@ function setSample(key) {
   body.innerHTML = `<div class="order-route">${locationPanel("From", current.from, current.fromMap, current.fromArt, "")}
     <svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>
     ${locationPanel("To", current.to, current.toMap, current.toArt, current.targetLabel, true)}</div>
-    <div class="order-columns"><section class="force-column" aria-label="Troop selection"><p class="force-label">Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : "send"}</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong id="amountValue"></strong></div><p class="remaining"><b id="remainingValue"></b> of ${num(current.troops)} remain at source</p>
+    <div class="order-columns ${current.kind === "attack" ? "attack-layout" : ""}"><section class="force-column" aria-label="Troop selection"><p class="force-label">Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : "send"}</p><div class="force-readout"><img src="assets/icons/daily-login-troops-r1.svg" alt=""><strong id="amountValue"></strong></div><p class="remaining"><b id="remainingValue"></b> of ${num(current.troops)} remain at source</p>
     ${isRally() ? `<label class="contribution">Contribution<input id="contribution" type="number" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Rally troop contribution"></label>` : ""}
     <input id="troopRange" class="troop-range" type="range" min="1" max="${current.troops}" step="1" value="${amount}" aria-label="Troops to ${isRally() ? "commit" : current.kind === "attack" ? "attack with" : current.kind === "reinforce" ? "reinforce with" : "transfer"}"><div class="range-labels"><span>1</span><span>Max ${num(current.troops)}</span></div>
     ${current.swift !== undefined ? `<div class="swift-option ${current.swift ? "" : "unavailable"}"><img src="${art.swift}" alt=""><div class="swift-copy"><strong>Swift March Order</strong><small>Available: ${current.swift}</small></div><label class="swift-toggle"><span id="swiftState">Off</span><input id="swiftToggle" type="checkbox" role="switch" aria-label="Use a Swift March Order" ${current.swift ? "" : "disabled"}></label></div>` : ""}
-    ${notes.length ? `<div class="order-notes">${notes.join("")}</div>` : ""}</section><section class="intelligence-column" aria-label="Forecast and travel"><div id="forecast"></div><div id="travelSummary" class="travel-summary"></div></section></div>`;
+    ${notes.length ? `<div class="order-notes">${notes.join("")}</div>` : ""}</section>${current.kind === "attack" ? renderPowerBreakdown() : ""}<section class="intelligence-column" aria-label="Forecast and travel"><div class="forecast-travel"><div id="forecast"></div><div id="travelSummary" class="travel-summary"></div></div>${current.kind === "attack" ? renderOtherEffects() : ""}</section></div>`;
   body.querySelector("#troopRange").addEventListener("input", event => setAmount(event.target.value));
   const contribution = body.querySelector("#contribution");
   contribution?.addEventListener("input", event => { if (event.target.value !== "" && event.target.validity.valid) setAmount(event.target.value); });
@@ -82,11 +124,21 @@ function setSample(key) {
 function setAmount(value) {
   amount = Math.min(current.troops, Math.max(1, Math.floor(Number(value) || 1)));
   update();
-  announce("Selection updated. Friendly arrival totals respond; combat forecasts and route times remain fixed sample snapshots.");
+  announce(current.kind === "attack" ? "Selection and your attack-power contributions updated. Enemy outcomes and route times remain fixed sample snapshots." : "Selection updated. Friendly arrival totals respond; route times remain fixed sample snapshots.");
 }
 function update() {
   document.getElementById("amountValue").textContent = num(amount);
   document.getElementById("remainingValue").textContent = num(current.troops - amount);
+  if (current.kind === "attack") {
+    const gearPercent = current.weaponLevel ? gearData.getBonusPercent({ level: current.weaponLevel }) : 0;
+    const power = ORDER_POWER_REVIEW.calculate(amount, current.swordmastery, gearPercent);
+    document.getElementById("ownAttackTotal").textContent = num(power.totalPower);
+    document.getElementById("basePowerValue").textContent = contributionValue(power.basePower);
+    document.getElementById("skillPowerValue").textContent = contributionValue(power.swordmasteryPower, true);
+    document.getElementById("weaponPowerValue").textContent = contributionValue(power.weaponPower, true);
+    document.getElementById("perTroopValue").textContent = `${precise(power.perTroop)} power / troop`;
+    document.getElementById("combinedAttackBonus").textContent = `+${precise(power.bonusPercent)}% total bonus`;
+  }
   const range = document.getElementById("troopRange"); range.value = amount; range.style.setProperty("--fill", `${100 * (amount - 1) / Math.max(1, current.troops - 1)}%`);
   const contribution = document.getElementById("contribution"); if (contribution) contribution.value = amount;
   const toggle = document.getElementById("swiftToggle"); if (toggle) { toggle.checked = swift; document.getElementById("swiftState").textContent = swift ? "On" : "Off"; }

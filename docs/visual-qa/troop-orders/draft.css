@@ -21,3 +21,31 @@
  .forecast-values{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
  .forecast-values>div:only-child{grid-column:1/-1}
 }
+/* Own-army power is separate from the enemy's scout-time forecast. */
+.attack-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.12fr) minmax(0,1fr);gap:17px;align-items:start}
+.attack-layout .force-readout strong{font-size:32px}
+@media(min-height:601px) and (min-width:1001px){.order-body:has(.attack-layout){padding-block:12px}.attack-layout{margin-top:14px}}
+.attack-layout .forecast-sheet{padding:12px}.attack-layout .forecast-title{margin-bottom:9px}.attack-layout .forecast-values{gap:10px}.attack-layout .forecast-values strong{font-size:22px}.attack-layout .travel-summary{margin-top:10px;padding-top:9px}.attack-layout .travel-summary strong{font-size:21px}
+.attack-power-sheet{min-width:0;border:1px solid #ada17e;background:#f8f0d84d}
+.attack-power-sheet>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:#e0e1bc70;border-bottom:1px solid #b8aa80}
+.attack-power-sheet>header span{font-size:9px;letter-spacing:1.2px;color:#566044;display:block}
+.attack-power-sheet>header strong{display:block;font:29px/1.2 Georgia,serif;color:#485537;margin-top:3px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.attack-power-sheet>header img{width:33px;height:37px;object-fit:contain;flex:none}
+.power-source{display:flex;align-items:center;gap:9px;padding:8px 11px;border-bottom:1px solid #c3b18b70;min-width:0}
+.power-source>img{width:28px;height:31px;object-fit:contain;flex:none}.common-item{background:#d9d9d3;border:1px solid #b0afa4;border-radius:2px;padding:2px}
+.power-source>div{min-width:0;flex:1}.power-source strong{display:block;font:13px/1.2 Georgia,serif;overflow-wrap:anywhere}.power-source small{display:block;font-size:9px;line-height:1.35;color:var(--muted);margin-top:3px}
+.power-source>b{max-width:48%;font:17px/1.2 Georgia,serif;text-align:right;color:#4d593e;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.power-equation{display:flex;justify-content:space-between;gap:7px;flex-wrap:wrap;padding:8px 11px 4px;font-size:10px;color:#5c624a}.power-equation strong{font-weight:600}.power-note{font-size:9px;line-height:1.4;color:#78674d;padding:0 11px 9px}
+.other-effects{margin-top:15px;border:1px solid #b7a17b;background:#e7daba33}.other-effects>summary{display:flex;justify-content:space-between;align-items:center;gap:9px;cursor:pointer;min-height:54px;padding:8px 12px;list-style:none;font:15px Georgia,serif;color:#5b513a}.other-effects>summary::-webkit-details-marker{display:none}.other-effects>summary small{display:block;font:10px "Segoe UI",sans-serif;margin-top:5px;color:var(--muted)}.details-chevron{font:22px Georgia,serif}.other-effects[open] .details-chevron{transform:rotate(180deg)}.other-effects[open]>summary{border-bottom:1px solid #b7a17b}.other-effects-body{padding:0 10px}
+.other-effect{display:flex;align-items:center;gap:9px;border-bottom:1px solid #c3b18b70;padding:9px 0}.other-effect:last-child{border:0}.other-effect>img{width:32px;height:35px;object-fit:contain;flex:none}.other-effect>div{flex:1;min-width:0}.other-effect strong{font:13px/1.2 Georgia,serif;display:block;overflow-wrap:anywhere}.other-effect small{font-size:9px;line-height:1.3;display:block;margin-top:3px;color:var(--muted)}.other-effect p{font-size:10px;line-height:1.4;color:#645b43;margin-top:4px;overflow-wrap:anywhere}.other-effect>span{font:17px Georgia,serif;color:#72674f;text-align:right;min-width:51px}.other-effect>span small{font:8px "Segoe UI",sans-serif}.no-other-effects{font-size:11px;line-height:1.5;padding:12px 0;color:var(--muted)}
+@media(max-height:600px),(max-width:1000px){
+ .attack-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"selection intelligence" "power power" "effects effects"}
+ .attack-layout .force-column{grid-area:selection}.attack-layout .intelligence-column{display:contents}.attack-layout .forecast-travel{grid-area:intelligence;min-width:0}.attack-layout .other-effects{grid-area:effects;margin-top:0}.attack-layout .other-effects-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}.attack-layout .attack-power-sheet{grid-area:power;margin-top:0}.attack-layout .force-readout strong{font-size:29px}
+ .attack-layout .forecast-sheet{padding:8px 10px}.attack-layout .forecast-values strong{font-size:19px}.attack-layout .travel-summary strong{font-size:19px}
+ .attack-power-sheet{margin-top:10px}.attack-power-sheet>header{padding:7px 9px}.attack-power-sheet>header span{font-size:8px;letter-spacing:.6px}.attack-power-sheet>header strong{font-size:23px;margin-top:2px}.attack-power-sheet>header img{width:27px;height:29px}.power-source{gap:7px;padding:7px 8px}.power-source>img{width:24px;height:27px}.power-source strong{font-size:12px}.power-source small{font-size:9px}.power-source>b{font-size:15px}.power-equation{font-size:9px;padding:7px 8px 4px}.power-note{font-size:8px;padding:0 8px 7px}.other-effects{margin-top:10px}.other-effects>summary{min-height:48px;font-size:13px;padding:6px 9px}.other-effects>summary small{font-size:9px;margin-top:3px}.other-effect{gap:7px}.other-effect>img{width:26px;height:29px}.other-effect strong{font-size:12px}.other-effect p{font-size:9px}.other-effect>span{font-size:15px;min-width:47px}
+}
+@media(max-width:650px){
+ .attack-layout .force-readout strong{font-size:24px}
+ .attack-layout .forecast-sheet{padding:7px 8px}.attack-layout .forecast-values strong{font-size:17px}.attack-layout .travel-summary strong{font-size:18px}
+ .power-source{gap:5px;padding:7px 6px}.power-source>img{width:20px;height:23px}.power-source strong{font-size:11px}.power-source small{font-size:8px}.power-source>b{font-size:13px}.power-equation{font-size:8px}.power-note{font-size:8px}.other-effects>summary{font-size:12px}.other-effect{gap:5px}.other-effects-body{padding:0 7px}.other-effect>img{width:23px;height:26px}.other-effect strong{font-size:11px}.other-effect>span{font-size:14px;min-width:42px}.other-effect small,.other-effect>span small{font-size:8px}
+}
