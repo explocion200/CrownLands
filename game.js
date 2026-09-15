@@ -21133,8 +21133,8 @@ function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   const bounds = getIslandMapBounds(activeRegionId);
   const center = {
-    x: bounds.left + bounds.width / 2,
-    y: bounds.top + bounds.height / 2,
+    x: Math.round(bounds.left + bounds.width / 2),
+    y: Math.round(bounds.top + bounds.height / 2),
   };
   if (isValidHarvestBonusPoint(center.x, center.y, activeRegionId)) return center;
 
@@ -21146,8 +21146,8 @@ function createHarvestBonusPoint(regionId) {
       const angle = angleOffset + attempt * HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
       const radiusFraction = (attempt + 0.5) / HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;
       const radius = maximumRadius * Math.sqrt(radiusFraction);
-      const x = center.x + Math.cos(angle) * radius;
-      const y = center.y + Math.sin(angle) * radius;
+      const x = Math.round(center.x + Math.cos(angle) * radius);
+      const y = Math.round(center.y + Math.sin(angle) * radius);
       if (!isValidHarvestBonusPoint(x, y, activeRegionId)) continue;
       // Increasing radii make this the closest valid candidate in the zone.
       return { x, y };

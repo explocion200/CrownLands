@@ -79,6 +79,22 @@ Close. Incoming countdowns and rally arrival/launch eligibility are covered too.
 
 ## Broader checks and remaining limits
 
+### Additional confirmed defect: pickups can disappear after placement
+
+GitHub's pickup interaction test exposed a real terrain-boundary defect. Placement
+validated fractional coordinates, while the saved pickup rounded them to whole
+map units. Rounding could move a valid point across the terrain boundary, causing
+the next update to prune the new pickup before collection. Three deterministic
+seeds reproduced this on the benchmark map; for example, `(11409.813, 7155.412)`
+became `(11410, 7155)` and was immediately removed.
+
+The search now validates the exact integer coordinates that it saves, including
+the center candidate. The browser regression saves and prunes all three seeded
+placements and requires them to remain present. Center-biased placement, terrain
+clearances, reward authority, timers, and limits retain their established rules.
+
+### Remaining coverage and capacity limits
+
 - Inspected the shared frame/simulation loop, map/army rendering cadence,
   fullscreen target, modal transitions, recent ledger integrations, onboarding,
   Profile/Skills refreshes, and listener/reconnect/foreground lifecycle paths.
