@@ -2,7 +2,13 @@
 
 Checked September 15, 2026 in the local in-app browser. Synthetic UI fixtures only; no production account or server operations.
 
-## Current revision: Transfer boots and aligned summary
+## Current revision: marching-banner proposal
+
+- Replaced the rejected Transfer boots with a draft-local olive pennant on a wooden pole, using dark ink outlines and ochre trim. Journey uses the same banner; the Attack swords and summary layout are unchanged.
+- Desktop, landscape and small-landscape checks confirmed the banner loads, the native handle remains 48px and no horizontal overflow appears. Visually inspected desktop and landscape slider rendering. JavaScript syntax, SVG XML and whitespace checks passed.
+- This is an icon proposal for review, not a confirmed final art choice or production update.
+
+## Previous revision: Transfer boots and aligned summary
 
 - Transfer uses the existing leather-boot illustration in its 48px native slider handle. Attack retains crossed swords. Arrival troops, journey time/bonus and Swift March now form three matching panels beneath the main selector.
 - Checked Transfer and no-item fixtures at desktop, mobile landscape and small landscape (six combinations): each summary row shares the same top and panel height, without horizontal overflow or missing images. Footer actions remain visible and the unavailable-item switch stays disabled.

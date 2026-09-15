@@ -7,7 +7,7 @@ const art = {
   camp: "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp",
   stronghold: "assets/worlds/core-expansion-v1/art/stronghold-defense-bc42b1436d02.webp",
   swift: "assets/optimized/item-swift-march-160x160-e857cc4d8977.webp",
-  boots: "assets/optimized/gear-barracks-boots-192x192-31f6f4acf5a8.webp",
+  banner: "docs/visual-qa/troop-orders/marching-banner.svg",
   attack: "assets/icons/skills/swordmastery.svg",
   transfer: "assets/icons/skills/marchOrders.svg",
   reinforce: "assets/icons/skills/shieldwallDiscipline.svg",
@@ -61,7 +61,7 @@ function renderPowerBreakdown() {
 function renderTransferDetails() {
   return `<div class="transfer-details" aria-label="Transfer summary">
     <section id="forecast" class="transfer-card" aria-label="Troops at destination"></section>
-    <section class="transfer-card transfer-journey" aria-label="Journey details"><p class="transfer-card-title"><img src="${art.boots}" alt="">Journey</p><div id="travelSummary" class="travel-summary"></div></section>
+    <section class="transfer-card transfer-journey" aria-label="Journey details"><p class="transfer-card-title"><img src="${art.banner}" alt="">Journey</p><div id="travelSummary" class="travel-summary"></div></section>
     <section class="transfer-card transfer-options" aria-label="Swift March option"><p class="transfer-card-title"><img src="${art.swift}" alt="">Swift March Order</p><div class="transfer-swift-control"><div><strong>${num(current.swift)} available</strong><small>${current.swift ? "Use one to shorten this journey" : "No orders in your bag"}</small></div><label class="swift-toggle"><span id="swiftState">Off</span><input id="swiftToggle" type="checkbox" role="switch" aria-label="Use a Swift March Order" ${current.swift ? "" : "disabled"}></label></div></section>
   </div>`;
 }

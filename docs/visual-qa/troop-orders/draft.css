@@ -57,8 +57,8 @@
  .power-source{gap:5px;padding:6px}.power-source>img{width:20px;height:23px}.power-source strong{font-size:11px}.power-source small{font-size:8px}.power-source>b{font-size:13px}.power-equation{font-size:8px}.power-note{font-size:8px}
 }
 @media(min-height:601px) and (min-width:1001px){.selection-layout{margin-top:8px;row-gap:10px}.attack-power-sheet>header{padding-block:4px}.power-source{padding-block:4px}}
-/* Friendly transfers use leather marching boots and one aligned summary row. */
-#reportDialog[data-kind="transfer"] .troop-range{--order-slider-art:url("../../../assets/optimized/gear-barracks-boots-192x192-31f6f4acf5a8.webp");--order-slider-size:64px}
+/* Friendly transfers preview an olive marching banner above the aligned summary. */
+#reportDialog[data-kind="transfer"] .troop-range{--order-slider-art:url("marching-banner.svg");--order-slider-size:46px}
 .transfer-details{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.1fr);gap:12px}
 .transfer-card{min-width:0;border:1px solid #b9a47f;border-top:2px solid #78835d;background:#f4ecd447;padding:13px 15px}
 .transfer-card-title,.transfer-card .forecast-title{display:flex;align-items:center;gap:9px;min-height:30px;margin-bottom:13px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#6f6349}
